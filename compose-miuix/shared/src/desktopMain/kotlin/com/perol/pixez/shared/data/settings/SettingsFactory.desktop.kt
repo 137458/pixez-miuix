@@ -48,7 +48,8 @@ actual class SettingsFactory {
         val legacyFile = findLegacySharedPreferencesFile() ?: return
 
         try {
-            val json = Json.parseToJsonElement(legacyFile.readText()).jsonObject
+            // 显式指定 UTF-8，与 Flutter shared_preferences 桌面实现保持一致，避免中文乱码。
+            val json = Json.parseToJsonElement(legacyFile.readText(Charsets.UTF_8)).jsonObject
             json.forEach { (key, value) ->
                 when (value) {
                     is JsonPrimitive -> writePrimitive(target, key, value)

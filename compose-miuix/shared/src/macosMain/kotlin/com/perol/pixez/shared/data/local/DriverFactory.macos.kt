@@ -4,6 +4,8 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlSchema
 import app.cash.sqldelight.driver.native.NativeSqliteDriver
+import app.cash.sqldelight.driver.native.wrapConnection
+import co.touchlab.sqliter.DatabaseConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSApplicationSupportDirectory
@@ -37,6 +39,38 @@ actual class DriverFactory {
         )
 
         val dbPath = "$dbDir/$fileName"
-        return NativeSqliteDriver(schema, dbPath)
+        val configuration = DatabaseConfiguration(
+            name = dbPath,
+            version = schema.version.toInt(),
+            create = { connection ->
+                wrapConnection(connection) { driver ->
+                    if (driver.hasLegacyTables()) {
+                        driver.execute(null, "PRAGMA user_version = ${schema.version}", 0, null)
+                    } else {
+                        schema.create(driver)
+                    }
+                }
+            },
+            upgrade = { connection, oldVersion, newVersion ->
+                wrapConnection(connection) { driver ->
+                    schema.migrate(driver, oldVersion.toLong(), newVersion.toLong())
+                }
+            },
+        )
+        return NativeSqliteDriver(configuration)
+    }
+
+    actual fun closeDriver(driver: SqlDriver) {
+        driver.close()
+    }
+
+    private fun SqlDriver.hasLegacyTables(): Boolean {
+        return executeQuery(
+            identifier = null,
+            sql = "SELECT count(*) FROM sqlite_master WHERE type='table'",
+            mapper = { cursor -> QueryResult.Value(cursor.getLong(0) ?: 0L) },
+            parameters = 0,
+            binders = null,
+        ).value > 0L
     }
 }

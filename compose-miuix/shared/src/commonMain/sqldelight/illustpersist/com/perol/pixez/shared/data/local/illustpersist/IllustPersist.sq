@@ -1,31 +1,37 @@
-CREATE TABLE illustpersist (
+CREATE TABLE glanceillustpersist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     illust_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     picture_url TEXT NOT NULL,
     title TEXT,
     user_name TEXT,
-    time INTEGER NOT NULL
+    ctype TEXT NOT NULL,
+    original_url TEXT,
+    large_url TEXT,
+    ctime INTEGER NOT NULL
 );
 
 selectAll:
-SELECT * FROM illustpersist ORDER BY time;
+SELECT * FROM glanceillustpersist ORDER BY ctime;
 
 selectByIllustId:
-SELECT * FROM illustpersist WHERE illust_id = ?;
+SELECT * FROM glanceillustpersist WHERE illust_id = ?;
+
+selectByType:
+SELECT * FROM glanceillustpersist WHERE ctype = ? ORDER BY ctime;
 
 searchByTitleOrUserName:
-SELECT * FROM illustpersist
+SELECT * FROM glanceillustpersist
 WHERE title LIKE ? OR user_name LIKE ?
-ORDER BY time;
+ORDER BY ctime;
 
 insertOrReplace:
-INSERT OR REPLACE INTO illustpersist (
-    id, illust_id, user_id, picture_url, title, user_name, time
-) VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO glanceillustpersist (
+    id, illust_id, user_id, picture_url, title, user_name, ctype, original_url, large_url, ctime
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteByIllustId:
-DELETE FROM illustpersist WHERE illust_id = ?;
+DELETE FROM glanceillustpersist WHERE illust_id = ?;
 
 deleteAll:
-DELETE FROM illustpersist;
+DELETE FROM glanceillustpersist;

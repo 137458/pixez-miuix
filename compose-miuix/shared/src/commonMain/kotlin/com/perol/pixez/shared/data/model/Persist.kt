@@ -54,11 +54,11 @@ data class GlanceIllustPersist(
     @SerialName("illust_id") val illustId: Int,
     @SerialName("user_id") val userId: Int,
     @SerialName("picture_url") val pictureUrl: String,
+    val title: String? = null,
+    @SerialName("user_name") val userName: String? = null,
+    val type: String,
     @SerialName("original_url") val originalUrl: String? = null,
     @SerialName("large_url") val largeUrl: String? = null,
-    @SerialName("user_name") val userName: String? = null,
-    val title: String? = null,
-    val type: String,
     val time: Int,
 )
 
@@ -109,7 +109,8 @@ data class TaskPersist(
     val medium: String? = null,
     @SerialName("user_id") val userId: Int,
     @SerialName("illust_id") val illustId: Int,
-    @SerialName("sanity_level") val sanityLevel: Int,
+    // 旧 Flutter task 表中的 sanity_level 列为 INTEGER（可空），保持可空以避免读取旧数据时崩溃。
+    @SerialName("sanity_level") val sanityLevel: Int? = null,
     val status: Int,
 )
 

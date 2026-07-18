@@ -10,4 +10,10 @@ import app.cash.sqldelight.db.SqlSchema
  */
 expect class DriverFactory {
     fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver
+
+    /**
+     * 关闭由 [createDriver] 创建的 [SqlDriver]，释放底层文件句柄与连接。
+     * Repository / DatabaseHolder 层应在合适的生命周期点统一调用。
+     */
+    fun closeDriver(driver: SqlDriver)
 }

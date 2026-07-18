@@ -88,8 +88,9 @@ class SettingsRepository(
             }
         }
         set(value) {
+            // Multiplatform Settings 各平台底层（SharedPreferences.Editor/NSUserDefaults 等）
+            // 对连续写入已做事务或延迟提交，先写新键再删旧键即可覆盖旧版回退逻辑。
             settings[SettingsKeys.SAVE_MODE] = value
-            // 显式设置后清除旧键，避免后续回退到过期值
             settings.remove(SettingsKeys.IS_HELPLESS_WAY)
         }
 

@@ -23,7 +23,8 @@ data class Novel(
     @SerialName("page_count") val pageCount: Int,
     @SerialName("text_length") val textLength: Int,
     val user: NovelUser,
-    val series: NovelSeries,
+    // 旧版 novel_recom_response 中 Series 的 id/title 均可空，说明 novel 不一定属于 series。
+    val series: NovelSeries? = null,
     @SerialName("is_bookmarked") val isBookmarked: Boolean,
     @SerialName("total_bookmarks") val totalBookmarks: Int,
     @SerialName("total_view") val totalView: Int,

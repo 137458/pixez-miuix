@@ -31,23 +31,53 @@ actual class DriverFactory {
             binders = null,
         ).value
         val targetVersion = schema.version
+        val hasTables = driver.executeQuery(
+            identifier = null,
+            sql = "SELECT count(*) FROM sqlite_master WHERE type='table'",
+            mapper = { cursor -> QueryResult.Value(cursor.getLong(0) ?: 0L) },
+            parameters = 0,
+            binders = null,
+        ).value > 0L
 
-        if (currentVersion == 0L && !dbFile.exists()) {
-            // 全新数据库：执行 SQLDelight 生成的 CREATE 语句
-            schema.create(driver)
-        } else if (currentVersion < targetVersion) {
-            // 已有数据库：按版本号迁移
-            schema.migrate(driver, currentVersion, targetVersion)
+        when {
+            // 全新数据库：文件不存在且版本号为 0
+            currentVersion == 0L && !dbFile.exists() -> {
+                schema.create(driver)
+                driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
+            }
+            // 空或损坏文件：文件存在但无表且版本号为 0
+            currentVersion == 0L && dbFile.exists() && !hasTables -> {
+                schema.create(driver)
+                driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
+            }
+            // 旧 Flutter 数据库：文件存在、有表但 user_version 为 0
+            currentVersion == 0L && dbFile.exists() && hasTables -> {
+                // 旧版 sqflite 未设置 user_version，直接同步到目标版本，避免 SQLDelight 重复 CREATE
+                driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
+            }
+            // 正常升级
+            currentVersion < targetVersion -> {
+                schema.migrate(driver, currentVersion, targetVersion)
+                driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
+            }
         }
 
         return driver
     }
 
+    actual fun closeDriver(driver: SqlDriver) {
+        driver.close()
+    }
+
     /**
      * 返回与旧 Flutter 桌面端 `path_provider.getApplicationSupportDirectory()` 一致的目录。
      * path_provider 在该目录下会追加应用包名，因此这里需要同步追加 `com.perol.pixez`。
+     *
+     * 测试可通过设置系统属性 `pixez.test.db.root` 覆盖根目录，避免污染真实用户数据路径。
      */
     private fun legacyDatabaseRoot(): File {
+        System.getProperty(TEST_DB_ROOT_PROPERTY)?.let { return File(it) }
+
         val home = System.getProperty("user.home") ?: error("无法获取 user.home")
         val os = System.getProperty("os.name")?.lowercase() ?: ""
         val appSupportRoot = when {
@@ -63,5 +93,6 @@ actual class DriverFactory {
 
     companion object {
         private const val LEGACY_PACKAGE_DIR = "com.perol.pixez"
+        private const val TEST_DB_ROOT_PROPERTY = "pixez.test.db.root"
     }
 }
