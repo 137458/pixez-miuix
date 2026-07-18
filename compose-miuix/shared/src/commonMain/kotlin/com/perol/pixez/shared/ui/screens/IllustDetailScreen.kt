@@ -17,12 +17,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,11 +34,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -53,6 +58,7 @@ fun IllustDetailScreen(
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
     repository: IllustRepository,
+    bookmarkRepository: BookmarkRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -68,6 +74,8 @@ fun IllustDetailScreen(
 
     val result = state.value
     val illust = result?.getOrNull()
+    var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -83,10 +91,26 @@ fun IllustDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* M4: 收藏 */ }) {
+                    IconButton(
+                        onClick = {
+                            illust?.let {
+                                coroutineScope.launch {
+                                    runCatchingNonCancel {
+                                        if (isBookmarked) {
+                                            bookmarkRepository.deleteBookmark(it.id)
+                                        } else {
+                                            bookmarkRepository.addBookmark(it.id)
+                                        }
+                                    }.onSuccess {
+                                        isBookmarked = !isBookmarked
+                                    }
+                                }
+                            }
+                        },
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.FavoriteBorder,
-                            contentDescription = "收藏",
+                            imageVector = if (isBookmarked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isBookmarked) "已收藏" else "收藏",
                         )
                     }
                     IconButton(onClick = { /* M4: 更多菜单 */ }) {

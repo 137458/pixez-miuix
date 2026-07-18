@@ -61,6 +61,7 @@ internal object SettingsKeys {
     const val ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS = "illust_detail_save_skip_long_press"
     const val DRAG_START_X = "drag_start_x"
     const val AUTO_TAG_WHEN_STAR = "auto_tag_when_star"
+    const val SEARCH_HISTORY = "search_history"
 
     // 旧版遗留键，用于迁移兼容
     const val FILE_NAME_EVAL_LEGACY = "file_name_eval"

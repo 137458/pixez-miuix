@@ -13,6 +13,8 @@ import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
@@ -21,6 +23,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
+import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.RankingScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
@@ -41,6 +44,8 @@ fun RootContent(
     illustRepository: IllustRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
+    accountRepository: AccountRepository,
+    bookmarkRepository: BookmarkRepository,
     settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -83,6 +88,8 @@ fun RootContent(
                         illustRepository = illustRepository,
                         searchRepository = searchRepository,
                         userRepository = userRepository,
+                        accountRepository = accountRepository,
+                        settingsRepository = settingsRepository,
                     )
 
                     is Child.IllustDetail -> IllustDetailScreen(
@@ -90,6 +97,7 @@ fun RootContent(
                         onBack = component::onBack,
                         onUserClick = component::onUserClicked,
                         repository = illustRepository,
+                        bookmarkRepository = bookmarkRepository,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(
@@ -97,6 +105,13 @@ fun RootContent(
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
                         repository = userRepository,
+                        bookmarkRepository = bookmarkRepository,
+                    )
+
+                    Child.Login -> LoginScreen(
+                        onBack = component::onBack,
+                        onLoginSuccess = component::onBack,
+                        accountRepository = accountRepository,
                     )
 
                     Child.Settings -> SettingsScreen(
@@ -128,17 +143,22 @@ private fun MainContent(
     illustRepository: IllustRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
+    accountRepository: AccountRepository,
+    settingsRepository: SettingsRepository,
 ) {
     when (tab) {
         RootComponent.MainTab.Hello -> HelloScreen(
             onIllustClick = component::onIllustClicked,
             onSettingsClick = component::onSettingsClicked,
+            onLoginClick = component::onLoginClicked,
             repository = illustRepository,
+            accountRepository = accountRepository,
         )
 
         RootComponent.MainTab.Search -> SearchScreen(
             onIllustClick = component::onIllustClicked,
             repository = searchRepository,
+            settingsRepository = settingsRepository,
         )
 
         RootComponent.MainTab.Ranking -> RankingScreen(

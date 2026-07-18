@@ -80,6 +80,13 @@ class RootComponent(
         navigation.push(Config.About)
     }
 
+    /**
+     * 打开登录页。
+     */
+    fun onLoginClicked() {
+        navigation.push(Config.Login)
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -89,6 +96,7 @@ class RootComponent(
         is Config.UserDetail -> Child.UserDetail(config.userId)
         Config.Settings -> Child.Settings
         Config.About -> Child.About
+        Config.Login -> Child.Login
     }
 
     /**
@@ -121,6 +129,9 @@ class RootComponent(
 
         @Serializable
         data object About : Config()
+
+        @Serializable
+        data object Login : Config()
     }
 
     sealed class Child {
@@ -129,5 +140,6 @@ class RootComponent(
         data class UserDetail(val userId: Int) : Child()
         data object Settings : Child()
         data object About : Child()
+        data object Login : Child()
     }
 }

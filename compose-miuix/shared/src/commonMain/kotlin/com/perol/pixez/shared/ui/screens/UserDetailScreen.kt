@@ -18,7 +18,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -36,6 +39,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -54,6 +58,7 @@ fun UserDetailScreen(
     onBack: () -> Unit,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
+    bookmarkRepository: BookmarkRepository,
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料与作品列表重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -76,6 +81,10 @@ fun UserDetailScreen(
 
     val result = detailState.value
     val userDetail = result?.getOrNull()?.first
+    var isFollowed by rememberSaveable(userDetail) {
+        mutableStateOf(userDetail?.user?.isFollowed ?: false)
+    }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -104,6 +113,20 @@ fun UserDetailScreen(
                 ) {
                     UserProfileHeader(
                         userDetail = userDetail,
+                        isFollowed = isFollowed,
+                        onFollowClick = {
+                            coroutineScope.launch {
+                                runCatchingNonCancel {
+                                    if (isFollowed) {
+                                        bookmarkRepository.unfollowUser(userDetail.user.id)
+                                    } else {
+                                        bookmarkRepository.followUser(userDetail.user.id)
+                                    }
+                                }.onSuccess {
+                                    isFollowed = !isFollowed
+                                }
+                            }
+                        },
                         modifier = Modifier.padding(16.dp),
                     )
                     Text(
@@ -142,6 +165,8 @@ fun UserDetailScreen(
 @Composable
 private fun UserProfileHeader(
     userDetail: UserDetail,
+    isFollowed: Boolean,
+    onFollowClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -172,10 +197,10 @@ private fun UserProfileHeader(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = { /* M4: 调用关注 API */ },
+            onClick = onFollowClick,
             colors = ButtonDefaults.buttonColorsPrimary(),
         ) {
-            Text(text = if (userDetail.user.isFollowed == true) "已关注" else "关注")
+            Text(text = if (isFollowed) "已关注" else "关注")
         }
     }
 }

@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.repository.SearchRepository
+import com.perol.pixez.shared.data.settings.SettingsKeys
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -41,6 +43,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun SearchScreen(
     onIllustClick: (Int) -> Unit,
     repository: SearchRepository,
+    settingsRepository: SettingsRepository,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -57,8 +60,14 @@ fun SearchScreen(
         value = runCatchingNonCancel { repository.getTrendTags() }
     }
 
-    // 搜索历史仍用内存占位，M4 后续接入 SettingsRepository 持久化。
-    var searchHistory by rememberSaveable { mutableStateOf(listOf<String>()) }
+    // 搜索历史从旧 Flutter 设置中读取并持久化回写。
+    var searchHistory by rememberSaveable {
+        mutableStateOf(settingsRepository.getStringList(SettingsKeys.SEARCH_HISTORY).orEmpty())
+    }
+    val updateHistory: (List<String>) -> Unit = { newHistory ->
+        searchHistory = newHistory
+        settingsRepository.setStringList(SettingsKeys.SEARCH_HISTORY, newHistory)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -72,10 +81,12 @@ fun SearchScreen(
                             if (query.isNotBlank()) {
                                 expanded = true
                                 // 将新搜索词加入历史（去重，最多保留 20 条）。
-                                searchHistory = buildList {
-                                    add(query)
-                                    addAll(searchHistory.filter { it != query })
-                                }.take(20)
+                                updateHistory(
+                                    buildList {
+                                        add(query)
+                                        addAll(searchHistory.filter { it != query })
+                                    }.take(20)
+                                )
                             }
                         },
                         expanded = expanded,
@@ -112,7 +123,7 @@ fun SearchScreen(
                     query = tag
                     expanded = true
                 },
-                onClearHistory = { searchHistory = emptyList() },
+                onClearHistory = { updateHistory(emptyList()) },
                 onRetryTrend = { trendRetryCount++ },
             )
         }

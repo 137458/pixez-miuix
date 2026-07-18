@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
@@ -68,6 +69,10 @@ class AppDependencies(
 
     val userRepository: UserRepository by lazy {
         UserRepository(httpClient.apiClient)
+    }
+
+    val bookmarkRepository: BookmarkRepository by lazy {
+        BookmarkRepository(httpClient.apiClient)
     }
 
     /**

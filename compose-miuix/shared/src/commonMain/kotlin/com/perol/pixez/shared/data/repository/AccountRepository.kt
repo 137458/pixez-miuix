@@ -20,8 +20,10 @@ class AccountRepository(
 
     /**
      * 生成 WebView 登录 URL。
+     *
+     * @param create 是否进入创建账号流程。
      */
-    fun loginUrl(): String = oAuthClient.buildLoginUrl()
+    fun loginUrl(create: Boolean = false): String = oAuthClient.buildLoginUrl(create)
 
     /**
      * 用授权码完成登录并持久化账号信息。

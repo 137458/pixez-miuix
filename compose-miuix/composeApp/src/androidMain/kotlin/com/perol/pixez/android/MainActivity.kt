@@ -8,6 +8,7 @@ import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
+import com.perol.pixez.shared.platform.BrowserLauncherContext
 
 /**
  * Android 应用入口。
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        BrowserLauncherContext.applicationContext = applicationContext
         dependencies = AppDependencies(
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
