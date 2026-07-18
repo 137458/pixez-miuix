@@ -33,8 +33,16 @@ jobs:
 
       - name: 安装 Android 37 平台 SDK
         run: |
+          # runner 预装的 cmdline-tools 版本过旧（12.0），无法识别 Android 17（API 37）预览版，
+          # 因此手动下载最新 command-line tools 覆盖到 cmdline-tools/latest。
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -O /tmp/cmdline-tools.zip
+          rm -rf $ANDROID_HOME/cmdline-tools/latest
+          mkdir -p $ANDROID_HOME/cmdline-tools/latest
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+          mv /tmp/cmdline-tools/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+          # Android 17（API 37）当前仍处于预览/Canary 渠道，需要 --channel=3 才能安装。
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-37" "build-tools;37.0.0"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --channel=3 "platforms;android-37" "build-tools;37.0.0"
 
       - name: 缓存 Gradle
         uses: gradle/actions/setup-gradle@v4
