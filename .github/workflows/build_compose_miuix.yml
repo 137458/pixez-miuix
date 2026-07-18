@@ -30,9 +30,9 @@ jobs:
 
       - name: 配置 Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: 安装 Android 37 平台 SDK
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
+        with:
+          packages: 'platforms;android-37 build-tools;37.0.0'
+          accept-android-sdk-licenses: true
 
       - name: 缓存 Gradle
         uses: gradle/actions/setup-gradle@v4
