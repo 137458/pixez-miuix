@@ -1,0 +1,31 @@
+CREATE TABLE illustpersist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    illust_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    picture_url TEXT NOT NULL,
+    title TEXT,
+    user_name TEXT,
+    time INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM illustpersist ORDER BY time;
+
+selectByIllustId:
+SELECT * FROM illustpersist WHERE illust_id = ?;
+
+searchByTitleOrUserName:
+SELECT * FROM illustpersist
+WHERE title LIKE ? OR user_name LIKE ?
+ORDER BY time;
+
+insertOrReplace:
+INSERT OR REPLACE INTO illustpersist (
+    id, illust_id, user_id, picture_url, title, user_name, time
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteByIllustId:
+DELETE FROM illustpersist WHERE illust_id = ?;
+
+deleteAll:
+DELETE FROM illustpersist;

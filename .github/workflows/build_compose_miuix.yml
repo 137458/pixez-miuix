@@ -36,6 +36,9 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
 
+      - name: 授予 gradlew 执行权限
+        run: chmod +x gradlew
+
       - name: 构建 Android Debug APK
         run: ./gradlew :composeApp:assembleDebug --no-daemon --stacktrace
 

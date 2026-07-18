@@ -1,0 +1,24 @@
+CREATE TABLE kvpair (
+    _id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    expire_time INTEGER NOT NULL,
+    date_time INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM kvpair;
+
+selectByKey:
+SELECT * FROM kvpair WHERE key = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO kvpair (
+    _id, key, value, expire_time, date_time
+) VALUES (?, ?, ?, ?, ?);
+
+deleteByKey:
+DELETE FROM kvpair WHERE key = ?;
+
+deleteAll:
+DELETE FROM kvpair;

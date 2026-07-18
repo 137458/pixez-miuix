@@ -1,0 +1,51 @@
+CREATE TABLE task (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    sanity_level INTEGER,
+    illust_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    file_name TEXT NOT NULL,
+    medium TEXT
+);
+
+selectAll:
+SELECT * FROM task ORDER BY id ASC;
+
+selectByUrl:
+SELECT * FROM task WHERE url = ?;
+
+selectAllPagedAsc:
+SELECT * FROM task
+ORDER BY id ASC
+LIMIT ? OFFSET ?;
+
+selectAllPagedDesc:
+SELECT * FROM task
+ORDER BY id DESC
+LIMIT ? OFFSET ?;
+
+selectByStatusPagedAsc:
+SELECT * FROM task
+WHERE status = ?
+ORDER BY id ASC
+LIMIT ? OFFSET ?;
+
+selectByStatusPagedDesc:
+SELECT * FROM task
+WHERE status = ?
+ORDER BY id DESC
+LIMIT ? OFFSET ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO task (
+    id, title, user_name, url, sanity_level, illust_id, user_id, status, file_name, medium
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM task WHERE id = ?;
+
+deleteAll:
+DELETE FROM task;

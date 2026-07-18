@@ -1,0 +1,39 @@
+CREATE TABLE account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    device_token TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    user_image TEXT NOT NULL,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL,
+    account TEXT NOT NULL,
+    mail_address TEXT NOT NULL,
+    is_premium INTEGER NOT NULL,
+    x_restrict INTEGER NOT NULL,
+    is_mail_authorized INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM account;
+
+selectById:
+SELECT * FROM account WHERE id = ?;
+
+selectByUserId:
+SELECT * FROM account WHERE user_id = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO account (
+    id, access_token, refresh_token, device_token, user_id, user_image,
+    name, password, account, mail_address, is_premium, x_restrict, is_mail_authorized
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM account WHERE id = ?;
+
+deleteByUserId:
+DELETE FROM account WHERE user_id = ?;
+
+deleteAll:
+DELETE FROM account;
