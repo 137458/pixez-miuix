@@ -41,9 +41,9 @@ junit = "4.13.2"
 # 不在这里声明，以避免平台 artifact 坐标错误（如 material3 / material-icons-extended 无通用 common artifact）。
 
 # MIUIX
-miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
-miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference", version.ref = "miuix" }
-miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
+# 0.8.8 在 Maven Central 上以单包形式发布：top.yukonga.miuix.kmp:miuix:0.8.8，
+# UI / Preference / Icons 等模块均为该包的内部子模块，不再提供独立 artifact。
+miuix = { module = "top.yukonga.miuix.kmp:miuix", version.ref = "miuix" }
 
 # Compose Android
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }

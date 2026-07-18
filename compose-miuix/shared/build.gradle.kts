@@ -45,10 +45,8 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
 
-            // MIUIX
-            implementation(libs.miuix.ui)
-            implementation(libs.miuix.preference)
-            implementation(libs.miuix.icons)
+            // MIUIX：0.8.8 使用单包发布，内部包含 UI / Preference / Icons 等子模块
+            implementation(libs.miuix)
 
             // Ktor
             implementation(libs.ktor.client.core)
