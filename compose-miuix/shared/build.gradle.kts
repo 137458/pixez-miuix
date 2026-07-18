@@ -112,8 +112,8 @@ kotlin {
 
 android {
     namespace = "com.perol.pixez.shared"
-    // MIUIX 0.9.2 要求 compileSdk 37
-    compileSdk = 37
+    // MIUIX 0.8.8 要求 compileSdk >= 36
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24

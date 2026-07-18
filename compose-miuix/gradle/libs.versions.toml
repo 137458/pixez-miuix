@@ -5,7 +5,9 @@ compose = "1.11.1"
 android-gradle-plugin = "8.13.0"
 
 # MIUIX
-miuix = "0.9.2"
+# 0.9.x 要求 compileSdk 37（Android 17 预览版），在稳定版 CI 中无法自动安装；
+# 退回到 0.8.8，其 compileSdk 为 36，与当前稳定 Android SDK 一致。
+miuix = "0.8.8"
 
 # KMP / Android 基础
 androidx-activity-compose = "1.10.1"
