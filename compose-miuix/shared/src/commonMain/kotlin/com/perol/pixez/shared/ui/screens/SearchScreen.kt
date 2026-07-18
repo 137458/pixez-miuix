@@ -242,14 +242,16 @@ private fun SearchSuggestions(
             )
         }
 
-        item {
-            TextButton(
-                text = "清空历史",
-                onClick = onClearHistory,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+        if (searchHistory.isNotEmpty()) {
+            item {
+                TextButton(
+                    text = "清空历史",
+                    onClick = onClearHistory,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }

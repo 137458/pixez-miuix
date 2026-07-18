@@ -52,13 +52,16 @@ fun HelloScreen(
         isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
 
-    // 页面进入时加载真实推荐数据；key 包含 repository 引用与 retryCount。
+    // 页面进入时加载真实推荐数据；未登录时跳过请求（避免 401），key 包含登录状态。
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         repository,
         retryCount,
+        isLoggedIn,
     ) {
-        value = runCatchingNonCancel { repository.getRecommended() }
+        if (isLoggedIn != false) {
+            value = runCatchingNonCancel { repository.getRecommended() }
+        }
     }
 
     Scaffold(

@@ -75,6 +75,8 @@ fun IllustDetailScreen(
     val result = state.value
     val illust = result?.getOrNull()
     var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
+    var isBookmarkLoading by rememberSaveable { mutableStateOf(false) }
+    var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -93,8 +95,11 @@ fun IllustDetailScreen(
                 actions = {
                     IconButton(
                         onClick = {
+                            if (isBookmarkLoading) return@IconButton
                             illust?.let {
                                 coroutineScope.launch {
+                                    isBookmarkLoading = true
+                                    bookmarkError = null
                                     runCatchingNonCancel {
                                         if (isBookmarked) {
                                             bookmarkRepository.deleteBookmark(it.id)
@@ -103,10 +108,14 @@ fun IllustDetailScreen(
                                         }
                                     }.onSuccess {
                                         isBookmarked = !isBookmarked
+                                    }.onFailure { e ->
+                                        bookmarkError = e.message ?: "收藏操作失败"
                                     }
+                                    isBookmarkLoading = false
                                 }
                             }
                         },
+                        enabled = !isBookmarkLoading,
                     ) {
                         Icon(
                             imageVector = if (isBookmarked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -123,13 +132,24 @@ fun IllustDetailScreen(
             )
         },
     ) { paddingValues ->
-        when {
-            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            result.isSuccess && illust != null -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = paddingValues,
-                ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            bookmarkError?.let { error ->
+                Text(
+                    text = error,
+                    color = MiuixTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                result.isSuccess && illust != null -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
                     item {
                         PixivAsyncImage(
                             model = illust.imageUrls.large,
@@ -165,13 +185,14 @@ fun IllustDetailScreen(
                     }
                 }
             }
-            else -> ErrorPlaceholder(
-                error = result.exceptionOrNull(),
-                onRetry = { retryCount++ },
-                modifier = Modifier.padding(paddingValues),
-            )
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { retryCount++ },
+                    modifier = Modifier.fillMaxSize(),
+                )
         }
     }
+}
 }
 
 @Composable

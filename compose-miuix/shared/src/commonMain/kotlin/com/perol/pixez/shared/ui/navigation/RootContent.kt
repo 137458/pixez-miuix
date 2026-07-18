@@ -110,7 +110,11 @@ fun RootContent(
 
                     Child.Login -> LoginScreen(
                         onBack = component::onBack,
-                        onLoginSuccess = component::onBack,
+                        onLoginSuccess = {
+                            component.onBack()
+                            // 登录成功后重置首页，触发 HelloScreen 重新加载并刷新登录态。
+                            component.onMainTabSelected(RootComponent.MainTab.Hello)
+                        },
                         accountRepository = accountRepository,
                     )
 

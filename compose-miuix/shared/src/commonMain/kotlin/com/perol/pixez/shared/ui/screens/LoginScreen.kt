@@ -11,8 +11,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -43,9 +43,9 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     accountRepository: AccountRepository,
 ) {
-    var code by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    var code by rememberSaveable { mutableStateOf("") }
+    var errorMessage by rememberSaveable { mutableStateOf("") }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(

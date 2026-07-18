@@ -84,6 +84,8 @@ fun UserDetailScreen(
     var isFollowed by rememberSaveable(userDetail) {
         mutableStateOf(userDetail?.user?.isFollowed ?: false)
     }
+    var isFollowLoading by rememberSaveable { mutableStateOf(false) }
+    var followError by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -111,11 +113,22 @@ fun UserDetailScreen(
                         .fillMaxSize()
                         .padding(paddingValues),
                 ) {
+                    followError?.let { error ->
+                        Text(
+                            text = error,
+                            color = MiuixTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
                     UserProfileHeader(
                         userDetail = userDetail,
                         isFollowed = isFollowed,
+                        isLoading = isFollowLoading,
                         onFollowClick = {
-                            coroutineScope.launch {
+                            if (!isFollowLoading) {
+                                coroutineScope.launch {
+                                isFollowLoading = true
+                                followError = null
                                 runCatchingNonCancel {
                                     if (isFollowed) {
                                         bookmarkRepository.unfollowUser(userDetail.user.id)
@@ -124,6 +137,10 @@ fun UserDetailScreen(
                                     }
                                 }.onSuccess {
                                     isFollowed = !isFollowed
+                                }.onFailure { e ->
+                                    followError = e.message ?: "关注操作失败"
+                                }
+                                    isFollowLoading = false
                                 }
                             }
                         },
@@ -166,6 +183,7 @@ fun UserDetailScreen(
 private fun UserProfileHeader(
     userDetail: UserDetail,
     isFollowed: Boolean,
+    isLoading: Boolean,
     onFollowClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,6 +216,7 @@ private fun UserProfileHeader(
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = onFollowClick,
+            enabled = !isLoading,
             colors = ButtonDefaults.buttonColorsPrimary(),
         ) {
             Text(text = if (isFollowed) "已关注" else "关注")
