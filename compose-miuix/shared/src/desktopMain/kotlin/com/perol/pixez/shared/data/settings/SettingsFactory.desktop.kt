@@ -21,28 +21,29 @@ import java.util.prefs.Preferences
 /**
  * Desktop(JVM) 平台的 [Settings] 工厂。
  *
- * 使用 Java Preferences 作为新存储，并在首次启动时从旧 Flutter 桌面应用生成的
- * `shared_preferences.json` 导入已有设置，避免用户升级后设置丢失。
+ * 使用 Java Preferences 作为新存储；旧 Flutter 桌面应用的 `shared_preferences.json`
+ * 通过 [migrateIfNeeded] 在后台协程中一次性导入，避免阻塞主线程。
  */
 actual class SettingsFactory {
     actual fun createSettings(): Settings {
         val userRoot = Preferences.userRoot()
         val node = userRoot.node("com/perol/pixez")
-        migrateLegacySharedPreferencesIfNeeded(node)
         return PreferencesSettings(node)
     }
 
     /**
      * 从旧 Flutter 桌面应用的 `shared_preferences.json` 一次性迁移设置。
+     * 应在 [Dispatchers.IO] 等后台调度器上调用，避免阻塞 UI/主线程。
      *
      * 旧文件位置与旧版 `path_provider.getApplicationSupportDirectory()` 一致：
-     * - Windows：`%APPDATA%/com.perol.pixez/shared_preferences.json`
-     * - macOS：`~/Library/Application Support/com.perol.pixez/shared_preferences.json`
-     * - Linux：`~/.local/share/com.perol.pixez/shared_preferences.json`
+     * - Windows：`%APPDATA%/com.perol/pixez/shared_preferences.json`
+     * - macOS：`~/Library/Application Support/com.perol.pixezFlutter/shared_preferences.json`
+     * - Linux：`~/.local/share/com.perol.pixez/shared_preferences.json`（旧 Flutter 项目未提供 Linux 支持，仅作兜底）
      *
      * 迁移完成后在 Java Preferences 中写入标记，避免重复执行。
      */
-    private fun migrateLegacySharedPreferencesIfNeeded(target: Preferences) {
+    actual suspend fun migrateIfNeeded() {
+        val target = Preferences.userRoot().node("com/perol/pixez")
         if (target.getBoolean(MIGRATION_FLAG_KEY, false)) return
 
         val legacyFile = findLegacySharedPreferencesFile() ?: return
@@ -92,23 +93,38 @@ actual class SettingsFactory {
 
     /**
      * 返回旧 Flutter 桌面端 `path_provider.getApplicationSupportDirectory()` 目录。
+     *
+     * 各平台旧路径与 [DriverFactory.desktop] 保持一致：
+     * - Windows：%APPDATA%/com.perol/pixez
+     * - macOS：~/Library/Application Support/com.perol.pixezFlutter
+     * - Linux：~/.local/share/com.perol.pixez
      */
     private fun legacyAppSupportRoot(): File? {
         val home = System.getProperty("user.home") ?: return null
         val os = System.getProperty("os.name")?.lowercase() ?: ""
+        val legacyAppDir = when {
+            os.contains("win") -> LEGACY_WINDOWS_APP_DIR
+            os.contains("mac") -> LEGACY_MACOS_BUNDLE_ID
+            else -> LEGACY_LINUX_APP_DIR
+        }
         return when {
             os.contains("win") -> {
                 val appData = System.getenv("APPDATA")
-                if (!appData.isNullOrBlank()) File(appData, LEGACY_PACKAGE_DIR)
-                else File(home, "AppData/Roaming/$LEGACY_PACKAGE_DIR")
+                if (!appData.isNullOrBlank()) File(appData, legacyAppDir)
+                else File(home, "AppData/Roaming/$legacyAppDir")
             }
-            os.contains("mac") -> File(home, "Library/Application Support/$LEGACY_PACKAGE_DIR")
-            else -> File(home, ".local/share/$LEGACY_PACKAGE_DIR")
+            os.contains("mac") -> File(home, "Library/Application Support/$legacyAppDir")
+            else -> File(home, ".local/share/$legacyAppDir")
         }
     }
 
     companion object {
-        private const val LEGACY_PACKAGE_DIR = "com.perol.pixez"
+        // Windows：对应 Runner.rc 中 CompanyName=com.perol / ProductName=pixez
+        private const val LEGACY_WINDOWS_APP_DIR = "com.perol/pixez"
+        // macOS：对应旧 Flutter 项目 bundle identifier
+        private const val LEGACY_MACOS_BUNDLE_ID = "com.perol.pixezFlutter"
+        // Linux：旧 Flutter 项目未提供 Linux 支持，仅作兜底路径
+        private const val LEGACY_LINUX_APP_DIR = "com.perol.pixez"
         private const val MIGRATION_FLAG_KEY = "__pixez_m2_settings_migrated__"
     }
 }

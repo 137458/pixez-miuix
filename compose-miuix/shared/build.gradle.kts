@@ -131,10 +131,14 @@ android {
     }
 }
 
-// SQLDelight migration 验证在 Windows 上因 native sqlite 库释放路径问题无法通过，
-// 且 M2 没有真实 migration 文件，直接禁用相关任务。
+// SQLDelight migration 验证在 Windows 上因 native sqlite 库释放路径问题可能失败，
+// 因此仅在非 Windows 平台默认启用；Windows 本地/CI 可通过 -PskipVerifyMigrations 显式跳过。
+// 现在有真实 migration 文件（1.sqm），必须保留校验以捕获 schema 不一致问题。
 tasks.withType<app.cash.sqldelight.gradle.VerifyMigrationTask>().configureEach {
-    enabled = false
+    onlyIf {
+        val skip = project.findProperty("skipVerifyMigrations")?.toString()?.toBoolean() ?: false
+        !skip && !System.getProperty("os.name").orEmpty().lowercase().contains("win")
+    }
 }
 
 sqldelight {
@@ -142,13 +146,25 @@ sqldelight {
         // 为兼容旧 Flutter 应用，每个旧 .db 文件对应一个独立数据库，
         // 文件路径与表结构均与旧版保持一致。
         // 每个数据库通过 srcDirs 限定只编译自己的 .sq 文件，避免生成类重名。
+        //
+        // TODO(M2 后续或 M3): 旧 Flutter 还有以下数据库未接入迁移，对应功能历史数据会暂时缺失：
+        //  - illustpersist.db（表 illustpersist）
+        //  - tag.db（表 tag）
+        //  - Novelpersist.db（表 novelpersist）
+        //  - NovelViewerPersist.db（表 novel_viewer_persist）
+        //  - banillustid.db（表 ban_illust_id）
+        //  - banncommentid.db（表 ban_comment_persist）
+        //  - bantag.db（表 ban_tag）
+        //  - banuserid.db（表 ban_user_id）
         create("AccountDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.account")
             srcDirs.setFrom("src/commonMain/sqldelight/account")
         }
-        create("IllustPersistDatabase") {
-            packageName.set("com.perol.pixez.shared.data.local.illustpersist")
-            srcDirs.setFrom("src/commonMain/sqldelight/illustpersist")
+        // 注意：该数据库实际表名为 glanceillustpersist，对应旧 glanceillustpersist.db，
+        // 因此生成类命名为 GlanceIllustPersistDatabase，避免与未来的 illustpersist.db 混淆。
+        create("GlanceIllustPersistDatabase") {
+            packageName.set("com.perol.pixez.shared.data.local.glanceillustpersist")
+            srcDirs.setFrom("src/commonMain/sqldelight/glanceillustpersist")
         }
         create("TaskDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.task")

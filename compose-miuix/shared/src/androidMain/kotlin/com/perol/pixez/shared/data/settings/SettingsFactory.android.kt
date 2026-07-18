@@ -10,4 +10,8 @@ actual class SettingsFactory(private val context: Context) {
         val sharedPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         return SharedPreferencesSettings(sharedPrefs)
     }
+
+    actual suspend fun migrateIfNeeded() {
+        // Android 直接使用旧 SharedPreferences 文件，无需一次性导入。
+    }
 }

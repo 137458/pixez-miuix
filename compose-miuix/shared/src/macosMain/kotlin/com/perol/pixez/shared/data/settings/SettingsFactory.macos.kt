@@ -9,4 +9,8 @@ actual class SettingsFactory {
         // 旧 Flutter 应用在 macOS 上默认使用 NSUserDefaults.standardUserDefaults
         return NSUserDefaultsSettings(NSUserDefaults.standardUserDefaults)
     }
+
+    actual suspend fun migrateIfNeeded() {
+        // macOS 直接使用旧 NSUserDefaults，无需一次性导入。
+    }
 }

@@ -1,0 +1,4 @@
+-- 旧版 Flutter glanceillustpersist.db 从 v1 升级到 v2 时新增了 original_url 与 large_url 列。
+-- SQLDelight 当前 schema 为 v2，因此 1.sqm 描述从 v1 到 v2 的变更。
+ALTER TABLE glanceillustpersist ADD COLUMN original_url TEXT;
+ALTER TABLE glanceillustpersist ADD COLUMN large_url TEXT;

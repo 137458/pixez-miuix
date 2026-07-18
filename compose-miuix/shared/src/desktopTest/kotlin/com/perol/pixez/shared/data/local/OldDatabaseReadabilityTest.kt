@@ -2,7 +2,7 @@ package com.perol.pixez.shared.data.local
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.account.AccountDatabase
-import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
+import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
 import com.perol.pixez.shared.data.local.kvpair.KVPairDatabase
 import com.perol.pixez.shared.data.local.task.TaskDatabase
 import org.junit.Test
@@ -43,11 +43,11 @@ class OldDatabaseReadabilityTest {
     }
 
     @Test
-    fun `illustpersist db schema matches old glance db`() {
+    fun `glanceillustpersist db schema matches old glance db`() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-        IllustPersistDatabase.Schema.create(driver)
+        GlanceIllustPersistDatabase.Schema.create(driver)
 
-        IllustPersistDatabase(driver).illustPersistQueries.insertOrReplace(
+        GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries.insertOrReplace(
             id = 1,
             illust_id = 98765432,
             user_id = 12345,
@@ -60,7 +60,7 @@ class OldDatabaseReadabilityTest {
             ctime = System.currentTimeMillis(),
         )
 
-        val rows = IllustPersistDatabase(driver).illustPersistQueries.selectAll().executeAsList()
+        val rows = GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries.selectAll().executeAsList()
         assertEquals(1, rows.size)
         assertEquals("title", rows.first().title)
         assertEquals("home", rows.first().ctype)

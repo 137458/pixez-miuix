@@ -14,8 +14,9 @@ import platform.Foundation.NSUserDomainMask
 /**
  * macOS 平台的 SQLDelight 驱动工厂。
  *
- * 旧 Flutter 桌面端使用 sqflite_common_ffi，其 `getDatabasesPath()` 在 macOS 上对应
- * `Application Support/databases`。本实现沿用该路径，确保能直接打开旧数据库。
+ * 旧 Flutter 桌面端使用 path_provider_foundation，其 `getApplicationSupportDirectory()` 在 macOS 上
+ * 返回 `Application Support/<bundle_identifier>`，旧 Flutter 项目 bundle id 为 `com.perol.pixezFlutter`，
+ * 再在其下追加 `databases`。本实现沿用该路径，确保能直接打开旧数据库。
  */
 @OptIn(ExperimentalForeignApi::class)
 actual class DriverFactory {
@@ -30,7 +31,9 @@ actual class DriverFactory {
         )?.path
             ?: throw IllegalStateException("无法获取 macOS ApplicationSupport 目录")
 
-        val dbDir = "$supportDir/databases"
+        // 旧 Flutter 项目 macOS bundle identifier 为 com.perol.pixezFlutter，
+        // path_provider_foundation 会在 Application Support 下追加该 bundle id。
+        val dbDir = "$supportDir/$LEGACY_MACOS_BUNDLE_ID/databases"
         fileManager.createDirectoryAtPath(
             path = dbDir,
             withIntermediateDirectories = true,
@@ -72,5 +75,10 @@ actual class DriverFactory {
             parameters = 0,
             binders = null,
         ).value > 0L
+    }
+
+    companion object {
+        // 旧 Flutter 项目 macOS bundle identifier
+        private const val LEGACY_MACOS_BUNDLE_ID = "com.perol.pixezFlutter"
     }
 }

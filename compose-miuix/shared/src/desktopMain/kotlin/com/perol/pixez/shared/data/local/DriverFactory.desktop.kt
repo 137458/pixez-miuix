@@ -10,9 +10,9 @@ import java.io.File
  * Desktop(JVM) 平台的 SQLDelight 驱动工厂。
  *
  * 数据库路径沿用旧 Flutter 桌面端（sqflite_common_ffi + path_provider）的默认位置：
- * - Windows：%APPDATA%/com.perol.pixez/databases
- * - macOS：~/Library/Application Support/com.perol.pixez/databases
- * - Linux：~/.local/share/com.perol.pixez/databases
+ * - Windows：%APPDATA%/com.perol/pixez/databases
+ * - macOS：~/Library/Application Support/com.perol.pixezFlutter/databases
+ * - Linux：~/.local/share/com.perol.pixez/databases（旧 Flutter 项目未提供 Linux 支持，仅作兜底）
  *
  * 打开后通过 `PRAGMA user_version` 判断是创建新库还是迁移旧库，
  * 避免每次启动都对已有数据库执行 CREATE TABLE 导致崩溃。
@@ -55,7 +55,7 @@ actual class DriverFactory {
                 // 旧版 sqflite 未设置 user_version，直接同步到目标版本，避免 SQLDelight 重复 CREATE
                 driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
             }
-            // 正常升级
+            // 正常升级：旧 Flutter v1 库通过 1.sqm 补齐 medium / original_url / large_url 列
             currentVersion < targetVersion -> {
                 schema.migrate(driver, currentVersion, targetVersion)
                 driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
@@ -71,7 +71,11 @@ actual class DriverFactory {
 
     /**
      * 返回与旧 Flutter 桌面端 `path_provider.getApplicationSupportDirectory()` 一致的目录。
-     * path_provider 在该目录下会追加应用包名，因此这里需要同步追加 `com.perol.pixez`。
+     *
+     * 旧 Flutter 桌面路径由 `path_provider` 根据平台资源决定：
+     * - Windows 读取 `Runner.rc` 的 `CompanyName`/`ProductName`，生成 `com.perol/pixez`；
+     * - macOS 使用 bundle identifier `com.perol.pixezFlutter`；
+     * - Linux 旧项目未配置，统一使用 `com.perol.pixez` 作为兜底。
      *
      * 测试可通过设置系统属性 `pixez.test.db.root` 覆盖根目录，避免污染真实用户数据路径。
      */
@@ -88,11 +92,21 @@ actual class DriverFactory {
             os.contains("mac") -> File(home, "Library/Application Support")
             else -> File(home, ".local/share")
         }
-        return File(appSupportRoot, LEGACY_PACKAGE_DIR)
+        val legacyAppDir = when {
+            os.contains("win") -> LEGACY_WINDOWS_APP_DIR
+            os.contains("mac") -> LEGACY_MACOS_BUNDLE_ID
+            else -> LEGACY_LINUX_APP_DIR
+        }
+        return File(appSupportRoot, legacyAppDir)
     }
 
     companion object {
-        private const val LEGACY_PACKAGE_DIR = "com.perol.pixez"
+        // Windows：对应 Runner.rc 中 CompanyName=com.perol / ProductName=pixez
+        private const val LEGACY_WINDOWS_APP_DIR = "com.perol/pixez"
+        // macOS：对应旧 Flutter 项目 bundle identifier
+        private const val LEGACY_MACOS_BUNDLE_ID = "com.perol.pixezFlutter"
+        // Linux：旧 Flutter 项目未提供 Linux 支持，仅作兜底路径
+        private const val LEGACY_LINUX_APP_DIR = "com.perol.pixez"
         private const val TEST_DB_ROOT_PROPERTY = "pixez.test.db.root"
     }
 }

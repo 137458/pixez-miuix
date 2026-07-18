@@ -2,7 +2,7 @@ package com.perol.pixez.shared.data.local
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.account.AccountDatabase
-import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
+import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
 import com.perol.pixez.shared.data.local.kvpair.KVPairDatabase
 import com.perol.pixez.shared.data.local.task.TaskDatabase
 import org.junit.After
@@ -90,8 +90,8 @@ class DriverFactoryMigrationTest {
         legacyDriver.close()
 
         val factory = DriverFactory()
-        val driver = factory.createDriver(IllustPersistDatabase.Schema, dbFile.name)
-        val queries = IllustPersistDatabase(driver).illustPersistQueries
+        val driver = factory.createDriver(GlanceIllustPersistDatabase.Schema, dbFile.name)
+        val queries = GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries
 
         val rows = queries.selectAll().executeAsList()
         assertEquals(1, rows.size)
@@ -155,6 +155,152 @@ class DriverFactoryMigrationTest {
     }
 
     @Test
+    fun `legacy task db version 1 gets medium column added`() {
+        val dbFile = dbFile("task1_v1.db")
+
+        // 创建旧 Flutter v1 task 表（无 medium 列），并设置 user_version = 1
+        val legacyDriver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
+        legacyDriver.execute(null, LEGACY_TASK_V1_SCHEMA, 0, null)
+        legacyDriver.execute(null, INSERT_TASK_V1, 8) {
+            bindString(0, "title")
+            bindString(1, "artist")
+            bindString(2, "https://i.pximg.net/img-original/img/1.jpg")
+            bindLong(3, 2)
+            bindLong(4, 98765432)
+            bindLong(5, 12345)
+            bindLong(6, 0)
+            bindString(7, "1.jpg")
+        }
+        legacyDriver.execute(null, "PRAGMA user_version = 1", 0, null)
+        legacyDriver.close()
+
+        val factory = DriverFactory()
+        val driver = factory.createDriver(TaskDatabase.Schema, dbFile.name)
+        val queries = TaskDatabase(driver).taskQueries
+
+        // 旧数据可读
+        val row = queries.selectByUrl("https://i.pximg.net/img-original/img/1.jpg").executeAsOneOrNull()
+        assertNotNull(row)
+        assertEquals("artist", row.user_name)
+        // 新增 medium 列应为 null
+        assertEquals(null, row.medium)
+
+        // 可向 medium 列写入数据
+        queries.insertOrReplace(
+            id = 2,
+            title = "title2",
+            user_name = "artist2",
+            url = "https://i.pximg.net/img-original/img/2.jpg",
+            sanity_level = 0,
+            illust_id = 98765433,
+            user_id = 12346,
+            status = 0,
+            file_name = "2.jpg",
+            medium = "https://i.pximg.net/c/540x540_70/img-master/img/2.jpg",
+        )
+        assertEquals(2, queries.selectAll().executeAsList().size)
+
+        factory.closeDriver(driver)
+    }
+
+    @Test
+    fun `legacy task db version 2 opens without downgrade error`() {
+        val dbFile = dbFile("task1_v2.db")
+
+        // 创建旧 Flutter v2 task 表，并设置 user_version = 2
+        val legacyDriver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
+        legacyDriver.execute(null, LEGACY_TASK_SCHEMA, 0, null)
+        legacyDriver.execute(null, INSERT_TASK, 9) {
+            bindString(0, "title")
+            bindString(1, "artist")
+            bindString(2, "https://i.pximg.net/img-original/img/1.jpg")
+            bindLong(3, 2)
+            bindLong(4, 98765432)
+            bindLong(5, 12345)
+            bindLong(6, 0)
+            bindString(7, "1.jpg")
+            bindString(8, "https://i.pximg.net/c/540x540_70/img-master/img/1.jpg")
+        }
+        legacyDriver.execute(null, "PRAGMA user_version = 2", 0, null)
+        legacyDriver.close()
+
+        val factory = DriverFactory()
+        val driver = factory.createDriver(TaskDatabase.Schema, dbFile.name)
+        val queries = TaskDatabase(driver).taskQueries
+
+        val row = queries.selectByUrl("https://i.pximg.net/img-original/img/1.jpg").executeAsOneOrNull()
+        assertNotNull(row)
+        assertEquals("artist", row.user_name)
+
+        factory.closeDriver(driver)
+    }
+
+    @Test
+    fun `legacy glanceillustpersist db version 1 gets url columns added`() {
+        val dbFile = dbFile("glanceillustpersist_v1.db")
+
+        // 创建旧 Flutter v1 glanceillustpersist 表（无 original_url/large_url），并设置 user_version = 1
+        val legacyDriver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
+        legacyDriver.execute(null, LEGACY_GLANCE_V1_SCHEMA, 0, null)
+        legacyDriver.execute(null, INSERT_GLANCE_V1, 7) {
+            bindLong(0, 98765432)
+            bindLong(1, 12345)
+            bindString(2, "https://i.pximg.net/c/360x360_70/img-master/img/1.jpg")
+            bindString(3, "home")
+            bindString(4, "title")
+            bindString(5, "artist")
+            bindLong(6, System.currentTimeMillis())
+        }
+        legacyDriver.execute(null, "PRAGMA user_version = 1", 0, null)
+        legacyDriver.close()
+
+        val factory = DriverFactory()
+        val driver = factory.createDriver(GlanceIllustPersistDatabase.Schema, dbFile.name)
+        val queries = GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries
+
+        val rows = queries.selectAll().executeAsList()
+        assertEquals(1, rows.size)
+        assertEquals("title", rows.first().title)
+        assertEquals("home", rows.first().ctype)
+        assertEquals(null, rows.first().original_url)
+        assertEquals(null, rows.first().large_url)
+
+        factory.closeDriver(driver)
+    }
+
+    @Test
+    fun `legacy glanceillustpersist db version 2 opens without downgrade error`() {
+        val dbFile = dbFile("glanceillustpersist_v2.db")
+
+        // 创建旧 Flutter v2 glanceillustpersist 表，并设置 user_version = 2
+        val legacyDriver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}")
+        legacyDriver.execute(null, LEGACY_GLANCE_SCHEMA, 0, null)
+        legacyDriver.execute(null, INSERT_GLANCE, 9) {
+            bindLong(0, 98765432)
+            bindLong(1, 12345)
+            bindString(2, "https://i.pximg.net/c/360x360_70/img-master/img/1.jpg")
+            bindString(3, "home")
+            bindString(4, "title")
+            bindString(5, "https://i.pximg.net/c/600x1200_90/img-master/img/1.jpg")
+            bindString(6, "https://i.pximg.net/img-original/img/1.jpg")
+            bindString(7, "artist")
+            bindLong(8, System.currentTimeMillis())
+        }
+        legacyDriver.execute(null, "PRAGMA user_version = 2", 0, null)
+        legacyDriver.close()
+
+        val factory = DriverFactory()
+        val driver = factory.createDriver(GlanceIllustPersistDatabase.Schema, dbFile.name)
+        val queries = GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries
+
+        val rows = queries.selectAll().executeAsList()
+        assertEquals(1, rows.size)
+        assertEquals("title", rows.first().title)
+
+        factory.closeDriver(driver)
+    }
+
+    @Test
     fun `empty database file is recreated with current schema`() {
         val dbFile = dbFile("empty.db")
         dbFile.createNewFile()
@@ -202,9 +348,29 @@ class DriverFactoryMigrationTest {
             )
         """
 
+        // 旧 Flutter task1.db v1：无 medium 列
+        private const val LEGACY_TASK_V1_SCHEMA = """
+            CREATE TABLE task (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                user_name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                sanity_level INTEGER,
+                illust_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                status INTEGER NOT NULL,
+                file_name TEXT NOT NULL
+            )
+        """
+
         private const val INSERT_TASK = """
             INSERT INTO task (title, user_name, url, sanity_level, illust_id, user_id, status, file_name, medium)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        private const val INSERT_TASK_V1 = """
+            INSERT INTO task (title, user_name, url, sanity_level, illust_id, user_id, status, file_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         private const val LEGACY_GLANCE_SCHEMA = """
@@ -222,9 +388,28 @@ class DriverFactoryMigrationTest {
             )
         """
 
+        // 旧 Flutter glanceillustpersist.db v1：无 original_url / large_url 列
+        private const val LEGACY_GLANCE_V1_SCHEMA = """
+            CREATE TABLE glanceillustpersist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                illust_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                picture_url TEXT NOT NULL,
+                ctype TEXT NOT NULL,
+                title TEXT,
+                user_name TEXT,
+                ctime INTEGER NOT NULL
+            )
+        """
+
         private const val INSERT_GLANCE = """
             INSERT INTO glanceillustpersist (illust_id, user_id, picture_url, ctype, title, large_url, original_url, user_name, ctime)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        private const val INSERT_GLANCE_V1 = """
+            INSERT INTO glanceillustpersist (illust_id, user_id, picture_url, ctype, title, user_name, ctime)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
 
         private const val LEGACY_ACCOUNT_SCHEMA = """

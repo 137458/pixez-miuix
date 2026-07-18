@@ -3,6 +3,7 @@ package com.perol.pixez.shared.data.settings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
+import io.github.aakira.napier.Napier
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -82,16 +83,16 @@ class SettingsRepository(
                 SettingsKeys.IS_HELPLESS_WAY,
             )
             return when (isHelplessWay) {
-                true -> 2
-                false -> 1
-                else -> 0
+                true -> SAVE_MODE_LEGACY_HELPLESS
+                false -> SAVE_MODE_LEGACY_SAFE
+                else -> SAVE_MODE_DEFAULT
             }
         }
         set(value) {
             // Multiplatform Settings 各平台底层（SharedPreferences.Editor/NSUserDefaults 等）
-            // 对连续写入已做事务或延迟提交，先写新键再删旧键即可覆盖旧版回退逻辑。
-            settings[SettingsKeys.SAVE_MODE] = value
+            // 对连续写入已做事务或延迟提交，先删旧键再写新键，避免异常路径下旧键残留导致读取歧义。
             settings.remove(SettingsKeys.IS_HELPLESS_WAY)
+            settings[SettingsKeys.SAVE_MODE] = value
         }
 
     var storePath: String?
@@ -171,7 +172,8 @@ class SettingsRepository(
         val json = settings.getStringWithLegacyFallbackOrNull(key) ?: return null
         return try {
             Json.decodeFromString(ListSerializer(String.serializer()), json)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Napier.w("读取字符串列表失败 key=$key", e)
             null
         }
     }
@@ -187,6 +189,11 @@ class SettingsRepository(
         private const val DEFAULT_WELCOME_PAGE_TYPE = "home"
 
         private const val LEGACY_KEY_PREFIX = "flutter."
+
+        // 旧版 save_mode 取值：0 默认、1 旧安全模式、2 旧 helpless 模式
+        private const val SAVE_MODE_DEFAULT = 0
+        private const val SAVE_MODE_LEGACY_SAFE = 1
+        private const val SAVE_MODE_LEGACY_HELPLESS = 2
     }
 }
 

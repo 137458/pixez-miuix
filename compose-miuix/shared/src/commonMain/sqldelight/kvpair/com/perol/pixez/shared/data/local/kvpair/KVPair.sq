@@ -1,6 +1,6 @@
 CREATE TABLE kvpair (
     _id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT NOT NULL UNIQUE,
+    key TEXT NOT NULL,
     value TEXT NOT NULL,
     expire_time INTEGER NOT NULL,
     date_time INTEGER NOT NULL
