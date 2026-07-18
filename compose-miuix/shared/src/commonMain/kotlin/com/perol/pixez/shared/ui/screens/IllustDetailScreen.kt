@@ -1,0 +1,187 @@
+package com.perol.pixez.shared.ui.screens
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.ui.FakeData
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+/**
+ * 作品详情页：大图、作者信息、标题、标签、浏览/收藏数。
+ */
+@Composable
+fun IllustDetailScreen(
+    illustId: Int,
+    onBack: () -> Unit,
+    onUserClick: (Int) -> Unit,
+) {
+    // M3 使用 mock 数据；M4 通过 illustId 从 Repository 查询真实数据。
+    val illusts = remember { FakeData.illusts() }
+    val illust = remember(illustId, illusts) {
+        illusts.find { it.id == illustId } ?: illusts.first()
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = "作品详情",
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* M4: 收藏 */ }) {
+                        Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "收藏")
+                    }
+                    IconButton(onClick = { /* M4: 更多菜单 */ }) {
+                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "更多")
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+        ) {
+            item {
+                AsyncImage(
+                    model = illust.imageUrls.large,
+                    contentDescription = illust.title,
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            item {
+                IllustInfoSection(
+                    illust = illust,
+                    onUserClick = onUserClick,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+
+            item {
+                SmallTitle(
+                    text = "标签",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+
+            items(illust.tags) { tag ->
+                Text(
+                    text = tag.translatedName ?: tag.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    style = MiuixTheme.textStyles.body1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IllustInfoSection(
+    illust: Illust,
+    onUserClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = illust.title,
+            style = MiuixTheme.textStyles.title1,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = illust.caption,
+            style = MiuixTheme.textStyles.body2,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onUserClick(illust.user.id) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = illust.user.profileImageUrls.medium,
+                contentDescription = illust.user.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = illust.user.name,
+                    style = MiuixTheme.textStyles.body1,
+                )
+                Text(
+                    text = "@${illust.user.account}",
+                    style = MiuixTheme.textStyles.footnote1,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            StatItem(label = "浏览", value = illust.totalView.toString())
+            StatItem(label = "收藏", value = illust.totalBookmarks.toString())
+            StatItem(label = "评论", value = (illust.totalComments ?: 0).toString())
+            StatItem(label = "页数", value = illust.pageCount.toString())
+        }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MiuixTheme.textStyles.body1,
+        )
+        Text(
+            text = label,
+            style = MiuixTheme.textStyles.footnote1,
+        )
+    }
+}

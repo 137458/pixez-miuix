@@ -1,46 +1,36 @@
 package com.perol.pixez.shared
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeController
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.destroy
+import com.arkivanov.essenty.lifecycle.resume
+import com.perol.pixez.shared.ui.navigation.RootComponent
+import com.perol.pixez.shared.ui.navigation.RootContent
 
 /**
  * 共享的 Compose 应用入口。
- * 当前为 M1 里程碑的最小可运行示例：Hello MIUIX。
+ *
+ * M3 阶段接入 Decompose 导航与 MIUIX 页面，替换 M1 的占位页面。
  */
 @Composable
-fun App(
-    darkTheme: Boolean = false,
-    dynamicColor: Boolean = false,
-) {
-    // M1 先用 System 模式；后续接入 Monet 动态取色与跟随系统深色模式
-    val controller = remember {
-        ThemeController(ColorSchemeMode.System)
-    }
+fun App() {
+    val rootComponent = rememberRootComponent()
+    RootContent(component = rootComponent)
+}
 
-    MiuixTheme(
-        controller = controller,
-    ) {
-        Scaffold { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Hello MIUIX from PixEz",
-                )
-            }
-        }
+@Composable
+private fun rememberRootComponent(): RootComponent {
+    // Decompose 需要显式生命周期管理；Compose 组合进入时 resume，销毁时 destroy。
+    val lifecycle = remember { LifecycleRegistry() }
+    val component = remember {
+        RootComponent(DefaultComponentContext(lifecycle))
     }
+    DisposableEffect(Unit) {
+        lifecycle.resume()
+        onDispose { lifecycle.destroy() }
+    }
+    return component
 }

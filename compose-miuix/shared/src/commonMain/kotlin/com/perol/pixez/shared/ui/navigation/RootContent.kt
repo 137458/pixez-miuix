@@ -1,0 +1,135 @@
+package com.perol.pixez.shared.ui.navigation
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.slide
+import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.perol.pixez.shared.ui.navigation.RootComponent.Child
+import com.perol.pixez.shared.ui.screens.AboutScreen
+import com.perol.pixez.shared.ui.screens.HelloScreen
+import com.perol.pixez.shared.ui.screens.IllustDetailScreen
+import com.perol.pixez.shared.ui.screens.NewScreen
+import com.perol.pixez.shared.ui.screens.RankingScreen
+import com.perol.pixez.shared.ui.screens.SearchScreen
+import com.perol.pixez.shared.ui.screens.SettingsScreen
+import com.perol.pixez.shared.ui.screens.SpotlightScreen
+import com.perol.pixez.shared.ui.screens.UserDetailScreen
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeController
+
+/**
+ * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
+ */
+@Composable
+fun RootContent(
+    component: RootComponent,
+    modifier: Modifier = Modifier,
+) {
+    // 主题模式：0 跟随系统，1 浅色，2 深色。M4 接入 SettingsRepository.themeMode。
+    var themeMode by rememberSaveable { mutableIntStateOf(0) }
+    val colorSchemeMode = when (themeMode) {
+        1 -> ColorSchemeMode.Light
+        2 -> ColorSchemeMode.Dark
+        else -> ColorSchemeMode.System
+    }
+    // 使用 remember 即可；进程重建后 themeMode 会由 SettingsRepository 恢复（M4）。
+    val themeController = remember(colorSchemeMode) {
+        ThemeController(colorSchemeMode)
+    }
+
+    MiuixTheme(controller = themeController) {
+        Scaffold(
+            modifier = modifier.fillMaxSize(),
+            bottomBar = {
+                // 仅在一级主页面显示底部导航栏。
+                val stack by component.stack.subscribeAsState()
+                val active = stack.active.instance
+                if (active is Child.Main) {
+                    MainBottomBar(
+                        activeTab = active.tab,
+                        onTabSelected = component::onMainTabSelected,
+                    )
+                }
+            },
+        ) { paddingValues ->
+            Children(
+                stack = component.stack,
+                modifier = Modifier.padding(paddingValues),
+                animation = stackAnimation(slide()),
+            ) { child ->
+                when (val instance = child.instance) {
+                    is Child.Main -> MainContent(
+                        tab = instance.tab,
+                        component = component,
+                    )
+
+                    is Child.IllustDetail -> IllustDetailScreen(
+                        illustId = instance.illustId,
+                        onBack = component::onBack,
+                        onUserClick = component::onUserClicked,
+                    )
+
+                    is Child.UserDetail -> UserDetailScreen(
+                        userId = instance.userId,
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                    )
+
+                    Child.Settings -> SettingsScreen(
+                        onBack = component::onBack,
+                        onAboutClick = component::onAboutClicked,
+                        themeMode = themeMode,
+                        onThemeModeChange = { themeMode = it },
+                    )
+
+                    Child.About -> AboutScreen(
+                        onBack = component::onBack,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 根据当前底部标签渲染对应一级页面。
+ */
+@Composable
+private fun MainContent(
+    tab: RootComponent.MainTab,
+    component: RootComponent,
+) {
+    when (tab) {
+        RootComponent.MainTab.Hello -> HelloScreen(
+            onIllustClick = component::onIllustClicked,
+            onSettingsClick = component::onSettingsClicked,
+        )
+
+        RootComponent.MainTab.Search -> SearchScreen(
+            onIllustClick = component::onIllustClicked,
+        )
+
+        RootComponent.MainTab.Ranking -> RankingScreen(
+            onIllustClick = component::onIllustClicked,
+        )
+
+        RootComponent.MainTab.New -> NewScreen(
+            onIllustClick = component::onIllustClicked,
+        )
+
+        RootComponent.MainTab.Spotlight -> SpotlightScreen(
+            onIllustClick = component::onIllustClicked,
+        )
+    }
+}
