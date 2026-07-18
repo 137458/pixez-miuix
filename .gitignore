@@ -120,3 +120,6 @@ msic
 # FVM Version Cache
 .fvm/
 /lib/src/generated/
+
+# Trae agent workspace documents
+.trae/
