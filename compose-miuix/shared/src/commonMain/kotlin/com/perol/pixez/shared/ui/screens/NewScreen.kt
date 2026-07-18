@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -35,7 +36,7 @@ fun NewScreen(
         repository,
         retryCount,
     ) {
-        value = runCatching { repository.getNew() }
+        value = runCatchingNonCancel { repository.getNew() }
     }
 
     Scaffold(

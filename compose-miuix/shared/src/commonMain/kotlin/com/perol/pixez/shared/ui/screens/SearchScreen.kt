@@ -22,6 +22,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -53,7 +54,7 @@ fun SearchScreen(
         repository,
         trendRetryCount,
     ) {
-        value = runCatching { repository.getTrendTags() }
+        value = runCatchingNonCancel { repository.getTrendTags() }
     }
 
     // 搜索历史仍用内存占位，M4 后续接入 SettingsRepository 持久化。
@@ -133,7 +134,7 @@ private fun SearchResultGrid(
         query,
         retryCount,
     ) {
-        value = runCatching { repository.searchIllust(query) }
+        value = runCatchingNonCancel { repository.searchIllust(query) }
     }
 
     val result = state.value

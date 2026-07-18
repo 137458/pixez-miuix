@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import top.yukonga.miuix.kmp.basic.Icon
@@ -62,7 +63,7 @@ fun IllustDetailScreen(
         repository,
         retryCount,
     ) {
-        value = runCatching { repository.getIllustDetail(illustId) }
+        value = runCatchingNonCancel { repository.getIllustDetail(illustId) }
     }
 
     val result = state.value

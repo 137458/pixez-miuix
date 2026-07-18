@@ -30,10 +30,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        // Activity 销毁时释放数据库与网络资源，避免 OkHttp/SQLite 句柄泄漏。
+        // 先释放数据库与网络资源，再调用 super.onDestroy()，避免 Activity 销毁期间句柄泄漏。
         if (::dependencies.isInitialized) {
             dependencies.close()
         }
+        super.onDestroy()
     }
 }

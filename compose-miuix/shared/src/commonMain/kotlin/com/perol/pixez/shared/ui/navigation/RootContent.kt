@@ -16,6 +16,7 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
@@ -40,10 +41,11 @@ fun RootContent(
     illustRepository: IllustRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
+    settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
-    // 主题模式：0 跟随系统，1 浅色，2 深色。M4 接入 SettingsRepository.themeMode。
-    var themeMode by rememberSaveable { mutableIntStateOf(0) }
+    // 主题模式：0 跟随系统，1 浅色，2 深色。从 SettingsRepository 读取并回写。
+    var themeMode by rememberSaveable { mutableIntStateOf(settingsRepository.themeMode) }
     val colorSchemeMode = when (themeMode) {
         1 -> ColorSchemeMode.Light
         2 -> ColorSchemeMode.Dark
@@ -101,7 +103,10 @@ fun RootContent(
                         onBack = component::onBack,
                         onAboutClick = component::onAboutClicked,
                         themeMode = themeMode,
-                        onThemeModeChange = { themeMode = it },
+                        onThemeModeChange = {
+                            themeMode = it
+                            settingsRepository.themeMode = it
+                        },
                     )
 
                     Child.About -> AboutScreen(

@@ -11,6 +11,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.encodedPath
 import io.ktor.http.HttpStatusCode
 import io.ktor.util.AttributeKey
+import com.perol.pixez.shared.network.PixivApiException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -100,6 +101,13 @@ class TokenRefreshPlugin(
                             request.headers.append("Authorization", it)
                         }
                         call = execute(request)
+                    } else {
+                        // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常，
+                        // 避免 HttpResponseValidator 把真实错误体吞掉。
+                        throw PixivApiException(
+                            statusCode = call.response.status.value,
+                            message = "请求未授权: ${call.response.status}, body=$bodyText",
+                        )
                     }
                 }
                 call

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -48,7 +49,7 @@ fun RankingScreen(
         selectedMode,
         retryCount,
     ) {
-        value = runCatching { repository.getRanking(selectedMode.code) }
+        value = runCatchingNonCancel { repository.getRanking(selectedMode.code) }
     }
 
     Scaffold(

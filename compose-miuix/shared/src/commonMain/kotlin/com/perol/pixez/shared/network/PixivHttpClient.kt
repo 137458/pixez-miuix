@@ -165,6 +165,7 @@ class PixivHttpClient(
             // 响应校验：非 2xx 统一抛出异常。
             HttpResponseValidator {
                 validateResponse { response: HttpResponse ->
+                    // 401 已由 TokenRefreshPlugin 处理（刷新或抛异常），此处不再重复处理。
                     if (response.status.value >= 400 && response.status != HttpStatusCode.Unauthorized) {
                         throw PixivApiException(
                             statusCode = response.status.value,

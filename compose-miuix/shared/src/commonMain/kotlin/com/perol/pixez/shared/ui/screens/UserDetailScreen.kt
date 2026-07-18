@@ -30,6 +30,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustCard
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -64,7 +65,7 @@ fun UserDetailScreen(
         repository,
         retryCount,
     ) {
-        value = runCatching {
+        value = runCatchingNonCancel {
             coroutineScope {
                 val detailDeferred = async { repository.getUserDetail(userId) }
                 val illustsDeferred = async { repository.getUserIllusts(userId) }

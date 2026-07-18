@@ -23,6 +23,7 @@ fun App(dependencies: AppDependencies) {
         illustRepository = dependencies.illustRepository,
         searchRepository = dependencies.searchRepository,
         userRepository = dependencies.userRepository,
+        settingsRepository = dependencies.settingsRepository,
     )
 }
 
