@@ -1,27 +1,47 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.perol.pixez.shared.ui.FakeData
+import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
+import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 首页/推荐页：顶部标题栏 + 插画瀑布流。
+ * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
  */
 @Composable
 fun HelloScreen(
     onIllustClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
+    repository: IllustRepository,
 ) {
-    // M3 阶段缓存假数据，避免重组时重新生成导致列表状态丢失。
-    val illusts = remember { FakeData.illusts() }
+    // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
+    var retryCount by rememberSaveable { mutableIntStateOf(0) }
+
+    // 页面进入时加载真实推荐数据；key 包含 repository 引用与 retryCount。
+    val state = produceState<Result<List<Illust>>?>(
+        initialValue = null,
+        repository,
+        retryCount,
+    ) {
+        value = runCatching { repository.getRecommended() }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -32,7 +52,7 @@ fun HelloScreen(
                     IconButton(
                         onClick = onSettingsClick,
                     ) {
-                        top.yukonga.miuix.kmp.basic.Icon(
+                        Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "设置",
                         )
@@ -41,11 +61,31 @@ fun HelloScreen(
             )
         },
     ) { paddingValues ->
-        IllustStaggeredGrid(
-            illusts = illusts,
-            onIllustClick = onIllustClick,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
-        )
+        val result = state.value
+        when {
+            result == null -> LoadingPlaceholder()
+            result.isSuccess -> {
+                val illusts = result.getOrNull().orEmpty()
+                if (illusts.isEmpty()) {
+                    EmptyPlaceholder(
+                        message = "暂无推荐内容",
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    IllustStaggeredGrid(
+                        illusts = illusts,
+                        onIllustClick = onIllustClick,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                    )
+                }
+            }
+            else -> ErrorPlaceholder(
+                error = result.exceptionOrNull(),
+                onRetry = { retryCount++ },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }

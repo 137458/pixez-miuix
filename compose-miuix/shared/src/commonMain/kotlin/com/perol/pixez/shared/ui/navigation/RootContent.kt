@@ -13,6 +13,9 @@ import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.SearchRepository
+import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
@@ -34,6 +37,9 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 @Composable
 fun RootContent(
     component: RootComponent,
+    illustRepository: IllustRepository,
+    searchRepository: SearchRepository,
+    userRepository: UserRepository,
     modifier: Modifier = Modifier,
 ) {
     // 主题模式：0 跟随系统，1 浅色，2 深色。M4 接入 SettingsRepository.themeMode。
@@ -72,18 +78,23 @@ fun RootContent(
                     is Child.Main -> MainContent(
                         tab = instance.tab,
                         component = component,
+                        illustRepository = illustRepository,
+                        searchRepository = searchRepository,
+                        userRepository = userRepository,
                     )
 
                     is Child.IllustDetail -> IllustDetailScreen(
                         illustId = instance.illustId,
                         onBack = component::onBack,
                         onUserClick = component::onUserClicked,
+                        repository = illustRepository,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(
                         userId = instance.userId,
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
+                        repository = userRepository,
                     )
 
                     Child.Settings -> SettingsScreen(
@@ -109,23 +120,30 @@ fun RootContent(
 private fun MainContent(
     tab: RootComponent.MainTab,
     component: RootComponent,
+    illustRepository: IllustRepository,
+    searchRepository: SearchRepository,
+    userRepository: UserRepository,
 ) {
     when (tab) {
         RootComponent.MainTab.Hello -> HelloScreen(
             onIllustClick = component::onIllustClicked,
             onSettingsClick = component::onSettingsClicked,
+            repository = illustRepository,
         )
 
         RootComponent.MainTab.Search -> SearchScreen(
             onIllustClick = component::onIllustClicked,
+            repository = searchRepository,
         )
 
         RootComponent.MainTab.Ranking -> RankingScreen(
             onIllustClick = component::onIllustClicked,
+            repository = illustRepository,
         )
 
         RootComponent.MainTab.New -> NewScreen(
             onIllustClick = component::onIllustClicked,
+            repository = illustRepository,
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(

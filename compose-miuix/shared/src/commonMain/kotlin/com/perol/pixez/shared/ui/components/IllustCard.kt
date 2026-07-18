@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.model.Illust
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -49,7 +48,7 @@ fun IllustCard(
                 .clip(RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            AsyncImage(
+            PixivAsyncImage(
                 model = illust.imageUrls.medium,
                 contentDescription = illust.title,
                 contentScale = ContentScale.Crop,

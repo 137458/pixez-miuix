@@ -62,7 +62,7 @@ fun AboutScreen(
                 modifier = Modifier.padding(top = 16.dp),
             )
             Text(
-                text = "原应用功能保留中，M3 阶段为基础页面移植。",
+                text = "原应用功能保留中，M4 阶段已接入 Pixiv 真实数据。",
                 style = MiuixTheme.textStyles.footnote1,
                 modifier = Modifier.padding(top = 8.dp),
             )

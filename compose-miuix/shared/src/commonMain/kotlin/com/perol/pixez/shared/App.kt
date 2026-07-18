@@ -16,16 +16,21 @@ import com.perol.pixez.shared.ui.navigation.RootContent
  * M3 阶段接入 Decompose 导航与 MIUIX 页面，替换 M1 的占位页面。
  */
 @Composable
-fun App() {
-    val rootComponent = rememberRootComponent()
-    RootContent(component = rootComponent)
+fun App(dependencies: AppDependencies) {
+    val rootComponent = rememberRootComponent(dependencies)
+    RootContent(
+        component = rootComponent,
+        illustRepository = dependencies.illustRepository,
+        searchRepository = dependencies.searchRepository,
+        userRepository = dependencies.userRepository,
+    )
 }
 
 @Composable
-private fun rememberRootComponent(): RootComponent {
+private fun rememberRootComponent(dependencies: AppDependencies): RootComponent {
     // Decompose 需要显式生命周期管理；Compose 组合进入时 resume，销毁时 destroy。
     val lifecycle = remember { LifecycleRegistry() }
-    val component = remember {
+    val component = remember(dependencies) {
         RootComponent(DefaultComponentContext(lifecycle))
     }
     DisposableEffect(Unit) {

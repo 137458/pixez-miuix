@@ -20,15 +20,21 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.ui.FakeData
+import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -38,78 +44,107 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 作品详情页：大图、作者信息、标题、标签、浏览/收藏数。
+ * 作品详情页：通过 illustId 从 Repository 查询真实作品数据。
  */
 @Composable
 fun IllustDetailScreen(
     illustId: Int,
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
+    repository: IllustRepository,
 ) {
-    // M3 使用 mock 数据；M4 通过 illustId 从 Repository 查询真实数据。
-    val illusts = remember { FakeData.illusts() }
-    val illust = remember(illustId, illusts) {
-        illusts.find { it.id == illustId } ?: illusts.first()
+    // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
+    var retryCount by rememberSaveable { mutableIntStateOf(0) }
+
+    val state = produceState<Result<Illust>?>(
+        initialValue = null,
+        illustId,
+        repository,
+        retryCount,
+    ) {
+        value = runCatching { repository.getIllustDetail(illustId) }
     }
+
+    val result = state.value
+    val illust = result?.getOrNull()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "作品详情",
+                title = illust?.title ?: "作品详情",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回",
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { /* M4: 收藏 */ }) {
-                        Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "收藏")
+                        Icon(
+                            imageVector = Icons.Default.FavoriteBorder,
+                            contentDescription = "收藏",
+                        )
                     }
                     IconButton(onClick = { /* M4: 更多菜单 */ }) {
-                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = "更多")
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "更多",
+                        )
                     }
                 },
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
-        ) {
-            item {
-                AsyncImage(
-                    model = illust.imageUrls.large,
-                    contentDescription = illust.title,
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+        when {
+            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
+            result.isSuccess && illust != null -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = paddingValues,
+                ) {
+                    item {
+                        PixivAsyncImage(
+                            model = illust.imageUrls.large,
+                            contentDescription = illust.title,
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
 
-            item {
-                IllustInfoSection(
-                    illust = illust,
-                    onUserClick = onUserClick,
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
+                    item {
+                        IllustInfoSection(
+                            illust = illust,
+                            onUserClick = onUserClick,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
 
-            item {
-                SmallTitle(
-                    text = "标签",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+                    item {
+                        SmallTitle(
+                            text = "标签",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
 
-            items(illust.tags) { tag ->
-                Text(
-                    text = tag.translatedName ?: tag.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MiuixTheme.textStyles.body1,
-                )
+                    items(illust.tags, key = { it.name }) { tag ->
+                        Text(
+                            text = tag.translatedName ?: tag.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MiuixTheme.textStyles.body1,
+                        )
+                    }
+                }
             }
+            else -> ErrorPlaceholder(
+                error = result.exceptionOrNull(),
+                onRetry = { retryCount++ },
+                modifier = Modifier.padding(paddingValues),
+            )
         }
     }
 }
@@ -138,7 +173,7 @@ private fun IllustInfoSection(
                 .clickable { onUserClick(illust.user.id) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
+            PixivAsyncImage(
                 model = illust.user.profileImageUrls.medium,
                 contentDescription = illust.user.name,
                 contentScale = ContentScale.Crop,

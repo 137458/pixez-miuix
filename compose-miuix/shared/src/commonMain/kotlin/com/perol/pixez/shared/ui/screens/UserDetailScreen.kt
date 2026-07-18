@@ -16,15 +16,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
-import com.perol.pixez.shared.ui.FakeData
+import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustCard
+import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -35,64 +45,95 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 用户详情页：头部信息 + 用户作品网格。
- *
- * 使用单个 LazyVerticalStaggeredGrid 承载头部与作品卡片，避免 LazyColumn 嵌套
- * LazyVerticalStaggeredGrid 导致的滚动回收异常与固定高度问题。
+ * 用户详情页：头部信息 + 真实用户作品网格。
  */
 @Composable
 fun UserDetailScreen(
     userId: Int,
     onBack: () -> Unit,
     onIllustClick: (Int) -> Unit,
+    repository: UserRepository,
 ) {
-    // M3 使用 mock 数据；M4 通过 userId 从 Repository 查询真实数据。
-    val userDetail = FakeData.userDetail()
+    // 重试计数，作为 produceState 的 key 触发用户资料与作品列表重新加载。
+    var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+
+    // 同时加载用户资料与作品列表；任一失败都会进入错误态。
+    val detailState = produceState<Result<Pair<UserDetail, List<Illust>>>?>(
+        initialValue = null,
+        userId,
+        repository,
+        retryCount,
+    ) {
+        value = runCatching {
+            coroutineScope {
+                val detailDeferred = async { repository.getUserDetail(userId) }
+                val illustsDeferred = async { repository.getUserIllusts(userId) }
+                detailDeferred.await() to illustsDeferred.await()
+            }
+        }
+    }
+
+    val result = detailState.value
+    val userDetail = result?.getOrNull()?.first
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = userDetail.user.name,
+                title = userDetail?.user?.name ?: "用户详情",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回",
+                        )
                     }
                 },
             )
         },
     ) { paddingValues ->
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp,
-        ) {
-            item {
-                UserProfileHeader(
-                    userDetail = userDetail,
-                    modifier = Modifier.padding(16.dp),
-                )
+        when {
+            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
+            result.isSuccess && userDetail != null -> {
+                val illusts = result.getOrNull()?.second.orEmpty()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                ) {
+                    UserProfileHeader(
+                        userDetail = userDetail,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                    Text(
+                        text = "作品",
+                        style = MiuixTheme.textStyles.title2,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Fixed(2),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalItemSpacing = 8.dp,
+                    ) {
+                        items(
+                            items = illusts,
+                            key = { it.id },
+                        ) { illust ->
+                            IllustCard(
+                                illust = illust,
+                                onClick = { onIllustClick(illust.id) },
+                            )
+                        }
+                    }
+                }
             }
-
-            item {
-                Text(
-                    text = "作品",
-                    style = MiuixTheme.textStyles.title2,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            items(
-                items = FakeData.illusts(count = 12),
-                key = { it.id },
-            ) { illust ->
-                IllustCard(
-                    illust = illust,
-                    onClick = { onIllustClick(illust.id) },
-                )
-            }
+            else -> ErrorPlaceholder(
+                error = result.exceptionOrNull(),
+                onRetry = { retryCount++ },
+                modifier = Modifier.padding(paddingValues),
+            )
         }
     }
 }
@@ -106,7 +147,7 @@ private fun UserProfileHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AsyncImage(
+        PixivAsyncImage(
             model = userDetail.user.profileImageUrls.medium,
             contentDescription = userDetail.user.name,
             contentScale = ContentScale.Crop,

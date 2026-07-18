@@ -1,0 +1,186 @@
+package com.perol.pixez.shared.network
+
+import io.github.aakira.napier.Napier
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpResponseValidator
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLProtocol
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+
+/**
+ * Pixiv API 与 OAuth 的 Ktor HttpClient 工厂。
+ *
+ * 分别创建：
+ * - [apiClient]：用于 app-api.pixiv.net 的业务接口。
+ * - [baseOAuthClient]：用于 oauth.secure.pixiv.net 的基础认证接口，被 [oAuthClient] 持有。
+ *
+ * 注意：[OAuthClient] 内部使用一个不带 token 刷新的基础 HttpClient 执行登录/刷新，
+ * 避免与 [TokenRefreshPlugin] 形成循环依赖。
+ */
+class PixivHttpClient(
+    tokenStorage: AuthTokenStorage,
+    enableLogging: Boolean = false,
+) {
+    /**
+     * 用于 OAuth 登录/刷新 token 的基础客户端，不带 TokenRefreshPlugin。
+     */
+    private val baseOAuthClient: HttpClient = createBaseOAuthClient(enableLogging)
+
+    /**
+     * OAuth 业务封装，外部可用它构建登录 URL 或手动刷新 token。
+     */
+    val oAuthClient: OAuthClient = OAuthClient(baseOAuthClient)
+
+    /**
+     * 业务 API 客户端。
+     */
+    val apiClient: HttpClient = createClient(
+        host = APP_API_HOST,
+        tokenStorage = tokenStorage,
+        oAuthClient = oAuthClient,
+        enableLogging = enableLogging,
+    )
+
+    /**
+     * 释放所有 Ktor HttpClient 占用的引擎资源。
+     */
+    fun close() {
+        runCatching { apiClient.close() }
+        runCatching { baseOAuthClient.close() }
+    }
+
+    companion object {
+        private const val APP_API_HOST = "app-api.pixiv.net"
+        private const val OAUTH_HOST = "oauth.secure.pixiv.net"
+
+        /**
+         * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。
+         */
+        private fun createBaseOAuthClient(enableLogging: Boolean): HttpClient = HttpClient {
+            defaultRequest {
+                url {
+                    protocol = URLProtocol.HTTPS
+                    host = OAUTH_HOST
+                }
+                PixivHeaders.commonHeaders().forEach { (key, value) ->
+                    headers.append(key, value)
+                }
+            }
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        coerceInputValues = true
+                        isLenient = true
+                    },
+                )
+            }
+            if (enableLogging) {
+                install(Logging) {
+                    logger = object : Logger {
+                        override fun log(message: String) {
+                            Napier.d(message, tag = "PixivOAuth")
+                        }
+                    }
+                    // 避免打印 Authorization 头或 token 响应体。
+                    level = LogLevel.INFO
+                }
+            }
+            install(HttpRequestRetry) {
+                retryOnExceptionOrServerErrors(maxRetries = 2)
+            }
+            HttpResponseValidator {
+                validateResponse { response: HttpResponse ->
+                    if (response.status.value >= 400) {
+                        throw PixivApiException(
+                            statusCode = response.status.value,
+                            message = "OAuth 请求失败: ${response.status}",
+                        )
+                    }
+                }
+            }
+        }
+
+        fun createClient(
+            host: String,
+            tokenStorage: AuthTokenStorage,
+            oAuthClient: OAuthClient,
+            enableLogging: Boolean,
+        ): HttpClient = HttpClient {
+            // 统一使用 HTTPS 与固定 Host。
+            defaultRequest {
+                url {
+                    protocol = URLProtocol.HTTPS
+                    this.host = host
+                }
+                PixivHeaders.commonHeaders().forEach { (key, value) ->
+                    headers.append(key, value)
+                }
+            }
+
+            // JSON 序列化：忽略未知字段，宽松解析。
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        coerceInputValues = true
+                        isLenient = true
+                    },
+                )
+            }
+
+            // 日志：仅打印请求方法与 URL，避免泄露 Authorization 头。
+            if (enableLogging) {
+                install(Logging) {
+                    logger = object : Logger {
+                        override fun log(message: String) {
+                            Napier.d(message, tag = "PixivHttp")
+                        }
+                    }
+                    level = LogLevel.INFO
+                }
+            }
+
+            // 网络层通用重试：连接失败时最多重试 2 次。
+            // 先安装 HttpRequestRetry，再安装 TokenRefreshPlugin，确保 401 刷新逻辑在外层，
+            // 避免刷新失败时被外层重试反复触发。
+            install(HttpRequestRetry) {
+                retryOnExceptionOrServerErrors(maxRetries = 2)
+            }
+
+            // Token 注入与刷新。
+            install(TokenRefreshPlugin) {
+                this.tokenStorage = tokenStorage
+                this.oAuthClient = oAuthClient
+            }
+
+            // 响应校验：非 2xx 统一抛出异常。
+            HttpResponseValidator {
+                validateResponse { response: HttpResponse ->
+                    if (response.status.value >= 400 && response.status != HttpStatusCode.Unauthorized) {
+                        throw PixivApiException(
+                            statusCode = response.status.value,
+                            message = "请求失败: ${response.status}",
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Pixiv API 返回的非 2xx 响应异常。
+ */
+class PixivApiException(
+    val statusCode: Int,
+    override val message: String,
+) : Exception(message)
