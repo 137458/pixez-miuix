@@ -5,6 +5,8 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustDetailResponse
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
+import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -65,6 +67,20 @@ class IllustRepository(
                 parameter("restrict", restrict)
             }.body()
             response.illusts
+        }
+
+    /**
+     * 获取 Spotlight 精选文章列表。
+     *
+     * @param category 分类，如 all、illust、novel 等。
+     */
+    suspend fun getSpotlightArticles(category: String = "all"): List<SpotlightArticle> =
+        networkCall("获取 Spotlight 失败 category=$category") {
+            val response: SpotlightResponse = apiClient.get("/v1/spotlight/articles") {
+                parameter("filter", "for_android")
+                parameter("category", category)
+            }.body()
+            response.spotlightArticles
         }
 
     /**

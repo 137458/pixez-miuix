@@ -12,8 +12,9 @@
    - `NewScreen` 检测登录状态，未登录时显示登录入口；登录后加载关注画师最新插画。
    - 支持 `all`/`public`/`private` 三种可见性筛选。
 
-2. **Spotlight 真实数据（TODO）**
-   - 接入 Pixiv Spotlight API，替换当前 `FakeData` 占位。
+2. **Spotlight 真实数据（已完成）**
+   - 接入 Pixiv Spotlight API `/v1/spotlight/articles`，替换当前 `FakeData` 占位。
+   - `SpotlightScreen` 以卡片网格展示文章缩略图与标题，点击打开文章 URL。
 
 3. **作品下载任务管理（TODO）**
    - 实现插画下载队列、进度反馈与本地保存。
