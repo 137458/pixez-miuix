@@ -1,0 +1,34 @@
+# M6 里程碑：二级页面与数据填充
+
+## 目标
+将 M4/M5 中仍为占位或缺失的页面数据与二级页面逐步补齐，保持与原 Flutter PixEz 功能一致，不新增原应用不支持的功能。
+
+## 范围
+
+### 必做（按最小任务量拆分）
+1. **NewScreen 真实关注数据**
+   - 新增 `FollowIllusts` 响应模型，对应 `/v2/illust/follow`。
+   - `IllustRepository` 添加 `getFollowIllusts(restrict: String)`。
+   - `NewScreen` 检测登录状态，未登录时显示登录入口；登录后加载关注画师最新插画。
+   - 支持 `all`/`public`/`private` 三种可见性筛选。
+
+2. **Spotlight 真实数据（TODO）**
+   - 接入 Pixiv Spotlight API，替换当前 `FakeData` 占位。
+
+3. **作品下载任务管理（TODO）**
+   - 实现插画下载队列、进度反馈与本地保存。
+
+4. **评论列表与相关作品等二级页面（TODO）**
+   - 作品详情页入口进入评论列表。
+   - 用户详情/作品详情进入相关作品、画师系列等页面。
+
+## 技术决策
+- 登录状态通过 `AccountRepository.currentAccount()` 判断，与 `HelloScreen` 保持一致。
+- 可见性筛选状态使用 `rememberSaveable` 保存进程重建。
+- 网络请求统一使用 `runCatchingNonCancel` + `networkCall` 错误处理。
+
+## 验收条件
+- Android + Desktop 双端编译通过。
+- 未登录时 NewScreen 显示登录入口。
+- 登录后 NewScreen 可切换 all/public/private 并展示关注作品。
+- 各新增功能需经过 code review 并修复 P0/P1 问题。

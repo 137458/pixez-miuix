@@ -172,7 +172,9 @@ private fun MainContent(
 
         RootComponent.MainTab.New -> NewScreen(
             onIllustClick = component::onIllustClicked,
+            onLoginClick = component::onLoginClicked,
             repository = illustRepository,
+            accountRepository = accountRepository,
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(

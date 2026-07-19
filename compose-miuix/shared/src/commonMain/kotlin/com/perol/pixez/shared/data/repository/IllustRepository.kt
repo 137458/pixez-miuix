@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.model.FollowIllusts
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustDetailResponse
 import com.perol.pixez.shared.data.model.Ranking
@@ -54,15 +55,17 @@ class IllustRepository(
         }
 
     /**
-     * 获取最新插画（Follow 页也复用 /v1/illust/follow 之外的接口，这里使用 walkthrough 作为占位）。
+     * 获取关注用户最新插画（/v2/illust/follow）。
      *
-     * M4 先复用推荐接口作为“最新”标签内容，后续根据原应用需求替换。
+     * @param restrict 可见性筛选：all、public、private。
      */
-    suspend fun getNew(): List<Illust> {
-        // 原 Flutter 的 "New" 标签实际展示关注作品（/v2/illust/follow）。
-        // M4 为保持各标签都有内容，先返回推荐数据；M5 接入关注系统后再替换。
-        return getRecommended()
-    }
+    suspend fun getFollowIllusts(restrict: String = "all"): List<Illust> =
+        networkCall("获取关注插画失败 restrict=$restrict") {
+            val response: FollowIllusts = apiClient.get("/v2/illust/follow") {
+                parameter("restrict", restrict)
+            }.body()
+            response.illusts
+        }
 
     /**
      * 获取作品详情。
