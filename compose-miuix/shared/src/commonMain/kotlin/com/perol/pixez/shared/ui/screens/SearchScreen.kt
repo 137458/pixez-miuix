@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
@@ -35,6 +37,7 @@ import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -57,9 +60,11 @@ fun SearchScreen(
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
     val searchTypes = listOf("作品", "画师")
 
-    // 搜索筛选状态：排序与搜索目标（仅作品搜索有效）。
+    // 搜索筛选状态：排序、搜索目标与 AI 类型（仅作品搜索有效）。
+    // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
     var sort by rememberSaveable { mutableStateOf("date_desc") }
     var searchTarget by rememberSaveable { mutableStateOf("partial_match_for_tags") }
+    var searchAiType by rememberSaveable { mutableIntStateOf(0) }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
     var trendRetryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -137,6 +142,8 @@ fun SearchScreen(
                         onSortChange = { sort = it },
                         searchTarget = searchTarget,
                         onSearchTargetChange = { searchTarget = it },
+                        searchAiType = searchAiType,
+                        onSearchAiTypeChange = { searchAiType = it },
                     )
                 }
                 Box(
@@ -149,6 +156,7 @@ fun SearchScreen(
                             query = query,
                             sort = sort,
                             searchTarget = searchTarget,
+                            searchAiType = searchAiType,
                             repository = repository,
                             onIllustClick = onIllustClick,
                         )
@@ -184,17 +192,19 @@ private fun SearchIllustResultGrid(
     query: String,
     sort: String,
     searchTarget: String,
+    searchAiType: Int,
     repository: SearchRepository,
     onIllustClick: (Int) -> Unit,
 ) {
     // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
-    var retryCount by rememberSaveable(query, sort, searchTarget) { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(query, sort, searchTarget, searchAiType) { mutableIntStateOf(0) }
 
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         query,
         sort,
         searchTarget,
+        searchAiType,
         retryCount,
     ) {
         value = runCatchingNonCancel {
@@ -202,6 +212,7 @@ private fun SearchIllustResultGrid(
                 word = query,
                 sort = sort,
                 searchTarget = searchTarget,
+                searchAiType = searchAiType,
             )
         }
     }
@@ -284,7 +295,7 @@ private fun SearchUserResultList(
 }
 
 /**
- * 搜索筛选栏：排序与搜索目标切换。
+ * 搜索筛选栏：排序、搜索目标与 AI 类型切换。
  */
 @Composable
 private fun SearchFilterBar(
@@ -292,6 +303,8 @@ private fun SearchFilterBar(
     onSortChange: (String) -> Unit,
     searchTarget: String,
     onSearchTargetChange: (String) -> Unit,
+    searchAiType: Int,
+    onSearchAiTypeChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sortOptions = listOf(
@@ -324,6 +337,21 @@ private fun SearchFilterBar(
             selectedTabIndex = selectedTargetIndex,
             onTabSelected = { onSearchTargetChange(targetOptions[it].second) },
         )
+        // AI 生成作品开关：开启时 searchAiType = 0（包含 AI），关闭时 = 1（排除 AI）。
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "AI 生成作品",
+                style = MiuixTheme.textStyles.body1,
+            )
+            Switch(
+                checked = searchAiType == 0,
+                onCheckedChange = { onSearchAiTypeChange(if (it) 0 else 1) },
+            )
+        }
     }
 }
 

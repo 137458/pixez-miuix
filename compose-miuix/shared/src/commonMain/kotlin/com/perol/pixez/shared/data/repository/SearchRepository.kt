@@ -33,17 +33,20 @@ class SearchRepository(
      * @param word 搜索关键词。
      * @param sort 排序：date_desc（默认）、date_asc、popular_desc。
      * @param searchTarget 搜索目标：partial_match_for_tags、exact_match_for_tags、title_and_caption 等。
+     * @param searchAiType AI 类型：0（默认）包含 AI 生成，1 排除 AI 生成。
      */
     suspend fun searchIllust(
         word: String,
         sort: String = "date_desc",
         searchTarget: String = "partial_match_for_tags",
+        searchAiType: Int = 0,
     ): List<Illust> = networkCall("搜索插画失败 word=$word") {
         val response: Search = apiClient.get("/v1/search/illust") {
             parameter("filter", "for_android")
             parameter("merge_plain_keyword_results", "true")
             parameter("sort", sort)
             parameter("search_target", searchTarget)
+            parameter("search_ai_type", searchAiType)
             parameter("word", word)
         }.body()
         response.illusts
