@@ -108,6 +108,13 @@ class RootComponent(
         navigation.push(Config.IllustSeries(seriesId))
     }
 
+    /**
+     * 打开用户关注列表页。
+     */
+    fun onUserFollowListClicked(userId: Int) {
+        navigation.push(Config.UserFollowList(userId))
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -118,6 +125,7 @@ class RootComponent(
         is Config.Comments -> Child.Comments(config.illustId)
         is Config.RelatedIllusts -> Child.RelatedIllusts(config.illustId)
         is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
+        is Config.UserFollowList -> Child.UserFollowList(config.userId)
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -165,6 +173,9 @@ class RootComponent(
 
         @Serializable
         data class IllustSeries(val seriesId: Int) : Config()
+
+        @Serializable
+        data class UserFollowList(val userId: Int) : Config()
     }
 
     sealed class Child {
@@ -177,5 +188,6 @@ class RootComponent(
         data class Comments(val illustId: Int) : Child()
         data class RelatedIllusts(val illustId: Int) : Child()
         data class IllustSeries(val seriesId: Int) : Child()
+        data class UserFollowList(val userId: Int) : Child()
     }
 }
