@@ -101,6 +101,13 @@ class RootComponent(
         navigation.push(Config.RelatedIllusts(illustId))
     }
 
+    /**
+     * 打开插画系列页。
+     */
+    fun onIllustSeriesClicked(seriesId: Int) {
+        navigation.push(Config.IllustSeries(seriesId))
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -110,6 +117,7 @@ class RootComponent(
         is Config.UserDetail -> Child.UserDetail(config.userId)
         is Config.Comments -> Child.Comments(config.illustId)
         is Config.RelatedIllusts -> Child.RelatedIllusts(config.illustId)
+        is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -154,6 +162,9 @@ class RootComponent(
 
         @Serializable
         data class RelatedIllusts(val illustId: Int) : Config()
+
+        @Serializable
+        data class IllustSeries(val seriesId: Int) : Config()
     }
 
     sealed class Child {
@@ -165,5 +176,6 @@ class RootComponent(
         data object Login : Child()
         data class Comments(val illustId: Int) : Child()
         data class RelatedIllusts(val illustId: Int) : Child()
+        data class IllustSeries(val seriesId: Int) : Child()
     }
 }

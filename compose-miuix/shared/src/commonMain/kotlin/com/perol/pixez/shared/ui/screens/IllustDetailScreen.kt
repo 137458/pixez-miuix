@@ -59,6 +59,7 @@ fun IllustDetailScreen(
     onUserClick: (Int) -> Unit,
     onCommentsClick: (Int) -> Unit,
     onRelatedIllustsClick: (Int) -> Unit,
+    onIllustSeriesClick: (Int) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
 ) {
@@ -170,6 +171,7 @@ fun IllustDetailScreen(
                                 onUserClick = onUserClick,
                                 onCommentsClick = onCommentsClick,
                                 onRelatedIllustsClick = onRelatedIllustsClick,
+                                onIllustSeriesClick = onIllustSeriesClick,
                                 modifier = Modifier.padding(16.dp),
                             )
                         }
@@ -208,6 +210,7 @@ private fun IllustInfoSection(
     onUserClick: (Int) -> Unit,
     onCommentsClick: (Int) -> Unit,
     onRelatedIllustsClick: (Int) -> Unit,
+    onIllustSeriesClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -274,6 +277,19 @@ private fun IllustInfoSection(
             style = MiuixTheme.textStyles.body1,
             color = MiuixTheme.colorScheme.primary,
         )
+
+        illust.series?.let { series ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "系列：${series.title.orEmpty()}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onIllustSeriesClick(series.id) }
+                    .padding(vertical = 8.dp),
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

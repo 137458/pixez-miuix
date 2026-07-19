@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.FollowIllusts
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustDetailResponse
+import com.perol.pixez.shared.data.model.IllustSeriesWithIdModel
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
 import com.perol.pixez.shared.data.model.SpotlightArticle
@@ -118,5 +119,17 @@ class IllustRepository(
                 parameter("illust_id", illustId)
             }.body()
             response.illusts
+        }
+
+    /**
+     * 获取插画系列详情与系列内作品列表。
+     */
+    suspend fun getIllustSeries(seriesId: Int): Pair<String, List<Illust>> =
+        networkCall("获取系列详情失败 seriesId=$seriesId") {
+            val response: IllustSeriesWithIdModel = apiClient.get("/v1/illust/series") {
+                parameter("illust_series_id", seriesId)
+            }.body()
+            val title = response.illustSeriesDetail?.title ?: "系列"
+            title to (response.illusts.orEmpty())
         }
 }

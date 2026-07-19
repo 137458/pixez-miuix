@@ -30,8 +30,13 @@
    - 新增 `RelatedIllustsScreen`，复用 `IllustStaggeredGrid` 展示相关插画。
    - `IllustDetailScreen` 信息区添加"相关作品"入口，Decompose 导航到相关作品页。
 
-6. **画师系列等二级页面（TODO）**
-   - 用户详情/作品详情进入画师系列等页面。
+6. **插画系列二级页面（已完成）**
+   - `IllustRepository` 新增 `getIllustSeries(seriesId: Int)`，调用 `/v1/illust/series`。
+   - 新增 `IllustSeriesScreen`，复用 `IllustStaggeredGrid` 展示系列内插画。
+   - `IllustDetailScreen` 检测 `illust.series`，有系列时显示可点击的系列入口。
+
+## 待迁入 M7
+- **作品下载任务管理**：实现插画下载队列、进度反馈与本地保存。
 
 ## 技术决策
 - 登录状态通过 `AccountRepository.currentAccount()` 判断，与 `HelloScreen` 保持一致。

@@ -26,6 +26,7 @@ import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
+import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
 import com.perol.pixez.shared.ui.screens.RankingScreen
 import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
@@ -100,6 +101,7 @@ fun RootContent(
                         onUserClick = component::onUserClicked,
                         onCommentsClick = component::onCommentsClicked,
                         onRelatedIllustsClick = component::onRelatedIllustsClicked,
+                        onIllustSeriesClick = component::onIllustSeriesClicked,
                         repository = illustRepository,
                         bookmarkRepository = bookmarkRepository,
                     )
@@ -131,6 +133,13 @@ fun RootContent(
 
                     is Child.RelatedIllusts -> RelatedIllustsScreen(
                         illustId = instance.illustId,
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                        repository = illustRepository,
+                    )
+
+                    is Child.IllustSeries -> IllustSeriesScreen(
+                        seriesId = instance.seriesId,
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
                         repository = illustRepository,
