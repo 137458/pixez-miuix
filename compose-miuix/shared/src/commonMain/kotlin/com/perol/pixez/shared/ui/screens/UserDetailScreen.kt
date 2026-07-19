@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -31,12 +33,17 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.UserActionMenu
+import com.perol.pixez.shared.ui.components.buildUserCopyInfo
+import com.perol.pixez.shared.ui.components.buildUserShareLink
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -81,6 +88,9 @@ fun UserDetailScreen(
     }
     var isFollowLoading by rememberSaveable { mutableStateOf(false) }
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
+    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var showActionMenu by rememberSaveable { mutableStateOf(false) }
+    val clipboard = remember { IllustClipboard() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -96,66 +106,108 @@ fun UserDetailScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { showActionMenu = true },
+                        enabled = userDetail != null,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "更多",
+                        )
+                    }
+                },
             )
         },
     ) { paddingValues ->
-        when {
-            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            result.isSuccess && userDetail != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                ) {
-                    followError?.let { error ->
-                        Text(
-                            text = error,
-                            color = MiuixTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-                    UserProfileHeader(
-                        userDetail = userDetail,
-                        isFollowed = isFollowed,
-                        isLoading = isFollowLoading,
-                        onFollowClick = {
-                            if (!isFollowLoading) {
-                                coroutineScope.launch {
-                                    try {
-                                        isFollowLoading = true
-                                        followError = null
-                                        runCatchingNonCancel {
-                                            if (isFollowed) {
-                                                bookmarkRepository.unfollowUser(userDetail.user.id)
-                                            } else {
-                                                bookmarkRepository.followUser(userDetail.user.id)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                result.isSuccess && userDetail != null -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        followError?.let { error ->
+                            Text(
+                                text = error,
+                                color = MiuixTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                        UserProfileHeader(
+                            userDetail = userDetail,
+                            isFollowed = isFollowed,
+                            isLoading = isFollowLoading,
+                            onFollowClick = {
+                                if (!isFollowLoading) {
+                                    coroutineScope.launch {
+                                        try {
+                                            isFollowLoading = true
+                                            followError = null
+                                            runCatchingNonCancel {
+                                                if (isFollowed) {
+                                                    bookmarkRepository.unfollowUser(userDetail.user.id)
+                                                } else {
+                                                    bookmarkRepository.followUser(userDetail.user.id)
+                                                }
+                                            }.onSuccess {
+                                                isFollowed = !isFollowed
+                                            }.onFailure { e ->
+                                                followError = e.message ?: "关注操作失败"
                                             }
-                                        }.onSuccess {
-                                            isFollowed = !isFollowed
-                                        }.onFailure { e ->
-                                            followError = e.message ?: "关注操作失败"
+                                        } finally {
+                                            isFollowLoading = false
                                         }
-                                    } finally {
-                                        isFollowLoading = false
                                     }
                                 }
-                            }
-                        },
-                        onFollowListClick = { onFollowListClick(userDetail.user.id) },
-                        onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
-                        modifier = Modifier.padding(16.dp),
-                    )
-                    UserDetailTabContent(
-                        userId = userId,
-                        onIllustClick = onIllustClick,
-                        repository = repository,
-                    )
+                            },
+                            onFollowListClick = { onFollowListClick(userDetail.user.id) },
+                            onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        UserDetailTabContent(
+                            userId = userId,
+                            onIllustClick = onIllustClick,
+                            repository = repository,
+                        )
+                    }
                 }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { retryCount++ },
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-            else -> ErrorPlaceholder(
-                error = result.exceptionOrNull(),
-                onRetry = { retryCount++ },
-                modifier = Modifier.padding(paddingValues),
+            ToastMessage(
+                message = toastMessage,
+                onDismiss = { toastMessage = null },
+            )
+        }
+
+        userDetail?.let {
+            UserActionMenu(
+                show = showActionMenu,
+                onDismissRequest = { showActionMenu = false },
+                onCopyInfo = {
+                    showActionMenu = false
+                    val text = buildUserCopyInfo(it)
+                    runCatching { clipboard.copy(text) }.fold(
+                        onSuccess = { toastMessage = "已复制到剪贴板" },
+                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
+                onCopyLink = {
+                    showActionMenu = false
+                    val link = buildUserShareLink(it.user.id)
+                    runCatching { clipboard.copy(link) }.fold(
+                        onSuccess = { toastMessage = "链接已复制" },
+                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
             )
         }
     }
