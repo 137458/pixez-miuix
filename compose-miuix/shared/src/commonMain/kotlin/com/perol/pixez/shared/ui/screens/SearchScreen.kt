@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,11 +61,13 @@ fun SearchScreen(
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
     val searchTypes = listOf("作品", "画师")
 
-    // 搜索筛选状态：排序、搜索目标与 AI 类型（仅作品搜索有效）。
+    // 搜索筛选状态：排序、搜索目标、AI 类型与收藏数阈值（仅作品搜索有效）。
     // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
+    // bookmarkThreshold：0 表示不追加收藏数条件，非 0 时搜索词追加 " ${value}users入り"。
     var sort by rememberSaveable { mutableStateOf("date_desc") }
     var searchTarget by rememberSaveable { mutableStateOf("partial_match_for_tags") }
     var searchAiType by rememberSaveable { mutableIntStateOf(0) }
+    var bookmarkThreshold by rememberSaveable { mutableIntStateOf(0) }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
     var trendRetryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -144,6 +147,8 @@ fun SearchScreen(
                         onSearchTargetChange = { searchTarget = it },
                         searchAiType = searchAiType,
                         onSearchAiTypeChange = { searchAiType = it },
+                        bookmarkThreshold = bookmarkThreshold,
+                        onBookmarkThresholdChange = { bookmarkThreshold = it },
                     )
                 }
                 Box(
@@ -157,6 +162,7 @@ fun SearchScreen(
                             sort = sort,
                             searchTarget = searchTarget,
                             searchAiType = searchAiType,
+                            bookmarkThreshold = bookmarkThreshold,
                             repository = repository,
                             onIllustClick = onIllustClick,
                         )
@@ -193,15 +199,21 @@ private fun SearchIllustResultGrid(
     sort: String,
     searchTarget: String,
     searchAiType: Int,
+    bookmarkThreshold: Int,
     repository: SearchRepository,
     onIllustClick: (Int) -> Unit,
 ) {
+    // 根据收藏数阈值构建实际搜索词：非 0 时追加 " ${value}users入り"。
+    val searchWord = remember(query, bookmarkThreshold) {
+        if (bookmarkThreshold > 0) "$query ${bookmarkThreshold}users入り" else query
+    }
+
     // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
-    var retryCount by rememberSaveable(query, sort, searchTarget, searchAiType) { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(searchWord, sort, searchTarget, searchAiType) { mutableIntStateOf(0) }
 
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
-        query,
+        searchWord,
         sort,
         searchTarget,
         searchAiType,
@@ -209,7 +221,7 @@ private fun SearchIllustResultGrid(
     ) {
         value = runCatchingNonCancel {
             repository.searchIllust(
-                word = query,
+                word = searchWord,
                 sort = sort,
                 searchTarget = searchTarget,
                 searchAiType = searchAiType,
@@ -295,7 +307,7 @@ private fun SearchUserResultList(
 }
 
 /**
- * 搜索筛选栏：排序、搜索目标与 AI 类型切换。
+ * 搜索筛选栏：排序、搜索目标、AI 类型与收藏数阈值切换。
  */
 @Composable
 private fun SearchFilterBar(
@@ -305,6 +317,8 @@ private fun SearchFilterBar(
     onSearchTargetChange: (String) -> Unit,
     searchAiType: Int,
     onSearchAiTypeChange: (Int) -> Unit,
+    bookmarkThreshold: Int,
+    onBookmarkThresholdChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sortOptions = listOf(
@@ -317,9 +331,22 @@ private fun SearchFilterBar(
         "标签完全" to "exact_match_for_tags",
         "标题说明" to "title_and_caption",
     )
+    val bookmarkOptions = listOf(
+        "默认" to 0,
+        "100" to 100,
+        "250" to 250,
+        "500" to 500,
+        "1000" to 1000,
+        "5000" to 5000,
+        "10000" to 10000,
+        "20000" to 20000,
+        "30000" to 30000,
+        "50000" to 50000,
+    )
 
     val selectedSortIndex = sortOptions.indexOfFirst { it.second == sort }.coerceAtLeast(0)
     val selectedTargetIndex = targetOptions.indexOfFirst { it.second == searchTarget }.coerceAtLeast(0)
+    val selectedBookmarkIndex = bookmarkOptions.indexOfFirst { it.second == bookmarkThreshold }.coerceAtLeast(0)
 
     Column(
         modifier = modifier
@@ -352,6 +379,12 @@ private fun SearchFilterBar(
                 onCheckedChange = { onSearchAiTypeChange(if (it) 0 else 1) },
             )
         }
+        // 收藏数阈值选择：选择后在搜索词后追加 " ${value}users入り"。
+        TabRow(
+            tabs = bookmarkOptions.map { it.first },
+            selectedTabIndex = selectedBookmarkIndex,
+            onTabSelected = { onBookmarkThresholdChange(bookmarkOptions[it].second) },
+        )
     }
 }
 
