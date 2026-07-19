@@ -6,7 +6,7 @@ package com.perol.pixez.shared.platform
  * 各平台实现负责选择正确的保存路径与权限处理：
  * - Android：保存到公共 Pictures/PixEz 目录并刷新 MediaStore。
  * - Desktop：保存到用户主目录下的 Pictures/PixEz。
- * - iOS/macOS：保存到应用沙盒或相册（当前为占位实现）。
+ * - iOS/macOS：保存到应用沙盒 Documents/PixEz。
  */
 expect class IllustSaver() {
     /**

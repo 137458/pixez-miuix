@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastMessage
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -171,35 +173,25 @@ fun IllustDetailScreen(
             )
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            bookmarkError?.let { error ->
-                Text(
-                    text = error,
-                    color = MiuixTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
-            downloadMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = if (message.startsWith("下载失败")) {
-                        MiuixTheme.colorScheme.error
-                    } else {
-                        MiuixTheme.colorScheme.primary
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-            when {
-                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-                result.isSuccess && illust != null -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                bookmarkError?.let { error ->
+                    Text(
+                        text = error,
+                        color = MiuixTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                when {
+                    result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                    result.isSuccess && illust != null -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
                         item {
                             PixivAsyncImage(
                                 model = illust.imageUrls.large,
@@ -270,6 +262,11 @@ fun IllustDetailScreen(
                     onRetry = { retryCount++ },
                     modifier = Modifier.fillMaxSize(),
                 )
+            }
+            ToastMessage(
+                message = downloadMessage,
+                onDismiss = { downloadMessage = null },
+            )
         }
     }
 }

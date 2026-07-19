@@ -10,7 +10,7 @@
 1. **下载任务仓库与平台保存抽象（已完成）**
    - 新增 `DownloadTask` 数据模型：任务 ID、作品 ID、页码、远程 URL、文件名、状态、错误信息。
    - 新增 `DownloadRepository`：提供 `download(illust, pageIndex)` 接口，负责下载图片字节并调用平台保存。
-   - 新增 expect/actual `IllustSaver`：跨平台保存图片字节到本地，Android 保存到 Pictures/PixEz，Desktop 保存到用户图片目录，iOS/macOS 先提供占位实现。
+   - 新增 expect/actual `IllustSaver`：跨平台保存图片字节到本地，Android 保存到 Pictures/PixEz，Desktop 保存到用户图片目录，iOS/macOS 保存到应用沙盒 Documents/PixEz。
    - `IllustDetailScreen` 添加「下载」按钮，先支持下载当前展示的单页作品。
 
 2. **多页作品下载（已完成）**
@@ -18,14 +18,15 @@
    - `IllustDetailScreen` 信息区在 `pageCount > 1` 时显示「下载全部页」入口。
    - 单页作品仍通过 TopAppBar「下载」按钮下载当前页。
 
-3. **下载反馈与错误处理（当前切片）**
-   - 下载中/成功/失败状态反馈（暂定使用 Snackbar 或 Toast 风格的轻量提示）。
-   - 失败时支持重试。
+3. **下载反馈与错误处理（已完成）**
+   - 新增 `ToastMessage` 轻量提示组件，用于显示下载中/成功/失败状态。
+   - `IllustDetailScreen` 用底部 Toast 替换原来的 `downloadMessage` Text，避免挤占内容区。
+   - 下载失败时用户可再次点击「下载」或「下载全部页」入口重试。
 
-4. **平台实现补齐**
+4. **平台实现补齐（已完成）**
    - Android：使用 `MediaStore` 保存到公共 Pictures 目录，自动刷新图库。
    - Desktop：保存到用户主目录下的 `Pictures/PixEz`。
-   - iOS/macOS：保存到应用沙盒或相册（后续补充）。
+   - iOS/macOS：保存到应用沙盒 `Documents/PixEz`。
 
 ## 技术决策
 - 下载使用独立的 Ktor `HttpClient` 或复用现有 `apiClient` 发起 GET 请求获取图片字节。
