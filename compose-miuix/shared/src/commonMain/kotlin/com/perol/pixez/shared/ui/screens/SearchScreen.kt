@@ -62,9 +62,10 @@ fun SearchScreen(
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
     val searchTypes = listOf("作品", "画师")
 
-    // 搜索筛选状态：排序、搜索目标、AI 类型与收藏数阈值（仅作品搜索有效）。
+    // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值与 Ugoira 过滤（仅作品搜索有效）。
     // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
     // bookmarkThreshold：0 表示不追加收藏数条件，非 0 时搜索词追加 " ${value}users入り"。
+    // ugoiraFilter：0 表示全部，1 表示仅动图，2 表示排除动图。
     var sort by rememberSaveable {
         mutableStateOf(
             settingsRepository.getString(SettingsKeys.SEARCH_SORT, "date_desc") ?: "date_desc",
@@ -81,8 +82,11 @@ fun SearchScreen(
     var searchAiType by rememberSaveable {
         mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_AI_TYPE, 0))
     }
-        var bookmarkThreshold by rememberSaveable {
+    var bookmarkThreshold by rememberSaveable {
         mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0))
+    }
+    var ugoiraFilter by rememberSaveable {
+        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_UGOIRA_FILTER, 0))
     }
 
     // 筛选条件变化时持久化回写设置。
@@ -97,6 +101,9 @@ fun SearchScreen(
     }
     LaunchedEffect(bookmarkThreshold) {
         settingsRepository.setInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, bookmarkThreshold)
+    }
+    LaunchedEffect(ugoiraFilter) {
+        settingsRepository.setInt(SettingsKeys.SEARCH_UGOIRA_FILTER, ugoiraFilter)
     }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
@@ -179,6 +186,8 @@ fun SearchScreen(
                         onSearchAiTypeChange = { searchAiType = it },
                         bookmarkThreshold = bookmarkThreshold,
                         onBookmarkThresholdChange = { bookmarkThreshold = it },
+                        ugoiraFilter = ugoiraFilter,
+                        onUgoiraFilterChange = { ugoiraFilter = it },
                     )
                 }
                 Box(
@@ -193,6 +202,7 @@ fun SearchScreen(
                             searchTarget = searchTarget,
                             searchAiType = searchAiType,
                             bookmarkThreshold = bookmarkThreshold,
+                            ugoiraFilter = ugoiraFilter,
                             repository = repository,
                             onIllustClick = onIllustClick,
                         )
@@ -230,6 +240,7 @@ private fun SearchIllustResultGrid(
     searchTarget: String,
     searchAiType: Int,
     bookmarkThreshold: Int,
+    ugoiraFilter: Int,
     repository: SearchRepository,
     onIllustClick: (Int) -> Unit,
 ) {
@@ -264,14 +275,22 @@ private fun SearchIllustResultGrid(
         result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         result.isSuccess -> {
             val illusts = result.getOrNull().orEmpty()
-            if (illusts.isEmpty()) {
+            // 根据 Ugoira 筛选条件本地过滤作品类型。
+            val filteredIllusts = remember(illusts, ugoiraFilter) {
+                when (ugoiraFilter) {
+                    1 -> illusts.filter { it.type == "ugoira" }
+                    2 -> illusts.filter { it.type != "ugoira" }
+                    else -> illusts
+                }
+            }
+            if (filteredIllusts.isEmpty()) {
                 EmptyPlaceholder(
                     message = "未找到相关作品",
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 IllustStaggeredGrid(
-                    illusts = illusts,
+                    illusts = filteredIllusts,
                     onIllustClick = onIllustClick,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -337,7 +356,7 @@ private fun SearchUserResultList(
 }
 
 /**
- * 搜索筛选栏：排序、搜索目标、AI 类型与收藏数阈值切换。
+ * 搜索筛选栏：排序、搜索目标、AI 类型、收藏数阈值与 Ugoira 过滤切换。
  */
 @Composable
 private fun SearchFilterBar(
@@ -349,6 +368,8 @@ private fun SearchFilterBar(
     onSearchAiTypeChange: (Int) -> Unit,
     bookmarkThreshold: Int,
     onBookmarkThresholdChange: (Int) -> Unit,
+    ugoiraFilter: Int,
+    onUgoiraFilterChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sortOptions = listOf(
@@ -373,10 +394,16 @@ private fun SearchFilterBar(
         "30000" to 30000,
         "50000" to 50000,
     )
+    val ugoiraOptions = listOf(
+        "全部" to 0,
+        "仅动图" to 1,
+        "排除动图" to 2,
+    )
 
     val selectedSortIndex = sortOptions.indexOfFirst { it.second == sort }.coerceAtLeast(0)
     val selectedTargetIndex = targetOptions.indexOfFirst { it.second == searchTarget }.coerceAtLeast(0)
     val selectedBookmarkIndex = bookmarkOptions.indexOfFirst { it.second == bookmarkThreshold }.coerceAtLeast(0)
+    val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == ugoiraFilter }.coerceAtLeast(0)
 
     Column(
         modifier = modifier
@@ -414,6 +441,12 @@ private fun SearchFilterBar(
             tabs = bookmarkOptions.map { it.first },
             selectedTabIndex = selectedBookmarkIndex,
             onTabSelected = { onBookmarkThresholdChange(bookmarkOptions[it].second) },
+        )
+        // Ugoira 动图过滤：全部 / 仅动图 / 排除动图。
+        TabRow(
+            tabs = ugoiraOptions.map { it.first },
+            selectedTabIndex = selectedUgoiraIndex,
+            onTabSelected = { onUgoiraFilterChange(ugoiraOptions[it].second) },
         )
     }
 }

@@ -66,6 +66,7 @@ internal object SettingsKeys {
     const val SEARCH_TARGET = "search_target"
     const val SEARCH_AI_TYPE = "search_ai_type"
     const val SEARCH_BOOKMARK_THRESHOLD = "search_bookmark_threshold"
+    const val SEARCH_UGOIRA_FILTER = "search_ugoira_filter"
 
     // 旧版遗留键，用于迁移兼容
     const val FILE_NAME_EVAL_LEGACY = "file_name_eval"
