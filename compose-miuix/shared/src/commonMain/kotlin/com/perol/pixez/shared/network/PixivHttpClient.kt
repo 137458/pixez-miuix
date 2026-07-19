@@ -50,10 +50,36 @@ class PixivHttpClient(
     )
 
     /**
+     * 图片下载客户端，用于从 i.pximg.net 下载原图。
+     *
+     * 不使用 TokenRefreshPlugin，避免图片 401 时触发 OAuth 刷新逻辑；
+     * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
+     */
+    val downloadClient: HttpClient = HttpClient {
+        install(HttpRequestRetry) {
+            retryOnExceptionOrServerErrors(maxRetries = 2)
+        }
+        if (enableLogging) {
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        Napier.d(message, tag = "PixivDownload")
+                    }
+                }
+                level = LogLevel.INFO
+            }
+        }
+        defaultRequest {
+            headers.append("Referer", "https://app-api.pixiv.net/")
+        }
+    }
+
+    /**
      * 释放所有 Ktor HttpClient 占用的引擎资源。
      */
     fun close() {
         runCatching { apiClient.close() }
+        runCatching { downloadClient.close() }
         runCatching { baseOAuthClient.close() }
     }
 

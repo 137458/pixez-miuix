@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -33,8 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BookmarkRepository
+import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -62,6 +65,7 @@ fun IllustDetailScreen(
     onIllustSeriesClick: (Int) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
+    downloadRepository: DownloadRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -80,6 +84,8 @@ fun IllustDetailScreen(
     var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
     var isBookmarkLoading by rememberSaveable { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
+    var isDownloading by rememberSaveable { mutableStateOf(false) }
+    var downloadMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -128,6 +134,33 @@ fun IllustDetailScreen(
                             contentDescription = if (isBookmarked) "已收藏" else "收藏",
                         )
                     }
+                    IconButton(
+                        onClick = {
+                            if (isDownloading || illust == null) return@IconButton
+                            coroutineScope.launch {
+                                try {
+                                    isDownloading = true
+                                    downloadMessage = "下载中…"
+                                    // downloadRepository 已捕获保存/网络异常并返回 Failed 状态，
+                                    // 此处只需在 finally 中重置加载态，取消时也能保证状态恢复。
+                                    val task = downloadRepository.download(illust, pageIndex = 0)
+                                    downloadMessage = when (task.status) {
+                                        DownloadStatus.Success -> "下载成功"
+                                        DownloadStatus.Failed -> "下载失败: ${task.error ?: "未知错误"}"
+                                        else -> null
+                                    }
+                                } finally {
+                                    isDownloading = false
+                                }
+                            }
+                        },
+                        enabled = !isDownloading && illust != null,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "下载",
+                        )
+                    }
                     IconButton(onClick = { /* M4: 更多菜单 */ }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
@@ -148,6 +181,17 @@ fun IllustDetailScreen(
                     text = error,
                     color = MiuixTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp),
+                )
+            }
+            downloadMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = if (message.startsWith("下载失败")) {
+                        MiuixTheme.colorScheme.error
+                    } else {
+                        MiuixTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             when {

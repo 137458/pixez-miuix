@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
+import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
@@ -12,6 +13,7 @@ import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
+import com.perol.pixez.shared.platform.IllustSaver
 
 /**
  * 应用级依赖容器。
@@ -73,6 +75,13 @@ class AppDependencies(
 
     val bookmarkRepository: BookmarkRepository by lazy {
         BookmarkRepository(httpClient.apiClient)
+    }
+
+    /**
+     * 插画下载仓库，负责下载图片字节并调用平台保存。
+     */
+    val downloadRepository: DownloadRepository by lazy {
+        DownloadRepository(httpClient.downloadClient, IllustSaver())
     }
 
     /**
