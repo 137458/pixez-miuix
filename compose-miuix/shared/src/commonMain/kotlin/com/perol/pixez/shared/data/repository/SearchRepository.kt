@@ -4,6 +4,8 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.Search
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.TrendingTag
+import com.perol.pixez.shared.data.model.UserPreview
+import com.perol.pixez.shared.data.model.UserPreviewsResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -45,5 +47,20 @@ class SearchRepository(
             parameter("word", word)
         }.body()
         response.illusts
+    }
+
+    /**
+     * 按关键词搜索画师（用户）。
+     *
+     * @param word 搜索关键词。
+     */
+    suspend fun searchUser(
+        word: String,
+    ): List<UserPreview> = networkCall("搜索画师失败 word=$word") {
+        val response: UserPreviewsResponse = apiClient.get("/v1/search/user") {
+            parameter("filter", "for_android")
+            parameter("word", word)
+        }.body()
+        response.userPreviews
     }
 }

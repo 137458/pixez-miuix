@@ -209,6 +209,7 @@ private fun MainContent(
 
         RootComponent.MainTab.Search -> SearchScreen(
             onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
             repository = searchRepository,
             settingsRepository = settingsRepository,
         )

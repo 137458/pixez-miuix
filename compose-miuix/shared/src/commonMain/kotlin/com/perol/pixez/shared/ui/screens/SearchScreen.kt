@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
+import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -29,6 +30,7 @@ import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.UserPreviewItem
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SearchBar
@@ -44,13 +46,18 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun SearchScreen(
     onIllustClick: (Int) -> Unit,
+    onUserClick: (Int) -> Unit,
     repository: SearchRepository,
     settingsRepository: SettingsRepository,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    // 搜索筛选状态：排序与搜索目标。
+    // 搜索类型：0 = 作品，1 = 画师。
+    var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
+    val searchTypes = listOf("作品", "画师")
+
+    // 搜索筛选状态：排序与搜索目标（仅作品搜索有效）。
     var sort by rememberSaveable { mutableStateOf("date_desc") }
     var searchTarget by rememberSaveable { mutableStateOf("partial_match_for_tags") }
 
@@ -116,24 +123,41 @@ fun SearchScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
             ) {
-                SearchFilterBar(
-                    sort = sort,
-                    onSortChange = { sort = it },
-                    searchTarget = searchTarget,
-                    onSearchTargetChange = { searchTarget = it },
+                TabRow(
+                    tabs = searchTypes,
+                    selectedTabIndex = searchTypeIndex,
+                    onTabSelected = { searchTypeIndex = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+                if (searchTypeIndex == 0) {
+                    SearchFilterBar(
+                        sort = sort,
+                        onSortChange = { sort = it },
+                        searchTarget = searchTarget,
+                        onSearchTargetChange = { searchTarget = it },
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                 ) {
-                    SearchResultGrid(
-                        query = query,
-                        sort = sort,
-                        searchTarget = searchTarget,
-                        repository = repository,
-                        onIllustClick = onIllustClick,
-                    )
+                    when (searchTypeIndex) {
+                        0 -> SearchIllustResultGrid(
+                            query = query,
+                            sort = sort,
+                            searchTarget = searchTarget,
+                            repository = repository,
+                            onIllustClick = onIllustClick,
+                        )
+                        1 -> SearchUserResultList(
+                            query = query,
+                            repository = repository,
+                            onUserClick = onUserClick,
+                        )
+                    }
                 }
             }
         } else {
@@ -156,7 +180,7 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchResultGrid(
+private fun SearchIllustResultGrid(
     query: String,
     sort: String,
     searchTarget: String,
@@ -198,6 +222,57 @@ private fun SearchResultGrid(
                     onIllustClick = onIllustClick,
                     modifier = Modifier.fillMaxSize(),
                 )
+            }
+        }
+        else -> ErrorPlaceholder(
+            error = result.exceptionOrNull(),
+            onRetry = { retryCount++ },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Composable
+private fun SearchUserResultList(
+    query: String,
+    repository: SearchRepository,
+    onUserClick: (Int) -> Unit,
+) {
+    // 画师搜索结果重试计数，作为 produceState 的 key 触发重新加载。
+    var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
+
+    val state = produceState<Result<List<UserPreview>>?>(
+        initialValue = null,
+        query,
+        retryCount,
+    ) {
+        value = runCatchingNonCancel { repository.searchUser(query) }
+    }
+
+    val result = state.value
+    when {
+        result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        result.isSuccess -> {
+            val previews = result.getOrNull().orEmpty()
+            if (previews.isEmpty()) {
+                EmptyPlaceholder(
+                    message = "未找到相关画师",
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(
+                        items = previews,
+                        key = { it.user.id },
+                    ) { preview ->
+                        UserPreviewItem(
+                            preview = preview,
+                            onClick = { onUserClick(preview.user.id) },
+                        )
+                    }
+                }
             }
         }
         else -> ErrorPlaceholder(
