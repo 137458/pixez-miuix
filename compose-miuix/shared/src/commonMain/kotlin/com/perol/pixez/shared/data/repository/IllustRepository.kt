@@ -107,4 +107,16 @@ class IllustRepository(
             }.body()
             response.comments
         }
+
+    /**
+     * 获取相关作品列表。
+     */
+    suspend fun getIllustRelated(illustId: Int): List<Illust> =
+        networkCall("获取相关作品失败 illustId=$illustId") {
+            val response: Recommend = apiClient.get("/v2/illust/related") {
+                parameter("filter", "for_android")
+                parameter("illust_id", illustId)
+            }.body()
+            response.illusts
+        }
 }

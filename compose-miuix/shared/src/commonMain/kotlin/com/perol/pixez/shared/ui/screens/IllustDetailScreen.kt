@@ -58,6 +58,7 @@ fun IllustDetailScreen(
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
     onCommentsClick: (Int) -> Unit,
+    onRelatedIllustsClick: (Int) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
 ) {
@@ -165,11 +166,12 @@ fun IllustDetailScreen(
 
                         item {
                             IllustInfoSection(
-                            illust = illust,
-                            onUserClick = onUserClick,
-                            onCommentsClick = onCommentsClick,
-                            modifier = Modifier.padding(16.dp),
-                        )
+                                illust = illust,
+                                onUserClick = onUserClick,
+                                onCommentsClick = onCommentsClick,
+                                onRelatedIllustsClick = onRelatedIllustsClick,
+                                modifier = Modifier.padding(16.dp),
+                            )
                         }
 
                         item {
@@ -205,6 +207,7 @@ private fun IllustInfoSection(
     illust: Illust,
     onUserClick: (Int) -> Unit,
     onCommentsClick: (Int) -> Unit,
+    onRelatedIllustsClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -260,6 +263,17 @@ private fun IllustInfoSection(
             )
             StatItem(label = "页数", value = illust.pageCount.toString())
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "相关作品",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onRelatedIllustsClick(illust.id) }
+                .padding(vertical = 8.dp),
+            style = MiuixTheme.textStyles.body1,
+            color = MiuixTheme.colorScheme.primary,
+        )
     }
 }
 

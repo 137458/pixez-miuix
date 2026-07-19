@@ -94,6 +94,13 @@ class RootComponent(
         navigation.push(Config.Comments(illustId))
     }
 
+    /**
+     * 打开相关作品页。
+     */
+    fun onRelatedIllustsClicked(illustId: Int) {
+        navigation.push(Config.RelatedIllusts(illustId))
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -102,6 +109,7 @@ class RootComponent(
         is Config.IllustDetail -> Child.IllustDetail(config.illustId)
         is Config.UserDetail -> Child.UserDetail(config.userId)
         is Config.Comments -> Child.Comments(config.illustId)
+        is Config.RelatedIllusts -> Child.RelatedIllusts(config.illustId)
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -143,6 +151,9 @@ class RootComponent(
 
         @Serializable
         data class Comments(val illustId: Int) : Config()
+
+        @Serializable
+        data class RelatedIllusts(val illustId: Int) : Config()
     }
 
     sealed class Child {
@@ -153,5 +164,6 @@ class RootComponent(
         data object About : Child()
         data object Login : Child()
         data class Comments(val illustId: Int) : Child()
+        data class RelatedIllusts(val illustId: Int) : Child()
     }
 }

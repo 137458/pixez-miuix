@@ -16,12 +16,22 @@
    - 接入 Pixiv Spotlight API `/v1/spotlight/articles`，替换当前 `FakeData` 占位。
    - `SpotlightScreen` 以卡片网格展示文章缩略图与标题，点击打开文章 URL。
 
-3. **作品下载任务管理（TODO）**
+3. **评论列表（已完成）**
+   - 新增 `Comment`/`CommentResponse` 模型，对应 `/v3/illust/comments`。
+   - `IllustRepository` 添加 `getIllustComments(illustId: Int)`。
+   - 新增 `CommentsScreen`，展示评论列表、空态与错误重试。
+   - `IllustDetailScreen` 信息区添加可点击评论统计项，Decompose 导航到评论页。
+
+4. **作品下载任务管理（TODO）**
    - 实现插画下载队列、进度反馈与本地保存。
 
-4. **评论列表与相关作品等二级页面（TODO）**
-   - 作品详情页入口进入评论列表。
-   - 用户详情/作品详情进入相关作品、画师系列等页面。
+5. **相关作品二级页面（已完成）**
+   - `IllustRepository` 添加 `getIllustRelated(illustId: Int)`，调用 `/v2/illust/related`。
+   - 新增 `RelatedIllustsScreen`，复用 `IllustStaggeredGrid` 展示相关插画。
+   - `IllustDetailScreen` 信息区添加"相关作品"入口，Decompose 导航到相关作品页。
+
+6. **画师系列等二级页面（TODO）**
+   - 用户详情/作品详情进入画师系列等页面。
 
 ## 技术决策
 - 登录状态通过 `AccountRepository.currentAccount()` 判断，与 `HelloScreen` 保持一致。
