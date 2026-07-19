@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,10 +65,39 @@ fun SearchScreen(
     // 搜索筛选状态：排序、搜索目标、AI 类型与收藏数阈值（仅作品搜索有效）。
     // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
     // bookmarkThreshold：0 表示不追加收藏数条件，非 0 时搜索词追加 " ${value}users入り"。
-    var sort by rememberSaveable { mutableStateOf("date_desc") }
-    var searchTarget by rememberSaveable { mutableStateOf("partial_match_for_tags") }
-    var searchAiType by rememberSaveable { mutableIntStateOf(0) }
-    var bookmarkThreshold by rememberSaveable { mutableIntStateOf(0) }
+    var sort by rememberSaveable {
+        mutableStateOf(
+            settingsRepository.getString(SettingsKeys.SEARCH_SORT, "date_desc") ?: "date_desc",
+        )
+    }
+    var searchTarget by rememberSaveable {
+        mutableStateOf(
+            settingsRepository.getString(
+                SettingsKeys.SEARCH_TARGET,
+                "partial_match_for_tags",
+            ) ?: "partial_match_for_tags",
+        )
+    }
+    var searchAiType by rememberSaveable {
+        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_AI_TYPE, 0))
+    }
+        var bookmarkThreshold by rememberSaveable {
+        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0))
+    }
+
+    // 筛选条件变化时持久化回写设置。
+    LaunchedEffect(sort) {
+        settingsRepository.setString(SettingsKeys.SEARCH_SORT, sort)
+    }
+    LaunchedEffect(searchTarget) {
+        settingsRepository.setString(SettingsKeys.SEARCH_TARGET, searchTarget)
+    }
+    LaunchedEffect(searchAiType) {
+        settingsRepository.setInt(SettingsKeys.SEARCH_AI_TYPE, searchAiType)
+    }
+    LaunchedEffect(bookmarkThreshold) {
+        settingsRepository.setInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, bookmarkThreshold)
+    }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
     var trendRetryCount by rememberSaveable { mutableIntStateOf(0) }

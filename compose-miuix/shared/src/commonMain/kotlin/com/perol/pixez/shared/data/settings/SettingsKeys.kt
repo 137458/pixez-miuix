@@ -62,6 +62,10 @@ internal object SettingsKeys {
     const val DRAG_START_X = "drag_start_x"
     const val AUTO_TAG_WHEN_STAR = "auto_tag_when_star"
     const val SEARCH_HISTORY = "search_history"
+    const val SEARCH_SORT = "search_sort"
+    const val SEARCH_TARGET = "search_target"
+    const val SEARCH_AI_TYPE = "search_ai_type"
+    const val SEARCH_BOOKMARK_THRESHOLD = "search_bookmark_threshold"
 
     // 旧版遗留键，用于迁移兼容
     const val FILE_NAME_EVAL_LEGACY = "file_name_eval"
