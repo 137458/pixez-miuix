@@ -216,6 +216,33 @@ fun IllustDetailScreen(
                                 onCommentsClick = onCommentsClick,
                                 onRelatedIllustsClick = onRelatedIllustsClick,
                                 onIllustSeriesClick = onIllustSeriesClick,
+                                onDownloadAllPagesClick = if (illust.pageCount > 1) {
+                                    {
+                                        if (isDownloading) return@IllustInfoSection
+                                        coroutineScope.launch {
+                                            try {
+                                                isDownloading = true
+                                                val tasks = downloadRepository.downloadAllPages(
+                                                    illust,
+                                                    onProgress = { completed, total ->
+                                                        downloadMessage = "下载中 $completed/$total"
+                                                    },
+                                                )
+                                                val successCount = tasks.count { it.status == DownloadStatus.Success }
+                                                val failedCount = tasks.count { it.status == DownloadStatus.Failed }
+                                                downloadMessage = when {
+                                                    failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
+                                                    successCount == 0 -> "全部下载失败"
+                                                    else -> "下载完成: 成功 $successCount, 失败 $failedCount"
+                                                }
+                                            } finally {
+                                                isDownloading = false
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
                                 modifier = Modifier.padding(16.dp),
                             )
                         }
@@ -255,6 +282,7 @@ private fun IllustInfoSection(
     onCommentsClick: (Int) -> Unit,
     onRelatedIllustsClick: (Int) -> Unit,
     onIllustSeriesClick: (Int) -> Unit,
+    onDownloadAllPagesClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -309,6 +337,19 @@ private fun IllustInfoSection(
                 onClick = { onCommentsClick(illust.id) },
             )
             StatItem(label = "页数", value = illust.pageCount.toString())
+        }
+
+        onDownloadAllPagesClick?.let { onClick ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "下载全部页",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(vertical = 8.dp),
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.primary,
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

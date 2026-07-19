@@ -54,6 +54,27 @@ class DownloadRepository(
     }
 
     /**
+     * 下载作品全部页原图并保存到本地。
+     *
+     * 按页码顺序逐页下载，返回每一页的下载任务结果。
+     *
+     * @param illust 目标作品
+     * @param onProgress 进度回调，参数为 (已完成数量, 总页数)
+     * @return 每页对应的下载任务列表
+     */
+    suspend fun downloadAllPages(
+        illust: Illust,
+        onProgress: ((completed: Int, total: Int) -> Unit)? = null,
+    ): List<DownloadTask> {
+        return (0 until illust.pageCount).mapIndexed { index, pageIndex ->
+            onProgress?.invoke(index, illust.pageCount)
+            download(illust, pageIndex)
+        }.also { tasks ->
+            onProgress?.invoke(tasks.size, illust.pageCount)
+        }
+    }
+
+    /**
      * 解析作品指定页的原图 URL。
      *
      * 单页作品优先使用 [Illust.metaSinglePage]；多页作品使用 [Illust.metaPages]。

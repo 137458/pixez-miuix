@@ -13,11 +13,12 @@
    - 新增 expect/actual `IllustSaver`：跨平台保存图片字节到本地，Android 保存到 Pictures/PixEz，Desktop 保存到用户图片目录，iOS/macOS 先提供占位实现。
    - `IllustDetailScreen` 添加「下载」按钮，先支持下载当前展示的单页作品。
 
-2. **多页作品下载（当前切片）**
-   - 支持 `pageCount > 1` 的作品逐页下载。
-   - 下载全部页或仅下载当前页。
+2. **多页作品下载（已完成）**
+   - `DownloadRepository` 新增 `downloadAllPages(illust, onProgress)`，按页码顺序逐页下载并支持进度回调。
+   - `IllustDetailScreen` 信息区在 `pageCount > 1` 时显示「下载全部页」入口。
+   - 单页作品仍通过 TopAppBar「下载」按钮下载当前页。
 
-3. **下载反馈与错误处理**
+3. **下载反馈与错误处理（当前切片）**
    - 下载中/成功/失败状态反馈（暂定使用 Snackbar 或 Toast 风格的轻量提示）。
    - 失败时支持重试。
 
