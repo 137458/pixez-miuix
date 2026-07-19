@@ -178,7 +178,6 @@ private fun MainContent(
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(
-            onIllustClick = component::onIllustClicked,
             repository = illustRepository,
         )
     }

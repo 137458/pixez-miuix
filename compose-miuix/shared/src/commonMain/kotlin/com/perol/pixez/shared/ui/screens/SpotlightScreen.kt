@@ -39,7 +39,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun SpotlightScreen(
-    onIllustClick: (Int) -> Unit,
     repository: IllustRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
