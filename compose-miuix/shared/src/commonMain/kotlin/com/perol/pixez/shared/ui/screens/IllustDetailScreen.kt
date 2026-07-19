@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,11 +41,15 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
+import com.perol.pixez.shared.ui.components.buildIllustShareLink
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -87,7 +92,9 @@ fun IllustDetailScreen(
     var isBookmarkLoading by rememberSaveable { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by rememberSaveable { mutableStateOf(false) }
-    var downloadMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var showActionMenu by rememberSaveable { mutableStateOf(false) }
+    val clipboard = remember { IllustClipboard() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -142,11 +149,11 @@ fun IllustDetailScreen(
                             coroutineScope.launch {
                                 try {
                                     isDownloading = true
-                                    downloadMessage = "下载中…"
+                                    toastMessage = "下载中…"
                                     // downloadRepository 已捕获保存/网络异常并返回 Failed 状态，
                                     // 此处只需在 finally 中重置加载态，取消时也能保证状态恢复。
                                     val task = downloadRepository.download(illust, pageIndex = 0)
-                                    downloadMessage = when (task.status) {
+                                    toastMessage = when (task.status) {
                                         DownloadStatus.Success -> "下载成功"
                                         DownloadStatus.Failed -> "下载失败: ${task.error ?: "未知错误"}"
                                         else -> null
@@ -163,7 +170,10 @@ fun IllustDetailScreen(
                             contentDescription = "下载",
                         )
                     }
-                    IconButton(onClick = { /* M4: 更多菜单 */ }) {
+                    IconButton(
+                        onClick = { showActionMenu = true },
+                        enabled = illust != null,
+                    ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "更多",
@@ -192,84 +202,107 @@ fun IllustDetailScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                        item {
-                            PixivAsyncImage(
-                                model = illust.imageUrls.large,
-                                contentDescription = illust.title,
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
+                            item {
+                                PixivAsyncImage(
+                                    model = illust.imageUrls.large,
+                                    contentDescription = illust.title,
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
 
-                        item {
-                            IllustInfoSection(
-                                illust = illust,
-                                onUserClick = onUserClick,
-                                onCommentsClick = onCommentsClick,
-                                onRelatedIllustsClick = onRelatedIllustsClick,
-                                onIllustSeriesClick = onIllustSeriesClick,
-                                onDownloadAllPagesClick = if (illust.pageCount > 1) {
-                                    {
-                                        if (isDownloading) return@IllustInfoSection
-                                        coroutineScope.launch {
-                                            try {
-                                                isDownloading = true
-                                                val tasks = downloadRepository.downloadAllPages(
-                                                    illust,
-                                                    onProgress = { completed, total ->
-                                                        downloadMessage = "下载中 $completed/$total"
-                                                    },
-                                                )
-                                                val successCount = tasks.count { it.status == DownloadStatus.Success }
-                                                val failedCount = tasks.count { it.status == DownloadStatus.Failed }
-                                                downloadMessage = when {
-                                                    failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
-                                                    successCount == 0 -> "全部下载失败"
-                                                    else -> "下载完成: 成功 $successCount, 失败 $failedCount"
+                            item {
+                                IllustInfoSection(
+                                    illust = illust,
+                                    onUserClick = onUserClick,
+                                    onCommentsClick = onCommentsClick,
+                                    onRelatedIllustsClick = onRelatedIllustsClick,
+                                    onIllustSeriesClick = onIllustSeriesClick,
+                                    onDownloadAllPagesClick = if (illust.pageCount > 1) {
+                                        {
+                                            if (isDownloading) return@IllustInfoSection
+                                            coroutineScope.launch {
+                                                try {
+                                                    isDownloading = true
+                                                    val tasks = downloadRepository.downloadAllPages(
+                                                        illust,
+                                                        onProgress = { completed, total ->
+                                                            toastMessage = "下载中 $completed/$total"
+                                                        },
+                                                    )
+                                                    val successCount = tasks.count { it.status == DownloadStatus.Success }
+                                                    val failedCount = tasks.count { it.status == DownloadStatus.Failed }
+                                                    toastMessage = when {
+                                                        failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
+                                                        successCount == 0 -> "全部下载失败"
+                                                        else -> "下载完成: 成功 $successCount, 失败 $failedCount"
+                                                    }
+                                                } finally {
+                                                    isDownloading = false
                                                 }
-                                            } finally {
-                                                isDownloading = false
                                             }
                                         }
-                                    }
-                                } else {
-                                    null
-                                },
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        }
+                                    } else {
+                                        null
+                                    },
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            }
 
-                        item {
-                            SmallTitle(
-                                text = "标签",
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-                        }
+                            item {
+                                SmallTitle(
+                                    text = "标签",
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
 
-                        items(illust.tags, key = { it.name }) { tag ->
-                            Text(
-                                text = tag.translatedName ?: tag.name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                style = MiuixTheme.textStyles.body1,
-                            )
+                            items(illust.tags, key = { it.name }) { tag ->
+                                Text(
+                                    text = tag.translatedName ?: tag.name,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    style = MiuixTheme.textStyles.body1,
+                                )
+                            }
                         }
                     }
+                    else -> ErrorPlaceholder(
+                        error = result.exceptionOrNull(),
+                        onRetry = { retryCount++ },
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { retryCount++ },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
             ToastMessage(
-                message = downloadMessage,
-                onDismiss = { downloadMessage = null },
+                message = toastMessage,
+                onDismiss = { toastMessage = null },
+            )
+        }
+
+        illust?.let {
+            IllustActionMenu(
+                show = showActionMenu,
+                onDismissRequest = { showActionMenu = false },
+                onCopyInfo = {
+                    showActionMenu = false
+                    val text = buildIllustCopyInfo(it)
+                    runCatching { clipboard.copy(text) }.fold(
+                        onSuccess = { toastMessage = "已复制到剪贴板" },
+                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
+                onCopyLink = {
+                    showActionMenu = false
+                    val link = buildIllustShareLink(it)
+                    runCatching { clipboard.copy(link) }.fold(
+                        onSuccess = { toastMessage = "链接已复制" },
+                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
             )
         }
     }
-}
 }
 
 @Composable
