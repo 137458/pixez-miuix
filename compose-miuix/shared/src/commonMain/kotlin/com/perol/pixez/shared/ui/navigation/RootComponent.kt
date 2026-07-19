@@ -87,6 +87,13 @@ class RootComponent(
         navigation.push(Config.Login)
     }
 
+    /**
+     * 打开作品评论页。
+     */
+    fun onCommentsClicked(illustId: Int) {
+        navigation.push(Config.Comments(illustId))
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -94,6 +101,7 @@ class RootComponent(
         is Config.Main -> Child.Main(config.tab)
         is Config.IllustDetail -> Child.IllustDetail(config.illustId)
         is Config.UserDetail -> Child.UserDetail(config.userId)
+        is Config.Comments -> Child.Comments(config.illustId)
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -132,6 +140,9 @@ class RootComponent(
 
         @Serializable
         data object Login : Config()
+
+        @Serializable
+        data class Comments(val illustId: Int) : Config()
     }
 
     sealed class Child {
@@ -141,5 +152,6 @@ class RootComponent(
         data object Settings : Child()
         data object About : Child()
         data object Login : Child()
+        data class Comments(val illustId: Int) : Child()
     }
 }

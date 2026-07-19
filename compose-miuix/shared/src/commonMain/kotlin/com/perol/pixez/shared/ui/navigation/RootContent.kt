@@ -21,6 +21,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
+import com.perol.pixez.shared.ui.screens.CommentsScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
@@ -96,6 +97,7 @@ fun RootContent(
                         illustId = instance.illustId,
                         onBack = component::onBack,
                         onUserClick = component::onUserClicked,
+                        onCommentsClick = component::onCommentsClicked,
                         repository = illustRepository,
                         bookmarkRepository = bookmarkRepository,
                     )
@@ -116,6 +118,13 @@ fun RootContent(
                             component.onMainTabSelected(RootComponent.MainTab.Hello)
                         },
                         accountRepository = accountRepository,
+                    )
+
+                    is Child.Comments -> CommentsScreen(
+                        illustId = instance.illustId,
+                        onBack = component::onBack,
+                        onUserClick = component::onUserClicked,
+                        repository = illustRepository,
                     )
 
                     Child.Settings -> SettingsScreen(

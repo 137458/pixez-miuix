@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.model.Comment
+import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.FollowIllusts
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustDetailResponse
@@ -93,5 +95,16 @@ class IllustRepository(
                 parameter("illust_id", illustId)
             }.body()
             response.illust
+        }
+
+    /**
+     * 获取作品评论列表。
+     */
+    suspend fun getIllustComments(illustId: Int): List<Comment> =
+        networkCall("获取作品评论失败 illustId=$illustId") {
+            val response: CommentResponse = apiClient.get("/v3/illust/comments") {
+                parameter("illust_id", illustId)
+            }.body()
+            response.comments
         }
 }

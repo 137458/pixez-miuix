@@ -57,6 +57,7 @@ fun IllustDetailScreen(
     illustId: Int,
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
+    onCommentsClick: (Int) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
 ) {
@@ -164,10 +165,11 @@ fun IllustDetailScreen(
 
                         item {
                             IllustInfoSection(
-                                illust = illust,
-                                onUserClick = onUserClick,
-                                modifier = Modifier.padding(16.dp),
-                            )
+                            illust = illust,
+                            onUserClick = onUserClick,
+                            onCommentsClick = onCommentsClick,
+                            modifier = Modifier.padding(16.dp),
+                        )
                         }
 
                         item {
@@ -202,6 +204,7 @@ fun IllustDetailScreen(
 private fun IllustInfoSection(
     illust: Illust,
     onUserClick: (Int) -> Unit,
+    onCommentsClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -250,15 +253,31 @@ private fun IllustInfoSection(
         ) {
             StatItem(label = "浏览", value = illust.totalView.toString())
             StatItem(label = "收藏", value = illust.totalBookmarks.toString())
-            StatItem(label = "评论", value = (illust.totalComments ?: 0).toString())
+            StatItem(
+                label = "评论",
+                value = (illust.totalComments ?: 0).toString(),
+                onClick = { onCommentsClick(illust.id) },
+            )
             StatItem(label = "页数", value = illust.pageCount.toString())
         }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatItem(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+) {
+    val modifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+    Column(
+        modifier = modifier.padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = value,
             style = MiuixTheme.textStyles.body1,
