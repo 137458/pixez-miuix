@@ -57,6 +57,7 @@ fun UserDetailScreen(
     onBack: () -> Unit,
     onIllustClick: (Int) -> Unit,
     onFollowListClick: (Int) -> Unit,
+    onFollowerListClick: (Int) -> Unit,
     repository: UserRepository,
     bookmarkRepository: BookmarkRepository,
 ) {
@@ -141,6 +142,7 @@ fun UserDetailScreen(
                             }
                         },
                         onFollowListClick = { onFollowListClick(userDetail.user.id) },
+                        onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
                         modifier = Modifier.padding(16.dp),
                     )
                     UserDetailTabContent(
@@ -316,6 +318,7 @@ private fun UserProfileHeader(
     isLoading: Boolean,
     onFollowClick: () -> Unit,
     onFollowListClick: () -> Unit,
+    onFollowerListClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -354,6 +357,14 @@ private fun UserProfileHeader(
                 style = MiuixTheme.textStyles.body2,
                 modifier = Modifier
                     .clickable(enabled = followCount > 0, onClick = onFollowListClick)
+                    .padding(4.dp),
+            )
+            val followerCount = userDetail.profile.totalMypixivUsers
+            Text(
+                text = "好P友 $followerCount",
+                style = MiuixTheme.textStyles.body2,
+                modifier = Modifier
+                    .clickable(enabled = followerCount > 0, onClick = onFollowerListClick)
                     .padding(4.dp),
             )
         }

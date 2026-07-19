@@ -35,6 +35,7 @@ import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
+import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -115,6 +116,7 @@ fun RootContent(
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
                         onFollowListClick = component::onUserFollowListClicked,
+                        onFollowerListClick = component::onUserFollowerListClicked,
                         repository = userRepository,
                         bookmarkRepository = bookmarkRepository,
                     )
@@ -151,6 +153,13 @@ fun RootContent(
                     )
 
                     is Child.UserFollowList -> UserFollowListScreen(
+                        userId = instance.userId,
+                        onBack = component::onBack,
+                        onUserClick = component::onUserClicked,
+                        repository = userRepository,
+                    )
+
+                    is Child.UserFollowerList -> UserFollowerListScreen(
                         userId = instance.userId,
                         onBack = component::onBack,
                         onUserClick = component::onUserClicked,

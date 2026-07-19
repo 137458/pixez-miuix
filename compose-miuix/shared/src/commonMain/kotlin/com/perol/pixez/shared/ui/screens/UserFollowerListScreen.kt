@@ -27,10 +27,10 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 用户关注列表页。
+ * 用户好P友列表页。
  */
 @Composable
-fun UserFollowListScreen(
+fun UserFollowerListScreen(
     userId: Int,
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
@@ -44,14 +44,14 @@ fun UserFollowListScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getUserFollowing(userId) }
+        value = runCatchingNonCancel { repository.getUserFollowers(userId) }
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "关注",
+                title = "好P友",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -65,7 +65,7 @@ fun UserFollowListScreen(
     ) { paddingValues ->
         when (val result = state.value) {
             null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            else -> UserFollowListBody(
+            else -> UserFollowerListBody(
                 result = result,
                 onUserClick = onUserClick,
                 onRetry = { retryCount++ },
@@ -76,7 +76,7 @@ fun UserFollowListScreen(
 }
 
 @Composable
-private fun UserFollowListBody(
+private fun UserFollowerListBody(
     result: Result<List<UserPreview>>,
     onUserClick: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -87,7 +87,7 @@ private fun UserFollowListBody(
             val previews = result.getOrNull().orEmpty()
             if (previews.isEmpty()) {
                 EmptyPlaceholder(
-                    message = "暂无关注用户",
+                    message = "暂无好P友",
                     modifier = modifier.fillMaxSize(),
                 )
             } else {
