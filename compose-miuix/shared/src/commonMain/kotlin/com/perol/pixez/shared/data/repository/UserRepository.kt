@@ -42,4 +42,22 @@ class UserRepository(
         }.body()
         response.illusts
     }
+
+    /**
+     * 获取用户收藏的插画列表。
+     *
+     * @param userId 用户 ID。
+     * @param restrict 可见性：`public` 或 `private`，默认 `public`。
+     */
+    suspend fun getUserBookmarks(
+        userId: Int,
+        restrict: String = "public",
+    ): List<Illust> = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
+        val response: UserIllusts = apiClient.get("/v1/user/bookmarks/illust") {
+            parameter("filter", "for_android")
+            parameter("user_id", userId)
+            parameter("restrict", restrict)
+        }.body()
+        response.illusts
+    }
 }

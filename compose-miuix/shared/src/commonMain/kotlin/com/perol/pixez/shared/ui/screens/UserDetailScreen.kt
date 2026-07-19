@@ -1,17 +1,13 @@
 package com.perol.pixez.shared.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,25 +28,25 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
-import com.perol.pixez.shared.ui.components.IllustCard
+import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 用户详情页：头部信息 + 真实用户作品网格。
+ * 用户详情页：头部信息 + 「作品 / 收藏」Tab 切换。
  */
 @Composable
 fun UserDetailScreen(
@@ -60,27 +56,21 @@ fun UserDetailScreen(
     repository: UserRepository,
     bookmarkRepository: BookmarkRepository,
 ) {
-    // 重试计数，作为 produceState 的 key 触发用户资料与作品列表重新加载。
+    // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
 
-    // 同时加载用户资料与作品列表；任一失败都会进入错误态。
-    val detailState = produceState<Result<Pair<UserDetail, List<Illust>>>?>(
+    // 用户资料加载失败时整页进入错误态；成功后再展示 Tab 内容。
+    val detailState = produceState<Result<UserDetail>?>(
         initialValue = null,
         userId,
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel {
-            coroutineScope {
-                val detailDeferred = async { repository.getUserDetail(userId) }
-                val illustsDeferred = async { repository.getUserIllusts(userId) }
-                detailDeferred.await() to illustsDeferred.await()
-            }
-        }
+        value = runCatchingNonCancel { repository.getUserDetail(userId) }
     }
 
     val result = detailState.value
-    val userDetail = result?.getOrNull()?.first
+    val userDetail = result?.getOrNull()
     var isFollowed by rememberSaveable(userDetail) {
         mutableStateOf(userDetail?.user?.isFollowed ?: false)
     }
@@ -107,7 +97,6 @@ fun UserDetailScreen(
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
             result.isSuccess && userDetail != null -> {
-                val illusts = result.getOrNull()?.second.orEmpty()
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -149,28 +138,11 @@ fun UserDetailScreen(
                         },
                         modifier = Modifier.padding(16.dp),
                     )
-                    Text(
-                        text = "作品",
-                        style = MiuixTheme.textStyles.title2,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    UserDetailTabContent(
+                        userId = userId,
+                        onIllustClick = onIllustClick,
+                        repository = repository,
                     )
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(2),
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalItemSpacing = 8.dp,
-                    ) {
-                        items(
-                            items = illusts,
-                            key = { it.id },
-                        ) { illust ->
-                            IllustCard(
-                                illust = illust,
-                                onClick = { onIllustClick(illust.id) },
-                            )
-                        }
-                    }
                 }
             }
             else -> ErrorPlaceholder(
@@ -179,6 +151,156 @@ fun UserDetailScreen(
                 modifier = Modifier.padding(paddingValues),
             )
         }
+    }
+}
+
+/**
+ * 用户详情页 Tab 内容：作品 / 收藏。
+ */
+@Composable
+private fun UserDetailTabContent(
+    userId: Int,
+    onIllustClick: (Int) -> Unit,
+    repository: UserRepository,
+) {
+    // 主 Tab 选中状态：0 = 作品，1 = 收藏。
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf("作品", "收藏")
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(
+            tabs = tabs,
+            selectedTabIndex = selectedTabIndex,
+            onTabSelected = { selectedTabIndex = it },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            when (selectedTabIndex) {
+                0 -> UserWorksTab(
+                    userId = userId,
+                    onIllustClick = onIllustClick,
+                    repository = repository,
+                )
+                1 -> UserBookmarksTab(
+                    userId = userId,
+                    onIllustClick = onIllustClick,
+                    repository = repository,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 作品 Tab：加载并展示用户作品列表。
+ */
+@Composable
+private fun UserWorksTab(
+    userId: Int,
+    onIllustClick: (Int) -> Unit,
+    repository: UserRepository,
+) {
+    var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    val state = produceState<Result<List<Illust>>?>(
+        initialValue = null,
+        userId,
+        repository,
+        retryCount,
+    ) {
+        value = runCatchingNonCancel { repository.getUserIllusts(userId) }
+    }
+
+    IllustTabBody(
+        state = state.value,
+        onIllustClick = onIllustClick,
+        onRetry = { retryCount++ },
+        emptyText = "暂无作品",
+    )
+}
+
+/**
+ * 收藏 Tab：加载并展示用户公开/私密收藏插画。
+ */
+@Composable
+private fun UserBookmarksTab(
+    userId: Int,
+    onIllustClick: (Int) -> Unit,
+    repository: UserRepository,
+) {
+    // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
+    var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
+    val restrictTabs = listOf("公开", "私密")
+    val restrict = if (selectedRestrictIndex == 0) "public" else "private"
+
+    // 切换用户、可见性选项或重试时重新加载。
+    var retryCount by rememberSaveable(userId, restrict) { mutableIntStateOf(0) }
+    val state = produceState<Result<List<Illust>>?>(
+        initialValue = null,
+        userId,
+        restrict,
+        retryCount,
+    ) {
+        value = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(
+            tabs = restrictTabs,
+            selectedTabIndex = selectedRestrictIndex,
+            onTabSelected = { selectedRestrictIndex = it },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            IllustTabBody(
+                state = state.value,
+                onIllustClick = onIllustClick,
+                onRetry = { retryCount++ },
+                emptyText = "暂无${if (restrict == "public") "公开" else "私密"}收藏",
+            )
+        }
+    }
+}
+
+/**
+ * Tab 内容通用容器：处理加载 / 空态 / 错误 / 列表展示。
+ */
+@Composable
+private fun IllustTabBody(
+    state: Result<List<Illust>>?,
+    onIllustClick: (Int) -> Unit,
+    onRetry: () -> Unit,
+    emptyText: String,
+) {
+    when {
+        state == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        state.isSuccess -> {
+            val illusts = state.getOrNull().orEmpty()
+            if (illusts.isEmpty()) {
+                EmptyPlaceholder(
+                    message = emptyText,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                IllustStaggeredGrid(
+                    illusts = illusts,
+                    onIllustClick = onIllustClick,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        else -> ErrorPlaceholder(
+            error = state.exceptionOrNull(),
+            onRetry = onRetry,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
