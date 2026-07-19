@@ -10,11 +10,12 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.Url
+import kotlinx.coroutines.CancellationException
 
 /**
  * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存。
  *
- * 当前切片仅提供单页下载入口 [download]，多页作品会在后续切片中扩展为批量下载。
+ * 提供单页 [download] 与多页 [downloadAllPages] 下载入口，并将取消异常重新抛出以保留协程取消语义。
  */
 class DownloadRepository(
     private val httpClient: HttpClient,
@@ -44,6 +45,9 @@ class DownloadRepository(
             val savedPath = saver.save(fileName, bytes)
             Napier.d("下载完成 path=$savedPath")
             pendingTask.copy(status = DownloadStatus.Success)
+        } catch (e: CancellationException) {
+            // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
+            throw e
         } catch (e: Exception) {
             Napier.e("下载失败 illustId=${illust.id} page=$pageIndex", e)
             pendingTask.copy(

@@ -72,6 +72,17 @@ class PixivHttpClient(
         defaultRequest {
             headers.append("Referer", "https://app-api.pixiv.net/")
         }
+        // 图片下载也需要校验 HTTP 状态，避免把 403/404 的错误页面保存为图片文件。
+        HttpResponseValidator {
+            validateResponse { response: HttpResponse ->
+                if (response.status.value >= 400) {
+                    throw PixivApiException(
+                        statusCode = response.status.value,
+                        message = "下载请求失败: ${response.status}",
+                    )
+                }
+            }
+        }
     }
 
     /**

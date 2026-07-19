@@ -37,8 +37,11 @@ actual class IllustSaver {
             ?: throw IllegalStateException("无法打开文件写入: $filePath")
 
         try {
-            bytes.usePinned { pinned ->
+            val written = bytes.usePinned { pinned ->
                 fwrite(pinned.addressOf(0), 1u, bytes.size.toULong(), file)
+            }
+            if (written != bytes.size.toULong()) {
+                throw IllegalStateException("文件写入不完整: expected=${bytes.size}, written=$written")
             }
         } finally {
             fclose(file)
