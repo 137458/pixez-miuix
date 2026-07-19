@@ -1,7 +1,7 @@
 # M11 里程碑：用户关注列表
 
 ## 状态
-进行中。
+已完成。commit 见 `88aedcd2`。
 
 ## 目标
 原 Flutter PixEz 用户详情页可查看用户关注列表。当前 MIUIX 用户详情页仅展示资料与作品/收藏，M11 将补齐「关注」入口与列表页。
@@ -40,8 +40,12 @@
 
 ## 验收条件
 
-- [ ] `UserRepository.getUserFollowing` 成功返回关注用户预览列表。
-- [ ] `UserFollowListScreen` 正确展示关注用户与预览作品。
-- [ ] `UserDetailScreen` 关注数可点击进入关注列表。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M11 code review 完成，无 P0/P1 问题遗留。
+- [x] `UserRepository.getUserFollowing` 成功返回关注用户预览列表。
+- [x] `UserFollowListScreen` 正确展示关注用户与预览作品。
+- [x] `UserDetailScreen` 关注数可点击进入关注列表。
+- [x] Android + Desktop 双端编译通过。
+- [x] M11 code review 完成，无 P0/P1 问题遗留。
+
+## Code Review 记录
+
+本次 review 未发现 P0/P1 问题。P2 优化项（非必须）：列表项当前为纯 Row，后续若需更贴合 MIUIX 卡片风格可再调整；关注数为 0 时未灰显，当前通过「0」语义已足够表达。
