@@ -4,6 +4,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustDetailResponse
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
+import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -23,6 +24,14 @@ class IllustRepository(
             parameter("filter", "for_ios")
             parameter("include_ranking_label", "true")
         }.body()
+        response.illusts
+    }
+
+    /**
+     * 获取未登录 walkthrough 匿名推荐插画。
+     */
+    suspend fun getWalkthroughIllusts(): List<Illust> = networkCall("获取匿名推荐插画失败") {
+        val response: Walkthrough = apiClient.get("/v1/walkthrough/illusts").body()
         response.illusts
     }
 
