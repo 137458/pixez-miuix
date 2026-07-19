@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +33,7 @@ import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SearchBar
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -47,6 +49,10 @@ fun SearchScreen(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
+
+    // 搜索筛选状态：排序与搜索目标。
+    var sort by rememberSaveable { mutableStateOf("date_desc") }
+    var searchTarget by rememberSaveable { mutableStateOf("partial_match_for_tags") }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
     var trendRetryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -105,12 +111,31 @@ fun SearchScreen(
         },
     ) { paddingValues ->
         if (expanded && query.isNotBlank()) {
-            SearchResultGrid(
-                query = query,
-                repository = repository,
-                onIllustClick = onIllustClick,
-                contentPadding = paddingValues,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+            ) {
+                SearchFilterBar(
+                    sort = sort,
+                    onSortChange = { sort = it },
+                    searchTarget = searchTarget,
+                    onSearchTargetChange = { searchTarget = it },
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    SearchResultGrid(
+                        query = query,
+                        sort = sort,
+                        searchTarget = searchTarget,
+                        repository = repository,
+                        onIllustClick = onIllustClick,
+                    )
+                }
+            }
         } else {
             val trendResult = trendState.value
             SearchSuggestions(
@@ -133,41 +158,96 @@ fun SearchScreen(
 @Composable
 private fun SearchResultGrid(
     query: String,
+    sort: String,
+    searchTarget: String,
     repository: SearchRepository,
     onIllustClick: (Int) -> Unit,
-    contentPadding: PaddingValues,
 ) {
     // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
-    var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(query, sort, searchTarget) { mutableIntStateOf(0) }
 
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         query,
+        sort,
+        searchTarget,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.searchIllust(query) }
+        value = runCatchingNonCancel {
+            repository.searchIllust(
+                word = query,
+                sort = sort,
+                searchTarget = searchTarget,
+            )
+        }
     }
 
     val result = state.value
     when {
-        result == null -> LoadingPlaceholder()
+        result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         result.isSuccess -> {
             val illusts = result.getOrNull().orEmpty()
             if (illusts.isEmpty()) {
-                EmptyPlaceholder(message = "未找到相关作品")
+                EmptyPlaceholder(
+                    message = "未找到相关作品",
+                    modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 IllustStaggeredGrid(
                     illusts = illusts,
                     onIllustClick = onIllustClick,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding),
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
         else -> ErrorPlaceholder(
             error = result.exceptionOrNull(),
             onRetry = { retryCount++ },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+/**
+ * 搜索筛选栏：排序与搜索目标切换。
+ */
+@Composable
+private fun SearchFilterBar(
+    sort: String,
+    onSortChange: (String) -> Unit,
+    searchTarget: String,
+    onSearchTargetChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val sortOptions = listOf(
+        "最新" to "date_desc",
+        "旧序" to "date_asc",
+        "人气" to "popular_desc",
+    )
+    val targetOptions = listOf(
+        "标签部分" to "partial_match_for_tags",
+        "标签完全" to "exact_match_for_tags",
+        "标题说明" to "title_and_caption",
+    )
+
+    val selectedSortIndex = sortOptions.indexOfFirst { it.second == sort }.coerceAtLeast(0)
+    val selectedTargetIndex = targetOptions.indexOfFirst { it.second == searchTarget }.coerceAtLeast(0)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        TabRow(
+            tabs = sortOptions.map { it.first },
+            selectedTabIndex = selectedSortIndex,
+            onTabSelected = { onSortChange(sortOptions[it].second) },
+        )
+        TabRow(
+            tabs = targetOptions.map { it.first },
+            selectedTabIndex = selectedTargetIndex,
+            onTabSelected = { onSearchTargetChange(targetOptions[it].second) },
         )
     }
 }
