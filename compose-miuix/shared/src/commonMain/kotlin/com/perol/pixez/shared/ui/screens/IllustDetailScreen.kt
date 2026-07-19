@@ -98,20 +98,23 @@ fun IllustDetailScreen(
                             if (isBookmarkLoading) return@IconButton
                             illust?.let {
                                 coroutineScope.launch {
-                                    isBookmarkLoading = true
-                                    bookmarkError = null
-                                    runCatchingNonCancel {
-                                        if (isBookmarked) {
-                                            bookmarkRepository.deleteBookmark(it.id)
-                                        } else {
-                                            bookmarkRepository.addBookmark(it.id)
+                                    try {
+                                        isBookmarkLoading = true
+                                        bookmarkError = null
+                                        runCatchingNonCancel {
+                                            if (isBookmarked) {
+                                                bookmarkRepository.deleteBookmark(it.id)
+                                            } else {
+                                                bookmarkRepository.addBookmark(it.id)
+                                            }
+                                        }.onSuccess {
+                                            isBookmarked = !isBookmarked
+                                        }.onFailure { e ->
+                                            bookmarkError = e.message ?: "收藏操作失败"
                                         }
-                                    }.onSuccess {
-                                        isBookmarked = !isBookmarked
-                                    }.onFailure { e ->
-                                        bookmarkError = e.message ?: "收藏操作失败"
+                                    } finally {
+                                        isBookmarkLoading = false
                                     }
-                                    isBookmarkLoading = false
                                 }
                             }
                         },
@@ -150,41 +153,41 @@ fun IllustDetailScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                    item {
-                        PixivAsyncImage(
-                            model = illust.imageUrls.large,
-                            contentDescription = illust.title,
-                            contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                        item {
+                            PixivAsyncImage(
+                                model = illust.imageUrls.large,
+                                contentDescription = illust.title,
+                                contentScale = ContentScale.FillWidth,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
 
-                    item {
-                        IllustInfoSection(
-                            illust = illust,
-                            onUserClick = onUserClick,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
+                        item {
+                            IllustInfoSection(
+                                illust = illust,
+                                onUserClick = onUserClick,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
 
-                    item {
-                        SmallTitle(
-                            text = "标签",
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
-                    }
+                        item {
+                            SmallTitle(
+                                text = "标签",
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
 
-                    items(illust.tags, key = { it.name }) { tag ->
-                        Text(
-                            text = tag.translatedName ?: tag.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            style = MiuixTheme.textStyles.body1,
-                        )
+                        items(illust.tags, key = { it.name }) { tag ->
+                            Text(
+                                text = tag.translatedName ?: tag.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MiuixTheme.textStyles.body1,
+                            )
+                        }
                     }
                 }
-            }
                 else -> ErrorPlaceholder(
                     error = result.exceptionOrNull(),
                     onRetry = { retryCount++ },

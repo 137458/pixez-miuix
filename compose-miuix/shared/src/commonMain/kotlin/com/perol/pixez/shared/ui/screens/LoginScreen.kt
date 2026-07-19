@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
@@ -130,14 +131,17 @@ fun LoginScreen(
                         return@TextButton
                     }
                     coroutineScope.launch {
-                        isLoading = true
-                        errorMessage = ""
                         try {
-                            accountRepository.loginWithCode(code.trim())
-                            onLoginSuccess()
-                        } catch (e: Exception) {
-                            errorMessage = "登录失败：${e.message}"
-                            Napier.e("登录失败", e)
+                            isLoading = true
+                            errorMessage = ""
+                            runCatchingNonCancel {
+                                accountRepository.loginWithCode(code.trim())
+                            }.onSuccess {
+                                onLoginSuccess()
+                            }.onFailure { e ->
+                                errorMessage = "登录失败：${e.message}"
+                                Napier.e("登录失败", e)
+                            }
                         } finally {
                             isLoading = false
                         }

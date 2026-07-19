@@ -127,20 +127,23 @@ fun UserDetailScreen(
                         onFollowClick = {
                             if (!isFollowLoading) {
                                 coroutineScope.launch {
-                                isFollowLoading = true
-                                followError = null
-                                runCatchingNonCancel {
-                                    if (isFollowed) {
-                                        bookmarkRepository.unfollowUser(userDetail.user.id)
-                                    } else {
-                                        bookmarkRepository.followUser(userDetail.user.id)
+                                    try {
+                                        isFollowLoading = true
+                                        followError = null
+                                        runCatchingNonCancel {
+                                            if (isFollowed) {
+                                                bookmarkRepository.unfollowUser(userDetail.user.id)
+                                            } else {
+                                                bookmarkRepository.followUser(userDetail.user.id)
+                                            }
+                                        }.onSuccess {
+                                            isFollowed = !isFollowed
+                                        }.onFailure { e ->
+                                            followError = e.message ?: "关注操作失败"
+                                        }
+                                    } finally {
+                                        isFollowLoading = false
                                     }
-                                }.onSuccess {
-                                    isFollowed = !isFollowed
-                                }.onFailure { e ->
-                                    followError = e.message ?: "关注操作失败"
-                                }
-                                    isFollowLoading = false
                                 }
                             }
                         },
