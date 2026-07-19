@@ -1,7 +1,7 @@
 # M14 里程碑：搜索高级筛选
 
 ## 状态
-进行中。
+已完成。commit 见 `c87c8d6a`、`7bbe75b8`。
 
 ## 目标
 原 Flutter PixEz 搜索页支持多种高级筛选条件。当前 MIUIX 搜索页已支持排序与搜索目标，M14 将补充 AI 类型筛选与收藏数阈值筛选，保持搜索能力与原应用一致。
@@ -21,8 +21,8 @@
 
 ## 验收条件
 
-- [ ] `SearchRepository.searchIllust` 支持 `searchAiType` 参数。
-- [ ] `SearchScreen` 可切换 AI 类型筛选并重新加载结果。
-- [ ] `SearchScreen` 可选择收藏数阈值并重新加载结果。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M14 code review 完成，无 P0/P1 问题遗留。
+- [x] `SearchRepository.searchIllust` 支持 `searchAiType` 参数。
+- [x] `SearchScreen` 可切换 AI 类型筛选并重新加载结果。
+- [x] `SearchScreen` 可选择收藏数阈值并重新加载结果。
+- [x] Android + Desktop 双端编译通过。
+- [x] M14 code review 完成，无 P0/P1 问题遗留。
