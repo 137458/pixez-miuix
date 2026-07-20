@@ -1,7 +1,13 @@
 # M36 里程碑：排行榜屏蔽作品过滤
 
 ## 状态
-进行中。
+已完成。
+
+- PRD commit: `ac75bbd4`
+- 实现 commit: `2814a18b`
+- code review: 已执行，未发现 P0/P1 问题
+- 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
+- push 状态: 本地 commit 已完成，因 GitHub 网络连接问题暂存本地，待网络恢复后重试
 
 ## 目标
 M35 已完成首页的屏蔽作品过滤。M36 将排行榜（RankingScreen）接入相同的过滤机制，使用户在排行榜中也不会看到已被屏蔽的作品。
@@ -31,8 +37,8 @@ M35 已完成首页的屏蔽作品过滤。M36 将排行榜（RankingScreen）�
 
 ## 验收条件
 
-- [ ] 被屏蔽作品不再出现在 `RankingScreen` 瀑布流中。
-- [ ] 全部作品均被屏蔽时，排行榜显示空态占位。
-- [ ] 切换排行榜模式或日期后，过滤结果同步更新。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M36 code review 完成，无 P0/P1 问题遗留。
+- [x] 被屏蔽作品不再出现在 `RankingScreen` 瀑布流中。
+- [x] 全部作品均被屏蔽时，排行榜显示空态占位。
+- [x] 切换排行榜模式或日期后，过滤结果同步更新。
+- [x] Android + Desktop 双端编译通过。
+- [x] M36 code review 完成，无 P0/P1 问题遗留。
