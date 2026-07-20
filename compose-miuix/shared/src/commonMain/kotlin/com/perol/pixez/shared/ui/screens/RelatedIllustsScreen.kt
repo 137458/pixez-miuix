@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -32,6 +33,7 @@ fun RelatedIllustsScreen(
     onBack: () -> Unit,
     onIllustClick: (Int) -> Unit,
     repository: IllustRepository,
+    banRepository: BanRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -41,8 +43,14 @@ fun RelatedIllustsScreen(
         illustId,
         repository,
         retryCount,
+        banRepository,
     ) {
-        value = runCatchingNonCancel { repository.getIllustRelated(illustId) }
+        val illustsResult = runCatchingNonCancel { repository.getIllustRelated(illustId) }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
+        }
     }
 
     Scaffold(
