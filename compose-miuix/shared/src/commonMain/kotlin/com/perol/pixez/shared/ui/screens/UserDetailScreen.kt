@@ -388,6 +388,18 @@ private fun UserProfileHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // 背景图：仅在存在非空背景图链接时展示，位于头像上方。
+        userDetail.profile.backgroundImageUrl?.takeIf { it.isNotBlank() }?.let { backgroundUrl ->
+            PixivAsyncImage(
+                model = backgroundUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         PixivAsyncImage(
             model = userDetail.user.profileImageUrls.medium,
             contentDescription = userDetail.user.name,
