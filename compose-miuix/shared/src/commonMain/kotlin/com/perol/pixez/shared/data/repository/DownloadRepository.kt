@@ -13,17 +13,22 @@ import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
 
 /**
- * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存。
+ * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存，
+ * 同时通过 [DownloadHistoryRepository] 将任务状态写入本地历史。
  *
  * 提供单页 [download] 与多页 [downloadAllPages] 下载入口，并将取消异常重新抛出以保留协程取消语义。
  */
 class DownloadRepository(
     private val httpClient: HttpClient,
     private val saver: IllustSaver,
+    private val historyRepository: DownloadHistoryRepository,
 ) {
 
     /**
      * 下载指定作品的指定页原图并保存到本地。
+     *
+     * 下载前先将任务以 [Downloading][DownloadStatus.Downloading] 状态写入历史，
+     * 完成后更新为 [Success][DownloadStatus.Success] 或 [Failed][DownloadStatus.Failed]。
      *
      * @param illust 目标作品
      * @param pageIndex 页码，单页作品传 0
@@ -40,20 +45,31 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
+        // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
+        var historyId = 0L
         return try {
+            // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
+            historyId = historyRepository.saveTask(pendingTask, illust).id
             val bytes = downloadBytes(remoteUrl)
             val savedPath = saver.save(fileName, bytes)
             Napier.d("下载完成 path=$savedPath")
-            pendingTask.copy(status = DownloadStatus.Success)
+            val successTask = pendingTask.copy(status = DownloadStatus.Success)
+            historyRepository.saveTask(successTask, illust, historyId)
+            successTask
         } catch (e: CancellationException) {
             // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
             throw e
         } catch (e: Exception) {
             Napier.e("下载失败 illustId=${illust.id} page=$pageIndex", e)
-            pendingTask.copy(
+            val failedTask = pendingTask.copy(
                 status = DownloadStatus.Failed,
                 error = e.message ?: "下载失败",
             )
+            if (historyId > 0) {
+                // 历史记录已创建时尽力回写失败状态；不因为回写失败而覆盖原始错误。
+                runCatching { historyRepository.saveTask(failedTask, illust, historyId) }
+            }
+            failedTask
         }
     }
 

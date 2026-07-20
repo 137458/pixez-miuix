@@ -15,6 +15,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
+import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
@@ -23,6 +24,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.CommentsScreen
+import com.perol.pixez.shared.ui.screens.DownloadHistoryScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
@@ -54,6 +56,7 @@ fun RootContent(
     accountRepository: AccountRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
+    downloadHistoryRepository: DownloadHistoryRepository,
     settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -179,6 +182,7 @@ fun RootContent(
                         onBack = component::onBack,
                         onAboutClick = component::onAboutClicked,
                         onLoginClick = component::onLoginClicked,
+                        onDownloadHistoryClick = component::onDownloadHistoryClicked,
                         themeMode = themeMode,
                         onThemeModeChange = {
                             themeMode = it
@@ -193,6 +197,12 @@ fun RootContent(
                         repository = searchRepository,
                         settingsRepository = settingsRepository,
                         initialQuery = instance.query,
+                    )
+
+                    Child.DownloadHistory -> DownloadHistoryScreen(
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                        repository = downloadHistoryRepository,
                     )
 
                     Child.About -> AboutScreen(

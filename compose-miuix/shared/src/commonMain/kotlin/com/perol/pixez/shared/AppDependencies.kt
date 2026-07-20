@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
+import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
@@ -32,6 +33,16 @@ class AppDependencies(
         driverFactory.createDriver(
             AccountDatabase.Schema,
             "account.db",
+        )
+    }
+
+    /**
+     * 下载任务数据库驱动，复用旧 Flutter task.db。
+     */
+    val taskDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            com.perol.pixez.shared.data.local.task.TaskDatabase.Schema,
+            "task.db",
         )
     }
 
@@ -78,10 +89,21 @@ class AppDependencies(
     }
 
     /**
-     * 插画下载仓库，负责下载图片字节并调用平台保存。
+     * 下载历史仓库，复用旧 Flutter task.db 记录下载任务。
+     */
+    val downloadHistoryRepository: DownloadHistoryRepository by lazy {
+        DownloadHistoryRepository(taskDriver)
+    }
+
+    /**
+     * 插画下载仓库，负责下载图片字节并调用平台保存，同时写入下载历史。
      */
     val downloadRepository: DownloadRepository by lazy {
-        DownloadRepository(httpClient.downloadClient, IllustSaver())
+        DownloadRepository(
+            httpClient = httpClient.downloadClient,
+            saver = IllustSaver(),
+            historyRepository = downloadHistoryRepository,
+        )
     }
 
     /**
@@ -90,5 +112,6 @@ class AppDependencies(
     fun close() {
         runCatching { httpClient.close() }
         runCatching { driverFactory.closeDriver(accountDriver) }
+        runCatching { driverFactory.closeDriver(taskDriver) }
     }
 }

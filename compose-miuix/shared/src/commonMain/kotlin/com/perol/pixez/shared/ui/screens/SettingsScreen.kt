@@ -50,6 +50,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onAboutClick: () -> Unit,
     onLoginClick: () -> Unit,
+    onDownloadHistoryClick: () -> Unit,
     themeMode: Int,
     onThemeModeChange: (Int) -> Unit,
     accountRepository: AccountRepository,
@@ -111,6 +112,16 @@ fun SettingsScreen(
                 ThemeModeSelector(
                     selected = themeMode,
                     onSelect = onThemeModeChange,
+                )
+            }
+            item {
+                SmallTitle(text = "下载")
+            }
+            item {
+                BasicComponent(
+                    title = "下载历史",
+                    summary = "查看已下载的作品记录",
+                    onClick = onDownloadHistoryClick,
                 )
             }
             item {

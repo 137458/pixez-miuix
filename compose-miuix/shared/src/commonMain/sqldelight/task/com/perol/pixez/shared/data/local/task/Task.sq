@@ -49,3 +49,6 @@ DELETE FROM task WHERE id = ?;
 
 deleteAll:
 DELETE FROM task;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

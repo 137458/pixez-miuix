@@ -136,6 +136,13 @@ class RootComponent(
         navigation.push(Config.Search(query))
     }
 
+    /**
+     * 打开下载历史页。
+     */
+    fun onDownloadHistoryClicked() {
+        navigation.push(Config.DownloadHistory)
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -150,6 +157,7 @@ class RootComponent(
         is Config.UserFollowerList -> Child.UserFollowerList(config.userId)
         is Config.Search -> Child.Search(config.query)
         Config.RecomUserList -> Child.RecomUserList
+        Config.DownloadHistory -> Child.DownloadHistory
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -209,6 +217,9 @@ class RootComponent(
 
         @Serializable
         data class Search(val query: String) : Config()
+
+        @Serializable
+        data object DownloadHistory : Config()
     }
 
     sealed class Child {
@@ -225,5 +236,6 @@ class RootComponent(
         data class UserFollowerList(val userId: Int) : Child()
         data object RecomUserList : Child()
         data class Search(val query: String) : Child()
+        data object DownloadHistory : Child()
     }
 }
