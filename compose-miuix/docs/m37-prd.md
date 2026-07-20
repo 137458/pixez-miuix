@@ -1,7 +1,13 @@
 # M37 里程碑：搜索页屏蔽作品过滤
 
 ## 状态
-进行中。
+已完成。
+
+- PRD commit: `18dd9c07`
+- 实现 commit: `e15c7c86`
+- code review: 已执行，未发现 P0/P1 问题
+- 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
+- push 状态: 已推送至 origin master（`97252fd2..e15c7c86`）
 
 ## 目标
 M35、M36 已完成首页与排行榜的屏蔽作品过滤。M37 将搜索页（SearchScreen）的作品搜索结果接入相同的过滤机制，使用户在搜索作品时也不会看到已被屏蔽的作品。
@@ -33,8 +39,8 @@ M35、M36 已完成首页与排行榜的屏蔽作品过滤。M37 将搜索页（
 
 ## 验收条件
 
-- [ ] 被屏蔽作品不再出现在 `SearchScreen` 作品搜索结果中。
-- [ ] 全部搜索结果均被屏蔽时，作品 Tab 显示空态占位。
-- [ ] 切换搜索词或筛选条件后，过滤结果同步更新。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M37 code review 完成，无 P0/P1 问题遗留。
+- [x] 被屏蔽作品不再出现在 `SearchScreen` 作品搜索结果中。
+- [x] 全部搜索结果均被屏蔽时，作品 Tab 显示空态占位。
+- [x] 切换搜索词或筛选条件后，过滤结果同步更新。
+- [x] Android + Desktop 双端编译通过。
+- [x] M37 code review 完成，无 P0/P1 问题遗留。
