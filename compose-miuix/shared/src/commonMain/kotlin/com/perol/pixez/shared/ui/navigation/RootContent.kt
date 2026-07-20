@@ -162,6 +162,7 @@ fun RootContent(
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
                         repository = illustRepository,
+                        banRepository = banRepository,
                     )
 
                     is Child.UserFollowList -> UserFollowListScreen(
