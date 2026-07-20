@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -40,6 +41,7 @@ fun HelloScreen(
     onRecomUserClick: () -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
+    banRepository: BanRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -51,16 +53,23 @@ fun HelloScreen(
     }
 
     // 页面进入时加载数据；已登录用推荐接口，未登录用 walkthrough 匿名接口。
+    // 加载完成后用本地屏蔽列表过滤，被屏蔽作品不展示。
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         repository,
+        banRepository,
         retryCount,
         isLoggedIn,
     ) {
-        value = when (isLoggedIn) {
+        val illustsResult = when (isLoggedIn) {
             true -> runCatchingNonCancel { repository.getRecommended() }
             false -> runCatchingNonCancel { repository.getWalkthroughIllusts() }
             null -> null
+        }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult?.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
         }
     }
 

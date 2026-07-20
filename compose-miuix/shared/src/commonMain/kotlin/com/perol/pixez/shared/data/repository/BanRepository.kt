@@ -41,6 +41,15 @@ class BanRepository(
     }
 
     /**
+     * 查询全部被屏蔽的作品 ID 集合，用于列表页快速过滤。
+     */
+    suspend fun getBannedIllustIds(): Set<Int> = withContext(Dispatchers.IO) {
+        queries.selectAll().executeAsList().mapNotNull {
+            it.illust_id.toIntOrNull()
+        }.toSet()
+    }
+
+    /**
      * 将作品加入屏蔽列表。
      *
      * 若该作品已存在，先删除旧记录再插入，对齐旧 Flutter 的

@@ -102,6 +102,7 @@ fun RootContent(
                         searchRepository = searchRepository,
                         userRepository = userRepository,
                         accountRepository = accountRepository,
+                        banRepository = banRepository,
                         settingsRepository = settingsRepository,
                     )
 
@@ -228,6 +229,7 @@ private fun MainContent(
     searchRepository: SearchRepository,
     userRepository: UserRepository,
     accountRepository: AccountRepository,
+    banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
     when (tab) {
@@ -238,6 +240,7 @@ private fun MainContent(
             onRecomUserClick = component::onRecomUserListClicked,
             repository = illustRepository,
             accountRepository = accountRepository,
+            banRepository = banRepository,
         )
 
         RootComponent.MainTab.Search -> SearchScreen(
