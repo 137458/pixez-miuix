@@ -35,6 +35,7 @@ import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -429,6 +430,29 @@ private fun UserProfileHeader(
                     .clickable(enabled = followerCount > 0, onClick = onFollowerListClick)
                     .padding(4.dp),
             )
+        }
+        // 外部链接：仅在存在非空链接时展示。
+        val externalLinks = listOfNotNull(
+            userDetail.profile.twitterUrl?.takeIf { it.isNotBlank() }?.let { "Twitter" to it },
+            userDetail.profile.webpage?.takeIf { it.isNotBlank() }?.let { "网页" to it },
+            userDetail.profile.pawooUrl?.takeIf { it.isNotBlank() }?.let { "Pawoo" to it },
+        )
+        if (externalLinks.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                externalLinks.forEach { (label, url) ->
+                    Text(
+                        text = label,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { runCatching { openBrowser(url) } }
+                            .padding(4.dp),
+                    )
+                }
+            }
         }
         Spacer(modifier = Modifier.height(12.dp))
         Button(
