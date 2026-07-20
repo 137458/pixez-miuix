@@ -3,7 +3,7 @@
 ## 状态
 已完成。
 
-- 实现 commit: `待填充`
+- 实现 commit: `32c5fdc4`
 - code review: 已执行，未发现 P0/P1 问题
 - 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
 
