@@ -3,6 +3,8 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +38,8 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SearchBar
@@ -246,6 +250,9 @@ fun SearchScreen(
                 onTagClick = { tag ->
                     query = tag
                     expanded = true
+                },
+                onHistoryRemove = { history ->
+                    updateHistory(searchHistory.filter { it != history })
                 },
                 onClearHistory = { updateHistory(emptyList()) },
                 onRetryTrend = { trendRetryCount++ },
@@ -532,6 +539,7 @@ private fun SearchSuggestions(
     isLoadingTrend: Boolean,
     trendError: Throwable?,
     onTagClick: (String) -> Unit,
+    onHistoryRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
 ) {
@@ -584,14 +592,30 @@ private fun SearchSuggestions(
         }
 
         items(searchHistory, key = { it }) { history ->
-            Text(
-                text = history,
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onTagClick(history) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                style = MiuixTheme.textStyles.body1,
-            )
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = history,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onTagClick(history) }
+                        .padding(end = 8.dp),
+                    style = MiuixTheme.textStyles.body1,
+                )
+                IconButton(
+                    onClick = { onHistoryRemove(history) },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "删除",
+                    )
+                }
+            }
         }
 
         if (searchHistory.isNotEmpty()) {
