@@ -1,7 +1,13 @@
 # M38 里程碑：用户详情页作品 Tab 屏蔽作品过滤
 
 ## 状态
-进行中。
+已完成（代码与本地提交）。
+
+- PRD commit: `b90f5beb`
+- 实现 commit: `70595659`
+- code review: 已执行，未发现 P0/P1 问题
+- 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
+- push 状态: `git push` 多次失败，错误为 `Failed to connect to github.com port 443`。已生成 SSH key（`~/.ssh/id_ed25519`）并配置 SSH 复用连接，待将公钥添加到 GitHub 后即可通过 SSH 推送。
 
 ## 目标
 M35-M37 已完成首页、排行榜与搜索页的屏蔽作品过滤。M38 将用户详情页「作品」Tab 接入相同的过滤机制，使用户作品列表中也不会展示已被屏蔽的作品。
@@ -32,8 +38,8 @@ M35-M37 已完成首页、排行榜与搜索页的屏蔽作品过滤。M38 将�
 
 ## 验收条件
 
-- [ ] 被屏蔽作品不再出现在 `UserDetailScreen` 作品 Tab 中。
-- [ ] 全部作品均被屏蔽时，作品 Tab 显示空态占位。
-- [ ] 切换用户或重试后，过滤结果同步更新。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M38 code review 完成，无 P0/P1 问题遗留。
+- [x] 被屏蔽作品不再出现在 `UserDetailScreen` 作品 Tab 中。
+- [x] 全部作品均被屏蔽时，作品 Tab 显示空态占位。
+- [x] 切换用户或重试后，过滤结果同步更新。
+- [x] Android + Desktop 双端编译通过。
+- [x] M38 code review 完成，无 P0/P1 问题遗留。
