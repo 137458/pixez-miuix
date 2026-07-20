@@ -10,12 +10,13 @@ import top.yukonga.miuix.kmp.extra.SuperBottomSheet
  * 作品详情页底部操作菜单。
  *
  * 基于 [SuperBottomSheet] 实现，必须在 [top.yukonga.miuix.kmp.basic.Scaffold] 内使用。
- * 当前提供「复制信息」与「复制链接」两项操作，与原 Flutter PixEz 作品详情页「更多」菜单保持一致。
+ * 当前提供「复制信息」「复制链接」与「分享链接」三项操作，与原 Flutter PixEz 作品详情页「更多」菜单保持一致。
  *
  * @param show 是否显示菜单
  * @param onDismissRequest 用户请求关闭菜单时的回调
  * @param onCopyInfo 点击「复制信息」时的回调
  * @param onCopyLink 点击「复制链接」时的回调
+ * @param onShareLink 点击「分享链接」时的回调
  */
 @Composable
 fun IllustActionMenu(
@@ -23,6 +24,7 @@ fun IllustActionMenu(
     onDismissRequest: () -> Unit,
     onCopyInfo: () -> Unit,
     onCopyLink: () -> Unit,
+    onShareLink: () -> Unit,
 ) {
     SuperBottomSheet(
         show = show,
@@ -37,6 +39,10 @@ fun IllustActionMenu(
             BasicComponent(
                 title = "复制链接",
                 onClick = onCopyLink,
+            )
+            BasicComponent(
+                title = "分享链接",
+                onClick = onShareLink,
             )
         }
     }

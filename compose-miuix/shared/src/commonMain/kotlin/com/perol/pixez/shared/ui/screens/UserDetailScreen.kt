@@ -34,6 +34,7 @@ import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -91,6 +92,7 @@ fun UserDetailScreen(
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showActionMenu by rememberSaveable { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
+    val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -206,6 +208,14 @@ fun UserDetailScreen(
                     runCatching { clipboard.copy(link) }.fold(
                         onSuccess = { toastMessage = "链接已复制" },
                         onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
+                onShareLink = {
+                    showActionMenu = false
+                    val link = buildUserShareLink(it.user.id)
+                    runCatching { share.share(link, it.user.name) }.fold(
+                        onSuccess = { toastMessage = "已分享" },
+                        onFailure = { e -> toastMessage = "分享失败: ${e.message}" },
                     )
                 },
             )

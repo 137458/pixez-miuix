@@ -42,6 +42,7 @@ import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -95,6 +96,7 @@ fun IllustDetailScreen(
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showActionMenu by rememberSaveable { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
+    val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -298,6 +300,14 @@ fun IllustDetailScreen(
                     runCatching { clipboard.copy(link) }.fold(
                         onSuccess = { toastMessage = "链接已复制" },
                         onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                    )
+                },
+                onShareLink = {
+                    showActionMenu = false
+                    val link = buildIllustShareLink(it)
+                    runCatching { share.share(link, it.title) }.fold(
+                        onSuccess = { toastMessage = "已分享" },
+                        onFailure = { e -> toastMessage = "分享失败: ${e.message}" },
                     )
                 },
             )
