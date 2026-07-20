@@ -7,7 +7,7 @@
 - 实现 commit: `2814a18b`
 - code review: 已执行，未发现 P0/P1 问题
 - 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
-- push 状态: 本地 commit 已完成，因 GitHub 网络连接问题暂存本地，待网络恢复后重试
+- push 状态: 已推送至 origin master（`3ad37c4c..7fa046a1`）
 
 ## 目标
 M35 已完成首页的屏蔽作品过滤。M36 将排行榜（RankingScreen）接入相同的过滤机制，使用户在排行榜中也不会看到已被屏蔽的作品。
