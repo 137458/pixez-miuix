@@ -102,10 +102,18 @@ class UserRepository(
     /**
      * 获取推荐用户列表。
      */
-    suspend fun getRecommendedUsers(): List<UserPreview> = networkCall("获取推荐用户失败") {
-        val response: UserPreviewsResponse = apiClient.get("/v1/user/recommended") {
+    suspend fun getRecommendedUsers(): UserPreviewsResponse = networkCall("获取推荐用户失败") {
+        apiClient.get("/v1/user/recommended") {
             parameter("filter", "for_android")
         }.body()
-        response.userPreviews
+    }
+
+    /**
+     * 通过 Pixiv 返回的 next_url 加载下一页推荐用户。
+     *
+     * @param nextUrl 上一页响应中的 `next_url`。
+     */
+    suspend fun getRecommendedUsers(nextUrl: String): UserPreviewsResponse = networkCall("加载更多推荐用户失败") {
+        apiClient.get(nextUrl).body()
     }
 }
