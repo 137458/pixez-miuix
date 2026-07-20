@@ -34,12 +34,16 @@ class SearchRepository(
      * @param sort 排序：date_desc（默认）、date_asc、popular_desc。
      * @param searchTarget 搜索目标：partial_match_for_tags、exact_match_for_tags、title_and_caption 等。
      * @param searchAiType AI 类型：0（默认）包含 AI 生成，1 排除 AI 生成。
+     * @param startDate 开始日期，格式 YYYY-MM-DD，非空时附加 start_date。
+     * @param endDate 结束日期，格式 YYYY-MM-DD，非空时附加 end_date。
      */
     suspend fun searchIllust(
         word: String,
         sort: String = "date_desc",
         searchTarget: String = "partial_match_for_tags",
         searchAiType: Int = 0,
+        startDate: String? = null,
+        endDate: String? = null,
     ): List<Illust> = networkCall("搜索插画失败 word=$word") {
         val response: Search = apiClient.get("/v1/search/illust") {
             parameter("filter", "for_android")
@@ -48,6 +52,8 @@ class SearchRepository(
             parameter("search_target", searchTarget)
             parameter("search_ai_type", searchAiType)
             parameter("word", word)
+            startDate?.let { parameter("start_date", it.toPixivDateFormat()) }
+            endDate?.let { parameter("end_date", it.toPixivDateFormat()) }
         }.body()
         response.illusts
     }
@@ -66,4 +72,17 @@ class SearchRepository(
         }.body()
         response.userPreviews
     }
+}
+
+/**
+ * 将 YYYY-MM-DD 格式日期转换为 Pixiv API 期望的 YYYY-M-D 格式。
+ * 输入非法时原样返回，让后端决定行为。
+ */
+private fun String.toPixivDateFormat(): String {
+    val parts = split("-")
+    if (parts.size != 3) return this
+    val year = parts[0].toIntOrNull() ?: return this
+    val month = parts[1].toIntOrNull() ?: return this
+    val day = parts[2].toIntOrNull() ?: return this
+    return "$year-$month-$day"
 }

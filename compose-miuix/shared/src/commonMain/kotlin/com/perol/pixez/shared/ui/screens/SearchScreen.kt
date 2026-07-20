@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
@@ -43,6 +44,7 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -62,10 +64,11 @@ fun SearchScreen(
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
     val searchTypes = listOf("作品", "画师")
 
-    // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值与 Ugoira 过滤（仅作品搜索有效）。
+    // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值、Ugoira 过滤与时间范围（仅作品搜索有效）。
     // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
     // bookmarkThreshold：0 表示不追加收藏数条件，非 0 时搜索词追加 " ${value}users入り"。
     // ugoiraFilter：0 表示全部，1 表示仅动图，2 表示排除动图。
+    // startDate / endDate：格式 YYYY-MM-DD，空字符串表示未选择。
     var sort by rememberSaveable {
         mutableStateOf(
             settingsRepository.getString(SettingsKeys.SEARCH_SORT, "date_desc") ?: "date_desc",
@@ -88,6 +91,12 @@ fun SearchScreen(
     var ugoiraFilter by rememberSaveable {
         mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_UGOIRA_FILTER, 0))
     }
+    var startDate by rememberSaveable {
+        mutableStateOf(settingsRepository.getString(SettingsKeys.SEARCH_START_DATE, "") ?: "")
+    }
+    var endDate by rememberSaveable {
+        mutableStateOf(settingsRepository.getString(SettingsKeys.SEARCH_END_DATE, "") ?: "")
+    }
 
     // 筛选条件变化时持久化回写设置。
     LaunchedEffect(sort) {
@@ -104,6 +113,12 @@ fun SearchScreen(
     }
     LaunchedEffect(ugoiraFilter) {
         settingsRepository.setInt(SettingsKeys.SEARCH_UGOIRA_FILTER, ugoiraFilter)
+    }
+    LaunchedEffect(startDate) {
+        settingsRepository.setString(SettingsKeys.SEARCH_START_DATE, startDate)
+    }
+    LaunchedEffect(endDate) {
+        settingsRepository.setString(SettingsKeys.SEARCH_END_DATE, endDate)
     }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
@@ -188,6 +203,10 @@ fun SearchScreen(
                         onBookmarkThresholdChange = { bookmarkThreshold = it },
                         ugoiraFilter = ugoiraFilter,
                         onUgoiraFilterChange = { ugoiraFilter = it },
+                        startDate = startDate,
+                        onStartDateChange = { startDate = it },
+                        endDate = endDate,
+                        onEndDateChange = { endDate = it },
                     )
                 }
                 Box(
@@ -203,6 +222,8 @@ fun SearchScreen(
                             searchAiType = searchAiType,
                             bookmarkThreshold = bookmarkThreshold,
                             ugoiraFilter = ugoiraFilter,
+                            startDate = startDate.takeIf { it.isNotBlank() },
+                            endDate = endDate.takeIf { it.isNotBlank() },
                             repository = repository,
                             onIllustClick = onIllustClick,
                         )
@@ -241,6 +262,8 @@ private fun SearchIllustResultGrid(
     searchAiType: Int,
     bookmarkThreshold: Int,
     ugoiraFilter: Int,
+    startDate: String?,
+    endDate: String?,
     repository: SearchRepository,
     onIllustClick: (Int) -> Unit,
 ) {
@@ -250,7 +273,18 @@ private fun SearchIllustResultGrid(
     }
 
     // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
-    var retryCount by rememberSaveable(searchWord, sort, searchTarget, searchAiType) { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(
+        searchWord,
+        sort,
+        searchTarget,
+        searchAiType,
+        startDate,
+        endDate,
+    ) { mutableIntStateOf(0) }
+
+    // 对日期输入做防抖，避免用户逐字输入时频繁请求。
+    val effectiveStartDate = debouncedSearchDate(startDate)
+    val effectiveEndDate = debouncedSearchDate(endDate)
 
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
@@ -258,6 +292,8 @@ private fun SearchIllustResultGrid(
         sort,
         searchTarget,
         searchAiType,
+        effectiveStartDate ?: "",
+        effectiveEndDate ?: "",
         retryCount,
     ) {
         value = runCatchingNonCancel {
@@ -266,6 +302,8 @@ private fun SearchIllustResultGrid(
                 sort = sort,
                 searchTarget = searchTarget,
                 searchAiType = searchAiType,
+                startDate = effectiveStartDate,
+                endDate = effectiveEndDate,
             )
         }
     }
@@ -356,7 +394,7 @@ private fun SearchUserResultList(
 }
 
 /**
- * 搜索筛选栏：排序、搜索目标、AI 类型、收藏数阈值与 Ugoira 过滤切换。
+ * 搜索筛选栏：排序、搜索目标、AI 类型、收藏数阈值、Ugoira 过滤与时间范围切换。
  */
 @Composable
 private fun SearchFilterBar(
@@ -370,6 +408,10 @@ private fun SearchFilterBar(
     onBookmarkThresholdChange: (Int) -> Unit,
     ugoiraFilter: Int,
     onUgoiraFilterChange: (Int) -> Unit,
+    startDate: String,
+    onStartDateChange: (String) -> Unit,
+    endDate: String,
+    onEndDateChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sortOptions = listOf(
@@ -448,6 +490,37 @@ private fun SearchFilterBar(
             selectedTabIndex = selectedUgoiraIndex,
             onTabSelected = { onUgoiraFilterChange(ugoiraOptions[it].second) },
         )
+        // 时间范围筛选：开始日期 / 结束日期，格式 YYYY-MM-DD。
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextField(
+                value = startDate,
+                onValueChange = { onStartDateChange(it) },
+                label = "开始日期",
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "至",
+                style = MiuixTheme.textStyles.body2,
+            )
+            TextField(
+                value = endDate,
+                onValueChange = { onEndDateChange(it) },
+                label = "结束日期",
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                text = "清空",
+                onClick = {
+                    onStartDateChange("")
+                    onEndDateChange("")
+                },
+                enabled = startDate.isNotBlank() || endDate.isNotBlank(),
+            )
+        }
     }
 }
 
@@ -534,3 +607,20 @@ private fun SearchSuggestions(
         }
     }
 }
+
+/**
+ * 将日期字符串延迟 500ms 后返回，避免用户逐字输入时频繁触发搜索。
+ * 空字符串或格式不符合 YYYY-MM-DD 时返回 null，表示不应用该日期筛选。
+ */
+@Composable
+private fun debouncedSearchDate(date: String?): String? {
+    if (date == null) return null
+    var debounced by remember { mutableStateOf(date) }
+    LaunchedEffect(date) {
+        delay(500)
+        debounced = date
+    }
+    return debounced.takeIf { it.matches(SearchDateRegex) }
+}
+
+private val SearchDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
