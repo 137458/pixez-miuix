@@ -235,7 +235,11 @@ private fun MainContent(
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(
+            onUserClick = component::onUserClicked,
+            onRecomUserListClick = component::onRecomUserListClicked,
             repository = illustRepository,
+            userRepository = userRepository,
+            accountRepository = accountRepository,
         )
     }
 }
