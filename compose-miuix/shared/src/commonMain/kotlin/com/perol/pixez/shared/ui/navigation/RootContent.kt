@@ -128,6 +128,7 @@ fun RootContent(
                         onFollowerListClick = component::onUserFollowerListClicked,
                         repository = userRepository,
                         bookmarkRepository = bookmarkRepository,
+                        banRepository = banRepository,
                     )
 
                     Child.Login -> LoginScreen(

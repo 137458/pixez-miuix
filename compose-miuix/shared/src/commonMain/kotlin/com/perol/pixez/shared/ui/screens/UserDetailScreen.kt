@@ -31,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.platform.IllustClipboard
@@ -69,6 +70,7 @@ fun UserDetailScreen(
     onFollowerListClick: (Int) -> Unit,
     repository: UserRepository,
     bookmarkRepository: BookmarkRepository,
+    banRepository: BanRepository,
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -176,6 +178,7 @@ fun UserDetailScreen(
                             userId = userId,
                             onIllustClick = onIllustClick,
                             repository = repository,
+                            banRepository = banRepository,
                         )
                     }
                 }
@@ -232,6 +235,7 @@ private fun UserDetailTabContent(
     userId: Int,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
+    banRepository: BanRepository,
 ) {
     // 主 Tab 选中状态：0 = 作品，1 = 收藏。
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -254,6 +258,7 @@ private fun UserDetailTabContent(
                     userId = userId,
                     onIllustClick = onIllustClick,
                     repository = repository,
+                    banRepository = banRepository,
                 )
                 1 -> UserBookmarksTab(
                     userId = userId,
@@ -273,6 +278,7 @@ private fun UserWorksTab(
     userId: Int,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
+    banRepository: BanRepository,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     val state = produceState<Result<List<Illust>>?>(
@@ -280,8 +286,14 @@ private fun UserWorksTab(
         userId,
         repository,
         retryCount,
+        banRepository,
     ) {
-        value = runCatchingNonCancel { repository.getUserIllusts(userId) }
+        val illustsResult = runCatchingNonCancel { repository.getUserIllusts(userId) }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
+        }
     }
 
     IllustTabBody(
