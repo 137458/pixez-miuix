@@ -58,6 +58,16 @@ class AppDependencies(
     }
 
     /**
+     * 屏蔽画师数据库驱动，复用旧 Flutter banuserid.db。
+     */
+    val banUserDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            com.perol.pixez.shared.data.local.banuserid.BanUserIdDatabase.Schema,
+            "banuserid.db",
+        )
+    }
+
+    /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
      */
     val settingsRepository: SettingsRepository by lazy {
@@ -118,10 +128,10 @@ class AppDependencies(
     }
 
     /**
-     * 屏蔽作品仓库，封装对旧 banillustid.db 的读写。
+     * 屏蔽仓库，封装对旧 banillustid.db 与 banuserid.db 的读写。
      */
     val banRepository: BanRepository by lazy {
-        BanRepository(banDriver)
+        BanRepository(banDriver, banUserDriver)
     }
 
     /**
@@ -132,5 +142,6 @@ class AppDependencies(
         runCatching { driverFactory.closeDriver(accountDriver) }
         runCatching { driverFactory.closeDriver(taskDriver) }
         runCatching { driverFactory.closeDriver(banDriver) }
+        runCatching { driverFactory.closeDriver(banUserDriver) }
     }
 }

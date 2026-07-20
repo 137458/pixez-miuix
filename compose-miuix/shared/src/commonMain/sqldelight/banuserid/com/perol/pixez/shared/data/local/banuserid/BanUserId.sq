@@ -1,0 +1,24 @@
+CREATE TABLE banuserid (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL
+);
+
+-- 加速按画师 ID 的屏蔽查询，避免全表扫描。
+CREATE INDEX IF NOT EXISTS idx_banuserid_user_id ON banuserid(user_id);
+
+selectAll:
+SELECT * FROM banuserid;
+
+selectByUserId:
+SELECT * FROM banuserid WHERE user_id = ?;
+
+insert:
+INSERT INTO banuserid(user_id, name)
+VALUES (?, ?);
+
+delete:
+DELETE FROM banuserid WHERE id = ?;
+
+deleteAll:
+DELETE FROM banuserid;

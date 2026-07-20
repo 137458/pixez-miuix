@@ -154,7 +154,6 @@ sqldelight {
         //  - NovelViewerPersist.db（表 novel_viewer_persist）
         //  - banncommentid.db（表 ban_comment_persist）
         //  - bantag.db（表 ban_tag）
-        //  - banuserid.db（表 ban_user_id）
         create("AccountDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.account")
             srcDirs.setFrom("src/commonMain/sqldelight/account")
@@ -176,6 +175,10 @@ sqldelight {
         create("BanIllustIdDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.banillustid")
             srcDirs.setFrom("src/commonMain/sqldelight/banillustid")
+        }
+        create("BanUserIdDatabase") {
+            packageName.set("com.perol.pixez.shared.data.local.banuserid")
+            srcDirs.setFrom("src/commonMain/sqldelight/banuserid")
         }
     }
 }
