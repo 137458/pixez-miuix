@@ -176,11 +176,13 @@ fun RootContent(
                     Child.Settings -> SettingsScreen(
                         onBack = component::onBack,
                         onAboutClick = component::onAboutClicked,
+                        onLoginClick = component::onLoginClicked,
                         themeMode = themeMode,
                         onThemeModeChange = {
                             themeMode = it
                             settingsRepository.themeMode = it
                         },
+                        accountRepository = accountRepository,
                     )
 
                     Child.About -> AboutScreen(
