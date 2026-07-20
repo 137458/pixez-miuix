@@ -29,6 +29,7 @@ import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
 import com.perol.pixez.shared.ui.screens.RankingScreen
+import com.perol.pixez.shared.ui.screens.RecomUserScreen
 import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
@@ -166,6 +167,12 @@ fun RootContent(
                         repository = userRepository,
                     )
 
+                    Child.RecomUserList -> RecomUserScreen(
+                        onBack = component::onBack,
+                        onUserClick = component::onUserClicked,
+                        repository = userRepository,
+                    )
+
                     Child.Settings -> SettingsScreen(
                         onBack = component::onBack,
                         onAboutClick = component::onAboutClicked,
@@ -203,6 +210,7 @@ private fun MainContent(
             onIllustClick = component::onIllustClicked,
             onSettingsClick = component::onSettingsClicked,
             onLoginClick = component::onLoginClicked,
+            onRecomUserClick = component::onRecomUserListClicked,
             repository = illustRepository,
             accountRepository = accountRepository,
         )

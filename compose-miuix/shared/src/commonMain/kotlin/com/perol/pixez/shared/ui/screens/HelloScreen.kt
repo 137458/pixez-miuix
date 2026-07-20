@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +37,7 @@ fun HelloScreen(
     onIllustClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
+    onRecomUserClick: () -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
 ) {
@@ -75,6 +77,16 @@ fun HelloScreen(
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "登录",
+                            )
+                        }
+                    }
+                    if (isLoggedIn == true) {
+                        IconButton(
+                            onClick = onRecomUserClick,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PersonAdd,
+                                contentDescription = "推荐用户",
                             )
                         }
                     }

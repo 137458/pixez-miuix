@@ -122,6 +122,13 @@ class RootComponent(
         navigation.push(Config.UserFollowerList(userId))
     }
 
+    /**
+     * 打开推荐用户列表页。
+     */
+    fun onRecomUserListClicked() {
+        navigation.push(Config.RecomUserList)
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -134,6 +141,7 @@ class RootComponent(
         is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
         is Config.UserFollowList -> Child.UserFollowList(config.userId)
         is Config.UserFollowerList -> Child.UserFollowerList(config.userId)
+        Config.RecomUserList -> Child.RecomUserList
         Config.Settings -> Child.Settings
         Config.About -> Child.About
         Config.Login -> Child.Login
@@ -187,6 +195,9 @@ class RootComponent(
 
         @Serializable
         data class UserFollowerList(val userId: Int) : Config()
+
+        @Serializable
+        data object RecomUserList : Config()
     }
 
     sealed class Child {
@@ -201,5 +212,6 @@ class RootComponent(
         data class IllustSeries(val seriesId: Int) : Child()
         data class UserFollowList(val userId: Int) : Child()
         data class UserFollowerList(val userId: Int) : Child()
+        data object RecomUserList : Child()
     }
 }

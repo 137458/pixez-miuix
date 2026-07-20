@@ -98,4 +98,14 @@ class UserRepository(
         }.body()
         response.userPreviews
     }
+
+    /**
+     * 获取推荐用户列表。
+     */
+    suspend fun getRecommendedUsers(): List<UserPreview> = networkCall("获取推荐用户失败") {
+        val response: UserPreviewsResponse = apiClient.get("/v1/user/recommended") {
+            parameter("filter", "for_android")
+        }.body()
+        response.userPreviews
+    }
 }
