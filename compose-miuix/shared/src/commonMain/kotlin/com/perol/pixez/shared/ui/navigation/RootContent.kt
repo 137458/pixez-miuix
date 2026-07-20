@@ -200,6 +200,7 @@ fun RootContent(
                         onUserClick = component::onUserClicked,
                         repository = searchRepository,
                         settingsRepository = settingsRepository,
+                        banRepository = banRepository,
                         initialQuery = instance.query,
                     )
 
@@ -248,6 +249,7 @@ private fun MainContent(
             onUserClick = component::onUserClicked,
             repository = searchRepository,
             settingsRepository = settingsRepository,
+            banRepository = banRepository,
         )
 
         RootComponent.MainTab.Ranking -> RankingScreen(

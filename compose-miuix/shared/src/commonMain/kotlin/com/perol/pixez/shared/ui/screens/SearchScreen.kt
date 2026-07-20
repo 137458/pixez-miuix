@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -60,6 +61,7 @@ fun SearchScreen(
     onUserClick: (Int) -> Unit,
     repository: SearchRepository,
     settingsRepository: SettingsRepository,
+    banRepository: BanRepository,
     initialQuery: String = "",
 ) {
     var query by rememberSaveable { mutableStateOf(initialQuery) }
@@ -231,6 +233,7 @@ fun SearchScreen(
                             startDate = startDate.takeIf { it.isNotBlank() },
                             endDate = endDate.takeIf { it.isNotBlank() },
                             repository = repository,
+                            banRepository = banRepository,
                             onIllustClick = onIllustClick,
                         )
                         1 -> SearchUserResultList(
@@ -274,6 +277,7 @@ private fun SearchIllustResultGrid(
     startDate: String?,
     endDate: String?,
     repository: SearchRepository,
+    banRepository: BanRepository,
     onIllustClick: (Int) -> Unit,
 ) {
     // 根据收藏数阈值构建实际搜索词：非 0 时追加 " ${value}users入り"。
@@ -304,8 +308,9 @@ private fun SearchIllustResultGrid(
         effectiveStartDate ?: "",
         effectiveEndDate ?: "",
         retryCount,
+        banRepository,
     ) {
-        value = runCatchingNonCancel {
+        val illustsResult = runCatchingNonCancel {
             repository.searchIllust(
                 word = searchWord,
                 sort = sort,
@@ -314,6 +319,11 @@ private fun SearchIllustResultGrid(
                 startDate = effectiveStartDate,
                 endDate = effectiveEndDate,
             )
+        }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
         }
     }
 
