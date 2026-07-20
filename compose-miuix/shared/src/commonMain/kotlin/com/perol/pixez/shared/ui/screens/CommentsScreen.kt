@@ -71,6 +71,9 @@ fun CommentsScreen(
     LaunchedEffect(Unit) {
         isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
+    // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。
+    // 使用 remember：进程恢复时丢失回复目标不会导致功能异常，用户可重新点击回复。
+    var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     val state = produceState<Result<List<Comment>>?>(
@@ -103,15 +106,22 @@ fun CommentsScreen(
                 onTextChange = { inputText = it },
                 isSending = isSending,
                 isLoggedIn = isLoggedIn,
+                replyTarget = replyTarget,
+                onCancelReply = { replyTarget = null },
                 onSend = {
                     if (isSending || inputText.isBlank() || isLoggedIn != true) return@CommentInputBar
                     coroutineScope.launch {
                         isSending = true
                         sendError = null
                         runCatchingNonCancel {
-                            repository.postComment(illustId, inputText)
+                            repository.postComment(
+                                illustId = illustId,
+                                comment = inputText,
+                                parentCommentId = replyTarget?.id,
+                            )
                         }.onSuccess {
                             inputText = ""
+                            replyTarget = null
                             retryCount++
                         }.onFailure { e ->
                             sendError = e.message ?: "发送失败"
@@ -144,6 +154,7 @@ fun CommentsScreen(
                             CommentItem(
                                 comment = comment,
                                 onUserClick = onUserClick,
+                                onReplyClick = { replyTarget = comment },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -163,7 +174,7 @@ fun CommentsScreen(
 }
 
 /**
- * 评论输入栏：位于页面底部，提供输入框与发送按钮。
+ * 评论输入栏：位于页面底部，提供输入框、发送按钮与回复目标提示。
  */
 @Composable
 private fun CommentInputBar(
@@ -171,6 +182,8 @@ private fun CommentInputBar(
     onTextChange: (String) -> Unit,
     isSending: Boolean,
     isLoggedIn: Boolean?,
+    replyTarget: Comment?,
+    onCancelReply: () -> Unit,
     onSend: () -> Unit,
     error: String?,
     modifier: Modifier = Modifier,
@@ -184,6 +197,25 @@ private fun CommentInputBar(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
+        replyTarget?.let { target ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "回复 ${target.user?.name.orEmpty()}：${target.comment.orEmpty()}",
+                    style = MiuixTheme.textStyles.body2,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onCancelReply) {
+                    Text("取消")
+                }
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -193,8 +225,9 @@ private fun CommentInputBar(
             TextField(
                 value = text,
                 onValueChange = onTextChange,
-                label = when (isLoggedIn) {
-                    false -> "登录后发表评论"
+                label = when {
+                    isLoggedIn == false -> "登录后发表评论"
+                    replyTarget != null -> "回复…"
                     else -> "发表评论…"
                 },
                 modifier = Modifier.weight(1f),
@@ -222,6 +255,7 @@ private fun CommentInputBar(
 private fun CommentItem(
     comment: Comment,
     onUserClick: (Int) -> Unit,
+    onReplyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val userId = comment.user?.id
@@ -277,6 +311,15 @@ private fun CommentItem(
             Text(
                 text = date,
                 style = MiuixTheme.textStyles.footnote2,
+            )
+        }
+        if (comment.id != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "回复",
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.primary,
+                modifier = Modifier.clickable(onClick = onReplyClick),
             )
         }
     }

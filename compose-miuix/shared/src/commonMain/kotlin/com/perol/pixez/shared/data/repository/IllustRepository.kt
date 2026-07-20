@@ -115,14 +115,16 @@ class IllustRepository(
         }
 
     /**
-     * 发表作品评论。
+     * 发表作品评论或回复指定评论。
      *
      * @param illustId 作品 ID。
      * @param comment 评论内容。
+     * @param parentCommentId 被回复的评论 ID；为空时发表普通评论。
      */
     suspend fun postComment(
         illustId: Int,
         comment: String,
+        parentCommentId: Int? = null,
     ): Unit = networkCall("发表评论失败 illustId=$illustId") {
         apiClient.post("/v1/illust/comment/add") {
             header("Content-Type", "application/x-www-form-urlencoded")
@@ -131,6 +133,9 @@ class IllustRepository(
                     Parameters.build {
                         append("illust_id", illustId.toString())
                         append("comment", comment)
+                        if (parentCommentId != null) {
+                            append("parent_comment_id", parentCommentId.toString())
+                        }
                     },
                 ),
             )
