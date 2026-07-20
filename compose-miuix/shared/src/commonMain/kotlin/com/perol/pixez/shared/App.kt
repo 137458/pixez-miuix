@@ -27,6 +27,7 @@ fun App(dependencies: AppDependencies) {
         bookmarkRepository = dependencies.bookmarkRepository,
         downloadRepository = dependencies.downloadRepository,
         downloadHistoryRepository = dependencies.downloadHistoryRepository,
+        banRepository = dependencies.banRepository,
         settingsRepository = dependencies.settingsRepository,
     )
 }

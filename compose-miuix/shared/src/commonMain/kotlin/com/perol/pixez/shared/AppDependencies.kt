@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -43,6 +44,16 @@ class AppDependencies(
         driverFactory.createDriver(
             com.perol.pixez.shared.data.local.task.TaskDatabase.Schema,
             "task.db",
+        )
+    }
+
+    /**
+     * 屏蔽作品数据库驱动，复用旧 Flutter banillustid.db。
+     */
+    val banDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            com.perol.pixez.shared.data.local.banillustid.BanIllustIdDatabase.Schema,
+            "banillustid.db",
         )
     }
 
@@ -107,11 +118,19 @@ class AppDependencies(
     }
 
     /**
+     * 屏蔽作品仓库，封装对旧 banillustid.db 的读写。
+     */
+    val banRepository: BanRepository by lazy {
+        BanRepository(banDriver)
+    }
+
+    /**
      * 释放数据库与网络资源，应用在退出时调用。
      */
     fun close() {
         runCatching { httpClient.close() }
         runCatching { driverFactory.closeDriver(accountDriver) }
         runCatching { driverFactory.closeDriver(taskDriver) }
+        runCatching { driverFactory.closeDriver(banDriver) }
     }
 }

@@ -152,7 +152,6 @@ sqldelight {
         //  - tag.db（表 tag）
         //  - Novelpersist.db（表 novelpersist）
         //  - NovelViewerPersist.db（表 novel_viewer_persist）
-        //  - banillustid.db（表 ban_illust_id）
         //  - banncommentid.db（表 ban_comment_persist）
         //  - bantag.db（表 ban_tag）
         //  - banuserid.db（表 ban_user_id）
@@ -173,6 +172,10 @@ sqldelight {
         create("KVPairDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.kvpair")
             srcDirs.setFrom("src/commonMain/sqldelight/kvpair")
+        }
+        create("BanIllustIdDatabase") {
+            packageName.set("com.perol.pixez.shared.data.local.banillustid")
+            srcDirs.setFrom("src/commonMain/sqldelight/banillustid")
         }
     }
 }

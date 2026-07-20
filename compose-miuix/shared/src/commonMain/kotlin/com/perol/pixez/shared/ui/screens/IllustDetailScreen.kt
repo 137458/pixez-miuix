@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
@@ -52,6 +54,7 @@ import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -75,6 +78,7 @@ fun IllustDetailScreen(
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
+    banRepository: BanRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -96,9 +100,17 @@ fun IllustDetailScreen(
     var isDownloading by rememberSaveable { mutableStateOf(false) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var showActionMenu by rememberSaveable { mutableStateOf(false) }
+    var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
+    var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
+
+    // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
+    LaunchedEffect(illustId) {
+        runCatchingNonCancel { banRepository.isBanIllust(illustId) }
+            .onSuccess { isBanned = it }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -201,10 +213,16 @@ fun IllustDetailScreen(
                 }
                 when {
                     result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-                    result.isSuccess && illust != null -> {
-                        LazyColumn(
+                    result.isSuccess && illust != null -> when {
+                        isBanned && !isTempView -> BanPage(
+                            name = illust.title,
+                            onView = { isTempView = true },
                             modifier = Modifier.fillMaxSize(),
-                        ) {
+                        )
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
                             item {
                                 PixivAsyncImage(
                                     model = illust.imageUrls.large,
@@ -271,6 +289,7 @@ fun IllustDetailScreen(
                                 )
                             }
                         }
+                        }
                     }
                     else -> ErrorPlaceholder(
                         error = result.exceptionOrNull(),
@@ -288,6 +307,7 @@ fun IllustDetailScreen(
         illust?.let {
             IllustActionMenu(
                 show = showActionMenu,
+                showBan = !isBanned,
                 onDismissRequest = { showActionMenu = false },
                 onCopyInfo = {
                     showActionMenu = false
@@ -312,6 +332,20 @@ fun IllustDetailScreen(
                         onSuccess = { toastMessage = "已分享" },
                         onFailure = { e -> toastMessage = "分享失败: ${e.message}" },
                     )
+                },
+                onBan = {
+                    showActionMenu = false
+                    coroutineScope.launch {
+                        runCatchingNonCancel {
+                            banRepository.insertBanIllust(it.id, it.title)
+                        }.fold(
+                            onSuccess = {
+                                isBanned = true
+                                toastMessage = "已屏蔽"
+                            },
+                            onFailure = { e -> toastMessage = "屏蔽失败: ${e.message}" },
+                        )
+                    }
                 },
             )
         }
@@ -444,5 +478,32 @@ private fun StatItem(
             text = label,
             style = MiuixTheme.textStyles.footnote1,
         )
+    }
+}
+
+/**
+ * 屏蔽占位页：作品被屏蔽后居中提示，并提供「查看」按钮临时显示内容。
+ *
+ * 样式与原 Flutter 应用的 BanPage 对齐，显示「作品\n标题\n」。
+ */
+@Composable
+private fun BanPage(
+    name: String,
+    onView: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "作品\n$name\n",
+            style = MiuixTheme.textStyles.title2,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onView) {
+            Text(text = "查看")
+        }
     }
 }

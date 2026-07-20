@@ -14,6 +14,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -57,6 +58,7 @@ fun RootContent(
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     downloadHistoryRepository: DownloadHistoryRepository,
+    banRepository: BanRepository,
     settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -114,6 +116,7 @@ fun RootContent(
                         repository = illustRepository,
                         bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
+                        banRepository = banRepository,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(

@@ -10,21 +10,26 @@ import top.yukonga.miuix.kmp.extra.SuperBottomSheet
  * 作品详情页底部操作菜单。
  *
  * 基于 [SuperBottomSheet] 实现，必须在 [top.yukonga.miuix.kmp.basic.Scaffold] 内使用。
- * 当前提供「复制信息」「复制链接」与「分享链接」三项操作，与原 Flutter PixEz 作品详情页「更多」菜单保持一致。
+ * 当前提供「复制信息」「复制链接」「分享链接」与「屏蔽作品」四项操作，
+ * 与原 Flutter PixEz 作品详情页「更多」菜单保持一致。
  *
  * @param show 是否显示菜单
+ * @param showBan 是否显示「屏蔽作品」入口；作品已屏蔽时可设为 false 避免重复屏蔽
  * @param onDismissRequest 用户请求关闭菜单时的回调
  * @param onCopyInfo 点击「复制信息」时的回调
  * @param onCopyLink 点击「复制链接」时的回调
  * @param onShareLink 点击「分享链接」时的回调
+ * @param onBan 点击「屏蔽作品」时的回调
  */
 @Composable
 fun IllustActionMenu(
     show: Boolean,
+    showBan: Boolean,
     onDismissRequest: () -> Unit,
     onCopyInfo: () -> Unit,
     onCopyLink: () -> Unit,
     onShareLink: () -> Unit,
+    onBan: () -> Unit,
 ) {
     SuperBottomSheet(
         show = show,
@@ -44,6 +49,12 @@ fun IllustActionMenu(
                 title = "分享链接",
                 onClick = onShareLink,
             )
+            if (showBan) {
+                BasicComponent(
+                    title = "屏蔽作品",
+                    onClick = onBan,
+                )
+            }
         }
     }
 }

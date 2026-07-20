@@ -1,0 +1,24 @@
+CREATE TABLE banillustid (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    illust_id TEXT NOT NULL,
+    name TEXT NOT NULL
+);
+
+-- 加速按作品 ID 的屏蔽查询，避免全表扫描。
+CREATE INDEX IF NOT EXISTS idx_banillustid_illust_id ON banillustid(illust_id);
+
+selectAll:
+SELECT * FROM banillustid;
+
+selectByIllustId:
+SELECT * FROM banillustid WHERE illust_id = ?;
+
+insert:
+INSERT INTO banillustid(illust_id, name)
+VALUES (?, ?);
+
+delete:
+DELETE FROM banillustid WHERE id = ?;
+
+deleteAll:
+DELETE FROM banillustid;
