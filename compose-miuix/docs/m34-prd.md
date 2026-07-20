@@ -1,7 +1,11 @@
 # M34 里程碑：作品详情页屏蔽作品
 
 ## 状态
-进行中。
+已完成。
+
+- 实现 commit: `49be5a20`
+- code review: 已执行，修复 5 个 P1 问题（主线程同步查询、executeAsList 性能、查询异常未处理、重复屏蔽入口、过时 TODO 注释）
+- 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
 
 ## 目标
 原 Flutter PixEz 在作品详情页右上角「更多」菜单中提供「屏蔽」入口，可将当前作品加入屏蔽列表，并在详情页显示屏蔽占位提示。M34 将在 MIUIX 版复刻该功能，保持与旧版数据文件 `banillustid.db` 兼容。
@@ -39,8 +43,8 @@
 
 ## 验收条件
 
-- [ ] `IllustDetailScreen` 更多菜单中出现「屏蔽作品」入口。
-- [ ] 点击后作品被写入 `banillustid.db`，并立即显示屏蔽占位页。
-- [ ] 占位页点击「查看」可临时显示作品内容，下次进入仍保持屏蔽。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M34 code review 完成，无 P0/P1 问题遗留。
+- [x] `IllustDetailScreen` 更多菜单中出现「屏蔽作品」入口。
+- [x] 点击后作品被写入 `banillustid.db`，并立即显示屏蔽占位页。
+- [x] 占位页点击「查看」可临时显示作品内容，下次进入仍保持屏蔽。
+- [x] Android + Desktop 双端编译通过。
+- [x] M34 code review 完成，无 P0/P1 问题遗留。
