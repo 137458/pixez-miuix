@@ -147,4 +147,9 @@ private enum class RankingMode(
     DAY_FEMALE("day_female", "女性向"),
     WEEK_ORIGINAL("week_original", "原创"),
     DAY_ROOKIE("day_rookie", "新人"),
+    DAY_AI("day_ai", "AI 日榜"),
+    DAY_R18_AI("day_r18_ai", "AI R18 日榜"),
+    DAY_R18("day_r18", "R18 日榜"),
+    WEEK_R18("week_r18", "R18 周榜"),
+    WEEK_R18G("week_r18g", "R18G 周榜"),
 }
