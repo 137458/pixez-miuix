@@ -71,6 +71,7 @@ fun IllustDetailScreen(
     onCommentsClick: (Int) -> Unit,
     onRelatedIllustsClick: (Int) -> Unit,
     onIllustSeriesClick: (Int) -> Unit,
+    onTagClick: (String) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
@@ -263,8 +264,10 @@ fun IllustDetailScreen(
                                     text = tag.translatedName ?: tag.name,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clickable { onTagClick(tag.name) }
                                         .padding(horizontal = 16.dp, vertical = 8.dp),
                                     style = MiuixTheme.textStyles.body1,
+                                    color = MiuixTheme.colorScheme.primary,
                                 )
                             }
                         }

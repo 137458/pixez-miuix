@@ -129,6 +129,13 @@ class RootComponent(
         navigation.push(Config.RecomUserList)
     }
 
+    /**
+     * 打开搜索页并填入指定关键词。
+     */
+    fun onSearchClicked(query: String) {
+        navigation.push(Config.Search(query))
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -141,6 +148,7 @@ class RootComponent(
         is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
         is Config.UserFollowList -> Child.UserFollowList(config.userId)
         is Config.UserFollowerList -> Child.UserFollowerList(config.userId)
+        is Config.Search -> Child.Search(config.query)
         Config.RecomUserList -> Child.RecomUserList
         Config.Settings -> Child.Settings
         Config.About -> Child.About
@@ -198,6 +206,9 @@ class RootComponent(
 
         @Serializable
         data object RecomUserList : Config()
+
+        @Serializable
+        data class Search(val query: String) : Config()
     }
 
     sealed class Child {
@@ -213,5 +224,6 @@ class RootComponent(
         data class UserFollowList(val userId: Int) : Child()
         data class UserFollowerList(val userId: Int) : Child()
         data object RecomUserList : Child()
+        data class Search(val query: String) : Child()
     }
 }

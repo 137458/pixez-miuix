@@ -107,6 +107,7 @@ fun RootContent(
                         onCommentsClick = component::onCommentsClicked,
                         onRelatedIllustsClick = component::onRelatedIllustsClicked,
                         onIllustSeriesClick = component::onIllustSeriesClicked,
+                        onTagClick = component::onSearchClicked,
                         repository = illustRepository,
                         bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
@@ -184,6 +185,14 @@ fun RootContent(
                             settingsRepository.themeMode = it
                         },
                         accountRepository = accountRepository,
+                    )
+
+                    is Child.Search -> SearchScreen(
+                        onIllustClick = component::onIllustClicked,
+                        onUserClick = component::onUserClicked,
+                        repository = searchRepository,
+                        settingsRepository = settingsRepository,
+                        initialQuery = instance.query,
                     )
 
                     Child.About -> AboutScreen(

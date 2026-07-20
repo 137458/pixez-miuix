@@ -60,9 +60,11 @@ fun SearchScreen(
     onUserClick: (Int) -> Unit,
     repository: SearchRepository,
     settingsRepository: SettingsRepository,
+    initialQuery: String = "",
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
+    // 存在初始查询词时直接进入搜索结果模式。
+    var expanded by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
 
     // 搜索类型：0 = 作品，1 = 画师。
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
