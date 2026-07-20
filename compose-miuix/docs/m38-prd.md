@@ -7,7 +7,7 @@
 - 实现 commit: `70595659`
 - code review: 已执行，未发现 P0/P1 问题
 - 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
-- push 状态: `git push` 多次失败，错误为 `Failed to connect to github.com port 443`。已生成 SSH key（`~/.ssh/id_ed25519`）并配置 SSH 复用连接，待将公钥添加到 GitHub 后即可通过 SSH 推送。
+- push 状态: 已推送至 origin master。初次推送因直连 github.com:443 失败；后通过 http/https proxy `127.0.0.1:7897` 成功推送。
 
 ## 目标
 M35-M37 已完成首页、排行榜与搜索页的屏蔽作品过滤。M38 将用户详情页「作品」Tab 接入相同的过滤机制，使用户作品列表中也不会展示已被屏蔽的作品。

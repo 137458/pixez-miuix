@@ -1,7 +1,13 @@
 # M39 里程碑：用户详情页收藏 Tab 屏蔽作品过滤
 
 ## 状态
-进行中。
+已完成。
+
+- PRD commit: `5bd80387`
+- 实现 commit: `1dc38e57`
+- code review: 已执行，未发现 P0/P1 问题
+- 编译验证: Android Debug + Desktop 双端 BUILD SUCCESSFUL
+- push 状态: 已推送至 origin master（`382d9fcb..1dc38e57`，通过 http/https proxy `127.0.0.1:7897`）
 
 ## 目标
 M38 已完成用户详情页「作品」Tab 的屏蔽过滤。M39 将「收藏」Tab 接入相同的过滤机制，使用户收藏列表中也不会展示已被屏蔽的作品。
@@ -29,8 +35,8 @@ M38 已完成用户详情页「作品」Tab 的屏蔽过滤。M39 将「收藏�
 
 ## 验收条件
 
-- [ ] 被屏蔽作品不再出现在 `UserDetailScreen` 收藏 Tab 中。
-- [ ] 全部收藏均被屏蔽时，收藏 Tab 显示空态占位。
-- [ ] 切换用户、公开/私密选项或重试后，过滤结果同步更新。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M39 code review 完成，无 P0/P1 问题遗留。
+- [x] 被屏蔽作品不再出现在 `UserDetailScreen` 收藏 Tab 中。
+- [x] 全部收藏均被屏蔽时，收藏 Tab 显示空态占位。
+- [x] 切换用户、公开/私密选项或重试后，过滤结果同步更新。
+- [x] Android + Desktop 双端编译通过。
+- [x] M39 code review 完成，无 P0/P1 问题遗留。
