@@ -265,6 +265,7 @@ private fun MainContent(
             onLoginClick = component::onLoginClicked,
             repository = illustRepository,
             accountRepository = accountRepository,
+            banRepository = banRepository,
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(

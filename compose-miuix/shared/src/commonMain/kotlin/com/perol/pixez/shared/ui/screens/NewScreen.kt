@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -42,6 +43,7 @@ fun NewScreen(
     onLoginClick: () -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
+    banRepository: BanRepository,
 ) {
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
@@ -63,9 +65,17 @@ fun NewScreen(
         currentRestrict,
         retryCount,
         isLoggedIn,
+        banRepository,
     ) {
         value = when (isLoggedIn) {
-            true -> runCatchingNonCancel { repository.getFollowIllusts(currentRestrict) }
+            true -> {
+                val illustsResult = runCatchingNonCancel { repository.getFollowIllusts(currentRestrict) }
+                val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+                    .getOrDefault(emptySet())
+                illustsResult.map { illusts ->
+                    illusts.filter { it.id !in bannedIds }
+                }
+            }
             false -> Result.success(emptyList())
             null -> null
         }
