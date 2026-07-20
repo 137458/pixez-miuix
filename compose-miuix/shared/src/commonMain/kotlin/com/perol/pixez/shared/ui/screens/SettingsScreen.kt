@@ -24,11 +24,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.SingletonImageLoader
+import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -40,7 +44,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 设置页：分组展示账号、主题、关于等入口。
+ * 设置页：分组展示账号、主题、下载、存储、关于等入口。
  *
  * @param themeMode 当前主题模式：0 跟随系统，1 浅色，2 深色。
  * @param onThemeModeChange 主题模式变更回调，由外层 [RootContent] 应用到 [MiuixTheme]。
@@ -56,10 +60,15 @@ fun SettingsScreen(
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalPlatformContext.current
 
     // 当前账号信息，登出后手动置 null。
     var account by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
+
+    // 清除缓存的加载态与提示信息。
+    var isClearingCache by remember { mutableStateOf(false) }
+    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     // 页面进入时加载一次账号信息。
     LaunchedEffect(accountRepository) {
@@ -125,6 +134,38 @@ fun SettingsScreen(
                 )
             }
             item {
+                SmallTitle(text = "存储")
+            }
+            item {
+                BasicComponent(
+                    title = "清除缓存",
+                    summary = if (isClearingCache) "清理中…" else "释放图片缓存占用的空间",
+                    onClick = {
+                        if (isClearingCache) return@BasicComponent
+                        coroutineScope.launch {
+                            isClearingCache = true
+                            val result = try {
+                                val imageLoader = SingletonImageLoader.get(context)
+                                imageLoader.memoryCache?.clear()
+                                imageLoader.diskCache?.clear()
+                                Result.success(Unit)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Throwable) {
+                                Result.failure(e)
+                            } finally {
+                                isClearingCache = false
+                            }
+                            toastMessage = if (result.isSuccess) {
+                                "缓存已清除"
+                            } else {
+                                "清除失败: ${result.exceptionOrNull()?.message}"
+                            }
+                        }
+                    },
+                )
+            }
+            item {
                 SmallTitle(text = "关于")
             }
             item {
@@ -135,6 +176,11 @@ fun SettingsScreen(
                 )
             }
         }
+
+        ToastMessage(
+            message = toastMessage,
+            onDismiss = { toastMessage = null },
+        )
     }
 }
 
