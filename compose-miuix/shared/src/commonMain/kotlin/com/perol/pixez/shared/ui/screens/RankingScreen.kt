@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -46,6 +47,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun RankingScreen(
     onIllustClick: (Int) -> Unit,
     repository: IllustRepository,
+    banRepository: BanRepository,
 ) {
     // 保存用户选择的排行榜模式，进程重建后恢复。
     var selectedMode by rememberSaveable { mutableStateOf(RankingMode.DAY) }
@@ -56,18 +58,24 @@ fun RankingScreen(
     // 重试计数，点击重试或切换模式/日期时触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
 
-    // 模式、日期切换或重试时自动重新加载。
+    // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         selectedMode,
         selectedDate,
         retryCount,
+        banRepository,
     ) {
-        value = runCatchingNonCancel {
+        val illustsResult = runCatchingNonCancel {
             repository.getRanking(
                 mode = selectedMode.code,
                 date = selectedDate,
             )
+        }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
         }
     }
 

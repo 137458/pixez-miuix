@@ -253,6 +253,7 @@ private fun MainContent(
         RootComponent.MainTab.Ranking -> RankingScreen(
             onIllustClick = component::onIllustClicked,
             repository = illustRepository,
+            banRepository = banRepository,
         )
 
         RootComponent.MainTab.New -> NewScreen(
