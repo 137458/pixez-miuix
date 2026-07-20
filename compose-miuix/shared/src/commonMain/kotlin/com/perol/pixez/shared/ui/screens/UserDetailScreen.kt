@@ -264,6 +264,7 @@ private fun UserDetailTabContent(
                     userId = userId,
                     onIllustClick = onIllustClick,
                     repository = repository,
+                    banRepository = banRepository,
                 )
             }
         }
@@ -312,21 +313,28 @@ private fun UserBookmarksTab(
     userId: Int,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
+    banRepository: BanRepository,
 ) {
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
     var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
     val restrictTabs = listOf("公开", "私密")
     val restrict = if (selectedRestrictIndex == 0) "public" else "private"
 
-    // 切换用户、可见性选项或重试时重新加载。
+    // 切换用户、可见性选项或重试时重新加载；加载完成后过滤掉被屏蔽作品。
     var retryCount by rememberSaveable(userId, restrict) { mutableIntStateOf(0) }
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         userId,
         restrict,
         retryCount,
+        banRepository,
     ) {
-        value = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
+        val illustsResult = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
+        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        value = illustsResult.map { illusts ->
+            illusts.filter { it.id !in bannedIds }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
