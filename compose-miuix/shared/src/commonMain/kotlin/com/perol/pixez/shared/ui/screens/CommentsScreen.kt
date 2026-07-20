@@ -11,13 +11,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -26,22 +32,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Comment
+import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 作品评论页：展示指定作品的用户评论列表。
+ * 作品评论页：展示指定作品的用户评论列表，并支持发表评论。
  */
 @Composable
 fun CommentsScreen(
@@ -49,9 +58,20 @@ fun CommentsScreen(
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
     repository: IllustRepository,
+    accountRepository: AccountRepository,
 ) {
-    // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
+    // retryCount 作为 produceState 的 key，点击重试或发表评论后自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var inputText by rememberSaveable { mutableStateOf("") }
+    // 发送状态在进程恢复时不应持久化，否则可能因发送中断而永久卡死。
+    var isSending by remember { mutableStateOf(false) }
+    var sendError by remember { mutableStateOf<String?>(null) }
+    // 登录状态：未登录时禁用发送按钮，与 Hello/New/Spotlight 等页面保持一致。
+    var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+    }
+    val coroutineScope = rememberCoroutineScope()
 
     val state = produceState<Result<List<Comment>>?>(
         initialValue = null,
@@ -75,6 +95,31 @@ fun CommentsScreen(
                         )
                     }
                 },
+            )
+        },
+        bottomBar = {
+            CommentInputBar(
+                text = inputText,
+                onTextChange = { inputText = it },
+                isSending = isSending,
+                isLoggedIn = isLoggedIn,
+                onSend = {
+                    if (isSending || inputText.isBlank() || isLoggedIn != true) return@CommentInputBar
+                    coroutineScope.launch {
+                        isSending = true
+                        sendError = null
+                        runCatchingNonCancel {
+                            repository.postComment(illustId, inputText)
+                        }.onSuccess {
+                            inputText = ""
+                            retryCount++
+                        }.onFailure { e ->
+                            sendError = e.message ?: "发送失败"
+                        }
+                        isSending = false
+                    }
+                },
+                error = sendError,
             )
         },
     ) { paddingValues ->
@@ -117,15 +162,80 @@ fun CommentsScreen(
     }
 }
 
+/**
+ * 评论输入栏：位于页面底部，提供输入框与发送按钮。
+ */
+@Composable
+private fun CommentInputBar(
+    text: String,
+    onTextChange: (String) -> Unit,
+    isSending: Boolean,
+    isLoggedIn: Boolean?,
+    onSend: () -> Unit,
+    error: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        error?.let {
+            Text(
+                text = it,
+                color = MiuixTheme.colorScheme.error,
+                style = MiuixTheme.textStyles.body2,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextField(
+                value = text,
+                onValueChange = onTextChange,
+                label = when (isLoggedIn) {
+                    false -> "登录后发表评论"
+                    else -> "发表评论…"
+                },
+                modifier = Modifier.weight(1f),
+                enabled = !isSending && isLoggedIn != false,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onSend,
+                enabled = text.isNotBlank() && !isSending && isLoggedIn == true,
+            ) {
+                if (isSending) {
+                    Text("发送中")
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "发送",
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun CommentItem(
     comment: Comment,
     onUserClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val userId = comment.user?.id
     Column(modifier = modifier.padding(16.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (userId != null) {
+                        Modifier.clickable { onUserClick(userId) }
+                    } else {
+                        Modifier
+                    },
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             comment.user?.let { user ->

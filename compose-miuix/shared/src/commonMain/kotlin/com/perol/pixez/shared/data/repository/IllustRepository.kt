@@ -13,8 +13,13 @@ import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.Parameters
 
 /**
  * 插画作品仓库：推荐、排行榜、作品详情等业务接口。
@@ -108,6 +113,29 @@ class IllustRepository(
             }.body()
             response.comments
         }
+
+    /**
+     * 发表作品评论。
+     *
+     * @param illustId 作品 ID。
+     * @param comment 评论内容。
+     */
+    suspend fun postComment(
+        illustId: Int,
+        comment: String,
+    ): Unit = networkCall("发表评论失败 illustId=$illustId") {
+        apiClient.post("/v1/illust/comment/add") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("illust_id", illustId.toString())
+                        append("comment", comment)
+                    },
+                ),
+            )
+        }
+    }
 
     /**
      * 获取相关作品列表。

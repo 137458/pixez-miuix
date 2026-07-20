@@ -137,6 +137,7 @@ fun RootContent(
                         onBack = component::onBack,
                         onUserClick = component::onUserClicked,
                         repository = illustRepository,
+                        accountRepository = accountRepository,
                     )
 
                     is Child.RelatedIllusts -> RelatedIllustsScreen(
