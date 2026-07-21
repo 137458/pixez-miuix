@@ -125,6 +125,13 @@ class RootComponent(
     }
 
     /**
+     * 打开分享格式设置页。
+     */
+    fun onCopyTextSettingClicked() {
+        navigation.push(Config.CopyTextSetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -209,6 +216,7 @@ class RootComponent(
         Config.NetworkSetting -> Child.NetworkSetting
         Config.DownloadSetting -> Child.DownloadSetting
         Config.QualitySetting -> Child.QualitySetting
+        Config.CopyTextSetting -> Child.CopyTextSetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -288,6 +296,9 @@ class RootComponent(
 
         @Serializable
         data object QualitySetting : Config()
+
+        @Serializable
+        data object CopyTextSetting : Config()
     }
 
     sealed class Child {
@@ -311,5 +322,6 @@ class RootComponent(
         data object NetworkSetting : Child()
         data object DownloadSetting : Child()
         data object QualitySetting : Child()
+        data object CopyTextSetting : Child()
     }
 }

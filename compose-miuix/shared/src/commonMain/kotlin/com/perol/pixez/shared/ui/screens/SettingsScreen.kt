@@ -57,6 +57,7 @@ fun SettingsScreen(
     onNetworkSettingClick: () -> Unit,
     onDownloadSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
+    onCopyTextSettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -142,6 +143,16 @@ fun SettingsScreen(
                     title = "屏蔽设置",
                     summary = "标签、画师、AI 作品过滤",
                     onClick = onShieldClick,
+                )
+            }
+            item {
+                SmallTitle(text = "分享")
+            }
+            item {
+                BasicComponent(
+                    title = "分享格式",
+                    summary = "复制作品信息时的文本模板",
+                    onClick = onCopyTextSettingClick,
                 )
             }
             item {
