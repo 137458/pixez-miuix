@@ -72,8 +72,10 @@ fun NewScreen(
                 val illustsResult = runCatchingNonCancel { repository.getFollowIllusts(currentRestrict) }
                 val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
                     .getOrDefault(emptySet())
+                val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+                    .getOrDefault(emptySet())
                 illustsResult.map { illusts ->
-                    illusts.filter { it.id !in bannedIds }
+                    illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
                 }
             }
             false -> Result.success(emptyList())

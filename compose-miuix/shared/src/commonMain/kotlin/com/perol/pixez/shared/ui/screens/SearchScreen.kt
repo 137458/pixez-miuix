@@ -322,8 +322,10 @@ private fun SearchIllustResultGrid(
         }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
+        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
         value = illustsResult.map { illusts ->
-            illusts.filter { it.id !in bannedIds }
+            illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
         }
     }
 

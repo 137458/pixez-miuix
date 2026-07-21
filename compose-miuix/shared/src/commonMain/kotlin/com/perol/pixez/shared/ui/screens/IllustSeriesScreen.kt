@@ -48,8 +48,10 @@ fun IllustSeriesScreen(
         val seriesResult = runCatchingNonCancel { repository.getIllustSeries(seriesId) }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
+        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
         value = seriesResult.map { (title, illusts) ->
-            title to illusts.filter { it.id !in bannedIds }
+            title to illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
         }
     }
 

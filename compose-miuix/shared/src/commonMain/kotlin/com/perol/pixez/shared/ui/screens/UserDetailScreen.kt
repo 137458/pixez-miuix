@@ -292,8 +292,10 @@ private fun UserWorksTab(
         val illustsResult = runCatchingNonCancel { repository.getUserIllusts(userId) }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
+        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
         value = illustsResult.map { illusts ->
-            illusts.filter { it.id !in bannedIds }
+            illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
         }
     }
 
@@ -332,8 +334,10 @@ private fun UserBookmarksTab(
         val illustsResult = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
+        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
         value = illustsResult.map { illusts ->
-            illusts.filter { it.id !in bannedIds }
+            illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
         }
     }
 
