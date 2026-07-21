@@ -35,17 +35,28 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+/**
+ * 删除目标：标签、画师或作品。
+ */
+private sealed class DeleteTarget {
+    data class Tag(val tag: BanRepository.BanTag) : DeleteTarget()
+    data class User(val user: BanRepository.BanUser) : DeleteTarget()
+    data class Illust(val illust: BanRepository.BanIllust) : DeleteTarget()
+}
 
 /**
  * 屏蔽设置页：管理本地屏蔽相关开关与列表入口。
  *
- * M48 已实现 AI 作品过滤开关；M49 新增屏蔽标签的展示、添加与删除。
+ * M48 已实现 AI 作品过滤开关；M49 新增屏蔽标签的展示、添加与删除；
+ * M50 补齐被屏蔽画师与作品的展示、删除。
  */
 @Composable
 fun ShieldScreen(
@@ -58,39 +69,49 @@ fun ShieldScreen(
     // AI 作品过滤开关状态。
     var banAIIllust by remember { mutableStateOf(settingsRepository.banAIIllust) }
 
-    // 屏蔽标签列表，进入页面时加载一次。
+    // 屏蔽列表：标签、画师、作品。
     var banTags by remember { mutableStateOf<List<BanRepository.BanTag>>(emptyList()) }
-    var isLoadingTags by remember { mutableStateOf(false) }
+    var banUsers by remember { mutableStateOf<List<BanRepository.BanUser>>(emptyList()) }
+    var banIllusts by remember { mutableStateOf<List<BanRepository.BanIllust>>(emptyList()) }
+
+    // 初始加载态与分组操作加载态。
+    var isLoading by remember { mutableStateOf(false) }
     var isAddingTag by remember { mutableStateOf(false) }
-    var isDeletingTag by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
 
     // 添加 / 删除对话框状态。
     var showAddDialog by remember { mutableStateOf(false) }
-    var tagToDelete by remember { mutableStateOf<BanRepository.BanTag?>(null) }
+    var deleteTarget by remember { mutableStateOf<DeleteTarget?>(null) }
 
     // 提示信息。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     /**
-     * 加载全部屏蔽标签，并按名称字典序排序。
+     * 同时加载标签、画师、作品三类屏蔽数据，并按名称字典序排序。
      */
-    fun loadTags() {
+    fun loadAll() {
         coroutineScope.launch {
-            isLoadingTags = true
-            runCatchingNonCancel { banRepository.getAllBanTags() }
-                .onSuccess {
-                    banTags = it.sortedBy { tag -> tag.name.lowercase() }
-                }
-                .onFailure { e ->
-                    Napier.e("加载屏蔽标签失败", e)
-                    toastMessage = "加载标签失败：${e.message}"
-                }
-            isLoadingTags = false
+            isLoading = true
+            runCatchingNonCancel {
+                Triple(
+                    banRepository.getAllBanTags(),
+                    banRepository.getAllBanUsers(),
+                    banRepository.getAllBanIllusts(),
+                )
+            }.onSuccess { (tags, users, illusts) ->
+                banTags = tags.sortedBy { it.name.lowercase() }
+                banUsers = users.sortedBy { it.name.lowercase() }
+                banIllusts = illusts.sortedBy { it.name.lowercase() }
+            }.onFailure { e ->
+                Napier.e("加载屏蔽数据失败", e)
+                toastMessage = "加载失败：${e.message}"
+            }
+            isLoading = false
         }
     }
 
     LaunchedEffect(banRepository) {
-        loadTags()
+        loadAll()
     }
 
     Scaffold(
@@ -132,6 +153,7 @@ fun ShieldScreen(
                 )
             }
 
+            // 标签分组：展示、添加、删除。
             item {
                 SmallTitle(text = "标签")
             }
@@ -145,11 +167,11 @@ fun ShieldScreen(
                 ) {
                     Text(
                         text = "已屏蔽 ${banTags.size} 个标签",
-                        style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
+                        style = MiuixTheme.textStyles.body2,
                     )
                     IconButton(
                         onClick = { showAddDialog = true },
-                        enabled = !isLoadingTags && !isAddingTag,
+                        enabled = !isLoading && !isAddingTag,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
@@ -159,20 +181,53 @@ fun ShieldScreen(
                 }
             }
             item {
-                FlowRow(
+                ChipFlowRow(
+                    items = banTags,
+                    label = { it.name },
+                    onClick = { deleteTarget = DeleteTarget.Tag(it) },
+                )
+            }
+
+            // 画师分组：仅展示与删除（原应用未提供从此处添加入口）。
+            item {
+                SmallTitle(text = "画师")
+            }
+            item {
+                Text(
+                    text = "已屏蔽 ${banUsers.size} 个画师",
+                    style = MiuixTheme.textStyles.body2,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    banTags.forEach { tag ->
-                        TagChip(
-                            name = tag.name,
-                            onClick = { tagToDelete = tag },
-                        )
-                    }
-                }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item {
+                ChipFlowRow(
+                    items = banUsers,
+                    label = { it.name },
+                    onClick = { deleteTarget = DeleteTarget.User(it) },
+                )
+            }
+
+            // 作品分组：仅展示与删除（原应用未提供从此处添加入口）。
+            item {
+                SmallTitle(text = "作品")
+            }
+            item {
+                Text(
+                    text = "已屏蔽 ${banIllusts.size} 个作品",
+                    style = MiuixTheme.textStyles.body2,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item {
+                ChipFlowRow(
+                    items = banIllusts,
+                    label = { it.name },
+                    onClick = { deleteTarget = DeleteTarget.Illust(it) },
+                )
             }
         }
 
@@ -188,7 +243,7 @@ fun ShieldScreen(
                         banRepository.insertBanTag(name, translateName = "")
                     }.onSuccess {
                         showAddDialog = false
-                        loadTags()
+                        loadAll()
                     }.onFailure { e ->
                         Napier.e("添加屏蔽标签失败", e)
                         toastMessage = "添加失败：${e.message}"
@@ -198,47 +253,40 @@ fun ShieldScreen(
             },
         )
 
-        // 删除标签确认对话框。
-        val pendingDelete = tagToDelete
+        // 通用删除确认对话框。
+        val pendingDelete = deleteTarget
         if (pendingDelete != null) {
-            SuperDialog(
-                title = "删除屏蔽标签",
-                summary = "确定删除标签「${pendingDelete.name}」吗？",
-                show = true,
-                onDismissRequest = { tagToDelete = null },
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    TextButton(
-                        text = "取消",
-                        onClick = { tagToDelete = null },
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        text = "删除",
-                        onClick = {
-                            coroutineScope.launch {
-                                isDeletingTag = true
-                                runCatchingNonCancel {
-                                    banRepository.deleteBanTag(pendingDelete.id)
-                                }.onSuccess {
-                                    tagToDelete = null
-                                    loadTags()
-                                }.onFailure { e ->
-                                    Napier.e("删除屏蔽标签失败", e)
-                                    toastMessage = "删除失败：${e.message}"
-                                }
-                                isDeletingTag = false
-                            }
-                        },
-                        enabled = !isDeletingTag,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
+            val (title, summary) = when (pendingDelete) {
+                is DeleteTarget.Tag -> "删除屏蔽标签" to "确定删除标签「${pendingDelete.tag.name}」吗？"
+                is DeleteTarget.User -> "删除屏蔽画师" to "确定删除画师「${pendingDelete.user.name}」吗？"
+                is DeleteTarget.Illust -> "删除屏蔽作品" to "确定删除作品「${pendingDelete.illust.name}」吗？"
             }
+            DeleteConfirmationDialog(
+                title = title,
+                summary = summary,
+                isLoading = isDeleting,
+                onDismiss = { deleteTarget = null },
+                onConfirm = {
+                    coroutineScope.launch {
+                        isDeleting = true
+                        val result = runCatchingNonCancel {
+                            when (pendingDelete) {
+                                is DeleteTarget.Tag -> banRepository.deleteBanTag(pendingDelete.tag.id)
+                                is DeleteTarget.User -> banRepository.deleteBanUser(pendingDelete.user.id)
+                                is DeleteTarget.Illust -> banRepository.deleteBanIllust(pendingDelete.illust.id)
+                            }
+                        }
+                        result.onSuccess {
+                            deleteTarget = null
+                            loadAll()
+                        }.onFailure { e ->
+                            Napier.e("删除屏蔽项失败", e)
+                            toastMessage = "删除失败：${e.message}"
+                        }
+                        isDeleting = false
+                    }
+                },
+            )
         }
 
         ToastMessage(
@@ -249,10 +297,35 @@ fun ShieldScreen(
 }
 
 /**
- * 标签 chip：使用次要按钮样式，点击触发删除确认。
+ * 通用 chip 流式布局：按给定标签函数展示列表项，点击触发回调。
  */
 @Composable
-private fun TagChip(
+private fun <T> ChipFlowRow(
+    items: List<T>,
+    label: (T) -> String,
+    onClick: (T) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items.forEach { item ->
+            Chip(
+                name = label(item),
+                onClick = { onClick(item) },
+            )
+        }
+    }
+}
+
+/**
+ * 通用 chip：使用次要按钮样式，点击触发删除确认。
+ */
+@Composable
+private fun Chip(
     name: String,
     onClick: () -> Unit,
 ) {
@@ -264,7 +337,7 @@ private fun TagChip(
     ) {
         Text(
             text = name,
-            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+            style = MiuixTheme.textStyles.footnote2,
         )
     }
 }
@@ -312,6 +385,43 @@ private fun AddTagDialog(
                         onConfirm(trimmed)
                     }
                 },
+                enabled = !isLoading,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        }
+    }
+}
+
+/**
+ * 通用删除确认对话框。
+ */
+@Composable
+private fun DeleteConfirmationDialog(
+    title: String,
+    summary: String,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    SuperDialog(
+        title = title,
+        summary = summary,
+        show = true,
+        onDismissRequest = onDismiss,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(
+                text = "取消",
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                text = if (isLoading) "删除中…" else "删除",
+                onClick = onConfirm,
                 enabled = !isLoading,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.textButtonColorsPrimary(),
