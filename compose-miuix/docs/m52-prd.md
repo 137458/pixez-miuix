@@ -46,7 +46,7 @@
 
 - 独立 `ThemeSettingScreen` 作为二级页面，符合设置页中「关于」「屏蔽设置」等现有二级页模式。
 - 主题模式、AMOLED、动态颜色、种子色全部从 `SettingsRepository` 读写，保持与旧 Flutter `user_setting.dart` 的键兼容。
-- 动态颜色使用 MIUIX `ColorSchemeMode.MonetSystem/MonetLight/MonetDark`，关闭动态颜色时使用普通 `System/Light/Dark`。
+- 统一使用 MIUIX `ColorSchemeMode.MonetSystem/MonetLight/MonetDark`；动态颜色开启时 `keyColor` 传 `null` 以使用系统壁纸颜色，关闭时传入固定种子色，确保种子色在非动态颜色模式下也能生效。
 - AMOLED 通过自定义 `darkColorScheme` 实现，将背景/表面相关颜色设为纯黑，仅在深色模式生效。
 - 颜色选择器不引入第三方库，使用 MIUIX `SuperDialog` 与 Compose 基础组件实现。
 

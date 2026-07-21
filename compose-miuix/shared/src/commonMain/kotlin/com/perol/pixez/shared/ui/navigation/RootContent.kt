@@ -41,7 +41,7 @@ import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.ThemeSettingScreen
-import com.perol.pixez.shared.ui.screens.ThemeSettingScreen_DEFAULT_SEED_COLOR
+import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
@@ -74,7 +74,7 @@ fun RootContent(
     var isAmoled by rememberSaveable { mutableStateOf(settingsRepository.isAmoled) }
     var useDynamicColor by rememberSaveable { mutableStateOf(settingsRepository.useDynamicColor) }
     var seedColor by rememberSaveable {
-        mutableIntStateOf(settingsRepository.seedColor ?: ThemeSettingScreen_DEFAULT_SEED_COLOR)
+        mutableIntStateOf(settingsRepository.seedColor ?: DEFAULT_SEED_COLOR)
     }
 
     // 进程重建后上述状态会由 SettingsRepository 恢复（M4）。

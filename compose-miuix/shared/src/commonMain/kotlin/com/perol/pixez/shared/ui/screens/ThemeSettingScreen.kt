@@ -61,7 +61,7 @@ fun ThemeSettingScreen(
     var themeMode by remember { mutableIntStateOf(settingsRepository.themeMode) }
     var isAmoled by remember { mutableStateOf(settingsRepository.isAmoled) }
     var useDynamicColor by remember { mutableStateOf(settingsRepository.useDynamicColor) }
-    var seedColor by remember { mutableIntStateOf(settingsRepository.seedColor ?: ThemeSettingScreen_DEFAULT_SEED_COLOR) }
+    var seedColor by remember { mutableIntStateOf(settingsRepository.seedColor ?: DEFAULT_SEED_COLOR) }
 
     // 颜色选择对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
@@ -397,4 +397,4 @@ private fun parseHexColor(hex: String): Int? {
 /**
  * 默认种子色：对齐 Flutter 版默认蓝色。
  */
-internal const val ThemeSettingScreen_DEFAULT_SEED_COLOR = 0xFF2196F3.toInt()
+internal const val DEFAULT_SEED_COLOR = 0xFF2196F3.toInt()
