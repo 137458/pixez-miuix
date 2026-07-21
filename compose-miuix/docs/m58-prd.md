@@ -2,7 +2,7 @@
 
 ## 状态
 
-进行中。
+已完成。
 
 ## 目标
 
@@ -44,15 +44,15 @@
 
 ## 验收条件
 
-- [ ] `RootComponent` 接收 `settingsRepository` 并根据 `welcomePageType` 设置初始路由。
-- [ ] `App.kt` 正确向 `RootComponent` 传递 `settingsRepository`。
-- [ ] `RootComponent` 提供 `onWelcomePageSettingClicked` 导航，`RootContent` 正确渲染 `WelcomePageSettingScreen`。
-- [ ] `SettingsScreen` 显示「欢迎页」入口，点击进入新页面。
-- [ ] `WelcomePageSettingScreen` 正确展示当前欢迎页选项并提供全部五个互斥选项。
-- [ ] 修改欢迎页选项后，设置即时保存到 `SettingsRepository.welcomePageType`。
-- [ ] 重启应用后，进入页面与所选欢迎页一致。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M58 code review 完成，无 P0/P1 问题遗留。
+- [x] `RootComponent` 接收 `settingsRepository` 并根据 `welcomePageType` 设置初始路由。
+- [x] `App.kt` 正确向 `RootComponent` 传递 `settingsRepository`。
+- [x] `RootComponent` 提供 `onWelcomePageSettingClicked` 导航，`RootContent` 正确渲染 `WelcomePageSettingScreen`。
+- [x] `SettingsScreen` 显示「欢迎页」入口，点击进入新页面。
+- [x] `WelcomePageSettingScreen` 正确展示当前欢迎页选项并提供全部五个互斥选项。
+- [x] 修改欢迎页选项后，设置即时保存到 `SettingsRepository.welcomePageType`。
+- [x] 重启应用后，进入页面与所选欢迎页一致。
+- [x] Android + Desktop 双端编译通过。
+- [x] M58 code review 完成，无 P0/P1 问题遗留。
 
 ## 垂直切片（Issue 拆分）
 
@@ -65,10 +65,10 @@
 **What to build**: 打通 `RootComponent` 读取 `SettingsRepository.welcomePageType` 并映射为初始路由的能力。
 
 **Acceptance criteria**:
-- [ ] `RootComponent` 构造函数新增 `settingsRepository` 参数。
-- [ ] `App.kt` 的 `rememberRootComponent` 传入 `dependencies.settingsRepository`。
-- [ ] `RootComponent` 根据 `welcomePageType` 的值正确设置 `initialConfiguration`。
-- [ ] 未知或空值时回退到 `Config.Main(MainTab.Hello)`。
+- [x] `RootComponent` 构造函数新增 `settingsRepository` 参数。
+- [x] `App.kt` 的 `rememberRootComponent` 传入 `dependencies.settingsRepository`。
+- [x] `RootComponent` 根据 `welcomePageType` 的值正确设置 `initialConfiguration`。
+- [x] 未知或空值时回退到 `Config.Main(MainTab.Hello)`。
 
 ### Slice 2: 欢迎页设置页 UI 与导航
 
@@ -79,9 +79,9 @@
 **What to build**: 新增欢迎页设置二级页，提供五个选项并持久化到 `SettingsRepository`。
 
 **Acceptance criteria**:
-- [ ] `RootComponent` / `RootContent` / `SettingsScreen` 已新增欢迎页入口与路由。
-- [ ] `WelcomePageSettingScreen` 可正常进入与返回。
-- [ ] 页面展示五个互斥单选项，选中后保存到 `SettingsRepository.welcomePageType` 并刷新高亮。
+- [x] `RootComponent` / `RootContent` / `SettingsScreen` 已新增欢迎页入口与路由。
+- [x] `WelcomePageSettingScreen` 可正常进入与返回。
+- [x] 页面展示五个互斥单选项，选中后保存到 `SettingsRepository.welcomePageType` 并刷新高亮。
 
 ## 不在范围
 
