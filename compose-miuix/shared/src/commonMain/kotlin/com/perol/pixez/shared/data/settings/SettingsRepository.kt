@@ -123,6 +123,14 @@ class SettingsRepository(
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
         set(value) { settings[SettingsKeys.NSFW_MASK] = value }
 
+    /**
+     * 是否本地过滤 AI 生成作品（illust_ai_type == 2）。
+     * 对应旧 Flutter mute_store 中的 `ban_ai_illust`。
+     */
+    var banAIIllust: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.BAN_AI_ILLUST, false)
+        set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value }
+
     var defaultPrivateLike: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
         set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value }

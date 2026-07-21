@@ -20,6 +20,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -42,6 +43,7 @@ fun HelloScreen(
     repository: IllustRepository,
     accountRepository: AccountRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -58,6 +60,7 @@ fun HelloScreen(
         initialValue = null,
         repository,
         banRepository,
+        settingsRepository,
         retryCount,
         isLoggedIn,
     ) {
@@ -72,10 +75,12 @@ fun HelloScreen(
             .getOrDefault(emptySet())
         val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult?.map { illusts ->
             illusts.filter {
                 it.id !in bannedIds &&
                     it.user.id !in bannedUserIds &&
+                    (!banAIIllust || it.illustAIType != 2) &&
                     !banRepository.isBannedByTags(
                         banTags,
                         it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }

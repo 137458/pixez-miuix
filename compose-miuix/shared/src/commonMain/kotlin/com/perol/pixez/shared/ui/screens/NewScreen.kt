@@ -21,6 +21,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -44,6 +45,7 @@ fun NewScreen(
     repository: IllustRepository,
     accountRepository: AccountRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
@@ -66,6 +68,7 @@ fun NewScreen(
         retryCount,
         isLoggedIn,
         banRepository,
+        settingsRepository,
     ) {
         value = when (isLoggedIn) {
             true -> {
@@ -76,10 +79,12 @@ fun NewScreen(
                     .getOrDefault(emptySet())
                 val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
                     .getOrDefault(emptyList())
+                val banAIIllust = settingsRepository.banAIIllust
                 illustsResult.map { illusts ->
                     illusts.filter {
                         it.id !in bannedIds &&
                             it.user.id !in bannedUserIds &&
+                            (!banAIIllust || it.illustAIType != 2) &&
                             !banRepository.isBannedByTags(
                                 banTags,
                                 it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -88,7 +93,7 @@ fun NewScreen(
                 }
             }
             false -> Result.success(emptyList())
-            null -> null
+            null -> null 
         }
     }
 

@@ -234,6 +234,7 @@ fun SearchScreen(
                             endDate = endDate.takeIf { it.isNotBlank() },
                             repository = repository,
                             banRepository = banRepository,
+                            settingsRepository = settingsRepository,
                             onIllustClick = onIllustClick,
                         )
                         1 -> SearchUserResultList(
@@ -278,6 +279,7 @@ private fun SearchIllustResultGrid(
     endDate: String?,
     repository: SearchRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
     onIllustClick: (Int) -> Unit,
 ) {
     // 根据收藏数阈值构建实际搜索词：非 0 时追加 " ${value}users入り"。
@@ -309,6 +311,7 @@ private fun SearchIllustResultGrid(
         effectiveEndDate ?: "",
         retryCount,
         banRepository,
+        settingsRepository,
     ) {
         val illustsResult = runCatchingNonCancel {
             repository.searchIllust(
@@ -326,10 +329,12 @@ private fun SearchIllustResultGrid(
             .getOrDefault(emptySet())
         val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->
             illusts.filter {
                 it.id !in bannedIds &&
                     it.user.id !in bannedUserIds &&
+                    (!banAIIllust || it.illustAIType != 2) &&
                     !banRepository.isBannedByTags(
                         banTags,
                         it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }

@@ -66,6 +66,7 @@ internal object SettingsKeys {
     const val SEARCH_TARGET = "search_target"
     const val SEARCH_AI_TYPE = "search_ai_type"
     const val SEARCH_BOOKMARK_THRESHOLD = "search_bookmark_threshold"
+    const val BAN_AI_ILLUST = "ban_ai_illust"
     const val SEARCH_UGOIRA_FILTER = "search_ugoira_filter"
     const val SEARCH_START_DATE = "search_start_date"
     const val SEARCH_END_DATE = "search_end_date"

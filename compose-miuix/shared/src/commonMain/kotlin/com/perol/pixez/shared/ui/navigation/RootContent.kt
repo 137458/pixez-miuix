@@ -129,6 +129,7 @@ fun RootContent(
                         repository = userRepository,
                         bookmarkRepository = bookmarkRepository,
                         banRepository = banRepository,
+                        settingsRepository = settingsRepository,
                     )
 
                     Child.Login -> LoginScreen(
@@ -155,6 +156,7 @@ fun RootContent(
                         onIllustClick = component::onIllustClicked,
                         repository = illustRepository,
                         banRepository = banRepository,
+                        settingsRepository = settingsRepository,
                     )
 
                     is Child.IllustSeries -> IllustSeriesScreen(
@@ -163,6 +165,7 @@ fun RootContent(
                         onIllustClick = component::onIllustClicked,
                         repository = illustRepository,
                         banRepository = banRepository,
+                        settingsRepository = settingsRepository,
                     )
 
                     is Child.UserFollowList -> UserFollowListScreen(
@@ -245,6 +248,7 @@ private fun MainContent(
             repository = illustRepository,
             accountRepository = accountRepository,
             banRepository = banRepository,
+            settingsRepository = settingsRepository,
         )
 
         RootComponent.MainTab.Search -> SearchScreen(
@@ -259,6 +263,7 @@ private fun MainContent(
             onIllustClick = component::onIllustClicked,
             repository = illustRepository,
             banRepository = banRepository,
+            settingsRepository = settingsRepository,
         )
 
         RootComponent.MainTab.New -> NewScreen(
@@ -267,6 +272,7 @@ private fun MainContent(
             repository = illustRepository,
             accountRepository = accountRepository,
             banRepository = banRepository,
+            settingsRepository = settingsRepository,
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(

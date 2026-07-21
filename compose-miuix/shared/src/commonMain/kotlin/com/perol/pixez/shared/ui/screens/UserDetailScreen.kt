@@ -34,6 +34,7 @@ import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
@@ -71,6 +72,7 @@ fun UserDetailScreen(
     repository: UserRepository,
     bookmarkRepository: BookmarkRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -179,6 +181,7 @@ fun UserDetailScreen(
                             onIllustClick = onIllustClick,
                             repository = repository,
                             banRepository = banRepository,
+                            settingsRepository = settingsRepository,
                         )
                     }
                 }
@@ -236,6 +239,7 @@ private fun UserDetailTabContent(
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     // 主 Tab 选中状态：0 = 作品，1 = 收藏。
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -259,12 +263,14 @@ private fun UserDetailTabContent(
                     onIllustClick = onIllustClick,
                     repository = repository,
                     banRepository = banRepository,
+                    settingsRepository = settingsRepository,
                 )
                 1 -> UserBookmarksTab(
                     userId = userId,
                     onIllustClick = onIllustClick,
                     repository = repository,
                     banRepository = banRepository,
+                    settingsRepository = settingsRepository,
                 )
             }
         }
@@ -280,6 +286,7 @@ private fun UserWorksTab(
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     val state = produceState<Result<List<Illust>>?>(
@@ -288,6 +295,7 @@ private fun UserWorksTab(
         repository,
         retryCount,
         banRepository,
+        settingsRepository,
     ) {
         val illustsResult = runCatchingNonCancel { repository.getUserIllusts(userId) }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
@@ -296,10 +304,12 @@ private fun UserWorksTab(
             .getOrDefault(emptySet())
         val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->
             illusts.filter {
                 it.id !in bannedIds &&
                     it.user.id !in bannedUserIds &&
+                    (!banAIIllust || it.illustAIType != 2) &&
                     !banRepository.isBannedByTags(
                         banTags,
                         it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -325,6 +335,7 @@ private fun UserBookmarksTab(
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
 ) {
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
     var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -339,6 +350,7 @@ private fun UserBookmarksTab(
         restrict,
         retryCount,
         banRepository,
+        settingsRepository,
     ) {
         val illustsResult = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
         val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
@@ -347,10 +359,12 @@ private fun UserBookmarksTab(
             .getOrDefault(emptySet())
         val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->
             illusts.filter {
                 it.id !in bannedIds &&
                     it.user.id !in bannedUserIds &&
+                    (!banAIIllust || it.illustAIType != 2) &&
                     !banRepository.isBannedByTags(
                         banTags,
                         it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
