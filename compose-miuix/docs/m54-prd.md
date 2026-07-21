@@ -2,7 +2,7 @@
 
 ## 状态
 
-进行中。
+已完成。
 
 ## 目标
 
@@ -38,13 +38,13 @@
 
 ## 验收条件
 
-- [ ] `RootComponent` 提供 `onDownloadSettingClicked` 导航，`RootContent` 正确渲染 `DownloadSettingScreen`。
-- [ ] `SettingsScreen` 显示「下载设置」入口，点击进入新页面。
-- [ ] `DownloadSettingScreen` 正确展示保存路径、同时下载任务数、单文件夹模式设置。
-- [ ] 修改保存路径 / 同时下载任务数 / 单文件夹模式后，设置即时保存到 `SettingsRepository`。
-- [ ] 保存路径输入为空时保存为 `null`，非空时去除首尾空格后保存。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M54 code review 完成，无 P0/P1 问题遗留。
+- [x] `RootComponent` 提供 `onDownloadSettingClicked` 导航，`RootContent` 正确渲染 `DownloadSettingScreen`。
+- [x] `SettingsScreen` 显示「下载设置」入口，点击进入新页面。
+- [x] `DownloadSettingScreen` 正确展示保存路径、同时下载任务数、单文件夹模式设置。
+- [x] 修改保存路径 / 同时下载任务数 / 单文件夹模式后，设置即时保存到 `SettingsRepository`。
+- [x] 保存路径输入为空时保存为 `null`，非空时去除首尾空格后保存。
+- [x] Android + Desktop 双端编译通过。
+- [x] M54 code review 完成，无 P0/P1 问题遗留。
 
 ## 垂直切片（Issue 拆分）
 
