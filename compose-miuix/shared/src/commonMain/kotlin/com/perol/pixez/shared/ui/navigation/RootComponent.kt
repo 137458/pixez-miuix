@@ -118,6 +118,13 @@ class RootComponent(
     }
 
     /**
+     * 打开画质设置页。
+     */
+    fun onQualitySettingClicked() {
+        navigation.push(Config.QualitySetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -201,6 +208,7 @@ class RootComponent(
         Config.ThemeSetting -> Child.ThemeSetting
         Config.NetworkSetting -> Child.NetworkSetting
         Config.DownloadSetting -> Child.DownloadSetting
+        Config.QualitySetting -> Child.QualitySetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -277,6 +285,9 @@ class RootComponent(
 
         @Serializable
         data object DownloadSetting : Config()
+
+        @Serializable
+        data object QualitySetting : Config()
     }
 
     sealed class Child {
@@ -299,5 +310,6 @@ class RootComponent(
         data object ThemeSetting : Child()
         data object NetworkSetting : Child()
         data object DownloadSetting : Child()
+        data object QualitySetting : Child()
     }
 }

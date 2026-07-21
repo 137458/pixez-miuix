@@ -56,6 +56,7 @@ fun SettingsScreen(
     onThemeSettingClick: () -> Unit,
     onNetworkSettingClick: () -> Unit,
     onDownloadSettingClick: () -> Unit,
+    onQualitySettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -141,6 +142,16 @@ fun SettingsScreen(
                     title = "屏蔽设置",
                     summary = "标签、画师、AI 作品过滤",
                     onClick = onShieldClick,
+                )
+            }
+            item {
+                SmallTitle(text = "画质")
+            }
+            item {
+                BasicComponent(
+                    title = "画质设置",
+                    summary = "Feed 预览、插画、漫画、大图缩放画质",
+                    onClick = onQualitySettingClick,
                 )
             }
             item {
