@@ -1,0 +1,28 @@
+CREATE TABLE bantag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    translate_name TEXT NOT NULL,
+    name TEXT NOT NULL
+);
+
+-- 加速按标签名和翻译名的屏蔽查询。
+CREATE INDEX IF NOT EXISTS idx_bantag_name ON bantag(name);
+CREATE INDEX IF NOT EXISTS idx_bantag_translate_name ON bantag(translate_name);
+
+selectAll:
+SELECT * FROM bantag;
+
+selectByName:
+SELECT * FROM bantag WHERE name = ?;
+
+selectByTranslateName:
+SELECT * FROM bantag WHERE translate_name = ?;
+
+insert:
+INSERT INTO bantag(translate_name, name)
+VALUES (?, ?);
+
+delete:
+DELETE FROM bantag WHERE id = ?;
+
+deleteAll:
+DELETE FROM bantag;

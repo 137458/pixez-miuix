@@ -68,6 +68,16 @@ class AppDependencies(
     }
 
     /**
+     * 屏蔽标签数据库驱动，复用旧 Flutter bantag.db。
+     */
+    val banTagDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            com.perol.pixez.shared.data.local.bantag.BanTagDatabase.Schema,
+            "bantag.db",
+        )
+    }
+
+    /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
      */
     val settingsRepository: SettingsRepository by lazy {
@@ -128,10 +138,10 @@ class AppDependencies(
     }
 
     /**
-     * 屏蔽仓库，封装对旧 banillustid.db 与 banuserid.db 的读写。
+     * 屏蔽仓库，封装对旧 banillustid.db、banuserid.db 与 bantag.db 的读写。
      */
     val banRepository: BanRepository by lazy {
-        BanRepository(banDriver, banUserDriver)
+        BanRepository(banDriver, banUserDriver, banTagDriver)
     }
 
     /**
@@ -143,5 +153,6 @@ class AppDependencies(
         runCatching { driverFactory.closeDriver(taskDriver) }
         runCatching { driverFactory.closeDriver(banDriver) }
         runCatching { driverFactory.closeDriver(banUserDriver) }
+        runCatching { driverFactory.closeDriver(banTagDriver) }
     }
 }
