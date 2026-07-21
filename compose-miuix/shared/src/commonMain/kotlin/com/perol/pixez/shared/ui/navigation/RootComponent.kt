@@ -83,6 +83,13 @@ class RootComponent(
     }
 
     /**
+     * 打开收藏标签页。
+     */
+    fun onBookTagClicked() {
+        navigation.push(Config.BookTag)
+    }
+
+    /**
      * 打开致谢页。
      */
     fun onThanksClicked() {
@@ -243,6 +250,7 @@ class RootComponent(
         Config.PrivacySetting -> Child.PrivacySetting
         Config.WelcomePageSetting -> Child.WelcomePageSetting
         Config.About -> Child.About
+        Config.BookTag -> Child.BookTag
         Config.Thanks -> Child.Thanks
         Config.Login -> Child.Login
     }
@@ -277,6 +285,9 @@ class RootComponent(
 
         @Serializable
         data object About : Config()
+
+        @Serializable
+        data object BookTag : Config()
 
         @Serializable
         data object Thanks : Config()
@@ -342,6 +353,7 @@ class RootComponent(
         data class UserDetail(val userId: Int) : Child()
         data object Settings : Child()
         data object About : Child()
+        data object BookTag : Child()
         data object Thanks : Child()
         data object Login : Child()
         data class Comments(val illustId: Int) : Child()

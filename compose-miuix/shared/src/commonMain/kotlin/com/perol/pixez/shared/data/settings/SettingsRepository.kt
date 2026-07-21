@@ -135,6 +135,13 @@ class SettingsRepository(
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
         set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value }
 
+    /**
+     * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
+     */
+    var bookTagList: List<String>
+        get() = getStringList(SettingsKeys.BOOK_TAG_LIST).orEmpty()
+        set(value) { setStringList(SettingsKeys.BOOK_TAG_LIST, value) }
+
     var copyInfoText: String
         get() = settings.getStringWithLegacyFallback(
             SettingsKeys.COPY_INFO_TEXT,

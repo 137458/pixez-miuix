@@ -70,6 +70,7 @@ internal object SettingsKeys {
     const val SEARCH_UGOIRA_FILTER = "search_ugoira_filter"
     const val SEARCH_START_DATE = "search_start_date"
     const val SEARCH_END_DATE = "search_end_date"
+    const val BOOK_TAG_LIST = "book_tag_list"
 
     // 旧版遗留键，用于迁移兼容
     const val FILE_NAME_EVAL_LEGACY = "file_name_eval"

@@ -53,6 +53,7 @@ import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
+import com.perol.pixez.shared.ui.screens.BookTagScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -221,6 +222,7 @@ fun RootContent(
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
                         onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
+                        onBookTagClick = component::onBookTagClicked,
                         accountRepository = accountRepository,
                     )
 
@@ -291,6 +293,12 @@ fun RootContent(
                     Child.About -> AboutScreen(
                         onBack = component::onBack,
                         onThanksClick = component::onThanksClicked,
+                    )
+
+                    Child.BookTag -> BookTagScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                        onTagSearch = component::onSearchClicked,
                     )
 
                     Child.Thanks -> ThanksScreen(

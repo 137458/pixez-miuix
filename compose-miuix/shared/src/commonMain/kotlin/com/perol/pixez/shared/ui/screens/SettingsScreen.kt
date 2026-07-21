@@ -44,7 +44,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、分享、画质、下载、存储、关于等入口。
+ * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、收藏、分享、画质、下载、存储、关于等入口。
  */
 @Composable
 fun SettingsScreen(
@@ -60,6 +60,7 @@ fun SettingsScreen(
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
     onWelcomePageSettingClick: () -> Unit,
+    onBookTagClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -165,6 +166,16 @@ fun SettingsScreen(
                     title = "隐私设置",
                     summary = "NSFW 遮罩、默认私密收藏",
                     onClick = onPrivacySettingClick,
+                )
+            }
+            item {
+                SmallTitle(text = "收藏")
+            }
+            item {
+                BasicComponent(
+                    title = "收藏标签",
+                    summary = "管理常用的收藏/搜索标签",
+                    onClick = onBookTagClick,
                 )
             }
             item {
