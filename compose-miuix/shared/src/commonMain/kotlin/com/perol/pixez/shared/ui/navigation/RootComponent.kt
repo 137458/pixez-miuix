@@ -8,6 +8,7 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.serialization.Serializable
 
 /**
@@ -20,6 +21,7 @@ import kotlinx.serialization.Serializable
 @OptIn(com.arkivanov.decompose.DelicateDecomposeApi::class)
 class RootComponent(
     componentContext: ComponentContext,
+    settingsRepository: SettingsRepository,
 ) : ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Config>()
@@ -27,7 +29,7 @@ class RootComponent(
     val stack: Value<ChildStack<Config, Child>> = childStack(
         source = navigation,
         serializer = Config.serializer(),
-        initialConfiguration = Config.Main(MainTab.Hello),
+        initialConfiguration = resolveWelcomePageConfig(settingsRepository.welcomePageType),
         handleBackButton = true,
         childFactory = ::createChild,
     )
@@ -139,6 +141,13 @@ class RootComponent(
     }
 
     /**
+     * 打开欢迎页设置页。
+     */
+    fun onWelcomePageSettingClicked() {
+        navigation.push(Config.WelcomePageSetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -225,6 +234,7 @@ class RootComponent(
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
+        Config.WelcomePageSetting -> Child.WelcomePageSetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -310,6 +320,9 @@ class RootComponent(
 
         @Serializable
         data object PrivacySetting : Config()
+
+        @Serializable
+        data object WelcomePageSetting : Config()
     }
 
     sealed class Child {
@@ -335,5 +348,20 @@ class RootComponent(
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()
+        data object WelcomePageSetting : Child()
+    }
+}
+
+/**
+ * 根据保存的欢迎页类型解析初始路由配置。
+ * 未知或空值时回退到首页，确保应用始终能正常启动。
+ */
+private fun resolveWelcomePageConfig(welcomePageType: String): RootComponent.Config {
+    return when (welcomePageType) {
+        "rank" -> RootComponent.Config.Main(RootComponent.MainTab.Ranking)
+        "quick_view" -> RootComponent.Config.Main(RootComponent.MainTab.New)
+        "search" -> RootComponent.Config.Main(RootComponent.MainTab.Search)
+        "setting" -> RootComponent.Config.Settings
+        else -> RootComponent.Config.Main(RootComponent.MainTab.Hello)
     }
 }

@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
+import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -218,6 +219,7 @@ fun RootContent(
                         onQualitySettingClick = component::onQualitySettingClicked,
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
+                        onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
                         accountRepository = accountRepository,
                     )
 
@@ -276,6 +278,11 @@ fun RootContent(
                     )
 
                     Child.PrivacySetting -> PrivacySettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.WelcomePageSetting -> WelcomePageSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

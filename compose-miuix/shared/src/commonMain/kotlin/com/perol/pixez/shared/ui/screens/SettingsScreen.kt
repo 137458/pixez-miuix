@@ -44,7 +44,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 设置页：分组展示账号、主题、下载、存储、关于等入口。
+ * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、分享、画质、下载、存储、关于等入口。
  */
 @Composable
 fun SettingsScreen(
@@ -59,6 +59,7 @@ fun SettingsScreen(
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
+    onWelcomePageSettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -114,6 +115,16 @@ fun SettingsScreen(
                             }
                         }
                     },
+                )
+            }
+            item {
+                SmallTitle(text = "启动")
+            }
+            item {
+                BasicComponent(
+                    title = "欢迎页",
+                    summary = "设置启动应用时默认显示的页面",
+                    onClick = onWelcomePageSettingClick,
                 )
             }
             item {

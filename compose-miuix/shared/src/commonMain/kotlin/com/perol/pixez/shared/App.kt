@@ -37,7 +37,10 @@ private fun rememberRootComponent(dependencies: AppDependencies): RootComponent 
     // Decompose 需要显式生命周期管理；Compose 组合进入时 resume，销毁时 destroy。
     val lifecycle = remember { LifecycleRegistry() }
     val component = remember(dependencies) {
-        RootComponent(DefaultComponentContext(lifecycle))
+        RootComponent(
+            componentContext = DefaultComponentContext(lifecycle),
+            settingsRepository = dependencies.settingsRepository,
+        )
     }
     DisposableEffect(Unit) {
         lifecycle.resume()
