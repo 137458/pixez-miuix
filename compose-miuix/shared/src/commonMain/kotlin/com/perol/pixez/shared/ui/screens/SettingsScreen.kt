@@ -53,6 +53,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 fun SettingsScreen(
     onBack: () -> Unit,
     onAboutClick: () -> Unit,
+    onShieldClick: () -> Unit,
     onLoginClick: () -> Unit,
     onDownloadHistoryClick: () -> Unit,
     themeMode: Int,
@@ -121,6 +122,16 @@ fun SettingsScreen(
                 ThemeModeSelector(
                     selected = themeMode,
                     onSelect = onThemeModeChange,
+                )
+            }
+            item {
+                SmallTitle(text = "屏蔽")
+            }
+            item {
+                BasicComponent(
+                    title = "屏蔽设置",
+                    summary = "标签、画师、AI 作品过滤",
+                    onClick = onShieldClick,
                 )
             }
             item {

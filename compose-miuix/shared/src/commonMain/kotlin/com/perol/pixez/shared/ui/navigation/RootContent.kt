@@ -36,6 +36,7 @@ import com.perol.pixez.shared.ui.screens.RecomUserScreen
 import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
+import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
@@ -191,6 +192,7 @@ fun RootContent(
                     Child.Settings -> SettingsScreen(
                         onBack = component::onBack,
                         onAboutClick = component::onAboutClicked,
+                        onShieldClick = component::onShieldClicked,
                         onLoginClick = component::onLoginClicked,
                         onDownloadHistoryClick = component::onDownloadHistoryClicked,
                         themeMode = themeMode,
@@ -214,6 +216,11 @@ fun RootContent(
                         onBack = component::onBack,
                         onIllustClick = component::onIllustClicked,
                         repository = downloadHistoryRepository,
+                    )
+
+                    Child.Shield -> ShieldScreen(
+                        onBack = component::onBack,
+                        settingsRepository = settingsRepository,
                     )
 
                     Child.About -> AboutScreen(

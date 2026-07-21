@@ -81,6 +81,13 @@ class RootComponent(
     }
 
     /**
+     * 打开屏蔽设置页。
+     */
+    fun onShieldClicked() {
+        navigation.push(Config.Shield)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -159,6 +166,7 @@ class RootComponent(
         Config.RecomUserList -> Child.RecomUserList
         Config.DownloadHistory -> Child.DownloadHistory
         Config.Settings -> Child.Settings
+        Config.Shield -> Child.Shield
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -220,6 +228,9 @@ class RootComponent(
 
         @Serializable
         data object DownloadHistory : Config()
+
+        @Serializable
+        data object Shield : Config()
     }
 
     sealed class Child {
@@ -237,5 +248,6 @@ class RootComponent(
         data object RecomUserList : Child()
         data class Search(val query: String) : Child()
         data object DownloadHistory : Child()
+        data object Shield : Child()
     }
 }
