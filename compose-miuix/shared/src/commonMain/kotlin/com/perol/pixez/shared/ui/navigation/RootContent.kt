@@ -221,6 +221,7 @@ fun RootContent(
                     Child.Shield -> ShieldScreen(
                         onBack = component::onBack,
                         settingsRepository = settingsRepository,
+                        banRepository = banRepository,
                     )
 
                     Child.About -> AboutScreen(
