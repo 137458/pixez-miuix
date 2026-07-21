@@ -83,6 +83,13 @@ class RootComponent(
     }
 
     /**
+     * 打开致谢页。
+     */
+    fun onThanksClicked() {
+        navigation.push(Config.Thanks)
+    }
+
+    /**
      * 打开屏蔽设置页。
      */
     fun onShieldClicked() {
@@ -236,6 +243,7 @@ class RootComponent(
         Config.PrivacySetting -> Child.PrivacySetting
         Config.WelcomePageSetting -> Child.WelcomePageSetting
         Config.About -> Child.About
+        Config.Thanks -> Child.Thanks
         Config.Login -> Child.Login
     }
 
@@ -269,6 +277,9 @@ class RootComponent(
 
         @Serializable
         data object About : Config()
+
+        @Serializable
+        data object Thanks : Config()
 
         @Serializable
         data object Login : Config()
@@ -331,6 +342,7 @@ class RootComponent(
         data class UserDetail(val userId: Int) : Child()
         data object Settings : Child()
         data object About : Child()
+        data object Thanks : Child()
         data object Login : Child()
         data class Comments(val illustId: Int) : Child()
         data class RelatedIllusts(val illustId: Int) : Child()

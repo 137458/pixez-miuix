@@ -52,6 +52,7 @@ import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
+import com.perol.pixez.shared.ui.screens.ThanksScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -288,6 +289,11 @@ fun RootContent(
                     )
 
                     Child.About -> AboutScreen(
+                        onBack = component::onBack,
+                        onThanksClick = component::onThanksClicked,
+                    )
+
+                    Child.Thanks -> ThanksScreen(
                         onBack = component::onBack,
                     )
                 }
