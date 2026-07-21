@@ -50,8 +50,17 @@ fun IllustSeriesScreen(
             .getOrDefault(emptySet())
         val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
+        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+            .getOrDefault(emptyList())
         value = seriesResult.map { (title, illusts) ->
-            title to illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
+            title to illusts.filter {
+                it.id !in bannedIds &&
+                    it.user.id !in bannedUserIds &&
+                    !banRepository.isBannedByTags(
+                        banTags,
+                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                    )
+            }
         }
     }
 

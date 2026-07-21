@@ -74,8 +74,17 @@ fun NewScreen(
                     .getOrDefault(emptySet())
                 val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
                     .getOrDefault(emptySet())
+                val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+                    .getOrDefault(emptyList())
                 illustsResult.map { illusts ->
-                    illusts.filter { it.id !in bannedIds && it.user.id !in bannedUserIds }
+                    illusts.filter {
+                        it.id !in bannedIds &&
+                            it.user.id !in bannedUserIds &&
+                            !banRepository.isBannedByTags(
+                                banTags,
+                                it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                            )
+                    }
                 }
             }
             false -> Result.success(emptyList())
