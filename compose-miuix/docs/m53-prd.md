@@ -2,7 +2,7 @@
 
 ## 状态
 
-进行中。
+已完成。
 
 ## 目标
 
@@ -44,14 +44,14 @@
 
 ## 验收条件
 
-- [ ] `RootComponent` 提供 `onNetworkSettingClicked` 导航，`RootContent` 正确渲染 `NetworkSettingScreen`。
-- [ ] `SettingsScreen` 显示「网络设置」入口，点击进入新页面。
-- [ ] `NetworkSettingScreen` 正确展示 OAuth 网络模式、API 服务网络模式、图片源设置。
-- [ ] 切换网络模式 / 图片源后，设置即时保存到 `SettingsRepository`。
-- [ ] API 网络模式为 `standard` 时隐藏图片源分组；切换为 `ech`/`compat` 时显示，且图片源重置为默认 Host。
-- [ ] 自定义 Host 输入为空或含空格时给出错误提示，不保存。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M53 code review 完成，无 P0/P1 问题遗留。
+- [x] `RootComponent` 提供 `onNetworkSettingClicked` 导航，`RootContent` 正确渲染 `NetworkSettingScreen`。
+- [x] `SettingsScreen` 显示「网络设置」入口，点击进入新页面。
+- [x] `NetworkSettingScreen` 正确展示 OAuth 网络模式、API 服务网络模式、图片源设置。
+- [x] 切换网络模式 / 图片源后，设置即时保存到 `SettingsRepository`。
+- [x] API 网络模式为 `standard` 时隐藏图片源分组；切换为 `ech`/`compat` 时显示，且图片源重置为默认 Host。
+- [x] 自定义 Host 输入为空或含空格时给出错误提示，不保存。
+- [x] Android + Desktop 双端编译通过。
+- [x] M53 code review 完成，无 P0/P1 问题遗留。
 
 ## 垂直切片（Issue 拆分）
 
