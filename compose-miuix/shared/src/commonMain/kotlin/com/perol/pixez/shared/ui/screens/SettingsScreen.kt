@@ -58,6 +58,7 @@ fun SettingsScreen(
     onDownloadSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
+    onPrivacySettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -143,6 +144,16 @@ fun SettingsScreen(
                     title = "屏蔽设置",
                     summary = "标签、画师、AI 作品过滤",
                     onClick = onShieldClick,
+                )
+            }
+            item {
+                SmallTitle(text = "隐私")
+            }
+            item {
+                BasicComponent(
+                    title = "隐私设置",
+                    summary = "NSFW 遮罩、默认私密收藏",
+                    onClick = onPrivacySettingClick,
                 )
             }
             item {

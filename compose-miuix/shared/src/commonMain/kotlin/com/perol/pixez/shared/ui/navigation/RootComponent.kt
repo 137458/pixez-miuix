@@ -132,6 +132,13 @@ class RootComponent(
     }
 
     /**
+     * 打开隐私设置页。
+     */
+    fun onPrivacySettingClicked() {
+        navigation.push(Config.PrivacySetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -217,6 +224,7 @@ class RootComponent(
         Config.DownloadSetting -> Child.DownloadSetting
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
+        Config.PrivacySetting -> Child.PrivacySetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -299,6 +307,9 @@ class RootComponent(
 
         @Serializable
         data object CopyTextSetting : Config()
+
+        @Serializable
+        data object PrivacySetting : Config()
     }
 
     sealed class Child {
@@ -323,5 +334,6 @@ class RootComponent(
         data object DownloadSetting : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
+        data object PrivacySetting : Child()
     }
 }
