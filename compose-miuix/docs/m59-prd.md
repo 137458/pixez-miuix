@@ -40,8 +40,8 @@
 
 ## 验收条件
 
-- [ ] `AboutScreen` 展示开发者、贡献者、项目仓库、反馈邮箱、支持/感谢入口。
-- [ ] 点击项目仓库或开发者链接可在系统浏览器中打开。
-- [ ] 点击支持/感谢可进入 `ThanksScreen` 并返回。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M59 code review 完成，无 P0/P1 问题遗留。
+- [x] `AboutScreen` 展示开发者、贡献者、项目仓库、反馈邮箱、支持/感谢入口。
+- [x] 点击项目仓库或开发者链接可在系统浏览器中打开。
+- [x] 点击支持/感谢可进入 `ThanksScreen` 并返回。
+- [x] Android + Desktop 双端编译通过。
+- [x] M59 code review 完成，无 P0/P1 问题遗留。
