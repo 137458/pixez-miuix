@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
@@ -38,6 +40,8 @@ import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
+import com.perol.pixez.shared.ui.screens.ThemeSettingScreen
+import com.perol.pixez.shared.ui.screens.ThemeSettingScreen_DEFAULT_SEED_COLOR
 import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
@@ -46,6 +50,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.darkColorScheme
 
 /**
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
@@ -64,16 +69,22 @@ fun RootContent(
     settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
-    // 主题模式：0 跟随系统，1 浅色，2 深色。从 SettingsRepository 读取并回写。
+    // 主题状态：从 SettingsRepository 读取，由设置页回写。
     var themeMode by rememberSaveable { mutableIntStateOf(settingsRepository.themeMode) }
-    val colorSchemeMode = when (themeMode) {
-        1 -> ColorSchemeMode.Light
-        2 -> ColorSchemeMode.Dark
-        else -> ColorSchemeMode.System
+    var isAmoled by rememberSaveable { mutableStateOf(settingsRepository.isAmoled) }
+    var useDynamicColor by rememberSaveable { mutableStateOf(settingsRepository.useDynamicColor) }
+    var seedColor by rememberSaveable {
+        mutableIntStateOf(settingsRepository.seedColor ?: ThemeSettingScreen_DEFAULT_SEED_COLOR)
     }
-    // 使用 remember 即可；进程重建后 themeMode 会由 SettingsRepository 恢复（M4）。
-    val themeController = remember(colorSchemeMode) {
-        ThemeController(colorSchemeMode)
+
+    // 进程重建后上述状态会由 SettingsRepository 恢复（M4）。
+    val themeController = remember(themeMode, isAmoled, useDynamicColor, seedColor) {
+        buildThemeController(
+            themeMode = themeMode,
+            isAmoled = isAmoled,
+            useDynamicColor = useDynamicColor,
+            seedColor = seedColor,
+        )
     }
 
     MiuixTheme(controller = themeController) {
@@ -196,11 +207,7 @@ fun RootContent(
                         onShieldClick = component::onShieldClicked,
                         onLoginClick = component::onLoginClicked,
                         onDownloadHistoryClick = component::onDownloadHistoryClicked,
-                        themeMode = themeMode,
-                        onThemeModeChange = {
-                            themeMode = it
-                            settingsRepository.themeMode = it
-                        },
+                        onThemeSettingClick = component::onThemeSettingClicked,
                         accountRepository = accountRepository,
                     )
 
@@ -231,6 +238,11 @@ fun RootContent(
                         showAI = instance.showAI,
                         onBack = component::onBack,
                         userRepository = userRepository,
+                    )
+
+                    Child.ThemeSetting -> ThemeSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
                     )
 
                     Child.About -> AboutScreen(
@@ -298,6 +310,57 @@ private fun MainContent(
             repository = illustRepository,
             userRepository = userRepository,
             accountRepository = accountRepository,
+        )
+    }
+}
+
+/**
+ * 根据当前主题偏好构建 [ThemeController]。
+ *
+ * @param themeMode 0 跟随系统，1 浅色，2 深色。
+ * @param isAmoled 是否开启 AMOLED 纯黑深色模式。
+ * @param useDynamicColor 是否使用 Monet 动态颜色。
+ * @param seedColor 动态颜色/非动态颜色下的种子色。
+ */
+private fun buildThemeController(
+    themeMode: Int,
+    isAmoled: Boolean,
+    useDynamicColor: Boolean,
+    seedColor: Int,
+): ThemeController {
+    // 统一使用 Monet 模式，使种子色在非动态颜色模式下也能生效；
+    // 动态颜色开启时 keyColor 传 null，让 Monet 使用系统壁纸颜色。
+    val colorSchemeMode = when (themeMode) {
+        1 -> ColorSchemeMode.MonetLight
+        2 -> ColorSchemeMode.MonetDark
+        else -> ColorSchemeMode.MonetSystem
+    }
+    val keyColor = if (useDynamicColor) null else Color(seedColor)
+
+    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑。
+    val darkColors = if (isAmoled) {
+        darkColorScheme(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceVariant = Color.Black,
+            surfaceContainer = Color.Black,
+            surfaceContainerHigh = Color.Black,
+            surfaceContainerHighest = Color.Black,
+        )
+    } else {
+        null
+    }
+
+    return if (darkColors != null) {
+        ThemeController(
+            colorSchemeMode = colorSchemeMode,
+            keyColor = keyColor,
+            darkColors = darkColors,
+        )
+    } else {
+        ThemeController(
+            colorSchemeMode = colorSchemeMode,
+            keyColor = keyColor,
         )
     }
 }

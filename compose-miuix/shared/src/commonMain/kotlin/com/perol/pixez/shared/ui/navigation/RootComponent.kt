@@ -97,6 +97,13 @@ class RootComponent(
     }
 
     /**
+     * 打开主题设置页。
+     */
+    fun onThemeSettingClicked() {
+        navigation.push(Config.ThemeSetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -177,6 +184,7 @@ class RootComponent(
         Config.Settings -> Child.Settings
         Config.Shield -> Child.Shield
         is Config.AISetting -> Child.AISetting(config.showAI)
+        Config.ThemeSetting -> Child.ThemeSetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -244,6 +252,9 @@ class RootComponent(
 
         @Serializable
         data class AISetting(val showAI: Boolean) : Config()
+
+        @Serializable
+        data object ThemeSetting : Config()
     }
 
     sealed class Child {
@@ -263,5 +274,6 @@ class RootComponent(
         data object DownloadHistory : Child()
         data object Shield : Child()
         data class AISetting(val showAI: Boolean) : Child()
+        data object ThemeSetting : Child()
     }
 }

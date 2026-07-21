@@ -45,9 +45,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
  * 设置页：分组展示账号、主题、下载、存储、关于等入口。
- *
- * @param themeMode 当前主题模式：0 跟随系统，1 浅色，2 深色。
- * @param onThemeModeChange 主题模式变更回调，由外层 [RootContent] 应用到 [MiuixTheme]。
  */
 @Composable
 fun SettingsScreen(
@@ -56,8 +53,7 @@ fun SettingsScreen(
     onShieldClick: () -> Unit,
     onLoginClick: () -> Unit,
     onDownloadHistoryClick: () -> Unit,
-    themeMode: Int,
-    onThemeModeChange: (Int) -> Unit,
+    onThemeSettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -119,9 +115,10 @@ fun SettingsScreen(
                 SmallTitle(text = "主题")
             }
             item {
-                ThemeModeSelector(
-                    selected = themeMode,
-                    onSelect = onThemeModeChange,
+                BasicComponent(
+                    title = "主题设置",
+                    summary = "主题模式、AMOLED、动态颜色、种子色",
+                    onClick = onThemeSettingClick,
                 )
             }
             item {
@@ -266,23 +263,4 @@ private fun AccountSection(
     }
 }
 
-@Composable
-private fun ThemeModeSelector(
-    selected: Int,
-    onSelect: (Int) -> Unit,
-) {
-    val options = listOf("跟随系统" to 0, "浅色" to 1, "深色" to 2)
-    Column {
-        options.forEach { (label, value) ->
-            BasicComponent(
-                title = label,
-                onClick = { onSelect(value) },
-                endActions = {
-                    if (selected == value) {
-                        Text(text = "✓")
-                    }
-                },
-            )
-        }
-    }
-}
+
