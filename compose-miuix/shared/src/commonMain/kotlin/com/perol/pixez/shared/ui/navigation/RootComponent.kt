@@ -88,6 +88,15 @@ class RootComponent(
     }
 
     /**
+     * 打开 AI 作品显示设置页。
+     *
+     * @param showAI 当前账号是否显示 AI 作品，由入口页面从服务器加载后传入。
+     */
+    fun onAISettingClicked(showAI: Boolean) {
+        navigation.push(Config.AISetting(showAI))
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -167,6 +176,7 @@ class RootComponent(
         Config.DownloadHistory -> Child.DownloadHistory
         Config.Settings -> Child.Settings
         Config.Shield -> Child.Shield
+        is Config.AISetting -> Child.AISetting(config.showAI)
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -231,6 +241,9 @@ class RootComponent(
 
         @Serializable
         data object Shield : Config()
+
+        @Serializable
+        data class AISetting(val showAI: Boolean) : Config()
     }
 
     sealed class Child {
@@ -249,5 +262,6 @@ class RootComponent(
         data class Search(val query: String) : Child()
         data object DownloadHistory : Child()
         data object Shield : Child()
+        data class AISetting(val showAI: Boolean) : Child()
     }
 }

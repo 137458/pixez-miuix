@@ -1,14 +1,20 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.ShowAIResponse
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.model.UserIllusts
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.UserPreviewsResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.Parameters
 
 /**
  * 用户仓库：用户资料与作品列表。
@@ -115,5 +121,30 @@ class UserRepository(
      */
     suspend fun getRecommendedUsers(nextUrl: String): UserPreviewsResponse = networkCall("加载更多推荐用户失败") {
         apiClient.get(nextUrl).body()
+    }
+
+    /**
+     * 获取当前账号的 AI 作品显示设置。
+     */
+    suspend fun getUserAISettings(): ShowAIResponse = networkCall("获取 AI 显示设置失败") {
+        apiClient.get("/v1/user/ai-show-settings").body()
+    }
+
+    /**
+     * 更新当前账号的 AI 作品显示设置。
+     *
+     * @param showAI 是否显示 AI 作品。
+     */
+    suspend fun updateUserAISettings(showAI: Boolean): ShowAIResponse = networkCall("更新 AI 显示设置失败") {
+        apiClient.post("/v1/user/ai-show-settings/edit") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("show_ai", showAI.toString())
+                    },
+                ),
+            )
+        }.body()
     }
 }

@@ -38,6 +38,7 @@ import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
+import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
@@ -220,8 +221,16 @@ fun RootContent(
 
                     Child.Shield -> ShieldScreen(
                         onBack = component::onBack,
+                        onAISettingClick = component::onAISettingClicked,
                         settingsRepository = settingsRepository,
                         banRepository = banRepository,
+                        userRepository = userRepository,
+                    )
+
+                    is Child.AISetting -> UserShowAISettingScreen(
+                        showAI = instance.showAI,
+                        onBack = component::onBack,
+                        userRepository = userRepository,
                     )
 
                     Child.About -> AboutScreen(

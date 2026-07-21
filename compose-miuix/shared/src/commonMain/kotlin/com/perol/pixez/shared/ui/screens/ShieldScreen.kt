@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
@@ -61,13 +62,18 @@ private sealed class DeleteTarget {
 @Composable
 fun ShieldScreen(
     onBack: () -> Unit,
+    onAISettingClick: (showAI: Boolean) -> Unit,
     settingsRepository: SettingsRepository,
     banRepository: BanRepository,
+    userRepository: UserRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     // AI 作品过滤开关状态。
     var banAIIllust by remember { mutableStateOf(settingsRepository.banAIIllust) }
+
+    // AI 作品显示设置入口加载态，防止重复点击。
+    var isLoadingAISetting by remember { mutableStateOf(false) }
 
     // 屏蔽列表：标签、画师、作品。
     var banTags by remember { mutableStateOf<List<BanRepository.BanTag>>(emptyList()) }
@@ -149,6 +155,27 @@ fun ShieldScreen(
                                 settingsRepository.banAIIllust = checked
                             },
                         )
+                    },
+                )
+            }
+            item {
+                BasicComponent(
+                    title = "AI 作品显示设置",
+                    summary = if (isLoadingAISetting) "加载中…" else "Pixiv 账号级 AI 作品显示偏好",
+                    onClick = {
+                        if (isLoadingAISetting) return@BasicComponent
+                        coroutineScope.launch {
+                            isLoadingAISetting = true
+                            runCatchingNonCancel {
+                                userRepository.getUserAISettings()
+                            }.onSuccess { response ->
+                                onAISettingClick(response.showAI)
+                            }.onFailure { e ->
+                                Napier.e("加载 AI 显示设置失败", e)
+                                toastMessage = "加载失败：${e.message}"
+                            }
+                            isLoadingAISetting = false
+                        }
                     },
                 )
             }
