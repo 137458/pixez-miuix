@@ -31,6 +31,7 @@ import com.perol.pixez.shared.ui.screens.DownloadHistoryScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
+import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
 import com.perol.pixez.shared.ui.screens.RankingScreen
@@ -208,6 +209,7 @@ fun RootContent(
                         onLoginClick = component::onLoginClicked,
                         onDownloadHistoryClick = component::onDownloadHistoryClicked,
                         onThemeSettingClick = component::onThemeSettingClicked,
+                        onNetworkSettingClick = component::onNetworkSettingClicked,
                         accountRepository = accountRepository,
                     )
 
@@ -241,6 +243,11 @@ fun RootContent(
                     )
 
                     Child.ThemeSetting -> ThemeSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.NetworkSetting -> NetworkSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

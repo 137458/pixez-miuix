@@ -54,6 +54,7 @@ fun SettingsScreen(
     onLoginClick: () -> Unit,
     onDownloadHistoryClick: () -> Unit,
     onThemeSettingClick: () -> Unit,
+    onNetworkSettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -119,6 +120,16 @@ fun SettingsScreen(
                     title = "主题设置",
                     summary = "主题模式、AMOLED、动态颜色、种子色",
                     onClick = onThemeSettingClick,
+                )
+            }
+            item {
+                SmallTitle(text = "网络")
+            }
+            item {
+                BasicComponent(
+                    title = "网络设置",
+                    summary = "网络模式、图片源",
+                    onClick = onNetworkSettingClick,
                 )
             }
             item {

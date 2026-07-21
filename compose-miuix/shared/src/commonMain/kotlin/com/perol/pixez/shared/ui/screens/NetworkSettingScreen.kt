@@ -1,0 +1,276 @@
+package com.perol.pixez.shared.ui.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.ToastMessage
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
+
+/**
+ * 网络设置页：提供 OAuth / API 服务网络模式切换与图片源选择。
+ *
+ * @param settingsRepository 设置仓库，用于读写网络相关偏好。
+ * @param onBack 返回上一级页面。
+ */
+@Composable
+fun NetworkSettingScreen(
+    settingsRepository: SettingsRepository,
+    onBack: () -> Unit,
+) {
+    // 页面状态：从 SettingsRepository 读取当前网络设置。
+    var oauthNetworkMode by remember { mutableStateOf(settingsRepository.oauthNetworkMode) }
+    var apiNetworkMode by remember { mutableStateOf(settingsRepository.apiNetworkMode) }
+    var pictureSource by remember { mutableStateOf(settingsRepository.pictureSource) }
+
+    // 自定义 Host 输入框状态。
+    var customHostInput by rememberSaveable(apiNetworkMode) {
+        mutableStateOf(
+            if (pictureSource == DEFAULT_IMAGE_HOST || pictureSource == MIRROR_IMAGE_HOST) {
+                ""
+            } else {
+                pictureSource
+            },
+        )
+    }
+
+    // 提示信息状态。
+    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // 当前 API 网络模式是否允许选择图片源（standard 模式不显示）。
+    val allowsImageSource = apiNetworkMode != NETWORK_MODE_STANDARD
+
+    /**
+     * 设置 OAuth 网络模式。
+     */
+    fun setOAuthNetworkMode(mode: String) {
+        oauthNetworkMode = mode
+        settingsRepository.oauthNetworkMode = mode
+    }
+
+    /**
+     * 设置 API 服务网络模式；切换到 standard 时自动将图片源重置为默认 Host。
+     */
+    fun setApiNetworkMode(mode: String) {
+        apiNetworkMode = mode
+        settingsRepository.apiNetworkMode = mode
+        if (mode == NETWORK_MODE_STANDARD) {
+            pictureSource = DEFAULT_IMAGE_HOST
+            settingsRepository.pictureSource = DEFAULT_IMAGE_HOST
+            customHostInput = ""
+        }
+    }
+
+    /**
+     * 设置图片源为预设 Host。
+     */
+    fun setPresetPictureSource(host: String) {
+        pictureSource = host
+        settingsRepository.pictureSource = host
+        customHostInput = ""
+    }
+
+    /**
+     * 设置图片源为自定义 Host，并进行基础校验。
+     */
+    fun setCustomPictureSource(host: String) {
+        val trimmed = host.trim()
+        if (trimmed.isEmpty()) {
+            toastMessage = "Host 不能为空"
+            return
+        }
+        if (trimmed.contains(" ")) {
+            toastMessage = "Host 不能包含空格"
+            return
+        }
+        pictureSource = trimmed
+        settingsRepository.pictureSource = trimmed
+        toastMessage = null
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = "网络设置",
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回",
+                        )
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+        ) {
+            item {
+                SmallTitle(text = "OAuth 网络模式")
+            }
+            NETWORK_MODES.forEach { (code, label, description) ->
+                item {
+                    NetworkModeOption(
+                        label = label,
+                        description = description,
+                        selected = oauthNetworkMode == code,
+                        onClick = { setOAuthNetworkMode(code) },
+                    )
+                }
+            }
+
+            item {
+                SmallTitle(text = "API 服务网络模式")
+            }
+            NETWORK_MODES.forEach { (code, label, description) ->
+                item {
+                    NetworkModeOption(
+                        label = label,
+                        description = description,
+                        selected = apiNetworkMode == code,
+                        onClick = { setApiNetworkMode(code) },
+                    )
+                }
+            }
+
+            if (allowsImageSource) {
+                item {
+                    SmallTitle(text = "图片源")
+                }
+                item {
+                    BasicComponent(
+                        title = "默认",
+                        summary = DEFAULT_IMAGE_HOST,
+                        onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
+                        endActions = {
+                            SelectionIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
+                        },
+                    )
+                }
+                item {
+                    BasicComponent(
+                        title = "镜像",
+                        summary = MIRROR_IMAGE_HOST,
+                        onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
+                        endActions = {
+                            SelectionIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
+                        },
+                    )
+                }
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(text = "自定义 Host")
+                        TextField(
+                            value = customHostInput,
+                            onValueChange = { customHostInput = it },
+                            label = "输入 Host",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            TextButton(
+                                text = "确认",
+                                onClick = { setCustomPictureSource(customHostInput) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.textButtonColorsPrimary(),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        ToastMessage(
+            message = toastMessage,
+            onDismiss = { toastMessage = null },
+        )
+    }
+}
+
+/**
+ * 网络模式单选项：标题 + 描述 + 选中指示器。
+ */
+@Composable
+private fun NetworkModeOption(
+    label: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    BasicComponent(
+        title = label,
+        summary = description,
+        onClick = onClick,
+        endActions = {
+            SelectionIndicator(selected = selected)
+        },
+    )
+}
+
+/**
+ * 选中指示器：使用对勾符号，与 ThemeSettingScreen 的 ThemeModeOption 风格一致。
+ */
+@Composable
+private fun SelectionIndicator(selected: Boolean) {
+    if (selected) {
+        Text(text = "✓")
+    }
+}
+
+/**
+ * 默认图片 Host：对齐 Flutter 版 ImageHost。
+ */
+private const val DEFAULT_IMAGE_HOST = "i.pximg.net"
+
+/**
+ * 镜像图片 Host：对齐 Flutter 版 ImageCatHost。
+ */
+private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
+
+/**
+ * standard 网络模式 code：该模式下不显示图片源选择。
+ */
+private const val NETWORK_MODE_STANDARD = "standard"
+
+/**
+ * 可选网络模式列表：顺序与 Flutter 版 NetworkMode.selectableValues 一致。
+ */
+private val NETWORK_MODES = listOf(
+    Triple("ech", "ECH", "通过 Encrypted ClientHello 绕过 SNI 审查"),
+    Triple("compat", "兼容", "绕过 SNI 并使用 DoH"),
+    Triple("standard", "标准", "标准连接，不使用绕过策略"),
+)

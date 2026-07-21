@@ -104,6 +104,13 @@ class RootComponent(
     }
 
     /**
+     * 打开网络设置页。
+     */
+    fun onNetworkSettingClicked() {
+        navigation.push(Config.NetworkSetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -185,6 +192,7 @@ class RootComponent(
         Config.Shield -> Child.Shield
         is Config.AISetting -> Child.AISetting(config.showAI)
         Config.ThemeSetting -> Child.ThemeSetting
+        Config.NetworkSetting -> Child.NetworkSetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -255,6 +263,9 @@ class RootComponent(
 
         @Serializable
         data object ThemeSetting : Config()
+
+        @Serializable
+        data object NetworkSetting : Config()
     }
 
     sealed class Child {
@@ -275,5 +286,6 @@ class RootComponent(
         data object Shield : Child()
         data class AISetting(val showAI: Boolean) : Child()
         data object ThemeSetting : Child()
+        data object NetworkSetting : Child()
     }
 }
