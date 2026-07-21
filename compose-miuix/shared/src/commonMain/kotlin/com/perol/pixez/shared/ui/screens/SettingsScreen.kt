@@ -55,6 +55,7 @@ fun SettingsScreen(
     onDownloadHistoryClick: () -> Unit,
     onThemeSettingClick: () -> Unit,
     onNetworkSettingClick: () -> Unit,
+    onDownloadSettingClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -144,6 +145,13 @@ fun SettingsScreen(
             }
             item {
                 SmallTitle(text = "下载")
+            }
+            item {
+                BasicComponent(
+                    title = "下载设置",
+                    summary = "保存路径、同时下载任务数、单文件夹模式",
+                    onClick = onDownloadSettingClick,
+                )
             }
             item {
                 BasicComponent(

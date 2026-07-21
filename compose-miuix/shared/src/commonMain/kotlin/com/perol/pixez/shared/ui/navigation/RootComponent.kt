@@ -111,6 +111,13 @@ class RootComponent(
     }
 
     /**
+     * 打开下载设置页。
+     */
+    fun onDownloadSettingClicked() {
+        navigation.push(Config.DownloadSetting)
+    }
+
+    /**
      * 打开登录页。
      */
     fun onLoginClicked() {
@@ -193,6 +200,7 @@ class RootComponent(
         is Config.AISetting -> Child.AISetting(config.showAI)
         Config.ThemeSetting -> Child.ThemeSetting
         Config.NetworkSetting -> Child.NetworkSetting
+        Config.DownloadSetting -> Child.DownloadSetting
         Config.About -> Child.About
         Config.Login -> Child.Login
     }
@@ -266,6 +274,9 @@ class RootComponent(
 
         @Serializable
         data object NetworkSetting : Config()
+
+        @Serializable
+        data object DownloadSetting : Config()
     }
 
     sealed class Child {
@@ -287,5 +298,6 @@ class RootComponent(
         data class AISetting(val showAI: Boolean) : Child()
         data object ThemeSetting : Child()
         data object NetworkSetting : Child()
+        data object DownloadSetting : Child()
     }
 }
