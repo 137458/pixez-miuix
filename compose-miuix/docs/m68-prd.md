@@ -2,7 +2,7 @@
 
 ## 状态
 
-规划中。
+已完成（edc4e560）。
 
 ## 目标
 
@@ -50,11 +50,11 @@
 
 ## 验收条件
 
-- [ ] `DownloadSettingScreen` 显示保存模式、保存格式、脚本文件名开关、Sanity 单独文件夹四项。
-- [ ] 保存模式可在 Media / SAF / 旧模式 之间切换并持久化。
-- [ ] 保存格式输入支持变量插入，保存后写回 `SettingsRepository.format`。
-- [ ] 脚本文件名开关状态正确，切换后立即持久化。
-- [ ] Sanity 单独文件夹开关状态正确，切换后立即持久化。
-- [ ] 返回后再次进入保持上次状态。
-- [ ] Android + Desktop 双端编译通过。
-- [ ] M68 code review 完成，无 P0/P1 问题遗留。
+- [x] `DownloadSettingScreen` 显示保存模式、保存格式、脚本文件名开关、Sanity 单独文件夹四项。
+- [x] 保存模式可在 Media / SAF / 旧模式 之间切换并持久化。
+- [x] 保存格式输入支持变量插入，保存后写回 `SettingsRepository.format`。
+- [x] 脚本文件名开关状态正确，切换后立即持久化。
+- [x] Sanity 单独文件夹开关状态正确，切换后立即持久化。
+- [x] 返回后再次进入保持上次状态。
+- [x] Android + Desktop 双端编译通过。
+- [x] M68 code review 完成，无 P0/P1 问题遗留。
