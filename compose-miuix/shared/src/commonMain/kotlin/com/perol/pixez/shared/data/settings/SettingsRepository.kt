@@ -107,6 +107,45 @@ class SettingsRepository(
         get() = settings.getIntWithLegacyFallback(SettingsKeys.MAX_RUNNING_TASK, 2)
         set(value) { settings[SettingsKeys.MAX_RUNNING_TASK] = value }
 
+    /**
+     * 保存格式模板，用于非脚本文件名模式。
+     * 默认与原 Flutter 版一致：{illust_id}_p{part}。
+     */
+    var format: String
+        get() = settings.getStringWithLegacyFallback(
+            SettingsKeys.SAVE_FORMAT,
+            DEFAULT_SAVE_FORMAT,
+        )
+        set(value) { settings[SettingsKeys.SAVE_FORMAT] = value.trim() }
+
+    /**
+     * 是否使用脚本文件名（file_name_eval）。
+     * 旧版 Flutter 用 int 0/1 存储，读取时兼容转换；新版统一用布尔值存储。
+     */
+    var fileNameEval: Boolean
+        get() = settings.getBooleanWithIntLegacyFallback(
+            SettingsKeys.FILE_NAME_EVAL_LEGACY,
+            false,
+        )
+        set(value) { settings[SettingsKeys.FILE_NAME_EVAL_LEGACY] = value }
+
+    /**
+     * 脚本文件名代码（name_eval）。开启 fileNameEval 后由该脚本计算文件名。
+     */
+    var nameEval: String
+        get() = settings.getStringWithLegacyFallback(SettingsKeys.NAME_EVAL, "")
+        set(value) { settings[SettingsKeys.NAME_EVAL] = value }
+
+    /**
+     * R18 作品是否保存到独立文件夹。
+     */
+    var overSanityLevelFolder: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER,
+            false,
+        )
+        set(value) { settings[SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER] = value }
+
     // region 通用
     var languageNum: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.LANGUAGE_NUM, 0)
@@ -381,6 +420,9 @@ class SettingsRepository(
         private const val DEFAULT_WELCOME_PAGE_TYPE = "home"
         private const val DEFAULT_WIDGET_ILLUST_TYPE = "recom"
 
+        // 默认保存格式，与原 Flutter 版 intialFormat 保持一致
+        private const val DEFAULT_SAVE_FORMAT = "{illust_id}_p{part}"
+
         // 旧版 save_mode 取值：0 默认、1 旧安全模式、2 旧 helpless 模式
         private const val SAVE_MODE_DEFAULT = 0
         private const val SAVE_MODE_LEGACY_SAFE = 1
@@ -432,6 +474,28 @@ private fun Settings.getBooleanWithLegacyFallback(key: String, default: Boolean)
     val value: Boolean? = this[key]
     if (value != null) return value
     return this[SettingsRepository_LegacyPrefix + key, default]
+}
+
+/**
+ * 兼容旧版将 boolean 存为 int 0/1 的键。
+ * 旧版 file_name_eval 在 Android/iOS 用 int 0/1 存储，直接按布尔读取可能因类型不匹配崩溃，
+ * 因此先尝试 int 再尝试 bool；新版统一用 bool 存储。
+ * 对带 flutter. 前缀的旧键做同样回退。
+ */
+private fun Settings.getBooleanWithIntLegacyFallback(key: String, default: Boolean): Boolean {
+    // 先尝试读取旧版 int 0/1
+    val intValue: Int? = try { this[key] } catch (_: Exception) { null }
+    if (intValue != null) return intValue == 1
+    // 再尝试新版 bool
+    val boolValue: Boolean? = try { this[key] } catch (_: Exception) { null }
+    if (boolValue != null) return boolValue
+    // 带 flutter. 前缀的旧键同样先 int 后 bool
+    val legacyKey = SettingsRepository_LegacyPrefix + key
+    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyInt != null) return legacyInt == 1
+    val legacyBool: Boolean? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyBool != null) return legacyBool
+    return default
 }
 
 private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? {

@@ -31,6 +31,10 @@ class SettingsBridgeTest {
         assertFalse(repo.isAmoled)
         assertEquals(2, repo.maxRunningTask)
         assertEquals("title:{title}\npainter:{user_name}\nillust id:{illust_id}", repo.copyInfoText)
+        assertEquals("{illust_id}_p{part}", repo.format)
+        assertFalse(repo.fileNameEval)
+        assertEquals("", repo.nameEval)
+        assertFalse(repo.overSanityLevelFolder)
     }
 
     @Test
@@ -104,5 +108,46 @@ class SettingsBridgeTest {
         repo.saveMode = 0
         assertEquals(0, repo.saveMode)
         assertFalse(node.getBoolean("is_helplessway", false))
+    }
+
+    @Test
+    fun `format read and write`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/format")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        assertEquals("{illust_id}_p{part}", repo.format)
+        repo.format = "{user_name}_{illust_id}"
+        assertEquals("{user_name}_{illust_id}", repo.format)
+        assertEquals("{user_name}_{illust_id}", node.get("save_format", null))
+    }
+
+    @Test
+    fun `fileNameEval falls back to legacy int 0 or 1`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/filenameeval")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        assertFalse(repo.fileNameEval)
+
+        // 旧版 Flutter 使用 int 1 表示开启
+        node.putInt("file_name_eval", 1)
+        assertTrue(repo.fileNameEval)
+
+        // 写入新版布尔值后优先使用新值
+        repo.fileNameEval = false
+        assertFalse(repo.fileNameEval)
+    }
+
+    @Test
+    fun `overSanityLevelFolder read and write`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/sanity")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        assertFalse(repo.overSanityLevelFolder)
+        repo.overSanityLevelFolder = true
+        assertTrue(repo.overSanityLevelFolder)
+        assertTrue(node.getBoolean("is_over_sanity_level_folder", false))
     }
 }
