@@ -35,6 +35,7 @@ import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
+import com.perol.pixez.shared.ui.screens.SaveSettingScreen
 import com.perol.pixez.shared.ui.screens.CopyTextSettingScreen
 import com.perol.pixez.shared.ui.screens.PrivacySettingScreen
 import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
@@ -218,6 +219,7 @@ fun RootContent(
                         onThemeSettingClick = component::onThemeSettingClicked,
                         onNetworkSettingClick = component::onNetworkSettingClicked,
                         onDownloadSettingClick = component::onDownloadSettingClicked,
+                        onSaveSettingClick = component::onSaveSettingClicked,
                         onQualitySettingClick = component::onQualitySettingClicked,
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
@@ -266,6 +268,11 @@ fun RootContent(
                     )
 
                     Child.DownloadSetting -> DownloadSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.SaveSetting -> SaveSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

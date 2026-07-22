@@ -134,6 +134,13 @@ class RootComponent(
     }
 
     /**
+     * 打开保存设置页。
+     */
+    fun onSaveSettingClicked() {
+        navigation.push(Config.SaveSetting)
+    }
+
+    /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
@@ -245,6 +252,7 @@ class RootComponent(
         Config.ThemeSetting -> Child.ThemeSetting
         Config.NetworkSetting -> Child.NetworkSetting
         Config.DownloadSetting -> Child.DownloadSetting
+        Config.SaveSetting -> Child.SaveSetting
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
@@ -335,6 +343,9 @@ class RootComponent(
         data object DownloadSetting : Config()
 
         @Serializable
+        data object SaveSetting : Config()
+
+        @Serializable
         data object QualitySetting : Config()
 
         @Serializable
@@ -369,6 +380,7 @@ class RootComponent(
         data object ThemeSetting : Child()
         data object NetworkSetting : Child()
         data object DownloadSetting : Child()
+        data object SaveSetting : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()

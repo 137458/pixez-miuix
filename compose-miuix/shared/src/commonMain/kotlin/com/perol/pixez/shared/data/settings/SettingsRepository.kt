@@ -136,6 +136,44 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value }
 
     /**
+     * 收藏后自动保存作品。
+     */
+    var saveAfterStar: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.SAVE_AFTER_STAR, false)
+        set(value) { settings[SettingsKeys.SAVE_AFTER_STAR] = value }
+
+    /**
+     * 保存后自动收藏作品。
+     */
+    var starAfterSave: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.STAR_AFTER_SAVE, false)
+        set(value) { settings[SettingsKeys.STAR_AFTER_SAVE] = value }
+
+    /**
+     * 长按保存时显示确认。
+     */
+    var longPressSaveConfirm: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.LONG_PRESS_SAVE_CONFIRM, false)
+        set(value) { settings[SettingsKeys.LONG_PRESS_SAVE_CONFIRM] = value }
+
+    /**
+     * 插画详情页点击保存按钮直接保存，无需长按。
+     */
+    var illustDetailSaveSkipLongPress: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS,
+            false,
+        )
+        set(value) { settings[SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS] = value }
+
+    /**
+     * 收藏作品时自动使用收藏标签。
+     */
+    var autoTagWhenStar: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_TAG_WHEN_STAR, false)
+        set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value }
+
+    /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
      */
     var bookTagList: List<String>
