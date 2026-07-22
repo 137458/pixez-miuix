@@ -155,6 +155,34 @@ class RootComponent(
     }
 
     /**
+     * 打开语言设置页。
+     */
+    fun onLanguageSettingClicked() {
+        navigation.push(Config.LanguageSetting)
+    }
+
+    /**
+     * 打开小部件推荐类型设置页。
+     */
+    fun onWidgetRecommendSettingClicked() {
+        navigation.push(Config.WidgetRecommendSetting)
+    }
+
+    /**
+     * 打开交互习惯开关页。
+     */
+    fun onInteractionSettingClicked() {
+        navigation.push(Config.InteractionSetting)
+    }
+
+    /**
+     * 打开动态与搜索开关页。
+     */
+    fun onFeedSettingClicked() {
+        navigation.push(Config.FeedSetting)
+    }
+
+    /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
@@ -269,6 +297,10 @@ class RootComponent(
         Config.SaveSetting -> Child.SaveSetting
         Config.CrossAdapterSetting -> Child.CrossAdapterSetting
         Config.LayoutSetting -> Child.LayoutSetting
+        Config.LanguageSetting -> Child.LanguageSetting
+        Config.WidgetRecommendSetting -> Child.WidgetRecommendSetting
+        Config.InteractionSetting -> Child.InteractionSetting
+        Config.FeedSetting -> Child.FeedSetting
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
@@ -368,6 +400,18 @@ class RootComponent(
         data object LayoutSetting : Config()
 
         @Serializable
+        data object LanguageSetting : Config()
+
+        @Serializable
+        data object WidgetRecommendSetting : Config()
+
+        @Serializable
+        data object InteractionSetting : Config()
+
+        @Serializable
+        data object FeedSetting : Config()
+
+        @Serializable
         data object QualitySetting : Config()
 
         @Serializable
@@ -405,6 +449,10 @@ class RootComponent(
         data object SaveSetting : Child()
         data object CrossAdapterSetting : Child()
         data object LayoutSetting : Child()
+        data object LanguageSetting : Child()
+        data object WidgetRecommendSetting : Child()
+        data object InteractionSetting : Child()
+        data object FeedSetting : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()

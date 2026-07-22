@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -190,21 +191,11 @@ private fun LayoutSelectDialog(
                     title = label,
                     onClick = { onSelected(value) },
                     endActions = {
-                        SelectionIndicator(selected = currentValue == value)
-                    },
+                            CheckIndicator(selected = currentValue == value)
+                        },
                 )
             }
         }
-    }
-}
-
-/**
- * 选中指示器：使用对勾符号，与 QualitySettingScreen / NetworkSettingScreen 风格一致。
- */
-@Composable
-private fun SelectionIndicator(selected: Boolean) {
-    if (selected) {
-        Text(text = "✓")
     }
 }
 

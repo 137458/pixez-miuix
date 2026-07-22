@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -176,22 +177,12 @@ fun DownloadSettingScreen(
                             showTaskDialog = false
                         },
                         endActions = {
-                            SelectionIndicator(selected = maxRunningTask == value)
+                            CheckIndicator(selected = maxRunningTask == value)
                         },
                     )
                 }
             }
         }
-    }
-}
-
-/**
- * 选中指示器：使用对勾符号，与 NetworkSettingScreen / ThemeSettingScreen 风格一致。
- */
-@Composable
-private fun SelectionIndicator(selected: Boolean) {
-    if (selected) {
-        Text(text = "✓")
     }
 }
 

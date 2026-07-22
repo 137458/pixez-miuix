@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.components.ToastMessage
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -170,7 +171,7 @@ fun NetworkSettingScreen(
                         summary = DEFAULT_IMAGE_HOST,
                         onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
                         endActions = {
-                            SelectionIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
+                            CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
                         },
                     )
                 }
@@ -180,7 +181,7 @@ fun NetworkSettingScreen(
                         summary = MIRROR_IMAGE_HOST,
                         onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
                         endActions = {
-                            SelectionIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
+                            CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
                         },
                     )
                 }
@@ -236,19 +237,9 @@ private fun NetworkModeOption(
         summary = description,
         onClick = onClick,
         endActions = {
-            SelectionIndicator(selected = selected)
+            CheckIndicator(selected = selected)
         },
     )
-}
-
-/**
- * 选中指示器：使用对勾符号，与 ThemeSettingScreen 的 ThemeModeOption 风格一致。
- */
-@Composable
-private fun SelectionIndicator(selected: Boolean) {
-    if (selected) {
-        Text(text = "✓")
-    }
 }
 
 /**

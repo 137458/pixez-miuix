@@ -21,27 +21,27 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 欢迎页设置页：选择应用启动后默认进入的页面。
+ * 桌面小组件推荐类型设置页：选择小部件展示的内容来源。
  *
- * 选项沿用旧 Flutter 版的字符串编码，写入 [SettingsRepository.welcomePageType]，
- * 由 [RootComponent] 在启动时解析为初始路由。
+ * 选项沿用旧 Flutter 版的字符串编码，写入 [SettingsRepository.widgetIllustType]，
+ * 供桌面小部件在刷新时读取并决定请求哪类插画列表。
  *
- * @param settingsRepository 设置仓库，用于读写欢迎页类型。
+ * @param settingsRepository 设置仓库，用于读写小组件推荐类型。
  * @param onBack 返回上一级页面。
  */
 @Composable
-fun WelcomePageSettingScreen(
+fun WidgetRecommendSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前欢迎页类型。
-    var selectedType by remember { mutableStateOf(settingsRepository.welcomePageType) }
+    // 页面状态：从 SettingsRepository 读取当前小组件推荐类型。
+    var selectedType by remember { mutableStateOf(settingsRepository.widgetIllustType) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "欢迎页",
+                title = "小组件推荐",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -58,15 +58,17 @@ fun WelcomePageSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "启动时显示")
+                SmallTitle(text = "推荐内容")
             }
-            items(WELCOME_PAGE_OPTIONS.size) { index ->
-                val option = WELCOME_PAGE_OPTIONS[index]
+            // 遍历三个互斥选项，渲染为带单选指示器的行。
+            items(WIDGET_ILLUST_OPTIONS.size) { index ->
+                val option = WIDGET_ILLUST_OPTIONS[index]
                 BasicComponent(
                     title = option.label,
                     onClick = {
+                        // 更新本地选中状态，并同步写入设置仓库。
                         selectedType = option.type
-                        settingsRepository.welcomePageType = option.type
+                        settingsRepository.widgetIllustType = option.type
                     },
                     endActions = {
                         CheckIndicator(selected = selectedType == option.type)
@@ -78,20 +80,21 @@ fun WelcomePageSettingScreen(
 }
 
 /**
- * 欢迎页选项数据。
+ * 小组件推荐选项数据。
  */
-private data class WelcomePageOption(
+private data class WidgetIllustOption(
     val type: String,
     val label: String,
 )
 
 /**
- * 可选的欢迎页类型与展示文案，顺序与原 Flutter 应用保持一致。
+ * 可选的小组件推荐类型与展示文案，顺序与旧 Flutter 应用保持一致。
+ * - recom：推荐
+ * - rank：排行榜
+ * - news：关注
  */
-private val WELCOME_PAGE_OPTIONS = listOf(
-    WelcomePageOption(type = "home", label = "首页"),
-    WelcomePageOption(type = "rank", label = "排行榜"),
-    WelcomePageOption(type = "quick_view", label = "速览"),
-    WelcomePageOption(type = "search", label = "搜索"),
-    WelcomePageOption(type = "setting", label = "设置"),
+private val WIDGET_ILLUST_OPTIONS = listOf(
+    WidgetIllustOption(type = "recom", label = "推荐"),
+    WidgetIllustOption(type = "rank", label = "排行榜"),
+    WidgetIllustOption(type = "news", label = "关注"),
 )

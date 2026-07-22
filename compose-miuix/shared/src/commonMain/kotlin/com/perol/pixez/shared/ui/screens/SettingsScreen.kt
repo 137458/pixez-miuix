@@ -44,9 +44,10 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
+ * 设置页：分组展示账号、启动、通用、主题、交互、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
  *
- * 显示分组包含「跨适配设置」与「布局设置」，分别对应自适应列数与固定列数/平板模式。
+ * 通用分组包含语言设置、小部件推荐类型；交互分组包含异形屏/H 限制/返回再退出/滑动切换作品开关；
+ * 显示分组包含「跨适配设置」与「布局设置」。
  */
 @Composable
 fun SettingsScreen(
@@ -61,6 +62,10 @@ fun SettingsScreen(
     onSaveSettingClick: () -> Unit,
     onCrossAdapterSettingClick: () -> Unit,
     onLayoutSettingClick: () -> Unit,
+    onLanguageSettingClick: () -> Unit,
+    onWidgetRecommendSettingClick: () -> Unit,
+    onInteractionSettingClick: () -> Unit,
+    onFeedSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
@@ -131,6 +136,23 @@ fun SettingsScreen(
                     title = "欢迎页",
                     summary = "设置启动应用时默认显示的页面",
                     onClick = onWelcomePageSettingClick,
+                )
+            }
+            item {
+                SmallTitle(text = "通用")
+            }
+            item {
+                BasicComponent(
+                    title = "语言设置",
+                    summary = "选择应用界面语言",
+                    onClick = onLanguageSettingClick,
+                )
+            }
+            item {
+                BasicComponent(
+                    title = "小部件推荐类型",
+                    summary = "桌面小部件展示的内容来源",
+                    onClick = onWidgetRecommendSettingClick,
                 )
             }
             item {

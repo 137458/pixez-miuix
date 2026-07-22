@@ -4,11 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.arkivanov.decompose.extensions.compose.stack.Children
@@ -37,6 +33,10 @@ import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.SaveSettingScreen
 import com.perol.pixez.shared.ui.screens.CrossAdapterSettingScreen
 import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
+import com.perol.pixez.shared.ui.screens.LanguageSettingScreen
+import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
+import com.perol.pixez.shared.ui.screens.InteractionSettingScreen
+import com.perol.pixez.shared.ui.screens.FeedSettingScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
 import com.perol.pixez.shared.ui.screens.CopyTextSettingScreen
 import com.perol.pixez.shared.ui.screens.PrivacySettingScreen
@@ -80,13 +80,12 @@ fun RootContent(
     settingsRepository: SettingsRepository,
     modifier: Modifier = Modifier,
 ) {
-    // 主题状态：从 SettingsRepository 读取，由设置页回写。
-    var themeMode by rememberSaveable { mutableIntStateOf(settingsRepository.themeMode) }
-    var isAmoled by rememberSaveable { mutableStateOf(settingsRepository.isAmoled) }
-    var useDynamicColor by rememberSaveable { mutableStateOf(settingsRepository.useDynamicColor) }
-    var seedColor by rememberSaveable {
-        mutableIntStateOf(settingsRepository.seedColor ?: DEFAULT_SEED_COLOR)
-    }
+    // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
+    // 确保 ThemeSettingScreen 回写主题偏好后返回即可生效。
+    val themeMode = settingsRepository.themeMode
+    val isAmoled = settingsRepository.isAmoled
+    val useDynamicColor = settingsRepository.useDynamicColor
+    val seedColor = settingsRepository.seedColor ?: DEFAULT_SEED_COLOR
 
     // 进程重建后上述状态会由 SettingsRepository 恢复（M4）。
     val themeController = remember(themeMode, isAmoled, useDynamicColor, seedColor) {
@@ -224,6 +223,10 @@ fun RootContent(
                         onSaveSettingClick = component::onSaveSettingClicked,
                         onCrossAdapterSettingClick = component::onCrossAdapterSettingClicked,
                         onLayoutSettingClick = component::onLayoutSettingClicked,
+                        onLanguageSettingClick = component::onLanguageSettingClicked,
+                        onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
+                        onInteractionSettingClick = component::onInteractionSettingClicked,
+                        onFeedSettingClick = component::onFeedSettingClicked,
                         onQualitySettingClick = component::onQualitySettingClicked,
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
@@ -287,6 +290,26 @@ fun RootContent(
                     )
 
                     Child.LayoutSetting -> LayoutSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.LanguageSetting -> LanguageSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.WidgetRecommendSetting -> WidgetRecommendSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.InteractionSetting -> InteractionSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.FeedSetting -> FeedSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

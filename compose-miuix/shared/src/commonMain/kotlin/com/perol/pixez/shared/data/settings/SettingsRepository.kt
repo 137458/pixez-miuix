@@ -174,6 +174,81 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value }
 
     /**
+     * 桌面小部件推荐类型：recom / rank / news。
+     */
+    var widgetIllustType: String
+        get() = settings.getStringWithLegacyFallback(
+            SettingsKeys.WIDGET_ILLUST_TYPE,
+            DEFAULT_WIDGET_ILLUST_TYPE,
+        )
+        set(value) { settings[SettingsKeys.WIDGET_ILLUST_TYPE] = value }
+
+    /**
+     * 适配刘海/挖孔屏（异形屏）。
+     */
+    var isBangs: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_BANGS, false)
+        set(value) { settings[SettingsKeys.IS_BANGS] = value }
+
+    /**
+     * 是否限制 R18 内容展示（H 是不行的）。
+     * 沿用旧版键 `h_is_not_allow`。
+     */
+    var hIsNotAllow: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.H_IS_NOT_ALLOW_LEGACY,
+            false,
+        )
+        set(value) { settings[SettingsKeys.H_IS_NOT_ALLOW_LEGACY] = value }
+
+    /**
+     * 再次返回退出应用。
+     */
+    var isReturnAgainToExit: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.IS_RETURN_AGAIN_TO_EXIT,
+            false,
+        )
+        set(value) { settings[SettingsKeys.IS_RETURN_AGAIN_TO_EXIT] = value }
+
+    /**
+     * 插画详情页左右滑动切换作品。
+     */
+    var swipeChangeArtwork: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.SWIPE_CHANGE_ARTWORK,
+            true,
+        )
+        set(value) { settings[SettingsKeys.SWIPE_CHANGE_ARTWORK] = value }
+
+    /**
+     * 是否在 Feed 中显示 AI 生成标识。
+     */
+    var feedAIBadge: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.FEED_AI_BADGE, true)
+        set(value) { settings[SettingsKeys.FEED_AI_BADGE] = value }
+
+    /**
+     * 收藏作品后自动关注画师。
+     */
+    var followAfterStar: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.IS_FOLLOW_AFTER_STAR,
+            false,
+        )
+        set(value) { settings[SettingsKeys.IS_FOLLOW_AFTER_STAR] = value }
+
+    /**
+     * 使用 WebView 打开 SauceNAO 搜索结果。
+     */
+    var useSaunceNaoWebview: Boolean
+        get() = settings.getBooleanWithLegacyFallback(
+            SettingsKeys.USE_SAUNCE_NAO_WEBVIEW,
+            false,
+        )
+        set(value) { settings[SettingsKeys.USE_SAUNCE_NAO_WEBVIEW] = value }
+
+    /**
      * 竖屏是否启用按宽度自适应网格列数。
      */
     var crossAdapt: Boolean
@@ -304,8 +379,7 @@ class SettingsRepository(
         private const val DEFAULT_PICTURE_SOURCE = "i.pximg.net"
         private const val DEFAULT_NETWORK_MODE = "ech"
         private const val DEFAULT_WELCOME_PAGE_TYPE = "home"
-
-        private const val LEGACY_KEY_PREFIX = "flutter."
+        private const val DEFAULT_WIDGET_ILLUST_TYPE = "recom"
 
         // 旧版 save_mode 取值：0 默认、1 旧安全模式、2 旧 helpless 模式
         private const val SAVE_MODE_DEFAULT = 0
