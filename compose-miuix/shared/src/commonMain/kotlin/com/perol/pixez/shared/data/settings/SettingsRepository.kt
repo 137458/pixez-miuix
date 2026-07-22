@@ -174,6 +174,46 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value }
 
     /**
+     * 竖屏是否启用按宽度自适应网格列数。
+     */
+    var crossAdapt: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, false)
+        set(value) { settings[SettingsKeys.CROSS_ADAPT] = value }
+
+    /**
+     * 竖屏自适应宽度阈值（100-2160）。
+     */
+    var crossAdapterWidth: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, 100)
+            .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
+        set(value) {
+            settings[SettingsKeys.CROSS_ADAPT_WIDTH] = value.coerceIn(
+                MIN_CROSS_ADAPTER_WIDTH,
+                MAX_CROSS_ADAPTER_WIDTH,
+            )
+        }
+
+    /**
+     * 横屏是否启用按宽度自适应网格列数。
+     */
+    var hCrossAdapt: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT, false)
+        set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value }
+
+    /**
+     * 横屏自适应宽度阈值（100-2160）。
+     */
+    var hCrossAdapterWidth: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT_WIDTH, 100)
+            .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
+        set(value) {
+            settings[SettingsKeys.H_CROSS_ADAPT_WIDTH] = value.coerceIn(
+                MIN_CROSS_ADAPTER_WIDTH,
+                MAX_CROSS_ADAPTER_WIDTH,
+            )
+        }
+
+    /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
      */
     var bookTagList: List<String>
@@ -247,6 +287,10 @@ class SettingsRepository(
         private const val SAVE_MODE_DEFAULT = 0
         private const val SAVE_MODE_LEGACY_SAFE = 1
         private const val SAVE_MODE_LEGACY_HELPLESS = 2
+
+        // 跨适配宽度阈值范围，与旧版 setting_cross_adapter_page.dart 保持一致
+        private const val MIN_CROSS_ADAPTER_WIDTH = 100
+        private const val MAX_CROSS_ADAPTER_WIDTH = 2160
     }
 }
 

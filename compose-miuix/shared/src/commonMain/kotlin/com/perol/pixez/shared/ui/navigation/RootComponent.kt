@@ -141,6 +141,13 @@ class RootComponent(
     }
 
     /**
+     * 打开跨适配设置页。
+     */
+    fun onCrossAdapterSettingClicked() {
+        navigation.push(Config.CrossAdapterSetting)
+    }
+
+    /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
@@ -253,6 +260,7 @@ class RootComponent(
         Config.NetworkSetting -> Child.NetworkSetting
         Config.DownloadSetting -> Child.DownloadSetting
         Config.SaveSetting -> Child.SaveSetting
+        Config.CrossAdapterSetting -> Child.CrossAdapterSetting
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
@@ -346,6 +354,9 @@ class RootComponent(
         data object SaveSetting : Config()
 
         @Serializable
+        data object CrossAdapterSetting : Config()
+
+        @Serializable
         data object QualitySetting : Config()
 
         @Serializable
@@ -381,6 +392,7 @@ class RootComponent(
         data object NetworkSetting : Child()
         data object DownloadSetting : Child()
         data object SaveSetting : Child()
+        data object CrossAdapterSetting : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()

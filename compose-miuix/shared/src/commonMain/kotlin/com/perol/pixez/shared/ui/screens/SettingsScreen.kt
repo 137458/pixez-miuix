@@ -44,7 +44,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
- * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、收藏、分享、画质、保存、下载、存储、关于等入口。
+ * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
  */
 @Composable
 fun SettingsScreen(
@@ -57,6 +57,7 @@ fun SettingsScreen(
     onNetworkSettingClick: () -> Unit,
     onDownloadSettingClick: () -> Unit,
     onSaveSettingClick: () -> Unit,
+    onCrossAdapterSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
@@ -207,6 +208,16 @@ fun SettingsScreen(
                     title = "保存设置",
                     summary = "收藏/保存联动、长按确认、自动标签",
                     onClick = onSaveSettingClick,
+                )
+            }
+            item {
+                SmallTitle(text = "显示")
+            }
+            item {
+                BasicComponent(
+                    title = "跨适配设置",
+                    summary = "竖屏/横屏按宽度自适应网格列数",
+                    onClick = onCrossAdapterSettingClick,
                 )
             }
             item {
