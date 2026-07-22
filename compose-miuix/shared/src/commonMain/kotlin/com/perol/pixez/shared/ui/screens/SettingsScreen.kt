@@ -45,6 +45,8 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 
 /**
  * 设置页：分组展示账号、启动、主题、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
+ *
+ * 显示分组包含「跨适配设置」与「布局设置」，分别对应自适应列数与固定列数/平板模式。
  */
 @Composable
 fun SettingsScreen(
@@ -58,6 +60,7 @@ fun SettingsScreen(
     onDownloadSettingClick: () -> Unit,
     onSaveSettingClick: () -> Unit,
     onCrossAdapterSettingClick: () -> Unit,
+    onLayoutSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
@@ -218,6 +221,13 @@ fun SettingsScreen(
                     title = "跨适配设置",
                     summary = "竖屏/横屏按宽度自适应网格列数",
                     onClick = onCrossAdapterSettingClick,
+                )
+            }
+            item {
+                BasicComponent(
+                    title = "布局设置",
+                    summary = "平板模式、竖屏/横屏固定网格列数",
+                    onClick = onLayoutSettingClick,
                 )
             }
             item {

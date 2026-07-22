@@ -214,6 +214,30 @@ class SettingsRepository(
         }
 
     /**
+     * 平板模式：0=V:H, 1=V:V, 2=H:H。
+     */
+    var padMode: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.PAD_MODE, 0)
+            .coerceIn(PAD_MODE_MIN, PAD_MODE_MAX)
+        set(value) { settings[SettingsKeys.PAD_MODE] = value.coerceIn(PAD_MODE_MIN, PAD_MODE_MAX) }
+
+    /**
+     * 竖屏固定网格列数（2-4）。
+     */
+    var crossCount: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_COUNT, 2)
+            .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
+        set(value) { settings[SettingsKeys.CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX) }
+
+    /**
+     * 横屏固定网格列数（2-4）。
+     */
+    var hCrossCount: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_COUNT, 2)
+            .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
+        set(value) { settings[SettingsKeys.H_CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX) }
+
+    /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
      */
     var bookTagList: List<String>
@@ -291,6 +315,14 @@ class SettingsRepository(
         // 跨适配宽度阈值范围，与旧版 setting_cross_adapter_page.dart 保持一致
         private const val MIN_CROSS_ADAPTER_WIDTH = 100
         private const val MAX_CROSS_ADAPTER_WIDTH = 2160
+
+        // 平板模式取值范围：0=V:H, 1=V:V, 2=H:H
+        private const val PAD_MODE_MIN = 0
+        private const val PAD_MODE_MAX = 2
+
+        // 固定网格列数范围
+        private const val CROSS_COUNT_MIN = 2
+        private const val CROSS_COUNT_MAX = 4
     }
 }
 

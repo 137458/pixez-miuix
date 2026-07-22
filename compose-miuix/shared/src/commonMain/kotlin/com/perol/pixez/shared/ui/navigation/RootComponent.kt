@@ -148,6 +148,13 @@ class RootComponent(
     }
 
     /**
+     * 打开布局设置页。
+     */
+    fun onLayoutSettingClicked() {
+        navigation.push(Config.LayoutSetting)
+    }
+
+    /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
@@ -261,6 +268,7 @@ class RootComponent(
         Config.DownloadSetting -> Child.DownloadSetting
         Config.SaveSetting -> Child.SaveSetting
         Config.CrossAdapterSetting -> Child.CrossAdapterSetting
+        Config.LayoutSetting -> Child.LayoutSetting
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
@@ -357,6 +365,9 @@ class RootComponent(
         data object CrossAdapterSetting : Config()
 
         @Serializable
+        data object LayoutSetting : Config()
+
+        @Serializable
         data object QualitySetting : Config()
 
         @Serializable
@@ -393,6 +404,7 @@ class RootComponent(
         data object DownloadSetting : Child()
         data object SaveSetting : Child()
         data object CrossAdapterSetting : Child()
+        data object LayoutSetting : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()

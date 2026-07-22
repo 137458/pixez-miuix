@@ -36,6 +36,7 @@ import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.SaveSettingScreen
 import com.perol.pixez.shared.ui.screens.CrossAdapterSettingScreen
+import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
 import com.perol.pixez.shared.ui.screens.CopyTextSettingScreen
 import com.perol.pixez.shared.ui.screens.PrivacySettingScreen
@@ -222,6 +223,7 @@ fun RootContent(
                         onDownloadSettingClick = component::onDownloadSettingClicked,
                         onSaveSettingClick = component::onSaveSettingClicked,
                         onCrossAdapterSettingClick = component::onCrossAdapterSettingClicked,
+                        onLayoutSettingClick = component::onLayoutSettingClicked,
                         onQualitySettingClick = component::onQualitySettingClicked,
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
@@ -280,6 +282,11 @@ fun RootContent(
                     )
 
                     Child.CrossAdapterSetting -> CrossAdapterSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.LayoutSetting -> LayoutSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )
