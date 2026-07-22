@@ -13,6 +13,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -22,10 +23,15 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.AboutScreen
+import com.perol.pixez.shared.ui.screens.AccountEditScreen
+import com.perol.pixez.shared.ui.screens.BoardScreen
 import com.perol.pixez.shared.ui.screens.CommentsScreen
+import com.perol.pixez.shared.ui.screens.DataExportScreen
 import com.perol.pixez.shared.ui.screens.DownloadHistoryScreen
 import com.perol.pixez.shared.ui.screens.DownloadSettingScreen
+import com.perol.pixez.shared.ui.screens.DownloadTaskScreen
 import com.perol.pixez.shared.ui.screens.HelloScreen
+import com.perol.pixez.shared.ui.screens.HistoryScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
@@ -51,6 +57,7 @@ import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.ThemeSettingScreen
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
+import com.perol.pixez.shared.ui.screens.UpdateSettingScreen
 import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
@@ -79,6 +86,7 @@ fun RootContent(
     downloadHistoryRepository: DownloadHistoryRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    boardRepository: BoardRepository,
     modifier: Modifier = Modifier,
 ) {
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
@@ -234,7 +242,14 @@ fun RootContent(
                         onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
                         onPlatformSettingClick = component::onPlatformSettingClicked,
                         onBookTagClick = component::onBookTagClicked,
+                        onUpdateSettingClick = component::onUpdateSettingClicked,
+                        onAccountEditClick = component::onAccountEditClicked,
+                        onHistoryClick = component::onHistoryClicked,
+                        onDownloadTaskClick = component::onDownloadTaskClicked,
+                        onDataExportClick = component::onDataExportClicked,
+                        onBoardClick = component::onBoardClicked,
                         accountRepository = accountRepository,
+                        boardRepository = boardRepository,
                     )
 
                     is Child.Search -> SearchScreen(
@@ -314,6 +329,38 @@ fun RootContent(
                     Child.FeedSetting -> FeedSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
+                    )
+
+                    Child.UpdateSetting -> UpdateSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.AccountEdit -> AccountEditScreen(
+                        onBack = component::onBack,
+                        accountRepository = accountRepository,
+                    )
+
+                    Child.History -> HistoryScreen(
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                    )
+
+                    Child.DownloadTask -> DownloadTaskScreen(
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                        downloadRepository = downloadRepository,
+                        downloadHistoryRepository = downloadHistoryRepository,
+                    )
+
+                    Child.DataExport -> DataExportScreen(
+                        onBack = component::onBack,
+                        settingsRepository = settingsRepository,
+                    )
+
+                    Child.Board -> BoardScreen(
+                        onBack = component::onBack,
+                        boardRepository = boardRepository,
                     )
 
                     Child.QualitySetting -> QualitySettingScreen(

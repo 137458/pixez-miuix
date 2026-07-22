@@ -190,6 +190,48 @@ class RootComponent(
     }
 
     /**
+     * 打开更新设置页。
+     */
+    fun onUpdateSettingClicked() {
+        navigation.push(Config.UpdateSetting)
+    }
+
+    /**
+     * 打开账号信息编辑页。
+     */
+    fun onAccountEditClicked() {
+        navigation.push(Config.AccountEdit)
+    }
+
+    /**
+     * 打开浏览历史页。
+     */
+    fun onHistoryClicked() {
+        navigation.push(Config.History)
+    }
+
+    /**
+     * 打开下载任务页。
+     */
+    fun onDownloadTaskClicked() {
+        navigation.push(Config.DownloadTask)
+    }
+
+    /**
+     * 打开应用数据导入导出页。
+     */
+    fun onDataExportClicked() {
+        navigation.push(Config.DataExport)
+    }
+
+    /**
+     * 打开公告板页。
+     */
+    fun onBoardClicked() {
+        navigation.push(Config.Board)
+    }
+
+    /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
@@ -308,6 +350,12 @@ class RootComponent(
         Config.WidgetRecommendSetting -> Child.WidgetRecommendSetting
         Config.InteractionSetting -> Child.InteractionSetting
         Config.FeedSetting -> Child.FeedSetting
+        Config.UpdateSetting -> Child.UpdateSetting
+        Config.AccountEdit -> Child.AccountEdit
+        Config.History -> Child.History
+        Config.DownloadTask -> Child.DownloadTask
+        Config.DataExport -> Child.DataExport
+        Config.Board -> Child.Board
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
@@ -420,6 +468,24 @@ class RootComponent(
         data object FeedSetting : Config()
 
         @Serializable
+        data object UpdateSetting : Config()
+
+        @Serializable
+        data object AccountEdit : Config()
+
+        @Serializable
+        data object History : Config()
+
+        @Serializable
+        data object DownloadTask : Config()
+
+        @Serializable
+        data object DataExport : Config()
+
+        @Serializable
+        data object Board : Config()
+
+        @Serializable
         data object QualitySetting : Config()
 
         @Serializable
@@ -464,6 +530,12 @@ class RootComponent(
         data object WidgetRecommendSetting : Child()
         data object InteractionSetting : Child()
         data object FeedSetting : Child()
+        data object UpdateSetting : Child()
+        data object AccountEdit : Child()
+        data object History : Child()
+        data object DownloadTask : Child()
+        data object DataExport : Child()
+        data object Board : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()

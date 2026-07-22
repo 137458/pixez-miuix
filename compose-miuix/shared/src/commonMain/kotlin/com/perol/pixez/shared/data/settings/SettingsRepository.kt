@@ -365,6 +365,13 @@ class SettingsRepository(
         )
         set(value) { settings[SettingsKeys.COPY_INFO_TEXT] = value }
 
+    /**
+     * 已忽略的版本号；当存在新版本且版本号与此值相同时跳过更新提醒。
+     */
+    var ignoreUpdateVersion: String?
+        get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.IGNORE_UPDATE_VERSION)
+        set(value) { settings[SettingsKeys.IGNORE_UPDATE_VERSION] = value }
+
     // region Android 平台专属
     /**
      * 屏幕显示模式索引。

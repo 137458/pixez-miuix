@@ -50,6 +50,16 @@ class PixivHttpClient(
     )
 
     /**
+     * 账号管理客户端，用于 accounts.pixiv.net 的账号信息编辑等接口。
+     */
+    val accountClient: HttpClient = createClient(
+        host = ACCOUNTS_HOST,
+        tokenStorage = tokenStorage,
+        oAuthClient = oAuthClient,
+        enableLogging = enableLogging,
+    )
+
+    /**
      * 图片下载客户端，用于从 i.pximg.net 下载原图。
      *
      * 不使用 TokenRefreshPlugin，避免图片 401 时触发 OAuth 刷新逻辑；
@@ -90,6 +100,7 @@ class PixivHttpClient(
      */
     fun close() {
         runCatching { apiClient.close() }
+        runCatching { accountClient.close() }
         runCatching { downloadClient.close() }
         runCatching { baseOAuthClient.close() }
     }
@@ -97,6 +108,7 @@ class PixivHttpClient(
     companion object {
         private const val APP_API_HOST = "app-api.pixiv.net"
         private const val OAUTH_HOST = "oauth.secure.pixiv.net"
+        private const val ACCOUNTS_HOST = "accounts.pixiv.net"
 
         /**
          * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。

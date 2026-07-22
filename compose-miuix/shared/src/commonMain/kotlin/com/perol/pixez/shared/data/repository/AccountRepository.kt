@@ -2,16 +2,25 @@ package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.model.Account as OAuthAccount
+import com.perol.pixez.shared.data.model.AccountEditResponse
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.OAuthClient
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.Parameters
 
 /**
- * 账号仓库：封装 OAuth 登录、token 刷新与本地账号持久化。
+ * 账号仓库：封装 OAuth 登录、token 刷新、账号信息编辑与本地账号持久化。
  */
 class AccountRepository(
     private val oAuthClient: OAuthClient,
     private val tokenStorage: AuthTokenStorage,
+    private val accountClient: HttpClient,
 ) {
     /**
      * 当前已登录账号，未登录返回 null。
@@ -39,6 +48,57 @@ class AccountRepository(
      */
     suspend fun logout() {
         tokenStorage.clear()
+    }
+
+    /**
+     * 编辑当前账号信息：修改邮箱或密码。
+     *
+     * 调用 accounts.pixiv.net/api/account/edit，成功后更新本地账号缓存中的邮箱与密码。
+     *
+     * @param currentPassword 当前密码，用于接口鉴权。
+     * @param newPassword 新密码，为空表示不修改。
+     * @param newMailAddress 新邮箱地址，为空表示不修改。
+     * @throws IllegalStateException 当前未登录时抛出。
+     */
+    suspend fun editAccount(
+        currentPassword: String,
+        newPassword: String?,
+        newMailAddress: String?,
+    ) = networkCall("编辑账号信息失败") {
+        val account = tokenStorage.getCurrentAccount()
+            ?: throw IllegalStateException("没有登录账号，无法编辑账号信息")
+
+        val response = accountClient.post("/api/account/edit") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("current_password", currentPassword)
+                        if (!newPassword.isNullOrBlank()) {
+                            append("new_password", newPassword)
+                        }
+                        if (!newMailAddress.isNullOrBlank()) {
+                            append("new_mail_address", newMailAddress)
+                        }
+                    },
+                ),
+            )
+        }.body<AccountEditResponse>()
+
+        // 解析响应体并校验业务成功标志；失败时抛异常，避免错误更新本地缓存。
+        if (response.error || !response.body.isSucceed) {
+            throw IllegalStateException(
+                response.message.takeIf { it.isNotBlank() } ?: "账号信息修改失败",
+            )
+        }
+
+        // 接口调用成功后，同步更新本地缓存的邮箱与密码，避免下次进入页面仍显示旧值。
+        tokenStorage.saveAccount(
+            account.copy(
+                password = if (!newPassword.isNullOrBlank()) newPassword else account.password,
+                mail_address = if (!newMailAddress.isNullOrBlank()) newMailAddress else account.mail_address,
+            ),
+        )
     }
 }
 

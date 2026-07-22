@@ -1,0 +1,4 @@
+-- 旧版 Flutter illustpersist.db 从 v1 升级到 v2 时新增了 title 与 user_name 列。
+-- SQLDelight 当前 schema 为 v2，因此 1.sqm 描述从 v1 到 v2 的变更。
+ALTER TABLE illustpersist ADD COLUMN title TEXT;
+ALTER TABLE illustpersist ADD COLUMN user_name TEXT;

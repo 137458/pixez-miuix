@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -47,8 +49,9 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 /**
  * 设置页：分组展示账号、启动、通用、主题、交互、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
  *
- * 通用分组包含语言设置、小部件推荐类型；交互分组包含异形屏/H 限制/返回再退出/滑动切换作品开关；
- * 显示分组包含「跨适配设置」与「布局设置」。
+ * 账号分组包含账号信息入口（已登录时）；通用分组包含语言设置、小部件推荐类型、历史记录；
+ * 交互分组包含异形屏/H 限制/返回再退出/滑动切换作品开关；显示分组包含「跨适配设置」与「布局设置」；
+ * 下载分组包含下载设置、下载历史、下载任务；存储分组包含清除缓存与应用数据；关于分组包含公告板、更新设置、关于 PixEz。
  */
 @Composable
 fun SettingsScreen(
@@ -73,7 +76,14 @@ fun SettingsScreen(
     onWelcomePageSettingClick: () -> Unit,
     onPlatformSettingClick: () -> Unit,
     onBookTagClick: () -> Unit,
+    onUpdateSettingClick: () -> Unit,
+    onAccountEditClick: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onDownloadTaskClick: () -> Unit,
+    onDataExportClick: () -> Unit,
+    onBoardClick: () -> Unit,
     accountRepository: AccountRepository,
+    boardRepository: BoardRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
@@ -89,6 +99,14 @@ fun SettingsScreen(
     // 页面进入时加载一次账号信息。
     LaunchedEffect(accountRepository) {
         account = runCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+    }
+
+    // 公告板入口动态状态：仅在公告列表非空时显示。
+    var boardList by remember { mutableStateOf<List<BoardInfo>?>(null) }
+
+    // 页面进入时异步加载公告列表，用于判断「公告板」入口是否显示。
+    LaunchedEffect(boardRepository) {
+        boardList = runCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
     }
 
     Scaffold(
@@ -130,6 +148,15 @@ fun SettingsScreen(
                     },
                 )
             }
+            if (account != null) {
+                item {
+                    BasicComponent(
+                        title = "账号信息",
+                        summary = "修改密码、邮箱、Token 与账号注销",
+                        onClick = onAccountEditClick,
+                    )
+                }
+            }
             item {
                 SmallTitle(text = "启动")
             }
@@ -155,6 +182,13 @@ fun SettingsScreen(
                     title = "小部件推荐类型",
                     summary = "桌面小部件展示的内容来源",
                     onClick = onWidgetRecommendSettingClick,
+                )
+            }
+            item {
+                BasicComponent(
+                    title = "历史记录",
+                    summary = "查看本地插画浏览历史",
+                    onClick = onHistoryClick,
                 )
             }
             item {
@@ -271,6 +305,13 @@ fun SettingsScreen(
                     onClick = onDownloadHistoryClick,
                 )
             }
+            item {
+                BasicComponent(
+                    title = "下载任务",
+                    summary = "管理下载队列与任务状态",
+                    onClick = onDownloadTaskClick,
+                )
+            }
             if (isAndroidPlatform()) {
                 item {
                     SmallTitle(text = "平台")
@@ -317,7 +358,31 @@ fun SettingsScreen(
                 )
             }
             item {
+                BasicComponent(
+                    title = "应用数据",
+                    summary = "导入/导出搜索历史、收藏标签、浏览历史等数据",
+                    onClick = onDataExportClick,
+                )
+            }
+            item {
                 SmallTitle(text = "关于")
+            }
+            // 与原 Flutter 行为一致：公告数据非空时才展示「公告板」入口。
+            if (!boardList.isNullOrEmpty()) {
+                item {
+                    BasicComponent(
+                        title = "公告板",
+                        summary = "查看官方公告与更新说明",
+                        onClick = onBoardClick,
+                    )
+                }
+            }
+            item {
+                BasicComponent(
+                    title = "更新设置",
+                    summary = "忽略当前版本更新与手动检查更新",
+                    onClick = onUpdateSettingClick,
+                )
             }
             item {
                 BasicComponent(

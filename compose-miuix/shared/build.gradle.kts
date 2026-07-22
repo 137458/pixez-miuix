@@ -183,5 +183,9 @@ sqldelight {
             packageName.set("com.perol.pixez.shared.data.local.bantag")
             srcDirs.setFrom("src/commonMain/sqldelight/bantag")
         }
+        create("IllustPersistDatabase") {
+            packageName.set("com.perol.pixez.shared.data.local.illustpersist")
+            srcDirs.setFrom("src/commonMain/sqldelight/illustpersist")
+        }
     }
 }

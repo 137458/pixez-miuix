@@ -1,0 +1,31 @@
+-- 旧 Flutter 应用的插画浏览历史表。
+-- 对应旧 `illustpersist.db` 中的 `illustpersist` 表，v2 版本新增 title 与 user_name 列。
+CREATE TABLE illustpersist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    illust_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    picture_url TEXT NOT NULL,
+    title TEXT,
+    user_name TEXT,
+    time INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM illustpersist ORDER BY time;
+
+selectByIllustId:
+SELECT * FROM illustpersist WHERE illust_id = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO illustpersist (
+    id, illust_id, user_id, picture_url, title, user_name, time
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM illustpersist WHERE id = ?;
+
+deleteAll:
+DELETE FROM illustpersist;
+
+-- 为按时间排序的全表查询建立索引，避免数据量增大后全表扫描排序。
+CREATE INDEX IF NOT EXISTS idx_illustpersist_time ON illustpersist(time);

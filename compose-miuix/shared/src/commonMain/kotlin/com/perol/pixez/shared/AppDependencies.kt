@@ -3,11 +3,14 @@ package com.perol.pixez.shared
 import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
+import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
@@ -78,6 +81,16 @@ class AppDependencies(
     }
 
     /**
+     * 插画浏览历史数据库驱动，复用旧 Flutter illustpersist.db。
+     */
+    val illustPersistDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            IllustPersistDatabase.Schema,
+            "illustpersist.db",
+        )
+    }
+
+    /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
      */
     val settingsRepository: SettingsRepository by lazy {
@@ -100,7 +113,11 @@ class AppDependencies(
     }
 
     val accountRepository: AccountRepository by lazy {
-        AccountRepository(httpClient.oAuthClient, tokenStorage)
+        AccountRepository(
+            oAuthClient = httpClient.oAuthClient,
+            tokenStorage = tokenStorage,
+            accountClient = httpClient.accountClient,
+        )
     }
 
     val illustRepository: IllustRepository by lazy {
@@ -109,6 +126,13 @@ class AppDependencies(
 
     val searchRepository: SearchRepository by lazy {
         SearchRepository(httpClient.apiClient)
+    }
+
+    /**
+     * 公告板仓库，从 GitHub Raw 拉取官方公告 JSON。
+     */
+    val boardRepository: BoardRepository by lazy {
+        BoardRepository()
     }
 
     val userRepository: UserRepository by lazy {
@@ -124,6 +148,13 @@ class AppDependencies(
      */
     val downloadHistoryRepository: DownloadHistoryRepository by lazy {
         DownloadHistoryRepository(taskDriver)
+    }
+
+    /**
+     * 插画浏览历史仓库，复用旧 Flutter illustpersist.db。
+     */
+    val historyRepository: HistoryRepository by lazy {
+        HistoryRepository(illustPersistDriver)
     }
 
     /**
@@ -154,5 +185,6 @@ class AppDependencies(
         runCatching { driverFactory.closeDriver(banDriver) }
         runCatching { driverFactory.closeDriver(banUserDriver) }
         runCatching { driverFactory.closeDriver(banTagDriver) }
+        runCatching { driverFactory.closeDriver(illustPersistDriver) }
     }
 }

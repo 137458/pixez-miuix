@@ -2,7 +2,16 @@ package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTask
+import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.IllustProfileImageUrls
+import com.perol.pixez.shared.data.model.IllustSeries
+import com.perol.pixez.shared.data.model.IllustTag
+import com.perol.pixez.shared.data.model.IllustUser
+import com.perol.pixez.shared.data.model.ImageUrls
+import com.perol.pixez.shared.data.model.MetaPage
+import com.perol.pixez.shared.data.model.MetaPageImageUrls
+import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.platform.IllustSaver
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
@@ -95,6 +104,55 @@ class DownloadRepository(
     }
 
     /**
+     * 根据已有历史记录重试下载。
+     *
+     * 直接使用历史记录中保存的远程 URL 与文件名，避免调用方必须持有完整的 [Illust] 对象。
+     * 重试会覆盖原历史记录的状态（成功或失败）。
+     *
+     * @param history 待重试的下载历史记录
+     * @return 包含最终状态的下载任务
+     */
+    suspend fun retry(history: DownloadTaskHistory): DownloadTask {
+        // 构造待重试任务对象，状态先置为下载中。
+        val pendingTask = DownloadTask(
+            illustId = history.illustId,
+            pageIndex = history.pageIndex,
+            remoteUrl = history.remoteUrl,
+            fileName = history.fileName,
+            status = DownloadStatus.Downloading,
+        )
+
+        // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
+        if (history.id > 0) {
+            runCatching { historyRepository.saveTask(pendingTask, history.toMinimalIllust(), history.id) }
+        }
+
+        return try {
+            // 复用已有 HTTP 下载与平台保存逻辑。
+            val bytes = downloadBytes(history.remoteUrl)
+            val savedPath = saver.save(history.fileName, bytes)
+            Napier.d("重试下载完成 path=$savedPath")
+            val successTask = pendingTask.copy(status = DownloadStatus.Success)
+            historyRepository.saveTask(successTask, history.toMinimalIllust(), history.id)
+            successTask
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Napier.e("重试下载失败 illustId=${history.illustId}", e)
+            val failedTask = pendingTask.copy(
+                status = DownloadStatus.Failed,
+                error = e.message ?: "下载失败",
+            )
+            if (history.id > 0) {
+                // 历史记录已存在时尽力回写失败状态。
+                runCatching { historyRepository.saveTask(failedTask, history.toMinimalIllust(), history.id) }
+            }
+            // 抛出异常，让调用方感知重试失败，避免 UI 错误地提示「成功」。
+            throw e
+        }
+    }
+
+    /**
      * 解析作品指定页的原图 URL。
      *
      * 单页作品优先使用 [Illust.metaSinglePage]；多页作品使用 [Illust.metaPages]。
@@ -154,6 +212,68 @@ class DownloadRepository(
      */
     private fun sanitizeFileName(name: String): String {
         return name.replace(INVALID_FILE_NAME_CHARS, "_")
+    }
+
+    /**
+     * 将下载历史记录转换为可供 [saveTask] 使用的最小化 [Illust] 对象。
+     *
+     * 重试时仅需要作品元信息（标题、画师、页码、原图 URL），其余字段使用默认值填充。
+     */
+    private fun DownloadTaskHistory.toMinimalIllust(): Illust {
+        // 根据页码构造单页或多页结构，确保 resolveOriginalUrl 能正确取到 remoteUrl。
+        val singlePage = if (pageIndex == 0) MetaSinglePage(originalImageUrl = remoteUrl) else null
+        val metaPages = if (pageIndex > 0) {
+            listOf(
+                MetaPage(
+                    imageUrls = MetaPageImageUrls(
+                        squareMedium = medium ?: "",
+                        medium = medium ?: "",
+                        large = "",
+                        original = remoteUrl,
+                    ),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
+        return Illust(
+            id = illustId,
+            title = title,
+            type = "illust",
+            imageUrls = ImageUrls(
+                squareMedium = medium ?: "",
+                medium = medium ?: "",
+                large = "",
+            ),
+            caption = "",
+            restrict = 0,
+            user = IllustUser(
+                id = userId,
+                name = userName,
+                account = "",
+                profileImageUrls = IllustProfileImageUrls(medium = ""),
+                comment = "",
+                isFollowed = false,
+            ),
+            tags = emptyList(),
+            tools = emptyList(),
+            createDate = "",
+            pageCount = maxOf(pageIndex + 1, 1),
+            width = 0,
+            height = 0,
+            sanityLevel = sanityLevel ?: 0,
+            xRestrict = 0,
+            metaSinglePage = singlePage,
+            metaPages = metaPages,
+            totalView = 0,
+            totalBookmarks = 0,
+            isBookmarked = false,
+            visible = false,
+            isMuted = false,
+            illustAIType = 1,
+            series = null,
+        )
     }
 
     companion object {
