@@ -73,6 +73,10 @@ internal object SettingsKeys {
     const val SEARCH_END_DATE = "search_end_date"
     const val BOOK_TAG_LIST = "book_tag_list"
 
+    // Android 平台专属设置键
+    const val DISPLAY_MODE = "display_mode"
+    const val OPEN_BY_DEFAULT = "open_by_default"
+
     // 旧版遗留键，用于迁移兼容
     const val FILE_NAME_EVAL_LEGACY = "file_name_eval"
     const val H_IS_NOT_ALLOW_LEGACY = "h_is_not_allow"

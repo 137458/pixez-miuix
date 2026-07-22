@@ -83,6 +83,13 @@ class RootComponent(
     }
 
     /**
+     * 打开平台专属设置页（Android only）。
+     */
+    fun onPlatformSettingClicked() {
+        navigation.push(Config.PlatformSetting)
+    }
+
+    /**
      * 打开收藏标签页。
      */
     fun onBookTagClicked() {
@@ -305,6 +312,7 @@ class RootComponent(
         Config.CopyTextSetting -> Child.CopyTextSetting
         Config.PrivacySetting -> Child.PrivacySetting
         Config.WelcomePageSetting -> Child.WelcomePageSetting
+        Config.PlatformSetting -> Child.PlatformSetting
         Config.About -> Child.About
         Config.BookTag -> Child.BookTag
         Config.Thanks -> Child.Thanks
@@ -422,6 +430,9 @@ class RootComponent(
 
         @Serializable
         data object WelcomePageSetting : Config()
+
+        @Serializable
+        data object PlatformSetting : Config()
     }
 
     sealed class Child {
@@ -457,6 +468,7 @@ class RootComponent(
         data object CopyTextSetting : Child()
         data object PrivacySetting : Child()
         data object WelcomePageSetting : Child()
+        data object PlatformSetting : Child()
     }
 }
 

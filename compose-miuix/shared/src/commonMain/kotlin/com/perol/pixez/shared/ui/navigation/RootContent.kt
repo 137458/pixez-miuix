@@ -30,6 +30,7 @@ import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
+import com.perol.pixez.shared.ui.screens.PlatformSettingScreen
 import com.perol.pixez.shared.ui.screens.SaveSettingScreen
 import com.perol.pixez.shared.ui.screens.CrossAdapterSettingScreen
 import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
@@ -231,6 +232,7 @@ fun RootContent(
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
                         onPrivacySettingClick = component::onPrivacySettingClicked,
                         onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
+                        onPlatformSettingClick = component::onPlatformSettingClicked,
                         onBookTagClick = component::onBookTagClicked,
                         accountRepository = accountRepository,
                     )
@@ -330,6 +332,11 @@ fun RootContent(
                     )
 
                     Child.WelcomePageSetting -> WelcomePageSettingScreen(
+                        settingsRepository = settingsRepository,
+                        onBack = component::onBack,
+                    )
+
+                    Child.PlatformSetting -> PlatformSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

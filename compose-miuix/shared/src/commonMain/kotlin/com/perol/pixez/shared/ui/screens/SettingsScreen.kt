@@ -28,6 +28,7 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -70,6 +71,7 @@ fun SettingsScreen(
     onCopyTextSettingClick: () -> Unit,
     onPrivacySettingClick: () -> Unit,
     onWelcomePageSettingClick: () -> Unit,
+    onPlatformSettingClick: () -> Unit,
     onBookTagClick: () -> Unit,
     accountRepository: AccountRepository,
 ) {
@@ -269,6 +271,19 @@ fun SettingsScreen(
                     onClick = onDownloadHistoryClick,
                 )
             }
+            if (isAndroidPlatform()) {
+                item {
+                    SmallTitle(text = "平台")
+                }
+                item {
+                    BasicComponent(
+                        title = "平台专属设置",
+                        summary = "屏幕刷新率、图片选择器、默认打开链接",
+                        onClick = onPlatformSettingClick,
+                    )
+                }
+            }
+
             item {
                 SmallTitle(text = "存储")
             }

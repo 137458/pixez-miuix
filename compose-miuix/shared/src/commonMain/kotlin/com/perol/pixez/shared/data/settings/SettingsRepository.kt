@@ -365,6 +365,38 @@ class SettingsRepository(
         )
         set(value) { settings[SettingsKeys.COPY_INFO_TEXT] = value }
 
+    // region Android 平台专属
+    /**
+     * 屏幕显示模式索引。
+     * 旧版 Flutter 用 `display_mode` 键存 int，默认 0 表示跟随系统/第一个模式。
+     */
+    var displayMode: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.DISPLAY_MODE, 0)
+        set(value) { settings[SettingsKeys.DISPLAY_MODE] = value }
+
+    /**
+     * 图片选择器类型。
+     * 任务要求暴露为 String，但旧版 Flutter 用 `image_picker_type_renew` 键存 int 0/1。
+     * 读取时优先按 String，再兼容旧版 int，最后回退到空字符串；写入统一用新键 String。
+     */
+    var imagePickerType: String
+        get() = settings.getStringOrIntLegacyFallback(
+            SettingsKeys.IMAGE_PICKER_TYPE,
+            "",
+        )
+        set(value) { settings[SettingsKeys.IMAGE_PICKER_TYPE] = value }
+
+    /**
+     * 是否已开启「默认打开链接」（Android 12+）。
+     * 旧版 Flutter 无此持久化键，仅通过 OpenSettingPlugin 跳转系统设置；
+     * 新版增加布尔记录，用于在平台设置页展示开关状态。
+     */
+    var openByDefault: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.OPEN_BY_DEFAULT, false)
+        set(value) { settings[SettingsKeys.OPEN_BY_DEFAULT] = value }
+
+    // endregion
+
     // region 低级访问
     /**
      * 读取任意旧键的字符串值，优先读新键，再读带 `flutter.` 前缀的旧键。
@@ -502,6 +534,24 @@ private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? {
     val value: Boolean? = this[key]
     if (value != null) return value
     return this[SettingsRepository_LegacyPrefix + key]
+}
+
+/**
+ * 兼容旧版将图片选择器类型存为 int 0/1 的键。
+ * 新版统一按 String 存储，读取时若当前键为 String 则直接返回；
+ * 若不存在则尝试读取 int 并转换为 "0"/"1"；带 `flutter.` 前缀的旧键同样处理。
+ */
+private fun Settings.getStringOrIntLegacyFallback(key: String, default: String): String {
+    val stringValue: String? = this[key]
+    if (stringValue != null) return stringValue
+    val intValue: Int? = try { this[key] } catch (_: Exception) { null }
+    if (intValue != null) return intValue.toString()
+    val legacyKey = SettingsRepository_LegacyPrefix + key
+    val legacyString: String? = this[legacyKey]
+    if (legacyString != null) return legacyString
+    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyInt != null) return legacyInt.toString()
+    return default
 }
 
 private const val SettingsRepository_LegacyPrefix = "flutter."
