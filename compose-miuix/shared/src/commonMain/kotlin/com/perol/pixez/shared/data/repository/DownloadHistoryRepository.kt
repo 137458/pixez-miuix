@@ -7,9 +7,12 @@ import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * 下载任务历史仓库：封装对旧 task.db 的读写，支持记录、查询与清理下载历史。
+ * 所有公开方法均为 suspend，内部切到 [Dispatchers.IO] 执行，避免阻塞 UI 线程。
  *
  * 复用旧 Flutter 遗留的 `task` 表结构，status 字段映射如下：
  * - Pending = 0
@@ -30,8 +33,8 @@ class DownloadHistoryRepository(
      *
      * 不依赖 [remoteUrl] 反查 ID，因此允许同一 URL 产生多条历史记录（重复下载）。
      */
-    fun saveTask(task: DownloadTaskHistory): DownloadTaskHistory {
-        return if (task.id > 0) {
+    suspend fun saveTask(task: DownloadTaskHistory): DownloadTaskHistory = withContext(Dispatchers.IO) {
+        if (task.id > 0) {
             queries.insertOrReplace(
                 id = task.id,
                 title = task.title,
@@ -73,7 +76,7 @@ class DownloadHistoryRepository(
      *
      * @param id 已有历史记录 ID；大于 0 时覆盖对应行，否则新增。
      */
-    fun saveTask(
+    suspend fun saveTask(
         task: DownloadTask,
         illust: Illust,
         id: Long = 0L,
@@ -91,14 +94,14 @@ class DownloadHistoryRepository(
             userId = illust.user.id,
             medium = illust.imageUrls.medium,
         )
-        return saveTask(history)
+        return withContext(Dispatchers.IO) { saveTask(history) }
     }
 
     /**
      * 查询全部历史记录，按时间倒序排列。
      */
-    fun getAllTasks(): List<DownloadTaskHistory> {
-        return queries.selectAllPagedDesc(
+    suspend fun getAllTasks(): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+        queries.selectAllPagedDesc(
             value_ = Long.MAX_VALUE,
             value__ = 0L,
         ).executeAsList().map { it.toHistory() }
@@ -107,8 +110,8 @@ class DownloadHistoryRepository(
     /**
      * 按状态查询历史记录，按时间倒序排列。
      */
-    fun getTasksByStatus(status: DownloadStatus): List<DownloadTaskHistory> {
-        return queries.selectByStatusPagedDesc(
+    suspend fun getTasksByStatus(status: DownloadStatus): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+        queries.selectByStatusPagedDesc(
             status = status.toDbValue(),
             value_ = Long.MAX_VALUE,
             value__ = 0L,
@@ -118,14 +121,14 @@ class DownloadHistoryRepository(
     /**
      * 删除指定 ID 的历史记录。
      */
-    fun deleteTask(id: Long) {
+    suspend fun deleteTask(id: Long) = withContext(Dispatchers.IO) {
         queries.deleteById(id)
     }
 
     /**
      * 清空全部下载历史。
      */
-    fun clearAll() {
+    suspend fun clearAll() = withContext(Dispatchers.IO) {
         queries.deleteAll()
     }
 

@@ -96,6 +96,19 @@ class BanRepository(
         }
     }
 
+    /**
+     * 原子替换全部屏蔽作品记录：在单个事务内先清空再插入。
+     * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
+     */
+    suspend fun replaceAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
+        illustQueries.transaction {
+            illustQueries.deleteAll()
+            items.forEach { item ->
+                illustQueries.insert(item.illustId, item.name)
+            }
+        }
+    }
+
     // endregion
 
     // region 屏蔽画师
@@ -162,6 +175,19 @@ class BanRepository(
      */
     suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
         userQueries.transaction {
+            items.forEach { item ->
+                userQueries.insert(item.userId, item.name)
+            }
+        }
+    }
+
+    /**
+     * 原子替换全部屏蔽画师记录：在单个事务内先清空再插入。
+     * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
+     */
+    suspend fun replaceAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
+        userQueries.transaction {
+            userQueries.deleteAll()
             items.forEach { item ->
                 userQueries.insert(item.userId, item.name)
             }
@@ -244,6 +270,19 @@ class BanRepository(
      */
     suspend fun insertAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
         tagQueries.transaction {
+            items.forEach { item ->
+                tagQueries.insert(item.translateName, item.name)
+            }
+        }
+    }
+
+    /**
+     * 原子替换全部屏蔽标签记录：在单个事务内先清空再插入。
+     * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
+     */
+    suspend fun replaceAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
+        tagQueries.transaction {
+            tagQueries.deleteAll()
             items.forEach { item ->
                 tagQueries.insert(item.translateName, item.name)
             }

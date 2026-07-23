@@ -21,6 +21,7 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
@@ -145,11 +146,14 @@ fun UpdateSettingScreen(
                             checked = ignoredVersion != null && ignoredVersion == latestVersion,
                             onCheckedChange = { checked ->
                                 val newValue = if (checked) latestVersion else null
-                                // Setting 写操作切到 IO 线程，避免阻塞主线程。
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    settingsRepository.ignoreUpdateVersion = newValue
+                                coroutineScope.launch {
+                                    // 先完成持久化写操作，待 Setting 写入成功后再更新本地 UI 状态，
+                                    // 避免写入失败时 UI 与持久化状态不一致。
+                                    withContext(Dispatchers.IO) {
+                                        settingsRepository.ignoreUpdateVersion = newValue
+                                    }
+                                    ignoredVersion = newValue
                                 }
-                                ignoredVersion = newValue
                             },
                             enabled = hasNewVersion,
                         )

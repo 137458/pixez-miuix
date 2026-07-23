@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -92,7 +93,7 @@ fun HistoryScreen(
         repository,
         refreshToken,
     ) {
-        value = runCatchingNonCancel {
+        value = suspendRunCatchingNonCancel {
             withContext(Dispatchers.IO) { repository.getAll() }
         }
     }
@@ -223,13 +224,18 @@ fun HistoryScreen(
                     onConfirm = {
                         isProcessing = true
                         coroutineScope.launch {
-                            runCatchingNonCancel { repository.clearAll() }
-                                .onSuccess { refreshToken++ }
-                                .onFailure { toastMessage = "清空失败: ${it.message}" }
-                                .also {
-                                    isProcessing = false
-                                    showClearConfirm = false
+                            try {
+                                suspendRunCatchingNonCancel {
+                                    // 数据库清空是同步写操作，切到 IO 调度器避免阻塞主线程。
+                                    withContext(Dispatchers.IO) { repository.clearAll() }
                                 }
+                                    .onSuccess { refreshToken++ }
+                                    .onFailure { toastMessage = "清空失败: ${it.message}" }
+                            } finally {
+                                // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
+                                isProcessing = false
+                                showClearConfirm = false
+                            }
                         }
                     },
                     onCancel = {
@@ -248,13 +254,18 @@ fun HistoryScreen(
                     onConfirm = {
                         isProcessing = true
                         coroutineScope.launch {
-                            runCatchingNonCancel { repository.deleteById(deleteId) }
-                                .onSuccess { refreshToken++ }
-                                .onFailure { toastMessage = "删除失败: ${it.message}" }
-                                .also {
-                                    isProcessing = false
-                                    itemToDelete = null
+                            try {
+                                suspendRunCatchingNonCancel {
+                                    // 数据库删除是同步写操作，切到 IO 调度器避免阻塞主线程。
+                                    withContext(Dispatchers.IO) { repository.deleteById(deleteId) }
                                 }
+                                    .onSuccess { refreshToken++ }
+                                    .onFailure { toastMessage = "删除失败: ${it.message}" }
+                            } finally {
+                                // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
+                                isProcessing = false
+                                itemToDelete = null
+                            }
                         }
                     },
                     onCancel = {

@@ -50,10 +50,13 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -104,7 +107,10 @@ fun DownloadTaskScreen(
         refreshToken,
         retryCount,
     ) {
-        value = runCatchingNonCancel { downloadHistoryRepository.getAllTasks() }
+        // 在 IO 线程执行数据库查询，避免主线程被 SQLite 阻塞。
+        value = suspendRunCatchingNonCancel {
+            withContext(Dispatchers.IO) { downloadHistoryRepository.getAllTasks() }
+        }
     }
 
     // 通过 derivedStateOf 派生筛选后的列表：只有当底层数据或筛选条件真正改变时才会触发重组，
@@ -189,7 +195,7 @@ fun DownloadTaskScreen(
                                                 processingTaskIds = processingTaskIds + task.id
                                                 coroutineScope.launch {
                                                     try {
-                                                        runCatchingNonCancel {
+                                                        suspendRunCatchingNonCancel {
                                                             downloadRepository.retry(task)
                                                         }.onSuccess {
                                                             toastMessage = "重试成功"
@@ -207,8 +213,11 @@ fun DownloadTaskScreen(
                                                 processingTaskIds = processingTaskIds + task.id
                                                 coroutineScope.launch {
                                                     try {
-                                                        runCatchingNonCancel {
-                                                            downloadHistoryRepository.deleteTask(task.id)
+                                                        // 删除单条记录时显式切到 IO，保持与仓库方法一致的线程语义。
+                                                        suspendRunCatchingNonCancel {
+                                                            withContext(Dispatchers.IO) {
+                                                                downloadHistoryRepository.deleteTask(task.id)
+                                                            }
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
@@ -244,9 +253,11 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 先查询所有失败任务；没有失败任务时给出明确提示，避免误导性成功文案。
-                                val failedTasks = runCatchingNonCancel {
-                                    downloadHistoryRepository.getTasksByStatus(DownloadStatus.Failed)
+                                // 在 IO 线程查询所有失败任务；没有失败任务时给出明确提示，避免误导性成功文案。
+                                val failedTasks = suspendRunCatchingNonCancel {
+                                    withContext(Dispatchers.IO) {
+                                        downloadHistoryRepository.getTasksByStatus(DownloadStatus.Failed)
+                                    }
                                 }.getOrDefault(emptyList())
                                 if (failedTasks.isEmpty()) {
                                     toastMessage = "没有失败任务需要重试"
@@ -257,7 +268,7 @@ fun DownloadTaskScreen(
                                 var successCount = 0
                                 var failureCount = 0
                                 failedTasks.forEach { task ->
-                                    runCatchingNonCancel { downloadRepository.retry(task) }
+                                    suspendRunCatchingNonCancel { downloadRepository.retry(task) }
                                         .onSuccess { successCount++ }
                                         .onFailure { failureCount++ }
                                 }
@@ -293,18 +304,24 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 查询所有已完成任务；没有已完成任务时给出明确提示，避免误导性成功文案。
-                                val completedTasks = runCatchingNonCancel {
-                                    downloadHistoryRepository.getTasksByStatus(DownloadStatus.Success)
+                                // 在 IO 线程查询所有已完成任务；没有已完成任务时给出明确提示，避免误导性成功文案。
+                                val completedTasks = suspendRunCatchingNonCancel {
+                                    withContext(Dispatchers.IO) {
+                                        downloadHistoryRepository.getTasksByStatus(DownloadStatus.Success)
+                                    }
                                 }.getOrDefault(emptyList())
                                 if (completedTasks.isEmpty()) {
                                     toastMessage = "没有已完成任务"
                                     return@launch
                                 }
 
-                                // 数据库暂无按状态删除接口，逐条删除。
+                                // 数据库暂无按状态删除接口，逐条在 IO 线程删除。
                                 completedTasks.forEach { task ->
-                                    runCatchingNonCancel { downloadHistoryRepository.deleteTask(task.id) }
+                                    suspendRunCatchingNonCancel {
+                                        withContext(Dispatchers.IO) {
+                                            downloadHistoryRepository.deleteTask(task.id)
+                                        }
+                                    }
                                 }
                                 toastMessage = "已清空已完成任务"
                                 refreshToken++

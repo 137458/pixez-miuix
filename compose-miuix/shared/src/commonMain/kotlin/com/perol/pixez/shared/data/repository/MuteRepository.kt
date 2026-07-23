@@ -32,21 +32,18 @@ class MuteRepository(
     }
 
     /**
-     * 导入屏蔽数据，分别写入对应数据库表。
+     * 导入屏蔽数据，分别原子替换对应数据库表。
      *
-     * 导入前会先清空旧记录，避免重复与冲突。
+     * 每张表在单个事务内完成清空+插入，避免插入失败时旧数据已丢失。
      */
     suspend fun importMuteData(data: MuteData) = withContext(Dispatchers.IO) {
-        banRepository.clearAllBanIllusts()
-        banRepository.insertAllBanIllusts(
+        banRepository.replaceAllBanIllusts(
             data.illusts.map { BanRepository.BanIllust(it.id ?: 0L, it.illustId, it.name) },
         )
-        banRepository.clearAllBanUsers()
-        banRepository.insertAllBanUsers(
+        banRepository.replaceAllBanUsers(
             data.users.map { BanRepository.BanUser(it.id ?: 0L, it.userId, it.name) },
         )
-        banRepository.clearAllBanTags()
-        banRepository.insertAllBanTags(
+        banRepository.replaceAllBanTags(
             data.tags.map { BanRepository.BanTag(it.id ?: 0L, it.name, it.translateName) },
         )
     }

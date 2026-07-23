@@ -107,19 +107,19 @@ private fun String.normalizeVersion(): String {
 /**
  * 按版本号各段数字大小比较。
  *
- * 遇到无法解析为整数的段时抛出 [IllegalArgumentException]，避免静默忽略导致的错误比较结果。
+ * 遇到无法解析为整数的段时安全降级为 0，并记录警告日志；不会因外部返回异常版本格式而崩溃。
  *
  * @return 正数表示 v1 > v2，负数表示 v1 < v2，0 表示相等。
  */
 private fun compareVersion(v1: String, v2: String): Int {
-    val parts1 = v1.split('.').map {
-        it.toIntOrNull()
-            ?: throw IllegalArgumentException("无法解析版本号段: '$it'（完整版本: '$v1'）")
+    fun parseParts(version: String, full: String): List<Int> = version.split('.').map { segment ->
+        segment.toIntOrNull() ?: run {
+            Napier.w("无法解析版本号段: '$segment'（完整版本: '$full'），降级为 0 处理")
+            0
+        }
     }
-    val parts2 = v2.split('.').map {
-        it.toIntOrNull()
-            ?: throw IllegalArgumentException("无法解析版本号段: '$it'（完整版本: '$v2'）")
-    }
+    val parts1 = parseParts(v1, v1)
+    val parts2 = parseParts(v2, v2)
     val maxLength = maxOf(parts1.size, parts2.size)
     for (i in 0 until maxLength) {
         val p1 = parts1.getOrElse(i) { 0 }

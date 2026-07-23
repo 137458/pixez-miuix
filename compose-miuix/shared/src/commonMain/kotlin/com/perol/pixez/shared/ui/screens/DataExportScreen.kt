@@ -124,38 +124,42 @@ fun DataExportScreen(
                 onConfirm = { path ->
                     coroutineScope.launch {
                         isProcessing = true
-                        // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
-                        // 结果回到主线程更新 UI 状态。
-                        val result = withContext(Dispatchers.IO) {
-                            if (operation.action == Action.Export) {
-                                performExport(
-                                    operation.type,
-                                    path,
-                                    settingsRepository,
-                                    historyRepository,
-                                    novelHistoryRepository,
-                                    muteRepository,
-                                    json,
-                                )
-                            } else {
-                                performImport(
-                                    operation.type,
-                                    path,
-                                    settingsRepository,
-                                    historyRepository,
-                                    novelHistoryRepository,
-                                    muteRepository,
-                                    json,
-                                )
+                        try {
+                            // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
+                            // 结果回到主线程更新 UI 状态。
+                            val result = withContext(Dispatchers.IO) {
+                                if (operation.action == Action.Export) {
+                                    performExport(
+                                        operation.type,
+                                        path,
+                                        settingsRepository,
+                                        historyRepository,
+                                        novelHistoryRepository,
+                                        muteRepository,
+                                        json,
+                                    )
+                                } else {
+                                    performImport(
+                                        operation.type,
+                                        path,
+                                        settingsRepository,
+                                        historyRepository,
+                                        novelHistoryRepository,
+                                        muteRepository,
+                                        json,
+                                    )
+                                }
                             }
-                        }
-                        isProcessing = false
-                        pendingOperation = null
-                        toastMessage = if (result.isSuccess) {
-                            "${operation.type.title}${operation.action.label}成功"
-                        } else {
-                            val cause = result.exceptionOrNull()?.message ?: "未知错误"
-                            "${operation.type.title}${operation.action.label}失败: $cause"
+                            toastMessage = if (result.isSuccess) {
+                                "${operation.type.title}${operation.action.label}成功"
+                            } else {
+                                val cause = result.exceptionOrNull()?.message ?: "未知错误"
+                                "${operation.type.title}${operation.action.label}失败: $cause"
+                            }
+                        } finally {
+                            // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
+                            isProcessing = false
+                            pendingOperation = null
                         }
                     }
                 },
