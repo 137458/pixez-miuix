@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +32,7 @@ import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -98,7 +98,8 @@ fun SettingsScreen(
 
     // 页面进入时加载一次账号信息。
     LaunchedEffect(accountRepository) {
-        account = runCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        account = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
     }
 
     // 公告板入口动态状态：仅在公告列表非空时显示。
@@ -106,7 +107,7 @@ fun SettingsScreen(
 
     // 页面进入时异步加载公告列表，用于判断「公告板」入口是否显示。
     LaunchedEffect(boardRepository) {
-        boardList = runCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
+        boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
     }
 
     Scaffold(
@@ -139,7 +140,7 @@ fun SettingsScreen(
                         coroutineScope.launch {
                             try {
                                 isLoggingOut = true
-                                runCatchingNonCancel { accountRepository.logout() }
+                                suspendRunCatchingNonCancel { accountRepository.logout() }
                                     .onSuccess { account = null }
                             } finally {
                                 isLoggingOut = false

@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +35,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
@@ -68,7 +68,8 @@ fun CommentsScreen(
     // 登录状态：未登录时禁用发送按钮，与 Hello/New/Spotlight 等页面保持一致。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(Unit) {
-        isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
     // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。
     // 使用 remember：进程恢复时丢失回复目标不会导致功能异常，用户可重新点击回复。
@@ -81,7 +82,7 @@ fun CommentsScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getIllustComments(illustId) }
+        value = suspendRunCatchingNonCancel { repository.getIllustComments(illustId) }
     }
 
     Scaffold(
@@ -112,7 +113,7 @@ fun CommentsScreen(
                     coroutineScope.launch {
                         isSending = true
                         sendError = null
-                        runCatchingNonCancel {
+                        suspendRunCatchingNonCancel {
                             repository.postComment(
                                 illustId = illustId,
                                 comment = inputText,

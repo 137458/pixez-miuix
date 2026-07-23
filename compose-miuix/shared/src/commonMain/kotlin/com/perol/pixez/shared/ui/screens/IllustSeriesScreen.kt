@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,7 +17,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -48,12 +48,13 @@ fun IllustSeriesScreen(
         banRepository,
         settingsRepository,
     ) {
-        val seriesResult = runCatchingNonCancel { repository.getIllustSeries(seriesId) }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeries(seriesId) }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = seriesResult.map { (title, illusts) ->

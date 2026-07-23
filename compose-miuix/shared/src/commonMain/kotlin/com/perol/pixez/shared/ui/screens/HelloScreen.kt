@@ -21,7 +21,7 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -62,7 +62,8 @@ fun HelloScreen(
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
 
     // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
@@ -84,15 +85,15 @@ fun HelloScreen(
         isLoggedIn,
     ) {
         val illustsResult = when (isLoggedIn) {
-            true -> runCatchingNonCancel { repository.getRecommended() }
-            false -> runCatchingNonCancel { repository.getWalkthroughIllusts() }
+            true -> suspendRunCatchingNonCancel { repository.getRecommended() }
+            false -> suspendRunCatchingNonCancel { repository.getWalkthroughIllusts() }
             null -> null
         }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult?.map { illusts ->

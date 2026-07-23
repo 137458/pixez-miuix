@@ -46,7 +46,7 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
@@ -85,7 +85,8 @@ fun IllustDetailScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getIllustDetail(illustId) }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        value = suspendRunCatchingNonCancel { repository.getIllustDetail(illustId) }
     }
 
     val result = state.value
@@ -104,7 +105,7 @@ fun IllustDetailScreen(
 
     // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
     LaunchedEffect(illustId) {
-        runCatchingNonCancel { banRepository.isBanIllust(illustId) }
+        suspendRunCatchingNonCancel { banRepository.isBanIllust(illustId) }
             .onSuccess { isBanned = it }
     }
 
@@ -130,7 +131,7 @@ fun IllustDetailScreen(
                                     try {
                                         isBookmarkLoading = true
                                         bookmarkError = null
-                                        runCatchingNonCancel {
+                                        suspendRunCatchingNonCancel {
                                             if (isBookmarked) {
                                                 bookmarkRepository.deleteBookmark(it.id)
                                             } else {
@@ -332,7 +333,7 @@ fun IllustDetailScreen(
                 onBan = {
                     showActionMenu = false
                     coroutineScope.launch {
-                        runCatchingNonCancel {
+                        suspendRunCatchingNonCancel {
                             banRepository.insertBanIllust(it.id, it.title)
                         }.fold(
                             onSuccess = {

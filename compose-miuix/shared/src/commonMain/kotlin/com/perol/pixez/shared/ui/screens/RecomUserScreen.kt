@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +28,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -60,7 +60,8 @@ fun RecomUserScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getRecommendedUsers() }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        value = suspendRunCatchingNonCancel { repository.getRecommendedUsers() }
     }
 
     // 累积的推荐用户列表与下一页链接。
@@ -94,7 +95,7 @@ fun RecomUserScreen(
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
-            runCatchingNonCancel { repository.getRecommendedUsers(url) }
+            suspendRunCatchingNonCancel { repository.getRecommendedUsers(url) }
                 .onSuccess { response ->
                     previews = previews + response.userPreviews
                     nextUrl = response.nextUrl

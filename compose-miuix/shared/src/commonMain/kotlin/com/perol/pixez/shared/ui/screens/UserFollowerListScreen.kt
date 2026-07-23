@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,7 +18,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -44,7 +44,8 @@ fun UserFollowerListScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getUserFollowers(userId) }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        value = suspendRunCatchingNonCancel { repository.getUserFollowers(userId) }
     }
 
     Scaffold(

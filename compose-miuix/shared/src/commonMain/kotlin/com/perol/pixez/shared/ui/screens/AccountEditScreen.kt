@@ -26,7 +26,7 @@ import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -91,7 +91,8 @@ fun AccountEditScreen(
     // 页面进入时加载当前账号，并根据邮箱认证状态预填充当前密码：
     // 仅非邮箱认证账号才预填充已保存密码，与 Flutter 原版逻辑保持一致。
     LaunchedEffect(accountRepository) {
-        runCatchingNonCancel { accountRepository.currentAccount() }
+        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        suspendRunCatchingNonCancel { accountRepository.currentAccount() }
             .onSuccess { loaded ->
                 account = loaded
                 loaded?.let {
@@ -227,7 +228,7 @@ fun AccountEditScreen(
                                 try {
                                     // 提交阶段：启用加载态，调用仓库接口提交账号修改。
                                     isSaving = true
-                                    runCatchingNonCancel {
+                                    suspendRunCatchingNonCancel {
                                         accountRepository.editAccount(
                                             currentPassword = currentPassword,
                                             newPassword = newPassword.takeIf { it.isNotBlank() },

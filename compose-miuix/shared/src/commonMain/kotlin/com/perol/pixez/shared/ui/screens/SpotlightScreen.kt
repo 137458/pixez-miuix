@@ -42,7 +42,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -68,7 +68,8 @@ fun SpotlightScreen(
     // 推荐用户接口需要登录态，未登录时不请求以避免 401。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(accountRepository) {
-        isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
 
     val state = produceState<Result<List<SpotlightArticle>>?>(
@@ -76,7 +77,7 @@ fun SpotlightScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getSpotlightArticles() }
+        value = suspendRunCatchingNonCancel { repository.getSpotlightArticles() }
     }
 
     Scaffold(
@@ -158,7 +159,7 @@ private fun RecomUserRoad(
         initialValue = null,
         repository,
     ) {
-        value = runCatchingNonCancel { repository.getRecommendedUsers() }
+        value = suspendRunCatchingNonCancel { repository.getRecommendedUsers() }
     }
 
     val result = state.value

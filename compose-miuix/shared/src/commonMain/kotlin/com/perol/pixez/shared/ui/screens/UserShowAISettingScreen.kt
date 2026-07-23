@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,7 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -60,7 +60,8 @@ fun UserShowAISettingScreen(
         if (isUpdating || currentShowAI == value) return
         coroutineScope.launch {
             isUpdating = true
-            runCatchingNonCancel {
+            // 当前处于协程 launch 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+            suspendRunCatchingNonCancel {
                 userRepository.updateUserAISettings(value)
             }.onSuccess { response ->
                 currentShowAI = response.showAI

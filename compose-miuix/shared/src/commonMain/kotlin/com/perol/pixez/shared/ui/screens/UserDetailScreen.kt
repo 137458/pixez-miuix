@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +37,7 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -83,7 +83,8 @@ fun UserDetailScreen(
         repository,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.getUserDetail(userId) }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        value = suspendRunCatchingNonCancel { repository.getUserDetail(userId) }
     }
 
     val result = detailState.value
@@ -154,7 +155,7 @@ fun UserDetailScreen(
                                         try {
                                             isFollowLoading = true
                                             followError = null
-                                            runCatchingNonCancel {
+                                            suspendRunCatchingNonCancel {
                                                 if (isFollowed) {
                                                     bookmarkRepository.unfollowUser(userDetail.user.id)
                                                 } else {
@@ -296,12 +297,12 @@ private fun UserWorksTab(
         banRepository,
         settingsRepository,
     ) {
-        val illustsResult = runCatchingNonCancel { repository.getUserIllusts(userId) }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllusts(userId) }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->
@@ -351,12 +352,12 @@ private fun UserBookmarksTab(
         banRepository,
         settingsRepository,
     ) {
-        val illustsResult = runCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->

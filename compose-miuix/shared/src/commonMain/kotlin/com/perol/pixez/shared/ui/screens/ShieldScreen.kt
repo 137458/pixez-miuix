@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
@@ -23,7 +23,7 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -97,7 +97,8 @@ fun ShieldScreen(
     fun loadAll() {
         coroutineScope.launch {
             isLoading = true
-            runCatchingNonCancel {
+            // 当前处于协程 launch 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+            suspendRunCatchingNonCancel {
                 Triple(
                     banRepository.getAllBanTags(),
                     banRepository.getAllBanUsers(),
@@ -165,7 +166,7 @@ fun ShieldScreen(
                         if (isLoadingAISetting) return@BasicComponent
                         coroutineScope.launch {
                             isLoadingAISetting = true
-                            runCatchingNonCancel {
+                            suspendRunCatchingNonCancel {
                                 userRepository.getUserAISettings()
                             }.onSuccess { response ->
                                 onAISettingClick(response.showAI)
@@ -265,7 +266,7 @@ fun ShieldScreen(
             onConfirm = { name ->
                 coroutineScope.launch {
                     isAddingTag = true
-                    runCatchingNonCancel {
+                    suspendRunCatchingNonCancel {
                         banRepository.insertBanTag(name, translateName = "")
                     }.onSuccess {
                         showAddDialog = false
@@ -295,7 +296,7 @@ fun ShieldScreen(
                 onConfirm = {
                     coroutineScope.launch {
                         isDeleting = true
-                        val result = runCatchingNonCancel {
+                        val result = suspendRunCatchingNonCancel {
                             when (pendingDelete) {
                                 is DeleteTarget.Tag -> banRepository.deleteBanTag(pendingDelete.tag.id)
                                 is DeleteTarget.User -> banRepository.deleteBanUser(pendingDelete.user.id)

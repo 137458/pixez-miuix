@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +32,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
@@ -65,7 +65,8 @@ fun DownloadHistoryScreen(
         retryCount,
         refreshToken,
     ) {
-        value = runCatchingNonCancel { repository.getAllTasks() }
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        value = suspendRunCatchingNonCancel { repository.getAllTasks() }
     }
 
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
@@ -128,7 +129,7 @@ fun DownloadHistoryScreen(
                                         onClick = { onIllustClick(task.illustId) },
                                         onDelete = {
                                             coroutineScope.launch {
-                                                runCatchingNonCancel {
+                                                suspendRunCatchingNonCancel {
                                                     repository.deleteTask(task.id)
                                                 }.onSuccess {
                                                     refreshToken++
@@ -154,7 +155,7 @@ fun DownloadHistoryScreen(
                     onConfirm = {
                         showClearConfirm = false
                         coroutineScope.launch {
-                            runCatchingNonCancel { repository.clearAll() }
+                            suspendRunCatchingNonCancel { repository.clearAll() }
                                 .onSuccess { refreshToken++ }
                         }
                     },

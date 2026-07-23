@@ -32,7 +32,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -69,17 +69,18 @@ fun RankingScreen(
         banRepository,
         settingsRepository,
     ) {
-        val illustsResult = runCatchingNonCancel {
+        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        val illustsResult = suspendRunCatchingNonCancel {
             repository.getRanking(
                 mode = selectedMode.code,
                 date = selectedDate,
             )
         }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->

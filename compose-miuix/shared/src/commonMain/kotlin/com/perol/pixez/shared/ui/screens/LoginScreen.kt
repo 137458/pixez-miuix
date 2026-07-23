@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.openBrowser
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
@@ -134,7 +134,8 @@ fun LoginScreen(
                         try {
                             isLoading = true
                             errorMessage = ""
-                            runCatchingNonCancel {
+                            // 当前处于协程 launch 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+                            suspendRunCatchingNonCancel {
                                 accountRepository.loginWithCode(code.trim())
                             }.onSuccess {
                                 onLoginSuccess()

@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -33,7 +33,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
@@ -72,7 +72,8 @@ fun BoardScreen(
     suspend fun loadBoardList() {
         isRefreshing = true
         loadError = null
-        runCatchingNonCancel { boardRepository.loadBoardList() }
+        // 当前处于 suspend 函数挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
+        suspendRunCatchingNonCancel { boardRepository.loadBoardList() }
             .onSuccess { boardList = it }
             .onFailure { error ->
                 loadError = error

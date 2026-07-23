@@ -13,7 +13,6 @@ import com.perol.pixez.shared.data.model.MetaPage
 import com.perol.pixez.shared.data.model.MetaPageImageUrls
 import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.platform.IllustSaver
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
