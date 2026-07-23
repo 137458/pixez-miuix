@@ -1,0 +1,25 @@
+-- 旧 Flutter 应用的小说浏览历史表。
+-- 对应旧 `Novelpersist.db` 中的 `novelpersist` 表，结构与旧版保持一致。
+CREATE TABLE novelpersist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    novel_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    picture_url TEXT NOT NULL,
+    title TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    time INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM novelpersist ORDER BY time;
+
+insertOrReplace:
+INSERT OR REPLACE INTO novelpersist (
+    id, novel_id, user_id, picture_url, title, user_name, time
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteAll:
+DELETE FROM novelpersist;
+
+-- 为按时间排序的全表查询建立索引，避免数据量增大后全表扫描排序。
+CREATE INDEX IF NOT EXISTS idx_novelpersist_time ON novelpersist(time);

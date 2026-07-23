@@ -24,9 +24,10 @@ private data class GitHubRelease(
 )
 
 /**
- * 复用的 GitHub API HttpClient，配置 JSON、超时与 User-Agent。
+ * 创建用于检查 GitHub Release 的 HttpClient，配置 JSON、超时与 User-Agent。
+ * 由 [AppDependencies] 持有生命周期，也可作为默认客户端使用。
  */
-private val updateCheckClient: HttpClient = HttpClient {
+internal fun createUpdateCheckClient(): HttpClient = HttpClient {
     install(ContentNegotiation) {
         json(
             Json {
@@ -44,13 +45,23 @@ private val updateCheckClient: HttpClient = HttpClient {
 }
 
 /**
+ * 复用的 GitHub API HttpClient，供没有注入能力的调用方作为默认参数使用。
+ */
+internal val defaultUpdateCheckClient: HttpClient by lazy {
+    createUpdateCheckClient()
+}
+
+/**
  * 从 GitHub Release API 异步获取最新版本号。
  *
+ * @param client 执行请求的 HttpClient，默认使用顶层单例以保持兼容。
  * @return 成功返回最新版本号（已去除前导 "v"），失败返回异常。
  */
-suspend fun checkLatestVersion(): Result<String> {
+suspend fun checkLatestVersion(
+    client: HttpClient = defaultUpdateCheckClient,
+): Result<String> {
     return try {
-        val release: GitHubRelease = updateCheckClient
+        val release: GitHubRelease = client
             .get("https://api.github.com/repos/Notsfsssf/pixez-flutter/releases/latest") {
                 header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
             }
@@ -96,11 +107,19 @@ private fun String.normalizeVersion(): String {
 /**
  * 按版本号各段数字大小比较。
  *
+ * 遇到无法解析为整数的段时抛出 [IllegalArgumentException]，避免静默忽略导致的错误比较结果。
+ *
  * @return 正数表示 v1 > v2，负数表示 v1 < v2，0 表示相等。
  */
 private fun compareVersion(v1: String, v2: String): Int {
-    val parts1 = v1.split('.').mapNotNull { it.toIntOrNull() }
-    val parts2 = v2.split('.').mapNotNull { it.toIntOrNull() }
+    val parts1 = v1.split('.').map {
+        it.toIntOrNull()
+            ?: throw IllegalArgumentException("无法解析版本号段: '$it'（完整版本: '$v1'）")
+    }
+    val parts2 = v2.split('.').map {
+        it.toIntOrNull()
+            ?: throw IllegalArgumentException("无法解析版本号段: '$it'（完整版本: '$v2'）")
+    }
     val maxLength = maxOf(parts1.size, parts2.size)
     for (i in 0 until maxLength) {
         val p1 = parts1.getOrElse(i) { 0 }

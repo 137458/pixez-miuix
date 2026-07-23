@@ -73,14 +73,16 @@ fun AccountEditScreen(
     // 密码使用 remember 而非 rememberSaveable，避免明文密码进入 Saved Instance State。
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
+    // 邮箱使用 remember 而非 rememberSaveable：邮箱属于账号敏感信息，不写入 Saved Instance State；
+    // 配置变更后页面会重新加载当前账号并回填邮箱，避免信息泄露。
+    var email by remember { mutableStateOf("") }
 
     // 密码框显示/隐藏切换状态。
     var currentPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var newPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
-    // 保存操作加载态，用于防止重复提交。
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    // 保存操作加载态，用于防止重复提交；使用 remember，配置变更后允许重新提交。
+    var isSaving by remember { mutableStateOf(false) }
 
     // 账号注销二次确认栏显示状态。
     var showDeletionConfirm by rememberSaveable { mutableStateOf(false) }
@@ -206,9 +208,10 @@ fun AccountEditScreen(
                 item {
                     Button(
                         onClick = {
+                            // 校验阶段：若已有保存任务进行中，直接忽略本次点击，防止重复提交。
                             if (isSaving) return@Button
 
-                            // 保存前校验：当前密码与邮箱不能为空，邮箱格式需基本合法。
+                            // 校验阶段：当前密码与邮箱不能为空，邮箱格式需基本合法。
                             if (currentPassword.isBlank()) {
                                 toastMessage = "请输入当前密码"
                                 return@Button
@@ -224,6 +227,7 @@ fun AccountEditScreen(
 
                             coroutineScope.launch {
                                 try {
+                                    // 提交阶段：启用加载态，调用仓库接口提交账号修改。
                                     isSaving = true
                                     runCatchingNonCancel {
                                         accountRepository.editAccount(
@@ -232,15 +236,17 @@ fun AccountEditScreen(
                                             newMailAddress = email.takeIf { it.isNotBlank() },
                                         )
                                     }.onSuccess {
+                                        // 成功处理阶段：提示用户并清空密码框，降低误操作重复提交风险。
                                         toastMessage = "保存成功"
-                                        // 保存成功后清空密码框，降低误操作重复提交风险。
                                         currentPassword = ""
                                         newPassword = ""
                                     }.onFailure { e ->
+                                        // 失败处理阶段：向用户展示错误信息并记录日志。
                                         toastMessage = "保存失败：${e.message}"
                                         Napier.e("保存账号信息失败", e)
                                     }
                                 } finally {
+                                    // 清理阶段：无论成功或失败，都重置加载态以允许再次提交。
                                     isSaving = false
                                 }
                             }

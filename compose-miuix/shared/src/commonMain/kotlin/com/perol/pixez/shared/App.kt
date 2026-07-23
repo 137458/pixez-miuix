@@ -43,6 +43,10 @@ fun App(dependencies: AppDependencies) {
             banRepository = dependencies.banRepository,
             settingsRepository = dependencies.settingsRepository,
             boardRepository = dependencies.boardRepository,
+            historyRepository = dependencies.historyRepository,
+            novelHistoryRepository = dependencies.novelHistoryRepository,
+            muteRepository = dependencies.muteRepository,
+            updateCheckClient = dependencies.updateCheckClient,
         )
     }
 }

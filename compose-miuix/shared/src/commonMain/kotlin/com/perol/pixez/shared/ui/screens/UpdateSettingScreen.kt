@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.ToastMessage
+import io.ktor.client.HttpClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -33,14 +35,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
  * 更新设置页：展示当前版本、检查最新版本、管理忽略更新开关。
  *
  * @param settingsRepository 设置仓库，用于读写忽略版本号。
+ * @param updateCheckClient 检查更新的 HttpClient，由应用生命周期统一管理。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun UpdateSettingScreen(
     settingsRepository: SettingsRepository,
+    updateCheckClient: HttpClient = defaultUpdateCheckClient,
     onBack: () -> Unit,
 ) {
-    // 协程作用域，用于手动与自动触发版本检查。
+    // 协程作用域，用于手动触发版本检查与切到 IO 写 Setting。
     val coroutineScope = rememberCoroutineScope()
 
     // 最新版本号；null 表示尚未获取或获取失败。
@@ -53,18 +57,20 @@ fun UpdateSettingScreen(
     // 当前忽略的版本号，作为本地状态以便开关即时响应。
     var ignoredVersion by remember { mutableStateOf(settingsRepository.ignoreUpdateVersion) }
 
-    // 是否存在可忽略的新版本。
-    val hasNewVersion = latestVersion != null && hasNewVersion(latestVersion!!)
+    // 是否存在可忽略的新版本；使用 ?.let 避免 !! 非空断言。
+    val hasNewVersion = latestVersion?.let { hasNewVersion(it) } ?: false
 
     /**
      * 执行一次版本检查：更新加载态、最新版本号与错误提示。
+     *
+     * 使用 try/finally 保证协程取消时加载态也会被重置，避免按钮/开关永久禁用。
+     * 由 LaunchedEffect 直接调用，确保页面离开后自动检查任务随组合取消而终止。
      */
-    fun performCheck() {
+    suspend fun doCheck() {
         if (isChecking) return
-        coroutineScope.launch {
+        try {
             isChecking = true
-            val result = checkLatestVersion()
-            isChecking = false
+            val result = checkLatestVersion(updateCheckClient)
             result
                 .onSuccess { version ->
                     latestVersion = version
@@ -73,12 +79,14 @@ fun UpdateSettingScreen(
                     val message = error.message ?: "未知错误"
                     toastMessage = "检查更新失败: $message"
                 }
+        } finally {
+            isChecking = false
         }
     }
 
-    // 进入页面时自动检查一次最新版本。
+    // 进入页面时自动检查一次最新版本；LaunchedEffect 会在 Composable 离开组合时自动取消协程。
     LaunchedEffect(Unit) {
-        performCheck()
+        doCheck()
     }
 
     Scaffold(
@@ -137,7 +145,10 @@ fun UpdateSettingScreen(
                             checked = ignoredVersion != null && ignoredVersion == latestVersion,
                             onCheckedChange = { checked ->
                                 val newValue = if (checked) latestVersion else null
-                                settingsRepository.ignoreUpdateVersion = newValue
+                                // Setting 写操作切到 IO 线程，避免阻塞主线程。
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    settingsRepository.ignoreUpdateVersion = newValue
+                                }
                                 ignoredVersion = newValue
                             },
                             enabled = hasNewVersion,
@@ -148,7 +159,7 @@ fun UpdateSettingScreen(
 
             item {
                 Button(
-                    onClick = { performCheck() },
+                    onClick = { coroutineScope.launch { doCheck() } },
                     enabled = !isChecking,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -154,7 +154,12 @@ fun BoardScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp),
                     ) {
-                        items(boardList) { board ->
+                        items(
+                            items = boardList,
+                            // 公告模型无唯一 id，用标题与起始日期组合作为稳定 key，
+                            // 避免列表项在刷新或重组时发生不必要的复用错位。
+                            key = { it.title + it.startDate },
+                        ) { board ->
                             BoardItem(
                                 board = board,
                                 onLinkClick = { url -> openUrlOrToast(url) { toastMessage = it } },
@@ -225,7 +230,7 @@ private fun HtmlText(
     Text(
         text = annotatedString,
         style = style,
-        modifier = modifier.pointerInput(Unit) {
+        modifier = modifier.pointerInput(annotatedString) {
             // 通过 pointerInput 手动检测点击位置，再查询该位置是否存在 URL 注解；
             // 这样可以在不依赖 ClickableText 的情况下实现链接点击。
             detectTapGestures { offset ->
@@ -281,31 +286,34 @@ private fun parseHtmlToAnnotatedString(
             index = tagEnd + 1
 
             if (rawTag.startsWith('/')) {
-                // 处理闭标签：当前只处理 </a> 来结束链接注解。
+                // 处理闭标签：当前只处理 </a> 来结束链接注解，
+                // 同时兼容非标准的 </br> 写法。
                 val tagName = rawTag.substring(1).lowercase().substringBefore(' ')
-                if (tagName == "a") {
-                    pendingLinkUrl?.let { url ->
-                        addStringAnnotation(URL_ANNOTATION_TAG, url, pendingLinkStart, length)
-                        addStyle(
-                            SpanStyle(
-                                color = linkColor,
-                                textDecoration = TextDecoration.Underline,
-                            ),
-                            pendingLinkStart,
-                            length,
-                        )
+                when (tagName) {
+                    "a" -> {
+                        pendingLinkUrl?.let { url ->
+                            addStringAnnotation(URL_ANNOTATION_TAG, url, pendingLinkStart, length)
+                            addStyle(
+                                SpanStyle(
+                                    color = linkColor,
+                                    textDecoration = TextDecoration.Underline,
+                                ),
+                                pendingLinkStart,
+                                length,
+                            )
+                        }
+                        pendingLinkUrl = null
+                        pendingLinkStart = -1
                     }
-                    pendingLinkUrl = null
-                    pendingLinkStart = -1
+
+                    "br" -> append('\n')
                 }
             } else {
-                // 处理开标签与空标签。
+                // 处理开标签与空标签，去掉标签名末尾的 '/' 以兼容 <br/>、<br /> 等自闭合写法。
                 val firstSpace = rawTag.indexOf(' ')
-                val tagName = if (firstSpace == -1) {
-                    rawTag.lowercase()
-                } else {
-                    rawTag.substring(0, firstSpace).lowercase()
-                }
+                val tagName = rawTag.substring(0, if (firstSpace == -1) rawTag.length else firstSpace)
+                    .lowercase()
+                    .trimEnd('/')
                 val attributes = if (firstSpace == -1) "" else rawTag.substring(firstSpace + 1)
 
                 when (tagName) {
@@ -340,9 +348,12 @@ private fun extractHref(attributes: String): String? {
 
 /**
  * 反转义常见 HTML 实体，避免标签与文本被错误解析。
+ *
+ * 先处理数值实体（十进制 `&#123;` 与十六进制 `&#x7B;`），再处理命名实体。
+ * 超出 BMP 或无法解析的数值实体保留原样，避免误替换。
  */
 private fun String.unescapeHtmlEntities(): String {
-    return this
+    return this.decodeNumericEntities()
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&amp;", "&")
@@ -351,6 +362,23 @@ private fun String.unescapeHtmlEntities(): String {
         .replace("&#x27;", "'")
         .replace("&#x2F;", "/")
         .replace("&nbsp;", " ")
+}
+
+/**
+ * 解码 HTML 数值实体。
+ *
+ * 支持 `&#NNNN;`（十进制）与 `&#xHHHH;`（十六进制）两种形式，
+ * 仅将落在基本多文种平面（BMP）内的码点转换为对应字符。
+ */
+private fun String.decodeNumericEntities(): String {
+    return replace(Regex("&#([0-9]+);|&#x([0-9a-fA-F]+);")) { match ->
+        val code = match.groups[1]?.value?.toIntOrNull()
+            ?: match.groups[2]?.value?.toIntOrNull(16)
+        when {
+            code != null && code in 0..0xFFFF -> code.toChar().toString()
+            else -> match.value
+        }
+    }
 }
 
 /**

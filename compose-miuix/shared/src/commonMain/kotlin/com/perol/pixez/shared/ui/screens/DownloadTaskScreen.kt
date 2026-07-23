@@ -26,12 +26,14 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,6 +68,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * 支持点击跳转作品详情、重试失败任务、删除单条任务、清空已完成任务。
  *
  * 运行中任务列表每秒自动刷新，以跟踪下载状态变化。
+ * 为避免筛选切换或轮询导致全量重组，所有任务只加载一次，再通过 [derivedStateOf] 按筛选条件派生子列表。
  */
 @Composable
 fun DownloadTaskScreen(
@@ -74,8 +77,8 @@ fun DownloadTaskScreen(
     downloadRepository: DownloadRepository,
     downloadHistoryRepository: DownloadHistoryRepository,
 ) {
-    // 当前选中的筛选标签：0=全部，1=运行中，2=完成，3=失败。
-    var selectedFilter by rememberSaveable { mutableIntStateOf(0) }
+    // 当前选中的筛选标签，使用 enum + Saver 保证类型安全与进程恢复。
+    var selectedFilter by rememberSaveable(stateSaver = TaskFilterSaver) { mutableStateOf(TaskFilter.All) }
     // 用于触发列表重新加载的令牌；删除/重试/清空后自增。
     var refreshToken by rememberSaveable { mutableIntStateOf(0) }
     // 初始加载失败时自增，触发 produceState 重新加载。
@@ -94,30 +97,23 @@ fun DownloadTaskScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // 使用 produceState 从数据库加载任务列表；筛选、刷新令牌或重试计数变化时自动重新加载。
+    // 一次性加载全部任务；运行中标签通过 refreshToken 轮询触发重新加载。
     val state = produceState<Result<List<DownloadTaskHistory>>?>(
         initialValue = null,
         downloadHistoryRepository,
-        selectedFilter,
         refreshToken,
         retryCount,
     ) {
-        value = runCatchingNonCancel {
-            when (selectedFilter) {
-                FILTER_ALL -> downloadHistoryRepository.getAllTasks()
-                // 「运行中」同时包含正在下载与等待中的任务，避免 Pending 任务在分类视图中不可见。
-                FILTER_RUNNING -> downloadHistoryRepository.getTasksByStatus(DownloadStatus.Downloading) +
-                    downloadHistoryRepository.getTasksByStatus(DownloadStatus.Pending)
-                FILTER_COMPLETED -> downloadHistoryRepository.getTasksByStatus(DownloadStatus.Success)
-                FILTER_FAILED -> downloadHistoryRepository.getTasksByStatus(DownloadStatus.Failed)
-                else -> downloadHistoryRepository.getAllTasks()
-            }
-        }
+        value = runCatchingNonCancel { downloadHistoryRepository.getAllTasks() }
     }
+
+    // 通过 derivedStateOf 派生筛选后的列表：只有当底层数据或筛选条件真正改变时才会触发重组，
+    // 避免运行中轮询每秒导致全量列表重组。
+    val filteredTasks by remember { derivedStateOf { state.value?.getOrNull()?.filter(selectedFilter::matches) } }
 
     // 筛选为「运行中」时启动定时器，每秒刷新一次以跟踪下载进度与状态变化。
     LaunchedEffect(selectedFilter) {
-        if (selectedFilter != FILTER_RUNNING) return@LaunchedEffect
+        if (selectedFilter != TaskFilter.Running) return@LaunchedEffect
         while (true) {
             delay(1000L)
             refreshToken++
@@ -168,10 +164,10 @@ fun DownloadTaskScreen(
                     null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
                     else -> when {
                         result.isSuccess -> {
-                            val tasks = result.getOrNull().orEmpty()
+                            val tasks = filteredTasks.orEmpty()
                             if (tasks.isEmpty()) {
                                 EmptyPlaceholder(
-                                    message = emptyMessage(selectedFilter),
+                                    message = selectedFilter.emptyMessage(),
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             } else {
@@ -248,10 +244,16 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 先查询所有失败任务，再逐个重试；单个失败不影响其他任务。
+                                // 先查询所有失败任务；没有失败任务时给出明确提示，避免误导性成功文案。
                                 val failedTasks = runCatchingNonCancel {
                                     downloadHistoryRepository.getTasksByStatus(DownloadStatus.Failed)
                                 }.getOrDefault(emptyList())
+                                if (failedTasks.isEmpty()) {
+                                    toastMessage = "没有失败任务需要重试"
+                                    return@launch
+                                }
+
+                                // 逐个重试；单个失败不影响其他任务。
                                 var successCount = 0
                                 var failureCount = 0
                                 failedTasks.forEach { task ->
@@ -291,10 +293,16 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 查询所有已完成任务并逐条删除；数据库暂无按状态删除接口。
+                                // 查询所有已完成任务；没有已完成任务时给出明确提示，避免误导性成功文案。
                                 val completedTasks = runCatchingNonCancel {
                                     downloadHistoryRepository.getTasksByStatus(DownloadStatus.Success)
                                 }.getOrDefault(emptyList())
+                                if (completedTasks.isEmpty()) {
+                                    toastMessage = "没有已完成任务"
+                                    return@launch
+                                }
+
+                                // 数据库暂无按状态删除接口，逐条删除。
                                 completedTasks.forEach { task ->
                                     runCatchingNonCancel { downloadHistoryRepository.deleteTask(task.id) }
                                 }
@@ -323,20 +331,44 @@ fun DownloadTaskScreen(
     }
 }
 
-// 筛选标签常量，避免魔法数字。
-private const val FILTER_ALL = 0
-private const val FILTER_RUNNING = 1
-private const val FILTER_COMPLETED = 2
-private const val FILTER_FAILED = 3
+/**
+ * 下载任务筛选条件，替代 Int 常量以提升类型安全。
+ */
+private enum class TaskFilter(val label: String) {
+    All("全部"),
+    Running("运行中"),
+    Completed("完成"),
+    Failed("失败"),
+}
 
 /**
- * 根据当前筛选标签返回空态提示文案。
+ * 用于 [rememberSaveable] 保存/恢复 [TaskFilter] 的 [Saver]。
  */
-private fun emptyMessage(filter: Int): String = when (filter) {
-    FILTER_RUNNING -> "暂无运行中的任务"
-    FILTER_COMPLETED -> "暂无已完成的任务"
-    FILTER_FAILED -> "暂无失败的任务"
-    else -> "暂无下载任务"
+private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
+    save = { it.name },
+    restore = { name -> TaskFilter.entries.find { it.name == name } ?: TaskFilter.All },
+)
+
+/**
+ * 根据当前筛选条件返回空态提示文案（exhaustive when）。
+ */
+private fun TaskFilter.emptyMessage(): String = when (this) {
+    TaskFilter.All -> "暂无下载任务"
+    TaskFilter.Running -> "暂无运行中的任务"
+    TaskFilter.Completed -> "暂无已完成的任务"
+    TaskFilter.Failed -> "暂无失败的任务"
+}
+
+/**
+ * 判断一条历史记录是否匹配当前筛选条件（exhaustive when）。
+ *
+ * 「运行中」同时包含正在下载与等待中的任务，避免 Pending 任务在分类视图中不可见。
+ */
+private fun TaskFilter.matches(task: DownloadTaskHistory): Boolean = when (this) {
+    TaskFilter.All -> true
+    TaskFilter.Running -> task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Pending
+    TaskFilter.Completed -> task.status == DownloadStatus.Success
+    TaskFilter.Failed -> task.status == DownloadStatus.Failed
 }
 
 /**
@@ -344,22 +376,19 @@ private fun emptyMessage(filter: Int): String = when (filter) {
  */
 @Composable
 private fun FilterTabRow(
-    selectedFilter: Int,
-    onFilterSelected: (Int) -> Unit,
+    selectedFilter: TaskFilter,
+    onFilterSelected: (TaskFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 使用 remember 缓存标签列表，避免每次重组重新创建。
-    val labels = remember { listOf("全部", "运行中", "完成", "失败") }
-
     Row(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        labels.forEachIndexed { index, label ->
+        TaskFilter.entries.forEach { filter ->
             FilterTab(
-                label = label,
-                selected = selectedFilter == index,
-                onClick = { onFilterSelected(index) },
+                label = filter.label,
+                selected = filter == selectedFilter,
+                onClick = { onFilterSelected(filter) },
                 modifier = Modifier.weight(1f),
             )
         }

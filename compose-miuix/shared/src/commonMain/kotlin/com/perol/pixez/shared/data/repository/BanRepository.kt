@@ -85,6 +85,17 @@ class BanRepository(
         illustQueries.deleteAll()
     }
 
+    /**
+     * 批量导入屏蔽作品记录，事务内逐条写入并替换已存在记录。
+     */
+    suspend fun insertAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
+        illustQueries.transaction {
+            items.forEach { item ->
+                illustQueries.insert(item.illustId, item.name)
+            }
+        }
+    }
+
     // endregion
 
     // region 屏蔽画师
@@ -144,6 +155,17 @@ class BanRepository(
      */
     suspend fun clearAllBanUsers() = withContext(Dispatchers.IO) {
         userQueries.deleteAll()
+    }
+
+    /**
+     * 批量导入屏蔽画师记录，事务内逐条写入并替换已存在记录。
+     */
+    suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
+        userQueries.transaction {
+            items.forEach { item ->
+                userQueries.insert(item.userId, item.name)
+            }
+        }
     }
 
     // endregion
@@ -215,6 +237,17 @@ class BanRepository(
      */
     suspend fun clearAllBanTags() = withContext(Dispatchers.IO) {
         tagQueries.deleteAll()
+    }
+
+    /**
+     * 批量导入屏蔽标签记录，事务内逐条写入并替换已存在记录。
+     */
+    suspend fun insertAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
+        tagQueries.transaction {
+            items.forEach { item ->
+                tagQueries.insert(item.translateName, item.name)
+            }
+        }
     }
 
     // endregion

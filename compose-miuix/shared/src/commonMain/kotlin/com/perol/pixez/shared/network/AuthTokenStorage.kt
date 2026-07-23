@@ -116,6 +116,37 @@ class AuthTokenStorage(
     }
 
     /**
+     * 原子更新当前账号。
+     *
+     * 在 Mutex 保护下读取当前账号，调用 [transform] 生成新账号对象，再将结果写回数据库。
+     * 读取、transform、写入整个流程串行化，避免并发操作导致的数据覆盖或丢失。
+     * [transform] 允许挂起，因此可在其中执行网络请求后再返回更新后的账号。
+     *
+     * @param transform 接收当前账号（未登录时为 null），返回更新后的账号；返回 null 表示不写入。
+     */
+    suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = mutex.withLock {
+        val current = queries.selectAll().executeAsList().firstOrNull()
+        val updated = transform(current)
+        if (updated != null) {
+            queries.insertOrReplace(
+                id = updated.id,
+                access_token = updated.access_token,
+                refresh_token = updated.refresh_token,
+                device_token = updated.device_token,
+                user_id = updated.user_id,
+                user_image = updated.user_image,
+                name = updated.name,
+                password = updated.password,
+                account = updated.account,
+                mail_address = updated.mail_address,
+                is_premium = updated.is_premium,
+                x_restrict = updated.x_restrict,
+                is_mail_authorized = updated.is_mail_authorized,
+            )
+        }
+    }
+
+    /**
      * 清空所有账号信息，相当于登出。
      */
     suspend fun clear() = mutex.withLock {

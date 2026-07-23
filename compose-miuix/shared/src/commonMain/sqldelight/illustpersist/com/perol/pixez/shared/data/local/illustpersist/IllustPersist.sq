@@ -11,10 +11,13 @@ CREATE TABLE illustpersist (
 );
 
 selectAll:
-SELECT * FROM illustpersist ORDER BY time;
+SELECT * FROM illustpersist ORDER BY time LIMIT :limit;
 
 selectByIllustId:
 SELECT * FROM illustpersist WHERE illust_id = ?;
+
+-- 为按作品 ID 查询建立索引，避免数据量增大后全表扫描。
+CREATE INDEX IF NOT EXISTS idx_illustpersist_illust_id ON illustpersist(illust_id);
 
 insertOrReplace:
 INSERT OR REPLACE INTO illustpersist (

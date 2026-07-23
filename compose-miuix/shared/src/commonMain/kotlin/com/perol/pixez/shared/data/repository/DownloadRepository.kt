@@ -13,6 +13,7 @@ import com.perol.pixez.shared.data.model.MetaPage
 import com.perol.pixez.shared.data.model.MetaPageImageUrls
 import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.platform.IllustSaver
+import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -76,7 +77,12 @@ class DownloadRepository(
             )
             if (historyId > 0) {
                 // 历史记录已创建时尽力回写失败状态；不因为回写失败而覆盖原始错误。
-                runCatching { historyRepository.saveTask(failedTask, illust, historyId) }
+                // 回写失败至少记录日志，便于排查 DB 状态与真实结果不一致的问题。
+                runCatchingNonCancel { historyRepository.saveTask(failedTask, illust, historyId) }
+                    .onFailure { saveError ->
+                        Napier.e("回写下载历史失败 historyId=$historyId", saveError)
+                        e.addSuppressed(saveError)
+                    }
             }
             failedTask
         }
@@ -113,6 +119,9 @@ class DownloadRepository(
      * @return 包含最终状态的下载任务
      */
     suspend fun retry(history: DownloadTaskHistory): DownloadTask {
+        // 重试必须对应已持久化的历史记录；ID 不合法时 saveTask 会插入新行，导致重复历史。
+        require(history.id > 0) { "重试必须基于已持久化的历史记录" }
+
         // 构造待重试任务对象，状态先置为下载中。
         val pendingTask = DownloadTask(
             illustId = history.illustId,
@@ -123,9 +132,8 @@ class DownloadRepository(
         )
 
         // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
-        if (history.id > 0) {
-            runCatching { historyRepository.saveTask(pendingTask, history.toMinimalIllust(), history.id) }
-        }
+        runCatchingNonCancel { historyRepository.saveTask(pendingTask, history.toMinimalIllust(), history.id) }
+            .onFailure { Napier.e("重试时回写下载历史失败 historyId=${history.id}", it) }
 
         return try {
             // 复用已有 HTTP 下载与平台保存逻辑。
@@ -143,10 +151,12 @@ class DownloadRepository(
                 status = DownloadStatus.Failed,
                 error = e.message ?: "下载失败",
             )
-            if (history.id > 0) {
-                // 历史记录已存在时尽力回写失败状态。
-                runCatching { historyRepository.saveTask(failedTask, history.toMinimalIllust(), history.id) }
-            }
+            // 历史记录已存在时尽力回写失败状态；回写失败则记录日志并将异常附加到原始异常，避免状态不一致被静默吞掉。
+            runCatchingNonCancel { historyRepository.saveTask(failedTask, history.toMinimalIllust(), history.id) }
+                .onFailure { saveError ->
+                    Napier.e("重试失败时回写下载历史失败 historyId=${history.id}", saveError)
+                    e.addSuppressed(saveError)
+                }
             // 抛出异常，让调用方感知重试失败，避免 UI 错误地提示「成功」。
             throw e
         }

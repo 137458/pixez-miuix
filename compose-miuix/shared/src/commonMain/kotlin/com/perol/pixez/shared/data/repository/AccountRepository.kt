@@ -65,40 +65,46 @@ class AccountRepository(
         newPassword: String?,
         newMailAddress: String?,
     ) = networkCall("编辑账号信息失败") {
-        val account = tokenStorage.getCurrentAccount()
-            ?: throw IllegalStateException("没有登录账号，无法编辑账号信息")
+        // 边界校验：当前密码不能为空，避免将空密码发送到服务端。
+        require(currentPassword.isNotBlank()) { "当前密码不能为空" }
 
-        val response = accountClient.post("/api/account/edit") {
-            header("Content-Type", "application/x-www-form-urlencoded")
-            setBody(
-                FormDataContent(
-                    Parameters.build {
-                        append("current_password", currentPassword)
-                        if (!newPassword.isNullOrBlank()) {
-                            append("new_password", newPassword)
-                        }
-                        if (!newMailAddress.isNullOrBlank()) {
-                            append("new_mail_address", newMailAddress)
-                        }
-                    },
-                ),
-            )
-        }.body<AccountEditResponse>()
+        // 使用原子更新接口：读取、网络请求、本地保存全程受 Mutex 保护，消除并发窗口。
+        tokenStorage.updateCurrentAccount { account ->
+            // 读取阶段：当前未登录时直接抛异常，中断后续网络请求与写入。
+            val current = account
+                ?: throw IllegalStateException("没有登录账号，无法编辑账号信息")
 
-        // 解析响应体并校验业务成功标志；失败时抛异常，避免错误更新本地缓存。
-        if (response.error || !response.body.isSucceed) {
-            throw IllegalStateException(
-                response.message.takeIf { it.isNotBlank() } ?: "账号信息修改失败",
+            // 提交阶段：调用 Pixiv 账号编辑接口修改邮箱或密码。
+            val response = accountClient.post("/api/account/edit") {
+                header("Content-Type", "application/x-www-form-urlencoded")
+                setBody(
+                    FormDataContent(
+                        Parameters.build {
+                            append("current_password", currentPassword)
+                            if (!newPassword.isNullOrBlank()) {
+                                append("new_password", newPassword)
+                            }
+                            if (!newMailAddress.isNullOrBlank()) {
+                                append("new_mail_address", newMailAddress)
+                            }
+                        },
+                    ),
+                )
+            }.body<AccountEditResponse>()
+
+            // 响应校验阶段：解析响应体并校验业务成功标志；失败时抛异常，避免错误更新本地缓存。
+            if (response.error || !response.body.isSucceed) {
+                throw IllegalStateException(
+                    response.message.takeIf { it.isNotBlank() } ?: "账号信息修改失败",
+                )
+            }
+
+            // 保存阶段：接口调用成功后，返回更新后的账号对象，由存储层原子写入数据库。
+            current.copy(
+                password = if (!newPassword.isNullOrBlank()) newPassword else current.password,
+                mail_address = if (!newMailAddress.isNullOrBlank()) newMailAddress else current.mail_address,
             )
         }
-
-        // 接口调用成功后，同步更新本地缓存的邮箱与密码，避免下次进入页面仍显示旧值。
-        tokenStorage.saveAccount(
-            account.copy(
-                password = if (!newPassword.isNullOrBlank()) newPassword else account.password,
-                mail_address = if (!newMailAddress.isNullOrBlank()) newMailAddress else account.mail_address,
-            ),
-        )
     }
 }
 

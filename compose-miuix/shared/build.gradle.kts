@@ -187,5 +187,9 @@ sqldelight {
             packageName.set("com.perol.pixez.shared.data.local.illustpersist")
             srcDirs.setFrom("src/commonMain/sqldelight/illustpersist")
         }
+        create("NovelPersistDatabase") {
+            packageName.set("com.perol.pixez.shared.data.local.novelpersist")
+            srcDirs.setFrom("src/commonMain/sqldelight/novelpersist")
+        }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +65,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    // 历史记录中的 illust_id 以 Long 保存，避免数据库大 ID 转 Int 溢出。
+    onIllustClick: (Long) -> Unit,
 ) {
     // 通过 CompositionLocal 获取历史仓库，避免修改 RootContent 签名。
     val repository = LocalHistoryRepository.current
@@ -80,6 +82,8 @@ fun HistoryScreen(
     var itemToDelete by rememberSaveable { mutableStateOf<Long?>(null) }
     // Toast 提示文本。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    // 删除/清空操作进行中标志，用于禁用确认栏的确定按钮，防止重复提交。
+    var isProcessing by remember { mutableStateOf(false) }
 
     // 异步加载全部历史记录；以 refreshToken 作为 key 实现刷新。
     // 数据库查询切到 IO 调度器，避免阻塞主线程。
@@ -93,24 +97,25 @@ fun HistoryScreen(
         }
     }
 
-    // 在内存中按作品 ID 或标题过滤；空关键词时展示全部。
-    val allItems = historyResult.value?.getOrNull().orEmpty()
-    val filteredItems by remember(allItems, query) {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) {
-            mutableStateOf(allItems)
-        } else {
-            mutableStateOf(
+    // 使用 derivedStateOf 缓存过滤结果：搜索输入频繁变化时不会重复计算完整列表，
+    // 仅当 query 或历史列表实际变化时才重新过滤。
+    val filteredItems by remember {
+        derivedStateOf {
+            val allItems = historyResult.value?.getOrNull().orEmpty()
+            val trimmed = query.trim()
+            if (trimmed.isEmpty()) {
+                allItems
+            } else {
                 allItems.filter { item ->
                     item.illustId.toString().contains(trimmed) ||
                         item.title?.contains(trimmed, ignoreCase = true) == true
                 }
-            )
+            }
         }
     }
 
     // 是否有可清空的历史记录，用于控制右上角按钮可用状态。
-    val hasHistory = allItems.isNotEmpty()
+    val hasHistory = historyResult.value?.getOrNull().orEmpty().isNotEmpty()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -214,15 +219,22 @@ fun HistoryScreen(
             if (showClearConfirm) {
                 ConfirmBar(
                     message = "确定清空全部浏览历史？",
+                    confirmEnabled = !isProcessing,
                     onConfirm = {
-                        showClearConfirm = false
+                        isProcessing = true
                         coroutineScope.launch {
                             runCatchingNonCancel { repository.clearAll() }
                                 .onSuccess { refreshToken++ }
                                 .onFailure { toastMessage = "清空失败: ${it.message}" }
+                                .also {
+                                    isProcessing = false
+                                    showClearConfirm = false
+                                }
                         }
                     },
-                    onCancel = { showClearConfirm = false },
+                    onCancel = {
+                        if (!isProcessing) showClearConfirm = false
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -232,15 +244,22 @@ fun HistoryScreen(
             if (deleteId != null) {
                 ConfirmBar(
                     message = "确定删除该条浏览历史？",
+                    confirmEnabled = !isProcessing,
                     onConfirm = {
-                        itemToDelete = null
+                        isProcessing = true
                         coroutineScope.launch {
                             runCatchingNonCancel { repository.deleteById(deleteId) }
                                 .onSuccess { refreshToken++ }
                                 .onFailure { toastMessage = "删除失败: ${it.message}" }
+                                .also {
+                                    isProcessing = false
+                                    itemToDelete = null
+                                }
                         }
                     },
-                    onCancel = { itemToDelete = null },
+                    onCancel = {
+                        if (!isProcessing) itemToDelete = null
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -259,7 +278,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryGrid(
     items: List<HistoryItem>,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     onLongClick: (HistoryItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -271,9 +290,10 @@ private fun HistoryGrid(
         verticalItemSpacing = 8.dp,
     ) {
         items(
-            items = items,
-            key = { it.illustId },
-        ) { item ->
+                items = items,
+                // 使用自增主键作为唯一 key；同一作品可多次浏览，illustId 会重复。
+                key = { it.id },
+            ) { item ->
             HistoryCard(
                 item = item,
                 onClick = { onIllustClick(item.illustId) },
@@ -343,6 +363,8 @@ private fun ConfirmBar(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    // 确定按钮是否可用；执行耗时操作时应设为 false，防止重复提交。
+    confirmEnabled: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -362,6 +384,7 @@ private fun ConfirmBar(
         )
         Button(
             onClick = onConfirm,
+            enabled = confirmEnabled,
         ) {
             Text("确定")
         }

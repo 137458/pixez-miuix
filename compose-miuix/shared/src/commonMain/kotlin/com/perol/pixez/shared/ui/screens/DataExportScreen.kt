@@ -19,15 +19,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsKeys
+import com.perol.pixez.shared.data.repository.HistoryRepository
+import com.perol.pixez.shared.data.repository.MuteRepository
+import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -46,13 +45,18 @@ import top.yukonga.miuix.kmp.extra.SuperDialog
  * 提供导出/导入入口，操作结果通过 [ToastMessage] 提示。
  *
  * @param onBack 返回上一级页面。
- * @param settingsRepository 设置仓库，当前用于读写搜索历史与收藏标签；
- *                           其余数据源的 Store/Repository 尚未接入，保留接口占位。
+ * @param settingsRepository 设置仓库，用于读写搜索历史与收藏标签。
+ * @param historyRepository 插画浏览历史仓库。
+ * @param novelHistoryRepository 小说浏览历史仓库。
+ * @param muteRepository 屏蔽数据仓库。
  */
 @Composable
 fun DataExportScreen(
     onBack: () -> Unit,
     settingsRepository: SettingsRepository,
+    historyRepository: HistoryRepository,
+    novelHistoryRepository: NovelHistoryRepository,
+    muteRepository: MuteRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val json = remember { Json { prettyPrint = true } }
@@ -66,7 +70,7 @@ fun DataExportScreen(
     // 用于强制路径输入对话框每次打开都重置输入内容，避免相同 type/action 时 data class 相等导致 remember 不重置。
     var dialogKey by remember { mutableIntStateOf(0) }
 
-    // 文件读写或占位处理期间禁用确定按钮，防止重复提交。
+    // 文件读写或仓库处理期间禁用确定按钮，防止重复提交。
     var isProcessing by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -120,13 +124,29 @@ fun DataExportScreen(
                 onConfirm = { path ->
                     coroutineScope.launch {
                         isProcessing = true
-                        // 文件读写属于阻塞操作，切到 IO 调度器执行，
+                        // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
                         // 结果回到主线程更新 UI 状态。
                         val result = withContext(Dispatchers.IO) {
                             if (operation.action == Action.Export) {
-                                performExport(operation.type, path, settingsRepository, json)
+                                performExport(
+                                    operation.type,
+                                    path,
+                                    settingsRepository,
+                                    historyRepository,
+                                    novelHistoryRepository,
+                                    muteRepository,
+                                    json,
+                                )
                             } else {
-                                performImport(operation.type, path, settingsRepository, json)
+                                performImport(
+                                    operation.type,
+                                    path,
+                                    settingsRepository,
+                                    historyRepository,
+                                    novelHistoryRepository,
+                                    muteRepository,
+                                    json,
+                                )
                             }
                         }
                         isProcessing = false
@@ -225,99 +245,6 @@ private fun PathInputDialog(
             }
         }
     }
-}
-
-/**
- * 执行导出：将已接入仓库的数据序列化为 JSON 后写入指定路径；
- * 尚未接入的数据源返回未实现错误，保留接口占位。
- */
-private fun performExport(
-    type: DataType,
-    path: String,
-    settingsRepository: SettingsRepository,
-    json: Json,
-): Result<Unit> = runCatchingNonCancel {
-    val content = when (type) {
-        DataType.SearchTagHistory -> {
-            val list = settingsRepository.getStringList(SettingsKeys.SEARCH_HISTORY).orEmpty()
-            json.encodeToString(ListSerializer(String.serializer()), list)
-        }
-
-        DataType.BookTags -> {
-            val list = settingsRepository.bookTagList
-            json.encodeToString(ListSerializer(String.serializer()), list)
-        }
-
-        DataType.IllustHistory,
-        DataType.NovelHistory,
-        DataType.MuteData,
-        -> throw NotImplementedError("${type.title} 的数据源与导入导出方法尚未接入")
-    }
-    writeExportFile(path, content).getOrThrow()
-}
-
-/**
- * 执行导入：从指定路径读取 JSON 后反序列化，并写回已接入仓库；
- * 尚未接入的数据源返回未实现错误，保留接口占位。
- */
-private fun performImport(
-    type: DataType,
-    path: String,
-    settingsRepository: SettingsRepository,
-    json: Json,
-): Result<Unit> = runCatchingNonCancel {
-    when (type) {
-        DataType.SearchTagHistory -> {
-            val content = readExportFile(path).getOrThrow()
-            val list = json.decodeFromString(ListSerializer(String.serializer()), content)
-            val validated = validateImportedStringList(list)
-            settingsRepository.setStringList(SettingsKeys.SEARCH_HISTORY, validated)
-        }
-
-        DataType.BookTags -> {
-            val content = readExportFile(path).getOrThrow()
-            val list = json.decodeFromString(ListSerializer(String.serializer()), content)
-            val validated = validateImportedStringList(list)
-            settingsRepository.bookTagList = validated
-        }
-
-        DataType.IllustHistory,
-        DataType.NovelHistory,
-        DataType.MuteData,
-        -> throw NotImplementedError("${type.title} 的数据源与导入导出方法尚未接入")
-    }
-}
-
-/**
- * 校验导入的字符串列表，防止过长或包含非法控制字符的数据损坏设置。
- *
- * @return 校验通过后的列表。
- * @throws IllegalArgumentException 任一条目不合法时抛出。
- */
-private fun validateImportedStringList(list: List<String>): List<String> {
-    require(list.size <= MAX_IMPORT_ITEM_COUNT) { "条目数量超过上限 $MAX_IMPORT_ITEM_COUNT" }
-    return list.map { item ->
-        require(item.length <= MAX_IMPORT_ITEM_LENGTH) { "单条内容长度超过上限 $MAX_IMPORT_ITEM_LENGTH" }
-        require(item.none { it.isISOControl() }) { "包含非法控制字符" }
-        item
-    }
-}
-
-private const val MAX_IMPORT_ITEM_COUNT = 10_000
-private const val MAX_IMPORT_ITEM_LENGTH = 1_000
-
-/**
- * 当前支持操作的数据类型列表，与原 Flutter DataExportPage 保持一致。
- */
-private enum class DataType(
-    val title: String,
-    val summary: String,
-) {
-    SearchTagHistory("搜索标签历史", "导出/导入历史搜索记录"),
-    BookTags("收藏标签", "导出/导入常用的收藏标签"),
-    IllustHistory("插画历史", "导出/导入插画浏览历史"),
-    NovelHistory("小说历史", "导出/导入小说浏览历史"),
-    MuteData("屏蔽数据", "导出/导入屏蔽的标签、画师与作品"),
 }
 
 /**

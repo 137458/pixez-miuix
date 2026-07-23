@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
+import com.perol.pixez.shared.data.local.novelpersist.NovelPersistDatabase
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -12,6 +13,8 @@ import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.MuteRepository
+import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
@@ -19,6 +22,12 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.IllustSaver
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+import com.perol.pixez.shared.ui.screens.createUpdateCheckClient
 
 /**
  * 应用级依赖容器。
@@ -91,6 +100,16 @@ class AppDependencies(
     }
 
     /**
+     * 小说浏览历史数据库驱动，复用旧 Flutter Novelpersist.db。
+     */
+    val novelPersistDriver: SqlDriver by lazy {
+        driverFactory.createDriver(
+            NovelPersistDatabase.Schema,
+            "Novelpersist.db",
+        )
+    }
+
+    /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
      */
     val settingsRepository: SettingsRepository by lazy {
@@ -112,6 +131,13 @@ class AppDependencies(
         PixivHttpClient(tokenStorage, enableLogging = false)
     }
 
+    /**
+     * 更新检查专用 HttpClient，生命周期由应用容器统一管理。
+     */
+    val updateCheckClient: HttpClient by lazy {
+        createUpdateCheckClient()
+    }
+
     val accountRepository: AccountRepository by lazy {
         AccountRepository(
             oAuthClient = httpClient.oAuthClient,
@@ -129,10 +155,35 @@ class AppDependencies(
     }
 
     /**
+     * 公告板专用 JSON 解析器，允许未知键、宽松输入并强制非空默认值。
+     */
+    private val boardJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
+
+    /**
+     * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
+     */
+    private val boardHttpClient: HttpClient by lazy {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(boardJson)
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 10_000
+            }
+        }
+    }
+
+    /**
      * 公告板仓库，从 GitHub Raw 拉取官方公告 JSON。
      */
     val boardRepository: BoardRepository by lazy {
-        BoardRepository()
+        BoardRepository(boardHttpClient)
     }
 
     val userRepository: UserRepository by lazy {
@@ -158,6 +209,20 @@ class AppDependencies(
     }
 
     /**
+     * 小说浏览历史仓库，复用旧 Flutter Novelpersist.db。
+     */
+    val novelHistoryRepository: NovelHistoryRepository by lazy {
+        NovelHistoryRepository(novelPersistDriver)
+    }
+
+    /**
+     * 屏蔽数据仓库，聚合作品、画师、标签屏蔽记录。
+     */
+    val muteRepository: MuteRepository by lazy {
+        MuteRepository(banRepository)
+    }
+
+    /**
      * 插画下载仓库，负责下载图片字节并调用平台保存，同时写入下载历史。
      */
     val downloadRepository: DownloadRepository by lazy {
@@ -180,11 +245,14 @@ class AppDependencies(
      */
     fun close() {
         runCatching { httpClient.close() }
+        runCatching { updateCheckClient.close() }
+        runCatching { boardHttpClient.close() }
         runCatching { driverFactory.closeDriver(accountDriver) }
         runCatching { driverFactory.closeDriver(taskDriver) }
         runCatching { driverFactory.closeDriver(banDriver) }
         runCatching { driverFactory.closeDriver(banUserDriver) }
         runCatching { driverFactory.closeDriver(banTagDriver) }
         runCatching { driverFactory.closeDriver(illustPersistDriver) }
+        runCatching { driverFactory.closeDriver(novelPersistDriver) }
     }
 }

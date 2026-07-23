@@ -17,11 +17,15 @@ import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.MuteRepository
+import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
+import io.ktor.client.HttpClient
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
 import com.perol.pixez.shared.ui.screens.BoardScreen
@@ -87,6 +91,10 @@ fun RootContent(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
     boardRepository: BoardRepository,
+    historyRepository: HistoryRepository,
+    novelHistoryRepository: NovelHistoryRepository,
+    muteRepository: MuteRepository,
+    updateCheckClient: HttpClient,
     modifier: Modifier = Modifier,
 ) {
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
@@ -333,6 +341,7 @@ fun RootContent(
 
                     Child.UpdateSetting -> UpdateSettingScreen(
                         settingsRepository = settingsRepository,
+                        updateCheckClient = updateCheckClient,
                         onBack = component::onBack,
                     )
 
@@ -343,7 +352,9 @@ fun RootContent(
 
                     Child.History -> HistoryScreen(
                         onBack = component::onBack,
-                        onIllustClick = component::onIllustClicked,
+                        // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
+                        // 导航层仍使用 Int，在此处做类型转换。
+                        onIllustClick = { component.onIllustClicked(it.toInt()) },
                     )
 
                     Child.DownloadTask -> DownloadTaskScreen(
@@ -356,6 +367,9 @@ fun RootContent(
                     Child.DataExport -> DataExportScreen(
                         onBack = component::onBack,
                         settingsRepository = settingsRepository,
+                        historyRepository = historyRepository,
+                        novelHistoryRepository = novelHistoryRepository,
+                        muteRepository = muteRepository,
                     )
 
                     Child.Board -> BoardScreen(
