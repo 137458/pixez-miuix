@@ -8,6 +8,7 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.backhandler.BackCallback
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.serialization.Serializable
 
@@ -30,9 +31,24 @@ class RootComponent(
         source = navigation,
         serializer = Config.serializer(),
         initialConfiguration = resolveWelcomePageConfig(settingsRepository.welcomePageType),
-        handleBackButton = true,
+        // 返回事件由本组件注册的 BackCallback 显式接管，
+        // 避免 Decompose 默认 pop 逻辑与 onBack() 的一级/二级页面判断冲突。
+        handleBackButton = false,
         childFactory = ::createChild,
     )
+
+    // 注册 Decompose 返回回调：仅在二级页面启用，一级页面禁用以让系统处理退出/再次返回退出。
+    private val backCallback = BackCallback(isEnabled = false) {
+        onBack()
+    }
+
+    init {
+        backHandler.register(backCallback)
+        // 监听栈变化，动态启用/禁用返回回调：栈顶为一级页面时不拦截返回事件。
+        stack.subscribe { childStack ->
+            backCallback.isEnabled = childStack.active.instance !is Child.Main
+        }
+    }
 
     /**
      * 底部标签切换：将栈重置为对应的主页标签。
@@ -49,9 +65,17 @@ class RootComponent(
 
     /**
      * 返回上一级页面。
+     *
+     * 当栈顶为一级主页面（[Child.Main]）时不消费返回事件，交由系统处理
+     * （退出应用或触发「再次返回退出」）；在二级页面时执行 [navigation.pop] 并返回 true。
      */
-    fun onBack() {
+    fun onBack(): Boolean {
+        val active = stack.value.active.instance
+        // 一级页面不拦截返回事件，让系统决定是否退出应用。
+        if (active is Child.Main) return false
+        // 二级页面消费返回事件，执行出栈。
         navigation.pop()
+        return true
     }
 
     /**

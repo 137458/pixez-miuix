@@ -3,8 +3,6 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,7 +32,7 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -50,6 +48,8 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -138,7 +138,7 @@ fun SearchScreen(
         repository,
         trendRetryCount,
     ) {
-        value = runCatchingNonCancel { repository.getTrendTags() }
+        value = suspendRunCatchingNonCancel { repository.getTrendTags() }
     }
 
     // 搜索历史从旧 Flutter 设置中读取并持久化回写。
@@ -301,6 +301,8 @@ private fun SearchIllustResultGrid(
     val effectiveStartDate = debouncedSearchDate(startDate)
     val effectiveEndDate = debouncedSearchDate(endDate)
 
+    // 在协程中执行搜索并应用屏蔽过滤：先请求作品列表，再并行获取屏蔽 ID/标签/AI 设置，
+    // 最后过滤掉被屏蔽的作品、画师、标签，以及全局设置的 AI 作品。
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         searchWord,
@@ -313,7 +315,7 @@ private fun SearchIllustResultGrid(
         banRepository,
         settingsRepository,
     ) {
-        val illustsResult = runCatchingNonCancel {
+        val illustsResult = suspendRunCatchingNonCancel {
             repository.searchIllust(
                 word = searchWord,
                 sort = sort,
@@ -323,11 +325,11 @@ private fun SearchIllustResultGrid(
                 endDate = effectiveEndDate,
             )
         }
-        val bannedIds = runCatchingNonCancel { banRepository.getBannedIllustIds() }
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
-        val bannedUserIds = runCatchingNonCancel { banRepository.getBannedUserIds() }
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
             .getOrDefault(emptySet())
-        val banTags = runCatchingNonCancel { banRepository.getAllBanTags() }
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
         value = illustsResult.map { illusts ->
@@ -391,7 +393,7 @@ private fun SearchUserResultList(
         query,
         retryCount,
     ) {
-        value = runCatchingNonCancel { repository.searchUser(query) }
+        value = suspendRunCatchingNonCancel { repository.searchUser(query) }
     }
 
     val result = state.value
@@ -635,11 +637,12 @@ private fun SearchSuggestions(
                         .padding(end = 8.dp),
                     style = MiuixTheme.textStyles.body1,
                 )
+                // 使用 MIUIX 扩展图标库中的 Close 图标替换原 Material Close 图标。
                 IconButton(
                     onClick = { onHistoryRemove(history) },
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = MiuixIcons.Close,
                         contentDescription = "删除",
                     )
                 }

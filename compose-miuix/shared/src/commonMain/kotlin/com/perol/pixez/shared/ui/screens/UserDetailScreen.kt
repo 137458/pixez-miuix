@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.screens
+﻿package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,6 +55,8 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
  * 用户详情页：头部信息 + 「作品 / 收藏」Tab 切换。
@@ -108,7 +107,7 @@ fun UserDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
                         )
                     }
@@ -119,7 +118,7 @@ fun UserDetailScreen(
                         enabled = userDetail != null,
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = MiuixIcons.More,
                             contentDescription = "更多",
                         )
                     }

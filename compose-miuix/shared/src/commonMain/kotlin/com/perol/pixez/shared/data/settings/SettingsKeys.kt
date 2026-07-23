@@ -30,6 +30,8 @@ internal object SettingsKeys {
     const val LEGACY_DISABLE_BYPASS_SNI = "disable_bypass_sni"
     const val IS_HELPLESS_WAY = "is_helplessway"
     const val THEME_MODE = "theme_mode"
+    const val MIUIX_PALETTE_STYLE = "miuix_palette_style"
+    const val MIUIX_USE_SPEC_2025 = "miuix_use_spec_2025"
     const val SAVE_MODE = "save_mode"
     const val NOVEL_FONT_SIZE = "novel_font_size"
     const val IS_RETURN_AGAIN_TO_EXIT = "return_again_to_exit"

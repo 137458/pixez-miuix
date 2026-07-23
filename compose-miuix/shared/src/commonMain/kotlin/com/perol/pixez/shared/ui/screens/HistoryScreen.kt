@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.screens
+﻿package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,10 +15,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -56,6 +52,8 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
  * 浏览历史页：展示本地插画浏览历史网格，支持搜索、单条删除与清空全部。
@@ -126,7 +124,7 @@ fun HistoryScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
                         )
                     }
@@ -166,7 +164,7 @@ fun HistoryScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = MiuixIcons.Search,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                         )
@@ -175,7 +173,7 @@ fun HistoryScreen(
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
+                                    imageVector = MiuixIcons.Close,
                                     contentDescription = "清空搜索",
                                     modifier = Modifier.size(20.dp),
                                 )

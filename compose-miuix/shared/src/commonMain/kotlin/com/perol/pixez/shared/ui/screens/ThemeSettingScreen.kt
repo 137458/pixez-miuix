@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,6 +40,8 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.ToastMessage
 
@@ -62,9 +62,12 @@ fun ThemeSettingScreen(
     var isAmoled by remember { mutableStateOf(settingsRepository.isAmoled) }
     var useDynamicColor by remember { mutableStateOf(settingsRepository.useDynamicColor) }
     var seedColor by remember { mutableIntStateOf(settingsRepository.seedColor ?: DEFAULT_SEED_COLOR) }
+    var paletteStyle by remember { mutableIntStateOf(settingsRepository.miuixPaletteStyle) }
+    var useSpec2025 by remember { mutableStateOf(settingsRepository.miuixUseSpec2025) }
 
-    // 颜色选择对话框显示状态。
+    // 颜色选择对话框与调色板风格对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    var showPaletteStylePicker by rememberSaveable { mutableStateOf(false) }
 
     // 本地修改辅助函数：写回仓库并更新页面状态。
     fun setThemeMode(value: Int) {
@@ -87,6 +90,16 @@ fun ThemeSettingScreen(
         settingsRepository.seedColor = value
     }
 
+    fun setPaletteStyle(value: Int) {
+        paletteStyle = value
+        settingsRepository.miuixPaletteStyle = value
+    }
+
+    fun setUseSpec2025(value: Boolean) {
+        useSpec2025 = value
+        settingsRepository.miuixUseSpec2025 = value
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -95,7 +108,7 @@ fun ThemeSettingScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
                         )
                     }
@@ -185,6 +198,29 @@ fun ThemeSettingScreen(
                     )
                 }
             }
+
+            item {
+                SmallTitle(text = "MIUIX 个性化")
+            }
+            item {
+                BasicComponent(
+                    title = "调色板风格",
+                    summary = paletteStyleName(paletteStyle),
+                    onClick = { showPaletteStylePicker = true },
+                )
+            }
+            item {
+                BasicComponent(
+                    title = "2025 色彩规范",
+                    summary = if (useSpec2025) "使用新版 Spec2025 取色算法" else "使用兼容 Spec2021 取色算法",
+                    endActions = {
+                        Switch(
+                            checked = useSpec2025,
+                            onCheckedChange = { setUseSpec2025(it) },
+                        )
+                    },
+                )
+            }
         }
 
         ColorPickerDialog(
@@ -194,6 +230,16 @@ fun ThemeSettingScreen(
             onColorSelected = { selectedColor ->
                 setSeedColor(selectedColor)
                 showColorPicker = false
+            },
+        )
+
+        PaletteStylePickerDialog(
+            show = showPaletteStylePicker,
+            currentPaletteStyle = paletteStyle,
+            onDismiss = { showPaletteStylePicker = false },
+            onPaletteStyleSelected = { selectedStyle ->
+                setPaletteStyle(selectedStyle)
+                showPaletteStylePicker = false
             },
         )
     }
@@ -373,6 +419,73 @@ private fun ColorPresetItem(
             text = name,
             style = MiuixTheme.textStyles.footnote2,
         )
+    }
+}
+
+/**
+ * 调色板风格选择对话框：列出 MIUIX 支持的调色板风格并单选。
+ */
+@Composable
+private fun PaletteStylePickerDialog(
+    show: Boolean,
+    currentPaletteStyle: Int,
+    onDismiss: () -> Unit,
+    onPaletteStyleSelected: (Int) -> Unit,
+) {
+    // 调色板风格列表，顺序与 [top.yukonga.miuix.kmp.theme.ThemePaletteStyle.entries] 保持一致。
+    val paletteStyles = listOf(
+        "TonalSpot" to "经典 Material You 色调",
+        "Neutral" to "低饱和度、柔和中性",
+        "Vibrant" to "高饱和度、鲜艳明快",
+        "Expressive" to "大胆艺术、创意色移",
+        "Rainbow" to "广色域彩虹渐变",
+        "FruitSalad" to "活泼多彩、混合色相",
+        "Monochrome" to "单色调灰阶",
+        "Fidelity" to "最接近种子色",
+        "Content" to "基于内容颜色取色",
+    )
+
+    SuperDialog(
+        title = "调色板风格",
+        summary = "选择 Monet 动态取色的调色板风格",
+        show = show,
+        onDismissRequest = onDismiss,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            paletteStyles.forEachIndexed { index, (name, description) ->
+                BasicComponent(
+                    title = name,
+                    summary = description,
+                    onClick = { onPaletteStyleSelected(index) },
+                    endActions = {
+                        if (index == currentPaletteStyle) {
+                            Text(text = "✓")
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 根据调色板风格索引返回显示名称。
+ */
+private fun paletteStyleName(index: Int): String {
+    // 顺序与 MIUIX [ThemePaletteStyle.entries] 一致，越界时回退到默认名称。
+    return when (index) {
+        0 -> "TonalSpot"
+        1 -> "Neutral"
+        2 -> "Vibrant"
+        3 -> "Expressive"
+        4 -> "Rainbow"
+        5 -> "FruitSalad"
+        6 -> "Monochrome"
+        7 -> "Fidelity"
+        8 -> "Content"
+        else -> "TonalSpot"
     }
 }
 

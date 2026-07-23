@@ -42,8 +42,10 @@ junit = "4.13.2"
 
 # MIUIX
 # 0.8.8 在 Maven Central 上以单包形式发布：top.yukonga.miuix.kmp:miuix:0.8.8，
-# UI / Preference / Icons 等模块均为该包的内部子模块，不再提供独立 artifact。
+# UI / Preference / 基础 Icons 等模块均为该包的内部子模块，不再提供独立 artifact。
+# 扩展图标库仍使用独立 artifact：top.yukonga.miuix.kmp:miuix-icons:0.8.8。
 miuix = { module = "top.yukonga.miuix.kmp:miuix", version.ref = "miuix" }
+miuixIcons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 
 # Compose Android
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }

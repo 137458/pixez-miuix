@@ -1,16 +1,12 @@
 package com.perol.pixez.shared.ui.navigation
 
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Newspaper
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
  * 底部 5 标签导航栏，与原 Flutter 应用底部导航顺序一致。
@@ -25,35 +21,35 @@ fun MainBottomBar(
             tab = RootComponent.MainTab.Hello,
             activeTab = activeTab,
             label = "首页",
-            icon = Icons.Default.Home,
+            icon = MiuixIcons.All, // 首页：MIUIX 无 Home，用 All（全部/汇总）语义最接近
             onClick = onTabSelected,
         )
         MainTabItem(
             tab = RootComponent.MainTab.Search,
             activeTab = activeTab,
             label = "搜索",
-            icon = Icons.Default.Search,
+            icon = MiuixIcons.Search,
             onClick = onTabSelected,
         )
         MainTabItem(
             tab = RootComponent.MainTab.Ranking,
             activeTab = activeTab,
             label = "排行榜",
-            icon = Icons.Outlined.Explore,
+            icon = MiuixIcons.TopDownloads, // 排行榜/探索：用 TopDownloads（热门下载）语义最接近
             onClick = onTabSelected,
         )
         MainTabItem(
             tab = RootComponent.MainTab.New,
             activeTab = activeTab,
             label = "最新",
-            icon = Icons.Default.Newspaper,
+            icon = MiuixIcons.Recent, // 最新：用 Recent（最近）语义最接近
             onClick = onTabSelected,
         )
         MainTabItem(
             tab = RootComponent.MainTab.Spotlight,
             activeTab = activeTab,
             label = "Spotlight",
-            icon = Icons.Outlined.Lightbulb,
+            icon = MiuixIcons.Promotions, // Spotlight：用 Promotions（推荐/精选）语义最接近
             onClick = onTabSelected,
         )
     }

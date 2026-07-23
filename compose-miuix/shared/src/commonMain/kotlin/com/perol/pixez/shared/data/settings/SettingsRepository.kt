@@ -73,6 +73,22 @@ class SettingsRepository(
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_AMOLED, false)
         set(value) { settings[SettingsKeys.IS_AMOLED] = value }
 
+    /**
+     * MIUIX 调色板风格索引，对应 [top.yukonga.miuix.kmp.theme.ThemePaletteStyle.entries] 顺序。
+     * 默认 0 即 TonalSpot，与 MIUIX 默认行为保持一致。
+     */
+    var miuixPaletteStyle: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.MIUIX_PALETTE_STYLE, 0)
+        set(value) { settings[SettingsKeys.MIUIX_PALETTE_STYLE] = value }
+
+    /**
+     * 是否使用 Material 2025 色彩规范（Spec2025）。
+     * 仅在部分调色板风格下生效，其余风格会由 MIUIX 自动回退到 Spec2021。
+     */
+    var miuixUseSpec2025: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.MIUIX_USE_SPEC_2025, false)
+        set(value) { settings[SettingsKeys.MIUIX_USE_SPEC_2025] = value }
+
     // region 保存与下载
     var saveMode: Int
         get() {

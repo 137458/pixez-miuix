@@ -72,7 +72,9 @@ import com.perol.pixez.shared.ui.screens.BookTagScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 import top.yukonga.miuix.kmp.theme.darkColorScheme
 
 /**
@@ -103,14 +105,25 @@ fun RootContent(
     val isAmoled = settingsRepository.isAmoled
     val useDynamicColor = settingsRepository.useDynamicColor
     val seedColor = settingsRepository.seedColor ?: DEFAULT_SEED_COLOR
+    val paletteStyleIndex = settingsRepository.miuixPaletteStyle
+    val useSpec2025 = settingsRepository.miuixUseSpec2025
 
     // 进程重建后上述状态会由 SettingsRepository 恢复（M4）。
-    val themeController = remember(themeMode, isAmoled, useDynamicColor, seedColor) {
+    val themeController = remember(
+        themeMode,
+        isAmoled,
+        useDynamicColor,
+        seedColor,
+        paletteStyleIndex,
+        useSpec2025,
+    ) {
         buildThemeController(
             themeMode = themeMode,
             isAmoled = isAmoled,
             useDynamicColor = useDynamicColor,
             seedColor = seedColor,
+            paletteStyleIndex = paletteStyleIndex,
+            useSpec2025 = useSpec2025,
         )
     }
 
@@ -489,12 +502,16 @@ private fun MainContent(
  * @param isAmoled 是否开启 AMOLED 纯黑深色模式。
  * @param useDynamicColor 是否使用 Monet 动态颜色。
  * @param seedColor 动态颜色/非动态颜色下的种子色。
+ * @param paletteStyleIndex 调色板风格索引，对应 [ThemePaletteStyle] 枚举顺序。
+ * @param useSpec2025 是否使用 Material 2025 色彩规范。
  */
 private fun buildThemeController(
     themeMode: Int,
     isAmoled: Boolean,
     useDynamicColor: Boolean,
     seedColor: Int,
+    paletteStyleIndex: Int,
+    useSpec2025: Boolean,
 ): ThemeController {
     // 统一使用 Monet 模式，使种子色在非动态颜色模式下也能生效；
     // 动态颜色开启时 keyColor 传 null，让 Monet 使用系统壁纸颜色。
@@ -504,6 +521,11 @@ private fun buildThemeController(
         else -> ColorSchemeMode.MonetSystem
     }
     val keyColor = if (useDynamicColor) null else Color(seedColor)
+
+    // 将持久化的调色板风格索引映射为 MIUIX 枚举值，越界时回退到默认 TonalSpot。
+    val paletteStyle = ThemePaletteStyle.entries.getOrNull(paletteStyleIndex)
+        ?: ThemePaletteStyle.TonalSpot
+    val colorSpec = if (useSpec2025) ThemeColorSpec.Spec2025 else ThemeColorSpec.Spec2021
 
     // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑。
     val darkColors = if (isAmoled) {
@@ -524,11 +546,15 @@ private fun buildThemeController(
             colorSchemeMode = colorSchemeMode,
             keyColor = keyColor,
             darkColors = darkColors,
+            colorSpec = colorSpec,
+            paletteStyle = paletteStyle,
         )
     } else {
         ThemeController(
             colorSchemeMode = colorSchemeMode,
             keyColor = keyColor,
+            colorSpec = colorSpec,
+            paletteStyle = paletteStyle,
         )
     }
 }

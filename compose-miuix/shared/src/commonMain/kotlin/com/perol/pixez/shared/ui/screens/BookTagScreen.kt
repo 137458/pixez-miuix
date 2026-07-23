@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.screens
+﻿package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -6,12 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +28,8 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
  * 收藏标签页：管理本地收藏标签列表，点击标签可跳转搜索。
@@ -75,7 +71,7 @@ fun BookTagScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
                         )
                     }
@@ -86,7 +82,7 @@ fun BookTagScreen(
                         enabled = !isAdding && !isReordering,
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Add,
+                            imageVector = MiuixIcons.Add,
                             contentDescription = "添加标签",
                         )
                     }
@@ -138,7 +134,7 @@ fun BookTagScreen(
                                     enabled = index > 0 && !isReordering,
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.KeyboardArrowUp,
+                                        imageVector = MiuixIcons.ExpandLess,
                                         contentDescription = "上移",
                                     )
                                 }
@@ -157,7 +153,7 @@ fun BookTagScreen(
                                     enabled = index < bookTags.lastIndex && !isReordering,
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.KeyboardArrowDown,
+                                        imageVector = MiuixIcons.ExpandMore,
                                         contentDescription = "下移",
                                     )
                                 }
@@ -166,7 +162,7 @@ fun BookTagScreen(
                                     enabled = !isReordering,
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.Delete,
+                                        imageVector = MiuixIcons.Delete,
                                         contentDescription = "删除",
                                     )
                                 }

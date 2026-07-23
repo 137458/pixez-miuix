@@ -1,11 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,10 +25,18 @@ import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
+import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.extended.Settings
 
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
@@ -50,8 +57,20 @@ fun HelloScreen(
 
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+
+    // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
+    var showLoginDialog by rememberSaveable { mutableStateOf(false) }
+    var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+    }
+
+    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == false && !hasPromptedLogin) {
+            showLoginDialog = true
+            hasPromptedLogin = true
+        }
     }
 
     // 页面进入时加载数据；已登录用推荐接口，未登录用 walkthrough 匿名接口。
@@ -89,6 +108,34 @@ fun HelloScreen(
         }
     }
 
+    // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
+    SuperDialog(
+        title = "需要登录",
+        summary = "当前未登录，登录后可使用完整功能",
+        show = showLoginDialog,
+        onDismissRequest = { showLoginDialog = false },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(
+                text = "暂不登录",
+                onClick = { showLoginDialog = false },
+                modifier = Modifier.weight(1f),
+            )
+            Button(
+                onClick = {
+                    showLoginDialog = false
+                    onLoginClick()
+                },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("去登录")
+            }
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -100,7 +147,7 @@ fun HelloScreen(
                             onClick = onLoginClick,
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Person,
+                                imageVector = MiuixIcons.Contacts,
                                 contentDescription = "登录",
                             )
                         }
@@ -110,7 +157,7 @@ fun HelloScreen(
                             onClick = onRecomUserClick,
                         ) {
                             Icon(
-                                imageVector = Icons.Default.PersonAdd,
+                                imageVector = MiuixIcons.AddCircle,
                                 contentDescription = "推荐用户",
                             )
                         }
@@ -119,7 +166,7 @@ fun HelloScreen(
                         onClick = onSettingsClick,
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = MiuixIcons.Settings,
                             contentDescription = "设置",
                         )
                     }

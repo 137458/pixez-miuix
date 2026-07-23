@@ -31,7 +31,9 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperDialog
 
 /**
  * 最新/关注页：展示已登录用户关注画师的最新插画。
@@ -49,8 +51,20 @@ fun NewScreen(
 ) {
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+
+    // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
+    var showLoginDialog by rememberSaveable { mutableStateOf(false) }
+    var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         isLoggedIn = runCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+    }
+
+    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == false && !hasPromptedLogin) {
+            showLoginDialog = true
+            hasPromptedLogin = true
+        }
     }
 
     // 可见性筛选：0=all, 1=public, 2=private。
@@ -94,6 +108,34 @@ fun NewScreen(
             }
             false -> Result.success(emptyList())
             null -> null 
+        }
+    }
+
+    // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
+    SuperDialog(
+        title = "需要登录",
+        summary = "当前未登录，登录后可使用完整功能",
+        show = showLoginDialog,
+        onDismissRequest = { showLoginDialog = false },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(
+                text = "暂不登录",
+                onClick = { showLoginDialog = false },
+                modifier = Modifier.weight(1f),
+            )
+            Button(
+                onClick = {
+                    showLoginDialog = false
+                    onLoginClick()
+                },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("去登录")
+            }
         }
     }
 

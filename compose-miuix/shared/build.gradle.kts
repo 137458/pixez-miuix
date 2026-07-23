@@ -45,8 +45,10 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
 
-            // MIUIX：0.8.8 使用单包发布，内部包含 UI / Preference / Icons 等子模块
+            // MIUIX：0.8.8 使用单包发布，内部包含 UI / Preference / 基础 Icons 等子模块
             implementation(libs.miuix)
+            // 扩展图标库（Contacts、Settings、AddCircle 等）需要单独引入 miuix-icons artifact。
+            implementation(libs.miuixIcons)
 
             // Ktor
             implementation(libs.ktor.client.core)

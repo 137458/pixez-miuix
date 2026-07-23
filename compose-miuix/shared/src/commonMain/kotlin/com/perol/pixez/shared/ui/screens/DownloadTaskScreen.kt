@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.screens
+﻿package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,15 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +56,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperBottomSheet
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
  * 下载任务页：展示全部 / 运行中 / 完成 / 失败四类下载任务，
@@ -134,7 +127,7 @@ fun DownloadTaskScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
                         )
                     }
@@ -145,7 +138,7 @@ fun DownloadTaskScreen(
                         enabled = !isBatchProcessing,
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = MiuixIcons.More,
                             contentDescription = "更多操作",
                         )
                     }
@@ -499,7 +492,7 @@ private fun DownloadTaskItem(
                 enabled = task.status == DownloadStatus.Failed && !isProcessing,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Refresh,
+                    imageVector = MiuixIcons.Refresh,
                     contentDescription = "重试",
                     tint = MiuixTheme.colorScheme.primary,
                 )
@@ -509,7 +502,7 @@ private fun DownloadTaskItem(
                 enabled = !isProcessing,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = MiuixIcons.Delete,
                     contentDescription = "删除",
                     tint = MiuixTheme.colorScheme.error,
                 )
@@ -540,28 +533,28 @@ private fun StatusIcon(
 ) {
     when (status) {
         DownloadStatus.Success -> Icon(
-            imageVector = Icons.Default.CheckCircle,
+            imageVector = MiuixIcons.Ok, // 完成：用 Ok 语义最接近
             contentDescription = "完成",
             modifier = modifier,
             tint = MiuixTheme.colorScheme.primary,
         )
 
         DownloadStatus.Failed -> Icon(
-            imageVector = Icons.Default.Error,
+            imageVector = MiuixIcons.Report, // 错误：用 Report 语义最接近
             contentDescription = "失败",
             modifier = modifier,
             tint = MiuixTheme.colorScheme.error,
         )
 
         DownloadStatus.Downloading -> Icon(
-            imageVector = Icons.Default.Download,
+            imageVector = MiuixIcons.Download,
             contentDescription = "下载中",
             modifier = modifier,
             tint = MiuixTheme.colorScheme.primary,
         )
 
         DownloadStatus.Pending -> Icon(
-            imageVector = Icons.Default.HourglassEmpty,
+            imageVector = MiuixIcons.Stopwatch, // 等待中：用 Stopwatch 语义最接近
             contentDescription = "等待中",
             modifier = modifier,
             tint = MiuixTheme.colorScheme.onSurface,
