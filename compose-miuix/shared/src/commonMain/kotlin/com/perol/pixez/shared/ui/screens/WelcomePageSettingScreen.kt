@@ -1,6 +1,8 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -8,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -59,19 +62,20 @@ fun WelcomePageSettingScreen(
         ) {
             item {
                 SmallTitle(text = "启动时显示")
-            }
-            items(WELCOME_PAGE_OPTIONS.size) { index ->
-                val option = WELCOME_PAGE_OPTIONS[index]
-                BasicComponent(
-                    title = option.label,
-                    onClick = {
-                        selectedType = option.type
-                        settingsRepository.welcomePageType = option.type
-                    },
-                    endActions = {
-                        CheckIndicator(selected = selectedType == option.type)
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    WELCOME_PAGE_OPTIONS.forEach { option ->
+                        BasicComponent(
+                            title = option.label,
+                            onClick = {
+                                selectedType = option.type
+                                settingsRepository.welcomePageType = option.type
+                            },
+                            endActions = {
+                                CheckIndicator(selected = selectedType == option.type)
+                            },
+                        )
+                    }
+                }
             }
         }
     }

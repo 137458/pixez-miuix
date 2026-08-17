@@ -11,6 +11,7 @@ internal object SettingsKeys {
     const val SINGLE_FOLDER = "single_folder"
     const val SAVE_FORMAT = "save_format"
     const val LANGUAGE_NUM = "language_num"
+    const val GUIDE_ENABLE = "guide_enable"
     const val LEGACY_WELCOME_PAGE_NUM = "welcome_page_num"
     const val WELCOME_PAGE_TYPE = "welcome_page_type"
     const val WELCOME_PAGE_NUM_IOS_MIGRATION = "welcome_page_num_ios_migration_v2"
@@ -74,6 +75,9 @@ internal object SettingsKeys {
     const val SEARCH_START_DATE = "search_start_date"
     const val SEARCH_END_DATE = "search_end_date"
     const val BOOK_TAG_LIST = "book_tag_list"
+    const val USE_FLOATING_BOTTOM_BAR = "use_floating_bottom_bar"
+    const val LIQUID_REFRACTION_LEVEL = "liquid_refraction_level"
+    const val AUTO_CHECK_UPDATE = "auto_check_update"
 
     // Android 平台专属设置键
     const val DISPLAY_MODE = "display_mode"

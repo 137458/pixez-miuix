@@ -14,18 +14,32 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * GitHub Release API 返回的最新版本信息。
- *
- * @param tag_name 版本标签，例如 "v0.9.42"。
+ * GitHub Release API 返回的完整版本信息。
  */
 @Serializable
 private data class GitHubRelease(
     val tag_name: String? = null,
+    val name: String? = null,
+    val body: String? = null,
+    val html_url: String? = null,
+    val published_at: String? = null,
+)
+
+/**
+ * 结构化的应用发布版本信息。
+ */
+data class ReleaseInfo(
+    val tagName: String,
+    val versionName: String,
+    val title: String,
+    val changelog: String,
+    val releaseUrl: String,
+    val publishedAt: String?,
+    val isNew: Boolean,
 )
 
 /**
  * 创建用于检查 GitHub Release 的 HttpClient，配置 JSON、超时与 User-Agent。
- * 由 [AppDependencies] 持有生命周期，也可作为默认客户端使用。
  */
 internal fun createUpdateCheckClient(): HttpClient = HttpClient {
     install(ContentNegotiation) {
@@ -45,48 +59,55 @@ internal fun createUpdateCheckClient(): HttpClient = HttpClient {
 }
 
 /**
- * 复用的 GitHub API HttpClient，供没有注入能力的调用方作为默认参数使用。
+ * 复用的 GitHub API HttpClient。
  */
 internal val defaultUpdateCheckClient: HttpClient by lazy {
     createUpdateCheckClient()
 }
 
 /**
- * 从 GitHub Release API 异步获取最新版本号。
- *
- * @param client 执行请求的 HttpClient，默认使用顶层单例以保持兼容。
- * @return 成功返回最新版本号（已去除前导 "v"），失败返回异常。
+ * 从 GitHub Release API 获取完整版本发布信息。
  */
-suspend fun checkLatestVersion(
+suspend fun fetchLatestReleaseInfo(
     client: HttpClient = defaultUpdateCheckClient,
-): Result<String> {
+): Result<ReleaseInfo> {
     return try {
         val release: GitHubRelease = client
-            .get("https://api.github.com/repos/Notsfsssf/pixez-flutter/releases/latest") {
+            .get("https://api.github.com/repos/137458/pixez-miuix/releases/latest") {
                 header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
             }
             .body()
-        val latest = release.tag_name?.removePrefix("v")
-        if (latest.isNullOrBlank()) {
-            Result.failure(Exception("未找到版本号"))
-        } else {
-            Result.success(latest)
-        }
+        val tag = release.tag_name ?: ""
+        val versionName = tag.removePrefix("v").ifBlank { "未知版本" }
+        val releaseInfo = ReleaseInfo(
+            tagName = tag,
+            versionName = versionName,
+            title = release.name ?: "PixEz MIUIX $tag",
+            changelog = release.body ?: "暂无更新日志",
+            releaseUrl = release.html_url ?: "https://github.com/137458/pixez-miuix/releases",
+            publishedAt = release.published_at,
+            isNew = hasNewVersion(versionName),
+        )
+        Result.success(releaseInfo)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        Napier.e("检查更新失败", e)
+        Napier.e("获取 Release 信息失败", e)
         Result.failure(e)
     }
 }
 
 /**
+ * 从 GitHub Release API 异步获取最新版本号。
+ */
+suspend fun checkLatestVersion(
+    client: HttpClient = defaultUpdateCheckClient,
+): Result<String> {
+    return fetchLatestReleaseInfo(client).map { it.versionName }
+}
+
+/**
  * 判断 [latest] 是否比当前应用版本新。
- *
- * 版本号会去除前导 "v" 与后缀（如 "-miuix"），按 "major.minor.patch" 分段比较。
- *
- * @param latest 从远程获取的最新版本号。
- * @param current 当前应用版本号，默认 [AppInfo.VERSION_NAME]。
  */
 fun hasNewVersion(
     latest: String,
@@ -106,10 +127,6 @@ private fun String.normalizeVersion(): String {
 
 /**
  * 按版本号各段数字大小比较。
- *
- * 遇到无法解析为整数的段时安全降级为 0，并记录警告日志；不会因外部返回异常版本格式而崩溃。
- *
- * @return 正数表示 v1 > v2，负数表示 v1 < v2，0 表示相等。
  */
 private fun compareVersion(v1: String, v2: String): Int {
     fun parseParts(version: String, full: String): List<Int> = version.split('.').map { segment ->

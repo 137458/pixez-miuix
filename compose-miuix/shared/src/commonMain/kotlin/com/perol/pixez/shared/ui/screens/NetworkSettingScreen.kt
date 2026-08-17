@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -135,80 +135,76 @@ fun NetworkSettingScreen(
         ) {
             item {
                 SmallTitle(text = "OAuth 网络模式")
-            }
-            NETWORK_MODES.forEach { (code, label, description) ->
-                item {
-                    NetworkModeOption(
-                        label = label,
-                        description = description,
-                        selected = oauthNetworkMode == code,
-                        onClick = { setOAuthNetworkMode(code) },
-                    )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    NETWORK_MODES.forEach { (code, label, description) ->
+                        NetworkModeOption(
+                            label = label,
+                            description = description,
+                            selected = oauthNetworkMode == code,
+                            onClick = { setOAuthNetworkMode(code) },
+                        )
+                    }
                 }
             }
 
             item {
                 SmallTitle(text = "API 服务网络模式")
-            }
-            NETWORK_MODES.forEach { (code, label, description) ->
-                item {
-                    NetworkModeOption(
-                        label = label,
-                        description = description,
-                        selected = apiNetworkMode == code,
-                        onClick = { setApiNetworkMode(code) },
-                    )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    NETWORK_MODES.forEach { (code, label, description) ->
+                        NetworkModeOption(
+                            label = label,
+                            description = description,
+                            selected = apiNetworkMode == code,
+                            onClick = { setApiNetworkMode(code) },
+                        )
+                    }
                 }
             }
 
             if (allowsImageSource) {
                 item {
                     SmallTitle(text = "图片源")
-                }
-                item {
-                    BasicComponent(
-                        title = "默认",
-                        summary = DEFAULT_IMAGE_HOST,
-                        onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
-                        endActions = {
-                            CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
-                        },
-                    )
-                }
-                item {
-                    BasicComponent(
-                        title = "镜像",
-                        summary = MIRROR_IMAGE_HOST,
-                        onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
-                        endActions = {
-                            CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
-                        },
-                    )
-                }
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(text = "自定义 Host")
-                        TextField(
-                            value = customHostInput,
-                            onValueChange = { customHostInput = it },
-                            label = "输入 Host",
-                            modifier = Modifier.fillMaxWidth(),
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = "默认",
+                            summary = DEFAULT_IMAGE_HOST,
+                            onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
+                            endActions = {
+                                CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
+                            },
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        BasicComponent(
+                            title = "镜像",
+                            summary = MIRROR_IMAGE_HOST,
+                            onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
+                            endActions = {
+                                CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
+                            },
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            TextButton(
-                                text = "确认",
-                                onClick = { setCustomPictureSource(customHostInput) },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.textButtonColorsPrimary(),
+                            Text(text = "自定义 Host")
+                            TextField(
+                                value = customHostInput,
+                                onValueChange = { customHostInput = it },
+                                label = "输入 Host",
+                                modifier = Modifier.fillMaxWidth(),
                             )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                TextButton(
+                                    text = "确认",
+                                    onClick = { setCustomPictureSource(customHostInput) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                )
+                            }
                         }
                     }
                 }

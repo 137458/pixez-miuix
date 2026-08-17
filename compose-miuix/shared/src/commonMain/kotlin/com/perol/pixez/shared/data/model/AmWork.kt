@@ -10,4 +10,20 @@ data class AmWork(
     val userLink: String? = null,
     val userImage: String? = null,
     val showImage: String? = null,
-)
+) {
+    val illustId: Int?
+        get() {
+            val link = arworkLink ?: return null
+            val match = Regex("""artworks/(\d+)""").find(link)
+                ?: Regex("""illust_id=(\d+)""").find(link)
+            return match?.groupValues?.get(1)?.toIntOrNull()
+        }
+
+    val userId: Int?
+        get() {
+            val link = userLink ?: return null
+            val match = Regex("""users/(\d+)""").find(link)
+                ?: Regex("""(?:users/|id=)(\d+)""").find(link)
+            return match?.groupValues?.get(1)?.toIntOrNull()
+        }
+}

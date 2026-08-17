@@ -1,26 +1,33 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 插画卡片：等比例展示封面缩略图，并在下方显示标题与作者。
  *
- * 长宽比由插画自身尺寸决定，以模拟原 Flutter 应用的不规则瀑布流效果。
+ * 使用 MIUIX Card 容器与设计语义色，支持画质选择、AI 标识与 NSFW 遮罩。
  */
 @Composable
 fun IllustCard(
@@ -28,45 +35,119 @@ fun IllustCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 计算封面长宽比，防止除零；宽度为 0 时回退到 1:1。
+    val settings = LocalSettingsRepository.current
+    val previewUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+        when (settings?.feedPreviewQuality ?: 0) {
+            1 -> illust.imageUrls.large
+            2 -> illust.imageUrls.squareMedium
+            else -> illust.imageUrls.medium
+        }
+    }
+
+    val isAI = illust.illustAIType == 2
+    val showAIBadge = (settings?.feedAIBadge != false) && isAI
+
+    val isNsfw = (settings?.nsfwMask == true) && (
+        illust.xRestrict > 0 || illust.sanityLevel > 5 || illust.tags.any { it.name.contains("R-18", ignoreCase = true) }
+    )
+
     val aspectRatio = if (illust.width > 0) {
         illust.width.toFloat() / illust.height.coerceAtLeast(1).toFloat()
     } else {
         1f
     }
 
-    Column(
+    Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(aspectRatio.coerceIn(0.5f, 2f))
-                .clip(RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            PixivAsyncImage(
-                model = illust.imageUrls.medium,
-                contentDescription = illust.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(aspectRatio.coerceIn(0.5f, 2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isNsfw) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MiuixTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "R-18",
+                                    style = MiuixTheme.textStyles.title3,
+                                    color = MiuixTheme.colorScheme.error,
+                                )
+                            }
+                            Text(
+                                text = "敏感内容已隐藏",
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                    }
+                } else {
+                    PixivAsyncImage(
+                        model = previewUrl,
+                        contentDescription = illust.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-        Text(
-            text = illust.title,
-            style = MiuixTheme.textStyles.body2,
-            maxLines = 1,
-            modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp),
-        )
-        Text(
-            text = illust.user.name,
-            style = MiuixTheme.textStyles.footnote1,
-            maxLines = 1,
-            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
-        )
+                if (showAIBadge) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = "AI",
+                            fontSize = 10.sp,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = illust.title,
+                    style = MiuixTheme.textStyles.body2,
+                    maxLines = 1,
+                    color = MiuixTheme.colorScheme.onSurfaceContainer,
+                )
+                Text(
+                    text = illust.user.name,
+                    style = MiuixTheme.textStyles.footnote1,
+                    maxLines = 1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
     }
 }
+

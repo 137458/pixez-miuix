@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
@@ -99,34 +99,40 @@ fun CopyTextSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                TextField(
-                    value = textFieldValue,
-                    onValueChange = { textFieldValue = it },
-                    label = "分享格式模板",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    maxLines = 10,
-                )
+                top.yukonga.miuix.kmp.basic.SmallTitle(text = "格式模板")
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    TextField(
+                        value = textFieldValue,
+                        onValueChange = { textFieldValue = it },
+                        label = "分享格式模板",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        maxLines = 10,
+                    )
+                }
             }
             item {
-                FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PLACEHOLDER_CHIPS.forEach { chip ->
-                        InsertChip(
-                            label = chip.label,
-                            onClick = {
-                                textFieldValue = insertTextAtSelection(
-                                    textFieldValue,
-                                    chip.text,
-                                )
-                            },
-                        )
+                top.yukonga.miuix.kmp.basic.SmallTitle(text = "快捷插入占位符")
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PLACEHOLDER_CHIPS.forEach { chip ->
+                            InsertChip(
+                                label = chip.label,
+                                onClick = {
+                                    textFieldValue = insertTextAtSelection(
+                                        textFieldValue,
+                                        chip.text,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }

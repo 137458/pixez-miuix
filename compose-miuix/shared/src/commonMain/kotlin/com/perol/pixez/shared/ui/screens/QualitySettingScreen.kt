@@ -1,8 +1,9 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -76,42 +78,40 @@ fun QualitySettingScreen(
         ) {
             item {
                 SmallTitle(text = "浏览")
-            }
-            item {
-                QualitySettingItem(
-                    title = "Feed 预览画质",
-                    summary = feedPreviewQuality.toQualityLabel(QUALITY_OPTIONS_3),
-                    onClick = { editingType = QualityType.FeedPreview },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    QualitySettingItem(
+                        title = "Feed 预览画质",
+                        summary = feedPreviewQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        onClick = { editingType = QualityType.FeedPreview },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "详情")
-            }
-            item {
-                QualitySettingItem(
-                    title = "插画详情页画质",
-                    summary = pictureQuality.toQualityLabel(QUALITY_OPTIONS_3),
-                    onClick = { editingType = QualityType.Picture },
-                )
-            }
-            item {
-                QualitySettingItem(
-                    title = "漫画详情页画质",
-                    summary = mangaQuality.toQualityLabel(QUALITY_OPTIONS_3),
-                    onClick = { editingType = QualityType.Manga },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    QualitySettingItem(
+                        title = "插画详情页画质",
+                        summary = pictureQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        onClick = { editingType = QualityType.Picture },
+                    )
+                    QualitySettingItem(
+                        title = "漫画详情页画质",
+                        summary = mangaQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        onClick = { editingType = QualityType.Manga },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "预览")
-            }
-            item {
-                QualitySettingItem(
-                    title = "大图预览缩放画质",
-                    summary = zoomQuality.toQualityLabel(QUALITY_OPTIONS_2),
-                    onClick = { editingType = QualityType.Zoom },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    QualitySettingItem(
+                        title = "大图预览缩放画质",
+                        summary = zoomQuality.toQualityLabel(QUALITY_OPTIONS_2),
+                        onClick = { editingType = QualityType.Zoom },
+                    )
+                }
             }
         }
 

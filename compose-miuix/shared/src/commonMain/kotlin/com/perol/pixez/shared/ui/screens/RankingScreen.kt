@@ -34,6 +34,8 @@ import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
@@ -96,14 +98,21 @@ fun RankingScreen(
         }
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(title = "排行榜")
+            TopAppBar(
+                title = "排行榜",
+                scrollBehavior = scrollBehavior,
+            )
         },
     ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding()),
         ) {
             RankingModeSelector(
                 selectedMode = selectedMode,
@@ -140,7 +149,7 @@ fun RankingScreen(
                             onIllustClick = onIllustClick,
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(paddingValues),
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
                         )
                     }
                 }

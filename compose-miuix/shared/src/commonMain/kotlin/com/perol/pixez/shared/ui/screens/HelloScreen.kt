@@ -25,9 +25,14 @@ import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -36,6 +41,7 @@ import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Settings
 
 /**
@@ -52,8 +58,9 @@ fun HelloScreen(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
-    // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
+    // retryCount 作为 produceState 的 key，手动刷新或点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
@@ -75,7 +82,7 @@ fun HelloScreen(
     }
 
     // 页面进入时加载数据；已登录用推荐接口，未登录用 walkthrough 匿名接口。
-    // 加载完成后用本地屏蔽列表过滤，被屏蔽作品不展示。
+    // 默认读取内存缓存，仅当 isManualRefreshing == true 时触发强制网络刷新。
     val state = produceState<Result<List<Illust>>?>(
         initialValue = null,
         repository,
@@ -84,11 +91,13 @@ fun HelloScreen(
         retryCount,
         isLoggedIn,
     ) {
+        val force = isManualRefreshing
         val illustsResult = when (isLoggedIn) {
-            true -> suspendRunCatchingNonCancel { repository.getRecommended() }
-            false -> suspendRunCatchingNonCancel { repository.getWalkthroughIllusts() }
+            true -> suspendRunCatchingNonCancel { repository.getRecommended(forceRefresh = force) }
+            false -> suspendRunCatchingNonCancel { repository.getWalkthroughIllusts(forceRefresh = force) }
             null -> null
         }
+        isManualRefreshing = false
         val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
         val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
@@ -137,12 +146,28 @@ fun HelloScreen(
         }
     }
 
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = "首页",
+                scrollBehavior = scrollBehavior,
                 actions = {
+                    IconButton(
+                        onClick = triggerManualRefresh,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
                     if (isLoggedIn == false) {
                         IconButton(
                             onClick = onLoginClick,
@@ -188,18 +213,30 @@ fun HelloScreen(
                             .padding(paddingValues),
                     )
                 } else {
-                    IllustStaggeredGrid(
-                        illusts = illusts,
-                        onIllustClick = onIllustClick,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    )
+                    PullToRefresh(
+                        isRefreshing = isManualRefreshing,
+                        onRefresh = triggerManualRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        IllustStaggeredGrid(
+                            illusts = illusts,
+                            onIllustClick = onIllustClick,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(
+                                start = 8.dp,
+                                top = paddingValues.calculateTopPadding() + 8.dp,
+                                end = 8.dp,
+                                bottom = 100.dp,
+                            ),
+                        )
+                    }
                 }
             }
             else -> ErrorPlaceholder(
                 error = result.exceptionOrNull(),
-                onRetry = { retryCount++ },
+                onRetry = { triggerManualRefresh() },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),

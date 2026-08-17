@@ -10,6 +10,11 @@ import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.platform.BrowserLauncherContext
 
+import android.content.Intent
+import android.util.Log
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
 /**
  * Android 应用入口。
  * 使用 ComponentActivity + setContent 承载 Compose Multiplatform 应用。
@@ -26,8 +31,30 @@ class MainActivity : ComponentActivity() {
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
         )
+        handleAuthIntent(intent)
         setContent {
             PixEzApp(dependencies)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthIntent(intent)
+    }
+
+    private fun handleAuthIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        val code = uri.getQueryParameter("code")
+        if (!code.isNullOrBlank()) {
+            lifecycleScope.launch {
+                try {
+                    Log.i("MainActivity", "收到 OAuth 回调 code，开始登录")
+                    dependencies.accountRepository.loginWithCode(code)
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "OAuth 回调登录失败", e)
+                }
+            }
         }
     }
 

@@ -50,6 +50,9 @@ kotlin {
             // 扩展图标库（Contacts、Settings、AddCircle 等）需要单独引入 miuix-icons artifact。
             implementation(libs.miuixIcons)
 
+            // Kyant0 Backdrop (Liquid Glass 毛玻璃特效)
+            implementation(libs.backdrop)
+
             // Ktor
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
@@ -66,6 +69,7 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.decompose)
             implementation(libs.decompose.compose)
+            implementation(libs.navigationevent.compose)
             implementation(libs.napier)
 
             // Settings
@@ -87,6 +91,7 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.android.driver)
             implementation(libs.androidx.lifecycle.viewmodel)
@@ -195,3 +200,8 @@ sqldelight {
         }
     }
 }
+
+tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+    enabled = false
+}
+

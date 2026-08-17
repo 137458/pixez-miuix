@@ -80,20 +80,26 @@ class TokenRefreshPlugin(
                 }
             }
 
-            // 使用 HttpSend 拦截器实现 401 重试，避免与 HttpRequestRetry 配置冲突。
+            // 使用 HttpSend 拦截器实现 Token 过期自动刷新与重试。
+            // Pixiv API 在 access_token 过期时可能返回 400 (invalid_grant) 或 401 (Unauthorized)。
             scope.plugin(HttpSend).intercept { request ->
                 var call = execute(request)
-                if (call.response.status == HttpStatusCode.Unauthorized) {
+                val status = call.response.status
+                if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.BadRequest) {
                     val bodyText = try {
                         call.response.bodyAsText()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Napier.w("读取 401 响应体失败", e)
+                        Napier.w("读取认证异常响应体失败", e)
                         ""
                     }
-                    val shouldRefresh = bodyText.contains("OAuth", ignoreCase = true)
+                    val shouldRefresh = bodyText.contains("OAuth", ignoreCase = true) ||
+                            bodyText.contains("invalid_grant", ignoreCase = true) ||
+                            bodyText.contains("Access Token", ignoreCase = true) ||
+                            bodyText.contains("token", ignoreCase = true)
                     if (shouldRefresh) {
+                        Napier.i("检测到 Pixiv Access Token 失效/过期 (HTTP $status)，正在自动执行 Token 刷新并重试...")
                         plugin.refreshTokenOrThrow()
                         // 移除旧的 Authorization，重新注入刷新后的 token。
                         request.headers.remove("Authorization")
@@ -101,9 +107,8 @@ class TokenRefreshPlugin(
                             request.headers.append("Authorization", it)
                         }
                         call = execute(request)
-                    } else {
-                        // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常，
-                        // 避免 HttpResponseValidator 把真实错误体吞掉。
+                    } else if (status == HttpStatusCode.Unauthorized) {
+                        // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
                         throw PixivApiException(
                             statusCode = call.response.status.value,
                             message = "请求未授权: ${call.response.status}, body=$bodyText",

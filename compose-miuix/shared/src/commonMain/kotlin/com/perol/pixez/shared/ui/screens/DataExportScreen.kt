@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -95,22 +95,21 @@ fun DataExportScreen(
         ) {
             item {
                 SmallTitle(text = "数据操作")
-            }
-
-            // 为五类数据分别生成一行，左侧为说明，右侧放置导出/导入按钮。
-            items(DataType.entries.size) { index ->
-                val type = DataType.entries[index]
-                DataExportRow(
-                    type = type,
-                    onExportClick = {
-                        dialogKey++
-                        pendingOperation = PendingOperation(type, Action.Export)
-                    },
-                    onImportClick = {
-                        dialogKey++
-                        pendingOperation = PendingOperation(type, Action.Import)
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    DataType.entries.forEach { type ->
+                        DataExportRow(
+                            type = type,
+                            onExportClick = {
+                                dialogKey++
+                                pendingOperation = PendingOperation(type, Action.Export)
+                            },
+                            onImportClick = {
+                                dialogKey++
+                                pendingOperation = PendingOperation(type, Action.Import)
+                            },
+                        )
+                    }
+                }
             }
         }
 

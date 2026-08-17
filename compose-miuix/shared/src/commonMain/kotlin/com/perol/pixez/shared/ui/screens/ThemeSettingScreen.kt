@@ -122,104 +122,112 @@ fun ThemeSettingScreen(
         ) {
             item {
                 SmallTitle(text = "主题模式")
-            }
-            item {
-                ThemeModeOption(
-                    label = "跟随系统",
-                    selected = themeMode == 0,
-                    onClick = { setThemeMode(0) },
-                )
-            }
-            item {
-                ThemeModeOption(
-                    label = "浅色",
-                    selected = themeMode == 1,
-                    onClick = { setThemeMode(1) },
-                )
-            }
-            item {
-                ThemeModeOption(
-                    label = "深色",
-                    selected = themeMode == 2,
-                    onClick = { setThemeMode(2) },
-                )
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                ) {
+                    ThemeModeOption(
+                        label = "跟随系统",
+                        selected = themeMode == 0,
+                        onClick = { setThemeMode(0) },
+                    )
+                    ThemeModeOption(
+                        label = "浅色",
+                        selected = themeMode == 1,
+                        onClick = { setThemeMode(1) },
+                    )
+                    ThemeModeOption(
+                        label = "深色",
+                        selected = themeMode == 2,
+                        onClick = { setThemeMode(2) },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "显示")
-            }
-            item {
-                BasicComponent(
-                    title = "AMOLED 模式",
-                    summary = "深色模式下使用纯黑背景，降低 OLED 屏幕耗电",
-                    endActions = {
-                        Switch(
-                            checked = isAmoled,
-                            onCheckedChange = { setIsAmoled(it) },
-                        )
-                    },
-                )
-            }
-            item {
-                BasicComponent(
-                    title = "动态颜色",
-                    summary = if (useDynamicColor) "根据系统壁纸或种子色生成主题色" else "使用固定种子色",
-                    endActions = {
-                        Switch(
-                            checked = useDynamicColor,
-                            onCheckedChange = { setUseDynamicColor(it) },
-                        )
-                    },
-                )
-            }
-
-            if (!useDynamicColor) {
-                item {
-                    SmallTitle(text = "种子色")
-                }
-                item {
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                ) {
                     BasicComponent(
-                        title = "选择种子色",
-                        summary = "用于生成应用主题色",
-                        onClick = { showColorPicker = true },
+                        title = "AMOLED 模式",
+                        summary = "深色模式下使用纯黑背景，降低 OLED 屏幕耗电",
                         endActions = {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(seedColor))
-                                    .border(
-                                        width = 1.dp,
-                                        color = MiuixTheme.colorScheme.outline,
-                                        shape = RoundedCornerShape(6.dp),
-                                    ),
+                            Switch(
+                                checked = isAmoled,
+                                onCheckedChange = { setIsAmoled(it) },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = "动态颜色",
+                        summary = if (useDynamicColor) "根据系统壁纸或种子色生成主题色" else "使用固定种子色",
+                        endActions = {
+                            Switch(
+                                checked = useDynamicColor,
+                                onCheckedChange = { setUseDynamicColor(it) },
                             )
                         },
                     )
                 }
             }
 
+            if (!useDynamicColor) {
+                item {
+                    SmallTitle(text = "种子色")
+                    top.yukonga.miuix.kmp.basic.Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        BasicComponent(
+                            title = "选择种子色",
+                            summary = "用于生成应用主题色",
+                            onClick = { showColorPicker = true },
+                            endActions = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(seedColor))
+                                        .border(
+                                            width = 1.dp,
+                                            color = MiuixTheme.colorScheme.outline,
+                                            shape = RoundedCornerShape(6.dp),
+                                        ),
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+
             item {
                 SmallTitle(text = "MIUIX 个性化")
-            }
-            item {
-                BasicComponent(
-                    title = "调色板风格",
-                    summary = paletteStyleName(paletteStyle),
-                    onClick = { showPaletteStylePicker = true },
-                )
-            }
-            item {
-                BasicComponent(
-                    title = "2025 色彩规范",
-                    summary = if (useSpec2025) "使用新版 Spec2025 取色算法" else "使用兼容 Spec2021 取色算法",
-                    endActions = {
-                        Switch(
-                            checked = useSpec2025,
-                            onCheckedChange = { setUseSpec2025(it) },
-                        )
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                ) {
+                    BasicComponent(
+                        title = "调色板风格",
+                        summary = paletteStyleName(paletteStyle),
+                        onClick = { showPaletteStylePicker = true },
+                    )
+                    BasicComponent(
+                        title = "2025 色彩规范",
+                        summary = if (useSpec2025) "使用新版 Spec2025 取色算法" else "使用兼容 Spec2021 取色算法",
+                        endActions = {
+                            Switch(
+                                checked = useSpec2025,
+                                onCheckedChange = { setUseSpec2025(it) },
+                            )
+                        },
+                    )
+                }
             }
         }
 

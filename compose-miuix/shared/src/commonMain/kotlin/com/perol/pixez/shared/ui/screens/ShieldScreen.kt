@@ -142,119 +142,111 @@ fun ShieldScreen(
         ) {
             item {
                 SmallTitle(text = "AI 作品")
-            }
-            item {
-                BasicComponent(
-                    title = "使带有 AI 生成标记的作品不可见",
-                    summary = if (banAIIllust) "已开启" else "已关闭",
-                    endActions = {
-                        Switch(
-                            checked = banAIIllust,
-                            onCheckedChange = { checked ->
-                                banAIIllust = checked
-                                settingsRepository.banAIIllust = checked
-                            },
-                        )
-                    },
-                )
-            }
-            item {
-                BasicComponent(
-                    title = "AI 作品显示设置",
-                    summary = if (isLoadingAISetting) "加载中…" else "Pixiv 账号级 AI 作品显示偏好",
-                    onClick = {
-                        if (isLoadingAISetting) return@BasicComponent
-                        coroutineScope.launch {
-                            isLoadingAISetting = true
-                            suspendRunCatchingNonCancel {
-                                userRepository.getUserAISettings()
-                            }.onSuccess { response ->
-                                onAISettingClick(response.showAI)
-                            }.onFailure { e ->
-                                Napier.e("加载 AI 显示设置失败", e)
-                                toastMessage = "加载失败：${e.message}"
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "使带有 AI 生成标记的作品不可见",
+                        summary = if (banAIIllust) "已开启" else "已关闭",
+                        endActions = {
+                            Switch(
+                                checked = banAIIllust,
+                                onCheckedChange = { checked ->
+                                    banAIIllust = checked
+                                    settingsRepository.banAIIllust = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = "AI 作品显示设置",
+                        summary = if (isLoadingAISetting) "加载中…" else "Pixiv 账号级 AI 作品显示偏好",
+                        onClick = {
+                            if (isLoadingAISetting) return@BasicComponent
+                            coroutineScope.launch {
+                                isLoadingAISetting = true
+                                suspendRunCatchingNonCancel {
+                                    userRepository.getUserAISettings()
+                                }.onSuccess { response ->
+                                    onAISettingClick(response.showAI)
+                                }.onFailure { e ->
+                                    Napier.e("加载 AI 显示设置失败", e)
+                                    toastMessage = "加载失败：${e.message}"
+                                }
+                                isLoadingAISetting = false
                             }
-                            isLoadingAISetting = false
-                        }
-                    },
-                )
+                        },
+                    )
+                }
             }
 
             // 标签分组：展示、添加、删除。
             item {
                 SmallTitle(text = "标签")
-            }
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "已屏蔽 ${banTags.size} 个标签",
-                        style = MiuixTheme.textStyles.body2,
-                    )
-                    IconButton(
-                        onClick = { showAddDialog = true },
-                        enabled = !isLoading && !isAddingTag,
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            imageVector = MiuixIcons.Add,
-                            contentDescription = "添加标签",
+                        Text(
+                            text = "已屏蔽 ${banTags.size} 个标签",
+                            style = MiuixTheme.textStyles.body2,
                         )
+                        IconButton(
+                            onClick = { showAddDialog = true },
+                            enabled = !isLoading && !isAddingTag,
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Add,
+                                contentDescription = "添加标签",
+                            )
+                        }
                     }
+                    ChipFlowRow(
+                        items = banTags,
+                        label = { it.name },
+                        onClick = { deleteTarget = DeleteTarget.Tag(it) },
+                    )
                 }
             }
-            item {
-                ChipFlowRow(
-                    items = banTags,
-                    label = { it.name },
-                    onClick = { deleteTarget = DeleteTarget.Tag(it) },
-                )
-            }
 
-            // 画师分组：仅展示与删除（原应用未提供从此处添加入口）。
+            // 画师分组：仅展示与删除。
             item {
                 SmallTitle(text = "画师")
-            }
-            item {
-                Text(
-                    text = "已屏蔽 ${banUsers.size} 个画师",
-                    style = MiuixTheme.textStyles.body2,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            item {
-                ChipFlowRow(
-                    items = banUsers,
-                    label = { it.name },
-                    onClick = { deleteTarget = DeleteTarget.User(it) },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = "已屏蔽 ${banUsers.size} 个画师",
+                        style = MiuixTheme.textStyles.body2,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    ChipFlowRow(
+                        items = banUsers,
+                        label = { it.name },
+                        onClick = { deleteTarget = DeleteTarget.User(it) },
+                    )
+                }
             }
 
-            // 作品分组：仅展示与删除（原应用未提供从此处添加入口）。
+            // 作品分组：仅展示与删除。
             item {
                 SmallTitle(text = "作品")
-            }
-            item {
-                Text(
-                    text = "已屏蔽 ${banIllusts.size} 个作品",
-                    style = MiuixTheme.textStyles.body2,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            item {
-                ChipFlowRow(
-                    items = banIllusts,
-                    label = { it.name },
-                    onClick = { deleteTarget = DeleteTarget.Illust(it) },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = "已屏蔽 ${banIllusts.size} 个作品",
+                        style = MiuixTheme.textStyles.body2,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    ChipFlowRow(
+                        items = banIllusts,
+                        label = { it.name },
+                        onClick = { deleteTarget = DeleteTarget.Illust(it) },
+                    )
+                }
             }
         }
 

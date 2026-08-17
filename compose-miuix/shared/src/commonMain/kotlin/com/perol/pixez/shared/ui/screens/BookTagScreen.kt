@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -96,79 +96,77 @@ fun BookTagScreen(
         ) {
             item {
                 SmallTitle(text = "标签列表")
-            }
-
-            if (isEmpty) {
-                item {
-                    Text(
-                        text = "暂无收藏标签，点击右上角添加",
-                        style = MiuixTheme.textStyles.body2,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 24.dp),
-                    )
-                }
-            } else {
-                items(bookTags.size) { index ->
-                    val tag = bookTags[index]
-                    BasicComponent(
-                        title = tag,
-                        onClick = { onTagSearch(tag) },
-                        endActions = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        if (index > 0) {
-                                            isReordering = true
-                                            updateTags(
-                                                bookTags.toMutableList().apply {
-                                                    add(index - 1, removeAt(index))
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    if (isEmpty) {
+                        Text(
+                            text = "暂无收藏标签，点击右上角添加",
+                            style = MiuixTheme.textStyles.body2,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                        )
+                    } else {
+                        bookTags.forEachIndexed { index, tag ->
+                            BasicComponent(
+                                title = tag,
+                                onClick = { onTagSearch(tag) },
+                                endActions = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                if (index > 0) {
+                                                    isReordering = true
+                                                    updateTags(
+                                                        bookTags.toMutableList().apply {
+                                                            add(index - 1, removeAt(index))
+                                                        }
+                                                    )
+                                                    isReordering = false
                                                 }
+                                            },
+                                            enabled = index > 0 && !isReordering,
+                                        ) {
+                                            Icon(
+                                                imageVector = MiuixIcons.ExpandLess,
+                                                contentDescription = "上移",
                                             )
-                                            isReordering = false
                                         }
-                                    },
-                                    enabled = index > 0 && !isReordering,
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.ExpandLess,
-                                        contentDescription = "上移",
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        if (index < bookTags.lastIndex) {
-                                            isReordering = true
-                                            updateTags(
-                                                bookTags.toMutableList().apply {
-                                                    add(index + 1, removeAt(index))
+                                        IconButton(
+                                            onClick = {
+                                                if (index < bookTags.lastIndex) {
+                                                    isReordering = true
+                                                    updateTags(
+                                                        bookTags.toMutableList().apply {
+                                                            add(index + 1, removeAt(index))
+                                                        }
+                                                    )
+                                                    isReordering = false
                                                 }
+                                            },
+                                            enabled = index < bookTags.lastIndex && !isReordering,
+                                        ) {
+                                            Icon(
+                                                imageVector = MiuixIcons.ExpandMore,
+                                                contentDescription = "下移",
                                             )
-                                            isReordering = false
                                         }
-                                    },
-                                    enabled = index < bookTags.lastIndex && !isReordering,
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.ExpandMore,
-                                        contentDescription = "下移",
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { tagToDelete = tag },
-                                    enabled = !isReordering,
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.Delete,
-                                        contentDescription = "删除",
-                                    )
-                                }
-                            }
-                        },
-                    )
+                                        IconButton(
+                                            onClick = { tagToDelete = tag },
+                                            enabled = !isReordering,
+                                        ) {
+                                            Icon(
+                                                imageVector = MiuixIcons.Delete,
+                                                contentDescription = "删除",
+                                            )
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }

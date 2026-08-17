@@ -62,7 +62,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.perol.pixez"
+        applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
         versionCode = 10010048
@@ -92,3 +92,8 @@ compose.desktop {
         }
     }
 }
+
+tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+    enabled = false
+}
+

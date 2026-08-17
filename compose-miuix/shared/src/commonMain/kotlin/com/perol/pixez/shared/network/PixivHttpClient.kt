@@ -10,6 +10,7 @@ import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.serialization.kotlinx.json.json
@@ -27,12 +28,13 @@ import kotlinx.serialization.json.Json
  */
 class PixivHttpClient(
     tokenStorage: AuthTokenStorage,
+    languageProvider: () -> String = { "zh-CN" },
     enableLogging: Boolean = false,
 ) {
     /**
      * 用于 OAuth 登录/刷新 token 的基础客户端，不带 TokenRefreshPlugin。
      */
-    private val baseOAuthClient: HttpClient = createBaseOAuthClient(enableLogging)
+    private val baseOAuthClient: HttpClient = createBaseOAuthClient(languageProvider, enableLogging)
 
     /**
      * OAuth 业务封装，外部可用它构建登录 URL 或手动刷新 token。
@@ -46,6 +48,7 @@ class PixivHttpClient(
         host = APP_API_HOST,
         tokenStorage = tokenStorage,
         oAuthClient = oAuthClient,
+        languageProvider = languageProvider,
         enableLogging = enableLogging,
     )
 
@@ -56,6 +59,7 @@ class PixivHttpClient(
         host = ACCOUNTS_HOST,
         tokenStorage = tokenStorage,
         oAuthClient = oAuthClient,
+        languageProvider = languageProvider,
         enableLogging = enableLogging,
     )
 
@@ -113,13 +117,16 @@ class PixivHttpClient(
         /**
          * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。
          */
-        private fun createBaseOAuthClient(enableLogging: Boolean): HttpClient = HttpClient {
+        private fun createBaseOAuthClient(
+            languageProvider: () -> String,
+            enableLogging: Boolean,
+        ): HttpClient = HttpClient {
             defaultRequest {
                 url {
                     protocol = URLProtocol.HTTPS
                     host = OAUTH_HOST
                 }
-                PixivHeaders.commonHeaders().forEach { (key, value) ->
+                PixivHeaders.commonHeaders(languageProvider()).forEach { (key, value) ->
                     headers.append(key, value)
                 }
             }
@@ -162,6 +169,7 @@ class PixivHttpClient(
             host: String,
             tokenStorage: AuthTokenStorage,
             oAuthClient: OAuthClient,
+            languageProvider: () -> String,
             enableLogging: Boolean,
         ): HttpClient = HttpClient {
             // 统一使用 HTTPS 与固定 Host。
@@ -170,7 +178,7 @@ class PixivHttpClient(
                     protocol = URLProtocol.HTTPS
                     this.host = host
                 }
-                PixivHeaders.commonHeaders().forEach { (key, value) ->
+                PixivHeaders.commonHeaders(languageProvider()).forEach { (key, value) ->
                     headers.append(key, value)
                 }
             }
@@ -216,9 +224,11 @@ class PixivHttpClient(
                 validateResponse { response: HttpResponse ->
                     // 401 已由 TokenRefreshPlugin 处理（刷新或抛异常），此处不再重复处理。
                     if (response.status.value >= 400 && response.status != HttpStatusCode.Unauthorized) {
+                        val bodyText = runCatching { response.bodyAsText() }.getOrDefault("")
+                        Napier.e("Pixiv API 请求失败 status=${response.status}, url=${response.call.request.url}, body=$bodyText")
                         throw PixivApiException(
                             statusCode = response.status.value,
-                            message = "请求失败: ${response.status}",
+                            message = if (bodyText.isNotBlank()) "请求失败: ${response.status} ($bodyText)" else "请求失败: ${response.status}",
                         )
                     }
                 }

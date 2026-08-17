@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -133,10 +133,12 @@ fun AccountEditScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 item {
-                    AccountInfoSection(
-                        account = account,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        AccountInfoSection(
+                            account = account,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
                 }
 
                 item {
@@ -144,118 +146,100 @@ fun AccountEditScreen(
                         text = "修改信息",
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )
-                }
-
-                item {
-                    TextField(
-                        value = currentPassword,
-                        onValueChange = { currentPassword = it },
-                        label = "当前密码",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        singleLine = true,
-                        visualTransformation = if (currentPasswordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        trailingIcon = {
-                            PasswordVisibilityToggle(
-                                visible = currentPasswordVisible,
-                                onToggle = { currentPasswordVisible = !currentPasswordVisible },
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            TextField(
+                                value = currentPassword,
+                                onValueChange = { currentPassword = it },
+                                label = "当前密码",
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = if (currentPasswordVisible) {
+                                    VisualTransformation.None
+                                } else {
+                                    PasswordVisualTransformation()
+                                },
+                                trailingIcon = {
+                                    PasswordVisibilityToggle(
+                                        visible = currentPasswordVisible,
+                                        onToggle = { currentPasswordVisible = !currentPasswordVisible },
+                                    )
+                                },
                             )
-                        },
-                    )
-                }
-
-                item {
-                    TextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = "新密码",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        singleLine = true,
-                        visualTransformation = if (newPasswordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        trailingIcon = {
-                            PasswordVisibilityToggle(
-                                visible = newPasswordVisible,
-                                onToggle = { newPasswordVisible = !newPasswordVisible },
+                            TextField(
+                                value = newPassword,
+                                onValueChange = { newPassword = it },
+                                label = "新密码",
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = if (newPasswordVisible) {
+                                    VisualTransformation.None
+                                } else {
+                                    PasswordVisualTransformation()
+                                },
+                                trailingIcon = {
+                                    PasswordVisibilityToggle(
+                                        visible = newPasswordVisible,
+                                        onToggle = { newPasswordVisible = !newPasswordVisible },
+                                    )
+                                },
                             )
-                        },
-                    )
-                }
-
-                item {
-                    TextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = "邮箱",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        singleLine = true,
-                    )
-                }
-
-                item {
-                    Button(
-                        onClick = {
-                            // 校验阶段：若已有保存任务进行中，直接忽略本次点击，防止重复提交。
-                            if (isSaving) return@Button
-
-                            // 校验阶段：当前密码与邮箱不能为空，邮箱格式需基本合法。
-                            if (currentPassword.isBlank()) {
-                                toastMessage = "请输入当前密码"
-                                return@Button
-                            }
-                            if (email.isBlank()) {
-                                toastMessage = "请输入邮箱"
-                                return@Button
-                            }
-                            if (!EMAIL_REGEX.matches(email)) {
-                                toastMessage = "邮箱格式错误"
-                                return@Button
-                            }
-
-                            coroutineScope.launch {
-                                try {
-                                    // 提交阶段：启用加载态，调用仓库接口提交账号修改。
-                                    isSaving = true
-                                    suspendRunCatchingNonCancel {
-                                        accountRepository.editAccount(
-                                            currentPassword = currentPassword,
-                                            newPassword = newPassword.takeIf { it.isNotBlank() },
-                                            newMailAddress = email.takeIf { it.isNotBlank() },
-                                        )
-                                    }.onSuccess {
-                                        // 成功处理阶段：提示用户并清空密码框，降低误操作重复提交风险。
-                                        toastMessage = "保存成功"
-                                        currentPassword = ""
-                                        newPassword = ""
-                                    }.onFailure { e ->
-                                        // 失败处理阶段：向用户展示错误信息并记录日志。
-                                        toastMessage = "保存失败：${e.message}"
-                                        Napier.e("保存账号信息失败", e)
+                            TextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = "邮箱",
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    if (isSaving) return@Button
+                                    if (currentPassword.isBlank()) {
+                                        toastMessage = "请输入当前密码"
+                                        return@Button
                                     }
-                                } finally {
-                                    // 清理阶段：无论成功或失败，都重置加载态以允许再次提交。
-                                    isSaving = false
-                                }
+                                    if (email.isBlank()) {
+                                        toastMessage = "请输入邮箱"
+                                        return@Button
+                                    }
+                                    if (!EMAIL_REGEX.matches(email)) {
+                                        toastMessage = "邮箱格式错误"
+                                        return@Button
+                                    }
+
+                                    coroutineScope.launch {
+                                        try {
+                                            isSaving = true
+                                            suspendRunCatchingNonCancel {
+                                                accountRepository.editAccount(
+                                                    currentPassword = currentPassword,
+                                                    newPassword = newPassword.takeIf { it.isNotBlank() },
+                                                    newMailAddress = email.takeIf { it.isNotBlank() },
+                                                )
+                                            }.onSuccess {
+                                                toastMessage = "保存成功"
+                                                currentPassword = ""
+                                                newPassword = ""
+                                            }.onFailure { e ->
+                                                toastMessage = "保存失败：${e.message}"
+                                                Napier.e("保存账号信息失败", e)
+                                            }
+                                        } finally {
+                                            isSaving = false
+                                        }
+                                    }
+                                },
+                                enabled = !isSaving,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(text = if (isSaving) "保存中…" else "保存")
                             }
-                        },
-                        enabled = !isSaving,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                    ) {
-                        Text(text = if (isSaving) "保存中…" else "保存")
+                        }
                     }
                 }
 
@@ -266,23 +250,23 @@ fun AccountEditScreen(
                             text = "安全",
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                         )
-                    }
-                    item {
-                        BasicComponent(
-                            title = "复制 Refresh Token",
-                            summary = "将当前账号的 refresh token 复制到剪贴板",
-                            onClick = {
-                                account?.refreshToken?.let { token ->
-                                    try {
-                                        clipboard.copy(token)
-                                        toastMessage = "已复制到剪贴板"
-                                    } catch (e: Exception) {
-                                        toastMessage = "复制失败：${e.message}"
-                                        Napier.e("复制 refresh token 失败", e)
+                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                            BasicComponent(
+                                title = "复制 Refresh Token",
+                                summary = "将当前账号的 refresh token 复制到剪贴板",
+                                onClick = {
+                                    account?.refreshToken?.let { token ->
+                                        try {
+                                            clipboard.copy(token)
+                                            toastMessage = "已复制到剪贴板"
+                                        } catch (e: Exception) {
+                                            toastMessage = "复制失败：${e.message}"
+                                            Napier.e("复制 refresh token 失败", e)
+                                        }
                                     }
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -291,13 +275,13 @@ fun AccountEditScreen(
                         text = "危险操作",
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )
-                }
-                item {
-                    BasicComponent(
-                        title = "账号注销",
-                        summary = "跳转到 Pixiv 账号注销页面",
-                        onClick = { showDeletionConfirm = true },
-                    )
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = "账号注销",
+                            summary = "跳转到 Pixiv 账号注销页面",
+                            onClick = { showDeletionConfirm = true },
+                        )
+                    }
                 }
             }
 

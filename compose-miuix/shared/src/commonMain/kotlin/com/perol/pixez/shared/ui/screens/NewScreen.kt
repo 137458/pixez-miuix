@@ -27,6 +27,9 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -140,11 +143,14 @@ fun NewScreen(
         }
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = "最新",
+                scrollBehavior = scrollBehavior,
                 actions = {
                     if (isLoggedIn == false) {
                         Button(
@@ -162,7 +168,7 @@ fun NewScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(top = paddingValues.calculateTopPadding()),
         ) {
             when (isLoggedIn) {
                 false -> {
@@ -187,19 +193,21 @@ fun NewScreen(
 
                     val result = state.value
                     when {
-                        result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                        result == null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
                         result.isSuccess -> {
                             val illusts = result.getOrNull().orEmpty()
                             if (illusts.isEmpty()) {
                                 EmptyPlaceholder(
                                     message = "暂无关注作品",
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.weight(1f),
                                 )
                             } else {
                                 IllustStaggeredGrid(
                                     illusts = illusts,
                                     onIllustClick = onIllustClick,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 )
                             }
                         }
@@ -207,7 +215,7 @@ fun NewScreen(
                         else -> ErrorPlaceholder(
                             error = result.exceptionOrNull(),
                             onRetry = { retryCount++ },
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }

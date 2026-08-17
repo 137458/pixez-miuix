@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +17,7 @@ import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -27,6 +28,8 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 
 /**
  * 平台专属设置页：仅 Android 平台展示实际设置项。
@@ -75,69 +78,68 @@ fun PlatformSettingScreen(
             if (!isAndroidPlatform()) {
                 // Desktop 等不支持 Android 专属设置的平台展示占位提示。
                 item {
-                    BasicComponent(
-                        title = "当前平台不支持",
-                        summary = "平台专属设置仅适用于 Android 设备",
-                        onClick = {},
-                    )
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = "当前平台不支持",
+                            summary = "平台专属设置仅适用于 Android 设备",
+                            onClick = {},
+                        )
+                    }
                 }
                 return@LazyColumn
             }
 
             item {
                 SmallTitle(text = "显示")
-            }
-            // 显示模式入口：点击后弹出单选对话框。
-            item {
-                BasicComponent(
-                    title = "显示模式",
-                    summary = displayMode.toDisplayModeLabel(),
-                    onClick = { editingDialog = PlatformDialogType.DisplayMode },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "显示模式",
+                        summary = displayMode.toDisplayModeLabel(),
+                        onClick = { editingDialog = PlatformDialogType.DisplayMode },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "选择器")
-            }
-            // 图片选择器类型开关：开启后使用系统 Photo Picker。
-            item {
-                BasicComponent(
-                    title = "使用系统图片选择器",
-                    summary = if (imagePickerType == "1") "使用 Photo Picker" else "使用传统文件选择器",
-                    endActions = {
-                        Switch(
-                            checked = imagePickerType == "1",
-                            onCheckedChange = { checked ->
-                                imagePickerType = if (checked) "1" else "0"
-                                settingsRepository.imagePickerType = imagePickerType
-                            },
-                        )
-                    },
-                    onClick = {},
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "使用系统图片选择器",
+                        summary = if (imagePickerType == "1") "使用 Photo Picker" else "使用传统文件选择器",
+                        endActions = {
+                            Switch(
+                                checked = imagePickerType == "1",
+                                onCheckedChange = { checked ->
+                                    imagePickerType = if (checked) "1" else "0"
+                                    settingsRepository.imagePickerType = imagePickerType
+                                },
+                            )
+                        },
+                        onClick = {},
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "默认打开方式")
-            }
-            // Android 12+ 默认打开链接开关：切换后持久化并跳转系统设置页。
-            item {
-                BasicComponent(
-                    title = "默认打开链接",
-                    summary = "允许在此应用中打开网络链接",
-                    endActions = {
-                        Switch(
-                            checked = openByDefault,
-                            onCheckedChange = { checked ->
-                                openByDefault = checked
-                                settingsRepository.openByDefault = checked
-                                // 同步跳转系统「默认打开方式」设置页。
-                                openDefaultAppSettings()
-                            },
-                        )
-                    },
-                    onClick = {},
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "默认打开链接",
+                        summary = "允许在此应用中打开网络链接",
+                        endActions = {
+                            Switch(
+                                checked = openByDefault,
+                                onCheckedChange = { checked ->
+                                    openByDefault = checked
+                                    settingsRepository.openByDefault = checked
+                                    // 同步跳转系统「默认打开方式」设置页。
+                                    openDefaultAppSettings()
+                                },
+                            )
+                        },
+                        onClick = {},
+                    )
+                }
             }
         }
 

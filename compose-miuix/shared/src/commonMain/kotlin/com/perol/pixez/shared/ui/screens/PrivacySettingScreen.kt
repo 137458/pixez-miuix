@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -18,6 +19,9 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 
 /**
  * 隐私设置页：管理 NSFW 遮罩、默认私密收藏等与隐私相关的开关。
@@ -56,40 +60,40 @@ fun PrivacySettingScreen(
         ) {
             item {
                 SmallTitle(text = "内容展示")
-            }
-            item {
-                BasicComponent(
-                    title = "NSFW 遮罩",
-                    summary = if (nsfwMask) "已开启敏感内容遮罩" else "已关闭敏感内容遮罩",
-                    endActions = {
-                        Switch(
-                            checked = nsfwMask,
-                            onCheckedChange = { checked ->
-                                nsfwMask = checked
-                                settingsRepository.nsfwMask = checked
-                            },
-                        )
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "NSFW 遮罩",
+                        summary = if (nsfwMask) "已开启敏感内容遮罩" else "已关闭敏感内容遮罩",
+                        endActions = {
+                            Switch(
+                                checked = nsfwMask,
+                                onCheckedChange = { checked ->
+                                    nsfwMask = checked
+                                    settingsRepository.nsfwMask = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "收藏")
-            }
-            item {
-                BasicComponent(
-                    title = "默认私密收藏",
-                    summary = if (defaultPrivateLike) "收藏时默认不公开" else "收藏时默认公开",
-                    endActions = {
-                        Switch(
-                            checked = defaultPrivateLike,
-                            onCheckedChange = { checked ->
-                                defaultPrivateLike = checked
-                                settingsRepository.defaultPrivateLike = checked
-                            },
-                        )
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "默认私密收藏",
+                        summary = if (defaultPrivateLike) "收藏时默认不公开" else "收藏时默认公开",
+                        endActions = {
+                            Switch(
+                                checked = defaultPrivateLike,
+                                onCheckedChange = { checked ->
+                                    defaultPrivateLike = checked
+                                    settingsRepository.defaultPrivateLike = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
         }
     }

@@ -28,6 +28,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import com.perol.pixez.shared.ui.screens.createUpdateCheckClient
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 
 /**
  * 应用级依赖容器。
@@ -39,6 +41,9 @@ class AppDependencies(
     val driverFactory: DriverFactory,
     val settingsFactory: SettingsFactory,
 ) {
+    init {
+        runCatching { Napier.base(DebugAntilog()) }
+    }
     /**
      * 账号数据库驱动，复用旧 Flutter account.db。
      */
@@ -128,7 +133,14 @@ class AppDependencies(
      * 默认关闭网络日志，防止在 release 构建中泄露 Authorization token。
      */
     val httpClient: PixivHttpClient by lazy {
-        PixivHttpClient(tokenStorage, enableLogging = false)
+        PixivHttpClient(
+            tokenStorage = tokenStorage,
+            languageProvider = {
+                val num = settingsRepository.languageNum
+                com.perol.pixez.shared.ui.screens.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
+            },
+            enableLogging = true,
+        )
     }
 
     /**

@@ -1,65 +1,92 @@
-<img src="../android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" alt="logo" width="144" height="144" align="right" />
+<img src="../compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="logo" width="120" height="120" align="right" />
 
-# PixEz MIUIX ![](https://camo.githubusercontent.com/f2b4fa6779c8a4825e0e7347076746a2047ed100/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d47504c2d2d332e302d6f72616e67652e737667)
+# PixEz MIUIX ![](https://img.shields.io/badge/license-GPL--3.0-orange.svg) ![](https://img.shields.io/badge/Platform-Compose%20Multiplatform-blue.svg) ![](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg)
 
-> 🚧 **Migration in progress**: This project is migrating from Flutter to **Compose Multiplatform + MIUIX** (Xiaomi HyperOS design language). The new code lives in [`compose-miuix/`](../compose-miuix). The existing Flutter build remains available for download until the first MIUIX release.
+[中文 README 点这里](../README.md)<br />
+[README Bahasa Indonesia klik disini](./README_id.md)
 
-A 3rd-party pixiv client built with Compose Multiplatform, targeting Android / iOS / Desktop(JVM) / macOS.
+> 🌟 **Next-Gen Architecture**: This project has been rebuilt using **Compose Multiplatform + MIUIX** (Xiaomi HyperOS design system & component library). The new codebase is located in [`compose-miuix/`](../compose-miuix).
 
-Can access pixiv directly from Mainland China.
+A modern, fluid, and beautifully designed 3rd-party Pixiv cross-platform client targeting **Android / iOS / Desktop (JVM) / macOS**.
 
-# Download
+Direct access from Mainland China is supported without additional proxies.
 
-|OS|Market|GitHub|Cloud Drive|
-|:---:|:---:|:---:|:---:|
-|Android|[Google Play](https://play.google.com/store/apps/details?id=com.perol.play.pixez)|[Release](https://github.com/Notsfsssf/pixez-flutter/releases/latest)|[Lanzou](https://wwa.lanzous.com/b0ded45id)<br />**For Mainland China Users Only**|
-|iOS|[App Store](https://apps.apple.com/app/pixez/id1494435126)|/|/|
-|Windows|/|[Nightly MSIX](https://github.com/Notsfsssf/pixez-flutter/actions/workflows/build_windows.yml)|/|
+---
 
-# Preview
+## ✨ Features & Highlights
 
-|![Preview](../.github/preview/2.jpg) | ![Preview](../.github/preview/1.jpg) | 
-|:-------------------:|:------------------------:|
+- 🎨 **Xiaomi HyperOS (MIUIX) Design Language**:
+  - Squircle super-ellipse geometry and full MIUIX theme tokens for an authentic HyperOS experience.
+  - **IosLiquidGlass Floating Navigation Bar**: Official 3-layer architecture (frosted glass backdrop, interactive specular highlights, chromatic dispersion lens, and damped physics drag-and-snap gesture).
+  - **HyperOS 2 / HyperOS 3 Dynamic Shaders**: Official GLSL runtime shaders (`RuntimeShader` on Android 13+ / Skia `RuntimeEffect` on Desktop) and parallax Hero Logo animation.
+- ⚡ **Modern Multiplatform Architecture**:
+  - Kotlin Multiplatform + Compose Multiplatform foundation.
+  - Ktor + Kotlinx.Serialization asynchronous networking with auto token refresh.
+  - SQLDelight multiplatform local persistence.
+  - Coil3 async image loading pipeline with anti-hotlinking support.
+- 🖼️ **Complete Pixiv Core Capabilities**:
+  - Illustrations, Manga, Novels, and animated GIF (Ugoira) support.
+  - Daily, weekly, monthly, rookie, and R-18 ranking exploration.
+  - Pixivision / Spotlight rich article parser and reader.
+  - Adaptive staggered grid layout, smart tag filtering, mute list, and advanced search.
+  - One-click original image saving, system gallery sync, sharing, and clipboard parsing.
 
-# About this repository
+---
 
-As you see, Flutter is a framework that helps developer to design UI fastly.
+## 🛠️ Build & Run
 
-Its Hot Reload feature can shorten debug time greatly, making the process WYSIWYG.
+### Prerequisites
+- **JDK 17+**
+- **Android Studio** (Ladybug / Koala) or IntelliJ IDEA
+- **Android SDK** (compileSdk 36, minSdk 24)
 
-By using PlatformChannel, you can create specific functionalities for different platforms.
+### Build Commands
 
-This app uses `mobx`, `flutter_bloc` (will be deprecated), `provider` to manage status, and `custompainter` to play ugoira.
+Navigate into the `compose-miuix` folder:
 
-## Contribute
+```bash
+cd compose-miuix
 
-Currently we have those users who contribute to this project. Thanks for their participating!
+# Run Android Debug build on connected device / emulator
+./gradlew :composeApp:installDebug
+
+# Run Desktop (JVM) application
+./gradlew :composeApp:run
+
+# Build Android Release APK
+./gradlew :composeApp:assembleRelease
+```
+
+---
+
+## 👥 Contributors
+
+Thanks to everyone contributing to PixEz:
 
 <table>
   <tr>
-    <td align="center"><a href="https://github.com/Notsfsssf"><img src="https://avatars3.githubusercontent.com/u/16934707?v=4" width="100px;" alt=""/><br /><sub><b>Perol_Notsfsssf</b></sub></a><br /><a href="https://github.com/Skimige/pixez-flutter/commits?author=Notsfsssf" title="Code">💻</a></td>
-    <td align="center"><a href="https://xyx.moe"><img src="https://avatars3.githubusercontent.com/u/9017470?v=4" width="100px;" alt=""/><br /><sub><b>Skimige</b></sub></a><br /><a href="https://github.com/Skimige/pixez-flutter/commits?author=Skimige" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/TragicLifeHu"><img src="https://avatars3.githubusercontent.com/u/16817202?v=4" width="100px;" alt=""/><br /><sub><b>Tragic Life</b></sub></a><br /><a href="#translation-TragicLifeHu" title="Translation">🌍 (zh_TW)</a></td>
-    <td align="center"><a href="http://ivtune.net"><img src="https://avatars0.githubusercontent.com/u/54385201?v=4" width="100px;" alt=""/><br /><sub><b>karin722</b></sub></a><br /><a href="#translation-karin722" title="Translation">🌍 (ja)</a></td>
-    <td align="center"><a href="http://archman.fun"><img src="https://avatars0.githubusercontent.com/u/68731023?v=4" width="100px;" alt=""/><br /><sub><b>Romani-Archman</b></sub></a><br /><a href="https://github.com/Skimige/pixez-flutter/commits?author=Romani-Archman" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/itzXian"><img src="https://avatars1.githubusercontent.com/u/34748039?v=4" width="100px;" alt=""/><br /><sub><b>Xian</b></sub></a><br /><a href="#translation-itzXian" title="Translation">🌍 (en_US)</a></td>
+    <td align="center"><a href="https://github.com/Notsfsssf"><img src="https://avatars.githubusercontent.com/u/16934707?v=4" width="80px;" alt=""/><br /><sub><b>Perol_Notsfsssf</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=Notsfsssf" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/137458"><img src="https://avatars.githubusercontent.com/u/104149371?v=4" width="80px;" alt=""/><br /><sub><b>Right now</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=137458" title="Code">💻</a></td>
+    <td align="center"><a href="https://xyx.moe"><img src="https://avatars.githubusercontent.com/u/9017470?v=4" width="80px;" alt=""/><br /><sub><b>Skimige</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=Skimige" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/TragicLifeHu"><img src="https://avatars.githubusercontent.com/u/16817202?v=4" width="80px;" alt=""/><br /><sub><b>Tragic Life</b></sub></a><br /><a href="#translation-TragicLifeHu" title="Translation">🌍 (zh_TW)</a></td>
+    <td align="center"><a href="http://ivtune.net"><img src="https://avatars.githubusercontent.com/u/54385201?v=4" width="80px;" alt=""/><br /><sub><b>karin722</b></sub></a><br /><a href="#translation-karin722" title="Translation">🌍 (ja)</a></td>
+    <td align="center"><a href="http://archman.fun"><img src="https://avatars.githubusercontent.com/u/68731023?v=4" width="80px;" alt=""/><br /><sub><b>Romani-Archman</b></sub></a><br /><a href="#translation-Romani-Archman" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/itzXian"><img src="https://avatars.githubusercontent.com/u/34748039?v=4" width="80px;" alt=""/><br /><sub><b>Xian</b></sub></a><br /><a href="#translation-itzXian" title="Translation">🌍 (en_US)</a></td>
   </tr>
 </table>
 
-If you are a developer, and you're willing to contribute to this project, please don't hesitate to submit a PR!
+---
 
-This app also uses `flutter_intl` to localize. You're welcome to commit translation too.
+## 💬 Community & Feedback
 
-Got ideas about UI design? You're also welcome to share your opinions.
+- [FAQ & Guidelines (Chinese)](FAQ.md)
+- Feedback Email: PxezFeedback@outlook.com
+- Telegram: [@PixEzChannel](https://t.me/PixEzChannel)
+- Discord: [@PixEz](https://discord.gg/Em9AeJbg)
+- QQ Group: 815791942
 
-# Communicate
+---
 
-We have a [manual and FAQ page here (Chinese only)](./FAQ.md).
+## 📄 License
 
-Mail Feedback: PxezFeedback@outlook.com
-
-Also, feedback on Telegram: [@PixEzViewer](https://t.me/PixEzViewer)
-
-(Mainly Chinese, English welcomed)
-
-If you have questions about registering or 🔞, please don't ask for a solution, though.
+This project is licensed under the [GPL-3.0 License](../LICENSE).

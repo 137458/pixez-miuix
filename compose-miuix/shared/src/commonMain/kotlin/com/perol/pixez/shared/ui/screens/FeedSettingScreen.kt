@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -18,6 +19,9 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 
 /**
  * Feed 设置页：管理 Feed AI 标识、收藏后关注画师以及 SauceNAO 打开方式等开关。
@@ -57,62 +61,62 @@ fun FeedSettingScreen(
         ) {
             item {
                 SmallTitle(text = "内容展示")
-            }
-            item {
-                BasicComponent(
-                    title = "显示 Feed AI 标识",
-                    summary = if (feedAIBadge) "在 Feed 中显示 AI 生成标识" else "在 Feed 中隐藏 AI 生成标识",
-                    endActions = {
-                        Switch(
-                            checked = feedAIBadge,
-                            onCheckedChange = { checked ->
-                                // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                feedAIBadge = checked
-                                settingsRepository.feedAIBadge = checked
-                            },
-                        )
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "显示 Feed AI 标识",
+                        summary = if (feedAIBadge) "在 Feed 中显示 AI 生成标识" else "在 Feed 中隐藏 AI 生成标识",
+                        endActions = {
+                            Switch(
+                                checked = feedAIBadge,
+                                onCheckedChange = { checked ->
+                                    // 更新本地状态并立即写回仓库，保证偏好持久化。
+                                    feedAIBadge = checked
+                                    settingsRepository.feedAIBadge = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "收藏行为")
-            }
-            item {
-                BasicComponent(
-                    title = "收藏后关注画师",
-                    summary = if (followAfterStar) "收藏作品后自动关注画师" else "收藏作品后不自动关注画师",
-                    endActions = {
-                        Switch(
-                            checked = followAfterStar,
-                            onCheckedChange = { checked ->
-                                // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                followAfterStar = checked
-                                settingsRepository.followAfterStar = checked
-                            },
-                        )
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "收藏后关注画师",
+                        summary = if (followAfterStar) "收藏作品后自动关注画师" else "收藏作品后不自动关注画师",
+                        endActions = {
+                            Switch(
+                                checked = followAfterStar,
+                                onCheckedChange = { checked ->
+                                    // 更新本地状态并立即写回仓库，保证偏好持久化。
+                                    followAfterStar = checked
+                                    settingsRepository.followAfterStar = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "搜图")
-            }
-            item {
-                BasicComponent(
-                    title = "使用 WebView 打开 SauceNAO",
-                    summary = if (useSaunceNaoWebview) "SauceNAO 结果在应用内 WebView 打开" else "SauceNAO 结果使用外部浏览器打开",
-                    endActions = {
-                        Switch(
-                            checked = useSaunceNaoWebview,
-                            onCheckedChange = { checked ->
-                                // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                useSaunceNaoWebview = checked
-                                settingsRepository.useSaunceNaoWebview = checked
-                            },
-                        )
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "使用 WebView 打开 SauceNAO",
+                        summary = if (useSaunceNaoWebview) "SauceNAO 结果在应用内 WebView 打开" else "SauceNAO 结果使用外部浏览器打开",
+                        endActions = {
+                            Switch(
+                                checked = useSaunceNaoWebview,
+                                onCheckedChange = { checked ->
+                                    // 更新本地状态并立即写回仓库，保证偏好持久化。
+                                    useSaunceNaoWebview = checked
+                                    settingsRepository.useSaunceNaoWebview = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
         }
     }

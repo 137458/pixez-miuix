@@ -1,5 +1,9 @@
 package com.perol.pixez.shared.data.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -7,6 +11,8 @@ import io.github.aakira.napier.Napier
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+
+val LocalSettingsRepository = staticCompositionLocalOf<SettingsRepository?> { null }
 
 /**
  * 用户设置仓库，桥接旧 Flutter 应用的 SharedPreferences / NSUserDefaults。
@@ -18,14 +24,21 @@ import kotlinx.serialization.json.Json
 class SettingsRepository(
     private val settings: Settings,
 ) {
+    var changeVersion by mutableIntStateOf(0)
+        private set
+
+    fun notifyChanged() {
+        changeVersion++
+    }
+
     // region 画质与网络
     var zoomQuality: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.ZOOM_QUALITY, 0)
-        set(value) { settings[SettingsKeys.ZOOM_QUALITY] = value }
+        set(value) { settings[SettingsKeys.ZOOM_QUALITY] = value; notifyChanged() }
 
     var feedPreviewQuality: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.FEED_PREVIEW_QUALITY, 0)
-        set(value) { settings[SettingsKeys.FEED_PREVIEW_QUALITY] = value }
+        set(value) { settings[SettingsKeys.FEED_PREVIEW_QUALITY] = value; notifyChanged() }
 
     var pictureQuality: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.PICTURE_QUALITY, 0)
@@ -165,7 +178,21 @@ class SettingsRepository(
     // region 通用
     var languageNum: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.LANGUAGE_NUM, 0)
-        set(value) { settings[SettingsKeys.LANGUAGE_NUM] = value }
+        set(value) { settings[SettingsKeys.LANGUAGE_NUM] = value; notifyChanged() }
+
+    /**
+     * 是否已完成初次启动向导流程。
+     * 旧版 Flutter 中 guide_enable 为 false 时表示向导已完成；null 表示尚未执行向导。
+     */
+    var hasCompletedGuide: Boolean
+        get() {
+            val legacy = settings.getBooleanWithLegacyFallbackOrNull(SettingsKeys.GUIDE_ENABLE)
+            return legacy != null && !legacy
+        }
+        set(value) {
+            settings[SettingsKeys.GUIDE_ENABLE] = !value
+            notifyChanged()
+        }
 
     var welcomePageType: String
         get() = settings.getStringWithLegacyFallback(
@@ -368,6 +395,26 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.H_CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX) }
 
     /**
+     * 是否启用悬浮底栏模式（Liquid Glass 悬浮胶囊底栏 vs 标准全宽毛玻璃底栏）。
+     * 默认 true。
+     */
+    var useFloatingBottomBar: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_FLOATING_BOTTOM_BAR, true)
+        set(value) { settings[SettingsKeys.USE_FLOATING_BOTTOM_BAR] = value }
+
+    /**
+     * 悬浮底栏液态玻璃折射强度等级。
+     * 0: 弱 (16dp)
+     * 1: 标准 (24dp)
+     * 2: 强 (36dp - 默认)
+     * 3: 超强 (48dp)
+     * 4: 极致 (64dp)
+     */
+    var liquidRefractionLevel: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.LIQUID_REFRACTION_LEVEL, 2)
+        set(value) { settings[SettingsKeys.LIQUID_REFRACTION_LEVEL] = value }
+
+    /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
      */
     var bookTagList: List<String>
@@ -387,6 +434,14 @@ class SettingsRepository(
     var ignoreUpdateVersion: String?
         get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.IGNORE_UPDATE_VERSION)
         set(value) { settings[SettingsKeys.IGNORE_UPDATE_VERSION] = value }
+
+    /**
+     * 是否在应用启动时自动检查新版本。
+     * 默认 true。
+     */
+    var autoCheckUpdate: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_CHECK_UPDATE, true)
+        set(value) { settings[SettingsKeys.AUTO_CHECK_UPDATE] = value }
 
     // region Android 平台专属
     /**

@@ -30,6 +30,8 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -107,11 +109,14 @@ fun RecomUserScreen(
         }
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = "为你推荐",
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -123,54 +128,51 @@ fun RecomUserScreen(
             )
         },
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
-            when (val result = initialState.value) {
-                null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-                else -> when {
-                    result.isSuccess -> {
-                        val currentPreviews = previews
-                        if (currentPreviews.isEmpty()) {
-                            EmptyPlaceholder(
-                                message = "暂无推荐用户",
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                items(
-                                    items = currentPreviews,
-                                    key = { it.user.id },
-                                ) { preview ->
-                                    UserPreviewItem(
-                                        preview = preview,
-                                        onClick = { onUserClick(preview.user.id) },
-                                    )
-                                }
+        when (val result = initialState.value) {
+            null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+            else -> when {
+                result.isSuccess -> {
+                    val currentPreviews = previews
+                    if (currentPreviews.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = "暂无推荐用户",
+                            modifier = Modifier.fillMaxSize().padding(paddingValues),
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = paddingValues,
+                        ) {
+                            items(
+                                items = currentPreviews,
+                                key = { it.user.id },
+                            ) { preview ->
+                                UserPreviewItem(
+                                    preview = preview,
+                                    onClick = { onUserClick(preview.user.id) },
+                                )
+                            }
 
-                                item(key = "load_more") {
-                                    LoadMoreFooter(
-                                        nextUrl = nextUrl,
-                                        isLoading = isLoadingMore,
-                                        error = loadMoreError,
-                                        onLoadMore = ::loadMore,
-                                        onRetry = ::loadMore,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
+                            item(key = "load_more") {
+                                LoadMoreFooter(
+                                    nextUrl = nextUrl,
+                                    isLoading = isLoadingMore,
+                                    error = loadMoreError,
+                                    onLoadMore = ::loadMore,
+                                    onRetry = ::loadMore,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
                         }
                     }
-                    else -> ErrorPlaceholder(
-                        error = result.exceptionOrNull(),
-                        onRetry = { retryCount++ },
-                        modifier = Modifier.fillMaxSize(),
-                    )
                 }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { retryCount++ },
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                )
             }
         }
     }

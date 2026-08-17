@@ -16,6 +16,7 @@ import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -24,6 +25,9 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 
 /**
  * AI 作品显示设置页：展示并更新 Pixiv 账号级 AI 作品显示偏好。
@@ -95,30 +99,28 @@ fun UserShowAISettingScreen(
         ) {
             item {
                 SmallTitle(text = "显示选项")
-            }
-            item {
-                BasicComponent(
-                    title = "显示",
-                    summary = "展示所有 AI 生成作品",
-                    onClick = { changeShowAI(true) },
-                    endActions = {
-                        if (currentShowAI) {
-                            Text(text = "✓")
-                        }
-                    },
-                )
-            }
-            item {
-                BasicComponent(
-                    title = "部分隐藏",
-                    summary = "隐藏部分 AI 生成作品",
-                    onClick = { changeShowAI(false) },
-                    endActions = {
-                        if (!currentShowAI) {
-                            Text(text = "✓")
-                        }
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "显示",
+                        summary = "展示所有 AI 生成作品",
+                        onClick = { changeShowAI(true) },
+                        endActions = {
+                            if (currentShowAI) {
+                                Text(text = "✓")
+                            }
+                        },
+                    )
+                    BasicComponent(
+                        title = "部分隐藏",
+                        summary = "隐藏部分 AI 生成作品",
+                        onClick = { changeShowAI(false) },
+                        endActions = {
+                            if (!currentShowAI) {
+                                Text(text = "✓")
+                            }
+                        },
+                    )
+                }
             }
         }
 

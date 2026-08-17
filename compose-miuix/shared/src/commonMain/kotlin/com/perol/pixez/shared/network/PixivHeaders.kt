@@ -56,13 +56,13 @@ object PixivHeaders {
     /**
      * 获取公共请求头字典，适用于 app-api.pixiv.net 与 oauth.secure.pixiv.net。
      */
-    fun commonHeaders(): Map<String, String> {
+    fun commonHeaders(acceptLanguage: String = "zh-CN"): Map<String, String> {
         val time = getIsoDate()
         return mapOf(
             "X-Client-Time" to time,
             "X-Client-Hash" to getHash(time + HASH_SALT),
             "User-Agent" to "PixivAndroidApp/$APP_VERSION (Android 10.0; Pixel C)",
-            "Accept-Language" to "zh-CN",
+            "Accept-Language" to acceptLanguage,
             "App-OS" to "Android",
             "App-OS-Version" to "Android 10.0",
             "App-Version" to APP_VERSION,

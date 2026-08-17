@@ -1,72 +1,106 @@
 package com.perol.pixez.shared.ui.navigation
 
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.kyant.backdrop.Backdrop
+import com.perol.pixez.shared.ui.components.IosLiquidGlassNavigationBar
+import com.perol.pixez.shared.ui.components.backdropBlur
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+val LocalBottomBarVisibility = compositionLocalOf { mutableStateOf(true) }
 
 /**
- * 底部 5 标签导航栏，与原 Flutter 应用底部导航顺序一致。
+ * 底部 5 标签导航栏。
+ * - 悬浮模式 (isFloating = true)：与官方 compose-miuix-ui 示例 1:1 对齐的 IosLiquidGlassNavigationBar。
+ * - 标准模式 (isFloating = false)：使用原生 MIUIX NavigationBar + 背景毛玻璃模糊。
  */
 @Composable
 fun MainBottomBar(
     activeTab: RootComponent.MainTab,
     onTabSelected: (RootComponent.MainTab) -> Unit,
+    modifier: Modifier = Modifier,
+    isFloating: Boolean = true,
+    refractionLevel: Int = 2,
+    backdrop: Backdrop? = null,
 ) {
-    NavigationBar {
-        MainTabItem(
-            tab = RootComponent.MainTab.Hello,
-            activeTab = activeTab,
-            label = "首页",
-            icon = MiuixIcons.All, // 首页：MIUIX 无 Home，用 All（全部/汇总）语义最接近
-            onClick = onTabSelected,
-        )
-        MainTabItem(
-            tab = RootComponent.MainTab.Search,
-            activeTab = activeTab,
-            label = "搜索",
-            icon = MiuixIcons.Search,
-            onClick = onTabSelected,
-        )
-        MainTabItem(
-            tab = RootComponent.MainTab.Ranking,
-            activeTab = activeTab,
-            label = "排行榜",
-            icon = MiuixIcons.TopDownloads, // 排行榜/探索：用 TopDownloads（热门下载）语义最接近
-            onClick = onTabSelected,
-        )
-        MainTabItem(
-            tab = RootComponent.MainTab.New,
-            activeTab = activeTab,
-            label = "最新",
-            icon = MiuixIcons.Recent, // 最新：用 Recent（最近）语义最接近
-            onClick = onTabSelected,
-        )
-        MainTabItem(
-            tab = RootComponent.MainTab.Spotlight,
-            activeTab = activeTab,
-            label = "Spotlight",
-            icon = MiuixIcons.Promotions, // Spotlight：用 Promotions（推荐/精选）语义最接近
-            onClick = onTabSelected,
+    val colorScheme = MiuixTheme.colorScheme
+    val strings = LocalStrings.current
+
+    val mainTabs = remember(strings) {
+        listOf(
+            RootComponent.MainTab.Hello to (strings.tabRecommend to MiuixIcons.All),
+            RootComponent.MainTab.Search to (strings.tabSearch to MiuixIcons.Search),
+            RootComponent.MainTab.Ranking to (strings.tabRanking to MiuixIcons.TopDownloads),
+            RootComponent.MainTab.New to (strings.tabNew to MiuixIcons.Recent),
+            RootComponent.MainTab.Spotlight to (strings.tabSpotlight to MiuixIcons.Promotions),
         )
     }
-}
 
-@Composable
-private fun RowScope.MainTabItem(
-    tab: RootComponent.MainTab,
-    activeTab: RootComponent.MainTab,
-    label: String,
-    icon: ImageVector,
-    onClick: (RootComponent.MainTab) -> Unit,
-) {
-    NavigationBarItem(
-        selected = tab == activeTab,
-        onClick = { onClick(tab) },
-        icon = icon,
-        label = label,
-    )
+    if (isFloating) {
+        val currentPosition = mainTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
+        val navItems = remember(mainTabs) {
+            mainTabs.map { (_, pair) ->
+                val (label, icon) = pair
+                NavigationItem(label = label, icon = icon)
+            }
+        }
+
+        IosLiquidGlassNavigationBar(
+            items = navItems,
+            selectedIndex = currentPosition,
+            onItemClick = { index ->
+                mainTabs.getOrNull(index)?.let { (tab, _) ->
+                    onTabSelected(tab)
+                }
+            },
+            backdrop = backdrop,
+            isBlurActive = backdrop != null,
+            modifier = modifier,
+        )
+    } else {
+        // 标准固定底栏：应用 Backdrop Blur 毛玻璃效果
+        val bottomBarModifier = if (backdrop != null) {
+            modifier
+                .fillMaxWidth()
+                .backdropBlur(
+                    backdrop = backdrop,
+                    tintColor = colorScheme.surface,
+                    tintAlpha = 0.85f,
+                )
+        } else {
+            modifier.fillMaxWidth()
+        }
+
+        NavigationBar(
+            modifier = bottomBarModifier,
+            color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+        ) {
+            mainTabs.forEach { (tab, pair) ->
+                val (label, icon) = pair
+                NavigationBarItem(
+                    selected = activeTab == tab,
+                    onClick = { onTabSelected(tab) },
+                    icon = icon,
+                    label = label,
+                )
+            }
+        }
+    }
 }

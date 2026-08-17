@@ -18,3 +18,17 @@ data class SpotlightArticle(
     @SerialName("article_url") val articleUrl: String,
     @SerialName("publish_date") val publishDate: String,
 )
+
+@Serializable
+data class SpotlightDetail(
+    val title: String,
+    val pureTitle: String = "",
+    val description: String = "",
+    val coverUrl: String? = null,
+    val works: List<AmWork> = emptyList(),
+    val subArticles: List<SpotlightArticle> = emptyList(),
+    val rawUrl: String = "",
+) {
+    val isCollection: Boolean
+        get() = subArticles.isNotEmpty() || (works.isEmpty() && (title.contains("合集") || title.contains("合辑")))
+}

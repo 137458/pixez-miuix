@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -76,61 +76,57 @@ fun CrossAdapterSettingScreen(
         ) {
             item {
                 SmallTitle(text = "竖屏")
-            }
-            item {
-                BasicComponent(
-                    title = "按宽度自适应列数",
-                    summary = if (crossAdapt) "已开启" else "已关闭",
-                    endActions = {
-                        Switch(
-                            checked = crossAdapt,
-                            onCheckedChange = { checked ->
-                                crossAdapt = checked
-                                settingsRepository.crossAdapt = checked
-                            },
-                        )
-                    },
-                )
-            }
-            if (crossAdapt) {
-                item {
-                    AdapterWidthSlider(
-                        width = crossAdapterWidth,
-                        onWidthChangeFinished = { newWidth ->
-                            crossAdapterWidth = newWidth
-                            settingsRepository.crossAdapterWidth = newWidth
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "按宽度自适应列数",
+                        summary = if (crossAdapt) "已开启" else "已关闭",
+                        endActions = {
+                            Switch(
+                                checked = crossAdapt,
+                                onCheckedChange = { checked ->
+                                    crossAdapt = checked
+                                    settingsRepository.crossAdapt = checked
+                                },
+                            )
                         },
                     )
+                    if (crossAdapt) {
+                        AdapterWidthSlider(
+                            width = crossAdapterWidth,
+                            onWidthChangeFinished = { newWidth ->
+                                crossAdapterWidth = newWidth
+                                settingsRepository.crossAdapterWidth = newWidth
+                            },
+                        )
+                    }
                 }
             }
 
             item {
                 SmallTitle(text = "横屏")
-            }
-            item {
-                BasicComponent(
-                    title = "按宽度自适应列数",
-                    summary = if (hCrossAdapt) "已开启" else "已关闭",
-                    endActions = {
-                        Switch(
-                            checked = hCrossAdapt,
-                            onCheckedChange = { checked ->
-                                hCrossAdapt = checked
-                                settingsRepository.hCrossAdapt = checked
-                            },
-                        )
-                    },
-                )
-            }
-            if (hCrossAdapt) {
-                item {
-                    AdapterWidthSlider(
-                        width = hCrossAdapterWidth,
-                        onWidthChangeFinished = { newWidth ->
-                            hCrossAdapterWidth = newWidth
-                            settingsRepository.hCrossAdapterWidth = newWidth
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "按宽度自适应列数",
+                        summary = if (hCrossAdapt) "已开启" else "已关闭",
+                        endActions = {
+                            Switch(
+                                checked = hCrossAdapt,
+                                onCheckedChange = { checked ->
+                                    hCrossAdapt = checked
+                                    settingsRepository.hCrossAdapt = checked
+                                },
+                            )
                         },
                     )
+                    if (hCrossAdapt) {
+                        AdapterWidthSlider(
+                            width = hCrossAdapterWidth,
+                            onWidthChangeFinished = { newWidth ->
+                                hCrossAdapterWidth = newWidth
+                                settingsRepository.hCrossAdapterWidth = newWidth
+                            },
+                        )
+                    }
                 }
             }
         }

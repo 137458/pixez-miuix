@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -101,102 +101,100 @@ fun DownloadSettingScreen(
         ) {
             item {
                 SmallTitle(text = "保存路径")
-            }
-            item {
-                BasicComponent(
-                    title = "保存路径",
-                    summary = storePath.ifEmpty { "未设置" },
-                    onClick = {
-                        pathInput = storePath
-                        showPathDialog = true
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "保存路径",
+                        summary = storePath.ifEmpty { "未设置" },
+                        onClick = {
+                            pathInput = storePath
+                            showPathDialog = true
+                        },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "保存模式")
-            }
-            item {
-                BasicComponent(
-                    title = "保存模式",
-                    summary = saveMode.toSaveModeLabel(),
-                    onClick = { showSaveModeDialog = true },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "保存模式",
+                        summary = saveMode.toSaveModeLabel(),
+                        onClick = { showSaveModeDialog = true },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "保存格式")
-            }
-            item {
-                BasicComponent(
-                    title = "保存格式",
-                    summary = if (fileNameEval) "脚本文件名" else format,
-                    onClick = { showFormatDialog = true },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "保存格式",
+                        summary = if (fileNameEval) "脚本文件名" else format,
+                        onClick = { showFormatDialog = true },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "脚本文件名")
-            }
-            item {
-                BasicComponent(
-                    title = "使用脚本文件名",
-                    summary = "由 name_eval 脚本计算保存文件名",
-                    endActions = {
-                        Switch(
-                            checked = fileNameEval,
-                            onCheckedChange = { checked ->
-                                fileNameEval = checked
-                                settingsRepository.fileNameEval = checked
-                            },
-                        )
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "使用脚本文件名",
+                        summary = "由 name_eval 脚本计算保存文件名",
+                        endActions = {
+                            Switch(
+                                checked = fileNameEval,
+                                onCheckedChange = { checked ->
+                                    fileNameEval = checked
+                                    settingsRepository.fileNameEval = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "下载任务")
-            }
-            item {
-                BasicComponent(
-                    title = "同时下载任务数",
-                    summary = maxRunningTask.toString(),
-                    onClick = { showTaskDialog = true },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "同时下载任务数",
+                        summary = maxRunningTask.toString(),
+                        onClick = { showTaskDialog = true },
+                    )
+                }
             }
 
             item {
                 SmallTitle(text = "文件夹")
-            }
-            item {
-                BasicComponent(
-                    title = "单文件夹模式",
-                    summary = "所有图片保存到同一文件夹",
-                    endActions = {
-                        Switch(
-                            checked = singleFolder,
-                            onCheckedChange = { checked ->
-                                singleFolder = checked
-                                settingsRepository.singleFolder = checked
-                            },
-                        )
-                    },
-                )
-            }
-            item {
-                BasicComponent(
-                    title = "Sanity 单独文件夹",
-                    summary = "R18 作品保存到独立文件夹",
-                    endActions = {
-                        Switch(
-                            checked = overSanityLevelFolder,
-                            onCheckedChange = { checked ->
-                                overSanityLevelFolder = checked
-                                settingsRepository.overSanityLevelFolder = checked
-                            },
-                        )
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = "单文件夹模式",
+                        summary = "所有图片保存到同一文件夹",
+                        endActions = {
+                            Switch(
+                                checked = singleFolder,
+                                onCheckedChange = { checked ->
+                                    singleFolder = checked
+                                    settingsRepository.singleFolder = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = "Sanity 单独文件夹",
+                        summary = "R18 作品保存到独立文件夹",
+                        endActions = {
+                            Switch(
+                                checked = overSanityLevelFolder,
+                                onCheckedChange = { checked ->
+                                    overSanityLevelFolder = checked
+                                    settingsRepository.overSanityLevelFolder = checked
+                                },
+                            )
+                        },
+                    )
+                }
             }
         }
 

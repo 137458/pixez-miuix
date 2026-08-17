@@ -4,11 +4,13 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.router.stack.navigate
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackCallback
+import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.serialization.Serializable
 
@@ -22,7 +24,7 @@ import kotlinx.serialization.Serializable
 @OptIn(com.arkivanov.decompose.DelicateDecomposeApi::class)
 class RootComponent(
     componentContext: ComponentContext,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Config>()
@@ -30,7 +32,7 @@ class RootComponent(
     val stack: Value<ChildStack<Config, Child>> = childStack(
         source = navigation,
         serializer = Config.serializer(),
-        initialConfiguration = resolveWelcomePageConfig(settingsRepository.welcomePageType),
+        initialConfiguration = resolveWelcomePageConfig(settingsRepository),
         // 返回事件由本组件注册的 BackCallback 显式接管，
         // 避免 Decompose 默认 pop 逻辑与 onBack() 的一级/二级页面判断冲突。
         handleBackButton = false,
@@ -346,6 +348,32 @@ class RootComponent(
         navigation.push(Config.DownloadHistory)
     }
 
+    /**
+     * 打开 Spotlight 原生特辑阅读页。
+     */
+    fun onSpotlightArticleClicked(article: SpotlightArticle) {
+        navigation.push(Config.SpotlightDetail(article))
+    }
+
+    /**
+     * 打开启动向导页。
+     */
+    fun onGuideClicked() {
+        navigation.push(Config.Guide)
+    }
+
+    /**
+     * 完成启动向导后重置为欢迎页。
+     */
+    fun onGuideFinished() {
+        settingsRepository.hasCompletedGuide = true
+        if (stack.value.items.size > 1) {
+            navigation.pop()
+        } else {
+            navigation.navigate { listOf(resolveWelcomePageConfig(settingsRepository)) }
+        }
+    }
+
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
@@ -353,6 +381,8 @@ class RootComponent(
         is Config.Main -> Child.Main(config.tab)
         is Config.IllustDetail -> Child.IllustDetail(config.illustId)
         is Config.UserDetail -> Child.UserDetail(config.userId)
+        is Config.SpotlightDetail -> Child.SpotlightDetail(config.article)
+        Config.Guide -> Child.Guide
         is Config.Comments -> Child.Comments(config.illustId)
         is Config.RelatedIllusts -> Child.RelatedIllusts(config.illustId)
         is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
@@ -415,6 +445,12 @@ class RootComponent(
 
         @Serializable
         data class UserDetail(val userId: Int) : Config()
+
+        @Serializable
+        data class SpotlightDetail(val article: SpotlightArticle) : Config()
+
+        @Serializable
+        data object Guide : Config()
 
         @Serializable
         data object Settings : Config()
@@ -529,6 +565,8 @@ class RootComponent(
         data class Main(val tab: MainTab) : Child()
         data class IllustDetail(val illustId: Int) : Child()
         data class UserDetail(val userId: Int) : Child()
+        data class SpotlightDetail(val article: SpotlightArticle) : Child()
+        data object Guide : Child()
         data object Settings : Child()
         data object About : Child()
         data object BookTag : Child()
@@ -569,11 +607,14 @@ class RootComponent(
 }
 
 /**
- * 根据保存的欢迎页类型解析初始路由配置。
- * 未知或空值时回退到首页，确保应用始终能正常启动。
+ * 根据保存的欢迎页类型与首次启动状态解析初始路由配置。
+ * 若尚未完成初次启动向导，优先进入向导页；其余情况按欢迎页设置启动。
  */
-private fun resolveWelcomePageConfig(welcomePageType: String): RootComponent.Config {
-    return when (welcomePageType) {
+private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): RootComponent.Config {
+    if (!settingsRepository.hasCompletedGuide) {
+        return RootComponent.Config.Guide
+    }
+    return when (settingsRepository.welcomePageType) {
         "rank" -> RootComponent.Config.Main(RootComponent.MainTab.Ranking)
         "quick_view" -> RootComponent.Config.Main(RootComponent.MainTab.New)
         "search" -> RootComponent.Config.Main(RootComponent.MainTab.Search)

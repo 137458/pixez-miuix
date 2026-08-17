@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,20 +75,24 @@ fun LanguageSettingScreen(
         ) {
             item {
                 SmallTitle(text = "语言")
-            }
-            // 语言选项列表：每项显示语言代码，右侧对勾表示选中。
-            items(LANGUAGE_OPTIONS.size) { index ->
-                val option = LANGUAGE_OPTIONS[index]
-                BasicComponent(
-                    title = option.code,
-                    onClick = {
-                        selectedIndex = index
-                        settingsRepository.languageNum = index
-                    },
-                    endActions = {
-                        CheckIndicator(selected = selectedIndex == index)
-                    },
-                )
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                ) {
+                    LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                        BasicComponent(
+                            title = option.code,
+                            onClick = {
+                                selectedIndex = index
+                                settingsRepository.languageNum = index
+                            },
+                            endActions = {
+                                CheckIndicator(selected = selectedIndex == index)
+                            },
+                        )
+                    }
+                }
             }
 
             item {
@@ -148,27 +152,31 @@ private fun SponsorItem(sponsor: Sponsor) {
 /**
  * Sponsor 数据：名称、头像 URL、个人主页 URL。
  */
-private data class Sponsor(
+internal data class Sponsor(
     val name: String,
     val avatar: String,
     val uri: String,
 )
 
 /**
- * 语言选项数据：语言代码与该语言的 Sponsor 列表。
+ * 语言选项数据：语言代码、显示名称、本地名称与 Sponsor 列表。
  */
-private data class LanguageOption(
+internal data class LanguageOption(
     val code: String,
-    val sponsors: List<Sponsor>,
+    val displayName: String,
+    val nativeName: String,
+    val sponsors: List<Sponsor> = emptyList(),
 )
 
 /**
  * 可选语言列表，顺序与旧 Flutter 版 `languages.dart` 保持一致。
  * languageNum 0 对应 `en-US`，后续按此顺序递增。
  */
-private val LANGUAGE_OPTIONS = listOf(
+internal val LANGUAGE_OPTIONS = listOf(
     LanguageOption(
         code = "en-US",
+        displayName = "English (US)",
+        nativeName = "English",
         sponsors = listOf(
             Sponsor(
                 name = "Xian",
@@ -184,6 +192,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "zh-CN",
+        displayName = "简体中文",
+        nativeName = "中文 (简体)",
         sponsors = listOf(
             Sponsor(
                 name = "Skimige",
@@ -194,6 +204,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "zh-TW",
+        displayName = "繁體中文",
+        nativeName = "中文 (繁體)",
         sponsors = listOf(
             Sponsor(
                 name = "Tragic Life",
@@ -204,6 +216,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "ja",
+        displayName = "日本語",
+        nativeName = "日本語",
         sponsors = listOf(
             Sponsor(
                 name = "karin722",
@@ -219,6 +233,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "ko",
+        displayName = "한국어",
+        nativeName = "한국어",
         sponsors = listOf(
             Sponsor(
                 name = "San Kang",
@@ -229,6 +245,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "ru",
+        displayName = "Русский",
+        nativeName = "Русский язык",
         sponsors = listOf(
             Sponsor(
                 name = "Vlad Afonin",
@@ -239,6 +257,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "es",
+        displayName = "Español",
+        nativeName = "Español",
         sponsors = listOf(
             Sponsor(
                 name = "SugarBlank",
@@ -249,6 +269,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "tr",
+        displayName = "Türkçe",
+        nativeName = "Türkçe",
         sponsors = listOf(
             Sponsor(
                 name = "KYOYA",
@@ -259,6 +281,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "id",
+        displayName = "Bahasa Indonesia",
+        nativeName = "Bahasa Indonesia",
         sponsors = listOf(
             Sponsor(
                 name = "ReikiAigawara",
@@ -269,6 +293,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "fil",
+        displayName = "Filipino",
+        nativeName = "Wikang Filipino",
         sponsors = listOf(
             Sponsor(
                 name = "searingmoonlight",
@@ -279,6 +305,8 @@ private val LANGUAGE_OPTIONS = listOf(
     ),
     LanguageOption(
         code = "de",
+        displayName = "Deutsch",
+        nativeName = "Deutsch",
         sponsors = listOf(
             Sponsor(
                 name = "PanChi",

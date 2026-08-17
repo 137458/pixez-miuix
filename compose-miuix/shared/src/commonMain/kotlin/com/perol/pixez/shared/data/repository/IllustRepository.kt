@@ -9,6 +9,7 @@ import com.perol.pixez.shared.data.model.IllustSeriesWithIdModel
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
 import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
@@ -16,9 +17,11 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 
 /**
@@ -27,23 +30,40 @@ import io.ktor.http.Parameters
 class IllustRepository(
     private val apiClient: HttpClient,
 ) {
+    private var cachedRecommended: List<Illust>? = null
+    private var cachedWalkthrough: List<Illust>? = null
+
     /**
-     * 获取首页推荐插画。
+     * 获取首页推荐插画，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
      */
-    suspend fun getRecommended(): List<Illust> = networkCall("获取推荐插画失败") {
-        val response: Recommend = apiClient.get("/v1/illust/recommended") {
-            parameter("filter", "for_ios")
-            parameter("include_ranking_label", "true")
-        }.body()
-        response.illusts
+    suspend fun getRecommended(forceRefresh: Boolean = false): List<Illust> {
+        val cached = cachedRecommended
+        if (!forceRefresh && cached != null) {
+            return cached
+        }
+        return networkCall("获取推荐插画失败") {
+            val response: Recommend = apiClient.get("/v1/illust/recommended") {
+                parameter("filter", "for_ios")
+                parameter("include_ranking_label", "true")
+            }.body()
+            cachedRecommended = response.illusts
+            response.illusts
+        }
     }
 
     /**
-     * 获取未登录 walkthrough 匿名推荐插画。
+     * 获取未登录 walkthrough 匿名推荐插画，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
      */
-    suspend fun getWalkthroughIllusts(): List<Illust> = networkCall("获取匿名推荐插画失败") {
-        val response: Walkthrough = apiClient.get("/v1/walkthrough/illusts").body()
-        response.illusts
+    suspend fun getWalkthroughIllusts(forceRefresh: Boolean = false): List<Illust> {
+        val cached = cachedWalkthrough
+        if (!forceRefresh && cached != null) {
+            return cached
+        }
+        return networkCall("获取匿名推荐插画失败") {
+            val response: Walkthrough = apiClient.get("/v1/walkthrough/illusts").body()
+            cachedWalkthrough = response.illusts
+            response.illusts
+        }
     }
 
     /**
@@ -77,19 +97,95 @@ class IllustRepository(
             response.illusts
         }
 
+    private val spotlightArticlesCache = mutableMapOf<String, SpotlightResponse>()
+
     /**
-     * 获取 Spotlight 精选文章列表。
-     *
-     * @param category 分类，如 all、illust、novel 等。
+     * 获取指定分类已缓存的 Spotlight 列表，若无缓存返回 null。
      */
-    suspend fun getSpotlightArticles(category: String = "all"): List<SpotlightArticle> =
-        networkCall("获取 Spotlight 失败 category=$category") {
-            val response: SpotlightResponse = apiClient.get("/v1/spotlight/articles") {
-                parameter("filter", "for_android")
-                parameter("category", category)
-            }.body()
-            response.spotlightArticles
+    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesCache[category]
+
+    /**
+     * 获取 Spotlight 精选文章列表，支持按分类与分页加载，内置内存级缓存。
+     *
+     * @param category 分类，如 all、illust、manga、novel 等。
+     * @param nextUrl 分页加载下一页时传入的完整 URL；为空时请求首页数据。
+     * @param forceRefresh 是否强制发起网络请求刷新。
+     */
+    suspend fun getSpotlightArticles(
+        category: String = "all",
+        nextUrl: String? = null,
+        forceRefresh: Boolean = false,
+    ): SpotlightResponse {
+        if (nextUrl == null && !forceRefresh) {
+            val cached = spotlightArticlesCache[category]
+            if (cached != null) {
+                return cached
+            }
         }
+        return networkCall("获取 Spotlight 失败 category=$category") {
+            val response: SpotlightResponse = if (nextUrl != null && nextUrl.isNotBlank()) {
+                apiClient.get(nextUrl).body()
+            } else {
+                apiClient.get("/v1/spotlight/articles") {
+                    parameter("filter", "for_android")
+                    parameter("category", category)
+                }.body()
+            }
+
+            if (nextUrl == null) {
+                spotlightArticlesCache[category] = response
+            } else {
+                val cached = spotlightArticlesCache[category]
+                if (cached != null) {
+                    val existingIds = cached.spotlightArticles.map { it.id }.toSet()
+                    val merged = cached.spotlightArticles + response.spotlightArticles.filter { it.id !in existingIds }
+                    spotlightArticlesCache[category] = SpotlightResponse(
+                        spotlightArticles = merged,
+                        nextUrl = response.nextUrl,
+                    )
+                }
+            }
+            response
+        }
+    }
+
+    private val webClient: HttpClient = HttpClient()
+    private val spotlightDetailCache = mutableMapOf<String, SpotlightDetail>()
+
+    /**
+     * 获取缓存的 Spotlight 特辑详情，若无缓存返回 null。
+     */
+    fun getCachedSpotlightDetail(articleUrl: String): SpotlightDetail? = spotlightDetailCache[articleUrl]
+
+    /**
+     * 请求并解析 Pixivision 特辑文章详情（包含正文导语与画作列表，支持内存缓存与强制刷新）。
+     *
+     * @param articleUrl 特辑文章 URL。
+     * @param forceRefresh 是否强制发起网络请求刷新。
+     */
+    suspend fun getSpotlightArticleDetail(
+        articleUrl: String,
+        forceRefresh: Boolean = false,
+    ): SpotlightDetail {
+        if (!forceRefresh) {
+            val cached = spotlightDetailCache[articleUrl]
+            if (cached != null) {
+                return cached
+            }
+        }
+        return networkCall("获取 Spotlight 特辑详情失败 url=$articleUrl") {
+            val response: String = webClient.get(articleUrl) {
+                headers {
+                    append("Referer", "https://www.pixivision.net/zh/")
+                    append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/85.0.564.13")
+                    append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7")
+                }
+            }.bodyAsText()
+            val detail = PixivisionParser.parse(response, articleUrl)
+            spotlightDetailCache[articleUrl] = detail
+            detail
+        }
+    }
 
     /**
      * 获取作品详情。

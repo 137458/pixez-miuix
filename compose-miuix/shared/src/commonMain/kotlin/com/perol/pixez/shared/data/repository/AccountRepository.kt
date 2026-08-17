@@ -14,6 +14,10 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.Parameters
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
 /**
  * 账号仓库：封装 OAuth 登录、token 刷新、账号信息编辑与本地账号持久化。
  */
@@ -22,6 +26,9 @@ class AccountRepository(
     private val tokenStorage: AuthTokenStorage,
     private val accountClient: HttpClient,
 ) {
+    private val _loginEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val loginEventFlow: SharedFlow<Unit> = _loginEventFlow.asSharedFlow()
+
     /**
      * 当前已登录账号，未登录返回 null。
      */
@@ -40,6 +47,7 @@ class AccountRepository(
     suspend fun loginWithCode(code: String): OAuthAccount {
         val account = oAuthClient.exchangeCodeForToken(code)
         tokenStorage.saveAccount(account.response)
+        _loginEventFlow.tryEmit(Unit)
         return account
     }
 

@@ -1,16 +1,21 @@
 package com.perol.pixez.shared.ui.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -43,6 +48,7 @@ import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.PlatformSettingScreen
 import com.perol.pixez.shared.ui.screens.SaveSettingScreen
 import com.perol.pixez.shared.ui.screens.CrossAdapterSettingScreen
+import com.perol.pixez.shared.ui.screens.GuideScreen
 import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
 import com.perol.pixez.shared.ui.screens.LanguageSettingScreen
 import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
@@ -58,6 +64,7 @@ import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
+import com.perol.pixez.shared.ui.screens.SpotlightDetailScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.ThemeSettingScreen
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
@@ -68,6 +75,8 @@ import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
+import androidx.compose.runtime.CompositionLocalProvider
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.BookTagScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -76,6 +85,7 @@ import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 import top.yukonga.miuix.kmp.theme.darkColorScheme
+import top.yukonga.miuix.kmp.theme.lightColorScheme
 
 /**
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
@@ -100,7 +110,8 @@ fun RootContent(
     modifier: Modifier = Modifier,
 ) {
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
-    // 确保 ThemeSettingScreen 回写主题偏好后返回即可生效。
+    // 监听 changeVersion 响应式自增，确保 ThemeSettingScreen 修改后即时全局重绘。
+    val changeVersion = settingsRepository.changeVersion
     val themeMode = settingsRepository.themeMode
     val isAmoled = settingsRepository.isAmoled
     val useDynamicColor = settingsRepository.useDynamicColor
@@ -116,6 +127,7 @@ fun RootContent(
         seedColor,
         paletteStyleIndex,
         useSpec2025,
+        changeVersion,
     ) {
         buildThemeController(
             themeMode = themeMode,
@@ -127,33 +139,43 @@ fun RootContent(
         )
     }
 
+    val stack by component.stack.subscribeAsState()
+    val active = stack.active.instance
+    val canPop = active !is Child.Main
+
+    // 拦截系统返回键：在二级及以上页面时执行出栈返回上一级，在主页标签时不拦截以允许系统退出。
+    com.perol.pixez.shared.platform.PlatformBackHandler(enabled = canPop) {
+        component.onBack()
+    }
+
+    val backdrop = rememberLayerBackdrop()
+    val bottomBarVisible = remember { mutableStateOf(true) }
+    val currentLanguageNum = settingsRepository.languageNum
+    val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
+        com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
+    }
+
     MiuixTheme(controller = themeController) {
-        Scaffold(
-            modifier = modifier.fillMaxSize(),
-            bottomBar = {
-                // 仅在一级主页面显示底部导航栏。
-                val stack by component.stack.subscribeAsState()
-                val active = stack.active.instance
-                if (active is Child.Main) {
-                    MainBottomBar(
-                        activeTab = active.tab,
-                        onTabSelected = component::onMainTabSelected,
-                    )
-                }
-            },
-        ) { paddingValues ->
-            Children(
-                stack = component.stack,
-                modifier = Modifier.padding(paddingValues),
-                animation = stackAnimation(slide()),
-            ) { child ->
-                when (val instance = child.instance) {
-                    is Child.Main -> MainContent(
-                        tab = instance.tab,
-                        component = component,
-                        illustRepository = illustRepository,
-                        searchRepository = searchRepository,
-                        userRepository = userRepository,
+        CompositionLocalProvider(
+            LocalSettingsRepository provides settingsRepository,
+            LocalBottomBarVisibility provides bottomBarVisible,
+            com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+        ) {
+            Box(modifier = modifier.fillMaxSize()) {
+                Children(
+                    stack = component.stack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(backdrop),
+                    animation = stackAnimation(slide()),
+                ) { child ->
+                    when (val instance = child.instance) {
+                        is Child.Main -> MainContent(
+                            tab = instance.tab,
+                            component = component,
+                            illustRepository = illustRepository,
+                            searchRepository = searchRepository,
+                            userRepository = userRepository,
                         accountRepository = accountRepository,
                         banRepository = banRepository,
                         settingsRepository = settingsRepository,
@@ -269,6 +291,7 @@ fun RootContent(
                         onDownloadTaskClick = component::onDownloadTaskClicked,
                         onDataExportClick = component::onDataExportClicked,
                         onBoardClick = component::onBoardClicked,
+                        onGuideClick = component::onGuideClicked,
                         accountRepository = accountRepository,
                         boardRepository = boardRepository,
                     )
@@ -418,6 +441,7 @@ fun RootContent(
                     Child.About -> AboutScreen(
                         onBack = component::onBack,
                         onThanksClick = component::onThanksClicked,
+                        onUpdateClick = component::onUpdateSettingClicked,
                     )
 
                     Child.BookTag -> BookTagScreen(
@@ -429,10 +453,39 @@ fun RootContent(
                     Child.Thanks -> ThanksScreen(
                         onBack = component::onBack,
                     )
+
+                    is Child.SpotlightDetail -> SpotlightDetailScreen(
+                        article = instance.article,
+                        onBack = component::onBack,
+                        onIllustClick = component::onIllustClicked,
+                        onUserClick = component::onUserClicked,
+                        onArticleClick = component::onSpotlightArticleClicked,
+                        repository = illustRepository,
+                    )
+
+                    Child.Guide -> GuideScreen(
+                        settingsRepository = settingsRepository,
+                        accountRepository = accountRepository,
+                        onLoginClick = component::onLoginClicked,
+                        onFinish = component::onGuideFinished,
+                    )
                 }
+            }
+
+            // 仅在一级主页面且未被弹窗/抽屉临时隐藏时显示底部导航栏。
+            if (active is Child.Main && bottomBarVisible.value) {
+                MainBottomBar(
+                    activeTab = active.tab,
+                    onTabSelected = component::onMainTabSelected,
+                    isFloating = settingsRepository.useFloatingBottomBar,
+                    refractionLevel = settingsRepository.liquidRefractionLevel,
+                    backdrop = backdrop,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
     }
+}
 }
 
 /**
@@ -486,11 +539,8 @@ private fun MainContent(
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(
-            onUserClick = component::onUserClicked,
-            onRecomUserListClick = component::onRecomUserListClicked,
             repository = illustRepository,
-            userRepository = userRepository,
-            accountRepository = accountRepository,
+            onArticleClick = component::onSpotlightArticleClicked,
         )
     }
 }
@@ -513,12 +563,18 @@ private fun buildThemeController(
     paletteStyleIndex: Int,
     useSpec2025: Boolean,
 ): ThemeController {
-    // 统一使用 Monet 模式，使种子色在非动态颜色模式下也能生效；
-    // 动态颜色开启时 keyColor 传 null，让 Monet 使用系统壁纸颜色。
-    val colorSchemeMode = when (themeMode) {
-        1 -> ColorSchemeMode.MonetLight
-        2 -> ColorSchemeMode.MonetDark
-        else -> ColorSchemeMode.MonetSystem
+    val colorSchemeMode = if (useDynamicColor) {
+        when (themeMode) {
+            1 -> ColorSchemeMode.MonetLight
+            2 -> ColorSchemeMode.MonetDark
+            else -> ColorSchemeMode.MonetSystem
+        }
+    } else {
+        when (themeMode) {
+            1 -> ColorSchemeMode.Light
+            2 -> ColorSchemeMode.Dark
+            else -> ColorSchemeMode.System
+        }
     }
     val keyColor = if (useDynamicColor) null else Color(seedColor)
 
@@ -526,6 +582,15 @@ private fun buildThemeController(
     val paletteStyle = ThemePaletteStyle.entries.getOrNull(paletteStyleIndex)
         ?: ThemePaletteStyle.TonalSpot
     val colorSpec = if (useSpec2025) ThemeColorSpec.Spec2025 else ThemeColorSpec.Spec2021
+
+    // 自定义浅色颜色方案：背景为浅灰色（#F6F7F9），卡片/容器为纯白（Color.White）。
+    val lightColors = lightColorScheme(
+        background = Color(0xFFF6F7F9),
+        surface = Color(0xFFF6F7F9),
+        surfaceContainer = Color.White,
+        surfaceContainerHigh = Color(0xFFF0F1F4),
+        surfaceContainerHighest = Color(0xFFE5E7EB),
+    )
 
     // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑。
     val darkColors = if (isAmoled) {
@@ -545,6 +610,7 @@ private fun buildThemeController(
         ThemeController(
             colorSchemeMode = colorSchemeMode,
             keyColor = keyColor,
+            lightColors = lightColors,
             darkColors = darkColors,
             colorSpec = colorSpec,
             paletteStyle = paletteStyle,
@@ -553,6 +619,7 @@ private fun buildThemeController(
         ThemeController(
             colorSchemeMode = colorSchemeMode,
             keyColor = keyColor,
+            lightColors = lightColors,
             colorSpec = colorSpec,
             paletteStyle = paletteStyle,
         )

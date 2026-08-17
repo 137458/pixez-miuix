@@ -5,6 +5,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
@@ -27,8 +33,19 @@ val LocalHistoryRepository = compositionLocalOf<HistoryRepository> {
  */
 @Composable
 fun App(dependencies: AppDependencies) {
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components {
+                add(KtorNetworkFetcherFactory(httpClient = { dependencies.httpClient.downloadClient }))
+            }
+            .crossfade(true)
+            .build()
+    }
+
     val rootComponent = rememberRootComponent(dependencies)
+    val navigationEventDispatcherOwner = rememberNavigationEventDispatcherOwner(parent = null)
     CompositionLocalProvider(
+        LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
         LocalHistoryRepository provides dependencies.historyRepository,
     ) {
         RootContent(
