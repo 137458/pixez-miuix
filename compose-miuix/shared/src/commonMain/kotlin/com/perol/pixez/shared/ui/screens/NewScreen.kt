@@ -38,6 +38,14 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.window.WindowDialog
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+
 /**
  * 最新/关注页：展示已登录用户关注画师的最新插画。
  *
@@ -78,8 +86,28 @@ fun NewScreen(
 
     // retryCount 作为 produceState 的 key，点击重试或切换筛选时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    val state = produceState<Result<List<Illust>>?>(
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
+            .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
+        }
+    }
+
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
         repository,
         currentRestrict,
@@ -88,31 +116,55 @@ fun NewScreen(
         banRepository,
         settingsRepository,
     ) {
-        value = when (isLoggedIn) {
+        val res = when (isLoggedIn) {
             true -> {
-                val illustsResult = suspendRunCatchingNonCancel { repository.getFollowIllusts(currentRestrict) }
-                val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-                    .getOrDefault(emptySet())
-                val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-                    .getOrDefault(emptySet())
-                val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-                    .getOrDefault(emptyList())
-                val banAIIllust = settingsRepository.banAIIllust
-                illustsResult.map { illusts ->
-                    illusts.filter {
-                        it.id !in bannedIds &&
-                            it.user.id !in bannedUserIds &&
-                            (!banAIIllust || it.illustAIType != 2) &&
-                            !banRepository.isBannedByTags(
-                                banTags,
-                                it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                            )
-                    }
-                }
+                val followResult = suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(currentRestrict) }
+                followResult.map { filterBanned(it.illusts) to it.nextUrl }
             }
-            false -> Result.success(emptyList())
-            null -> null 
+            false -> Result.success(emptyList<Illust>() to null)
+            null -> null
         }
+        isManualRefreshing = false
+        value = res
+    }
+
+    var illusts by remember { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(restrict = currentRestrict, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    val filtered = filterBanned(response.illusts)
+                    illusts = illusts + filtered
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
+        }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -154,6 +206,14 @@ fun NewScreen(
                 title = "最新",
                 scrollBehavior = scrollBehavior,
                 actions = {
+                    IconButton(
+                        onClick = triggerManualRefresh,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
                     if (isLoggedIn == false) {
                         Button(
                             onClick = onLoginClick,
@@ -197,26 +257,35 @@ fun NewScreen(
                     when {
                         result == null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
                         result.isSuccess -> {
-                            val illusts = result.getOrNull().orEmpty()
                             if (illusts.isEmpty()) {
                                 EmptyPlaceholder(
                                     message = "暂无关注作品",
                                     modifier = Modifier.weight(1f),
                                 )
                             } else {
-                                IllustStaggeredGrid(
-                                    illusts = illusts,
-                                    onIllustClick = onIllustClick,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                )
+                                PullToRefresh(
+                                    isRefreshing = isManualRefreshing,
+                                    onRefresh = triggerManualRefresh,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    IllustStaggeredGrid(
+                                        illusts = illusts,
+                                        onIllustClick = onIllustClick,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        hasMore = nextUrl != null,
+                                        isLoadingMore = isLoadingMore,
+                                        loadMoreError = loadMoreError,
+                                        onLoadMore = ::loadMore,
+                                    )
+                                }
                             }
                         }
 
                         else -> ErrorPlaceholder(
                             error = result.exceptionOrNull(),
-                            onRetry = { retryCount++ },
+                            onRetry = { triggerManualRefresh() },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -253,3 +322,4 @@ private fun RestrictSelector(
         }
     }
 }
+

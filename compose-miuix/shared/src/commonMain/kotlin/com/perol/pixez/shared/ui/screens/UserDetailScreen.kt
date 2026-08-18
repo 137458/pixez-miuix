@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -290,15 +292,8 @@ private fun UserWorksTab(
     settingsRepository: SettingsRepository,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    val state = produceState<Result<List<Illust>>?>(
-        initialValue = null,
-        userId,
-        repository,
-        retryCount,
-        banRepository,
-        settingsRepository,
-    ) {
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllusts(userId) }
+
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
         val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
         val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
@@ -306,21 +301,69 @@ private fun UserWorksTab(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
-        value = illustsResult.map { illusts ->
-            illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
-            }
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
+        }
+    }
+
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
+        initialValue = null,
+        userId,
+        retryCount,
+        banRepository,
+        settingsRepository,
+    ) {
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId) }
+        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+    }
+
+    var illusts by remember(userId) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    val filtered = filterBanned(response.illusts)
+                    illusts = illusts + filtered
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
         }
     }
 
     IllustTabBody(
         state = state.value,
+        illusts = illusts,
+        hasMore = nextUrl != null,
+        isLoadingMore = isLoadingMore,
+        loadMoreError = loadMoreError,
+        onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
         onRetry = { retryCount++ },
         emptyText = "暂无作品",
@@ -345,15 +388,8 @@ private fun UserBookmarksTab(
 
     // 切换用户、可见性选项或重试时重新加载；加载完成后过滤掉被屏蔽作品。
     var retryCount by rememberSaveable(userId, restrict) { mutableIntStateOf(0) }
-    val state = produceState<Result<List<Illust>>?>(
-        initialValue = null,
-        userId,
-        restrict,
-        retryCount,
-        banRepository,
-        settingsRepository,
-    ) {
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarks(userId, restrict) }
+
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
         val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
         val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
@@ -361,16 +397,60 @@ private fun UserBookmarksTab(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
-        value = illustsResult.map { illusts ->
-            illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
-            }
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
+        }
+    }
+
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
+        initialValue = null,
+        userId,
+        restrict,
+        retryCount,
+        banRepository,
+        settingsRepository,
+    ) {
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, restrict) }
+        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+    }
+
+    var illusts by remember(userId, restrict) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(userId, restrict) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, restrict, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    val filtered = filterBanned(response.illusts)
+                    illusts = illusts + filtered
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
         }
     }
 
@@ -388,6 +468,11 @@ private fun UserBookmarksTab(
         ) {
             IllustTabBody(
                 state = state.value,
+                illusts = illusts,
+                hasMore = nextUrl != null,
+                isLoadingMore = isLoadingMore,
+                loadMoreError = loadMoreError,
+                onLoadMore = ::loadMore,
                 onIllustClick = onIllustClick,
                 onRetry = { retryCount++ },
                 emptyText = "暂无${if (restrict == "public") "公开" else "私密"}收藏",
@@ -401,7 +486,12 @@ private fun UserBookmarksTab(
  */
 @Composable
 private fun IllustTabBody(
-    state: Result<List<Illust>>?,
+    state: Result<Pair<List<Illust>, String?>>?,
+    illusts: List<Illust>,
+    hasMore: Boolean,
+    isLoadingMore: Boolean,
+    loadMoreError: Throwable?,
+    onLoadMore: () -> Unit,
     onIllustClick: (Int) -> Unit,
     onRetry: () -> Unit,
     emptyText: String,
@@ -409,8 +499,7 @@ private fun IllustTabBody(
     when {
         state == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         state.isSuccess -> {
-            val illusts = state.getOrNull().orEmpty()
-            if (illusts.isEmpty()) {
+            if (illusts.isEmpty() && !isLoadingMore) {
                 EmptyPlaceholder(
                     message = emptyText,
                     modifier = Modifier.fillMaxSize(),
@@ -420,6 +509,10 @@ private fun IllustTabBody(
                     illusts = illusts,
                     onIllustClick = onIllustClick,
                     modifier = Modifier.fillMaxSize(),
+                    hasMore = hasMore,
+                    isLoadingMore = isLoadingMore,
+                    loadMoreError = loadMoreError,
+                    onLoadMore = onLoadMore,
                 )
             }
         }
@@ -430,6 +523,7 @@ private fun IllustTabBody(
         )
     }
 }
+
 
 @Composable
 private fun UserProfileHeader(

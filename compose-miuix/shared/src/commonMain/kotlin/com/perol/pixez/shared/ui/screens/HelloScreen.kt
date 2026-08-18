@@ -44,6 +44,9 @@ import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Settings
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
  */
@@ -81,9 +84,29 @@ fun HelloScreen(
         }
     }
 
+    // 过滤被屏蔽作品与画师
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
+            .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
+        }
+    }
+
     // 页面进入时加载数据；已登录用推荐接口，未登录用 walkthrough 匿名接口。
     // 默认读取内存缓存，仅当 isManualRefreshing == true 时触发强制网络刷新。
-    val state = produceState<Result<List<Illust>>?>(
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
         repository,
         banRepository,
@@ -92,31 +115,55 @@ fun HelloScreen(
         isLoggedIn,
     ) {
         val force = isManualRefreshing
-        val illustsResult = when (isLoggedIn) {
-            true -> suspendRunCatchingNonCancel { repository.getRecommended(forceRefresh = force) }
-            false -> suspendRunCatchingNonCancel { repository.getWalkthroughIllusts(forceRefresh = force) }
+        val responseResult = when (isLoggedIn) {
+
+            true -> suspendRunCatchingNonCancel { repository.getRecommendedResponse(forceRefresh = force) }
+                .map { it.illusts to it.nextUrl }
+            false -> suspendRunCatchingNonCancel { repository.getWalkthroughResponse(forceRefresh = force) }
+                .map { it.illusts to (null as String?) }
             null -> null
         }
         isManualRefreshing = false
-        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-            .getOrDefault(emptySet())
-        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-            .getOrDefault(emptySet())
-        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-            .getOrDefault(emptyList())
-        val banAIIllust = settingsRepository.banAIIllust
-        value = illustsResult?.map { illusts ->
-            illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
-            }
+        value = responseResult?.map { (rawIllusts, nextUrl) ->
+            filterBanned(rawIllusts) to nextUrl
         }
     }
+
+    var illusts by remember { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            val nextResult = suspendRunCatchingNonCancel {
+                repository.getRecommendedResponse(nextUrl = currentNextUrl)
+            }
+            nextResult.onSuccess { response ->
+                val filtered = filterBanned(response.illusts)
+                illusts = illusts + filtered
+                nextUrl = response.nextUrl
+            }.onFailure { error ->
+                loadMoreError = error
+            }
+            isLoadingMore = false
+        }
+    }
+
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
@@ -206,7 +253,6 @@ fun HelloScreen(
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
             result.isSuccess -> {
-                val illusts = result.getOrNull().orEmpty()
                 if (illusts.isEmpty()) {
                     EmptyPlaceholder(
                         message = if (isLoggedIn == true) "暂无推荐内容" else "暂无内容",
@@ -232,6 +278,10 @@ fun HelloScreen(
                                 end = 8.dp,
                                 bottom = 100.dp,
                             ),
+                            hasMore = nextUrl != null,
+                            isLoadingMore = isLoadingMore,
+                            loadMoreError = loadMoreError,
+                            onLoadMore = ::loadMore,
                         )
                     }
                 }
@@ -246,3 +296,4 @@ fun HelloScreen(
         }
     }
 }
+

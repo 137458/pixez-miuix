@@ -28,14 +28,35 @@ class SearchRepository(
     }
 
     /**
-     * 按关键词搜索插画。
-     *
-     * @param word 搜索关键词。
-     * @param sort 排序：date_desc（默认）、date_asc、popular_desc。
-     * @param searchTarget 搜索目标：partial_match_for_tags、exact_match_for_tags、title_and_caption 等。
-     * @param searchAiType AI 类型：0（默认）包含 AI 生成，1 排除 AI 生成。
-     * @param startDate 开始日期，格式 YYYY-MM-DD，非空时附加 start_date。
-     * @param endDate 结束日期，格式 YYYY-MM-DD，非空时附加 end_date。
+     * 按关键词搜索插画（返回包含 nextUrl 的响应）。
+     */
+    suspend fun searchIllustResponse(
+        word: String,
+        sort: String = "date_desc",
+        searchTarget: String = "partial_match_for_tags",
+        searchAiType: Int = 0,
+        startDate: String? = null,
+        endDate: String? = null,
+        nextUrl: String? = null,
+    ): Search = networkCall("搜索插画失败 word=$word") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/search/illust") {
+                parameter("filter", "for_android")
+                parameter("merge_plain_keyword_results", "true")
+                parameter("sort", sort)
+                parameter("search_target", searchTarget)
+                parameter("search_ai_type", searchAiType)
+                parameter("word", word)
+                startDate?.let { parameter("start_date", it.toPixivDateFormat()) }
+                endDate?.let { parameter("end_date", it.toPixivDateFormat()) }
+            }.body()
+        }
+    }
+
+    /**
+     * 按关键词搜索插画（仅返回第一页列表，兼容旧调用）。
      */
     suspend fun searchIllust(
         word: String,
@@ -44,35 +65,40 @@ class SearchRepository(
         searchAiType: Int = 0,
         startDate: String? = null,
         endDate: String? = null,
-    ): List<Illust> = networkCall("搜索插画失败 word=$word") {
-        val response: Search = apiClient.get("/v1/search/illust") {
-            parameter("filter", "for_android")
-            parameter("merge_plain_keyword_results", "true")
-            parameter("sort", sort)
-            parameter("search_target", searchTarget)
-            parameter("search_ai_type", searchAiType)
-            parameter("word", word)
-            startDate?.let { parameter("start_date", it.toPixivDateFormat()) }
-            endDate?.let { parameter("end_date", it.toPixivDateFormat()) }
-        }.body()
-        response.illusts
+    ): List<Illust> = searchIllustResponse(
+        word = word,
+        sort = sort,
+        searchTarget = searchTarget,
+        searchAiType = searchAiType,
+        startDate = startDate,
+        endDate = endDate,
+    ).illusts
+
+    /**
+     * 按关键词搜索画师（返回包含 nextUrl 的响应）。
+     */
+    suspend fun searchUserResponse(
+        word: String,
+        nextUrl: String? = null,
+    ): UserPreviewsResponse = networkCall("搜索画师失败 word=$word") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/search/user") {
+                parameter("filter", "for_android")
+                parameter("word", word)
+            }.body()
+        }
     }
 
     /**
-     * 按关键词搜索画师（用户）。
-     *
-     * @param word 搜索关键词。
+     * 按关键词搜索画师（仅返回第一页列表，兼容旧调用）。
      */
     suspend fun searchUser(
         word: String,
-    ): List<UserPreview> = networkCall("搜索画师失败 word=$word") {
-        val response: UserPreviewsResponse = apiClient.get("/v1/search/user") {
-            parameter("filter", "for_android")
-            parameter("word", word)
-        }.body()
-        response.userPreviews
-    }
+    ): List<UserPreview> = searchUserResponse(word).userPreviews
 }
+
 
 /**
  * 将 YYYY-MM-DD 格式日期转换为 Pixiv API 期望的 YYYY-M-D 格式。

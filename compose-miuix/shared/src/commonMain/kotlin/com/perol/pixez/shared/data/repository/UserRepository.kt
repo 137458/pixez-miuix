@@ -34,40 +34,68 @@ class UserRepository(
         }
 
     /**
-     * 获取用户作品列表。
+     * 获取用户插画/漫画作品响应（含 nextUrl）。
+
      *
      * @param userId 用户 ID。
      * @param type 作品类型：illust、manga、novel。
+     * @param nextUrl 分页请求 URL。
+     */
+    suspend fun getUserIllustsResponse(
+        userId: Int,
+        type: String = "illust",
+        nextUrl: String? = null,
+    ): UserIllusts = networkCall("获取用户作品失败 userId=$userId type=$type") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/user/illusts") {
+                parameter("filter", "for_android")
+                parameter("user_id", userId)
+                parameter("type", type)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取用户插画/漫画作品列表（兼容旧调用）。
      */
     suspend fun getUserIllusts(
         userId: Int,
         type: String = "illust",
-    ): List<Illust> = networkCall("获取用户作品失败 userId=$userId type=$type") {
-        val response: UserIllusts = apiClient.get("/v1/user/illusts") {
-            parameter("filter", "for_android")
-            parameter("user_id", userId)
-            parameter("type", type)
-        }.body()
-        response.illusts
-    }
+    ): List<Illust> = getUserIllustsResponse(userId, type).illusts
 
     /**
-     * 获取用户收藏的插画列表。
+     * 获取用户收藏的插画响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
      * @param restrict 可见性：`public` 或 `private`，默认 `public`。
+     * @param nextUrl 分页请求 URL。
+     */
+    suspend fun getUserBookmarksResponse(
+        userId: Int,
+        restrict: String = "public",
+        nextUrl: String? = null,
+    ): UserIllusts = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/user/bookmarks/illust") {
+                parameter("filter", "for_android")
+                parameter("user_id", userId)
+                parameter("restrict", restrict)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取用户收藏的插画列表（兼容旧调用）。
      */
     suspend fun getUserBookmarks(
         userId: Int,
         restrict: String = "public",
-    ): List<Illust> = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
-        val response: UserIllusts = apiClient.get("/v1/user/bookmarks/illust") {
-            parameter("filter", "for_android")
-            parameter("user_id", userId)
-            parameter("restrict", restrict)
-        }.body()
-        response.illusts
-    }
+    ): List<Illust> = getUserBookmarksResponse(userId, restrict).illusts
+
 
     /**
      * 获取用户关注列表。

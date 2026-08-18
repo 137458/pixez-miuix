@@ -35,11 +35,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.lazy.rememberLazyListState
+
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+
+
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
+
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
@@ -647,9 +657,34 @@ private fun SearchIllustResultGrid(
     val effectiveStartDate = debouncedSearchDate(startDate)
     val effectiveEndDate = debouncedSearchDate(endDate)
 
-    // 在协程中执行搜索并应用屏蔽过滤：先请求作品列表，再并行获取屏蔽 ID/标签/AI 设置，
-    // 最后过滤掉被屏蔽的作品、画师、标签，以及全局设置的 AI 作品。
-    val state = produceState<Result<List<Illust>>?>(
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
+        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
+            .getOrDefault(emptySet())
+        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
+            .getOrDefault(emptySet())
+        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
+            .getOrDefault(emptyList())
+        val banAIIllust = settingsRepository.banAIIllust
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
+        }
+    }
+
+    fun applyUgoiraFilter(list: List<Illust>, filter: Int): List<Illust> {
+        return when (filter) {
+            1 -> list.filter { it.type == "ugoira" }
+            2 -> list.filter { it.type != "ugoira" }
+            else -> list
+        }
+    }
+
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
         searchWord,
         sort,
@@ -661,8 +696,8 @@ private fun SearchIllustResultGrid(
         banRepository,
         settingsRepository,
     ) {
-        val illustsResult = suspendRunCatchingNonCancel {
-            repository.searchIllust(
+        val searchResult = suspendRunCatchingNonCancel {
+            repository.searchIllustResponse(
                 word = searchWord,
                 sort = sort,
                 searchTarget = searchTarget,
@@ -671,23 +706,52 @@ private fun SearchIllustResultGrid(
                 endDate = effectiveEndDate,
             )
         }
-        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-            .getOrDefault(emptySet())
-        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-            .getOrDefault(emptySet())
-        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-            .getOrDefault(emptyList())
-        val banAIIllust = settingsRepository.banAIIllust
-        value = illustsResult.map { illusts ->
-            illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
+        value = searchResult.map { filterBanned(it.illusts) to it.nextUrl }
+    }
+
+    var illusts by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate) {
+        mutableStateOf(listOf<Illust>())
+    }
+    var nextUrl by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate) {
+        mutableStateOf<String?>(null)
+    }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel {
+                repository.searchIllustResponse(
+                    word = searchWord,
+                    sort = sort,
+                    searchTarget = searchTarget,
+                    searchAiType = searchAiType,
+                    startDate = effectiveStartDate,
+                    endDate = effectiveEndDate,
+                    nextUrl = currentNextUrl,
+                )
+            }.onSuccess { response ->
+                val filtered = filterBanned(response.illusts)
+                illusts = illusts + filtered
+                nextUrl = response.nextUrl
+            }.onFailure { error ->
+                loadMoreError = error
             }
+            isLoadingMore = false
         }
     }
 
@@ -695,16 +759,10 @@ private fun SearchIllustResultGrid(
     when {
         result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         result.isSuccess -> {
-            val illusts = result.getOrNull().orEmpty()
-            // 根据 Ugoira 筛选条件本地过滤作品类型。
             val filteredIllusts = remember(illusts, ugoiraFilter) {
-                when (ugoiraFilter) {
-                    1 -> illusts.filter { it.type == "ugoira" }
-                    2 -> illusts.filter { it.type != "ugoira" }
-                    else -> illusts
-                }
+                applyUgoiraFilter(illusts, ugoiraFilter)
             }
-            if (filteredIllusts.isEmpty()) {
+            if (filteredIllusts.isEmpty() && !isLoadingMore) {
                 EmptyPlaceholder(
                     message = "未找到相关作品",
                     modifier = Modifier.fillMaxSize(),
@@ -716,6 +774,10 @@ private fun SearchIllustResultGrid(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    hasMore = nextUrl != null,
+                    isLoadingMore = isLoadingMore,
+                    loadMoreError = loadMoreError,
+                    onLoadMore = ::loadMore,
                 )
             }
         }
@@ -737,19 +799,71 @@ private fun SearchUserResultList(
     // 画师搜索结果重试计数，作为 produceState 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 
-    val state = produceState<Result<List<UserPreview>>?>(
+    val state = produceState<Result<com.perol.pixez.shared.data.model.UserPreviewsResponse>?>(
         initialValue = null,
         query,
         retryCount,
     ) {
-        value = suspendRunCatchingNonCancel { repository.searchUser(query) }
+        value = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
+    }
+
+    var previews by remember(query) { mutableStateOf(listOf<UserPreview>()) }
+    var nextUrl by remember(query) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { response ->
+            previews = response.userPreviews
+            nextUrl = response.nextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    previews = previews + response.userPreviews
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
+        }
+    }
+
+    val shouldLoadMore by remember(nextUrl, isLoadingMore, loadMoreError, previews.size) {
+        derivedStateOf {
+            if (nextUrl == null || isLoadingMore || loadMoreError != null || previews.isEmpty()) {
+                false
+            } else {
+                val layoutInfo = listState.layoutInfo
+                val totalItems = layoutInfo.totalItemsCount
+                val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
+                lastVisibleIndex >= totalItems - 4
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
     }
 
     val result = state.value
     when {
         result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         result.isSuccess -> {
-            val previews = result.getOrNull().orEmpty()
             if (previews.isEmpty()) {
                 EmptyPlaceholder(
                     message = "未找到相关画师",
@@ -757,6 +871,7 @@ private fun SearchUserResultList(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -771,6 +886,56 @@ private fun SearchUserResultList(
                             onClick = { onUserClick(preview.user.id) },
                         )
                     }
+
+                    if (isLoadingMore || loadMoreError != null || (nextUrl == null && previews.isNotEmpty())) {
+                        item(key = "search_user_footer") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                when {
+                                    isLoadingMore -> {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
+                                            Text(
+                                                text = "正在加载更多...",
+                                                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                            )
+                                        }
+                                    }
+                                    loadMoreError != null -> {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            Text(
+                                                text = "加载失败，请重试",
+                                                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
+                                            )
+                                            TextButton(
+                                                text = "重试",
+                                                onClick = ::loadMore,
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        Text(
+                                            text = "没有更多了",
+                                            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                            color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -781,6 +946,7 @@ private fun SearchUserResultList(
         )
     }
 }
+
 
 @Composable
 private fun SearchSuggestions(

@@ -30,72 +30,120 @@ import io.ktor.http.Parameters
 class IllustRepository(
     private val apiClient: HttpClient,
 ) {
-    private var cachedRecommended: List<Illust>? = null
-    private var cachedWalkthrough: List<Illust>? = null
+    private var cachedRecommendedResponse: Recommend? = null
+    private var cachedWalkthroughResponse: Walkthrough? = null
 
     /**
-     * 获取首页推荐插画，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
+     * 获取首页推荐插画响应（含 nextUrl），默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
      */
-    suspend fun getRecommended(forceRefresh: Boolean = false): List<Illust> {
-        val cached = cachedRecommended
-        if (!forceRefresh && cached != null) {
-            return cached
-        }
-        return networkCall("获取推荐插画失败") {
+    suspend fun getRecommendedResponse(
+        nextUrl: String? = null,
+        forceRefresh: Boolean = false,
+    ): Recommend = networkCall("获取推荐插画失败") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            val cached = cachedRecommendedResponse
+            if (!forceRefresh && cached != null) {
+                return@networkCall cached
+            }
             val response: Recommend = apiClient.get("/v1/illust/recommended") {
                 parameter("filter", "for_ios")
                 parameter("include_ranking_label", "true")
             }.body()
-            cachedRecommended = response.illusts
-            response.illusts
+            cachedRecommendedResponse = response
+            response
         }
     }
 
     /**
-     * 获取未登录 walkthrough 匿名推荐插画，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
+     * 获取首页推荐插画列表，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
      */
-    suspend fun getWalkthroughIllusts(forceRefresh: Boolean = false): List<Illust> {
-        val cached = cachedWalkthrough
-        if (!forceRefresh && cached != null) {
-            return cached
-        }
-        return networkCall("获取匿名推荐插画失败") {
+    suspend fun getRecommended(forceRefresh: Boolean = false): List<Illust> =
+        getRecommendedResponse(nextUrl = null, forceRefresh = forceRefresh).illusts
+
+    /**
+     * 获取未登录 walkthrough 匿名推荐插画响应（含 nextUrl），默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
+     */
+    suspend fun getWalkthroughResponse(
+        nextUrl: String? = null,
+        forceRefresh: Boolean = false,
+    ): Walkthrough = networkCall("获取匿名推荐插画失败") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            val cached = cachedWalkthroughResponse
+            if (!forceRefresh && cached != null) {
+                return@networkCall cached
+            }
             val response: Walkthrough = apiClient.get("/v1/walkthrough/illusts").body()
-            cachedWalkthrough = response.illusts
-            response.illusts
+            cachedWalkthroughResponse = response
+            response
         }
     }
 
     /**
-     * 获取排行榜插画。
+     * 获取未登录 walkthrough 匿名推荐插画列表，默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
+     */
+    suspend fun getWalkthroughIllusts(forceRefresh: Boolean = false): List<Illust> =
+        getWalkthroughResponse(nextUrl = null, forceRefresh = forceRefresh).illusts
+
+    /**
+     * 获取排行榜插画响应（含 nextUrl）。
      *
      * @param mode 排行榜模式，如 day、week、month、day_male、day_female 等。
      * @param date 日期，格式 yyyy-MM-dd；为空则取最新。
+     * @param nextUrl 分页 URL，非空时优先请求下一页。
      */
-    suspend fun getRanking(mode: String, date: String? = null): List<Illust> =
-        networkCall("获取排行榜失败 mode=$mode") {
-            val response: Ranking = apiClient.get("/v1/illust/ranking") {
+    suspend fun getRankingResponse(
+        mode: String,
+        date: String? = null,
+        nextUrl: String? = null,
+    ): Ranking = networkCall("获取排行榜失败 mode=$mode") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/illust/ranking") {
                 parameter("filter", "for_android")
                 parameter("mode", mode)
                 if (!date.isNullOrBlank()) {
                     parameter("date", date)
                 }
             }.body()
-            response.illusts
         }
+    }
 
     /**
-     * 获取关注用户最新插画（/v2/illust/follow）。
+     * 获取排行榜插画列表（兼容旧调用）。
+     */
+    suspend fun getRanking(mode: String, date: String? = null): List<Illust> =
+        getRankingResponse(mode = mode, date = date).illusts
+
+    /**
+     * 获取关注用户最新插画响应（含 nextUrl）。
      *
      * @param restrict 可见性筛选：all、public、private。
+     * @param nextUrl 分页 URL，非空时优先请求下一页。
      */
-    suspend fun getFollowIllusts(restrict: String = "all"): List<Illust> =
-        networkCall("获取关注插画失败 restrict=$restrict") {
-            val response: FollowIllusts = apiClient.get("/v2/illust/follow") {
+    suspend fun getFollowIllustsResponse(
+        restrict: String = "all",
+        nextUrl: String? = null,
+    ): FollowIllusts = networkCall("获取关注插画失败 restrict=$restrict") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v2/illust/follow") {
                 parameter("restrict", restrict)
             }.body()
-            response.illusts
         }
+    }
+
+    /**
+     * 获取关注用户最新插画列表（兼容旧调用）。
+     */
+    suspend fun getFollowIllusts(restrict: String = "all"): List<Illust> =
+        getFollowIllustsResponse(restrict = restrict).illusts
+
 
     private val spotlightArticlesCache = mutableMapOf<String, SpotlightResponse>()
 
@@ -239,16 +287,28 @@ class IllustRepository(
     }
 
     /**
-     * 获取相关作品列表。
+     * 获取相关作品响应（含 nextUrl）。
      */
-    suspend fun getIllustRelated(illustId: Int): List<Illust> =
-        networkCall("获取相关作品失败 illustId=$illustId") {
-            val response: Recommend = apiClient.get("/v2/illust/related") {
+    suspend fun getIllustRelatedResponse(
+        illustId: Int,
+        nextUrl: String? = null,
+    ): Recommend = networkCall("获取相关作品失败 illustId=$illustId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v2/illust/related") {
                 parameter("filter", "for_android")
                 parameter("illust_id", illustId)
             }.body()
-            response.illusts
         }
+    }
+
+    /**
+     * 获取相关作品列表（兼容旧调用）。
+     */
+    suspend fun getIllustRelated(illustId: Int): List<Illust> =
+        getIllustRelatedResponse(illustId).illusts
+
 
     /**
      * 获取插画系列详情与系列内作品列表。

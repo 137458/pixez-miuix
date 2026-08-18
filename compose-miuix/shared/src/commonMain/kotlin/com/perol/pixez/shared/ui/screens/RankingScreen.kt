@@ -43,6 +43,14 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+
 /**
  * 排行榜页：支持日/周/月等模式切换，展示真实排行榜数据。
  */
@@ -61,23 +69,9 @@ fun RankingScreen(
     val selectedDate = debouncedRankingDate(dateInput)
     // 重试计数，点击重试或切换模式/日期时触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
-    val state = produceState<Result<List<Illust>>?>(
-        initialValue = null,
-        selectedMode,
-        selectedDate,
-        retryCount,
-        banRepository,
-        settingsRepository,
-    ) {
-        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        val illustsResult = suspendRunCatchingNonCancel {
-            repository.getRanking(
-                mode = selectedMode.code,
-                date = selectedDate,
-            )
-        }
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
         val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
         val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
@@ -85,17 +79,77 @@ fun RankingScreen(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
-        value = illustsResult.map { illusts ->
-            illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
-            }
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
         }
+    }
+
+    // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
+    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
+        initialValue = null,
+        selectedMode,
+        selectedDate,
+        retryCount,
+        banRepository,
+        settingsRepository,
+    ) {
+        val rankingResult = suspendRunCatchingNonCancel {
+            repository.getRankingResponse(
+                mode = selectedMode.code,
+                date = selectedDate,
+            )
+        }
+        isManualRefreshing = false
+        value = rankingResult.map { filterBanned(it.illusts) to it.nextUrl }
+    }
+
+    var illusts by remember(selectedMode, selectedDate) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel {
+                repository.getRankingResponse(
+                    mode = selectedMode.code,
+                    date = selectedDate,
+                    nextUrl = currentNextUrl,
+                )
+            }.onSuccess { response ->
+                val filtered = filterBanned(response.illusts)
+                illusts = illusts + filtered
+                nextUrl = response.nextUrl
+            }.onFailure { error ->
+                loadMoreError = error
+            }
+            isLoadingMore = false
+        }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
     }
 
     val scrollBehavior = MiuixScrollBehavior()
@@ -106,6 +160,16 @@ fun RankingScreen(
             TopAppBar(
                 title = "排行榜",
                 scrollBehavior = scrollBehavior,
+                actions = {
+                    IconButton(
+                        onClick = triggerManualRefresh,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
+                },
             )
         },
     ) { paddingValues ->
@@ -137,31 +201,41 @@ fun RankingScreen(
                     modifier = Modifier.weight(1f),
                 )
                 result.isSuccess -> {
-                    val illusts = result.getOrNull().orEmpty()
                     if (illusts.isEmpty()) {
                         EmptyPlaceholder(
                             message = "暂无排行榜数据",
                             modifier = Modifier.weight(1f),
                         )
                     } else {
-                        IllustStaggeredGrid(
-                            illusts = illusts,
-                            onIllustClick = onIllustClick,
-                            modifier = Modifier
-                                .weight(1f)
-                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        )
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            IllustStaggeredGrid(
+                                illusts = illusts,
+                                onIllustClick = onIllustClick,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                hasMore = nextUrl != null,
+                                isLoadingMore = isLoadingMore,
+                                loadMoreError = loadMoreError,
+                                onLoadMore = ::loadMore,
+                            )
+                        }
                     }
                 }
                 else -> ErrorPlaceholder(
                     error = result.exceptionOrNull(),
-                    onRetry = { retryCount++ },
+                    onRetry = { triggerManualRefresh() },
                     modifier = Modifier.weight(1f),
                 )
             }
         }
     }
 }
+
 
 @Composable
 private fun RankingModeSelector(
