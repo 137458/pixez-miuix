@@ -273,8 +273,6 @@ fun IosLiquidGlassNavigationBar(
 
     val navBarBottomPadding = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     val bottomPaddingValue = if (navBarBottomPadding != 0.dp) 8.dp + navBarBottomPadding else 20.dp
-    val singleTabWidthDp = 58.dp
-
 
     val tabsContent: @Composable RowScope.() -> Unit = {
         val tabScale = LocalIosTabScale.current
@@ -301,7 +299,7 @@ fun IosLiquidGlassNavigationBar(
                         }
                     }
                     .focusable()
-                    .width(singleTabWidthDp)
+                    .weight(1f)
                     .fillMaxHeight()
                     .graphicsLayer {
                         val s = tabScale()
@@ -346,20 +344,24 @@ fun IosLiquidGlassNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = bottomPaddingValue, start = 16.dp, end = 16.dp),
+            .padding(bottom = bottomPaddingValue, start = 24.dp, end = 24.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Box(
-            modifier = Modifier.wrapContentWidth(),
+            modifier = Modifier
+                .widthIn(
+                    min = AppConstants.Layout.FLOATING_BAR_MIN_WIDTH_DP.dp,
+                    max = AppConstants.Layout.FLOATING_BAR_MAX_WIDTH_DP.dp,
+                )
+                .fillMaxWidth(),
             contentAlignment = Alignment.CenterStart,
         ) {
-
             // ── 1. Base Layer（未选中状态底层） ──
             CompositionLocalProvider(LocalContentColor provides tabContentColor) {
                 Row(
                     modifier = Modifier
                         .selectableGroup()
-                        .wrapContentWidth()
+                        .fillMaxWidth()
                         .onSizeChanged { coords ->
                             totalWidthPx = coords.width.toFloat()
                             val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
@@ -372,7 +374,6 @@ fun IosLiquidGlassNavigationBar(
                             ambientColor = Color.Black.copy(alpha = 0.15f),
                             spotColor = Color.Black.copy(alpha = 0.20f),
                         )
-
                         .then(
                             if (isBlurActive && backdrop != null) {
                                 Modifier.drawBackdrop(
@@ -425,9 +426,8 @@ fun IosLiquidGlassNavigationBar(
                             .clearAndSetSemantics {}
                             .alpha(0f)
                             .layerBackdrop(tabsBackdrop)
-                            .wrapContentWidth()
+                            .fillMaxWidth()
                             .graphicsLayer { translationX = panelOffset }
-
                             .drawBackdrop(
                                 backdrop = backdrop,
                                 shape = { pillShape },
