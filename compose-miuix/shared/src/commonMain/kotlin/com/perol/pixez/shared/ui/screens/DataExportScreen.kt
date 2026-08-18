@@ -73,16 +73,18 @@ fun DataExportScreen(
     // 文件读写或仓库处理期间禁用确定按钮，防止重复提交。
     var isProcessing by remember { mutableStateOf(false) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "应用数据",
+                title = strings.settingDataExport,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },

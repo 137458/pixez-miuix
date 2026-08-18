@@ -570,18 +570,20 @@ private fun BatchActionMenu(
     onClearCompleted: () -> Unit,
     enabled: Boolean,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     OverlayBottomSheet(
         show = true,
-        title = "批量操作",
+        title = strings.batchActions,
         onDismissRequest = onDismissRequest,
     ) {
         Column {
             BasicComponent(
-                title = "重试失败任务",
+                title = strings.retryFailedTasks,
                 onClick = { if (enabled) onRetryFailed() },
             )
             BasicComponent(
-                title = "清空已完成任务",
+                title = strings.clearCompletedTasks,
                 onClick = { if (enabled) onClearCompleted() },
             )
         }

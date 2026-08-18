@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 
@@ -31,27 +32,29 @@ fun IllustActionMenu(
     onShareLink: () -> Unit,
     onBan: () -> Unit,
 ) {
+    val strings = LocalStrings.current
+
     OverlayBottomSheet(
         show = show,
-        title = "更多操作",
+        title = strings.menuMoreActions,
         onDismissRequest = onDismissRequest,
     ) {
         Column {
             BasicComponent(
-                title = "复制信息",
+                title = strings.menuCopyInfo,
                 onClick = onCopyInfo,
             )
             BasicComponent(
-                title = "复制链接",
+                title = strings.menuCopyLink,
                 onClick = onCopyLink,
             )
             BasicComponent(
-                title = "分享链接",
+                title = strings.menuShareLink,
                 onClick = onShareLink,
             )
             if (showBan) {
                 BasicComponent(
-                    title = "屏蔽作品",
+                    title = strings.menuBanWork,
                     onClick = onBan,
                 )
             }

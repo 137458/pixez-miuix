@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.UpdateDialog
@@ -388,7 +389,7 @@ fun UpdateSettingScreen(
                             title = "GitHub Releases",
                             summary = "查看历史版本记录与源代码",
                             onClick = {
-                                openBrowser("https://github.com/137458/pixez-miuix/releases")
+                                openBrowser(AppConstants.Urls.GITHUB_RELEASES)
                             },
                         )
 

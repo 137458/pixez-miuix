@@ -54,6 +54,9 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+
 /**
  * 关于页：展示应用信息、开发者、贡献者、项目仓库与反馈入口。
  *
@@ -66,6 +69,7 @@ fun AboutScreen(
     onThanksClick: () -> Unit,
     onUpdateClick: (() -> Unit)? = null,
 ) {
+    val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
@@ -73,12 +77,12 @@ fun AboutScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "关于 PixEz",
+                title = strings.settingAbout,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -169,7 +173,7 @@ fun AboutScreen(
                     title = "项目仓库",
                     summary = "github.com/137458/pixez-miuix",
                     onClick = {
-                        openUrlOrToast("https://github.com/137458/pixez-miuix") { toastMessage = it }
+                        openUrlOrToast(AppConstants.Urls.GITHUB_REPO) { toastMessage = it }
                     },
                 )
                 BasicComponent(
@@ -180,13 +184,13 @@ fun AboutScreen(
                     },
                 )
                 BasicComponent(
-                    title = "支持 / 感谢",
+                    title = strings.settingThanks,
                     summary = "感谢帮助、支持与鼓励我的朋友们",
                     onClick = onThanksClick,
                 )
                 if (onUpdateClick != null) {
                     BasicComponent(
-                        title = "检查更新",
+                        title = strings.settingUpdate,
                         summary = "当前版本 v${AppInfo.VERSION_NAME}",
                         onClick = onUpdateClick,
                     )

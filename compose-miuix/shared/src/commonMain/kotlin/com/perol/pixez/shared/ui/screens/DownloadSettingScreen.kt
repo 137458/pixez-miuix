@@ -39,6 +39,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+
 /**
  * 下载设置页：管理保存路径、保存模式、保存格式、脚本文件名、
  * Sanity 文件夹、同时下载任务数、单文件夹模式。
@@ -51,8 +54,10 @@ fun DownloadSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前下载设置。
-    var storePath by remember { mutableStateOf(settingsRepository.storePath ?: "") }
+    val strings = LocalStrings.current
+
+    // 页面状态：从 SettingsRepository 读取当前各项下载设置。
+    var storePath by remember { mutableStateOf(settingsRepository.storePath.orEmpty()) }
     var saveMode by remember { mutableIntStateOf(settingsRepository.saveMode) }
     var format by remember { mutableStateOf(settingsRepository.format) }
     var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
@@ -83,12 +88,12 @@ fun DownloadSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "下载设置",
+                title = strings.settingDownload,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -318,7 +323,7 @@ fun DownloadSettingScreen(
 
         // 同时下载任务数选择对话框。
         OverlayDialog(
-            title = "同时下载任务数",
+            title = strings.dialogTaskCount,
             show = showTaskDialog,
             onDismissRequest = { showTaskDialog = false },
         ) {
@@ -326,7 +331,7 @@ fun DownloadSettingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                MAX_RUNNING_TASK_RANGE.forEach { value ->
+                AppConstants.Download.MAX_TASK_OPTIONS.forEach { value ->
                     BasicComponent(
                         title = value.toString(),
                         onClick = {

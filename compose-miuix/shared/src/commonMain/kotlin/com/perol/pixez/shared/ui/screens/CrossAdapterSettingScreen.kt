@@ -37,6 +37,9 @@ import kotlin.math.max
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+
 /**
  * 跨适配设置页：调整竖屏/横屏下按宽度自适应网格列数的阈值。
  *
@@ -48,6 +51,8 @@ fun CrossAdapterSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    val strings = LocalStrings.current
+
     // 页面状态：从 SettingsRepository 读取当前跨适配设置。
     var crossAdapt by remember { mutableStateOf(settingsRepository.crossAdapt) }
     var crossAdapterWidth by remember { mutableStateOf(settingsRepository.crossAdapterWidth) }
@@ -58,12 +63,12 @@ fun CrossAdapterSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "跨适配设置",
+                title = strings.settingCrossAdapter,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -168,7 +173,7 @@ private fun AdapterWidthSlider(
             Slider(
                 value = sliderValue,
                 onValueChange = { sliderValue = it },
-                valueRange = CROSS_ADAPTER_WIDTH_MIN.toFloat()..CROSS_ADAPTER_WIDTH_MAX.toFloat(),
+                valueRange = AppConstants.CrossAdapter.WIDTH_MIN.toFloat()..AppConstants.CrossAdapter.WIDTH_MAX.toFloat(),
                 onValueChangeFinished = {
                     onWidthChangeFinished(sliderValue.toInt())
                 },
@@ -181,7 +186,7 @@ private fun AdapterWidthSlider(
 
             PreviewGrid(
                 columnCount = columnCount,
-                itemCount = PREVIEW_ITEM_COUNT,
+                itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
             )
         }
     }
@@ -225,7 +230,3 @@ private fun PreviewGrid(
         }
     }
 }
-
-private const val CROSS_ADAPTER_WIDTH_MIN = 100
-private const val CROSS_ADAPTER_WIDTH_MAX = 2160
-private const val PREVIEW_ITEM_COUNT = 20

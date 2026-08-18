@@ -455,12 +455,13 @@ private fun SearchFilterBottomSheet(
     var draftStartDate by remember(startDate) { mutableStateOf(startDate) }
     var draftEndDate by remember(endDate) { mutableStateOf(endDate) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftTarget }.coerceAtLeast(0)
     val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftUgoira }.coerceAtLeast(0)
 
     OverlayBottomSheet(
         show = true,
-        title = "搜索筛选",
+        title = strings.searchFilter,
         onDismissRequest = onDismissRequest,
     ) {
         Column(

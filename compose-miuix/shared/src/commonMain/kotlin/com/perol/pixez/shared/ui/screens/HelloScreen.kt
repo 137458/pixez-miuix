@@ -118,10 +118,12 @@ fun HelloScreen(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
     WindowDialog(
-        title = "需要登录",
-        summary = "当前未登录，登录后可使用完整功能",
+        title = strings.dialogNeedLogin,
+        summary = strings.dialogNeedLoginSummary,
         show = showLoginDialog,
         onDismissRequest = { showLoginDialog = false },
     ) {
@@ -130,7 +132,7 @@ fun HelloScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TextButton(
-                text = "暂不登录",
+                text = strings.btnCancelLogin,
                 onClick = { showLoginDialog = false },
                 modifier = Modifier.weight(1f),
             )
@@ -141,7 +143,7 @@ fun HelloScreen(
                 },
                 modifier = Modifier.weight(1f),
             ) {
-                Text("去登录")
+                Text(strings.btnGoLogin)
             }
         }
     }

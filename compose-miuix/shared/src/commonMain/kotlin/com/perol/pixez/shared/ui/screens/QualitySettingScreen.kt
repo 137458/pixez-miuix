@@ -56,16 +56,18 @@ fun QualitySettingScreen(
     // 当前正在编辑的画质类型，null 表示没有对话框打开。
     var editingType by rememberSaveable { mutableStateOf<QualityType?>(null) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "画质设置",
+                title = strings.settingQuality,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -44,9 +45,11 @@ fun UpdateDialog(
     onUpdate: (url: String) -> Unit,
     onIgnore: ((version: String) -> Unit)? = null,
 ) {
+    val strings = LocalStrings.current
+
     WindowDialog(
         show = show,
-        title = "发现新版本",
+        title = strings.dialogNewVersionFound,
         summary = "v${AppInfo.VERSION_NAME} → v${releaseInfo.versionName}",
         onDismissRequest = onDismiss,
     ) {
@@ -78,7 +81,7 @@ fun UpdateDialog(
             ) {
                 if (onIgnore != null) {
                     TextButton(
-                        text = "忽略此版",
+                        text = strings.btnIgnore,
                         onClick = { onIgnore(releaseInfo.versionName) },
                         modifier = Modifier.weight(1f),
                     )
@@ -86,7 +89,7 @@ fun UpdateDialog(
                 }
 
                 TextButton(
-                    text = "以后再说",
+                    text = strings.cancel,
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 )
@@ -94,7 +97,7 @@ fun UpdateDialog(
                 Spacer(Modifier.width(8.dp))
 
                 TextButton(
-                    text = "立即更新",
+                    text = strings.btnUpdate,
                     onClick = { onUpdate(releaseInfo.releaseUrl) },
                     modifier = Modifier.weight(1.2f),
                     colors = ButtonDefaults.textButtonColorsPrimary(),

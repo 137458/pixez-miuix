@@ -214,18 +214,19 @@ private fun AddTagDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var name by remember(show) { mutableStateOf("") }
 
     OverlayDialog(
-        title = "添加收藏标签",
-        summary = "输入要收藏的标签名称",
+        title = strings.dialogAddTag,
+        summary = strings.dialogAddTagSummary,
         show = show,
         onDismissRequest = onDismiss,
     ) {
         TextField(
             value = name,
             onValueChange = { name = it },
-            label = "标签名",
+            label = strings.tags,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
@@ -235,12 +236,12 @@ private fun AddTagDialog(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TextButton(
-                text = "取消",
+                text = strings.cancel,
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
             )
             TextButton(
-                text = if (isLoading) "添加中…" else "添加",
+                text = if (isLoading) strings.btnAdding else strings.btnAdd,
                 onClick = {
                     val trimmed = name.trim()
                     if (trimmed.isNotBlank()) {
@@ -266,6 +267,8 @@ private fun DeleteConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     OverlayDialog(
         title = title,
         summary = summary,
@@ -277,12 +280,12 @@ private fun DeleteConfirmationDialog(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TextButton(
-                text = "取消",
+                text = strings.cancel,
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
             )
             TextButton(
-                text = if (isLoading) "删除中…" else "删除",
+                text = if (isLoading) strings.btnDeleting else strings.btnDelete,
                 onClick = onConfirm,
                 enabled = !isLoading,
                 modifier = Modifier.weight(1f),

@@ -99,10 +99,12 @@ pixez-flutter-MIUIX/
 │       │       ├── platform/          # 跨平台 Expect 声明 (相册、剪贴板、分享、返回键)
 │       │       └── ui/
 │       │           ├── animation/     # 液态手势阻尼与弹性物理动画
-│       │           ├── components/    # MIUIX 风格通用组件 (液态底栏、卡片、更新弹窗等)
+│       │           ├── components/    # MIUIX 风格通用组件 (液态底栏、卡片、操作弹窗等)
 │       │           ├── effect/        # HyperOS 2 / 3 运行时 GLSL 着色器动态流光引擎
+│       │           ├── i18n/          # 多语言国际化体系 (17 种语言完整映射)
 │       │           ├── navigation/    # Decompose 路由导航与页面栈管理
-│       │           └── screens/       # 40+ 个完整业务屏幕与系统级设置页
+│       │           ├── screens/       # 40+ 个完整业务屏幕与系统级设置页
+│       │           └── AppConstants.kt# 全局外部链接、模板与选项档位常量收敛
 │       ├── src/androidMain/           # Android 平台特异实现 (RuntimeShader、存储等)
 │       ├── src/desktopMain/           # Desktop 平台特异实现 (Skia RuntimeEffect 等)
 │       ├── src/iosMain/               # iOS 平台特异实现

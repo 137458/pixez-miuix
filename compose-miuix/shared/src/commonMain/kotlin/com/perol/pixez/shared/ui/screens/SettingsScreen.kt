@@ -114,17 +114,18 @@ fun SettingsScreen(
         boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "设置",
+                title = strings.settingsTitle,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = MiuixIcons.Back, contentDescription = "返回")
+                        Icon(imageVector = MiuixIcons.Back, contentDescription = strings.back)
                     }
                 },
             )
@@ -207,7 +208,7 @@ fun SettingsScreen(
                 SmallTitle(text = "主题")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "主题设置",
+                        title = strings.settingTheme,
                         summary = "主题模式、AMOLED、动态颜色、种子色",
                         onClick = onThemeSettingClick,
                     )
@@ -218,7 +219,7 @@ fun SettingsScreen(
                 SmallTitle(text = "网络")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "网络设置",
+                        title = strings.settingNetwork,
                         summary = "网络模式、图片源",
                         onClick = onNetworkSettingClick,
                     )
@@ -229,12 +230,12 @@ fun SettingsScreen(
                 SmallTitle(text = "屏蔽与隐私")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "屏蔽设置",
+                        title = strings.settingShield,
                         summary = "标签、画师、AI 作品过滤",
                         onClick = onShieldClick,
                     )
                     BasicComponent(
-                        title = "隐私设置",
+                        title = strings.settingPrivacy,
                         summary = "NSFW 遮罩、默认私密收藏",
                         onClick = onPrivacySettingClick,
                     )
@@ -261,12 +262,12 @@ fun SettingsScreen(
                 SmallTitle(text = "画质与保存")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "画质设置",
+                        title = strings.settingQuality,
                         summary = "Feed 预览、插画、漫画、大图缩放画质",
                         onClick = onQualitySettingClick,
                     )
                     BasicComponent(
-                        title = "保存设置",
+                        title = strings.settingSave,
                         summary = "收藏/保存联动、长按确认、自动标签",
                         onClick = onSaveSettingClick,
                     )
@@ -277,12 +278,12 @@ fun SettingsScreen(
                 SmallTitle(text = "显示与布局")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "跨适配设置",
+                        title = strings.settingCrossAdapter,
                         summary = "竖屏/横屏按宽度自适应网格列数",
                         onClick = onCrossAdapterSettingClick,
                     )
                     BasicComponent(
-                        title = "布局设置",
+                        title = strings.settingLayout,
                         summary = "平板模式、竖屏/横屏固定网格列数",
                         onClick = onLayoutSettingClick,
                     )
@@ -293,7 +294,7 @@ fun SettingsScreen(
                 SmallTitle(text = "下载")
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "下载设置",
+                        title = strings.settingDownload,
                         summary = "保存路径、同时下载任务数、单文件夹模式",
                         onClick = onDownloadSettingClick,
                     )
@@ -315,7 +316,7 @@ fun SettingsScreen(
                     SmallTitle(text = "平台")
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
-                            title = "平台专属设置",
+                            title = strings.settingPlatform,
                             summary = "屏幕刷新率、图片选择器、默认打开链接",
                             onClick = onPlatformSettingClick,
                         )
@@ -354,7 +355,7 @@ fun SettingsScreen(
                         },
                     )
                     BasicComponent(
-                        title = "应用数据",
+                        title = strings.settingDataExport,
                         summary = "导入/导出搜索历史、收藏标签、浏览历史等数据",
                         onClick = onDataExportClick,
                     )
@@ -372,12 +373,12 @@ fun SettingsScreen(
                         )
                     }
                     BasicComponent(
-                        title = "更新设置",
+                        title = strings.settingUpdate,
                         summary = "忽略当前版本更新与手动检查更新",
                         onClick = onUpdateSettingClick,
                     )
                     BasicComponent(
-                        title = "关于 PixEz",
+                        title = strings.settingAbout,
                         summary = "版本 ${AppInfo.VERSION_NAME}",
                         onClick = onAboutClick,
                     )
