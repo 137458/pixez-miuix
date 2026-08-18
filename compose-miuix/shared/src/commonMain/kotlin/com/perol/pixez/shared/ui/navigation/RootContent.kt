@@ -502,7 +502,6 @@ fun RootContent(
                                     activeTab = active.tab,
                                     onTabSelected = component::onMainTabSelected,
                                     isFloating = settingsRepository.useFloatingBottomBar,
-                                    refractionLevel = settingsRepository.liquidRefractionLevel,
                                     backdrop = backdrop,
                                     modifier = Modifier.align(Alignment.BottomCenter),
                                 )
