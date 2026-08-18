@@ -16,9 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.perol.pixez.shared.data.repository.AccountRepository
@@ -95,6 +97,7 @@ import top.yukonga.miuix.kmp.theme.lightColorScheme
 /**
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
  */
+@OptIn(com.arkivanov.decompose.ExperimentalDecomposeApi::class)
 @Composable
 fun RootContent(
     component: RootComponent,
@@ -146,12 +149,6 @@ fun RootContent(
 
     val stack by component.stack.subscribeAsState()
     val active = stack.active.instance
-    val canPop = active !is Child.Main
-
-    // 拦截系统返回键：在二级及以上页面时执行出栈返回上一级，在主页标签时不拦截以允许系统退出。
-    com.perol.pixez.shared.platform.PlatformBackHandler(enabled = canPop) {
-        component.onBack()
-    }
 
     val backdrop = rememberLayerBackdrop()
     val bottomBarVisible = remember { mutableStateOf(true) }
@@ -159,6 +156,7 @@ fun RootContent(
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
     }
+
 
         MiuixTheme(controller = themeController) {
             CompositionLocalProvider(
@@ -189,7 +187,12 @@ fun RootContent(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .layerBackdrop(backdrop),
-                                animation = stackAnimation(slide()),
+                                animation = predictiveBackAnimation(
+                                    backHandler = component.backHandler,
+                                    fallbackAnimation = stackAnimation(slide()),
+                                    onBack = { component.onBack() },
+                                ),
+
                             ) { child ->
 
                     when (val instance = child.instance) {
