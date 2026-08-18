@@ -73,22 +73,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.highlight.HighlightStyle
-import com.kyant.backdrop.shadow.InnerShadow
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.animation.DampedDragAnimation
 import com.perol.pixez.shared.ui.animation.InteractiveHighlight
-import com.perol.pixez.shared.ui.libs.liquid.rememberCombinedBackdrop
 import kotlinx.coroutines.launch
 
 import top.yukonga.miuix.kmp.basic.Icon
@@ -99,8 +94,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
-
-private val LocalIosTabScale = staticCompositionLocalOf { { 1f } }
 
 private val iosIndicatorSpecular: Highlight = Highlight(
     width = 1.dp,
@@ -116,16 +109,13 @@ private data class RefractionConfig(
     val blur: Dp,
 )
 
-
-
 /**
- * 官方 compose-miuix-ui 示例 1:1 实现的 iOS Liquid Glass 悬浮导航栏。
+ * 官方 compose-miuix-ui 规范的 iOS Liquid Glass 悬浮导航栏。
  *
  * 架构原理：
- * 1. Base Layer（未选中状态底层）：渲染单层毛玻璃/液态玻璃胶囊 + 默认未选中颜色图标/文字；
- * 2. Active Layer（激活状态层）：alpha=0 隐藏，仅供 tabsBackdrop 录制高亮状态内容；
- * 3. Indicator Layer（指示器透镜层）：采样 combinedBackdrop（页面 backdrop + tabsBackdrop），
- *    结合 DampedDragAnimation 物理阻尼拖拽与速度拉伸，实现 iOS 液态玻璃色散折射透镜。
+ * 1. 统一连续液态玻璃底层：在整个药丸外框上应用单层 drawBackdrop（模糊 + 折射 + 高光 + 深度阴影），彻底杜绝多层 Backdrop 引起的分割线；
+ * 2. 物理平滑小药丸指示器：随 DampedDragAnimation 物理阻尼与弹性插值平滑滑动；
+ * 3. 标签内容层：高亮选中项文字/图标，保证无重影与无缝毛玻璃视觉。
  */
 @Composable
 fun IosLiquidGlassNavigationBar(
@@ -144,7 +134,7 @@ fun IosLiquidGlassNavigationBar(
     val surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
     val containerColor = if (isBlurActive && backdrop != null) surfaceContainer.copy(alpha = 0.4f) else surfaceContainer
 
-    val (baseRefractionDp, indicatorRefractionDp, highlightAlpha, lensBlurDp) = remember(refractionLevel) {
+    val (baseRefractionDp, _, highlightAlpha, lensBlurDp) = remember(refractionLevel) {
         when (refractionLevel) {
             0 -> RefractionConfig(base = 12.dp, indicator = 8.dp, highlightAlpha = 0.40f, blur = 3.dp)
             1 -> RefractionConfig(base = 20.dp, indicator = 12.dp, highlightAlpha = 0.60f, blur = 4.dp)
@@ -155,7 +145,6 @@ fun IosLiquidGlassNavigationBar(
         }
     }
 
-    val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
@@ -267,79 +256,9 @@ fun IosLiquidGlassNavigationBar(
     }
 
     val baseHighlight = remember { iosIndicatorSpecular.copy(alpha = 0.75f) }
-    val pillHighlight = remember { iosIndicatorSpecular.copy(alpha = 0.75f) }
-
-    val combinedBackdrop = backdrop?.let { rememberCombinedBackdrop(it, tabsBackdrop) }
 
     val navBarBottomPadding = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     val bottomPaddingValue = if (navBarBottomPadding != 0.dp) 8.dp + navBarBottomPadding else 20.dp
-
-    val tabsContent: @Composable RowScope.() -> Unit = {
-        val tabScale = LocalIosTabScale.current
-        items.forEachIndexed { index, item ->
-            Column(
-                modifier = Modifier
-                    .semantics(mergeDescendants = true) {
-                        selected = index == currentIndex
-                        role = Role.Tab
-                        onClick {
-                            activateTab(index)
-                            true
-                        }
-                    }
-                    .onKeyEvent { event ->
-                        val isActivationKey = event.key == Key.Enter ||
-                            event.key == Key.NumPadEnter ||
-                            event.key == Key.Spacebar
-                        if (isActivationKey) {
-                            if (event.type == KeyEventType.KeyUp) activateTab(index)
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    .focusable()
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .graphicsLayer {
-                        val s = tabScale()
-                        scaleX = s
-                        scaleY = s
-                    },
-                verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
-                horizontalAlignment = CenterHorizontally,
-            ) {
-                val currentBadge = badge(index)
-                if (currentBadge != null) {
-                    Box {
-                        Icon(
-                            modifier = Modifier.size(24.dp),
-                            imageVector = item.icon,
-                            contentDescription = null,
-                        )
-                        Box(
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        ) {
-                            currentBadge()
-                        }
-                    }
-                } else {
-                    Icon(
-                        modifier = Modifier.size(24.dp),
-                        imageVector = item.icon,
-                        contentDescription = null,
-                    )
-                }
-                Text(
-                    text = item.label,
-                    fontSize = 11.sp,
-                    fontWeight = if (index == currentIndex) FontWeight.Bold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
 
     Box(
         modifier = modifier
@@ -356,79 +275,26 @@ fun IosLiquidGlassNavigationBar(
                 .fillMaxWidth(),
             contentAlignment = Alignment.CenterStart,
         ) {
-            // ── 1. Base Layer（未选中状态底层） ──
-            CompositionLocalProvider(LocalContentColor provides tabContentColor) {
-                Row(
-                    modifier = Modifier
-                        .selectableGroup()
-                        .fillMaxWidth()
-                        .onSizeChanged { coords ->
-                            totalWidthPx = coords.width.toFloat()
-                            val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
-                            tabWidthPx = (contentWidthPx / tabsCount).coerceAtLeast(0f)
-                        }
-                        .graphicsLayer { translationX = panelOffset }
-                        .shadow(
-                            elevation = 10.dp,
-                            shape = pillShape,
-                            ambientColor = Color.Black.copy(alpha = 0.15f),
-                            spotColor = Color.Black.copy(alpha = 0.20f),
-                        )
-                        .then(
-                            if (isBlurActive && backdrop != null) {
-                                Modifier.drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { pillShape },
-                                    effects = {
-                                        vibrancy()
-                                        blur(lensBlurDp.toPx())
-                                        lens(
-                                            refractionHeight = baseRefractionDp.toPx(),
-                                            refractionAmount = baseRefractionDp.toPx(),
-                                        )
-                                    },
-                                    highlight = { baseHighlight.copy(alpha = highlightAlpha) },
-                                    layerBlock = {
-                                        val width = size.width.coerceAtLeast(1f)
-                                        val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDrag.pressProgress)
-                                        scaleX = s
-                                        scaleY = s
-                                    },
-                                    onDrawSurface = { drawRect(containerColor) },
-                                )
-                            } else {
-                                Modifier.background(containerColor, pillShape)
-                            },
-                        )
-                        .then(
-                            if (isBlurActive && backdrop != null) {
-                                interactiveHighlight.modifier.then(interactiveHighlight.gestureModifier)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .then(dampedDrag.modifier)
-                        .height(64.dp)
-                        .padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    content = tabsContent,
-                )
-            }
-
-            // ── 2. Active Tabs Layer（激活状态隐藏层，供 tabsBackdrop 录制高亮） ──
-            if (isBlurActive && backdrop != null) {
-                CompositionLocalProvider(
-                    LocalIosTabScale provides { lerp(1f, 1.2f, dampedDrag.pressProgress) },
-                    LocalContentColor provides accentColor,
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clearAndSetSemantics {}
-                            .alpha(0f)
-                            .layerBackdrop(tabsBackdrop)
-                            .fillMaxWidth()
-                            .graphicsLayer { translationX = panelOffset }
-                            .drawBackdrop(
+            // ── 1. 统一连续液态玻璃底层（消除多层 Backdrop 引起的区域分割线） ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .onSizeChanged { coords ->
+                        totalWidthPx = coords.width.toFloat()
+                        val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
+                        tabWidthPx = (contentWidthPx / tabsCount).coerceAtLeast(0f)
+                    }
+                    .graphicsLayer { translationX = panelOffset }
+                    .shadow(
+                        elevation = 10.dp,
+                        shape = pillShape,
+                        ambientColor = Color.Black.copy(alpha = 0.15f),
+                        spotColor = Color.Black.copy(alpha = 0.20f),
+                    )
+                    .then(
+                        if (isBlurActive && backdrop != null) {
+                            Modifier.drawBackdrop(
                                 backdrop = backdrop,
                                 shape = { pillShape },
                                 effects = {
@@ -439,101 +305,124 @@ fun IosLiquidGlassNavigationBar(
                                         refractionAmount = baseRefractionDp.toPx(),
                                     )
                                 },
+                                highlight = { baseHighlight.copy(alpha = highlightAlpha) },
+                                layerBlock = {
+                                    val width = size.width.coerceAtLeast(1f)
+                                    val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDrag.pressProgress)
+                                    scaleX = s
+                                    scaleY = s
+                                },
                                 onDrawSurface = { drawRect(containerColor) },
                             )
-                            .then(interactiveHighlight.modifier)
-                            .height(64.dp)
-                            .padding(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = tabsContent,
+                        } else {
+                            Modifier.background(containerColor, pillShape)
+                        },
                     )
-                }
-            }
+                    .then(
+                        if (isBlurActive && backdrop != null) {
+                            interactiveHighlight.modifier.then(interactiveHighlight.gestureModifier)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .then(dampedDrag.modifier),
+            )
 
-
-            // ── 3. Indicator Layer（指示器折射透镜层） ──
+            // ── 2. 平滑滑动选中小胶囊指示器 ──
             if (tabWidthPx > 0f) {
                 val tabWidthDp = with(density) { tabWidthPx.toDp() }
-                if (isBlurActive && combinedBackdrop != null) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .graphicsLayer {
-                                val singleTabWidth = tabWidthPx
-                                val progressOffset = dampedDrag.value * singleTabWidth
-                                translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
-                            }
-                            .drawBackdrop(
-                                backdrop = combinedBackdrop,
-                                shape = { pillShape },
-                                effects = {
-                                    val progress = dampedDrag.pressProgress
-                                    lens(
-                                        refractionHeight = indicatorRefractionDp.toPx() * progress,
-                                        refractionAmount = (indicatorRefractionDp * 1.35f).toPx() * progress,
-                                        chromaticAberration = true,
-                                    )
-                                },
-                                highlight = { pillHighlight.copy(alpha = highlightAlpha * dampedDrag.pressProgress) },
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .graphicsLayer {
+                            val progressOffset = dampedDrag.value * tabWidthPx
+                            translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                            scaleX = dampedDrag.scaleX
+                            scaleY = dampedDrag.scaleY
+                        }
+                        .clip(pillShape)
+                        .background(accentColor.copy(alpha = 0.15f), pillShape)
+                        .height(56.dp)
+                        .width(tabWidthDp),
+                )
+            }
 
-                                layerBlock = {
-                                    scaleX = dampedDrag.scaleX
-                                    scaleY = dampedDrag.scaleY
-                                    val v = dampedDrag.velocity / 10f
-                                    scaleX /= 1f - (v * 0.75f).coerceIn(-0.2f, 0.2f)
-                                    scaleY *= 1f - (v * 0.25f).coerceIn(-0.2f, 0.2f)
-                                },
-                                onDrawSurface = {
-                                    val progress = dampedDrag.pressProgress
-                                    drawRect(
-                                        color = Color.Black.copy(alpha = 0.1f),
-                                        alpha = 1f - progress,
-                                    )
-                                    drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                                },
-                                innerShadow = {
-                                    InnerShadow(
-                                        radius = 8.dp * dampedDrag.pressProgress,
-                                        color = Color.Black.copy(alpha = 0.15f),
-                                        alpha = dampedDrag.pressProgress,
-                                    )
-                                },
-                            )
-                            .height(56.dp)
-                            .width(tabWidthDp),
-                    )
-                } else {
-                    Box(
+            // ── 3. 标签内容层（文字与图标） ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(4.dp)
+                    .graphicsLayer { translationX = panelOffset }
+                    .selectableGroup(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items.forEachIndexed { index, item ->
+                    val isSelected = index == currentIndex
+                    val itemColor = if (isSelected) accentColor else tabContentColor
+
+                    Column(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .graphicsLayer {
-                                val progressOffset = dampedDrag.value * tabWidthPx
-                                translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                            .semantics(mergeDescendants = true) {
+                                selected = isSelected
+                                role = Role.Tab
+                                onClick {
+                                    activateTab(index)
+                                    true
+                                }
                             }
-                            .clip(pillShape)
-                            .background(accentColor.copy(alpha = 0.15f), pillShape)
-                            .height(56.dp)
-                            .width(tabWidthDp),
-                        contentAlignment = Alignment.CenterStart,
+                            .onKeyEvent { event ->
+                                val isActivationKey = event.key == Key.Enter ||
+                                    event.key == Key.NumPadEnter ||
+                                    event.key == Key.Spacebar
+                                if (isActivationKey) {
+                                    if (event.type == KeyEventType.KeyUp) activateTab(index)
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            .focusable()
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+                        horizontalAlignment = CenterHorizontally,
                     ) {
-                        CompositionLocalProvider(LocalContentColor provides accentColor) {
-                            Row(
-                                modifier = Modifier
-                                    .clearAndSetSemantics {}
-                                    .wrapContentWidth(align = Alignment.Start, unbounded = true)
-                                    .requiredWidth(with(density) { (totalWidthPx - 8.dp.toPx()).toDp() })
-                                    .height(56.dp)
-                                    .graphicsLayer {
-                                        val progressOffset = dampedDrag.value * tabWidthPx
-                                        translationX = if (isLtr) -progressOffset else progressOffset
-                                    },
-                                verticalAlignment = Alignment.CenterVertically,
-                                content = tabsContent,
+                        val currentBadge = badge(index)
+                        if (currentBadge != null) {
+                            Box {
+                                Icon(
+                                    modifier = Modifier.size(24.dp),
+                                    imageVector = item.icon,
+                                    contentDescription = null,
+                                    tint = itemColor,
+                                )
+                                Box(
+                                    modifier = Modifier.align(Alignment.TopEnd),
+                                ) {
+                                    currentBadge()
+                                }
+                            }
+                        } else {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                imageVector = item.icon,
+                                contentDescription = null,
+                                tint = itemColor,
                             )
                         }
+                        Text(
+                            text = item.label,
+                            color = itemColor,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
         }
     }
 }
+
