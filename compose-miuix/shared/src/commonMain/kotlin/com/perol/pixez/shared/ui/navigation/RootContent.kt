@@ -167,10 +167,13 @@ fun RootContent(
                 BoxWithConstraints(modifier = modifier.fillMaxSize()) {
                     val isWideScreen = maxWidth >= 600.dp
                     val isMainTab = active is Child.Main
+                    val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
+                    val showNavigationRail = isWideScreen && isMainTab && !useFloatingBottomBar
+                    val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
 
                     Row(modifier = Modifier.fillMaxSize()) {
-                        // 在平板/桌面宽屏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
-                        if (isWideScreen && isMainTab) {
+                        // 在平板/桌面宽屏且关闭悬浮底栏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
+                        if (showNavigationRail) {
                             MainNavigationRail(
                                 activeTab = active.tab,
                                 onTabSelected = component::onMainTabSelected,
@@ -495,13 +498,13 @@ fun RootContent(
                 }
             }
 
-                            // 仅在一级主页面、窄屏（手机）且未被弹窗/抽屉临时隐藏时显示底部导航栏。
+                            // 仅在符合条件的展示场景下渲染底部导航栏
                             val _changeVersion = settingsRepository.changeVersion
-                            if (active is Child.Main && bottomBarVisible.value && !isWideScreen) {
+                            if (showBottomBar && active is Child.Main) {
                                 MainBottomBar(
                                     activeTab = active.tab,
                                     onTabSelected = component::onMainTabSelected,
-                                    isFloating = settingsRepository.useFloatingBottomBar,
+                                    isFloating = useFloatingBottomBar,
                                     backdrop = backdrop,
                                     modifier = Modifier.align(Alignment.BottomCenter),
                                 )
