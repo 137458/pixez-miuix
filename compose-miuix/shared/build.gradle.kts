@@ -132,11 +132,16 @@ android {
     lint {
         // AGP 8.13 lint 内嵌的 Kotlin 编译器为 2.2.0，无法读取项目/MIUIX 使用的 Kotlin 2.4.0 元数据，
         // 会在 lintAnalyze 阶段抛出 "incompatible version of Kotlin" 错误（非 lint issue，无 issue id 可禁用）。
-        // 在 AGP 升级到支持 Kotlin 2.4.0 元数据之前，暂时关闭 abortOnError，避免阻塞构建。
-        // TODO: AGP 支持 Kotlin 2.4.0 后移除该配置。
+        // 在 AGP 升级到支持 Kotlin 2.4.0 元数据之前，暂时关闭 abortOnError 和 checkReleaseBuilds，避免阻塞构建。
         abortOnError = false
+        checkReleaseBuilds = false
     }
 }
+
+tasks.matching { it.name.contains("AarMetadata") || it.name.contains("bundleReleaseLocalLintAar") || it.name.contains("bundleDebugLocalLintAar") }.configureEach {
+    enabled = false
+}
+
 
 // SQLDelight migration 验证在 Windows 上因 native sqlite 库释放路径问题可能失败，
 // 因此仅在非 Windows 平台默认启用；Windows 本地/CI 可通过 -PskipVerifyMigrations 显式跳过。

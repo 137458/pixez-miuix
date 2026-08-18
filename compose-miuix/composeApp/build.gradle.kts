@@ -65,8 +65,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010048
-        versionName = "0.9.105-miuix"
+        versionCode = 10010049
+        versionName = "0.9.108-miuix"
     }
 
     buildTypes {
@@ -80,7 +80,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
 }
+
 
 compose.desktop {
     application {
@@ -89,10 +95,11 @@ compose.desktop {
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "PixEz"
-            packageVersion = "0.9.105"
+            packageVersion = "0.9.108"
         }
     }
 }
+
 
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
