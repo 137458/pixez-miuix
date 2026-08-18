@@ -1,12 +1,17 @@
 package com.perol.pixez.shared.ui.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -155,20 +160,38 @@ fun RootContent(
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
     }
 
-    MiuixTheme(controller = themeController) {
-        CompositionLocalProvider(
-            LocalSettingsRepository provides settingsRepository,
-            LocalBottomBarVisibility provides bottomBarVisible,
-            com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
-        ) {
-            Box(modifier = modifier.fillMaxSize()) {
-                Children(
-                    stack = component.stack,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .layerBackdrop(backdrop),
-                    animation = stackAnimation(slide()),
-                ) { child ->
+        MiuixTheme(controller = themeController) {
+            CompositionLocalProvider(
+                LocalSettingsRepository provides settingsRepository,
+                LocalBottomBarVisibility provides bottomBarVisible,
+                com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+            ) {
+                BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+                    val isWideScreen = maxWidth >= 600.dp
+                    val isMainTab = active is Child.Main
+
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        // 在平板/桌面宽屏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
+                        if (isWideScreen && isMainTab) {
+                            MainNavigationRail(
+                                activeTab = active.tab,
+                                onTabSelected = component::onMainTabSelected,
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                        ) {
+                            Children(
+                                stack = component.stack,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(backdrop),
+                                animation = stackAnimation(slide()),
+                            ) { child ->
+
                     when (val instance = child.instance) {
                         is Child.Main -> MainContent(
                             tab = instance.tab,
@@ -469,23 +492,25 @@ fun RootContent(
                 }
             }
 
-            // 仅在一级主页面且未被弹窗/抽屉临时隐藏时显示底部导航栏。
-            val _changeVersion = settingsRepository.changeVersion
-            if (active is Child.Main && bottomBarVisible.value) {
-                MainBottomBar(
-                    activeTab = active.tab,
-                    onTabSelected = component::onMainTabSelected,
-                    isFloating = settingsRepository.useFloatingBottomBar,
-                    refractionLevel = settingsRepository.liquidRefractionLevel,
-                    backdrop = backdrop,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
+                            // 仅在一级主页面、窄屏（手机）且未被弹窗/抽屉临时隐藏时显示底部导航栏。
+                            val _changeVersion = settingsRepository.changeVersion
+                            if (active is Child.Main && bottomBarVisible.value && !isWideScreen) {
+                                MainBottomBar(
+                                    activeTab = active.tab,
+                                    onTabSelected = component::onMainTabSelected,
+                                    isFloating = settingsRepository.useFloatingBottomBar,
+                                    refractionLevel = settingsRepository.liquidRefractionLevel,
+                                    backdrop = backdrop,
+                                    modifier = Modifier.align(Alignment.BottomCenter),
+                                )
+                            }
+                        }
+                    }
+                }
             }
-
         }
-    }
 }
-}
+
 
 /**
  * 根据当前底部标签渲染对应一级页面。
