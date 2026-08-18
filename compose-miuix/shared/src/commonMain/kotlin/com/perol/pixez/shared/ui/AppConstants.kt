@@ -49,4 +49,15 @@ object AppConstants {
         const val WIDTH_MAX = 2160
         const val PREVIEW_ITEM_COUNT = 20
     }
+
+    /**
+     * 布局与大屏自适应常量（单位：dp）
+     */
+    object Layout {
+        const val FLOATING_BAR_MAX_WIDTH_DP = 540
+        const val FLOATING_BAR_MIN_WIDTH_DP = 320
+        const val TABLET_CONTENT_MAX_WIDTH_DP = 760
+        const val GRID_CARD_MIN_WIDTH_DP = 180
+    }
 }
+

@@ -27,8 +27,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectableGroup
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -81,10 +83,12 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.highlight.HighlightStyle
 import com.kyant.backdrop.shadow.InnerShadow
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.animation.DampedDragAnimation
 import com.perol.pixez.shared.ui.animation.InteractiveHighlight
 import com.perol.pixez.shared.ui.libs.liquid.rememberCombinedBackdrop
 import kotlinx.coroutines.launch
+
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.Text
@@ -313,10 +317,18 @@ fun IosLiquidGlassNavigationBar(
         }
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = bottomPaddingValue, start = 24.dp, end = 24.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
         Box(
             modifier = Modifier
-                .padding(bottom = bottomPaddingValue, start = 24.dp, end = 24.dp)
+                .widthIn(
+                    min = AppConstants.Layout.FLOATING_BAR_MIN_WIDTH_DP.dp,
+                    max = AppConstants.Layout.FLOATING_BAR_MAX_WIDTH_DP.dp,
+                )
                 .fillMaxWidth(),
             contentAlignment = Alignment.CenterStart,
         ) {
@@ -404,13 +416,14 @@ fun IosLiquidGlassNavigationBar(
                                 onDrawSurface = { drawRect(containerColor) },
                             )
                             .then(interactiveHighlight.modifier)
-                            .height(56.dp)
-                            .padding(horizontal = 4.dp),
+                            .height(64.dp)
+                            .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         content = tabsContent,
                     )
                 }
             }
+
 
             // ── 3. Indicator Layer（指示器折射透镜层） ──
             if (tabWidthPx > 0f) {

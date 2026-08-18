@@ -216,10 +216,15 @@ fun SpotlightScreen(
             val minWidth = (settings.crossAdapterWidth * 1.2f).toInt().coerceIn(160, 600)
             StaggeredGridCells.Adaptive(minWidth.dp)
         } else {
-            val cols = settings?.crossCount?.coerceIn(1, 4) ?: 2
-            StaggeredGridCells.Fixed(cols)
+            val configuredCols = settings?.crossCount ?: 2
+            if (configuredCols == 2) {
+                StaggeredGridCells.Adaptive(240.dp)
+            } else {
+                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 4))
+            }
         }
     }
+
 
     Scaffold(
         modifier = modifier.fillMaxSize(),

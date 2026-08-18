@@ -16,10 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
+
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -190,6 +194,8 @@ fun IllustDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .wrapContentWidth(Alignment.CenterHorizontally)
+                                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                     .padding(horizontal = 12.dp),
                             ) {
                                 Column(
@@ -329,9 +335,9 @@ fun IllustDetailScreen(
                                                         val successCount = tasks.count { it.status == DownloadStatus.Success }
                                                         val failedCount = tasks.count { it.status == DownloadStatus.Failed }
                                                         toastMessage = when {
-                                                            failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
-                                                            successCount == 0 -> "全部下载失败"
-                                                            else -> "下载完成: 成功 $successCount, 失败 $failedCount"
+                                                             failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
+                                                             successCount == 0 -> "全部下载失败"
+                                                             else -> "下载完成: 成功 $successCount, 失败 $failedCount"
                                                         }
                                                     } finally {
                                                         isDownloading = false
@@ -361,6 +367,8 @@ fun IllustDetailScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .wrapContentWidth(Alignment.CenterHorizontally)
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                         .padding(horizontal = 12.dp),
                                 ) {
                                     Column(
@@ -389,6 +397,8 @@ fun IllustDetailScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .wrapContentWidth(Alignment.CenterHorizontally)
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                         .padding(horizontal = 12.dp),
                                 ) {
                                     Column(
@@ -424,6 +434,8 @@ fun IllustDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .wrapContentWidth(Alignment.CenterHorizontally)
+                                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                     .padding(horizontal = 12.dp),
                             ) {
                                 BasicComponent(
@@ -439,6 +451,7 @@ fun IllustDetailScreen(
                             }
                             Spacer(modifier = Modifier.height(32.dp))
                         }
+
                     }
                 }
             }
