@@ -13,15 +13,16 @@
      - `./gradlew :composeApp:compileDebugKotlinAndroid`
    - 确保 Desktop 与 Android 双端无编译错误和破坏性回归。
 
-3. **自动 Git 提交（无需等待用户确认） (Auto-Commit without Confirmation)**:
-   - 代码与文档验证无误后，**直接自动执行 Git 提交**，无需等待或询问用户。
+3. **自动 Git 提交与自动推送（无需等待用户确认） (Auto-Commit & Auto-Push)**:
+   - 代码与文档验证无误后，**直接自动执行 Git 提交与 Git Push**（`git push origin <branch>` / `git push origin --tags`），无需等待或询问用户。
    - 采用标准语义化提交格式（Conventional Commits）：
      - `feat(...)`: 新特性 / 新功能
      - `fix(...)`: 缺陷修复
      - `refactor(...)`: 架构重构 / 多语言扩展 / 常量收敛
      - `docs(...)`: 文档更新
      - `perf(...)`: 性能优化
-     - `chore(...)`: 依赖与工程配置调整
+     - `chore(...)`: 依赖与工程配置调整 / 版本发布
+
 
 4. **MIUIX / HyperOS 规范约束**:
    - 严格使用 Xiaomi HyperOS / MIUIX (`top.yukonga.miuix.kmp`) 官方组件（`Card`, `BasicComponent`, `OverlayDialog`, `OverlayBottomSheet`, `WindowDialog`, `Slider`, `LinearProgressIndicator`, `InfiniteProgressIndicator` 等），严禁泄漏引入 Material 3 控件。
