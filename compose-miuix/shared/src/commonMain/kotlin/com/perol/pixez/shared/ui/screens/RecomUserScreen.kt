@@ -3,6 +3,8 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,11 +43,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 /**
- * 推荐用户列表页。
- *
- * 支持分页加载：首次加载后保留 Pixiv 返回的 next_url，
- * 用户点击底部「加载更多」时继续请求下一页并追加到列表。
+ * 推荐用户列表页：支持触底自动流式加载与下拉刷新。
  */
 @Composable
 fun RecomUserScreen(
@@ -53,44 +60,34 @@ fun RecomUserScreen(
     onUserClick: (Int) -> Unit,
     repository: UserRepository,
 ) {
-    // 首次加载失败时通过自增 retryCount 触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    // 首次加载状态：仅用于获取第一页数据。
     val initialState = produceState<Result<UserPreviewsResponse>?>(
         initialValue = null,
         repository,
         retryCount,
     ) {
-        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        value = suspendRunCatchingNonCancel { repository.getRecommendedUsers() }
+        val userResult = suspendRunCatchingNonCancel { repository.getRecommendedUsers() }
+        isManualRefreshing = false
+        value = userResult
     }
 
-    // 累积的推荐用户列表与下一页链接。
     var previews by remember { mutableStateOf(listOf<UserPreview>()) }
     var nextUrl by remember { mutableStateOf<String?>(null) }
-
-    // 加载更多相关状态。
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-
     val coroutineScope = rememberCoroutineScope()
 
-    /**
-     * 首次加载成功后初始化列表；失败或重试时由 produceState 重新触发。
-     * 配置变更后 previews 会重置，此时重新从 initialState 恢复。
-     */
     LaunchedEffect(initialState.value) {
         initialState.value?.onSuccess { response ->
             previews = response.userPreviews
             nextUrl = response.nextUrl
+            isLoadingMore = false
+            loadMoreError = null
         }
     }
 
-    /**
-     * 加载下一页推荐用户。
-     * 仅在 nextUrl 非空且未处于加载态时执行。
-     */
     fun loadMore() {
         val url = nextUrl ?: return
         if (isLoadingMore) return
@@ -109,7 +106,31 @@ fun RecomUserScreen(
         }
     }
 
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
     val scrollBehavior = MiuixScrollBehavior()
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember(previews.size, nextUrl, isLoadingMore, loadMoreError) {
+        derivedStateOf {
+            val totalCount = previews.size
+            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+                false
+            } else {
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
+                lastVisibleItem >= totalCount - 4
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -125,6 +146,14 @@ fun RecomUserScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = triggerManualRefresh) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
+                },
             )
         },
     ) { paddingValues ->
@@ -132,45 +161,70 @@ fun RecomUserScreen(
             null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
             else -> when {
                 result.isSuccess -> {
-                    val currentPreviews = previews
-                    if (currentPreviews.isEmpty()) {
+                    if (previews.isEmpty()) {
                         EmptyPlaceholder(
                             message = "暂无推荐用户",
                             modifier = Modifier.fillMaxSize().padding(paddingValues),
                         )
                     } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                            contentPadding = paddingValues,
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
                         ) {
-                            items(
-                                items = currentPreviews,
-                                key = { it.user.id },
-                            ) { preview ->
-                                UserPreviewItem(
-                                    preview = preview,
-                                    onClick = { onUserClick(preview.user.id) },
-                                )
-                            }
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = paddingValues,
+                            ) {
+                                items(
+                                    items = previews,
+                                    key = { it.user.id },
+                                ) { preview ->
+                                    UserPreviewItem(
+                                        preview = preview,
+                                        onClick = { onUserClick(preview.user.id) },
+                                    )
+                                }
 
-                            item(key = "load_more") {
-                                LoadMoreFooter(
-                                    nextUrl = nextUrl,
-                                    isLoading = isLoadingMore,
-                                    error = loadMoreError,
-                                    onLoadMore = ::loadMore,
-                                    onRetry = ::loadMore,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
+                                item(key = "load_more_footer") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        when {
+                                            isLoadingMore -> InfiniteProgressIndicator()
+                                            loadMoreError != null -> Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = "加载失败",
+                                                    style = MiuixTheme.textStyles.body2,
+                                                    color = MiuixTheme.colorScheme.error,
+                                                )
+                                                Button(onClick = ::loadMore) {
+                                                    Text(text = "重试")
+                                                }
+                                            }
+                                            nextUrl == null -> Text(
+                                                text = "没有更多了",
+                                                style = MiuixTheme.textStyles.footnote1,
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 else -> ErrorPlaceholder(
                     error = result.exceptionOrNull(),
-                    onRetry = { retryCount++ },
+                    onRetry = { triggerManualRefresh() },
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
                 )
             }
@@ -178,39 +232,3 @@ fun RecomUserScreen(
     }
 }
 
-/**
- * 推荐用户列表底部加载更多区域。
- */
-@Composable
-private fun LoadMoreFooter(
-    nextUrl: String?,
-    isLoading: Boolean,
-    error: Throwable?,
-    onLoadMore: () -> Unit,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        when {
-            isLoading -> LoadingPlaceholder(modifier = Modifier.fillMaxWidth())
-            error != null -> ErrorPlaceholder(
-                error = error,
-                onRetry = onRetry,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            nextUrl != null -> TextButton(
-                text = "加载更多",
-                onClick = onLoadMore,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            else -> Text(
-                text = "没有更多了",
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
-        }
-    }
-}

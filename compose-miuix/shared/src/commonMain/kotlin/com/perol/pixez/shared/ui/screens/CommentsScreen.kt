@@ -1,7 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,8 +51,15 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Send
+
 /**
- * 作品评论页：展示指定作品的用户评论列表，并支持发表评论。
+ * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
  */
 @Composable
 fun CommentsScreen(
@@ -60,7 +70,8 @@ fun CommentsScreen(
     accountRepository: AccountRepository,
 ) {
     // retryCount 作为 produceState 的 key，点击重试或发表评论后自增触发重新加载。
-    var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
     var inputText by rememberSaveable { mutableStateOf("") }
     // 发送状态在进程恢复时不应持久化，否则可能因发送中断而永久卡死。
     var isSending by remember { mutableStateOf(false) }
@@ -76,13 +87,72 @@ fun CommentsScreen(
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val state = produceState<Result<List<Comment>>?>(
+    val state = produceState<Result<Pair<List<Comment>, String?>>?>(
         initialValue = null,
         illustId,
-        repository,
         retryCount,
     ) {
-        value = suspendRunCatchingNonCancel { repository.getIllustComments(illustId) }
+        val commentResult = suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId) }
+        isManualRefreshing = false
+        value = commentResult.map { it.comments to it.nextUrl }
+    }
+
+    var comments by remember(illustId) { mutableStateOf(listOf<Comment>()) }
+    var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialComments, initialNextUrl) ->
+            comments = initialComments
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    comments = comments + response.comments
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
+        }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
+    val listState = rememberLazyListState()
+
+    // 触底预加载：当滑到最后 4 项时自动请求下一页
+    val shouldLoadMore by remember(comments.size, nextUrl, isLoadingMore, loadMoreError) {
+        derivedStateOf {
+            val totalCount = comments.size
+            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+                false
+            } else {
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
+                lastVisibleItem >= totalCount - 4
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
     }
 
     Scaffold(
@@ -95,6 +165,14 @@ fun CommentsScreen(
                         Icon(
                             imageVector = MiuixIcons.Back,
                             contentDescription = "返回",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = triggerManualRefresh) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
                         )
                     }
                 },
@@ -122,7 +200,7 @@ fun CommentsScreen(
                         }.onSuccess {
                             inputText = ""
                             replyTarget = null
-                            retryCount++
+                            triggerManualRefresh()
                         }.onFailure { e ->
                             sendError = e.message ?: "发送失败"
                         }
@@ -137,7 +215,6 @@ fun CommentsScreen(
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
             result.isSuccess -> {
-                val comments = result.getOrNull().orEmpty()
                 if (comments.isEmpty()) {
                     EmptyPlaceholder(
                         message = "暂无评论",
@@ -146,17 +223,54 @@ fun CommentsScreen(
                             .padding(paddingValues),
                     )
                 } else {
-                    LazyColumn(
+                    PullToRefresh(
+                        isRefreshing = isManualRefreshing,
+                        onRefresh = triggerManualRefresh,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = paddingValues,
                     ) {
-                        items(comments, key = { it.id ?: it.hashCode() }) { comment ->
-                            CommentItem(
-                                comment = comment,
-                                onUserClick = onUserClick,
-                                onReplyClick = { replyTarget = comment },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = paddingValues,
+                        ) {
+                            items(comments, key = { it.id ?: it.hashCode() }) { comment ->
+                                CommentItem(
+                                    comment = comment,
+                                    onUserClick = onUserClick,
+                                    onReplyClick = { replyTarget = comment },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+
+                            item(key = "comment_pagination_footer") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    when {
+                                        isLoadingMore -> InfiniteProgressIndicator()
+                                        loadMoreError != null -> Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = "加载失败",
+                                                style = MiuixTheme.textStyles.body2,
+                                                color = MiuixTheme.colorScheme.error,
+                                            )
+                                            Button(onClick = ::loadMore) {
+                                                Text(text = "重试")
+                                            }
+                                        }
+                                        nextUrl == null -> Text(
+                                            text = "没有更多评论了",
+                                            style = MiuixTheme.textStyles.footnote1,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -164,7 +278,7 @@ fun CommentsScreen(
 
             else -> ErrorPlaceholder(
                 error = result.exceptionOrNull(),
-                onRetry = { retryCount++ },
+                onRetry = { triggerManualRefresh() },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
@@ -172,6 +286,7 @@ fun CommentsScreen(
         }
     }
 }
+
 
 /**
  * 评论输入栏：位于页面底部，提供输入框、发送按钮与回复目标提示。

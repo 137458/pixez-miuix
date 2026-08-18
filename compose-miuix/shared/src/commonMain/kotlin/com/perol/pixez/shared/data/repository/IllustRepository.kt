@@ -248,15 +248,26 @@ class IllustRepository(
         }
 
     /**
+     * 获取作品评论响应（含 nextUrl）。
+     */
+    suspend fun getIllustCommentsResponse(
+        illustId: Int,
+        nextUrl: String? = null,
+    ): CommentResponse = networkCall("获取作品评论失败 illustId=$illustId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v3/illust/comments") {
+                parameter("illust_id", illustId)
+            }.body()
+        }
+    }
+
+    /**
      * 获取作品评论列表。
      */
     suspend fun getIllustComments(illustId: Int): List<Comment> =
-        networkCall("获取作品评论失败 illustId=$illustId") {
-            val response: CommentResponse = apiClient.get("/v3/illust/comments") {
-                parameter("illust_id", illustId)
-            }.body()
-            response.comments
-        }
+        getIllustCommentsResponse(illustId).comments
 
     /**
      * 发表作品评论或回复指定评论。
@@ -311,14 +322,29 @@ class IllustRepository(
 
 
     /**
-     * 获取插画系列详情与系列内作品列表。
+     * 获取插画系列响应（含 nextUrl 与系列详情）。
+     */
+    suspend fun getIllustSeriesResponse(
+        seriesId: Int,
+        nextUrl: String? = null,
+    ): IllustSeriesWithIdModel = networkCall("获取系列详情失败 seriesId=$seriesId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/illust/series") {
+                parameter("illust_series_id", seriesId)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取插画系列详情与系列内作品列表（兼容旧调用）。
      */
     suspend fun getIllustSeries(seriesId: Int): Pair<String, List<Illust>> =
         networkCall("获取系列详情失败 seriesId=$seriesId") {
-            val response: IllustSeriesWithIdModel = apiClient.get("/v1/illust/series") {
-                parameter("illust_series_id", seriesId)
-            }.body()
+            val response = getIllustSeriesResponse(seriesId)
             val title = response.illustSeriesDetail?.title ?: "系列"
             title to (response.illusts.orEmpty())
         }
+
 }

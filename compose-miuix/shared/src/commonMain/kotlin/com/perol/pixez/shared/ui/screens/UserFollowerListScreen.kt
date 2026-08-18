@@ -26,8 +26,27 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 /**
- * 用户好P友列表页。
+ * 用户好P友/粉丝列表页：支持流式分页与下拉刷新。
  */
 @Composable
 fun UserFollowerListScreen(
@@ -37,15 +56,74 @@ fun UserFollowerListScreen(
     repository: UserRepository,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
 
-    val state = produceState<Result<List<UserPreview>>?>(
+    val state = produceState<Result<Pair<List<UserPreview>, String?>>?>(
         initialValue = null,
         userId,
-        repository,
         retryCount,
     ) {
-        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        value = suspendRunCatchingNonCancel { repository.getUserFollowers(userId) }
+        val followerResult = suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId) }
+        isManualRefreshing = false
+        value = followerResult.map { it.userPreviews to it.nextUrl }
+    }
+
+    var previews by remember(userId) { mutableStateOf(listOf<UserPreview>()) }
+    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialPreviews, initialNextUrl) ->
+            previews = initialPreviews
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    previews = previews + response.userPreviews
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
+        }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember(previews.size, nextUrl, isLoadingMore, loadMoreError) {
+        derivedStateOf {
+            val totalCount = previews.size
+            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+                false
+            } else {
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
+                lastVisibleItem >= totalCount - 4
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
     }
 
     Scaffold(
@@ -61,56 +139,91 @@ fun UserFollowerListScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = triggerManualRefresh) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
+                },
             )
         },
     ) { paddingValues ->
         when (val result = state.value) {
             null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            else -> UserFollowerListBody(
-                result = result,
-                onUserClick = onUserClick,
-                onRetry = { retryCount++ },
-                modifier = Modifier.padding(paddingValues),
-            )
+            else -> when {
+                result.isSuccess -> {
+                    if (previews.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = "暂无好P友",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = paddingValues,
+                            ) {
+                                items(
+                                    items = previews,
+                                    key = { it.user.id },
+                                ) { preview ->
+                                    UserPreviewItem(
+                                        preview = preview,
+                                        onClick = { onUserClick(preview.user.id) },
+                                    )
+                                }
+
+                                item(key = "follower_pagination_footer") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        when {
+                                            isLoadingMore -> InfiniteProgressIndicator()
+                                            loadMoreError != null -> Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = "加载失败",
+                                                    style = MiuixTheme.textStyles.body2,
+                                                    color = MiuixTheme.colorScheme.error,
+                                                )
+                                                Button(onClick = ::loadMore) {
+                                                    Text(text = "重试")
+                                                }
+                                            }
+                                            nextUrl == null -> Text(
+                                                text = "没有更多了",
+                                                style = MiuixTheme.textStyles.footnote1,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+            }
         }
     }
 }
 
-@Composable
-private fun UserFollowerListBody(
-    result: Result<List<UserPreview>>,
-    onUserClick: (Int) -> Unit,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    when {
-        result.isSuccess -> {
-            val previews = result.getOrNull().orEmpty()
-            if (previews.isEmpty()) {
-                EmptyPlaceholder(
-                    message = "暂无好P友",
-                    modifier = modifier.fillMaxSize(),
-                )
-            } else {
-                LazyColumn(
-                    modifier = modifier.fillMaxSize(),
-                ) {
-                    items(
-                        items = previews,
-                        key = { it.user.id },
-                    ) { preview ->
-                        UserPreviewItem(
-                            preview = preview,
-                            onClick = { onUserClick(preview.user.id) },
-                        )
-                    }
-                }
-            }
-        }
-        else -> ErrorPlaceholder(
-            error = result.exceptionOrNull(),
-            onRetry = onRetry,
-            modifier = modifier.fillMaxSize(),
-        )
-    }
-}

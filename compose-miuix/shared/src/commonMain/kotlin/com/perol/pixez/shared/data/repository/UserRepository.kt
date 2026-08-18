@@ -98,40 +98,67 @@ class UserRepository(
 
 
     /**
-     * 获取用户关注列表。
+     * 获取用户关注列表响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
      * @param restrict 可见性：`public` 或 `private`，默认 `public`。
+     * @param nextUrl 分页请求 URL。
+     */
+    suspend fun getUserFollowingResponse(
+        userId: Int,
+        restrict: String = "public",
+        nextUrl: String? = null,
+    ): UserPreviewsResponse = networkCall("获取用户关注列表失败 userId=$userId restrict=$restrict") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/user/following") {
+                parameter("filter", "for_android")
+                parameter("user_id", userId)
+                parameter("restrict", restrict)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取用户关注列表（兼容旧调用）。
      */
     suspend fun getUserFollowing(
         userId: Int,
         restrict: String = "public",
-    ): List<UserPreview> = networkCall("获取用户关注列表失败 userId=$userId restrict=$restrict") {
-        val response: UserPreviewsResponse = apiClient.get("/v1/user/following") {
-            parameter("filter", "for_android")
-            parameter("user_id", userId)
-            parameter("restrict", restrict)
-        }.body()
-        response.userPreviews
-    }
+    ): List<UserPreview> = getUserFollowingResponse(userId, restrict).userPreviews
 
     /**
-     * 获取用户粉丝列表。
+     * 获取用户粉丝列表响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
      * @param restrict 可见性：`public` 或 `private`，默认 `public`。
+     * @param nextUrl 分页请求 URL。
+     */
+    suspend fun getUserFollowersResponse(
+        userId: Int,
+        restrict: String = "public",
+        nextUrl: String? = null,
+    ): UserPreviewsResponse = networkCall("获取用户粉丝列表失败 userId=$userId restrict=$restrict") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(nextUrl).body()
+        } else {
+            apiClient.get("/v1/user/follower") {
+                parameter("filter", "for_android")
+                parameter("user_id", userId)
+                parameter("restrict", restrict)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取用户粉丝列表（兼容旧调用）。
      */
     suspend fun getUserFollowers(
         userId: Int,
         restrict: String = "public",
-    ): List<UserPreview> = networkCall("获取用户粉丝列表失败 userId=$userId restrict=$restrict") {
-        val response: UserPreviewsResponse = apiClient.get("/v1/user/follower") {
-            parameter("filter", "for_android")
-            parameter("user_id", userId)
-            parameter("restrict", restrict)
-        }.body()
-        response.userPreviews
-    }
+    ): List<UserPreview> = getUserFollowersResponse(userId, restrict).userPreviews
+
 
     /**
      * 获取推荐用户列表。

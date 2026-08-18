@@ -29,8 +29,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+
 /**
- * 插画系列页：展示指定系列内的作品列表。
+ * 插画系列页：展示指定系列内的作品列表，支持流式分页与下拉刷新。
  */
 @Composable
 fun IllustSeriesScreen(
@@ -41,19 +49,10 @@ fun IllustSeriesScreen(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
-    // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
-    var retryCount by rememberSaveable { mutableIntStateOf(0) }
+    var retryCount by rememberSaveable(seriesId) { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable(seriesId) { mutableStateOf(false) }
 
-    val state = produceState<Result<Pair<String, List<Illust>>>?>(
-        initialValue = null,
-        seriesId,
-        repository,
-        retryCount,
-        banRepository,
-        settingsRepository,
-    ) {
-        // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeries(seriesId) }
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
         val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
             .getOrDefault(emptySet())
         val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
@@ -61,21 +60,73 @@ fun IllustSeriesScreen(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
-        value = seriesResult.map { (title, illusts) ->
-            title to illusts.filter {
-                it.id !in bannedIds &&
-                    it.user.id !in bannedUserIds &&
-                    (!banAIIllust || it.illustAIType != 2) &&
-                    !banRepository.isBannedByTags(
-                        banTags,
-                        it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                    )
-            }
+        return rawIllusts.filter {
+            it.id !in bannedIds &&
+                it.user.id !in bannedUserIds &&
+                (!banAIIllust || it.illustAIType != 2) &&
+                !banRepository.isBannedByTags(
+                    banTags,
+                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
         }
     }
 
-    val result = state.value
-    val title = result?.getOrNull()?.first ?: "系列"
+    val state = produceState<Result<Triple<String, List<Illust>, String?>>?>(
+        initialValue = null,
+        seriesId,
+        retryCount,
+        banRepository,
+        settingsRepository,
+    ) {
+        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
+        isManualRefreshing = false
+        value = seriesResult.map { model ->
+            val title = model.illustSeriesDetail?.title ?: "系列"
+            val filtered = filterBanned(model.illusts.orEmpty())
+            Triple(title, filtered, model.nextUrl)
+        }
+    }
+
+    var seriesTitle by remember(seriesId) { mutableStateOf("系列") }
+    var illusts by remember(seriesId) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(seriesId) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(state.value) {
+        state.value?.onSuccess { (initialTitle, initialIllusts, initialNextUrl) ->
+            seriesTitle = initialTitle
+            illusts = initialIllusts
+            nextUrl = initialNextUrl
+            isLoadingMore = false
+            loadMoreError = null
+        }
+    }
+
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        coroutineScope.launch {
+            isLoadingMore = true
+            loadMoreError = null
+            suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId, nextUrl = currentNextUrl) }
+                .onSuccess { response ->
+                    val filtered = filterBanned(response.illusts.orEmpty())
+                    illusts = illusts + filtered
+                    nextUrl = response.nextUrl
+                }
+                .onFailure { error ->
+                    loadMoreError = error
+                }
+            isLoadingMore = false
+        }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
 
     val scrollBehavior = MiuixScrollBehavior()
 
@@ -83,7 +134,7 @@ fun IllustSeriesScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = title,
+                title = seriesTitle,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -93,9 +144,18 @@ fun IllustSeriesScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = triggerManualRefresh) {
+                        Icon(
+                            imageVector = MiuixIcons.Refresh,
+                            contentDescription = "刷新",
+                        )
+                    }
+                },
             )
         },
     ) { paddingValues ->
+        val result = state.value
         when {
             result == null -> LoadingPlaceholder(
                 modifier = Modifier
@@ -103,7 +163,6 @@ fun IllustSeriesScreen(
                     .padding(paddingValues),
             )
             result.isSuccess -> {
-                val illusts = result.getOrNull()?.second.orEmpty()
                 if (illusts.isEmpty()) {
                     EmptyPlaceholder(
                         message = "系列内暂无作品",
@@ -112,24 +171,34 @@ fun IllustSeriesScreen(
                             .padding(paddingValues),
                     )
                 } else {
-                    IllustStaggeredGrid(
-                        illusts = illusts,
-                        onIllustClick = onIllustClick,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            start = 8.dp,
-                            top = paddingValues.calculateTopPadding() + 8.dp,
-                            end = 8.dp,
-                            bottom = 100.dp,
-                        ),
-                    )
+                    PullToRefresh(
+                        isRefreshing = isManualRefreshing,
+                        onRefresh = triggerManualRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        IllustStaggeredGrid(
+                            illusts = illusts,
+                            onIllustClick = onIllustClick,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(
+                                start = 8.dp,
+                                top = paddingValues.calculateTopPadding() + 8.dp,
+                                end = 8.dp,
+                                bottom = 100.dp,
+                            ),
+                            hasMore = nextUrl != null,
+                            isLoadingMore = isLoadingMore,
+                            loadMoreError = loadMoreError,
+                            onLoadMore = ::loadMore,
+                        )
+                    }
                 }
             }
             else -> ErrorPlaceholder(
                 error = result.exceptionOrNull(),
-                onRetry = { retryCount++ },
+                onRetry = { triggerManualRefresh() },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
@@ -137,3 +206,4 @@ fun IllustSeriesScreen(
         }
     }
 }
+
