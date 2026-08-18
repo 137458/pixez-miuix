@@ -14,12 +14,13 @@
  *
  */
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pixez/i18n.dart';
 import 'package:pixez/main.dart';
 import 'package:pixez/page/follow/follow_list.dart';
 import 'package:pixez/page/novel/bookmark/novel_bookmark_page.dart';
 import 'package:pixez/page/novel/new/novel_new_page.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class NovelQuickPage extends StatefulWidget {
   @override
@@ -34,6 +35,9 @@ class _NovelQuickPageState extends State<NovelQuickPage> {
       child: Scaffold(
         appBar: AppBar(
           title: TabBar(
+            onTap: (i) {
+              HapticUtil.selectionClick();
+            },
             tabs: [
               Tab(
                 text: I18n.of(context).news,

@@ -15,12 +15,13 @@
  */
 
 import 'package:easy_refresh/easy_refresh.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/component/pixez_default_header.dart';
 import 'package:pixez/i18n.dart';
 import 'package:pixez/main.dart';
 import 'package:pixez/page/user/bookmark/tag/bookmark_tag_store.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class UserBookmarkTagPage extends StatefulWidget {
   final String? currentTag;
@@ -151,6 +152,9 @@ class _UserBookmarkTagPageState extends State<UserBookmarkTagPage>
 
   TabBar _buildTabBar(BuildContext context) {
     return TabBar(
+      onTap: (i) {
+        HapticUtil.selectionClick();
+      },
       controller: _tabController,
       tabs: <Widget>[
         Tab(text: I18n.of(context).public),

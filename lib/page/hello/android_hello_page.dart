@@ -20,7 +20,7 @@ import 'dart:ui';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -41,6 +41,7 @@ import 'package:pixez/page/saucenao/saucenao_page.dart';
 import 'package:pixez/page/search/search_page.dart';
 import 'package:pixez/page/search/suggest/search_suggestion_page.dart';
 import 'package:pixez/page/webview/saucenao_webview_page.dart';
+import 'package:pixez/utils/haptic_util.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 class AndroidHelloPage extends StatefulWidget {
@@ -190,6 +191,7 @@ class _AndroidHelloPageState extends State<AndroidHelloPage> {
           ],
           selectedIndex: index,
           onDestinationSelected: (index) {
+            HapticUtil.selectionClick();
             if (this.index == index) {
               topStore.setTop("${index + 1}00");
             }
@@ -227,9 +229,13 @@ class _AndroidHelloPageState extends State<AndroidHelloPage> {
             selectedIndex: index,
             labelType: NavigationRailLabelType.all,
             onDestinationSelected: (int index) {
+              HapticUtil.selectionClick();
+              if (this.index == index) {
+                topStore.setTop("${index + 1}00");
+              }
               _pageController.jumpToPage(index);
               setState(() {
-                index = index;
+                this.index = index;
               });
             },
             destinations: <NavigationRailDestination>[

@@ -15,7 +15,7 @@
  */
 
 import 'package:bot_toast/bot_toast.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/er/leader.dart';
@@ -26,6 +26,7 @@ import 'package:pixez/page/search/result_page.dart';
 import 'package:pixez/page/search/suggest/suggestion_store.dart';
 import 'package:pixez/page/soup/soup_page.dart';
 import 'package:pixez/page/user/users_page.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class SearchSuggestionPage extends StatefulWidget {
   final String? preword;
@@ -169,6 +170,7 @@ class _SearchSuggestionPageState extends State<SearchSuggestionPage> {
                         final tags = _suggestionStore.autoWords!.tags;
                         return GestureDetector(
                           onLongPress: () {
+                            HapticUtil.heavy();
                             Clipboard.setData(
                                 ClipboardData(text: tags[index].name));
                             BotToast.showText(

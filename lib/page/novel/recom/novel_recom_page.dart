@@ -17,7 +17,7 @@
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:pixez/component/pixez_default_header.dart';
 import 'package:pixez/exts.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/component/pixiv_image.dart';
 import 'package:pixez/i18n.dart';
@@ -26,6 +26,7 @@ import 'package:pixez/network/api_client.dart';
 import 'package:pixez/page/novel/component/novel_bookmark_button.dart';
 import 'package:pixez/page/novel/component/novel_lighting_store.dart';
 import 'package:pixez/page/novel/viewer/novel_viewer.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class NovelRecomPage extends StatefulWidget {
   @override
@@ -115,6 +116,7 @@ class _NovelRecomPageState extends State<NovelRecomPage>
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: InkWell(
         onTap: () {
+          HapticUtil.selectionClick();
           Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
               builder: (BuildContext context) => NovelViewerPage(
                     id: novel.id,

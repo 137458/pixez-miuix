@@ -18,7 +18,7 @@ import 'dart:io';
 
 import 'package:bot_toast/bot_toast.dart';
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/material.dart' show Icons;
+import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/fluent/component/pixez_button.dart';
 import 'package:pixez/constants.dart';
@@ -108,13 +108,14 @@ class _SettingQualityPageState extends State<SettingQualityPage>
           ListTile(
             leading: const Icon(FluentIcons.info),
             title: Text(I18n.of(context).share_info_format),
-            trailing: const Icon(FluentIcons.chevron_right),
-            onPressed: () => Leader.push(
-              context,
-              CopyTextPage(),
-              icon: Icon(FluentIcons.info),
-              title: Text(I18n.of(context).share_info_format),
-            ),
+            trailing: const Icon(WindowsIcons.open_in_new_window),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => CopyTextPage(),
+                useRootNavigator: false,
+              );
+            },
           ),
           ListTile(
             leading: const Icon(FluentIcons.translate),

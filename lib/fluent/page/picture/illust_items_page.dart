@@ -29,6 +29,7 @@ import 'package:pixez/fluent/page/zoom/photo_zoom_page.dart';
 import 'package:pixez/page/picture/illust_about_store.dart';
 import 'package:pixez/page/picture/illust_store.dart';
 import 'package:pixez/page/user/user_store.dart';
+import 'package:pixez/utils/haptic_util.dart';
 import 'package:share_plus/share_plus.dart';
 
 abstract class IllustItemsPage extends StatefulWidget {
@@ -257,7 +258,7 @@ abstract class IllustItemsPageState extends State<IllustItemsPage>
           if (data.type == "manga") {
             url = data.managaDetailUrl;
           }
-          Widget placeWidget = Container(height: height);
+
           return LayoutBuilder(
             builder: (context, constraints) => IllustItem(
               0,
@@ -269,14 +270,15 @@ abstract class IllustItemsPageState extends State<IllustItemsPage>
                   url,
                   fade: false,
                   width: constraints.maxWidth,
+                  height: height,
                   placeWidget: (url != data.imageUrls.medium)
                       ? PixivImage(
                           data.imageUrls.medium,
-                          width: constraints.maxWidth,
-                          placeWidget: placeWidget,
                           fade: false,
+                          width: constraints.maxWidth,
+                          height: height,
                         )
-                      : placeWidget,
+                      : null,
                 ),
               ),
               onMultiSavePressed: () async {
@@ -784,6 +786,7 @@ abstract class IllustItemsPageState extends State<IllustItemsPage>
   }
 
   Future<void> _pressSave(Illusts illust, int index) async {
+    HapticUtil.heavy();
     saveStore.saveImage(illust, index: index);
     if (userSetting.starAfterSave && (illustStore.state == 0)) {
       illustStore.star(
@@ -852,12 +855,8 @@ class IllustItem extends StatelessWidget {
           text: Text(I18n.of(context).copymessage),
           leading: Icon(FluentIcons.library),
           onPressed: () async {
-            await Clipboard.setData(
-              ClipboardData(
-                text:
-                    'title:${data.title}\npainter:${data.user.name}\nillust id:${widget.id}',
-              ),
-            );
+            final str = userSetting.illustToShareInfoText(data);
+            await Clipboard.setData(ClipboardData(text: str));
             BotToast.showText(text: I18n.of(context).copied_to_clipboard);
           },
         ),

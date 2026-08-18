@@ -15,7 +15,7 @@
  */
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:intl/intl.dart';
 import 'package:pixez/component/painter_avatar.dart';
@@ -27,6 +27,7 @@ import 'package:pixez/models/illust.dart';
 import 'package:pixez/page/comment/comment_page.dart';
 import 'package:pixez/page/picture/illust_detail_store.dart';
 import 'package:pixez/page/search/result_page.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class GestureMe extends GestureRecognizer {
   @override
@@ -229,6 +230,7 @@ class IllustDetailBody extends StatelessWidget {
   Widget buildRow(BuildContext context, Tags f) {
     return GestureDetector(
       onLongPress: () async {
+        HapticUtil.heavy();
         await _longPressTag(context, f);
       },
       onTap: () {

@@ -16,7 +16,7 @@
 
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pixez/component/pixiv_image.dart';
@@ -25,6 +25,7 @@ import 'package:pixez/models/illust_persist.dart';
 import 'package:pixez/page/history/history_store.dart';
 import 'package:pixez/page/picture/illust_lighting_page.dart';
 import 'package:pixez/page/picture/illust_store.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class HistoryPage extends HookConsumerWidget {
   const HistoryPage({super.key});
@@ -51,6 +52,7 @@ class HistoryPage extends HookConsumerWidget {
             itemBuilder: (context, index) {
               return GestureDetector(
                   onTap: () {
+                    HapticUtil.selectionClick();
                     Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(builder: (BuildContext context) {
                       return IllustLightingPage(
@@ -59,6 +61,7 @@ class HistoryPage extends HookConsumerWidget {
                     }));
                   },
                   onLongPress: () async {
+                    HapticUtil.heavy();
                     final result = await showDialog(
                         context: context,
                         builder: (context) {

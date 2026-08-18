@@ -14,13 +14,14 @@
  *
  */
 
-import 'package:flutter/material.dart' hide Image;
+import 'package:material_ui/material_ui.dart' hide Image;
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/component/pixiv_image.dart';
 import 'package:pixez/component/ugoira_painter.dart';
 import 'package:pixez/i18n.dart';
 import 'package:pixez/models/illust.dart';
 import 'package:pixez/page/picture/ugoira_store.dart';
+import 'package:pixez/utils/haptic_util.dart';
 
 class UgoiraLoader extends StatefulWidget {
   final int id;
@@ -56,6 +57,7 @@ class _UgoiraLoaderState extends State<UgoiraLoader> {
             if (_store.status == UgoiraStatus.play) {
               return InkWell(
                 onLongPress: () async {
+                  HapticUtil.heavy();
                   final result = await showModalBottomSheet(
                     context: context,
                     shape: RoundedRectangleBorder(

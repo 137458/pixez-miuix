@@ -19,7 +19,7 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:dio_compatibility_layer/dio_compatibility_layer.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_cache_manager_dio/flutter_cache_manager_dio.dart';
@@ -36,6 +36,7 @@ import 'package:pixez/models/task_persist.dart';
 import 'package:pixez/network/network_mode.dart';
 import 'package:pixez/network/pixez_network_settings.dart';
 import 'package:pixez/store/save_store.dart';
+import 'package:pixez/utils/haptic_util.dart';
 import 'package:quiver/collection.dart';
 import 'package:rhttp/rhttp.dart' as r;
 
@@ -247,6 +248,7 @@ class Fetcher {
     var taskPersist = await taskPersistProvider.getAccount(url);
     if (taskPersist == null) return;
     await taskPersistProvider.update(taskPersist..status = 3);
+    HapticUtil.error();
     var job = jobMaps[url];
     if (job != null) {
       job.status = 3;

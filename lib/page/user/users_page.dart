@@ -19,7 +19,7 @@ import 'dart:io';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:path_provider/path_provider.dart';
@@ -33,6 +33,7 @@ import 'package:pixez/er/pixiv_image_source.dart';
 import 'package:pixez/i18n.dart';
 import 'package:pixez/lighting/lighting_store.dart';
 import 'package:pixez/main.dart';
+import 'package:pixez/utils/haptic_util.dart';
 import 'package:pixez/models/illust.dart';
 import 'package:pixez/network/api_client.dart';
 import 'package:pixez/page/follow/follow_list.dart';
@@ -122,8 +123,6 @@ class _UsersPageState extends State<UsersPage> with TickerProviderStateMixin {
     _tabController.dispose();
     super.dispose();
   }
-
-  int _tabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -333,29 +332,20 @@ class _UsersPageState extends State<UsersPage> with TickerProviderStateMixin {
             TabBar(
               controller: _tabController,
               onTap: (index) {
-                setState(() {
-                  _tabIndex = index;
-                });
+                HapticUtil.selectionClick();
+                if (_tabController.index == index &&
+                    _scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                }
               },
               tabs: [
-                GestureDetector(
-                  onDoubleTap: () {
-                    if (_tabIndex == 0) _scrollController.position.jumpTo(0);
-                  },
-                  child: Tab(text: I18n.of(context).works),
-                ),
-                GestureDetector(
-                  onDoubleTap: () {
-                    if (_tabIndex == 1) _scrollController.position.jumpTo(0);
-                  },
-                  child: Tab(text: I18n.of(context).bookmark),
-                ),
-                GestureDetector(
-                  onDoubleTap: () {
-                    if (_tabIndex == 2) _scrollController.position.jumpTo(0);
-                  },
-                  child: Tab(text: I18n.of(context).user_page_info_title),
-                ),
+                Tab(text: I18n.of(context).works),
+                Tab(text: I18n.of(context).bookmark),
+                Tab(text: I18n.of(context).user_page_info_title),
               ],
             ),
           ),
