@@ -45,10 +45,10 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
 
-            // MIUIX：0.8.8 使用单包发布，内部包含 UI / Preference / 基础 Icons 等子模块
-            implementation(libs.miuix)
-            // 扩展图标库（Contacts、Settings、AddCircle 等）需要单独引入 miuix-icons artifact。
-            implementation(libs.miuixIcons)
+            // MIUIX
+            implementation(libs.miuix.ui)
+            implementation(libs.miuix.preference)
+            implementation(libs.miuix.icons)
 
             // Kyant0 Backdrop (Liquid Glass 毛玻璃特效)
             implementation(libs.backdrop)
@@ -117,7 +117,7 @@ kotlin {
 
 android {
     namespace = "com.perol.pixez.shared"
-    // MIUIX 0.8.8 要求 compileSdk >= 36
+    // MIUIX 0.9.3 要求 compileSdk >= 36
     compileSdk = 36
 
     defaultConfig {

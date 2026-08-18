@@ -4,12 +4,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import com.perol.pixez.shared.data.model.UserDetail
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.extra.SuperBottomSheet
+import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 
 /**
  * 用户详情页底部操作菜单。
  *
- * 基于 [SuperBottomSheet] 实现，必须在 [top.yukonga.miuix.kmp.basic.Scaffold] 内使用。
+ * 基于 [OverlayBottomSheet] 实现，必须在 [top.yukonga.miuix.kmp.basic.Scaffold] 内使用。
  * 当前提供「复制信息」「复制链接」与「分享链接」三项操作，与原 Flutter PixEz 用户详情页弹出菜单保持一致。
  *
  * @param show 是否显示菜单
@@ -26,7 +26,7 @@ fun UserActionMenu(
     onCopyLink: () -> Unit,
     onShareLink: () -> Unit,
 ) {
-    SuperBottomSheet(
+    OverlayBottomSheet(
         show = show,
         title = "更多操作",
         onDismissRequest = onDismissRequest,

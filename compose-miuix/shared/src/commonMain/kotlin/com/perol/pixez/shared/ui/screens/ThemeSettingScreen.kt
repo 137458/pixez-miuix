@@ -39,7 +39,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -298,7 +298,7 @@ private fun ColorPickerDialog(
     var customHex by remember(show) { mutableStateOf("") }
     var toastMessage by remember(show) { mutableStateOf<String?>(null) }
 
-    SuperDialog(
+    OverlayDialog(
         title = "选择种子色",
         summary = "点击预设颜色快速选择，或输入自定义 HEX 色值",
         show = show,
@@ -453,7 +453,7 @@ private fun PaletteStylePickerDialog(
         "Content" to "基于内容颜色取色",
     )
 
-    SuperDialog(
+    OverlayDialog(
         title = "调色板风格",
         summary = "选择 Monet 动态取色的调色板风格",
         show = show,

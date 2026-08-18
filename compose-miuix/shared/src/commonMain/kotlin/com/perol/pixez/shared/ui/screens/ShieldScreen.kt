@@ -38,7 +38,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -373,7 +373,7 @@ private fun AddTagDialog(
 ) {
     var name by remember(show) { mutableStateOf("") }
 
-    SuperDialog(
+    OverlayDialog(
         title = "添加屏蔽标签",
         summary = "支持普通标签或正则表达式，正则请以 r' 开头、以 ' 结尾。",
         show = show,
@@ -423,7 +423,7 @@ private fun DeleteConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    SuperDialog(
+    OverlayDialog(
         title = title,
         summary = summary,
         show = true,

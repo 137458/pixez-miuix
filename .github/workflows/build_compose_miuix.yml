@@ -33,7 +33,7 @@ jobs:
 
       - name: 安装 Android 36 平台 SDK
         run: |
-          # runner 预装的 cmdline-tools 版本过旧（12.0），无法识别 MIUIX 0.8.8 所需的 Android 16（API 36），
+          # runner 预装的 cmdline-tools 版本过旧（12.0），无法识别 Android 16（API 36），
           # 因此手动下载最新 command-line tools 覆盖到 cmdline-tools/latest。
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -O /tmp/cmdline-tools.zip
           rm -rf $ANDROID_HOME/cmdline-tools/latest

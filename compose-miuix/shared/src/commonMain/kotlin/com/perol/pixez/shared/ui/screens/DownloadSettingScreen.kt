@@ -34,7 +34,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -199,7 +199,7 @@ fun DownloadSettingScreen(
         }
 
         // 保存路径编辑对话框。
-        SuperDialog(
+        OverlayDialog(
             title = "保存路径",
             show = showPathDialog,
             onDismissRequest = { showPathDialog = false },
@@ -236,7 +236,7 @@ fun DownloadSettingScreen(
         }
 
         // 保存模式三选一对话框。
-        SuperDialog(
+        OverlayDialog(
             title = "保存模式",
             show = showSaveModeDialog,
             onDismissRequest = { showSaveModeDialog = false },
@@ -263,7 +263,7 @@ fun DownloadSettingScreen(
         }
 
         // 保存格式编辑对话框，支持变量占位符快捷插入。
-        SuperDialog(
+        OverlayDialog(
             title = "保存格式",
             show = showFormatDialog,
             onDismissRequest = { showFormatDialog = false },
@@ -317,7 +317,7 @@ fun DownloadSettingScreen(
         }
 
         // 同时下载任务数选择对话框。
-        SuperDialog(
+        OverlayDialog(
             title = "同时下载任务数",
             show = showTaskDialog,
             onDismissRequest = { showTaskDialog = false },

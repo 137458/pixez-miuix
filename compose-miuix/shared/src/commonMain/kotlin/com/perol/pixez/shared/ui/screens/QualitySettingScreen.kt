@@ -24,7 +24,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
@@ -208,7 +208,7 @@ private fun QualitySelectDialog(
     onDismiss: () -> Unit,
     onSelected: (Int) -> Unit,
 ) {
-    SuperDialog(
+    OverlayDialog(
         title = title,
         show = true,
         onDismissRequest = onDismiss,

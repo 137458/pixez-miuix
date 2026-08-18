@@ -36,7 +36,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
@@ -216,7 +216,7 @@ private fun PathInputDialog(
     // 对话框重新打开时重置输入内容，避免上一次的路径干扰新操作。
     var path by remember(dialogKey, operation.type, operation.action) { mutableStateOf("") }
 
-    SuperDialog(
+    OverlayDialog(
         title = "${operation.type.title} - ${operation.action.label}",
         summary = "请输入用于${operation.action.label}的 JSON 文件路径（平台文件选择器就绪后可替换为系统选择器）",
         show = true,

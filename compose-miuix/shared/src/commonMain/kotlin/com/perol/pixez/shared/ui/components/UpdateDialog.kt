@@ -28,7 +28,7 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -44,7 +44,7 @@ fun UpdateDialog(
     onUpdate: (url: String) -> Unit,
     onIgnore: ((version: String) -> Unit)? = null,
 ) {
-    SuperDialog(
+    WindowDialog(
         show = show,
         title = "发现新版本",
         summary = "v${AppInfo.VERSION_NAME} → v${releaseInfo.versionName}",

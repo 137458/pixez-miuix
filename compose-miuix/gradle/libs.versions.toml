@@ -5,9 +5,7 @@ compose = "1.11.1"
 android-gradle-plugin = "8.13.0"
 
 # MIUIX
-# 0.9.x 要求 compileSdk 37（Android 17 预览版），在稳定版 CI 中无法自动安装；
-# 退回到 0.8.8，其 compileSdk 为 36，与当前稳定 Android SDK 一致。
-miuix = "0.8.8"
+miuix = "0.9.3"
 
 # KMP / Android 基础
 androidx-activity-compose = "1.10.1"
@@ -47,10 +45,9 @@ junit = "4.13.2"
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 
 # MIUIX
-# 0.8.8 在 Maven Central 上以单包形式发布：top.yukonga.miuix.kmp:miuix:0.8.8，
-# UI / Preference / 基础 Icons 等模块均为该包的内部子模块，不再提供独立 artifact。
-miuix = { module = "top.yukonga.miuix.kmp:miuix", version.ref = "miuix" }
-miuixIcons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
+miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference", version.ref = "miuix" }
+miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 
 # Compose Android
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }

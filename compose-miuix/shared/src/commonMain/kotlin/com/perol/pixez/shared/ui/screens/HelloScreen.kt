@@ -37,7 +37,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Contacts
@@ -119,7 +119,7 @@ fun HelloScreen(
     }
 
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
-    SuperDialog(
+    WindowDialog(
         title = "需要登录",
         summary = "当前未登录，登录后可使用完整功能",
         show = showLoginDialog,
