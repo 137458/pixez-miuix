@@ -47,8 +47,8 @@ fun LanguageSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 读取当前 languageNum；若旧值越界则回退到 0（对应 en-US），与旧版行为一致。
-    var selectedIndex by remember {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    var selectedIndex by remember(settingsRepository.languageNum, settingsRepository.changeVersion) {
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
@@ -57,12 +57,12 @@ fun LanguageSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "语言设置",
+                title = strings.settingLanguage,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -74,7 +74,7 @@ fun LanguageSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "语言")
+                SmallTitle(text = strings.settingLanguage)
                 top.yukonga.miuix.kmp.basic.Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -82,7 +82,8 @@ fun LanguageSettingScreen(
                 ) {
                     LANGUAGE_OPTIONS.forEachIndexed { index, option ->
                         BasicComponent(
-                            title = option.code,
+                            title = "${option.nativeName} (${option.displayName})",
+                            summary = option.code,
                             onClick = {
                                 selectedIndex = index
                                 settingsRepository.languageNum = index
@@ -95,16 +96,18 @@ fun LanguageSettingScreen(
                 }
             }
 
-            item {
-                SmallTitle(text = "Sponsor")
-            }
-            // 展示当前选中语言的 Sponsor 头像与名称。
-            item {
-                SponsorSection(sponsors = selectedLanguage.sponsors)
+            if (selectedLanguage.sponsors.isNotEmpty()) {
+                item {
+                    SmallTitle(text = strings.sponsor)
+                }
+                item {
+                    SponsorSection(sponsors = selectedLanguage.sponsors)
+                }
             }
         }
     }
 }
+
 
 /**
  * Sponsor 横向列表：头像 + 名称，统一只做展示。

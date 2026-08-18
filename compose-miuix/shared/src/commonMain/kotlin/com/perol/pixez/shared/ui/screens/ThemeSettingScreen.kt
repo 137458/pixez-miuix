@@ -123,24 +123,24 @@ fun ThemeSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "主题模式")
+                SmallTitle(text = strings.settingTheme)
                 top.yukonga.miuix.kmp.basic.Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 ) {
                     ThemeModeOption(
-                        label = "跟随系统",
+                        label = strings.themeModeSystem,
                         selected = themeMode == 0,
                         onClick = { setThemeMode(0) },
                     )
                     ThemeModeOption(
-                        label = "浅色",
+                        label = strings.themeModeLight,
                         selected = themeMode == 1,
                         onClick = { setThemeMode(1) },
                     )
                     ThemeModeOption(
-                        label = "深色",
+                        label = strings.themeModeDark,
                         selected = themeMode == 2,
                         onClick = { setThemeMode(2) },
                     )
@@ -148,15 +148,15 @@ fun ThemeSettingScreen(
             }
 
             item {
-                SmallTitle(text = "显示")
+                SmallTitle(text = strings.settingSectionDisplayLayout)
                 top.yukonga.miuix.kmp.basic.Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 ) {
                     BasicComponent(
-                        title = "AMOLED 模式",
-                        summary = "深色模式下使用纯黑背景，降低 OLED 屏幕耗电",
+                        title = strings.themeAmoled,
+                        summary = strings.themeAmoledSummary,
                         endActions = {
                             Switch(
                                 checked = isAmoled,
@@ -165,8 +165,8 @@ fun ThemeSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "动态颜色",
-                        summary = if (useDynamicColor) "根据系统壁纸或种子色生成主题色" else "使用固定种子色",
+                        title = strings.themeDynamicColor,
+                        summary = if (useDynamicColor) strings.themeDynamicColorSummaryOn else strings.themeDynamicColorSummaryOff,
                         endActions = {
                             Switch(
                                 checked = useDynamicColor,
@@ -179,15 +179,15 @@ fun ThemeSettingScreen(
 
             if (!useDynamicColor) {
                 item {
-                    SmallTitle(text = "种子色")
+                    SmallTitle(text = strings.dialogPickSeedColor)
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                     ) {
                         BasicComponent(
-                            title = "选择种子色",
-                            summary = "用于生成应用主题色",
+                            title = strings.dialogPickSeedColor,
+                            summary = strings.dialogPickSeedColorSummary,
                             onClick = { showColorPicker = true },
                             endActions = {
                                 Box(
@@ -208,20 +208,20 @@ fun ThemeSettingScreen(
             }
 
             item {
-                SmallTitle(text = "MIUIX 个性化")
+                SmallTitle(text = strings.themePersonalization)
                 top.yukonga.miuix.kmp.basic.Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 ) {
                     BasicComponent(
-                        title = "调色板风格",
+                        title = strings.dialogPaletteStyle,
                         summary = paletteStyleName(paletteStyle),
                         onClick = { showPaletteStylePicker = true },
                     )
                     BasicComponent(
-                        title = "2025 色彩规范",
-                        summary = if (useSpec2025) "使用新版 Spec2025 取色算法" else "使用兼容 Spec2021 取色算法",
+                        title = strings.themeSpec2025,
+                        summary = if (useSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
                         endActions = {
                             Switch(
                                 checked = useSpec2025,

@@ -66,8 +66,8 @@ kotlin {
             // DI / Navigation / Logging
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
-            implementation(libs.decompose)
-            implementation(libs.decompose.compose)
+            api(libs.decompose)
+            api(libs.decompose.compose)
             implementation(libs.navigationevent.compose)
             implementation(libs.napier)
 

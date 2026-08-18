@@ -133,6 +133,7 @@ fun UpdateSettingScreen(
 
     val density = LocalDensity.current
     var logoHeightDp by remember { mutableStateOf(240.dp) }
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         topBar = {
@@ -141,7 +142,7 @@ fun UpdateSettingScreen(
                 alpha = ((scrollProgress - 0.35f) / 0.65f).coerceIn(0f, 1f),
             )
             SmallTopAppBar(
-                title = "系统与应用更新",
+                title = strings.settingUpdate,
                 scrollBehavior = topAppBarScrollBehavior,
                 color = barColor,
                 titleColor = titleColor,
@@ -149,7 +150,7 @@ fun UpdateSettingScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },

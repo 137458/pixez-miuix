@@ -116,6 +116,8 @@ fun ShieldScreen(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     LaunchedEffect(banRepository) {
         loadAll()
     }
@@ -124,12 +126,12 @@ fun ShieldScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "屏蔽设置",
+                title = strings.settingShield,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -141,11 +143,11 @@ fun ShieldScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "AI 作品")
+                SmallTitle(text = strings.filterAi)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "使带有 AI 生成标记的作品不可见",
-                        summary = if (banAIIllust) "已开启" else "已关闭",
+                        title = strings.banAIIllust,
+                        summary = if (banAIIllust) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = banAIIllust,
@@ -157,8 +159,8 @@ fun ShieldScreen(
                         },
                     )
                     BasicComponent(
-                        title = "AI 作品显示设置",
-                        summary = if (isLoadingAISetting) "加载中…" else "Pixiv 账号级 AI 作品显示偏好",
+                        title = strings.userAISettings,
+                        summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
                         onClick = {
                             if (isLoadingAISetting) return@BasicComponent
                             coroutineScope.launch {
@@ -169,7 +171,7 @@ fun ShieldScreen(
                                     onAISettingClick(response.showAI)
                                 }.onFailure { e ->
                                     Napier.e("加载 AI 显示设置失败", e)
-                                    toastMessage = "加载失败：${e.message}"
+                                    toastMessage = "${strings.loadFailed}: ${e.message}"
                                 }
                                 isLoadingAISetting = false
                             }
@@ -180,7 +182,7 @@ fun ShieldScreen(
 
             // 标签分组：展示、添加、删除。
             item {
-                SmallTitle(text = "标签")
+                SmallTitle(text = strings.tags)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Row(
                         modifier = Modifier
@@ -190,7 +192,7 @@ fun ShieldScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "已屏蔽 ${banTags.size} 个标签",
+                            text = "${strings.banTagCount.replace("%d", banTags.size.toString())}",
                             style = MiuixTheme.textStyles.body2,
                         )
                         IconButton(
@@ -199,7 +201,7 @@ fun ShieldScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Add,
-                                contentDescription = "添加标签",
+                                contentDescription = strings.btnAdd,
                             )
                         }
                     }
@@ -213,10 +215,10 @@ fun ShieldScreen(
 
             // 画师分组：仅展示与删除。
             item {
-                SmallTitle(text = "画师")
+                SmallTitle(text = strings.author)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Text(
-                        text = "已屏蔽 ${banUsers.size} 个画师",
+                        text = "${strings.banUserCount.replace("%d", banUsers.size.toString())}",
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -232,10 +234,10 @@ fun ShieldScreen(
 
             // 作品分组：仅展示与删除。
             item {
-                SmallTitle(text = "作品")
+                SmallTitle(text = strings.includedWorks)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Text(
-                        text = "已屏蔽 ${banIllusts.size} 个作品",
+                        text = "${strings.banIllustCount.replace("%d", banIllusts.size.toString())}",
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
                             .fillMaxWidth()

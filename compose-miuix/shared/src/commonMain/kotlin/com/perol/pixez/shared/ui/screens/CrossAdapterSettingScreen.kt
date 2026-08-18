@@ -80,11 +80,11 @@ fun CrossAdapterSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "竖屏")
+                SmallTitle(text = strings.crossCountPortrait)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "按宽度自适应列数",
-                        summary = if (crossAdapt) "已开启" else "已关闭",
+                        title = strings.crossAdaptAuto,
+                        summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = crossAdapt,
@@ -108,11 +108,11 @@ fun CrossAdapterSettingScreen(
             }
 
             item {
-                SmallTitle(text = "横屏")
+                SmallTitle(text = strings.crossCountLandscape)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "按宽度自适应列数",
-                        summary = if (hCrossAdapt) "已开启" else "已关闭",
+                        title = strings.crossAdaptAuto,
+                        summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = hCrossAdapt,

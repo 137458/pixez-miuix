@@ -74,43 +74,53 @@ fun QualitySettingScreen(
             )
         },
     ) { paddingValues ->
+        val qualityOptions3 = listOf(
+            0 to strings.qualityLow,
+            1 to strings.qualityMedium,
+            2 to strings.qualityOriginal,
+        )
+        val qualityOptions2 = listOf(
+            0 to strings.qualityLarge,
+            1 to strings.qualityOriginal,
+        )
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "浏览")
+                SmallTitle(text = strings.tabRecommend)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
-                        title = "Feed 预览画质",
-                        summary = feedPreviewQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        title = strings.feedPreviewQuality,
+                        summary = feedPreviewQuality.toQualityLabel(qualityOptions3),
                         onClick = { editingType = QualityType.FeedPreview },
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "详情")
+                SmallTitle(text = strings.categoryIllust)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
-                        title = "插画详情页画质",
-                        summary = pictureQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        title = strings.pictureQuality,
+                        summary = pictureQuality.toQualityLabel(qualityOptions3),
                         onClick = { editingType = QualityType.Picture },
                     )
                     QualitySettingItem(
-                        title = "漫画详情页画质",
-                        summary = mangaQuality.toQualityLabel(QUALITY_OPTIONS_3),
+                        title = strings.mangaQuality,
+                        summary = mangaQuality.toQualityLabel(qualityOptions3),
                         onClick = { editingType = QualityType.Manga },
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "预览")
+                SmallTitle(text = strings.zoomQuality)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
-                        title = "大图预览缩放画质",
-                        summary = zoomQuality.toQualityLabel(QUALITY_OPTIONS_2),
+                        title = strings.zoomQuality,
+                        summary = zoomQuality.toQualityLabel(qualityOptions2),
                         onClick = { editingType = QualityType.Zoom },
                     )
                 }
@@ -120,55 +130,49 @@ fun QualitySettingScreen(
         // 画质选择对话框。
         val currentType = editingType
         if (currentType != null) {
-            when (currentType) {
-                QualityType.FeedPreview -> QualitySelectDialog(
-                    title = currentType.title,
-                    currentValue = feedPreviewQuality,
-                    options = QUALITY_OPTIONS_3,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        feedPreviewQuality = value
-                        settingsRepository.feedPreviewQuality = value
-                        editingType = null
-                    },
-                )
-
-                QualityType.Picture -> QualitySelectDialog(
-                    title = currentType.title,
-                    currentValue = pictureQuality,
-                    options = QUALITY_OPTIONS_3,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        pictureQuality = value
-                        settingsRepository.pictureQuality = value
-                        editingType = null
-                    },
-                )
-
-                QualityType.Manga -> QualitySelectDialog(
-                    title = currentType.title,
-                    currentValue = mangaQuality,
-                    options = QUALITY_OPTIONS_3,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        mangaQuality = value
-                        settingsRepository.mangaQuality = value
-                        editingType = null
-                    },
-                )
-
-                QualityType.Zoom -> QualitySelectDialog(
-                    title = currentType.title,
-                    currentValue = zoomQuality,
-                    options = QUALITY_OPTIONS_2,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        zoomQuality = value
-                        settingsRepository.zoomQuality = value
-                        editingType = null
-                    },
-                )
+            val dialogTitle = when (currentType) {
+                QualityType.FeedPreview -> strings.feedPreviewQuality
+                QualityType.Picture -> strings.pictureQuality
+                QualityType.Manga -> strings.mangaQuality
+                QualityType.Zoom -> strings.zoomQuality
             }
+            val dialogOptions = when (currentType) {
+                QualityType.Zoom -> qualityOptions2
+                else -> qualityOptions3
+            }
+            val currentValue = when (currentType) {
+                QualityType.FeedPreview -> feedPreviewQuality
+                QualityType.Picture -> pictureQuality
+                QualityType.Manga -> mangaQuality
+                QualityType.Zoom -> zoomQuality
+            }
+            QualitySelectDialog(
+                title = dialogTitle,
+                currentValue = currentValue,
+                options = dialogOptions,
+                onDismiss = { editingType = null },
+                onSelected = { value ->
+                    when (currentType) {
+                        QualityType.FeedPreview -> {
+                            feedPreviewQuality = value
+                            settingsRepository.feedPreviewQuality = value
+                        }
+                        QualityType.Picture -> {
+                            pictureQuality = value
+                            settingsRepository.pictureQuality = value
+                        }
+                        QualityType.Manga -> {
+                            mangaQuality = value
+                            settingsRepository.mangaQuality = value
+                        }
+                        QualityType.Zoom -> {
+                            zoomQuality = value
+                            settingsRepository.zoomQuality = value
+                        }
+                    }
+                    editingType = null
+                },
+            )
         }
     }
 }
@@ -176,11 +180,11 @@ fun QualitySettingScreen(
 /**
  * 正在编辑的画质类型。
  */
-private enum class QualityType(val title: String) {
-    FeedPreview("Feed 预览画质"),
-    Picture("插画详情页画质"),
-    Manga("漫画详情页画质"),
-    Zoom("大图预览缩放画质"),
+private enum class QualityType {
+    FeedPreview,
+    Picture,
+    Manga,
+    Zoom,
 }
 
 /**
@@ -239,21 +243,3 @@ private fun Int.toQualityLabel(options: List<Pair<Int, String>>): String {
         ?: options.first().second
 }
 
-/**
- * 三档画质选项：0=标准、1=高画质、2=原图。
- * 对应旧 Flutter 版 feedPreviewQuality / pictureQuality / mangaQuality 的取值约定。
- */
-private val QUALITY_OPTIONS_3 = listOf(
-    0 to "标准",
-    1 to "高画质",
-    2 to "原图",
-)
-
-/**
- * 两档缩放画质选项：0=高画质、1=原图。
- * 对应旧 Flutter 版 zoomQuality 的取值约定。
- */
-private val QUALITY_OPTIONS_2 = listOf(
-    0 to "高画质",
-    1 to "原图",
-)

@@ -105,11 +105,11 @@ fun DownloadSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "保存路径")
+                SmallTitle(text = strings.dialogSavePath)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "保存路径",
-                        summary = storePath.ifEmpty { "未设置" },
+                        title = strings.dialogSavePath,
+                        summary = storePath.ifEmpty { strings.noData },
                         onClick = {
                             pathInput = storePath
                             showPathDialog = true
@@ -119,10 +119,10 @@ fun DownloadSettingScreen(
             }
 
             item {
-                SmallTitle(text = "保存模式")
+                SmallTitle(text = strings.dialogSaveMode)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "保存模式",
+                        title = strings.dialogSaveMode,
                         summary = saveMode.toSaveModeLabel(),
                         onClick = { showSaveModeDialog = true },
                     )
@@ -130,40 +130,21 @@ fun DownloadSettingScreen(
             }
 
             item {
-                SmallTitle(text = "保存格式")
+                SmallTitle(text = strings.dialogSaveFormat)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "保存格式",
-                        summary = if (fileNameEval) "脚本文件名" else format,
+                        title = strings.dialogSaveFormat,
+                        summary = if (fileNameEval) strings.settingShareFormat else format,
                         onClick = { showFormatDialog = true },
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "脚本文件名")
+                SmallTitle(text = strings.settingDownloadTask)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "使用脚本文件名",
-                        summary = "由 name_eval 脚本计算保存文件名",
-                        endActions = {
-                            Switch(
-                                checked = fileNameEval,
-                                onCheckedChange = { checked ->
-                                    fileNameEval = checked
-                                    settingsRepository.fileNameEval = checked
-                                },
-                            )
-                        },
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = "下载任务")
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = "同时下载任务数",
+                        title = strings.dialogTaskCount,
                         summary = maxRunningTask.toString(),
                         onClick = { showTaskDialog = true },
                     )
@@ -171,7 +152,7 @@ fun DownloadSettingScreen(
             }
 
             item {
-                SmallTitle(text = "文件夹")
+                SmallTitle(text = strings.settingSectionStorage)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = "单文件夹模式",
@@ -205,14 +186,14 @@ fun DownloadSettingScreen(
 
         // 保存路径编辑对话框。
         OverlayDialog(
-            title = "保存路径",
+            title = strings.dialogSavePath,
             show = showPathDialog,
             onDismissRequest = { showPathDialog = false },
         ) {
             TextField(
                 value = pathInput,
                 onValueChange = { pathInput = it },
-                label = "输入保存路径",
+                label = strings.dialogSavePath,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
@@ -222,12 +203,12 @@ fun DownloadSettingScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 TextButton(
-                    text = "取消",
+                    text = strings.cancel,
                     onClick = { showPathDialog = false },
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "确认",
+                    text = strings.confirm,
                     onClick = {
                         val trimmed = pathInput.trim()
                         storePath = trimmed
@@ -242,7 +223,7 @@ fun DownloadSettingScreen(
 
         // 保存模式三选一对话框。
         OverlayDialog(
-            title = "保存模式",
+            title = strings.dialogSaveMode,
             show = showSaveModeDialog,
             onDismissRequest = { showSaveModeDialog = false },
         ) {
@@ -269,14 +250,14 @@ fun DownloadSettingScreen(
 
         // 保存格式编辑对话框，支持变量占位符快捷插入。
         OverlayDialog(
-            title = "保存格式",
+            title = strings.dialogSaveFormat,
             show = showFormatDialog,
             onDismissRequest = { showFormatDialog = false },
         ) {
             TextField(
                 value = formatFieldValue,
                 onValueChange = { formatFieldValue = it },
-                label = "输入文件命名格式",
+                label = strings.dialogSaveFormat,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
@@ -303,12 +284,12 @@ fun DownloadSettingScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 TextButton(
-                    text = "取消",
+                    text = strings.cancel,
                     onClick = { showFormatDialog = false },
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "确认",
+                    text = strings.confirm,
                     onClick = {
                         val trimmed = formatFieldValue.text.trim()
                         format = trimmed

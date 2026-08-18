@@ -32,7 +32,10 @@ val LocalHistoryRepository = compositionLocalOf<HistoryRepository> {
  * M3 阶段接入 Decompose 导航与 MIUIX 页面，替换 M1 的占位页面。
  */
 @Composable
-fun App(dependencies: AppDependencies) {
+fun App(
+    dependencies: AppDependencies,
+    rootComponent: RootComponent? = null,
+) {
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)
             .components {
@@ -42,14 +45,14 @@ fun App(dependencies: AppDependencies) {
             .build()
     }
 
-    val rootComponent = rememberRootComponent(dependencies)
+    val component = rootComponent ?: rememberRootComponent(dependencies)
     val navigationEventDispatcherOwner = rememberNavigationEventDispatcherOwner(parent = null)
     CompositionLocalProvider(
         LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
         LocalHistoryRepository provides dependencies.historyRepository,
     ) {
         RootContent(
-            component = rootComponent,
+            component = component,
             illustRepository = dependencies.illustRepository,
             searchRepository = dependencies.searchRepository,
             userRepository = dependencies.userRepository,

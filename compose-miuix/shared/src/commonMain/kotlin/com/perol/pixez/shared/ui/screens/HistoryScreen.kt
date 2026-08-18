@@ -115,16 +115,18 @@ fun HistoryScreen(
     // 是否有可清空的历史记录，用于控制右上角按钮可用状态。
     val hasHistory = historyResult.value?.getOrNull().orEmpty().isNotEmpty()
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "历史记录",
+                title = strings.settingHistory,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -134,7 +136,7 @@ fun HistoryScreen(
                         enabled = hasHistory,
                     ) {
                         Text(
-                            text = "清空",
+                            text = strings.actionClear,
                             style = MiuixTheme.textStyles.body1,
                             color = if (hasHistory) {
                                 MiuixTheme.colorScheme.primary
@@ -157,7 +159,7 @@ fun HistoryScreen(
                 TextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = "搜索作品 ID 或标题",
+                    label = strings.tabSearch,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -173,7 +175,7 @@ fun HistoryScreen(
                             IconButton(onClick = { query = "" }) {
                                 Icon(
                                     imageVector = MiuixIcons.Close,
-                                    contentDescription = "清空搜索",
+                                    contentDescription = strings.actionClear,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }

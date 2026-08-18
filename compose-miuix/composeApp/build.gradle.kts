@@ -42,7 +42,8 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(projects.shared)
-
+            implementation(libs.decompose)
+            implementation(libs.decompose.compose)
         }
 
         androidMain.dependencies {

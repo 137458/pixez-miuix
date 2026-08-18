@@ -39,17 +39,18 @@ fun InteractionSettingScreen(
     var hIsNotAllow by remember { mutableStateOf(settingsRepository.hIsNotAllow) }
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "交互设置",
+                title = strings.settingSectionDisplayLayout,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -61,7 +62,7 @@ fun InteractionSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "交互行为")
+                SmallTitle(text = strings.settingSectionDisplayLayout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = "异形屏适配",

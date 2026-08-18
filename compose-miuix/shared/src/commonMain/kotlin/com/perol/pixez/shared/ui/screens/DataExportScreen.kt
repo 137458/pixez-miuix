@@ -96,7 +96,7 @@ fun DataExportScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "数据操作")
+                SmallTitle(text = strings.settingDataExport)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     DataType.entries.forEach { type ->
                         DataExportRow(

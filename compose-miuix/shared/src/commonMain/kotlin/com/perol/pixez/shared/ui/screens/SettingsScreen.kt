@@ -152,7 +152,7 @@ fun SettingsScreen(
             ) {
 
             item {
-                SmallTitle(text = "账号")
+                SmallTitle(text = strings.settingSectionAccount)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     AccountSection(
                         account = account,
@@ -170,11 +170,12 @@ fun SettingsScreen(
                                 }
                             }
                         },
+                        strings = strings,
                     )
                     if (account != null) {
                         BasicComponent(
-                            title = "账号信息",
-                            summary = "修改密码、邮箱、Token 与账号注销",
+                            title = strings.settingAccountInfo,
+                            summary = strings.settingAccountInfoSummary,
                             onClick = onAccountEditClick,
                         )
                     }
@@ -182,144 +183,144 @@ fun SettingsScreen(
             }
 
             item {
-                SmallTitle(text = "启动")
+                SmallTitle(text = strings.settingSectionStartup)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "欢迎页",
-                        summary = "设置启动应用时默认显示的页面",
+                        title = strings.settingWelcomePage,
+                        summary = strings.settingWelcomePageSummary,
                         onClick = onWelcomePageSettingClick,
                     )
                     BasicComponent(
-                        title = "启动引导向导",
-                        summary = "重新运行初次启动的语言与网络配置向导",
+                        title = strings.settingGuideWizard,
+                        summary = strings.settingGuideWizardSummary,
                         onClick = onGuideClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "通用")
+                SmallTitle(text = strings.settingSectionGeneral)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "语言设置",
-                        summary = "选择应用界面语言",
+                        title = strings.settingLanguage,
+                        summary = strings.settingLanguageSummary,
                         onClick = onLanguageSettingClick,
                     )
                     BasicComponent(
-                        title = "小部件推荐类型",
-                        summary = "桌面小部件展示的内容来源",
+                        title = strings.settingWidgetRecommend,
+                        summary = strings.settingWidgetRecommendSummary,
                         onClick = onWidgetRecommendSettingClick,
                     )
                     BasicComponent(
-                        title = "历史记录",
-                        summary = "查看本地插画浏览历史",
+                        title = strings.settingHistory,
+                        summary = strings.settingHistorySummary,
                         onClick = onHistoryClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "主题")
+                SmallTitle(text = strings.settingSectionTheme)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingTheme,
-                        summary = "主题模式、AMOLED、动态颜色、种子色",
+                        summary = strings.settingThemeSummary,
                         onClick = onThemeSettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "网络")
+                SmallTitle(text = strings.settingSectionNetwork)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingNetwork,
-                        summary = "网络模式、图片源",
+                        summary = strings.settingNetworkSummary,
                         onClick = onNetworkSettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "屏蔽与隐私")
+                SmallTitle(text = strings.settingSectionShieldPrivacy)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingShield,
-                        summary = "标签、画师、AI 作品过滤",
+                        summary = strings.settingShieldSummary,
                         onClick = onShieldClick,
                     )
                     BasicComponent(
                         title = strings.settingPrivacy,
-                        summary = "NSFW 遮罩、默认私密收藏",
+                        summary = strings.settingPrivacySummary,
                         onClick = onPrivacySettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "收藏与分享")
+                SmallTitle(text = strings.settingSectionBookmarkShare)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "收藏标签",
-                        summary = "管理常用的收藏/搜索标签",
+                        title = strings.settingBookTags,
+                        summary = strings.settingBookTagsSummary,
                         onClick = onBookTagClick,
                     )
                     BasicComponent(
-                        title = "分享格式",
-                        summary = "复制作品信息时的文本模板",
+                        title = strings.settingShareFormat,
+                        summary = strings.settingShareFormatSummary,
                         onClick = onCopyTextSettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "画质与保存")
+                SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingQuality,
-                        summary = "Feed 预览、插画、漫画、大图缩放画质",
+                        summary = strings.settingQualitySummary,
                         onClick = onQualitySettingClick,
                     )
                     BasicComponent(
                         title = strings.settingSave,
-                        summary = "收藏/保存联动、长按确认、自动标签",
+                        summary = strings.settingSaveSummary,
                         onClick = onSaveSettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "显示与布局")
+                SmallTitle(text = strings.settingSectionDisplayLayout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingCrossAdapter,
-                        summary = "竖屏/横屏按宽度自适应网格列数",
+                        summary = strings.settingCrossAdapterSummary,
                         onClick = onCrossAdapterSettingClick,
                     )
                     BasicComponent(
                         title = strings.settingLayout,
-                        summary = "平板模式、竖屏/横屏固定网格列数",
+                        summary = strings.settingLayoutSummary,
                         onClick = onLayoutSettingClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "下载")
+                SmallTitle(text = strings.settingSectionDownload)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingDownload,
-                        summary = "保存路径、同时下载任务数、单文件夹模式",
+                        summary = strings.settingDownloadSummary,
                         onClick = onDownloadSettingClick,
                     )
                     BasicComponent(
-                        title = "下载历史",
-                        summary = "查看已下载的作品记录",
+                        title = strings.settingDownloadHistory,
+                        summary = strings.settingDownloadHistorySummary,
                         onClick = onDownloadHistoryClick,
                     )
                     BasicComponent(
-                        title = "下载任务",
-                        summary = "管理下载队列与任务状态",
+                        title = strings.settingDownloadTask,
+                        summary = strings.settingDownloadTaskSummary,
                         onClick = onDownloadTaskClick,
                     )
                 }
@@ -327,11 +328,11 @@ fun SettingsScreen(
 
             if (isAndroidPlatform()) {
                 item {
-                    SmallTitle(text = "平台")
+                    SmallTitle(text = strings.settingSectionPlatform)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
                             title = strings.settingPlatform,
-                            summary = "屏幕刷新率、图片选择器、默认打开链接",
+                            summary = strings.settingPlatformSummary,
                             onClick = onPlatformSettingClick,
                         )
                     }
@@ -339,11 +340,11 @@ fun SettingsScreen(
             }
 
             item {
-                SmallTitle(text = "存储")
+                SmallTitle(text = strings.settingSectionStorage)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "清除缓存",
-                        summary = if (isClearingCache) "清理中…" else "释放图片缓存占用的空间",
+                        title = strings.settingClearCache,
+                        summary = if (isClearingCache) strings.clearingCache else strings.settingClearCacheSummary,
                         onClick = {
                             if (isClearingCache) return@BasicComponent
                             coroutineScope.launch {
@@ -361,39 +362,39 @@ fun SettingsScreen(
                                     isClearingCache = false
                                 }
                                 toastMessage = if (result.isSuccess) {
-                                    "缓存已清除"
+                                    strings.cacheCleared
                                 } else {
-                                    "清除失败: ${result.exceptionOrNull()?.message}"
+                                    "${strings.clearFailed}: ${result.exceptionOrNull()?.message}"
                                 }
                             }
                         },
                     )
                     BasicComponent(
                         title = strings.settingDataExport,
-                        summary = "导入/导出搜索历史、收藏标签、浏览历史等数据",
+                        summary = strings.settingDataExportSummary,
                         onClick = onDataExportClick,
                     )
                 }
             }
 
             item {
-                SmallTitle(text = "关于")
+                SmallTitle(text = strings.settingSectionAbout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (!boardList.isNullOrEmpty()) {
                         BasicComponent(
-                            title = "公告板",
-                            summary = "查看官方公告与更新说明",
+                            title = strings.settingBoard,
+                            summary = strings.settingBoardSummary,
                             onClick = onBoardClick,
                         )
                     }
                     BasicComponent(
                         title = strings.settingUpdate,
-                        summary = "忽略当前版本更新与手动检查更新",
+                        summary = strings.settingUpdateSummary,
                         onClick = onUpdateSettingClick,
                     )
                     BasicComponent(
                         title = strings.settingAbout,
-                        summary = "版本 ${AppInfo.VERSION_NAME}",
+                        summary = "${strings.version} ${AppInfo.VERSION_NAME}",
                         onClick = onAboutClick,
                     )
                 }
@@ -418,6 +419,7 @@ private fun AccountSection(
     isLoggingOut: Boolean,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    strings: com.perol.pixez.shared.ui.i18n.AppStrings,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -463,21 +465,22 @@ private fun AccountSection(
                 enabled = !isLoggingOut,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = if (isLoggingOut) "退出中…" else "退出登录")
+                Text(text = if (isLoggingOut) strings.loggingOut else strings.logout)
             }
         } else {
             Text(
-                text = "未登录",
+                text = strings.notLoggedIn,
                 style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1,
             )
             Button(
                 onClick = onLoginClick,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = "去登录")
+                Text(text = strings.goLogin)
             }
         }
     }
 }
+
 
 

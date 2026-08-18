@@ -71,11 +71,11 @@ fun LayoutSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "底栏样式")
+                SmallTitle(text = strings.floatingBottomBar)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "悬浮底栏",
-                        summary = if (useFloatingBottomBar) "Liquid Glass 悬浮药丸胶囊底栏" else "标准全宽毛玻璃底栏",
+                        title = strings.floatingBottomBar,
+                        summary = if (useFloatingBottomBar) strings.floatingBottomBarSummaryOn else strings.floatingBottomBarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = useFloatingBottomBar,
@@ -88,7 +88,7 @@ fun LayoutSettingScreen(
                     )
                     if (useFloatingBottomBar) {
                         LayoutSettingItem(
-                            title = "液态折射强度",
+                            title = strings.liquidRefractionLevel,
                             summary = liquidRefractionLevel.toRefractionLabel(),
                             onClick = { editingType = LayoutType.RefractionLevel },
                         )
@@ -97,10 +97,10 @@ fun LayoutSettingScreen(
             }
 
             item {
-                SmallTitle(text = "平板")
+                SmallTitle(text = strings.padMode)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LayoutSettingItem(
-                        title = "平板模式",
+                        title = strings.padMode,
                         summary = padMode.toPadModeLabel(),
                         onClick = { editingType = LayoutType.PadMode },
                     )
@@ -108,10 +108,10 @@ fun LayoutSettingScreen(
             }
 
             item {
-                SmallTitle(text = "竖屏")
+                SmallTitle(text = strings.crossCountPortrait)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LayoutSettingItem(
-                        title = "固定列数",
+                        title = strings.crossCountPortrait,
                         summary = crossCount.toCrossCountLabel(),
                         onClick = { editingType = LayoutType.CrossCount },
                     )
@@ -119,10 +119,10 @@ fun LayoutSettingScreen(
             }
 
             item {
-                SmallTitle(text = "横屏")
+                SmallTitle(text = strings.crossCountLandscape)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LayoutSettingItem(
-                        title = "固定列数",
+                        title = strings.crossCountLandscape,
                         summary = hCrossCount.toCrossCountLabel(),
                         onClick = { editingType = LayoutType.HCrossCount },
                     )
@@ -133,9 +133,15 @@ fun LayoutSettingScreen(
         // 布局选项选择对话框。
         val currentType = editingType
         if (currentType != null) {
+            val dialogTitle = when (currentType) {
+                LayoutType.RefractionLevel -> strings.liquidRefractionLevel
+                LayoutType.PadMode -> strings.padMode
+                LayoutType.CrossCount -> strings.crossCountPortrait
+                LayoutType.HCrossCount -> strings.crossCountLandscape
+            }
             when (currentType) {
                 LayoutType.RefractionLevel -> LayoutSelectDialog(
-                    title = currentType.title,
+                    title = dialogTitle,
                     currentValue = liquidRefractionLevel,
                     options = REFRACTION_LEVEL_OPTIONS,
                     onDismiss = { editingType = null },
@@ -147,7 +153,7 @@ fun LayoutSettingScreen(
                 )
 
                 LayoutType.PadMode -> LayoutSelectDialog(
-                    title = currentType.title,
+                    title = dialogTitle,
                     currentValue = padMode,
                     options = PAD_MODE_OPTIONS,
                     onDismiss = { editingType = null },
@@ -159,7 +165,7 @@ fun LayoutSettingScreen(
                 )
 
                 LayoutType.CrossCount -> LayoutSelectDialog(
-                    title = currentType.title,
+                    title = dialogTitle,
                     currentValue = crossCount,
                     options = CROSS_COUNT_OPTIONS,
                     onDismiss = { editingType = null },
@@ -171,7 +177,7 @@ fun LayoutSettingScreen(
                 )
 
                 LayoutType.HCrossCount -> LayoutSelectDialog(
-                    title = currentType.title,
+                    title = dialogTitle,
                     currentValue = hCrossCount,
                     options = CROSS_COUNT_OPTIONS,
                     onDismiss = { editingType = null },

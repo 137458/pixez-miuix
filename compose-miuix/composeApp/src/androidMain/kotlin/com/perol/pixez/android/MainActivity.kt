@@ -1,18 +1,19 @@
 package com.perol.pixez.android
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import com.arkivanov.decompose.defaultComponentContext
 import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.platform.BrowserLauncherContext
-
-import android.content.Intent
-import android.util.Log
-import androidx.lifecycle.lifecycleScope
+import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.launch
 
 /**
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private lateinit var dependencies: AppDependencies
+    private lateinit var rootComponent: RootComponent
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,9 +33,16 @@ class MainActivity : ComponentActivity() {
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
         )
+        rootComponent = RootComponent(
+            componentContext = defaultComponentContext(),
+            settingsRepository = dependencies.settingsRepository,
+        )
         handleAuthIntent(intent)
         setContent {
-            PixEzApp(dependencies)
+            PixEzApp(
+                dependencies = dependencies,
+                rootComponent = rootComponent,
+            )
         }
     }
 

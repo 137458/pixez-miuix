@@ -54,17 +54,18 @@ fun PlatformSettingScreen(
 
     // 当前正在编辑的对话框类型，null 表示没有对话框打开。
     var editingDialog by rememberSaveable { mutableStateOf<PlatformDialogType?>(null) }
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "平台专属设置",
+                title = strings.settingPlatform,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -80,8 +81,8 @@ fun PlatformSettingScreen(
                 item {
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
-                            title = "当前平台不支持",
-                            summary = "平台专属设置仅适用于 Android 设备",
+                            title = strings.noData,
+                            summary = strings.settingPlatformSummary,
                             onClick = {},
                         )
                     }
@@ -90,10 +91,10 @@ fun PlatformSettingScreen(
             }
 
             item {
-                SmallTitle(text = "显示")
+                SmallTitle(text = strings.settingSectionDisplayLayout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "显示模式",
+                        title = strings.dialogDisplayMode,
                         summary = displayMode.toDisplayModeLabel(),
                         onClick = { editingDialog = PlatformDialogType.DisplayMode },
                     )

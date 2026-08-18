@@ -41,18 +41,19 @@ fun SaveSettingScreen(
     var illustDetailSaveSkipLongPress by remember {
         mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
     }
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "保存设置",
+                title = strings.settingSave,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -64,11 +65,11 @@ fun SaveSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "保存联动")
+                SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "收藏后保存",
-                        summary = if (saveAfterStar) "收藏作品后自动保存" else "收藏作品后不自动保存",
+                        title = strings.saveAfterStar,
+                        summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = saveAfterStar,
@@ -80,8 +81,8 @@ fun SaveSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "保存后收藏",
-                        summary = if (starAfterSave) "保存作品后自动收藏" else "保存作品后不自动收藏",
+                        title = strings.starAfterSave,
+                        summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
                         endActions = {
                             Switch(
                                 checked = starAfterSave,
@@ -96,11 +97,11 @@ fun SaveSettingScreen(
             }
 
             item {
-                SmallTitle(text = "交互确认")
+                SmallTitle(text = strings.longPressSaveConfirm)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "长按保存确认",
-                        summary = if (longPressSaveConfirm) "长按保存时弹出确认" else "长按保存时直接保存",
+                        title = strings.longPressSaveConfirm,
+                        summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
                         endActions = {
                             Switch(
                                 checked = longPressSaveConfirm,
@@ -112,8 +113,8 @@ fun SaveSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "详情页保存跳过长按",
-                        summary = if (illustDetailSaveSkipLongPress) "点击保存按钮直接保存" else "需长按保存按钮",
+                        title = strings.illustDetailSkipLongPress,
+                        summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
                         endActions = {
                             Switch(
                                 checked = illustDetailSaveSkipLongPress,
@@ -128,11 +129,11 @@ fun SaveSettingScreen(
             }
 
             item {
-                SmallTitle(text = "收藏标签")
+                SmallTitle(text = strings.settingBookTags)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "收藏时自动添加标签",
-                        summary = if (autoTagWhenStar) "收藏作品时自动使用收藏标签" else "收藏作品时不自动添加标签",
+                        title = strings.autoTagWhenStar,
+                        summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = autoTagWhenStar,

@@ -35,6 +35,7 @@ fun PrivacySettingScreen(
     onBack: () -> Unit,
 ) {
     // 页面状态：从 SettingsRepository 读取当前隐私设置。
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var nsfwMask by remember { mutableStateOf(settingsRepository.nsfwMask) }
     var defaultPrivateLike by remember { mutableStateOf(settingsRepository.defaultPrivateLike) }
 
@@ -42,12 +43,12 @@ fun PrivacySettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "隐私设置",
+                title = strings.settingPrivacy,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -59,11 +60,11 @@ fun PrivacySettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "内容展示")
+                SmallTitle(text = strings.settingSectionShieldPrivacy)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "NSFW 遮罩",
-                        summary = if (nsfwMask) "已开启敏感内容遮罩" else "已关闭敏感内容遮罩",
+                        title = strings.nsfwMask,
+                        summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
                         endActions = {
                             Switch(
                                 checked = nsfwMask,
@@ -78,11 +79,11 @@ fun PrivacySettingScreen(
             }
 
             item {
-                SmallTitle(text = "收藏")
+                SmallTitle(text = strings.settingSectionBookmarkShare)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "默认私密收藏",
-                        summary = if (defaultPrivateLike) "收藏时默认不公开" else "收藏时默认公开",
+                        title = strings.defaultPrivateLike,
+                        summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,
                         endActions = {
                             Switch(
                                 checked = defaultPrivateLike,

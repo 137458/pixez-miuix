@@ -98,14 +98,19 @@ fun NetworkSettingScreen(
     /**
      * 设置图片源为自定义 Host，并进行基础校验。
      */
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
+    /**
+     * 设置图片源为自定义 Host，并进行基础校验。
+     */
     fun setCustomPictureSource(host: String) {
         val trimmed = host.trim()
         if (trimmed.isEmpty()) {
-            toastMessage = "Host 不能为空"
+            toastMessage = strings.hostNotEmpty
             return
         }
         if (trimmed.contains(" ")) {
-            toastMessage = "Host 不能包含空格"
+            toastMessage = strings.hostNoSpace
             return
         }
         pictureSource = trimmed
@@ -117,12 +122,12 @@ fun NetworkSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "网络设置",
+                title = strings.settingNetwork,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -134,7 +139,7 @@ fun NetworkSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "OAuth 网络模式")
+                SmallTitle(text = strings.oauthNetworkMode)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     NETWORK_MODES.forEach { (code, label, description) ->
                         NetworkModeOption(
@@ -148,7 +153,7 @@ fun NetworkSettingScreen(
             }
 
             item {
-                SmallTitle(text = "API 服务网络模式")
+                SmallTitle(text = strings.apiNetworkMode)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     NETWORK_MODES.forEach { (code, label, description) ->
                         NetworkModeOption(
@@ -163,19 +168,19 @@ fun NetworkSettingScreen(
 
             if (allowsImageSource) {
                 item {
-                    SmallTitle(text = "图片源")
+                    SmallTitle(text = strings.pictureSource)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
-                            title = "默认",
-                            summary = DEFAULT_IMAGE_HOST,
+                            title = DEFAULT_IMAGE_HOST,
+                            summary = "Default (i.pximg.net)",
                             onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
                             endActions = {
                                 CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
                             },
                         )
                         BasicComponent(
-                            title = "镜像",
-                            summary = MIRROR_IMAGE_HOST,
+                            title = MIRROR_IMAGE_HOST,
+                            summary = "Mirror (pixiv.re)",
                             onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
                             endActions = {
                                 CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
@@ -187,11 +192,11 @@ fun NetworkSettingScreen(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(text = "自定义 Host")
+                            Text(text = strings.customHost)
                             TextField(
                                 value = customHostInput,
                                 onValueChange = { customHostInput = it },
-                                label = "输入 Host",
+                                label = strings.customHost,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Row(
@@ -199,7 +204,7 @@ fun NetworkSettingScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 TextButton(
-                                    text = "确认",
+                                    text = strings.confirm,
                                     onClick = { setCustomPictureSource(customHostInput) },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.textButtonColorsPrimary(),

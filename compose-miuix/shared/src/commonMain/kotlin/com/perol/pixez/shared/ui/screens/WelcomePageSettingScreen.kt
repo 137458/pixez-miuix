@@ -40,16 +40,27 @@ fun WelcomePageSettingScreen(
     // 页面状态：从 SettingsRepository 读取当前欢迎页类型。
     var selectedType by remember { mutableStateOf(settingsRepository.welcomePageType) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val welcomePageOptions = remember(strings) {
+        listOf(
+            WelcomePageOption(type = "home", label = strings.tabRecommend),
+            WelcomePageOption(type = "rank", label = strings.tabRanking),
+            WelcomePageOption(type = "quick_view", label = strings.tabSpotlight),
+            WelcomePageOption(type = "search", label = strings.tabSearch),
+            WelcomePageOption(type = "setting", label = strings.tabSettings),
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "欢迎页",
+                title = strings.settingWelcomePage,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -61,9 +72,9 @@ fun WelcomePageSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "启动时显示")
+                SmallTitle(text = strings.settingSectionStartup)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    WELCOME_PAGE_OPTIONS.forEach { option ->
+                    welcomePageOptions.forEach { option ->
                         BasicComponent(
                             title = option.label,
                             onClick = {
@@ -89,13 +100,3 @@ private data class WelcomePageOption(
     val label: String,
 )
 
-/**
- * 可选的欢迎页类型与展示文案，顺序与原 Flutter 应用保持一致。
- */
-private val WELCOME_PAGE_OPTIONS = listOf(
-    WelcomePageOption(type = "home", label = "首页"),
-    WelcomePageOption(type = "rank", label = "排行榜"),
-    WelcomePageOption(type = "quick_view", label = "速览"),
-    WelcomePageOption(type = "search", label = "搜索"),
-    WelcomePageOption(type = "setting", label = "设置"),
-)

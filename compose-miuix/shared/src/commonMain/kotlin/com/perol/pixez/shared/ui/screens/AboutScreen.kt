@@ -135,29 +135,29 @@ fun AboutScreen(
                 )
             }
             Text(
-                text = "使用 MIUIX + Compose Multiplatform 重构的 PixEz 客户端，还原 HyperOS 精致交互体验。",
+                text = strings.aboutDesc,
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp),
             )
 
-            SmallTitle(text = "开发者", modifier = Modifier.fillMaxWidth())
+            SmallTitle(text = strings.aboutDevelopers, modifier = Modifier.fillMaxWidth())
             Card(modifier = Modifier.fillMaxWidth()) {
                 DeveloperRow(
                     name = "Perol_Notsfsssf",
-                    message = "最初开发与维护",
+                    message = "Founder & Maintainer",
                     avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
                     onClick = { openUrlOrToast("https://github.com/Notsfsssf") { toastMessage = it } },
                 )
                 DeveloperRow(
                     name = "Right now",
-                    message = "设计与开发支持",
+                    message = "Design & Multiplatform",
                     avatarUrl = "https://avatars.githubusercontent.com/u/104149371?v=4",
                     onClick = { openUrlOrToast("https://github.com/137458") { toastMessage = it } },
                 )
             }
 
-            SmallTitle(text = "贡献者", modifier = Modifier.fillMaxWidth())
+            SmallTitle(text = strings.aboutContributors, modifier = Modifier.fillMaxWidth())
             Card(modifier = Modifier.fillMaxWidth()) {
                 ContributorsRow(
                     contributors = CONTRIBUTORS,
@@ -167,17 +167,17 @@ fun AboutScreen(
                 )
             }
 
-            SmallTitle(text = "项目", modifier = Modifier.fillMaxWidth())
+            SmallTitle(text = strings.aboutProject, modifier = Modifier.fillMaxWidth())
             Card(modifier = Modifier.fillMaxWidth()) {
                 BasicComponent(
-                    title = "项目仓库",
+                    title = strings.aboutRepo,
                     summary = "github.com/137458/pixez-miuix",
                     onClick = {
                         openUrlOrToast(AppConstants.Urls.GITHUB_REPO) { toastMessage = it }
                     },
                 )
                 BasicComponent(
-                    title = "反馈邮箱",
+                    title = strings.aboutFeedback,
                     summary = "PxezFeedBack@outlook.com",
                     onClick = {
                         openUrlOrToast("mailto:PxezFeedBack@outlook.com") { toastMessage = it }
@@ -185,13 +185,13 @@ fun AboutScreen(
                 )
                 BasicComponent(
                     title = strings.settingThanks,
-                    summary = "感谢帮助、支持与鼓励我的朋友们",
+                    summary = strings.aboutThanksDesc,
                     onClick = onThanksClick,
                 )
                 if (onUpdateClick != null) {
                     BasicComponent(
                         title = strings.settingUpdate,
-                        summary = "当前版本 v${AppInfo.VERSION_NAME}",
+                        summary = "${strings.version} v${AppInfo.VERSION_NAME}",
                         onClick = onUpdateClick,
                     )
                 }

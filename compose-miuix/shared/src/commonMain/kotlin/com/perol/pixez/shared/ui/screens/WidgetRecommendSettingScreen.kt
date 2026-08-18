@@ -40,16 +40,25 @@ fun WidgetRecommendSettingScreen(
     // 页面状态：从 SettingsRepository 读取当前小组件推荐类型。
     var selectedType by remember { mutableStateOf(settingsRepository.widgetIllustType) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val widgetOptions = remember(strings) {
+        listOf(
+            WidgetIllustOption(type = "recom", label = strings.tabRecommend),
+            WidgetIllustOption(type = "rank", label = strings.tabRanking),
+            WidgetIllustOption(type = "news", label = strings.tabNew),
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "小组件推荐",
+                title = strings.settingWidgetRecommend,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -61,9 +70,9 @@ fun WidgetRecommendSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "推荐内容")
+                SmallTitle(text = strings.settingWidgetRecommend)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    WIDGET_ILLUST_OPTIONS.forEach { option ->
+                    widgetOptions.forEach { option ->
                         BasicComponent(
                             title = option.label,
                             onClick = {
@@ -89,14 +98,3 @@ private data class WidgetIllustOption(
     val label: String,
 )
 
-/**
- * 可选的小组件推荐类型与展示文案，顺序与旧 Flutter 应用保持一致。
- * - recom：推荐
- * - rank：排行榜
- * - news：关注
- */
-private val WIDGET_ILLUST_OPTIONS = listOf(
-    WidgetIllustOption(type = "recom", label = "推荐"),
-    WidgetIllustOption(type = "rank", label = "排行榜"),
-    WidgetIllustOption(type = "news", label = "关注"),
-)

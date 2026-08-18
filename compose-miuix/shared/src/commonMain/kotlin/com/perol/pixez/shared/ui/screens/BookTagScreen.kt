@@ -62,17 +62,18 @@ fun BookTagScreen(
 
     // 空列表占位提示。
     val isEmpty = bookTags.isEmpty()
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "收藏标签",
+                title = strings.settingBookTags,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -83,7 +84,7 @@ fun BookTagScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Add,
-                            contentDescription = "添加标签",
+                            contentDescription = strings.btnAdd,
                         )
                     }
                 },
@@ -95,7 +96,7 @@ fun BookTagScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "标签列表")
+                SmallTitle(text = strings.tags)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (isEmpty) {
                         Text(
