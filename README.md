@@ -7,7 +7,7 @@
 **基于 Compose Multiplatform 与 Xiaomi HyperOS (MIUIX) 设计规范打造的高颜值、现代跨平台 Pixiv 客户端**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Desktop%20%7C%20iOS%20%7C%20macOS-blue.svg?style=flat-square)](#-支持平台与架构)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Desktop%20%7C%20iOS%20%7C%20macOS-blue.svg?style=flat-square)](#下载与安装)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
@@ -18,7 +18,22 @@
 
 ---
 
-## 📖 项目简介
+## 目录
+
+- [项目简介](#项目简介)
+- [核心特性](#核心特性)
+- [文档中心](#文档中心)
+- [下载与安装](#下载与安装)
+- [使用说明](#使用说明)
+- [工程架构](#工程架构)
+- [源码构建](#源码构建)
+- [贡献者与鸣谢](#贡献者与鸣谢)
+- [社区与反馈](#社区与反馈)
+- [开源协议](#开源协议)
+
+---
+
+## 项目简介
 
 **PixEz MIUIX** 是原知名开源 Pixiv 第三方客户端 PixEz 的全新世代重构版本。本项目全面拥抱 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 技术栈，并深度结合 **Xiaomi HyperOS (MIUIX)** 设计语言与交互规范，为各平台用户提供原生流畅、通透轻盈、富有动感的美学体验。
 
@@ -26,154 +41,146 @@
 
 ---
 
-## ✨ 核心特性与设计亮点
+## 核心特性
 
-### 🎨 极致的 Xiaomi HyperOS (MIUIX) 交互美学
-- **全套 HyperOS 视觉规范**：采用官方 Squircle（超椭圆）几何圆角、层级卡片容器（`Card`、`BasicComponent`）与系统级色彩体系。
-- **IosLiquidGlass 悬浮液态玻璃底栏**：
-  - 官方 3 层高级渲染架构：`CombinedBackdrop` 高斯模糊基底、动态交互高光拾取、色散折射透镜层。
-  - 动态阻尼弹性手势拖拽动画（`DampedDragAnimation`），支持平滑跟随与回弹。
-- **HyperOS 2 / HyperOS 3 动态流光背景**：
-  - 官方 GLSL 运行时动态着色器（Android 13+ 原生 `RuntimeShader` / Desktop 端 Skia `RuntimeEffect`）。
-  - 60 帧色彩阶段平滑过渡与流动噪点，带来前沿系统的光效体验。
-- **平滑视差与微动效**：Hero 图标根据列表滚动实时缩放与渐隐，顶部标题动态淡入过渡。
-
-### ⚡ 现代化多平台架构与极致性能
-- **跨平台技术栈**：
-  - **核心 UI**：Jetpack / JetBrains Compose Multiplatform，真正做到一套代码多端统一且兼具平台原生表现。
-  - **页面路由**：Decompose 架构接管完整的页面栈生命周期与物理返回键调度。
-  - **异步网络**：Ktor Client + Kotlinx.Serialization，支持全自动 Token 刷新机制与免代理 SNI 混淆直连。
-  - **本地数据库**：SQLDelight 强类型多数据库架构，无缝兼容原版历史记录与屏蔽规则。
-  - **高性能图片管线**：Coil 3 跨平台渲染引擎，内置 Referer 防盗链与多级内存/磁盘缓存。
-
-### 🖼️ 全面的 Pixiv 核心功能覆盖
-- **浏览与发现**：
-  - **推荐与关注**：日榜、周榜、月榜、新人榜、原创榜、R-18 榜等多维度榜单。
-  - **动态瀑布流**：自适应列数瀑布流布局，智能加载预览缩略图。
-  - **Spotlight 特典解析**：Pixivision 官方特辑图文解析与沉浸式阅读器。
-- **作品与多媒体详情**：
-  - 高清多图轮播浏览与缩放查看。
-  - 动图（Ugoira）原生帧播放支持。
-  - 关联作品智能推荐、作品系列（Series）导航、评论区互动与二级回复查看。
-- **强大的搜索与屏蔽系统**：
-  - 搜索建议、热门标签、按收藏数筛选、作者搜索、搜索历史管理。
-  - 多重屏蔽引擎：标签屏蔽、作品 ID 屏蔽、画师 ID 屏蔽、AI 生成内容一键过滤。
-- **下载与资源管理**：
-  - 原图一键下载、后台任务队列调度、下载历史管理、自动同步至系统相册。
-  - 剪贴板链接智能识别与跨应用一键分享。
+- **Xiaomi HyperOS (MIUIX) 原生交互美学**：
+  - 官方 Squircle 超椭圆几何圆角与 MIUIX 层级卡片容器 (`Card`, `BasicComponent`)。
+  - Liquid Glass 悬浮液态玻璃底栏：高斯模糊基底、动态高光与透镜折射三重渲染。
+  - 动态流光背景：基于 Android 13+ 原生 `RuntimeShader` 与 Desktop Skia `RuntimeEffect` 的实时 GLSL 着色器。
+  - 大屏与平板响应式适配：自适应多列瀑布流与居中限宽悬浮底栏。
+- **全链路流式分页与无限滚动**：
+  - 首页推荐、关注动态、插画搜索、画师搜索、排行榜、相关推荐、系列作品与评论区均支持触底平滑预加载与下拉刷新。
+- **强大的 Pixiv 核心功能**：
+  - 推荐与多维度榜单（日榜、周榜、月榜、新人榜、原创榜、R-18 榜）。
+  - 高清大图多页轮播、动图 (Ugoira) 原生帧播放。
+  - Pixivision 官方特辑沉浸式图文阅读器。
+  - 评论区多级回复与作品关联推荐。
+- **严密的多重黑名单与屏蔽系统**：
+  - 标签屏蔽、作品 ID 屏蔽、画师 ID 屏蔽与 AI 生成作品一键过滤。
+- **多任务下载与资源管理**：
+  - 原图一键高速下载、后台任务队列调度、断点续传与自动同步至系统相册。
+- **全自动鉴权与免代理直连**：
+  - OAuth2 PKCE 认证流程与 Token 自动无感刷新。
+  - 内置免代理 SNI 混淆直连与防盗链图片管线。
 
 ---
 
-## 📱 界面与功能预览
+## 文档中心
 
-<div align="center">
-<table>
-  <tr>
-    <td align="center"><b>发现与排行榜</b></td>
-    <td align="center"><b>插画详情与作品浏览</b></td>
-  </tr>
-  <tr>
-    <td><img src="./.github/preview/2.jpg" alt="Preview 1" width="360" /></td>
-    <td><img src="./.github/preview/1.jpg" alt="Preview 2" width="360" /></td>
-  </tr>
-</table>
-</div>
+本项目建立了完善的工程与设计规范文档库，欢迎查阅：
+
+- [Code Wiki (架构全景手册)](Code_Wiki.md)：详细记录项目分层架构、目录结构、模块职责、数据流调用链与关键类说明。
+- [MIUIX Spec (UI 架构与设计规范)](MIUIX_Spec.md)：详细规定 MIUIX 组件选型、Liquid Glass 渲染、响应式断点与大屏适配准则。
+- [Global TODO (全局待办与路线图)](Global_TODO.md)：统一汇总各模块演进清单、优先级与交付状态。
 
 ---
 
-## 🏗️ 项目工程结构
+## 下载与安装
+
+请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的最新安装包：
+
+### Android
+- 下载 `.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统）。
+
+### 桌面端 (Windows / macOS / Linux)
+- **Windows**: 下载 `.msi` 安装包或 `.zip` 便携版解压运行。
+- **macOS**: 下载 `.dmg` 安装镜像（支持 Apple Silicon 与 Intel 架构）。
+- **Linux**: 下载 `.deb` / `.rpm` 安装包或 `.tar.gz` 预编译二进制。
+
+---
+
+## 使用说明
+
+1. **登录账号**：启动应用后进入登录页，点击登录并完成 Pixiv 网页端授权，应用将自动完成 Token 兑换并持久化。
+2. **浏览与发现**：
+   - 底部悬浮底栏提供“推荐 (Hello)”、“动态 (New)”、“发现 (Spotlight)”、“我的 (User)”快速切换。
+   - 列表向下滑动时将自动流式预加载后续作品，下拉即可触发即时刷新。
+3. **作品操作**：
+   - 点击作品卡片进入沉浸式详情页，可进行收藏、点赞、下载原图、查看画师主页、阅读评论及关联作品。
+4. **屏蔽设置**：
+   - 进入“设置 -> 屏蔽管理”，可配置屏蔽标签、画师黑名单、作品黑名单及是否过滤 AI 生成内容。
+
+---
+
+## 工程架构
 
 ```text
 pixez-flutter-MIUIX/
-├── compose-miuix/                     # Compose Multiplatform 新架构源码
+├── compose-miuix/                     # Compose Multiplatform 跨平台源码
 │   ├── composeApp/                    # 各平台入口模块 (Android / Desktop)
-│   │   ├── src/androidMain/           # Android 原生入口、Manifest、Adaptive 图标资源
+│   │   ├── src/androidMain/           # Android 原生入口与清单文件
 │   │   └── src/desktopMain/           # Desktop JVM 平台入口与打包配置
-│   └── shared/                        # 核心多平台共享逻辑模块
-│       ├── src/commonMain/            # 跨平台通用逻辑
-│       │   ├── composeResources/      # 共享矢量图标与图像资源
-│       │   ├── sqldelight/            # SQLDelight 数据库架构定义文件
-│       │   └── kotlin/com/perol/pixez/shared/
-│       │       ├── data/              # 数据模型、SQLDelight 数据库与 Repository 层
-│       │       ├── network/           # Ktor HTTP 客户端、OAuth 认证与直连引擎
-│       │       ├── platform/          # 跨平台 Expect 声明 (相册、剪贴板、分享、返回键)
-│       │       └── ui/
-│       │           ├── animation/     # 液态手势阻尼与弹性物理动画
-│       │           ├── components/    # MIUIX 风格通用组件 (液态底栏、卡片、操作弹窗等)
-│       │           ├── effect/        # HyperOS 2 / 3 运行时 GLSL 着色器动态流光引擎
-│       │           ├── i18n/          # 多语言国际化体系 (17 种语言完整映射)
-│       │           ├── navigation/    # Decompose 路由导航与页面栈管理
-│       │           ├── screens/       # 40+ 个完整业务屏幕与系统级设置页
-│       │           └── AppConstants.kt# 全局外部链接、模板与选项档位常量收敛
-│       ├── src/androidMain/           # Android 平台特异实现 (RuntimeShader、存储等)
-│       ├── src/desktopMain/           # Desktop 平台特异实现 (Skia RuntimeEffect 等)
-│       ├── src/iosMain/               # iOS 平台特异实现
-│       └── src/macosMain/             # macOS 平台特异实现
-└── .github/                           # GitHub Actions CI/CD 流水线与多语言文档
+│   └── shared/                        # 跨平台共享核心模块
+│       └── src/commonMain/
+│           ├── composeResources/      # 矢量图标与多语言资源
+│           ├── sqldelight/            # SQLDelight 数据库架构定义
+│           └── kotlin/com/perol/pixez/shared/
+│               ├── data/              # 数据模型、数据库驱动与 14 个核心 Repository
+│               ├── network/           # Ktor HTTP 客户端、OAuth 认证与 Token 刷新插件
+│               ├── platform/          # 跨平台 Expect 抽象 (相册、剪贴板、分享)
+│               └── ui/                # 46 个业务界面、MIUIX 组件与液态玻璃动效
+├── Code_Wiki.md                       # 架构全景手册
+├── MIUIX_Spec.md                      # UI 设计与组件规范
+└── Global_TODO.md                     # 全局待办与路线图
 ```
 
 ---
 
-## 🛠️ 构建与开发指南
+## 源码构建
 
-### 环境要求
-- **Java Development Kit (JDK)**: JDK 17 及以上（推荐 JDK 21）
-- **开发工具**: Android Studio Ladybug / Koala 或 IntelliJ IDEA Ultimate / Community
+如需从源码编译开发，请确保本地具备以下开发环境：
+- **JDK**: Java Development Kit 17 或 21
 - **Android SDK**: `compileSdk = 36`, `minSdk = 24`
 
-### 编译与运行命令
-
-在终端中进入 `compose-miuix` 根目录：
-
 ```bash
+# 1. 切换至 Compose 工程目录
 cd compose-miuix
 
-# 1. 编译并安装运行 Android Debug 版本至连接的设备/模拟器
-./gradlew :composeApp:installDebug
+# 2. 编译并验证 Desktop 端共享模块
+./gradlew :shared:compileKotlinDesktop
 
-# 2. 运行 Desktop (JVM) 桌面端应用
+# 3. 运行 Desktop (JVM) 桌面端客户端
 ./gradlew :composeApp:run
 
-# 3. 构建发布版 Android Release APK
+# 4. 编译并安装 Android Debug 版本至连接的设备
+./gradlew :composeApp:installDebug
+
+# 5. 打包 Android Release APK
 ./gradlew :composeApp:assembleRelease
 
-# 4. 打包当前桌面平台原生可执行安装包 (MSI / DMG / DEB)
+# 6. 打包当前桌面平台安装包 (MSI / DMG / DEB)
 ./gradlew :composeApp:packageDistributionForCurrentOS
 ```
 
 ---
 
-## 👥 贡献者与鸣谢
+## 贡献者与鸣谢
 
 感谢所有为 PixEz 及其 MIUIX 重构做出贡献的开发者与社区成员：
 
-<table>
-  <tr>
-    <td align="center"><a href="https://github.com/Notsfsssf"><img src="https://avatars.githubusercontent.com/u/16934707?v=4" width="80px;" alt=""/><br /><sub><b>Perol_Notsfsssf</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=Notsfsssf" title="Code">💻</a></td>
-    <td align="center"><a href="https://github.com/137458"><img src="https://avatars.githubusercontent.com/u/104149371?v=4" width="80px;" alt=""/><br /><sub><b>Right now</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=137458" title="Code">💻</a></td>
-    <td align="center"><a href="https://xyx.moe"><img src="https://avatars.githubusercontent.com/u/9017470?v=4" width="80px;" alt=""/><br /><sub><b>Skimige</b></sub></a><br /><a href="https://github.com/137458/pixez-miuix/commits?author=Skimige" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/TragicLifeHu"><img src="https://avatars.githubusercontent.com/u/16817202?v=4" width="80px;" alt=""/><br /><sub><b>Tragic Life</b></sub></a><br /><a href="#translation-TragicLifeHu" title="Translation">🌍 (zh_TW)</a></td>
-    <td align="center"><a href="http://ivtune.net"><img src="https://avatars.githubusercontent.com/u/54385201?v=4" width="80px;" alt=""/><br /><sub><b>karin722</b></sub></a><br /><a href="#translation-karin722" title="Translation">🌍 (ja)</a></td>
-    <td align="center"><a href="http://archman.fun"><img src="https://avatars.githubusercontent.com/u/68731023?v=4" width="80px;" alt=""/><br /><sub><b>Romani-Archman</b></sub></a><br /><a href="#translation-Romani-Archman" title="Documentation">📖</a></td>
-    <td align="center"><a href="https://github.com/itzXian"><img src="https://avatars.githubusercontent.com/u/34748039?v=4" width="80px;" alt=""/><br /><sub><b>Xian</b></sub></a><br /><a href="#translation-itzXian" title="Translation">🌍 (en_US)</a></td>
-    <td align="center"><a href="https://github.com/ReikiAigawara"><img src="https://avatars.githubusercontent.com/u/66962815?v=4" width="80px;" alt=""/><br /><sub><b>Reiki Aigawara</b></sub></a><br /><a href="#translation-ReikiAigawara" title="Translation">🌍 (id_ID)</a></td>
-  </tr>
-</table>
+- **Perol_Notsfsssf** ([Notsfsssf](https://github.com/Notsfsssf))
+- **Right now** ([137458](https://github.com/137458))
+- **Skimige** ([Skimige](https://github.com/Skimige))
+- **Tragic Life** ([TragicLifeHu](https://github.com/TragicLifeHu))
+- **karin722** ([karin722](http://ivtune.net))
+- **Romani-Archman** ([Romani-Archman](http://archman.fun))
+- **Xian** ([itzXian](https://github.com/itzXian))
+- **Reiki Aigawara** ([ReikiAigawara](https://github.com/ReikiAigawara))
 
-特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) 社区提供的优秀 Compose MIUIX 组件库与设计灵感。
+特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) 社区提供的优秀 Compose MIUIX 跨平台组件库。
 
 ---
 
-## 💬 社区与交流反馈
+## 社区与反馈
 
-- 📘 **使用指南 & 常见问题**：[点此查看 FAQ 文档](.github/FAQ.md)
-- 📮 **邮件反馈**：PxezFeedback@outlook.com
-- ✈️ **Telegram 官方频道**：[@PixEzChannel](https://t.me/PixEzChannel)
-- 🎮 **Discord 社区**：[@PixEz](https://discord.gg/Em9AeJbg)
-- 🐧 **QQ 交流群**：815791942
+- 使用指南 & 常见问题：[点此查看 FAQ 文档](.github/FAQ.md)
+- 邮件反馈：PxezFeedback@outlook.com
+- Telegram 官方频道：[@PixEzChannel](https://t.me/PixEzChannel)
+- Discord 社区：[@PixEz](https://discord.gg/Em9AeJbg)
+- QQ 交流群：815791942
 
 ---
 
-## 📄 开源许可证
+## 开源协议
 
-本项目遵循 [GPL-3.0 License](LICENSE) 开源许可证。
+本项目遵循 [GPL-3.0 License](LICENSE) 开源协议。
