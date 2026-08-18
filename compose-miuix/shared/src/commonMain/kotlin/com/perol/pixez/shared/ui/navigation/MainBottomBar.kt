@@ -72,8 +72,10 @@ fun MainBottomBar(
             },
             backdrop = backdrop,
             isBlurActive = backdrop != null,
+            refractionLevel = refractionLevel,
             modifier = modifier,
         )
+
     } else {
         // 标准固定底栏：应用 Backdrop Blur 毛玻璃效果
         val bottomBarModifier = if (backdrop != null) {

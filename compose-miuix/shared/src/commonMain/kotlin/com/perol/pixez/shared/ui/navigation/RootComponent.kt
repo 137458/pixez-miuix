@@ -293,6 +293,14 @@ class RootComponent(
     }
 
     /**
+     * 登录成功：清空登录栈并跳转至首页。
+     */
+    fun onLoginSuccess() {
+        navigation.navigate { listOf(Config.Main(MainTab.Hello)) }
+    }
+
+
+    /**
      * 打开作品评论页。
      */
     fun onCommentsClicked(illustId: Int) {

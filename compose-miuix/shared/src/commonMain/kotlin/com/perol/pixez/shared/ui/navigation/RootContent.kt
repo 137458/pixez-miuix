@@ -209,13 +209,10 @@ fun RootContent(
 
                     Child.Login -> LoginScreen(
                         onBack = component::onBack,
-                        onLoginSuccess = {
-                            component.onBack()
-                            // 登录成功后重置首页，触发 HelloScreen 重新加载并刷新登录态。
-                            component.onMainTabSelected(RootComponent.MainTab.Hello)
-                        },
+                        onLoginSuccess = component::onLoginSuccess,
                         accountRepository = accountRepository,
                     )
+
 
                     is Child.Comments -> CommentsScreen(
                         illustId = instance.illustId,
@@ -473,6 +470,7 @@ fun RootContent(
             }
 
             // 仅在一级主页面且未被弹窗/抽屉临时隐藏时显示底部导航栏。
+            val _changeVersion = settingsRepository.changeVersion
             if (active is Child.Main && bottomBarVisible.value) {
                 MainBottomBar(
                     activeTab = active.tab,
@@ -483,6 +481,7 @@ fun RootContent(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+
         }
     }
 }

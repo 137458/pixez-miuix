@@ -37,12 +37,12 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 登录页：通过 OAuth2 授权码完成登录。
+ * 登录页：支持通过系统浏览器 OAuth 授权或直接输入 Pixiv Refresh Token 完成登录。
  *
  * 流程：
  * 1. 点击“使用浏览器登录”打开 Pixiv OAuth 授权页。
- * 2. 用户授权后，系统通过 DeepLink 自动回填或手动将 code 粘贴到输入框。
- * 3. 点击“登录”交换 token 并持久化账号。
+ * 2. 用户授权后，系统通过 DeepLink 自动回调登录，或用户手动将 Token / 回调链接粘贴到输入框。
+ * 3. 点击“登录”完成鉴权与持久化并跳转回主页。
  */
 @Composable
 fun LoginScreen(
@@ -50,7 +50,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     accountRepository: AccountRepository,
 ) {
-    var code by rememberSaveable { mutableStateOf("") }
+    var tokenInput by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -131,7 +131,7 @@ fun LoginScreen(
                 }
             }
 
-            SmallTitle(text = "手动输入授权码")
+            SmallTitle(text = "Token 登录")
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,22 +139,22 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "如未能自动回调，可手动粘贴回调 URL 中的 code：",
+                        text = "支持输入 Pixiv Refresh Token 或授权回调链接：",
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
                     TextField(
-                        value = code,
-                        onValueChange = { code = it },
-                        label = "授权码 (code)",
+                        value = tokenInput,
+                        onValueChange = { tokenInput = it },
+                        label = "Pixiv Token / 授权链接",
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         colors = ButtonDefaults.buttonColorsPrimary(),
                         onClick = {
-                            if (code.isBlank()) {
-                                errorMessage = "请输入授权码"
+                            if (tokenInput.isBlank()) {
+                                errorMessage = "请输入 Token 或授权链接"
                                 return@Button
                             }
                             coroutineScope.launch {
@@ -162,11 +162,9 @@ fun LoginScreen(
                                     isLoading = true
                                     errorMessage = ""
                                     suspendRunCatchingNonCancel {
-                                        accountRepository.loginWithCode(code.trim())
-                                    }.onSuccess {
-                                        onLoginSuccess()
+                                        accountRepository.login(tokenInput.trim())
                                     }.onFailure { e ->
-                                        errorMessage = "登录失败：${e.message}"
+                                        errorMessage = "登录失败：${e.message ?: "凭证无效或网络错误"}"
                                         Napier.e("登录失败", e)
                                     }
                                 } finally {
@@ -180,6 +178,7 @@ fun LoginScreen(
                     }
                 }
             }
+
 
             if (errorMessage.isNotBlank()) {
                 Text(

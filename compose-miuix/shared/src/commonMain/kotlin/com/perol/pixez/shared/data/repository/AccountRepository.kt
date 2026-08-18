@@ -52,6 +52,48 @@ class AccountRepository(
     }
 
     /**
+     * 用 Pixiv Refresh Token 直接完成登录并持久化账号信息。
+     */
+    suspend fun loginWithToken(token: String): OAuthAccount {
+        val account = oAuthClient.refreshToken(token.trim())
+        tokenStorage.saveAccount(account.response)
+        _loginEventFlow.tryEmit(Unit)
+        return account
+    }
+
+    /**
+     * 智能统一登录：自动识别 Refresh Token、授权码或回调 URL 完成登录。
+     *
+     * 1. 若输入为 pixiv:// 回调 URL 或包含 code= 参数，自动提取 code 走 PKCE 授权码登录。
+     * 2. 若输入为纯文本，优先作为 Refresh Token 执行刷新登录；若失败则尝试作为授权码登录。
+     */
+    suspend fun login(input: String): OAuthAccount {
+        val trimmed = input.trim()
+        require(trimmed.isNotBlank()) { "登录凭证不能为空" }
+
+        // 1. 如果是回调 URL 或带有 code 参数
+        val codeMatch = Regex("[?&]code=([^&]+)").find(trimmed)
+        if (codeMatch != null) {
+            val code = codeMatch.groupValues[1]
+            return loginWithCode(code)
+        }
+
+        // 2. 优先尝试作为 Refresh Token 登录
+        return try {
+            loginWithToken(trimmed)
+        } catch (tokenEx: Exception) {
+            // 3. 降级尝试作为原始授权码登录
+            try {
+                loginWithCode(trimmed)
+            } catch (codeEx: Exception) {
+                // 如果两项均失败，抛出最具诊断价值的异常信息
+                throw tokenEx
+            }
+        }
+    }
+
+
+    /**
      * 登出：清空本地账号数据。
      */
     suspend fun logout() {

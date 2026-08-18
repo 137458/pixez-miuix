@@ -384,7 +384,10 @@ class SettingsRepository(
     var crossCount: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_COUNT, 2)
             .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
-        set(value) { settings[SettingsKeys.CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX) }
+        set(value) {
+            settings[SettingsKeys.CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
+            notifyChanged()
+        }
 
     /**
      * 横屏固定网格列数（2-4）。
@@ -392,7 +395,10 @@ class SettingsRepository(
     var hCrossCount: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_COUNT, 2)
             .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
-        set(value) { settings[SettingsKeys.H_CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX) }
+        set(value) {
+            settings[SettingsKeys.H_CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
+            notifyChanged()
+        }
 
     /**
      * 是否启用悬浮底栏模式（Liquid Glass 悬浮胶囊底栏 vs 标准全宽毛玻璃底栏）。
@@ -400,7 +406,10 @@ class SettingsRepository(
      */
     var useFloatingBottomBar: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_FLOATING_BOTTOM_BAR, true)
-        set(value) { settings[SettingsKeys.USE_FLOATING_BOTTOM_BAR] = value }
+        set(value) {
+            settings[SettingsKeys.USE_FLOATING_BOTTOM_BAR] = value
+            notifyChanged()
+        }
 
     /**
      * 悬浮底栏液态玻璃折射强度等级。
@@ -412,7 +421,11 @@ class SettingsRepository(
      */
     var liquidRefractionLevel: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.LIQUID_REFRACTION_LEVEL, 2)
-        set(value) { settings[SettingsKeys.LIQUID_REFRACTION_LEVEL] = value }
+        set(value) {
+            settings[SettingsKeys.LIQUID_REFRACTION_LEVEL] = value
+            notifyChanged()
+        }
+
 
     /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。

@@ -69,9 +69,11 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -107,6 +109,15 @@ private val iosIndicatorSpecular: Highlight = Highlight(
     style = HighlightStyle.Default,
 )
 
+private data class RefractionConfig(
+    val base: Dp,
+    val indicator: Dp,
+    val highlightAlpha: Float,
+    val blur: Dp,
+)
+
+
+
 /**
  * 官方 compose-miuix-ui 示例 1:1 实现的 iOS Liquid Glass 悬浮导航栏。
  *
@@ -123,6 +134,7 @@ fun IosLiquidGlassNavigationBar(
     onItemClick: (Int) -> Unit,
     backdrop: Backdrop?,
     isBlurActive: Boolean = true,
+    refractionLevel: Int = 2,
     modifier: Modifier = Modifier,
     badge: (Int) -> (@Composable () -> Unit)? = { null },
 ) {
@@ -132,11 +144,23 @@ fun IosLiquidGlassNavigationBar(
     val surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
     val containerColor = if (isBlurActive && backdrop != null) surfaceContainer.copy(alpha = 0.4f) else surfaceContainer
 
+    val (baseRefractionDp, indicatorRefractionDp, highlightAlpha, lensBlurDp) = remember(refractionLevel) {
+        when (refractionLevel) {
+            0 -> RefractionConfig(base = 12.dp, indicator = 8.dp, highlightAlpha = 0.40f, blur = 3.dp)
+            1 -> RefractionConfig(base = 20.dp, indicator = 12.dp, highlightAlpha = 0.60f, blur = 4.dp)
+            2 -> RefractionConfig(base = 28.dp, indicator = 16.dp, highlightAlpha = 0.75f, blur = 4.dp)
+            3 -> RefractionConfig(base = 38.dp, indicator = 22.dp, highlightAlpha = 0.88f, blur = 5.dp)
+            4 -> RefractionConfig(base = 50.dp, indicator = 30.dp, highlightAlpha = 1.00f, blur = 6.dp)
+            else -> RefractionConfig(base = 28.dp, indicator = 16.dp, highlightAlpha = 0.75f, blur = 4.dp)
+        }
+    }
+
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
     val tabsCount = items.size
+
 
     var tabWidthPx by remember { mutableFloatStateOf(0f) }
     var totalWidthPx by remember { mutableFloatStateOf(0f) }
@@ -356,13 +380,13 @@ fun IosLiquidGlassNavigationBar(
                                     shape = { pillShape },
                                     effects = {
                                         vibrancy()
-                                        blur(4.dp.toPx())
+                                        blur(lensBlurDp.toPx())
                                         lens(
-                                            refractionHeight = 24.dp.toPx(),
-                                            refractionAmount = 24.dp.toPx(),
+                                            refractionHeight = baseRefractionDp.toPx(),
+                                            refractionAmount = baseRefractionDp.toPx(),
                                         )
                                     },
-                                    highlight = { baseHighlight.copy(alpha = 0.75f) },
+                                    highlight = { baseHighlight.copy(alpha = highlightAlpha) },
                                     layerBlock = {
                                         val width = size.width.coerceAtLeast(1f)
                                         val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDrag.pressProgress)
@@ -407,10 +431,10 @@ fun IosLiquidGlassNavigationBar(
                                 shape = { pillShape },
                                 effects = {
                                     vibrancy()
-                                    blur(4.dp.toPx())
+                                    blur(lensBlurDp.toPx())
                                     lens(
-                                        refractionHeight = 24.dp.toPx(),
-                                        refractionAmount = 24.dp.toPx(),
+                                        refractionHeight = baseRefractionDp.toPx(),
+                                        refractionAmount = baseRefractionDp.toPx(),
                                     )
                                 },
                                 onDrawSurface = { drawRect(containerColor) },
@@ -443,12 +467,13 @@ fun IosLiquidGlassNavigationBar(
                                 effects = {
                                     val progress = dampedDrag.pressProgress
                                     lens(
-                                        refractionHeight = 10.dp.toPx() * progress,
-                                        refractionAmount = 14.dp.toPx() * progress,
+                                        refractionHeight = indicatorRefractionDp.toPx() * progress,
+                                        refractionAmount = (indicatorRefractionDp * 1.35f).toPx() * progress,
                                         chromaticAberration = true,
                                     )
                                 },
-                                highlight = { pillHighlight.copy(alpha = dampedDrag.pressProgress) },
+                                highlight = { pillHighlight.copy(alpha = highlightAlpha * dampedDrag.pressProgress) },
+
                                 layerBlock = {
                                     scaleX = dampedDrag.scaleX
                                     scaleY = dampedDrag.scaleY
