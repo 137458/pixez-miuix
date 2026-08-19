@@ -15,6 +15,12 @@
 - 增强 `PixivHttpClient` 针对 OAuth 400 错误的详细反序列化与解析，精准提取服务端提示。
 - 优化桌面端应用启动命令行参数自动解析登录流程。
 
+### 修复
+
+- 修复 iOS / macOS (Kotlin/Native) 跨平台编译错误，补全 `BrowserLauncher`、`Platform`、`RuntimeShaderCompat`、`DataExportFileHelper`、`IllustClipboard`、`IllustSaver` 与 `IllustShare` 的原生实际声明（`actual`）。
+- 新增跨平台 `String.format` 扩展实现，替代 Native 端缺失的 JVM `java.lang.String.format`。
+- 收敛全平台协程调度器，解决 Native 端缺少 `Dispatchers.IO` 的访问限制问题。
+
 ---
 
 ## [v0.9.108.1] - 2026-08-18
