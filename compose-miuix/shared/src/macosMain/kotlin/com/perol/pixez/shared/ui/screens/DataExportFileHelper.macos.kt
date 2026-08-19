@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
@@ -11,6 +12,7 @@ import platform.Foundation.stringByAppendingPathComponent
 import platform.Foundation.stringWithContentsOfFile
 import platform.Foundation.writeToFile
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual fun writeExportFile(path: String, content: String): Result<Unit> = runCatchingNonCancel {
     val baseDir = getExportBaseDirectory()
     val fullPath = if (path.startsWith("/")) path else (baseDir as NSString).stringByAppendingPathComponent(path)
@@ -24,12 +26,14 @@ internal actual fun writeExportFile(path: String, content: String): Result<Unit>
     Unit
 }
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual fun readExportFile(path: String): Result<String> = runCatchingNonCancel {
     val baseDir = getExportBaseDirectory()
     val fullPath = if (path.startsWith("/")) path else (baseDir as NSString).stringByAppendingPathComponent(path)
     NSString.stringWithContentsOfFile(fullPath, encoding = NSUTF8StringEncoding, error = null) ?: ""
 }
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual fun getExportBaseDirectory(): String {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
     val docs = (paths.firstOrNull() as? String) ?: ""
