@@ -152,9 +152,9 @@ fun AboutScreen(
                     onClick = { openUrlOrToast("https://github.com/Notsfsssf", strings) { toastMessage = it } },
                 )
                 DeveloperRow(
-                    name = "Right now",
-                    message = "Design & Multiplatform",
-                    avatarUrl = "https://avatars.githubusercontent.com/u/104149371?v=4",
+                    name = "137458 (Rosemary)",
+                    message = "MIUIX & Multiplatform",
+                    avatarUrl = "https://avatars.githubusercontent.com/u/138956834?v=4",
                     onClick = { openUrlOrToast("https://github.com/137458", strings) { toastMessage = it } },
                 )
             }

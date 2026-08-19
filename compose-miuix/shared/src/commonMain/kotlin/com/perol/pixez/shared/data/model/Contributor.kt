@@ -23,6 +23,12 @@ data class Contributor(
  */
 val CONTRIBUTORS: List<Contributor> = listOf(
     Contributor(
+        name = "137458 (Rosemary)",
+        avatar = "https://avatars.githubusercontent.com/u/138956834?v=4",
+        url = "https://github.com/137458",
+        content = "💻🎨",
+    ),
+    Contributor(
         name = "Tragic Life",
         avatar = "https://avatars.githubusercontent.com/u/16817202?v=4",
         url = "https://github.com/TragicLifeHu",
