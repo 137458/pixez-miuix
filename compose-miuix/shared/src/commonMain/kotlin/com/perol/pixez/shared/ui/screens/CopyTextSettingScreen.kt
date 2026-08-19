@@ -216,21 +216,3 @@ private fun insertTextAtSelection(
  */
 private const val DEFAULT_COPY_TEXT_FORMAT = "title:{title}\npainter:{user_name}\nillust id:{illust_id}"
 
-/**
- * 可用的占位符与固定文本 chips。
- */
-private val PLACEHOLDER_CHIPS = listOf(
-    PlaceholderChip(label = "标题", text = "{title}"),
-    PlaceholderChip(label = "作品ID", text = "{illust_id}"),
-    PlaceholderChip(label = "用户ID", text = "{user_id}"),
-    PlaceholderChip(label = "画师名", text = "{user_name}"),
-    PlaceholderChip(label = "标签", text = "{tags}"),
-    PlaceholderChip(
-        label = "作品链接",
-        text = "https://www.pixiv.net/artworks/{illust_id}",
-    ),
-    PlaceholderChip(
-        label = "用户链接",
-        text = "https://www.pixiv.net/users/{user_id}",
-    ),
-)

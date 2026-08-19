@@ -20,7 +20,7 @@ actual class IllustShare {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        val chooser = Intent.createChooser(sendIntent, "分享").apply {
+        val chooser = Intent.createChooser(sendIntent, subject).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 

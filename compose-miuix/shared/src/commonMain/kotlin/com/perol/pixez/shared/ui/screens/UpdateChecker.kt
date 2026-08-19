@@ -78,12 +78,12 @@ suspend fun fetchLatestReleaseInfo(
             }
             .body()
         val tag = release.tag_name ?: ""
-        val versionName = tag.removePrefix("v").ifBlank { "未知版本" }
+        val versionName = tag.removePrefix("v").ifBlank { "unknown" }
         val releaseInfo = ReleaseInfo(
             tagName = tag,
             versionName = versionName,
             title = release.name ?: "PixEz MIUIX $tag",
-            changelog = release.body ?: "暂无更新日志",
+            changelog = release.body.orEmpty(),
             releaseUrl = release.html_url ?: "https://github.com/137458/pixez-miuix/releases",
             publishedAt = release.published_at,
             isNew = hasNewVersion(versionName),
