@@ -10,11 +10,11 @@ Dapat mengakses Pixiv secara langsung dari Tiongkok Daratan.
 
 # Download
 
-|OS|Market|GitHub|Cloud Drive|
-|:---:|:---:|:---:|:---:|
-|Android|[Google Play](https://play.google.com/store/apps/details?id=com.perol.play.pixez)|[Release](https://github.com/Notsfsssf/pixez-flutter/releases/latest)|[Lanzou](https://wwa.lanzous.com/b0ded45id)<br />**Hanya untuk Pengguna Tiongkok Daratan**|
-|iOS|[App Store](https://apps.apple.com/app/pixez/id1494435126)|[Action Ipa](https://github.com/Notsfsssf/pixez-flutter/actions/workflows/build_ios.yml)|/|
-|Windows|/|[Nightly MSIX](https://github.com/Notsfsssf/pixez-flutter/actions/workflows/build_windows.yml)|/|
+|OS|Market|GitHub Releases|
+|:---:|:---:|:---:|
+|Android|[Google Play](https://play.google.com/store/apps/details?id=com.perol.play.pixez)|[Release APK](https://github.com/137458/pixez-miuix/releases)|
+|Desktop (Win/Mac/Linux)|/|[Executable JAR / Windows Release](https://github.com/137458/pixez-miuix/releases)|
+|iOS|[App Store](https://apps.apple.com/app/pixez/id1494435126)|[Action CI / Release](https://github.com/137458/pixez-miuix/actions)|
 
 # Preview
 

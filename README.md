@@ -77,15 +77,14 @@
 
 ## 下载与安装
 
-请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的最新安装包：
+请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的最新安装包或运行包：
 
 ### Android
-- 下载 `.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统）。
+- 下载 `PixEz-MIUIX-v*.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统，已适配手机、折叠屏与平板）。
 
 ### 桌面端 (Windows / macOS / Linux)
-- **Windows**: 下载 `.msi` 安装包或 `.zip` 便携版解压运行。
-- **macOS**: 下载 `.dmg` 安装镜像（支持 Apple Silicon 与 Intel 架构）。
-- **Linux**: 下载 `.deb` / `.rpm` 安装包或 `.tar.gz` 预编译二进制。
+- **跨平台可执行包**: 下载 `PixEz-MIUIX-v*-windows-x64.jar`（或跨平台 JAR 包），确保本地配备 Java 17 或 21 运行环境，在终端执行 `java -jar <文件名>.jar` 或直接双击即可运行。
+- **Windows 安装包**: 可在 Release 页面或 Actions 构建产物中下载 `.msi` 安装包与便携版。
 
 ---
 

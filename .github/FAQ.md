@@ -35,15 +35,14 @@
 
 ## 二、如何下载最新版
 
-所有平台最新安装包均发布于 [GitHub Releases 页面](https://github.com/137458/pixez-miuix/releases)：
+所有平台最新安装包与运行包均发布于 [GitHub Releases 页面](https://github.com/137458/pixez-miuix/releases)：
 
-| 平台 | 安装格式 | 说明 |
+| 平台 | 文件格式 / 产物 | 说明与运行方式 |
 | :--- | :--- | :--- |
-| **Android** | `.apk` | 支持 Android 7.0 (API 24) 及以上系统，适配手机、折叠屏与平板 |
-| **Windows** | `.msi` / `.zip` | 支持 Windows 10 / 11 (x64 / ARM64) |
-| **macOS** | `.dmg` | 支持 Apple Silicon (M系列) 与 Intel 芯片 |
-| **Linux** | `.deb` / `.tar.gz` | 支持主流 Linux 发行版 (x64) |
-| **iOS** | `.ipa` / 源码编译 | 支持 TrollStore 巨魔、自签或开发者证书安装 |
+| **Android** | `PixEz-MIUIX-v*.apk` | 推荐 Android 7.0 (API 24) 及以上系统，已全面适配手机、折叠屏与平板 |
+| **跨平台桌面端 (Windows / macOS / Linux)** | `PixEz-MIUIX-v*-windows-x64.jar` / 可执行 JAR | 本地具备 JRE/JDK 17 或 21 环境，在终端执行 `java -jar <包名>.jar` 或直接双击即可流畅运行 |
+| **Windows 原生安装包** | `.msi` / 便携版 | 通过 Release 或 GitHub Actions CI 构建产物直接安装运行 |
+| **iOS / macOS 原生编译** | `ComposeApp.framework` / `.ipa` | 共享模块已完全通过 Kotlin/Native 编译验证，支持通过 Xcode 侧载或流水线打包 |
 
 ---
 
