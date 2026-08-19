@@ -326,7 +326,7 @@ fun UpdateSettingScreen(
                                     onCheckedChange = { checked ->
                                         autoCheckUpdate = checked
                                         coroutineScope.launch {
-                                            withContext(Dispatchers.IO) {
+                                            withContext(Dispatchers.Default) {
                                                 settingsRepository.autoCheckUpdate = checked
                                             }
                                         }
@@ -349,7 +349,7 @@ fun UpdateSettingScreen(
                                     onCheckedChange = { checked ->
                                         val newValue = if (checked) releaseInfo?.versionName else null
                                         coroutineScope.launch {
-                                            withContext(Dispatchers.IO) {
+                                            withContext(Dispatchers.Default) {
                                                 settingsRepository.ignoreUpdateVersion = newValue
                                             }
                                             ignoredVersion = newValue
@@ -422,7 +422,7 @@ fun UpdateSettingScreen(
                 },
                 onIgnore = { ver ->
                     coroutineScope.launch {
-                        withContext(Dispatchers.IO) {
+                        withContext(Dispatchers.Default) {
                             settingsRepository.ignoreUpdateVersion = ver
                         }
                         ignoredVersion = ver

@@ -20,7 +20,7 @@ import platform.posix.fwrite
  */
 @OptIn(ExperimentalForeignApi::class)
 actual class IllustSaver {
-    actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+    actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.Default) {
         val documentsDir = (NSHomeDirectory() as NSString).stringByAppendingPathComponent("Documents")
         val pixezDir = (documentsDir as NSString).stringByAppendingPathComponent("PixEz")
 

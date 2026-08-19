@@ -7,6 +7,6 @@ import platform.UIKit.UIPasteboard
  */
 actual class IllustClipboard {
     actual fun copy(text: String) {
-        UIPasteboard.general.string = text
+        UIPasteboard.generalPasteboard.string = text
     }
 }

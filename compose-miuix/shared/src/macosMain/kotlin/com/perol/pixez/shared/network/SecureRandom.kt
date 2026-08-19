@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.network
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.readBytes

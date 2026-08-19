@@ -2,6 +2,7 @@ package com.perol.pixez.shared.platform
 
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
+import platform.UIKit.popoverPresentationController
 
 /**
  * iOS 平台实现：使用 `UIActivityViewController` 展示系统分享面板。
