@@ -27,11 +27,9 @@
 
 ## 一、项目声明与版本说明
 
-**PixEz MIUIX** 是原知名开源 Pixiv 客户端 PixEz 的全新世代重构版本。
-
-- **全新技术栈**：基于 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 构建，深度融合 **Xiaomi HyperOS (MIUIX)** 设计语言。
-- **跨平台支持**：全面覆盖 Android、桌面端（Windows / macOS / Linux）以及 iOS。
-- **与旧版关系**：旧版 Flutter 与 Java/Kotlin 原生版已全面停止维护，建议所有用户迁移至 PixEz MIUIX。
+- **PixEz MIUIX**：基于 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 全新打造，深度融合 **Xiaomi HyperOS (MIUIX)** 现代设计语言与交互动效，全面覆盖 Android、桌面端（Windows / macOS / Linux）与 iOS。
+- **原版 PixEz**：原版基于 Flutter 构建（[Notsfsssf/pixez-flutter](https://github.com/Notsfsssf/pixez-flutter)），由社区持续维护。
+- **关于本 FAQ**：本指南主要面向 **PixEz MIUIX** 版本的各项功能特性、设置项与常见问题解答。
 
 ---
 
