@@ -103,7 +103,7 @@ fun DownloadTaskScreen(
     ) {
         // 在 IO 线程执行数据库查询，避免主线程被 SQLite 阻塞。
         value = suspendRunCatchingNonCancel {
-            withContext(Dispatchers.IO) { downloadHistoryRepository.getAllTasks() }
+            withContext(Dispatchers.Default) { downloadHistoryRepository.getAllTasks() }
         }
     }
 
@@ -207,9 +207,9 @@ fun DownloadTaskScreen(
                                                 processingTaskIds = processingTaskIds + task.id
                                                 coroutineScope.launch {
                                                     try {
-                                                        // 删除单条记录时显式切到 IO，保持与仓库方法一致的线程语义。
+                                                        // 删除单条记录时显式切到后台，保持与仓库方法一致的线程语义。
                                                         suspendRunCatchingNonCancel {
-                                                            withContext(Dispatchers.IO) {
+                                                            withContext(Dispatchers.Default) {
                                                                 downloadHistoryRepository.deleteTask(task.id)
                                                             }
                                                         }.onSuccess {
@@ -247,9 +247,9 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 在 IO 线程查询所有失败任务；没有失败任务时给出明确提示，避免误导性成功文案。
+                                // 在后台线程查询所有失败任务；没有失败任务时给出明确提示，避免误导性成功文案。
                                 val failedTasks = suspendRunCatchingNonCancel {
-                                    withContext(Dispatchers.IO) {
+                                    withContext(Dispatchers.Default) {
                                         downloadHistoryRepository.getTasksByStatus(DownloadStatus.Failed)
                                     }
                                 }.getOrDefault(emptyList())
@@ -298,9 +298,9 @@ fun DownloadTaskScreen(
                         isBatchProcessing = true
                         coroutineScope.launch {
                             try {
-                                // 在 IO 线程查询所有已完成任务；没有已完成任务时给出明确提示，避免误导性成功文案。
+                                // 在后台线程查询所有已完成任务；没有已完成任务时给出明确提示，避免误导性成功文案。
                                 val completedTasks = suspendRunCatchingNonCancel {
-                                    withContext(Dispatchers.IO) {
+                                    withContext(Dispatchers.Default) {
                                         downloadHistoryRepository.getTasksByStatus(DownloadStatus.Success)
                                     }
                                 }.getOrDefault(emptyList())
@@ -309,10 +309,10 @@ fun DownloadTaskScreen(
                                     return@launch
                                 }
 
-                                // 数据库暂无按状态删除接口，逐条在 IO 线程删除。
+                                // 数据库暂无按状态删除接口，逐条在后台线程删除。
                                 completedTasks.forEach { task ->
                                     suspendRunCatchingNonCancel {
-                                        withContext(Dispatchers.IO) {
+                                        withContext(Dispatchers.Default) {
                                             downloadHistoryRepository.deleteTask(task.id)
                                         }
                                     }

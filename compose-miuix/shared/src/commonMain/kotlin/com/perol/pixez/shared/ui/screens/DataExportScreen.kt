@@ -128,7 +128,7 @@ fun DataExportScreen(
                         try {
                             // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
                             // 结果回到主线程更新 UI 状态。
-                            val result = withContext(Dispatchers.IO) {
+                            val result = withContext(Dispatchers.Default) {
                                 if (operation.action == Action.Export) {
                                     performExport(
                                         operation.type,

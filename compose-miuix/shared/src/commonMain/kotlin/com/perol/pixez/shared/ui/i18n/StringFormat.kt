@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.i18n
+package com.perol.pixez.shared.ui.screens
 
 /**
  * 跨平台 String.format 扩展，支持 %s, %d, %f, %1$s, %1$d, %2$s 等标准占位符，

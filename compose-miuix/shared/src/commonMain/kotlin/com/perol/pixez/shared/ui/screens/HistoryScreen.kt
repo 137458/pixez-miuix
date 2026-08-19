@@ -225,8 +225,8 @@ fun HistoryScreen(
                         coroutineScope.launch {
                             try {
                                 suspendRunCatchingNonCancel {
-                                    // 数据库清空是同步写操作，切到 IO 调度器避免阻塞主线程。
-                                    withContext(Dispatchers.IO) { repository.clearAll() }
+                                    // 数据库清空是同步写操作，切到后台调度器避免阻塞主线程。
+                                    withContext(Dispatchers.Default) { repository.clearAll() }
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure { toastMessage = "${strings.actionClear}${strings.loadFailed}: ${it.message}" }
@@ -255,8 +255,8 @@ fun HistoryScreen(
                         coroutineScope.launch {
                             try {
                                 suspendRunCatchingNonCancel {
-                                    // 数据库删除是同步写操作，切到 IO 调度器避免阻塞主线程。
-                                    withContext(Dispatchers.IO) { repository.deleteById(deleteId) }
+                                    // 数据库删除是同步写操作，切到后台调度器避免阻塞主线程。
+                                    withContext(Dispatchers.Default) { repository.deleteById(deleteId) }
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure { toastMessage = "${strings.btnDelete}${strings.loadFailed}: ${it.message}" }
