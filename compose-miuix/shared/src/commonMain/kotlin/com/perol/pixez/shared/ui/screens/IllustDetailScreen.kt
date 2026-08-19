@@ -91,6 +91,7 @@ fun IllustDetailScreen(
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val settings = LocalSettingsRepository.current
 
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
@@ -222,7 +223,7 @@ fun IllustDetailScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.Show,
-                                                contentDescription = "浏览量",
+                                                contentDescription = strings.views,
                                                 modifier = Modifier.size(16.dp),
                                                 tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
@@ -239,7 +240,7 @@ fun IllustDetailScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.Favorites,
-                                                contentDescription = "收藏量",
+                                                contentDescription = strings.bookmarks,
                                                 modifier = Modifier.size(16.dp),
                                                 tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
@@ -256,7 +257,7 @@ fun IllustDetailScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.Recent,
-                                                contentDescription = "发布时间",
+                                                contentDescription = strings.publishDate,
                                                 modifier = Modifier.size(16.dp),
                                                 tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
@@ -270,7 +271,7 @@ fun IllustDetailScreen(
 
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "ID: ${illust.id}   分辨率: ${illust.width}x${illust.height}",
+                                        text = "ID: ${illust.id}   ${illust.width}x${illust.height}",
                                         style = MiuixTheme.textStyles.footnote2,
                                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
@@ -309,7 +310,7 @@ fun IllustDetailScreen(
                                         }
                                         Icon(
                                             imageVector = MiuixIcons.Search,
-                                            contentDescription = "查看画师主页",
+                                            contentDescription = strings.author,
                                             tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             modifier = Modifier.size(18.dp),
                                         )
@@ -319,8 +320,8 @@ fun IllustDetailScreen(
                                     if (illust.pageCount > 1) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                         BasicComponent(
-                                            title = "下载全部页",
-                                            summary = "共 ${illust.pageCount} 页",
+                                            title = strings.downloadTaskFilterAll,
+                                            summary = "${illust.pageCount} P",
                                             onClick = {
                                                 if (isDownloading) return@BasicComponent
                                                 coroutineScope.launch {
@@ -329,15 +330,15 @@ fun IllustDetailScreen(
                                                         val tasks = downloadRepository.downloadAllPages(
                                                             illust,
                                                             onProgress = { completed, total ->
-                                                                toastMessage = "下载中 $completed/$total"
+                                                                toastMessage = "${strings.downloadStatusDownloading} $completed/$total"
                                                             },
                                                         )
                                                         val successCount = tasks.count { it.status == DownloadStatus.Success }
                                                         val failedCount = tasks.count { it.status == DownloadStatus.Failed }
                                                         toastMessage = when {
-                                                             failedCount == 0 -> "全部下载成功: $successCount/${tasks.size}"
-                                                             successCount == 0 -> "全部下载失败"
-                                                             else -> "下载完成: 成功 $successCount, 失败 $failedCount"
+                                                            failedCount == 0 -> "${strings.downloadStatusSuccess}: $successCount/${tasks.size}"
+                                                            successCount == 0 -> strings.downloadStatusFailed
+                                                            else -> "${strings.downloadStatusSuccess}: $successCount, ${strings.downloadStatusFailed} $failedCount"
                                                         }
                                                     } finally {
                                                         isDownloading = false
@@ -351,8 +352,8 @@ fun IllustDetailScreen(
                                     illust.series?.let { series ->
                                         Spacer(modifier = Modifier.height(6.dp))
                                         BasicComponent(
-                                            title = "所属系列",
-                                            summary = series.title.orEmpty(),
+                                            title = series.title.orEmpty(),
+                                            summary = "",
                                             onClick = { onIllustSeriesClick(series.id) },
                                         )
                                     }
@@ -377,7 +378,7 @@ fun IllustDetailScreen(
                                             .padding(16.dp),
                                     ) {
                                         Text(
-                                            text = "简介",
+                                            text = strings.searchTargetTitleCaption,
                                             style = MiuixTheme.textStyles.title4,
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -407,7 +408,7 @@ fun IllustDetailScreen(
                                             .padding(16.dp),
                                     ) {
                                         Text(
-                                            text = "标签",
+                                            text = strings.tags,
                                             style = MiuixTheme.textStyles.title4,
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
@@ -439,13 +440,13 @@ fun IllustDetailScreen(
                                     .padding(horizontal = 12.dp),
                             ) {
                                 BasicComponent(
-                                    title = "查看评论",
-                                    summary = "${illust.totalComments ?: 0} 条评论",
+                                    title = strings.commentsTitle,
+                                    summary = "${illust.totalComments ?: 0}",
                                     onClick = { onCommentsClick(illust.id) },
                                 )
                                 BasicComponent(
-                                    title = "相关作品",
-                                    summary = "查看同类推荐与关联画作",
+                                    title = strings.relatedIllusts,
+                                    summary = "",
                                     onClick = { onRelatedIllustsClick(illust.id) },
                                 )
                             }
@@ -495,7 +496,7 @@ fun IllustDetailScreen(
             ) {
                 Icon(
                     imageVector = MiuixIcons.Back,
-                    contentDescription = "返回",
+                    contentDescription = strings.back,
                     tint = Color.White,
                 )
             }
@@ -538,7 +539,7 @@ fun IllustDetailScreen(
                                             }.onSuccess {
                                                 isBookmarked = !isBookmarked
                                             }.onFailure { e ->
-                                                bookmarkError = e.message ?: "收藏操作失败"
+                                                bookmarkError = e.message ?: strings.loadFailed
                                             }
                                         } finally {
                                             isBookmarkLoading = false
@@ -551,7 +552,7 @@ fun IllustDetailScreen(
                 ) {
                     Icon(
                         imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                        contentDescription = if (isBookmarked) "已收藏" else "收藏",
+                        contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
                         tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
                     )
                 }
@@ -575,11 +576,11 @@ fun IllustDetailScreen(
                                 coroutineScope.launch {
                                     try {
                                         isDownloading = true
-                                        toastMessage = "下载中…"
+                                        toastMessage = "${strings.downloadStatusDownloading}…"
                                         val task = downloadRepository.download(illust, pageIndex = 0)
                                         toastMessage = when (task.status) {
-                                            DownloadStatus.Success -> "下载成功"
-                                            DownloadStatus.Failed -> "下载失败: ${task.error ?: "未知错误"}"
+                                            DownloadStatus.Success -> strings.downloadStatusSuccess
+                                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
                                             else -> null
                                         }
                                     } finally {
@@ -592,7 +593,7 @@ fun IllustDetailScreen(
                 ) {
                     Icon(
                         imageVector = MiuixIcons.Download,
-                        contentDescription = "下载",
+                        contentDescription = strings.download,
                         tint = Color.White,
                     )
                 }
@@ -617,7 +618,7 @@ fun IllustDetailScreen(
                 ) {
                     Icon(
                         imageVector = MiuixIcons.More,
-                        contentDescription = "更多",
+                        contentDescription = strings.menuMoreActions,
                         tint = Color.White,
                     )
                 }
@@ -641,24 +642,24 @@ fun IllustDetailScreen(
                     showActionMenu = false
                     val text = buildIllustCopyInfo(it)
                     runCatching { clipboard.copy(text) }.fold(
-                        onSuccess = { toastMessage = "已复制到剪贴板" },
-                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.copiedToClipboard },
+                        onFailure = { e -> toastMessage = "${strings.copy}: ${e.message}" },
                     )
                 },
                 onCopyLink = {
                     showActionMenu = false
                     val link = buildIllustShareLink(it)
                     runCatching { clipboard.copy(link) }.fold(
-                        onSuccess = { toastMessage = "链接已复制" },
-                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.copiedToClipboard },
+                        onFailure = { e -> toastMessage = "${strings.copy}: ${e.message}" },
                     )
                 },
                 onShareLink = {
                     showActionMenu = false
                     val link = buildIllustShareLink(it)
                     runCatching { share.share(link, it.title) }.fold(
-                        onSuccess = { toastMessage = "已分享" },
-                        onFailure = { e -> toastMessage = "分享失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.share },
+                        onFailure = { e -> toastMessage = "${strings.share}: ${e.message}" },
                     )
                 },
                 onBan = {
@@ -669,9 +670,9 @@ fun IllustDetailScreen(
                         }.fold(
                             onSuccess = {
                                 isBanned = true
-                                toastMessage = "已屏蔽"
+                                toastMessage = strings.menuBanWork
                             },
-                            onFailure = { e -> toastMessage = "屏蔽失败: ${e.message}" },
+                            onFailure = { e -> toastMessage = "${strings.menuBanWork}: ${e.message}" },
                         )
                     }
                 },
@@ -721,18 +722,19 @@ private fun BanPage(
     onView: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "作品\n$name\n",
+            text = "$name\n",
             style = MiuixTheme.textStyles.title2,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onView) {
-            Text(text = "查看")
+            Text(text = strings.confirm)
         }
     }
 }

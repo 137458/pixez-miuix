@@ -174,10 +174,10 @@ fun LayoutSettingScreen(
 /**
  * 正在编辑的布局设置类型。
  */
-private enum class LayoutType(val title: String) {
-    PadMode("平板模式"),
-    CrossCount("竖屏固定列数"),
-    HCrossCount("横屏固定列数"),
+private enum class LayoutType {
+    PadMode,
+    CrossCount,
+    HCrossCount,
 }
 
 /**

@@ -40,6 +40,8 @@ fun CopyTextSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 使用 TextFieldValue 以便跟踪和操控光标/选区。
     var textFieldValue by remember {
         mutableStateOf(
@@ -50,16 +52,34 @@ fun CopyTextSettingScreen(
         )
     }
 
+    val placeholderChips = remember(strings) {
+        listOf(
+            PlaceholderChip(label = strings.copyTextChipTitle, text = "{title}"),
+            PlaceholderChip(label = strings.copyTextChipIllustId, text = "{illust_id}"),
+            PlaceholderChip(label = strings.copyTextChipUserId, text = "{user_id}"),
+            PlaceholderChip(label = strings.copyTextChipUserName, text = "{user_name}"),
+            PlaceholderChip(label = strings.copyTextChipTags, text = "{tags}"),
+            PlaceholderChip(
+                label = strings.copyTextChipArtworkUrl,
+                text = "https://www.pixiv.net/artworks/{illust_id}",
+            ),
+            PlaceholderChip(
+                label = strings.copyTextChipUserUrl,
+                text = "https://www.pixiv.net/users/{user_id}",
+            ),
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "分享格式",
+                title = strings.copyTextFormatTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -75,7 +95,7 @@ fun CopyTextSettingScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "重置",
+                            contentDescription = strings.copyTextFormatReset,
                         )
                     }
                     // 保存并返回。
@@ -87,7 +107,7 @@ fun CopyTextSettingScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Ok, // 保存：MIUIX 无 Save，用 Ok 语义最接近
-                            contentDescription = "保存",
+                            contentDescription = strings.complete,
                         )
                     }
                 },
@@ -99,12 +119,12 @@ fun CopyTextSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                top.yukonga.miuix.kmp.basic.SmallTitle(text = "格式模板")
+                top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionTemplate)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     TextField(
                         value = textFieldValue,
                         onValueChange = { textFieldValue = it },
-                        label = "分享格式模板",
+                        label = strings.copyTextFormatLabel,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp),
@@ -113,7 +133,7 @@ fun CopyTextSettingScreen(
                 }
             }
             item {
-                top.yukonga.miuix.kmp.basic.SmallTitle(text = "快捷插入占位符")
+                top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionChips)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     FlowRow(
                         modifier = Modifier
@@ -122,7 +142,7 @@ fun CopyTextSettingScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        PLACEHOLDER_CHIPS.forEach { chip ->
+                        placeholderChips.forEach { chip ->
                             InsertChip(
                                 label = chip.label,
                                 onClick = {

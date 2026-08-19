@@ -25,6 +25,7 @@ import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -61,6 +62,7 @@ fun HelloScreen(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
+    val strings = LocalStrings.current
     // retryCount 作为 produceState 的 key，手动刷新或点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
@@ -164,9 +166,6 @@ fun HelloScreen(
         }
     }
 
-
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
     WindowDialog(
         title = strings.dialogNeedLogin,
@@ -206,7 +205,7 @@ fun HelloScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "首页",
+                title = strings.tabRecommend,
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(
@@ -214,7 +213,7 @@ fun HelloScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                     if (isLoggedIn == false) {
@@ -223,7 +222,7 @@ fun HelloScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Contacts,
-                                contentDescription = "登录",
+                                contentDescription = strings.goLogin,
                             )
                         }
                     }
@@ -233,7 +232,7 @@ fun HelloScreen(
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.AddCircle,
-                                contentDescription = "推荐用户",
+                                contentDescription = strings.recomUserTitle,
                             )
                         }
                     }
@@ -242,7 +241,7 @@ fun HelloScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Settings,
-                            contentDescription = "设置",
+                            contentDescription = strings.tabSettings,
                         )
                     }
                 },
@@ -255,7 +254,7 @@ fun HelloScreen(
             result.isSuccess -> {
                 if (illusts.isEmpty()) {
                     EmptyPlaceholder(
-                        message = if (isLoggedIn == true) "暂无推荐内容" else "暂无内容",
+                        message = strings.noData,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),

@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -44,6 +45,7 @@ fun UserShowAISettingScreen(
     onBack: () -> Unit,
     userRepository: UserRepository,
 ) {
+    val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
 
     // 当前选中的 AI 显示状态，以服务器返回结果为准。
@@ -71,13 +73,11 @@ fun UserShowAISettingScreen(
                 currentShowAI = response.showAI
             }.onFailure { e ->
                 Napier.e("更新 AI 显示设置失败", e)
-                toastMessage = "更新失败：${e.message}"
+                toastMessage = "${strings.loadFailed}：${e.message}"
             }
             isUpdating = false
         }
     }
-
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -100,11 +100,11 @@ fun UserShowAISettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "显示选项")
+                SmallTitle(text = strings.aiDisplayOptions)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "显示",
-                        summary = "展示所有 AI 生成作品",
+                        title = strings.aiDisplayShow,
+                        summary = strings.aiDisplayShowSummary,
                         onClick = { changeShowAI(true) },
                         endActions = {
                             if (currentShowAI) {
@@ -113,8 +113,8 @@ fun UserShowAISettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "部分隐藏",
-                        summary = "隐藏部分 AI 生成作品",
+                        title = strings.aiDisplayHidePartial,
+                        summary = strings.aiDisplayHidePartialSummary,
                         onClick = { changeShowAI(false) },
                         endActions = {
                             if (!currentShowAI) {

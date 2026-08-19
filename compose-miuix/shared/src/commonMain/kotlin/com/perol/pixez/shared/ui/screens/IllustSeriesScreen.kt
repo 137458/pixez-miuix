@@ -20,6 +20,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Icon
@@ -71,6 +72,8 @@ fun IllustSeriesScreen(
         }
     }
 
+    val strings = LocalStrings.current
+
     val state = produceState<Result<Triple<String, List<Illust>, String?>>?>(
         initialValue = null,
         seriesId,
@@ -81,13 +84,13 @@ fun IllustSeriesScreen(
         val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
         isManualRefreshing = false
         value = seriesResult.map { model ->
-            val title = model.illustSeriesDetail?.title ?: "系列"
+            val title = model.illustSeriesDetail?.title ?: ""
             val filtered = filterBanned(model.illusts.orEmpty())
             Triple(title, filtered, model.nextUrl)
         }
     }
 
-    var seriesTitle by remember(seriesId) { mutableStateOf("系列") }
+    var seriesTitle by remember(seriesId) { mutableStateOf("") }
     var illusts by remember(seriesId) { mutableStateOf(listOf<Illust>()) }
     var nextUrl by remember(seriesId) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
@@ -140,7 +143,7 @@ fun IllustSeriesScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -148,7 +151,7 @@ fun IllustSeriesScreen(
                     IconButton(onClick = triggerManualRefresh) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -165,7 +168,7 @@ fun IllustSeriesScreen(
             result.isSuccess -> {
                 if (illusts.isEmpty()) {
                     EmptyPlaceholder(
-                        message = "系列内暂无作品",
+                        message = strings.seriesEmpty,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),

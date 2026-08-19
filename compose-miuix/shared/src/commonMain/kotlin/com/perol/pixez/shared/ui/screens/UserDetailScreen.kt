@@ -39,6 +39,7 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -78,6 +79,7 @@ fun UserDetailScreen(
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    val strings = LocalStrings.current
 
     // 用户资料加载失败时整页进入错误态；成功后再展示 Tab 内容。
     val detailState = produceState<Result<UserDetail>?>(
@@ -107,12 +109,12 @@ fun UserDetailScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             SmallTopAppBar(
-                title = userDetail?.user?.name ?: "用户详情",
+                title = userDetail?.user?.name ?: "",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -123,7 +125,7 @@ fun UserDetailScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.More,
-                            contentDescription = "更多",
+                            contentDescription = strings.menuMoreActions,
                         )
                     }
                 },
@@ -167,7 +169,7 @@ fun UserDetailScreen(
                                             }.onSuccess {
                                                 isFollowed = !isFollowed
                                             }.onFailure { e ->
-                                                followError = e.message ?: "关注操作失败"
+                                                followError = e.message ?: "${strings.follow}${strings.loadFailed}"
                                             }
                                         } finally {
                                             isFollowLoading = false
@@ -208,24 +210,24 @@ fun UserDetailScreen(
                     showActionMenu = false
                     val text = buildUserCopyInfo(it)
                     runCatching { clipboard.copy(text) }.fold(
-                        onSuccess = { toastMessage = "已复制到剪贴板" },
-                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.copiedToClipboard },
+                        onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
                     )
                 },
                 onCopyLink = {
                     showActionMenu = false
                     val link = buildUserShareLink(it.user.id)
                     runCatching { clipboard.copy(link) }.fold(
-                        onSuccess = { toastMessage = "链接已复制" },
-                        onFailure = { e -> toastMessage = "复制失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.copiedToClipboard },
+                        onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
                     )
                 },
                 onShareLink = {
                     showActionMenu = false
                     val link = buildUserShareLink(it.user.id)
                     runCatching { share.share(link, it.user.name) }.fold(
-                        onSuccess = { toastMessage = "已分享" },
-                        onFailure = { e -> toastMessage = "分享失败: ${e.message}" },
+                        onSuccess = { toastMessage = strings.share },
+                        onFailure = { e -> toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}" },
                     )
                 },
             )
@@ -244,9 +246,10 @@ private fun UserDetailTabContent(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
+    val strings = LocalStrings.current
     // 主 Tab 选中状态：0 = 作品，1 = 收藏。
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf("作品", "收藏")
+    val tabs = listOf(strings.userWorkTab, strings.userBookmarkTab)
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(
@@ -357,6 +360,8 @@ private fun UserWorksTab(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     IllustTabBody(
         state = state.value,
         illusts = illusts,
@@ -366,7 +371,7 @@ private fun UserWorksTab(
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
         onRetry = { retryCount++ },
-        emptyText = "暂无作品",
+        emptyText = strings.userNoWorks,
     )
 }
 
@@ -381,9 +386,10 @@ private fun UserBookmarksTab(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
+    val strings = LocalStrings.current
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
     var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
-    val restrictTabs = listOf("公开", "私密")
+    val restrictTabs = listOf(strings.userPublicRestrict, strings.userPrivateRestrict)
     val restrict = if (selectedRestrictIndex == 0) "public" else "private"
 
     // 切换用户、可见性选项或重试时重新加载；加载完成后过滤掉被屏蔽作品。
@@ -475,7 +481,11 @@ private fun UserBookmarksTab(
                 onLoadMore = ::loadMore,
                 onIllustClick = onIllustClick,
                 onRetry = { retryCount++ },
-                emptyText = "暂无${if (restrict == "public") "公开" else "私密"}收藏",
+                emptyText = if (restrict == "public") {
+                    strings.userNoBookmarks.format(strings.userPublicRestrict)
+                } else {
+                    strings.userNoBookmarks.format(strings.userPrivateRestrict)
+                },
             )
         }
     }
@@ -535,6 +545,7 @@ private fun UserProfileHeader(
     onFollowerListClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -579,7 +590,7 @@ private fun UserProfileHeader(
         ) {
             val followCount = userDetail.profile.totalFollowUsers
             Text(
-                text = "关注 $followCount",
+                text = strings.userFollowCount.format(followCount),
                 style = MiuixTheme.textStyles.body2,
                 modifier = Modifier
                     .clickable(enabled = followCount > 0, onClick = onFollowListClick)
@@ -587,7 +598,7 @@ private fun UserProfileHeader(
             )
             val followerCount = userDetail.profile.totalMypixivUsers
             Text(
-                text = "好P友 $followerCount",
+                text = strings.userFollowerCount.format(followerCount),
                 style = MiuixTheme.textStyles.body2,
                 modifier = Modifier
                     .clickable(enabled = followerCount > 0, onClick = onFollowerListClick)
@@ -595,9 +606,9 @@ private fun UserProfileHeader(
             )
         }
         // 外部链接：仅在存在非空链接时展示。
-        val externalLinks = listOfNotNull(
+        val externalLinks: List<Pair<String, String>> = listOfNotNull(
             userDetail.profile.twitterUrl?.takeIf { it.isNotBlank() }?.let { "Twitter" to it },
-            userDetail.profile.webpage?.takeIf { it.isNotBlank() }?.let { "网页" to it },
+            userDetail.profile.webpage?.takeIf { it.isNotBlank() }?.let { strings.userWebpage to it },
             userDetail.profile.pawooUrl?.takeIf { it.isNotBlank() }?.let { "Pawoo" to it },
         )
         if (externalLinks.isNotEmpty()) {
@@ -623,7 +634,7 @@ private fun UserProfileHeader(
             enabled = !isLoading,
             colors = ButtonDefaults.buttonColorsPrimary(),
         ) {
-            Text(text = if (isFollowed) "已关注" else "关注")
+            Text(text = if (isFollowed) strings.followed else strings.follow)
         }
     }
 }

@@ -88,8 +88,8 @@ fun AccountEditScreen(
     // Toast 提示文本，为 null 时不显示。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // 页面进入时加载当前账号，并根据邮箱认证状态预填充当前密码：
-    // 仅非邮箱认证账号才预填充已保存密码，与 Flutter 原版逻辑保持一致。
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     LaunchedEffect(accountRepository) {
         // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
         suspendRunCatchingNonCancel { accountRepository.currentAccount() }
@@ -104,7 +104,7 @@ fun AccountEditScreen(
             }
             .onFailure { e ->
                 Napier.e("加载账号信息失败", e)
-                toastMessage = "加载账号失败：${e.message}"
+                toastMessage = "${strings.loadFailed}: ${e.message}"
             }
     }
 
@@ -112,12 +112,12 @@ fun AccountEditScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "账号信息",
+                title = strings.accountEditTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -143,7 +143,7 @@ fun AccountEditScreen(
 
                 item {
                     SmallTitle(
-                        text = "修改信息",
+                        text = strings.accountEditSectionInfo,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -156,7 +156,7 @@ fun AccountEditScreen(
                             TextField(
                                 value = currentPassword,
                                 onValueChange = { currentPassword = it },
-                                label = "当前密码",
+                                label = strings.accountEditCurrentPassword,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 visualTransformation = if (currentPasswordVisible) {
@@ -174,7 +174,7 @@ fun AccountEditScreen(
                             TextField(
                                 value = newPassword,
                                 onValueChange = { newPassword = it },
-                                label = "新密码",
+                                label = strings.accountEditNewPassword,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 visualTransformation = if (newPasswordVisible) {
@@ -192,7 +192,7 @@ fun AccountEditScreen(
                             TextField(
                                 value = email,
                                 onValueChange = { email = it },
-                                label = "邮箱",
+                                label = strings.accountEditEmail,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                             )
@@ -200,15 +200,15 @@ fun AccountEditScreen(
                                 onClick = {
                                     if (isSaving) return@Button
                                     if (currentPassword.isBlank()) {
-                                        toastMessage = "请输入当前密码"
+                                        toastMessage = strings.accountEditInputCurrentPassword
                                         return@Button
                                     }
                                     if (email.isBlank()) {
-                                        toastMessage = "请输入邮箱"
+                                        toastMessage = strings.accountEditInputEmail
                                         return@Button
                                     }
                                     if (!EMAIL_REGEX.matches(email)) {
-                                        toastMessage = "邮箱格式错误"
+                                        toastMessage = strings.accountEditEmailFormatError
                                         return@Button
                                     }
 
@@ -222,11 +222,11 @@ fun AccountEditScreen(
                                                     newMailAddress = email.takeIf { it.isNotBlank() },
                                                 )
                                             }.onSuccess {
-                                                toastMessage = "保存成功"
+                                                toastMessage = strings.accountEditSaveSuccess
                                                 currentPassword = ""
                                                 newPassword = ""
                                             }.onFailure { e ->
-                                                toastMessage = "保存失败：${e.message}"
+                                                toastMessage = "${strings.accountEditSaveFailed}：${e.message}"
                                                 Napier.e("保存账号信息失败", e)
                                             }
                                         } finally {
@@ -237,7 +237,7 @@ fun AccountEditScreen(
                                 enabled = !isSaving,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(text = if (isSaving) "保存中…" else "保存")
+                                Text(text = if (isSaving) strings.accountEditSaving else strings.accountEditSave)
                             }
                         }
                     }
@@ -247,20 +247,20 @@ fun AccountEditScreen(
                 if (account?.isMailAuthorized == 1) {
                     item {
                         SmallTitle(
-                            text = "安全",
+                            text = strings.accountEditSectionSecurity,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                         )
                         top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                             BasicComponent(
-                                title = "复制 Refresh Token",
-                                summary = "将当前账号的 refresh token 复制到剪贴板",
+                                title = strings.accountEditCopyRefreshToken,
+                                summary = strings.accountEditCopyRefreshTokenSummary,
                                 onClick = {
                                     account?.refreshToken?.let { token ->
                                         try {
                                             clipboard.copy(token)
-                                            toastMessage = "已复制到剪贴板"
+                                            toastMessage = strings.copiedToClipboard
                                         } catch (e: Exception) {
-                                            toastMessage = "复制失败：${e.message}"
+                                            toastMessage = "${strings.copy}${strings.loadFailed}：${e.message}"
                                             Napier.e("复制 refresh token 失败", e)
                                         }
                                     }
@@ -272,13 +272,13 @@ fun AccountEditScreen(
 
                 item {
                     SmallTitle(
-                        text = "危险操作",
+                        text = strings.accountEditSectionDanger,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                     )
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
-                            title = "账号注销",
-                            summary = "跳转到 Pixiv 账号注销页面",
+                            title = strings.accountEditLogoutTitle,
+                            summary = strings.accountEditLogoutSummary,
                             onClick = { showDeletionConfirm = true },
                         )
                     }
@@ -293,7 +293,7 @@ fun AccountEditScreen(
                         try {
                             openBrowser("https://www.pixiv.net/leave_pixiv.php")
                         } catch (e: Exception) {
-                            toastMessage = "打开浏览器失败：${e.message}"
+                            toastMessage = "${strings.loadFailed}：${e.message}"
                             Napier.e("打开账号注销页面失败", e)
                         }
                     },
@@ -345,10 +345,11 @@ private fun PasswordVisibilityToggle(
     visible: Boolean,
     onToggle: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     IconButton(onClick = onToggle) {
         Icon(
             imageVector = if (visible) MiuixIcons.Hide else MiuixIcons.Show,
-            contentDescription = if (visible) "隐藏密码" else "显示密码",
+            contentDescription = if (visible) strings.accountEditHidePassword else strings.accountEditShowPassword,
         )
     }
 }
@@ -362,6 +363,7 @@ private fun DeletionConfirmBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -370,18 +372,18 @@ private fun DeletionConfirmBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "确定跳转到账号注销页面？",
+            text = strings.accountEditLogoutConfirm,
             modifier = Modifier.weight(1f),
             style = MiuixTheme.textStyles.body1,
         )
         TextButton(
-            text = "取消",
+            text = strings.cancel,
             onClick = onCancel,
         )
         Button(
             onClick = onConfirm,
         ) {
-            Text("确定")
+            Text(strings.confirm)
         }
     }
 }

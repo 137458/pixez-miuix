@@ -114,6 +114,12 @@ class PixivHttpClient(
         private const val OAUTH_HOST = "oauth.secure.pixiv.net"
         private const val ACCOUNTS_HOST = "accounts.pixiv.net"
 
+        private val defaultJson = Json {
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+            isLenient = true
+        }
+
         /**
          * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。
          */
@@ -127,17 +133,11 @@ class PixivHttpClient(
                     host = OAUTH_HOST
                 }
                 PixivHeaders.commonHeaders(languageProvider()).forEach { (key, value) ->
-                    headers.append(key, value)
+                    headers[key] = value
                 }
             }
             install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        coerceInputValues = true
-                        isLenient = true
-                    },
-                )
+                json(defaultJson)
             }
             if (enableLogging) {
                 install(Logging) {
@@ -156,9 +156,32 @@ class PixivHttpClient(
             HttpResponseValidator {
                 validateResponse { response: HttpResponse ->
                     if (response.status.value >= 400) {
+                        val errorDetail = try {
+                            val body = response.bodyAsText()
+                            if (body.isNotBlank()) {
+                                try {
+                                    val parsed = defaultJson
+                                        .decodeFromString<com.perol.pixez.shared.data.model.LoginErrorResponse>(body)
+                                    parsed.errors.system.message
+                                } catch (_: Exception) {
+                                    body.take(200)
+                                }
+                            } else {
+                                null
+                            }
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                        val message = if (!errorDetail.isNullOrBlank()) {
+                            "OAuth 认证失败: $errorDetail (${response.status})"
+                        } else {
+                            "OAuth 请求失败: ${response.status}"
+                        }
+
                         throw PixivApiException(
                             statusCode = response.status.value,
-                            message = "OAuth 请求失败: ${response.status}",
+                            message = message,
                         )
                     }
                 }

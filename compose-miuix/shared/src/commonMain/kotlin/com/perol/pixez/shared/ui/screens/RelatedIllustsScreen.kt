@@ -126,17 +126,19 @@ fun RelatedIllustsScreen(
 
     val scrollBehavior = MiuixScrollBehavior()
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "相关作品",
+                title = strings.relatedIllusts,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -144,7 +146,7 @@ fun RelatedIllustsScreen(
                     IconButton(onClick = triggerManualRefresh) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -161,7 +163,7 @@ fun RelatedIllustsScreen(
             result.isSuccess -> {
                 if (illusts.isEmpty()) {
                     EmptyPlaceholder(
-                        message = "暂无相关作品",
+                        message = strings.relatedIllustsEmpty,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),

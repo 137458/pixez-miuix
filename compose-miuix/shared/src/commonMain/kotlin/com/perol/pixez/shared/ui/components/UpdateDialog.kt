@@ -67,7 +67,7 @@ fun UpdateDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 Text(
-                    text = releaseInfo.changelog.ifBlank { "包含性能提升与问题修复。" },
+                    text = releaseInfo.changelog.ifBlank { strings.updateChangelogTitle },
                     style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp, lineHeight = 18.sp),
                     color = MiuixTheme.colorScheme.onSurface,
                 )

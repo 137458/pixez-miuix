@@ -118,6 +118,12 @@ fun NetworkSettingScreen(
         toastMessage = null
     }
 
+    val networkModes = listOf(
+        Triple("ech", "ECH", strings.networkModeEchSummary),
+        Triple("compat", strings.networkModeCompat, strings.networkModeCompatSummary),
+        Triple("standard", strings.networkModeStandard, strings.networkModeStandardSummary),
+    )
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -141,7 +147,7 @@ fun NetworkSettingScreen(
             item {
                 SmallTitle(text = strings.oauthNetworkMode)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    NETWORK_MODES.forEach { (code, label, description) ->
+                    networkModes.forEach { (code, label, description) ->
                         NetworkModeOption(
                             label = label,
                             description = description,
@@ -155,7 +161,7 @@ fun NetworkSettingScreen(
             item {
                 SmallTitle(text = strings.apiNetworkMode)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    NETWORK_MODES.forEach { (code, label, description) ->
+                    networkModes.forEach { (code, label, description) ->
                         NetworkModeOption(
                             label = label,
                             description = description,
@@ -172,7 +178,7 @@ fun NetworkSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
                             title = DEFAULT_IMAGE_HOST,
-                            summary = "Default (i.pximg.net)",
+                            summary = "i.pximg.net",
                             onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
                             endActions = {
                                 CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
@@ -180,7 +186,7 @@ fun NetworkSettingScreen(
                         )
                         BasicComponent(
                             title = MIRROR_IMAGE_HOST,
-                            summary = "Mirror (pixiv.re)",
+                            summary = "pixiv.re",
                             onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
                             endActions = {
                                 CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
@@ -257,12 +263,3 @@ private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
  * standard 网络模式 code：该模式下不显示图片源选择。
  */
 private const val NETWORK_MODE_STANDARD = "standard"
-
-/**
- * 可选网络模式列表：顺序与 Flutter 版 NetworkMode.selectableValues 一致。
- */
-private val NETWORK_MODES = listOf(
-    Triple("ech", "ECH", "通过 Encrypted ClientHello 绕过 SNI 审查"),
-    Triple("compat", "兼容", "绕过 SNI 并使用 DoH"),
-    Triple("standard", "标准", "标准连接，不使用绕过策略"),
-)

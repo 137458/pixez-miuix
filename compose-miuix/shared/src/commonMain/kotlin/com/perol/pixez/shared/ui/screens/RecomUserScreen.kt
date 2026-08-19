@@ -30,6 +30,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -132,17 +133,19 @@ fun RecomUserScreen(
         }
     }
 
+    val strings = LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "为你推荐",
+                title = strings.recomUserTitle,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -150,7 +153,7 @@ fun RecomUserScreen(
                     IconButton(onClick = triggerManualRefresh) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -163,7 +166,7 @@ fun RecomUserScreen(
                 result.isSuccess -> {
                     if (previews.isEmpty()) {
                         EmptyPlaceholder(
-                            message = "暂无推荐用户",
+                            message = strings.recomUserEmpty,
                             modifier = Modifier.fillMaxSize().padding(paddingValues),
                         )
                     } else {
@@ -203,16 +206,16 @@ fun RecomUserScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
                                                 Text(
-                                                    text = "加载失败",
+                                                    text = strings.loadFailed,
                                                     style = MiuixTheme.textStyles.body2,
                                                     color = MiuixTheme.colorScheme.error,
                                                 )
                                                 Button(onClick = ::loadMore) {
-                                                    Text(text = "重试")
+                                                    Text(text = strings.retry)
                                                 }
                                             }
                                             nextUrl == null -> Text(
-                                                text = "没有更多了",
+                                                text = strings.noMoreData,
                                                 style = MiuixTheme.textStyles.footnote1,
                                             )
                                         }

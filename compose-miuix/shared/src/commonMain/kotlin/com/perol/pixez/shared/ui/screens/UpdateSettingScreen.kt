@@ -40,6 +40,7 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.effect.BgEffectBackground
 import com.perol.pixez.shared.ui.effect.isRuntimeShaderSupported
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,6 +74,7 @@ fun UpdateSettingScreen(
     updateCheckClient: HttpClient = defaultUpdateCheckClient,
     onBack: () -> Unit,
 ) {
+    val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val lazyListState = rememberLazyListState()
@@ -99,12 +101,12 @@ fun UpdateSettingScreen(
                     if (info.isNew && userInitiated) {
                         showDialog = true
                     } else if (!info.isNew && userInitiated) {
-                        toastMessage = "当前已是最新版本"
+                        toastMessage = strings.updateLatest.format(AppInfo.VERSION_NAME)
                     }
                 }
                 .onFailure { error ->
-                    val message = error.message ?: "网络连接失败"
-                    toastMessage = "检查更新失败: $message"
+                    val message = error.message ?: strings.loadFailed
+                    toastMessage = "${strings.loadFailed}: $message"
                 }
         } finally {
             isChecking = false
@@ -133,7 +135,6 @@ fun UpdateSettingScreen(
 
     val density = LocalDensity.current
     var logoHeightDp by remember { mutableStateOf(240.dp) }
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         topBar = {
@@ -212,7 +213,7 @@ fun UpdateSettingScreen(
 
                 if (isChecking) {
                     Text(
-                        text = "正在检查新版本…",
+                        text = strings.updateChecking,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
@@ -225,7 +226,7 @@ fun UpdateSettingScreen(
                     )
                 } else if (hasNew) {
                     Text(
-                        text = "发现新版本 v${releaseInfo?.versionName} (当前 v${AppInfo.VERSION_NAME})",
+                        text = strings.updateFoundNew.format(releaseInfo?.versionName ?: "", AppInfo.VERSION_NAME),
                         color = MiuixTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
@@ -239,7 +240,7 @@ fun UpdateSettingScreen(
                     )
                 } else {
                     Text(
-                        text = "当前已是最新版本 (v${AppInfo.VERSION_NAME})",
+                        text = strings.updateLatest.format(AppInfo.VERSION_NAME),
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
@@ -273,7 +274,7 @@ fun UpdateSettingScreen(
                 // ── 新版本更新日志（若存在更新） ──
                 if (hasNew && releaseInfo != null) {
                     item(key = "changelog") {
-                        SmallTitle(text = "更新日志 (v${releaseInfo?.versionName})")
+                        SmallTitle(text = strings.updateChangelogTitle.format(releaseInfo?.versionName ?: ""))
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -281,7 +282,7 @@ fun UpdateSettingScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = releaseInfo?.title ?: "新版本发布",
+                                    text = releaseInfo?.title ?: strings.updateNewRelease,
                                     style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
                                     color = MiuixTheme.colorScheme.onSurface,
                                 )
@@ -293,7 +294,7 @@ fun UpdateSettingScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 TextButton(
-                                    text = "立即下载并安装新版本",
+                                    text = strings.updateDownloadNow,
                                     onClick = {
                                         releaseInfo?.releaseUrl?.let { url ->
                                             openBrowser(url)
@@ -310,15 +311,15 @@ fun UpdateSettingScreen(
 
                 // ── 更新设置 ──
                 item(key = "settings") {
-                    SmallTitle(text = "更新设置")
+                    SmallTitle(text = strings.updateSectionSettings)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp),
                     ) {
                         BasicComponent(
-                            title = "启动时自动检查更新",
-                            summary = "开启后每次启动应用自动查询最新版本",
+                            title = strings.updateAutoCheck,
+                            summary = strings.updateAutoCheckSummary,
                             endActions = {
                                 Switch(
                                     checked = autoCheckUpdate,
@@ -335,12 +336,12 @@ fun UpdateSettingScreen(
                         )
 
                         BasicComponent(
-                            title = "忽略当前版本",
+                            title = strings.updateIgnoreVersion,
                             summary = when {
-                                isChecking -> "检查完成后可配置"
-                                !hasNew -> "当前已是最新版本"
-                                ignoredVersion == releaseInfo?.versionName -> "已忽略此版本更新提醒"
-                                else -> "开启后不再主动弹窗提醒 v${releaseInfo?.versionName}"
+                                isChecking -> strings.loading
+                                !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
+                                ignoredVersion == releaseInfo?.versionName -> strings.updateIgnoreVersionIgnored
+                                else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName ?: "")
                             },
                             endActions = {
                                 Switch(
@@ -363,15 +364,15 @@ fun UpdateSettingScreen(
 
                 // ── 版本通道与操作 ──
                 item(key = "channel") {
-                    SmallTitle(text = "版本与通道")
+                    SmallTitle(text = strings.updateSectionChannel)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp),
                     ) {
                         BasicComponent(
-                            title = "手动检查更新",
-                            summary = if (isChecking) "正在检查中…" else "点击获取最新 Release",
+                            title = strings.updateManualCheck,
+                            summary = if (isChecking) strings.updateManualCheckSummaryChecking else strings.updateManualCheckSummaryIdle,
                             onClick = {
                                 coroutineScope.launch {
                                     doCheck(userInitiated = true)
@@ -388,15 +389,15 @@ fun UpdateSettingScreen(
 
                         BasicComponent(
                             title = "GitHub Releases",
-                            summary = "查看历史版本记录与源代码",
+                            summary = strings.updateGithubReleasesSummary,
                             onClick = {
                                 openBrowser(AppConstants.Urls.GITHUB_RELEASES)
                             },
                         )
 
                         BasicComponent(
-                            title = "HyperOS 3 背景光效",
-                            summary = "开启 OS3 动态流光背景着色器特效",
+                            title = strings.updateHyperOs3Effect,
+                            summary = strings.updateHyperOs3EffectSummary,
                             endActions = {
                                 Switch(
                                     checked = isOs3Effect,

@@ -72,12 +72,12 @@ kotlin {
             implementation(libs.napier)
 
             // Settings
-            implementation(libs.multiplatform.settings)
-            implementation(libs.multiplatform.settings.coroutines)
+            api(libs.multiplatform.settings)
+            api(libs.multiplatform.settings.coroutines)
 
             // SQLDelight runtime（提供 SqlDriver.Schema 等共享 API）与 coroutines 扩展
-            implementation(libs.sqldelight.runtime)
-            implementation(libs.sqldelight.coroutines.extensions)
+            api(libs.sqldelight.runtime)
+            api(libs.sqldelight.coroutines.extensions)
 
             // Coil
             implementation(libs.coil.compose)

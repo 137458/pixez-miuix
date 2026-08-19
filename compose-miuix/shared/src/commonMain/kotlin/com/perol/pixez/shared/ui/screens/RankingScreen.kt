@@ -32,6 +32,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -154,11 +155,13 @@ fun RankingScreen(
 
     val scrollBehavior = MiuixScrollBehavior()
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "排行榜",
+                title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(
@@ -166,7 +169,7 @@ fun RankingScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -203,7 +206,7 @@ fun RankingScreen(
                 result.isSuccess -> {
                     if (illusts.isEmpty()) {
                         EmptyPlaceholder(
-                            message = "暂无排行榜数据",
+                            message = strings.rankingEmpty,
                             modifier = Modifier.weight(1f),
                         )
                     } else {
@@ -242,6 +245,7 @@ private fun RankingModeSelector(
     selectedMode: RankingMode,
     onModeSelected: (RankingMode) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -250,7 +254,7 @@ private fun RankingModeSelector(
         items(RankingMode.entries) { mode ->
             val isSelected = mode == selectedMode
             Text(
-                text = mode.label,
+                text = mode.label(strings),
                 modifier = Modifier
                     .clickable { onModeSelected(mode) }
                     .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -274,20 +278,34 @@ private fun RankingModeSelector(
  */
 private enum class RankingMode(
     val code: String,
-    val label: String,
 ) {
-    DAY("day", "日榜"),
-    WEEK("week", "周榜"),
-    MONTH("month", "月榜"),
-    DAY_MALE("day_male", "男性向"),
-    DAY_FEMALE("day_female", "女性向"),
-    WEEK_ORIGINAL("week_original", "原创"),
-    DAY_ROOKIE("day_rookie", "新人"),
-    DAY_AI("day_ai", "AI 日榜"),
-    DAY_R18_AI("day_r18_ai", "AI R18 日榜"),
-    DAY_R18("day_r18", "R18 日榜"),
-    WEEK_R18("week_r18", "R18 周榜"),
-    WEEK_R18G("week_r18g", "R18G 周榜"),
+    DAY("day"),
+    WEEK("week"),
+    MONTH("month"),
+    DAY_MALE("day_male"),
+    DAY_FEMALE("day_female"),
+    WEEK_ORIGINAL("week_original"),
+    DAY_ROOKIE("day_rookie"),
+    DAY_AI("day_ai"),
+    DAY_R18_AI("day_r18_ai"),
+    DAY_R18("day_r18"),
+    WEEK_R18("week_r18"),
+    WEEK_R18G("week_r18g");
+
+    fun label(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String = when (this) {
+        DAY -> strings.rankingDay
+        WEEK -> strings.rankingWeek
+        MONTH -> strings.rankingMonth
+        DAY_MALE -> strings.rankingDayMale
+        DAY_FEMALE -> strings.rankingDayFemale
+        WEEK_ORIGINAL -> strings.rankingWeekOriginal
+        DAY_ROOKIE -> strings.rankingDayRookie
+        DAY_AI -> strings.rankingDayAi
+        DAY_R18_AI -> strings.rankingDayR18Ai
+        DAY_R18 -> strings.rankingDayR18
+        WEEK_R18 -> strings.rankingWeekR18
+        WEEK_R18G -> strings.rankingWeekR18G
+    }
 }
 
 /**
@@ -302,6 +320,7 @@ private fun RankingDateInput(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
     val isValid = date.isEmpty() || date.matches(RankingDateRegex)
     Column(modifier = modifier) {
         Row(
@@ -311,7 +330,7 @@ private fun RankingDateInput(
             TextField(
                 value = date,
                 onValueChange = onDateChange,
-                label = "日期 (YYYY-MM-DD)",
+                label = strings.rankingDateLabel,
                 modifier = Modifier.weight(1f),
                 enabled = true,
             )
@@ -320,12 +339,12 @@ private fun RankingDateInput(
                 onClick = onClear,
                 enabled = date.isNotEmpty(),
             ) {
-                Text("清空")
+                Text(strings.actionClear)
             }
         }
         if (!isValid) {
             Text(
-                text = "日期格式不正确",
+                text = strings.rankingDateFormatError,
                 color = MiuixTheme.colorScheme.error,
                 style = MiuixTheme.textStyles.body2,
                 modifier = Modifier.fillMaxWidth(),

@@ -38,6 +38,8 @@ import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.github.aakira.napier.Napier
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
@@ -147,13 +149,13 @@ fun AboutScreen(
                     name = "Perol_Notsfsssf",
                     message = "Founder & Maintainer",
                     avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
-                    onClick = { openUrlOrToast("https://github.com/Notsfsssf") { toastMessage = it } },
+                    onClick = { openUrlOrToast("https://github.com/Notsfsssf", strings) { toastMessage = it } },
                 )
                 DeveloperRow(
                     name = "Right now",
                     message = "Design & Multiplatform",
                     avatarUrl = "https://avatars.githubusercontent.com/u/104149371?v=4",
-                    onClick = { openUrlOrToast("https://github.com/137458") { toastMessage = it } },
+                    onClick = { openUrlOrToast("https://github.com/137458", strings) { toastMessage = it } },
                 )
             }
 
@@ -162,7 +164,7 @@ fun AboutScreen(
                 ContributorsRow(
                     contributors = CONTRIBUTORS,
                     onUrlClick = { url ->
-                        openUrlOrToast(url) { toastMessage = it }
+                        openUrlOrToast(url, strings) { toastMessage = it }
                     },
                 )
             }
@@ -173,14 +175,14 @@ fun AboutScreen(
                     title = strings.aboutRepo,
                     summary = "github.com/137458/pixez-miuix",
                     onClick = {
-                        openUrlOrToast(AppConstants.Urls.GITHUB_REPO) { toastMessage = it }
+                        openUrlOrToast(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
                     },
                 )
                 BasicComponent(
                     title = strings.aboutFeedback,
                     summary = "PxezFeedBack@outlook.com",
                     onClick = {
-                        openUrlOrToast("mailto:PxezFeedBack@outlook.com") { toastMessage = it }
+                        openUrlOrToast("mailto:PxezFeedBack@outlook.com", strings) { toastMessage = it }
                     },
                 )
                 BasicComponent(
@@ -356,11 +358,11 @@ private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed
 /**
  * 安全打开外部链接或展示 Toast 错误提示。
  */
-private fun openUrlOrToast(url: String, onError: (String) -> Unit) {
+private fun openUrlOrToast(url: String, strings: AppStrings, onError: (String) -> Unit) {
     try {
         openBrowser(url)
     } catch (e: Exception) {
         Napier.w(tag = "AboutScreen", throwable = e) { "Failed to open url: $url" }
-        onError("无法打开链接: ${e.message ?: "未知错误"}")
+        onError("${strings.loadFailed}: ${e.message ?: strings.loadFailed}")
     }
 }

@@ -50,15 +50,12 @@ internal expect fun getExportBaseDirectory(): String
 /**
  * 当前支持操作的数据类型列表，与原 Flutter DataExportPage 保持一致。
  */
-internal enum class DataType(
-    val title: String,
-    val summary: String,
-) {
-    SearchTagHistory("搜索标签历史", "导出/导入历史搜索记录"),
-    BookTags("收藏标签", "导出/导入常用的收藏标签"),
-    IllustHistory("插画历史", "导出/导入插画浏览历史"),
-    NovelHistory("小说历史", "导出/导入小说浏览历史"),
-    MuteData("屏蔽数据", "导出/导入屏蔽的标签、画师与作品"),
+internal enum class DataType {
+    SearchTagHistory,
+    BookTags,
+    IllustHistory,
+    NovelHistory,
+    MuteData,
 }
 
 /**

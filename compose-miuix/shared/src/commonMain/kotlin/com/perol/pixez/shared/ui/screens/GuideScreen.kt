@@ -221,7 +221,7 @@ private fun GuideLanguageStep(
             Spacer(modifier = Modifier.height(16.dp))
             val selectedOption = LANGUAGE_OPTIONS[selectedIndex]
             if (selectedOption.sponsors.isNotEmpty()) {
-                SmallTitle(text = "翻译贡献者 (Sponsors)")
+                SmallTitle(text = strings.sponsor)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -303,13 +303,13 @@ private fun GuideNetworkStep(
         }
 
         item {
-            SmallTitle(text = "图片加速源")
+            SmallTitle(text = strings.guideImageSource)
             Card(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 BasicComponent(
-                    title = "i.pixiv.re 镜像加速",
-                    summary = "推荐大陆网络使用，免翻墙加载作品插画与封面",
+                    title = strings.guideImageMirror,
+                    summary = strings.guideImageMirrorDesc,
                     onClick = {
                         isMirrorEnabled = true
                         settingsRepository.pictureSource = MIRROR_IMAGE_HOST
@@ -319,8 +319,8 @@ private fun GuideNetworkStep(
                     },
                 )
                 BasicComponent(
-                    title = "i.pximg.net 官方图床",
-                    summary = "直连 Pixiv 官方图片服务器（需代理工具支持）",
+                    title = strings.guideImageOfficial,
+                    summary = strings.guideImageOfficialDesc,
                     onClick = {
                         isMirrorEnabled = false
                         settingsRepository.pictureSource = "i.pximg.net"
@@ -334,13 +334,13 @@ private fun GuideNetworkStep(
 
         item {
             Spacer(modifier = Modifier.height(12.dp))
-            SmallTitle(text = "连接方式")
+            SmallTitle(text = strings.guideStepNetwork)
             Card(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 BasicComponent(
-                    title = "直连 / 外部代理环境",
-                    summary = "如果你正在使用全局代理工具，保持此模式体验最佳",
+                    title = strings.guideNetworkDirect,
+                    summary = strings.guideNetworkDirectDesc,
                     onClick = {
                         currentNetworkMode = "direct"
                         settingsRepository.apiNetworkMode = "direct"
@@ -351,8 +351,8 @@ private fun GuideNetworkStep(
                     },
                 )
                 BasicComponent(
-                    title = "内置 SNI 绕过直连",
-                    summary = "在无外网代理时尝试利用内置 SNI 绕过机制连接 Pixiv API",
+                    title = strings.guideNetworkSni,
+                    summary = strings.guideNetworkSniDesc,
                     onClick = {
                         currentNetworkMode = "sni"
                         settingsRepository.apiNetworkMode = "sni"
@@ -468,7 +468,7 @@ private fun GuideWelcomeStep(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "登录后可同步关注画师、收藏插画与漫游历史",
+                            text = strings.guideLoginBenefits,
                             style = MiuixTheme.textStyles.body2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             textAlign = TextAlign.Center,

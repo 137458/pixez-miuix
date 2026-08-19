@@ -102,11 +102,11 @@ fun PlatformSettingScreen(
             }
 
             item {
-                SmallTitle(text = "选择器")
+                SmallTitle(text = strings.platformSettingSectionPicker)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "使用系统图片选择器",
-                        summary = if (imagePickerType == "1") "使用 Photo Picker" else "使用传统文件选择器",
+                        title = strings.platformSettingPhotoPicker,
+                        summary = if (imagePickerType == "1") strings.platformSettingPhotoPickerSummaryOn else strings.platformSettingPhotoPickerSummaryOff,
                         endActions = {
                             Switch(
                                 checked = imagePickerType == "1",
@@ -122,11 +122,11 @@ fun PlatformSettingScreen(
             }
 
             item {
-                SmallTitle(text = "默认打开方式")
+                SmallTitle(text = strings.platformSettingSectionDefaultOpen)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "默认打开链接",
-                        summary = "允许在此应用中打开网络链接",
+                        title = strings.platformSettingDefaultOpenLinks,
+                        summary = strings.platformSettingDefaultOpenLinksSummary,
                         endActions = {
                             Switch(
                                 checked = openByDefault,
@@ -171,15 +171,22 @@ private fun DisplayModeDialog(
     onDismiss: () -> Unit,
     onSelected: (Int) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val options = listOf(
+        0 to strings.platformDisplayModeFollowSystem,
+        1 to "60Hz",
+        2 to "120Hz",
+    )
+
     OverlayDialog(
-        title = "显示模式",
+        title = strings.dialogDisplayMode,
         show = true,
         onDismissRequest = onDismiss,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            DISPLAY_MODE_OPTIONS.forEach { (value, label) ->
+            options.forEach { (value, label) ->
                 BasicComponent(
                     title = label,
                     onClick = { onSelected(value) },
@@ -195,8 +202,14 @@ private fun DisplayModeDialog(
 /**
  * 将显示模式数值转换为展示文案；若数值不在选项范围内，返回默认「跟随系统」。
  */
+@Composable
 private fun Int.toDisplayModeLabel(): String {
-    return DISPLAY_MODE_OPTIONS.firstOrNull { it.first == this }?.second ?: "跟随系统"
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    return when (this) {
+        1 -> "60Hz"
+        2 -> "120Hz"
+        else -> strings.platformDisplayModeFollowSystem
+    }
 }
 
 /**
@@ -205,13 +218,3 @@ private fun Int.toDisplayModeLabel(): String {
 private enum class PlatformDialogType {
     DisplayMode,
 }
-
-/**
- * 显示模式选项：0 跟随系统、1 60Hz、2 120Hz。
- * 当前版本先做 UI 与持久化，实际刷新率能力待后续接入系统 API。
- */
-private val DISPLAY_MODE_OPTIONS = listOf(
-    0 to "跟随系统",
-    1 to "60Hz",
-    2 to "120Hz",
-)

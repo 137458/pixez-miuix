@@ -238,6 +238,51 @@ class SettingsRepository(
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.LONG_PRESS_SAVE_CONFIRM, false)
         set(value) { settings[SettingsKeys.LONG_PRESS_SAVE_CONFIRM] = value }
 
+    // region 搜索设置
+    var searchSort: String
+        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_SORT, "date_desc")
+        set(value) { settings[SettingsKeys.SEARCH_SORT] = value }
+
+    var searchTarget: String
+        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_TARGET, "partial_match_for_tags")
+        set(value) { settings[SettingsKeys.SEARCH_TARGET] = value }
+
+    var searchAiType: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_AI_TYPE, 0)
+        set(value) { settings[SettingsKeys.SEARCH_AI_TYPE] = value }
+
+    var searchBookmarkThreshold: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0)
+        set(value) { settings[SettingsKeys.SEARCH_BOOKMARK_THRESHOLD] = value }
+
+    var searchUgoiraFilter: Int
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_UGOIRA_FILTER, 0)
+        set(value) { settings[SettingsKeys.SEARCH_UGOIRA_FILTER] = value }
+
+    var searchStartDate: String
+        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_START_DATE, "")
+        set(value) { settings[SettingsKeys.SEARCH_START_DATE] = value }
+
+    var searchEndDate: String
+        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_END_DATE, "")
+        set(value) { settings[SettingsKeys.SEARCH_END_DATE] = value }
+
+    var searchHistory: List<String>
+        get() {
+            val raw = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_HISTORY, "")
+            if (raw.isBlank()) return emptyList()
+            return try {
+                Json.decodeFromString(ListSerializer(String.serializer()), raw)
+            } catch (_: Exception) {
+                raw.split(",").filter { it.isNotBlank() }
+            }
+        }
+        set(value) {
+            val json = Json.encodeToString(ListSerializer(String.serializer()), value)
+            settings[SettingsKeys.SEARCH_HISTORY] = json
+        }
+
+
     /**
      * 插画详情页点击保存按钮直接保存，无需长按。
      */

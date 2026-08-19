@@ -155,8 +155,8 @@ fun DownloadSettingScreen(
                 SmallTitle(text = strings.settingSectionStorage)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "单文件夹模式",
-                        summary = "所有图片保存到同一文件夹",
+                        title = strings.downloadSingleFolder,
+                        summary = strings.downloadSingleFolderSummary,
                         endActions = {
                             Switch(
                                 checked = singleFolder,
@@ -168,8 +168,8 @@ fun DownloadSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "Sanity 单独文件夹",
-                        summary = "R18 作品保存到独立文件夹",
+                        title = strings.downloadSanityFolder,
+                        summary = strings.downloadSanityFolderSummary,
                         endActions = {
                             Switch(
                                 checked = overSanityLevelFolder,
@@ -183,6 +183,20 @@ fun DownloadSettingScreen(
                 }
             }
         }
+
+        val saveModeOptions = listOf(
+            SaveModeOption(0, "Media", strings.downloadSaveModeMedia),
+            SaveModeOption(1, "SAF", strings.downloadSaveModeSaf),
+            SaveModeOption(2, strings.qualityMedium, strings.downloadSaveModeLegacy),
+        )
+
+        val formatPlaceholderChips = listOf(
+            FormatPlaceholderChip(label = strings.copyTextChipIllustId, text = "{illust_id}"),
+            FormatPlaceholderChip(label = "part", text = "{part}"),
+            FormatPlaceholderChip(label = strings.copyTextChipTitle, text = "{title}"),
+            FormatPlaceholderChip(label = strings.copyTextChipUserId, text = "{user_id}"),
+            FormatPlaceholderChip(label = strings.copyTextChipUserName, text = "{user_name}"),
+        )
 
         // 保存路径编辑对话框。
         OverlayDialog(
@@ -231,7 +245,7 @@ fun DownloadSettingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                SAVE_MODE_OPTIONS.forEach { option ->
+                saveModeOptions.forEach { option ->
                     BasicComponent(
                         title = option.label,
                         summary = option.description,
@@ -267,7 +281,7 @@ fun DownloadSettingScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FORMAT_PLACEHOLDER_CHIPS.forEach { chip ->
+                formatPlaceholderChips.forEach { chip ->
                     FormatInsertChip(
                         label = chip.label,
                         onClick = {
@@ -396,31 +410,6 @@ private data class SaveModeOption(
 private fun Int.toSaveModeLabel(): String = when (this) {
     0 -> "Media"
     1 -> "SAF"
-    2 -> "旧模式"
-    else -> "未知"
+    2 -> "Legacy"
+    else -> "Media"
 }
-
-/**
- * 同时下载任务数可选范围：1-5，与原应用常见取值一致。
- */
-private val MAX_RUNNING_TASK_RANGE = 1..5
-
-/**
- * 保存模式可选项：Media / SAF / 旧模式。
- */
-private val SAVE_MODE_OPTIONS = listOf(
-    SaveModeOption(0, "Media", "使用 MediaStore 保存到系统相册"),
-    SaveModeOption(1, "SAF", "使用存储访问框架选择目录"),
-    SaveModeOption(2, "旧模式", "传统直接写入存储路径"),
-)
-
-/**
- * 保存格式可用变量占位符。
- */
-private val FORMAT_PLACEHOLDER_CHIPS = listOf(
-    FormatPlaceholderChip(label = "作品ID", text = "{illust_id}"),
-    FormatPlaceholderChip(label = "分段", text = "{part}"),
-    FormatPlaceholderChip(label = "标题", text = "{title}"),
-    FormatPlaceholderChip(label = "用户ID", text = "{user_id}"),
-    FormatPlaceholderChip(label = "画师名", text = "{user_name}"),
-)

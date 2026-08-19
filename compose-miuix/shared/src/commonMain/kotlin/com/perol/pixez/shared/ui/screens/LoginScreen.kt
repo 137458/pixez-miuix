@@ -35,6 +35,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
  * 登录页：支持通过系统浏览器 OAuth 授权或直接输入 Pixiv Refresh Token 完成登录。
@@ -61,16 +62,18 @@ fun LoginScreen(
         }
     }
 
+    val strings = LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "登录",
+                title = strings.goLogin,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -83,7 +86,7 @@ fun LoginScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(paddingValues),
         ) {
-            SmallTitle(text = "快捷登录")
+            SmallTitle(text = strings.loginQuick)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,11 +94,11 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "使用 Pixiv 账号登录",
+                        text = strings.loginWithPixiv,
                         style = MiuixTheme.textStyles.title4,
                     )
                     Text(
-                        text = "点击下方按钮打开系统浏览器完成授权，授权完成后将自动回调登录。",
+                        text = strings.loginPixivPrompt,
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
                     )
@@ -105,13 +108,13 @@ fun LoginScreen(
                                 openBrowser(accountRepository.loginUrl())
                                 errorMessage = ""
                             } catch (e: Exception) {
-                                errorMessage = "打开浏览器失败：${e.message}"
+                                errorMessage = "${strings.openInBrowser}: ${e.message ?: ""}"
                                 Napier.e("打开登录浏览器失败", e)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("使用浏览器登录")
+                        Text(strings.loginWithBrowser)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
@@ -120,18 +123,18 @@ fun LoginScreen(
                                 openBrowser(accountRepository.loginUrl(create = true))
                                 errorMessage = ""
                             } catch (e: Exception) {
-                                errorMessage = "打开浏览器失败：${e.message}"
+                                errorMessage = "${strings.openInBrowser}: ${e.message ?: ""}"
                                 Napier.e("打开创建账号浏览器失败", e)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("创建新账号")
+                        Text(strings.loginCreateAccount)
                     }
                 }
             }
 
-            SmallTitle(text = "Token 登录")
+            SmallTitle(text = strings.loginToken)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,14 +142,14 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "支持输入 Pixiv Refresh Token 或授权回调链接：",
+                        text = strings.loginTokenPrompt,
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier.padding(bottom = 12.dp),
                     )
                     TextField(
                         value = tokenInput,
                         onValueChange = { tokenInput = it },
-                        label = "Pixiv Token / 授权链接",
+                        label = strings.loginInputTokenHint,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -154,7 +157,7 @@ fun LoginScreen(
                         colors = ButtonDefaults.buttonColorsPrimary(),
                         onClick = {
                             if (tokenInput.isBlank()) {
-                                errorMessage = "请输入 Token 或授权链接"
+                                errorMessage = strings.loginTokenLabel
                                 return@Button
                             }
                             coroutineScope.launch {
@@ -164,7 +167,7 @@ fun LoginScreen(
                                     suspendRunCatchingNonCancel {
                                         accountRepository.login(tokenInput.trim())
                                     }.onFailure { e ->
-                                        errorMessage = "登录失败：${e.message ?: "凭证无效或网络错误"}"
+                                        errorMessage = "${strings.loadFailed}: ${e.message ?: strings.clearFailed}"
                                         Napier.e("登录失败", e)
                                     }
                                 } finally {
@@ -174,7 +177,7 @@ fun LoginScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(if (isLoading) "登录中…" else "登录")
+                        Text(if (isLoading) strings.loginLoggingIn else strings.goLogin)
                     }
                 }
             }

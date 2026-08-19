@@ -26,6 +26,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -60,6 +61,7 @@ fun NewScreen(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
+    val strings = LocalStrings.current
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
@@ -71,7 +73,6 @@ fun NewScreen(
         isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }
 
-    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn == false && !hasPromptedLogin) {
             showLoginDialog = true
@@ -81,7 +82,11 @@ fun NewScreen(
 
     // 可见性筛选：0=all, 1=public, 2=private。
     var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
-    val restrictOptions = listOf("全部" to "all", "公开" to "public", "私密" to "private")
+    val restrictOptions: List<Pair<String, String>> = listOf(
+        strings.searchUgoiraAll to "all",
+        strings.userPublicRestrict to "public",
+        strings.userPrivateRestrict to "private",
+    )
     val currentRestrict = restrictOptions[selectedRestrictIndex].second
 
     // retryCount 作为 produceState 的 key，点击重试或切换筛选时自增触发重新加载。
@@ -167,8 +172,6 @@ fun NewScreen(
         retryCount++
     }
 
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
     WindowDialog(
         title = strings.dialogNeedLogin,
@@ -203,7 +206,7 @@ fun NewScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "最新",
+                title = strings.tabNew,
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(
@@ -211,7 +214,7 @@ fun NewScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                     if (isLoggedIn == false) {
@@ -220,7 +223,7 @@ fun NewScreen(
                             colors = ButtonDefaults.buttonColorsPrimary(),
                             modifier = Modifier.padding(end = 12.dp),
                         ) {
-                            Text("登录")
+                            Text(strings.btnGoLogin)
                         }
                     }
                 },
@@ -235,7 +238,7 @@ fun NewScreen(
             when (isLoggedIn) {
                 false -> {
                     EmptyPlaceholder(
-                        message = "登录后可查看关注作品",
+                        message = strings.loginNewNeedLogin,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -259,7 +262,7 @@ fun NewScreen(
                         result.isSuccess -> {
                             if (illusts.isEmpty()) {
                                 EmptyPlaceholder(
-                                    message = "暂无关注作品",
+                                    message = strings.loginNewEmpty,
                                     modifier = Modifier.weight(1f),
                                 )
                             } else {

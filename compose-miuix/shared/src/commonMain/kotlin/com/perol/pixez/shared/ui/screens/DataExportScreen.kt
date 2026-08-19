@@ -151,11 +151,13 @@ fun DataExportScreen(
                                     )
                                 }
                             }
+                            val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+                            val typeStr = operation.type.title(strings)
                             toastMessage = if (result.isSuccess) {
-                                "${operation.type.title}${operation.action.label}成功"
+                                strings.dataExportSuccess.format(typeStr, actionStr)
                             } else {
-                                val cause = result.exceptionOrNull()?.message ?: "未知错误"
-                                "${operation.type.title}${operation.action.label}失败: $cause"
+                                val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
+                                strings.dataExportFailed.format(typeStr, actionStr, cause)
                             }
                         } finally {
                             // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
@@ -183,20 +185,21 @@ private fun DataExportRow(
     onExportClick: () -> Unit,
     onImportClick: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     BasicComponent(
-        title = type.title,
-        summary = type.summary,
+        title = type.title(strings),
+        summary = type.summary(strings),
         endActions = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(
-                    text = "导出",
+                    text = strings.dataExportActionExport,
                     onClick = onExportClick,
                 )
                 TextButton(
-                    text = "导入",
+                    text = strings.dataExportActionImport,
                     onClick = onImportClick,
                 )
             }
@@ -215,19 +218,23 @@ private fun PathInputDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+    val typeStr = operation.type.title(strings)
+
     // 对话框重新打开时重置输入内容，避免上一次的路径干扰新操作。
     var path by remember(dialogKey, operation.type, operation.action) { mutableStateOf("") }
 
     OverlayDialog(
-        title = "${operation.type.title} - ${operation.action.label}",
-        summary = "请输入用于${operation.action.label}的 JSON 文件路径（平台文件选择器就绪后可替换为系统选择器）",
+        title = "$typeStr - $actionStr",
+        summary = strings.dataExportPathDialogSummary.format(actionStr),
         show = true,
         onDismissRequest = onDismiss,
     ) {
         TextField(
             value = path,
             onValueChange = { path = it },
-            label = "文件路径",
+            label = strings.dataExportFilePath,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
@@ -237,7 +244,7 @@ private fun PathInputDialog(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TextButton(
-                text = "取消",
+                text = strings.cancel,
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
             )
@@ -246,18 +253,38 @@ private fun PathInputDialog(
                 enabled = path.isNotBlank() && !isProcessing,
                 modifier = Modifier.weight(1f),
             ) {
-                Text(text = if (isProcessing) "处理中…" else "确定")
+                Text(text = if (isProcessing) strings.loading else strings.confirm)
             }
         }
+    }
+}
+
+private fun DataType.title(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String {
+    return when (this) {
+        DataType.SearchTagHistory -> strings.dataExportTypeSearchHistory
+        DataType.BookTags -> strings.dataExportTypeBookTags
+        DataType.IllustHistory -> strings.dataExportTypeIllustHistory
+        DataType.NovelHistory -> strings.dataExportTypeNovelHistory
+        DataType.MuteData -> strings.dataExportTypeMuteData
+    }
+}
+
+private fun DataType.summary(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String {
+    return when (this) {
+        DataType.SearchTagHistory -> strings.dataExportTypeSearchHistorySummary
+        DataType.BookTags -> strings.dataExportTypeBookTagsSummary
+        DataType.IllustHistory -> strings.dataExportTypeIllustHistorySummary
+        DataType.NovelHistory -> strings.dataExportTypeNovelHistorySummary
+        DataType.MuteData -> strings.dataExportTypeMuteDataSummary
     }
 }
 
 /**
  * 对某类数据执行的导入或导出动作。
  */
-private enum class Action(val label: String) {
-    Export("导出"),
-    Import("导入"),
+private enum class Action {
+    Export,
+    Import,
 }
 
 /**

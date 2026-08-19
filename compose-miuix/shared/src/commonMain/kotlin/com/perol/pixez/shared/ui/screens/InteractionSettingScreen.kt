@@ -45,7 +45,7 @@ fun InteractionSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = strings.settingSectionDisplayLayout,
+                title = strings.interactionSettingTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -62,11 +62,11 @@ fun InteractionSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = strings.settingSectionDisplayLayout)
+                SmallTitle(text = strings.interactionSettingTitle)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "异形屏适配",
-                        summary = if (isBangs) "已开启刘海/挖孔屏适配" else "未开启异形屏适配",
+                        title = strings.interactionSettingBangs,
+                        summary = if (isBangs) strings.interactionSettingBangsSummaryOn else strings.interactionSettingBangsSummaryOff,
                         endActions = {
                             Switch(
                                 checked = isBangs,
@@ -78,8 +78,8 @@ fun InteractionSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "H 是不行的",
-                        summary = if (hIsNotAllow) "已开启 H 内容过滤" else "未开启 H 内容过滤",
+                        title = strings.interactionSettingHNotAllow,
+                        summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
                         endActions = {
                             Switch(
                                 checked = hIsNotAllow,
@@ -91,8 +91,8 @@ fun InteractionSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "再次返回退出",
-                        summary = if (isReturnAgainToExit) "连续返回两次后退出应用" else "按一次返回键即退出应用",
+                        title = strings.interactionSettingDoubleBackExit,
+                        summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
                         endActions = {
                             Switch(
                                 checked = isReturnAgainToExit,
@@ -104,8 +104,8 @@ fun InteractionSettingScreen(
                         },
                     )
                     BasicComponent(
-                        title = "滑动切换作品",
-                        summary = if (swipeChangeArtwork) "插画详情页左右滑动可切换作品" else "插画详情页不通过滑动切换作品",
+                        title = strings.interactionSettingSwipeChange,
+                        summary = if (swipeChangeArtwork) strings.interactionSettingSwipeChangeSummaryOn else strings.interactionSettingSwipeChangeSummaryOff,
                         endActions = {
                             Switch(
                                 checked = swipeChangeArtwork,

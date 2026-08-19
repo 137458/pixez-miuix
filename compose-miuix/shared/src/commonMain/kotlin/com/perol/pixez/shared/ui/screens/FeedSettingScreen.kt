@@ -34,6 +34,8 @@ fun FeedSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 页面状态：从 SettingsRepository 读取当前 Feed 相关设置。
     var feedAIBadge by remember { mutableStateOf(settingsRepository.feedAIBadge) }
     var followAfterStar by remember { mutableStateOf(settingsRepository.followAfterStar) }
@@ -43,12 +45,12 @@ fun FeedSettingScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "Feed 设置",
+                title = strings.feedSettingTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -60,11 +62,11 @@ fun FeedSettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = "内容展示")
+                SmallTitle(text = strings.feedSettingSectionDisplay)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "显示 Feed AI 标识",
-                        summary = if (feedAIBadge) "在 Feed 中显示 AI 生成标识" else "在 Feed 中隐藏 AI 生成标识",
+                        title = strings.feedSettingAiBadge,
+                        summary = if (feedAIBadge) strings.feedSettingAiBadgeSummaryOn else strings.feedSettingAiBadgeSummaryOff,
                         endActions = {
                             Switch(
                                 checked = feedAIBadge,
@@ -80,11 +82,11 @@ fun FeedSettingScreen(
             }
 
             item {
-                SmallTitle(text = "收藏行为")
+                SmallTitle(text = strings.feedSettingSectionBehavior)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "收藏后关注画师",
-                        summary = if (followAfterStar) "收藏作品后自动关注画师" else "收藏作品后不自动关注画师",
+                        title = strings.feedSettingFollowAfterStar,
+                        summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
                         endActions = {
                             Switch(
                                 checked = followAfterStar,
@@ -100,11 +102,11 @@ fun FeedSettingScreen(
             }
 
             item {
-                SmallTitle(text = "搜图")
+                SmallTitle(text = strings.feedSettingSectionSearchImage)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = "使用 WebView 打开 SauceNAO",
-                        summary = if (useSaunceNaoWebview) "SauceNAO 结果在应用内 WebView 打开" else "SauceNAO 结果使用外部浏览器打开",
+                        title = strings.feedSettingSauceNaoWebview,
+                        summary = if (useSaunceNaoWebview) strings.feedSettingSauceNaoWebviewSummaryOn else strings.feedSettingSauceNaoWebviewSummaryOff,
                         endActions = {
                             Switch(
                                 checked = useSaunceNaoWebview,

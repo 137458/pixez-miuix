@@ -21,12 +21,13 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun LoadingPlaceholder(
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "加载中…",
+            text = "${strings.loading}…",
             style = MiuixTheme.textStyles.body1,
         )
     }
@@ -54,6 +55,7 @@ internal fun ErrorPlaceholder(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Box(
         modifier = modifier.fillMaxSize().padding(16.dp),
         contentAlignment = Alignment.Center,
@@ -62,12 +64,12 @@ internal fun ErrorPlaceholder(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "加载失败：${error?.message ?: "未知错误"}",
+                text = "${strings.loadFailed}: ${error?.message ?: strings.loadFailed}",
                 style = MiuixTheme.textStyles.body1,
             )
             Spacer(modifier = Modifier.padding(vertical = 8.dp))
             TextButton(
-                text = "重试",
+                text = strings.retry,
                 onClick = onRetry,
             )
         }

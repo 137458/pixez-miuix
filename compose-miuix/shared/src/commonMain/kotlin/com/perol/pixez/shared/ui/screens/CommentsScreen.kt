@@ -155,16 +155,18 @@ fun CommentsScreen(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "评论",
+                title = strings.commentsTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -172,7 +174,7 @@ fun CommentsScreen(
                     IconButton(onClick = triggerManualRefresh) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -202,7 +204,7 @@ fun CommentsScreen(
                             replyTarget = null
                             triggerManualRefresh()
                         }.onFailure { e ->
-                            sendError = e.message ?: "发送失败"
+                            sendError = e.message ?: "${strings.commentsSend}${strings.loadFailed}"
                         }
                         isSending = false
                     }
@@ -217,7 +219,7 @@ fun CommentsScreen(
             result.isSuccess -> {
                 if (comments.isEmpty()) {
                     EmptyPlaceholder(
-                        message = "暂无评论",
+                        message = strings.noComments,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
@@ -256,16 +258,16 @@ fun CommentsScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
-                                                text = "加载失败",
+                                                text = strings.loadFailed,
                                                 style = MiuixTheme.textStyles.body2,
                                                 color = MiuixTheme.colorScheme.error,
                                             )
                                             Button(onClick = ::loadMore) {
-                                                Text(text = "重试")
+                                                Text(text = strings.retry)
                                             }
                                         }
                                         nextUrl == null -> Text(
-                                            text = "没有更多评论了",
+                                            text = strings.commentsNoMore,
                                             style = MiuixTheme.textStyles.footnote1,
                                         )
                                     }
@@ -303,6 +305,7 @@ private fun CommentInputBar(
     error: String?,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(modifier = modifier.fillMaxWidth()) {
         error?.let {
             Text(
@@ -320,14 +323,14 @@ private fun CommentInputBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "回复 ${target.user?.name.orEmpty()}：${target.comment.orEmpty()}",
+                    text = strings.commentsReplyTo.format(target.user?.name.orEmpty(), target.comment.orEmpty()),
                     style = MiuixTheme.textStyles.body2,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = onCancelReply) {
-                    Text("取消")
+                    Text(strings.cancel)
                 }
             }
         }
@@ -341,9 +344,9 @@ private fun CommentInputBar(
                 value = text,
                 onValueChange = onTextChange,
                 label = when {
-                    isLoggedIn == false -> "登录后发表评论"
-                    replyTarget != null -> "回复…"
-                    else -> "发表评论…"
+                    isLoggedIn == false -> strings.commentsLoginToComment
+                    replyTarget != null -> strings.commentsReplyPlaceholder
+                    else -> strings.commentsPublishPlaceholder
                 },
                 modifier = Modifier.weight(1f),
                 enabled = !isSending && isLoggedIn != false,
@@ -354,11 +357,11 @@ private fun CommentInputBar(
                 enabled = text.isNotBlank() && !isSending && isLoggedIn == true,
             ) {
                 if (isSending) {
-                    Text("发送中")
+                    Text(strings.commentsSending)
                 } else {
                     Icon(
                         imageVector = MiuixIcons.Send,
-                        contentDescription = "发送",
+                        contentDescription = strings.commentsSend,
                     )
                 }
             }
@@ -373,6 +376,7 @@ private fun CommentItem(
     onReplyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val userId = comment.user?.id
     Column(modifier = modifier.padding(16.dp)) {
         Row(
@@ -409,7 +413,7 @@ private fun CommentItem(
                 }
             } ?: run {
                 Text(
-                    text = "未知用户",
+                    text = strings.commentsAnonymousUser,
                     style = MiuixTheme.textStyles.body1,
                     modifier = Modifier.weight(1f),
                 )
@@ -431,7 +435,7 @@ private fun CommentItem(
         if (comment.id != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "回复",
+                text = strings.commentsReplyAction,
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.primary,
                 modifier = Modifier.clickable(onClick = onReplyClick),

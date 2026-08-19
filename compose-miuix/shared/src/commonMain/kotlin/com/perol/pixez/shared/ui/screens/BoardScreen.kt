@@ -57,6 +57,7 @@ fun BoardScreen(
     boardRepository: BoardRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     // 公告列表、加载态、错误态与 Toast 提示。
     var boardList by remember { mutableStateOf<List<BoardInfo>>(emptyList()) }
@@ -78,7 +79,7 @@ fun BoardScreen(
             .onFailure { error ->
                 loadError = error
                 if (boardList.isEmpty()) {
-                    toastMessage = "加载失败: ${error.message ?: "未知错误"}"
+                    toastMessage = "${strings.loadFailed}: ${error.message ?: ""}"
                 }
             }
         isRefreshing = false
@@ -93,12 +94,12 @@ fun BoardScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "公告板",
+                title = strings.boardTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -114,7 +115,7 @@ fun BoardScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -144,7 +145,7 @@ fun BoardScreen(
 
                 boardList.isEmpty() -> {
                     EmptyPlaceholder(
-                        message = "暂无公告",
+                        message = strings.boardEmpty,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -162,7 +163,7 @@ fun BoardScreen(
                         ) { board ->
                             BoardItem(
                                 board = board,
-                                onLinkClick = { url -> openUrlOrToast(url) { toastMessage = it } },
+                                onLinkClick = { url -> openUrlOrToast(url, strings) { toastMessage = it } },
                             )
                         }
                     }
@@ -387,14 +388,14 @@ private fun String.decodeNumericEntities(): String {
  * 仅允许 `http` 与 `https` scheme，防止公告 HTML 中的恶意链接触发
  * `javascript:`、`file://`、`intent://` 等危险协议。
  */
-private fun openUrlOrToast(url: String, onError: (String) -> Unit) {
+private fun openUrlOrToast(url: String, strings: com.perol.pixez.shared.ui.i18n.AppStrings, onError: (String) -> Unit) {
     try {
         val scheme = url.substringBefore(":", "").lowercase()
-        require(scheme in ALLOWED_URL_SCHEMES) { "不支持的链接协议: $scheme" }
+        require(scheme in ALLOWED_URL_SCHEMES) { "Invalid scheme: $scheme" }
         openBrowser(url)
     } catch (e: Exception) {
         Napier.e("打开链接失败 url=$url", e)
-        onError("打开失败: ${e.message ?: "未知错误"}")
+        onError("${strings.loadFailed}: ${e.message ?: strings.loadFailed}")
     }
 }
 

@@ -286,23 +286,25 @@ private fun ColorPickerDialog(
     onDismiss: () -> Unit,
     onColorSelected: (Int) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 预设颜色，对齐 Flutter 版 ColorPickPage.skinList。
     val presetColors = listOf(
-        0xFF00BCD4.toInt() to "青色",
-        0xFFE91E63.toInt() to "粉色",
-        0xFF4CAF50.toInt() to "绿色",
-        0xFF795548.toInt() to "棕色",
-        0xFF9C27B0.toInt() to "紫色",
-        0xFF2196F3.toInt() to "蓝色",
-        0xFFFB7299.toInt() to "哔哩粉",
+        0xFF00BCD4.toInt() to strings.themePresetCyan,
+        0xFFE91E63.toInt() to strings.themePresetPink,
+        0xFF4CAF50.toInt() to strings.themePresetGreen,
+        0xFF795548.toInt() to strings.themePresetBrown,
+        0xFF9C27B0.toInt() to strings.themePresetPurple,
+        0xFF2196F3.toInt() to strings.themePresetBlue,
+        0xFFFB7299.toInt() to strings.themePresetBilibiliPink,
     )
 
     var customHex by remember(show) { mutableStateOf("") }
     var toastMessage by remember(show) { mutableStateOf<String?>(null) }
 
     OverlayDialog(
-        title = "选择种子色",
-        summary = "点击预设颜色快速选择，或输入自定义 HEX 色值",
+        title = strings.dialogPickSeedColor,
+        summary = strings.dialogPickSeedColorSummary,
         show = show,
         onDismissRequest = onDismiss,
     ) {
@@ -327,7 +329,7 @@ private fun ColorPickerDialog(
                         ),
                 )
                 Text(
-                    text = "当前",
+                    text = strings.themeDialogCurrentColor,
                     style = MiuixTheme.textStyles.body1,
                 )
             }
@@ -353,7 +355,7 @@ private fun ColorPickerDialog(
             TextField(
                 value = customHex,
                 onValueChange = { customHex = it },
-                label = "自定义颜色 #RRGGBB",
+                label = strings.themeDialogCustomColorLabel,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -362,18 +364,18 @@ private fun ColorPickerDialog(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 TextButton(
-                    text = "取消",
+                    text = strings.cancel,
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(
-                    text = "确认",
+                    text = strings.confirm,
                     onClick = {
                         val parsed = parseHexColor(customHex)
                         if (parsed != null) {
                             onColorSelected(parsed)
                         } else {
-                            toastMessage = "颜色格式错误，请输入 #RRGGBB"
+                            toastMessage = strings.themeColorFormatError
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -442,22 +444,24 @@ private fun PaletteStylePickerDialog(
     onDismiss: () -> Unit,
     onPaletteStyleSelected: (Int) -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 调色板风格列表，顺序与 [top.yukonga.miuix.kmp.theme.ThemePaletteStyle.entries] 保持一致。
     val paletteStyles = listOf(
-        "TonalSpot" to "经典 Material You 色调",
-        "Neutral" to "低饱和度、柔和中性",
-        "Vibrant" to "高饱和度、鲜艳明快",
-        "Expressive" to "大胆艺术、创意色移",
-        "Rainbow" to "广色域彩虹渐变",
-        "FruitSalad" to "活泼多彩、混合色相",
-        "Monochrome" to "单色调灰阶",
-        "Fidelity" to "最接近种子色",
-        "Content" to "基于内容颜色取色",
+        "TonalSpot" to "Material You",
+        "Neutral" to "Neutral",
+        "Vibrant" to "Vibrant",
+        "Expressive" to "Expressive",
+        "Rainbow" to "Rainbow",
+        "FruitSalad" to "Fruit Salad",
+        "Monochrome" to "Monochrome",
+        "Fidelity" to "Fidelity",
+        "Content" to "Content",
     )
 
     OverlayDialog(
-        title = "调色板风格",
-        summary = "选择 Monet 动态取色的调色板风格",
+        title = strings.dialogPaletteStyle,
+        summary = strings.dialogPaletteStyleSummary,
         show = show,
         onDismissRequest = onDismiss,
     ) {

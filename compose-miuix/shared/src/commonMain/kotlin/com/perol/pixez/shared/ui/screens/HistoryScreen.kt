@@ -191,9 +191,9 @@ fun HistoryScreen(
                             if (filteredItems.isEmpty()) {
                                 EmptyPlaceholder(
                                     message = if (query.isBlank()) {
-                                        "暂无浏览历史"
+                                        strings.historyEmpty
                                     } else {
-                                        "未找到匹配记录"
+                                        strings.historyNoMatch
                                     },
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -218,7 +218,7 @@ fun HistoryScreen(
             // 底部清空全部确认栏。
             if (showClearConfirm) {
                 ConfirmBar(
-                    message = "确定清空全部浏览历史？",
+                    message = strings.historyClearConfirm,
                     confirmEnabled = !isProcessing,
                     onConfirm = {
                         isProcessing = true
@@ -229,7 +229,7 @@ fun HistoryScreen(
                                     withContext(Dispatchers.IO) { repository.clearAll() }
                                 }
                                     .onSuccess { refreshToken++ }
-                                    .onFailure { toastMessage = "清空失败: ${it.message}" }
+                                    .onFailure { toastMessage = "${strings.actionClear}${strings.loadFailed}: ${it.message}" }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
                                 isProcessing = false
@@ -248,7 +248,7 @@ fun HistoryScreen(
             val deleteId = itemToDelete
             if (deleteId != null) {
                 ConfirmBar(
-                    message = "确定删除该条浏览历史？",
+                    message = strings.historyDeleteConfirm,
                     confirmEnabled = !isProcessing,
                     onConfirm = {
                         isProcessing = true
@@ -259,7 +259,7 @@ fun HistoryScreen(
                                     withContext(Dispatchers.IO) { repository.deleteById(deleteId) }
                                 }
                                     .onSuccess { refreshToken++ }
-                                    .onFailure { toastMessage = "删除失败: ${it.message}" }
+                                    .onFailure { toastMessage = "${strings.btnDelete}${strings.loadFailed}: ${it.message}" }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
                                 isProcessing = false
@@ -325,6 +325,7 @@ private fun HistoryCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -350,7 +351,7 @@ private fun HistoryCard(
         }
 
         Text(
-            text = item.title ?: "无标题",
+            text = item.title ?: strings.historyNoTitle,
             style = MiuixTheme.textStyles.body2,
             maxLines = 1,
             modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp),
@@ -376,6 +377,7 @@ private fun ConfirmBar(
     // 确定按钮是否可用；执行耗时操作时应设为 false，防止重复提交。
     confirmEnabled: Boolean = true,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -389,14 +391,14 @@ private fun ConfirmBar(
             style = MiuixTheme.textStyles.body1,
         )
         TextButton(
-            text = "取消",
+            text = strings.cancel,
             onClick = onCancel,
         )
         Button(
             onClick = onConfirm,
             enabled = confirmEnabled,
         ) {
-            Text("确定")
+            Text(strings.confirm)
         }
     }
 }

@@ -100,7 +100,7 @@ fun BookTagScreen(
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (isEmpty) {
                         Text(
-                            text = "暂无收藏标签，点击右上角添加",
+                            text = strings.bookTagsEmpty,
                             style = MiuixTheme.textStyles.body2,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -132,7 +132,7 @@ fun BookTagScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.ExpandLess,
-                                                contentDescription = "上移",
+                                                contentDescription = strings.bookTagsMoveUp,
                                             )
                                         }
                                         IconButton(
@@ -151,7 +151,7 @@ fun BookTagScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.ExpandMore,
-                                                contentDescription = "下移",
+                                                contentDescription = strings.bookTagsMoveDown,
                                             )
                                         }
                                         IconButton(
@@ -160,7 +160,7 @@ fun BookTagScreen(
                                         ) {
                                             Icon(
                                                 imageVector = MiuixIcons.Delete,
-                                                contentDescription = "删除",
+                                                contentDescription = strings.btnDelete,
                                             )
                                         }
                                     }
@@ -190,8 +190,8 @@ fun BookTagScreen(
         val pendingDelete = tagToDelete
         if (pendingDelete != null) {
             DeleteConfirmationDialog(
-                title = "删除收藏标签",
-                summary = "确定删除标签「$pendingDelete」吗？",
+                title = strings.dialogDeleteConfirm,
+                summary = strings.bookTagsDeleteConfirm.format(pendingDelete),
                 isLoading = isDeleting,
                 onDismiss = { tagToDelete = null },
                 onConfirm = {

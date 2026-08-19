@@ -117,6 +117,7 @@ fun IllustStaggeredGrid(
                 key = "load_more_footer",
                 span = StaggeredGridItemSpan.FullLine,
             ) {
+                val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -131,7 +132,7 @@ fun IllustStaggeredGrid(
                             ) {
                                 InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
                                 Text(
-                                    text = "正在加载更多...",
+                                    text = strings.loadingMore,
                                     style = MiuixTheme.textStyles.footnote1,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
@@ -143,19 +144,19 @@ fun IllustStaggeredGrid(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Text(
-                                    text = "加载失败，请重试",
+                                    text = strings.loadMoreFailedRetry,
                                     style = MiuixTheme.textStyles.footnote1,
                                     color = MiuixTheme.colorScheme.error,
                                 )
                                 TextButton(
-                                    text = "重试",
+                                    text = strings.retry,
                                     onClick = { (onRetryLoadMore ?: onLoadMore)?.invoke() },
                                 )
                             }
                         }
                         !hasMore && illusts.isNotEmpty() -> {
                             Text(
-                                text = "没有更多了",
+                                text = strings.noMoreData,
                                 style = MiuixTheme.textStyles.footnote1,
                                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )

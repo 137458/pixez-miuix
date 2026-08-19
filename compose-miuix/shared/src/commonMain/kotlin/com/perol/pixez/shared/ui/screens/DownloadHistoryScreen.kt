@@ -71,17 +71,18 @@ fun DownloadHistoryScreen(
 
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "下载历史",
+                title = strings.settingDownloadHistory,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -91,7 +92,7 @@ fun DownloadHistoryScreen(
                         enabled = state.value?.getOrNull()?.isNotEmpty() ?: false,
                     ) {
                         Text(
-                            text = "清空",
+                            text = strings.actionClear,
                             style = MiuixTheme.textStyles.body1,
                             color = MiuixTheme.colorScheme.primary,
                         )
@@ -112,7 +113,7 @@ fun DownloadHistoryScreen(
                         val tasks = result.getOrNull().orEmpty()
                         if (tasks.isEmpty()) {
                             EmptyPlaceholder(
-                                message = "暂无下载记录",
+                                message = strings.downloadHistoryEmpty,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         } else {
@@ -176,6 +177,7 @@ private fun DownloadHistoryItem(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,7 +205,7 @@ private fun DownloadHistoryItem(
             )
         }
         Text(
-            text = statusLabel(task.status),
+            text = statusLabel(task.status, strings),
             style = MiuixTheme.textStyles.footnote2,
             color = statusColor(task.status),
         )
@@ -212,7 +214,7 @@ private fun DownloadHistoryItem(
         ) {
             Icon(
                 imageVector = MiuixIcons.Delete,
-                contentDescription = "删除",
+                contentDescription = strings.btnDelete,
                 tint = MiuixTheme.colorScheme.error,
             )
         }
@@ -223,17 +225,17 @@ private fun DownloadHistoryItem(
  * 构建摘要文本：画师名、页码、文件名。
  */
 private fun buildSummary(task: DownloadTaskHistory): String {
-    return "${task.userName} · 第 ${task.pageIndex + 1} 页\n${task.fileName}"
+    return "${task.userName} · #${task.pageIndex + 1}\n${task.fileName}"
 }
 
 /**
  * 状态文本映射。
  */
-private fun statusLabel(status: DownloadStatus): String = when (status) {
-    DownloadStatus.Pending -> "等待中"
-    DownloadStatus.Downloading -> "下载中"
-    DownloadStatus.Success -> "成功"
-    DownloadStatus.Failed -> "失败"
+private fun statusLabel(status: DownloadStatus, strings: com.perol.pixez.shared.ui.i18n.AppStrings): String = when (status) {
+    DownloadStatus.Pending -> strings.downloadStatusPending
+    DownloadStatus.Downloading -> strings.downloadStatusDownloading
+    DownloadStatus.Success -> strings.downloadStatusSuccess
+    DownloadStatus.Failed -> strings.downloadStatusFailed
 }
 
 /**
@@ -257,6 +259,7 @@ private fun ClearConfirmBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -265,18 +268,18 @@ private fun ClearConfirmBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "确定清空全部下载记录？",
+            text = strings.downloadHistoryClearConfirm,
             modifier = Modifier.weight(1f),
             style = MiuixTheme.textStyles.body1,
         )
         TextButton(
-            text = "取消",
+            text = strings.cancel,
             onClick = onCancel,
         )
         Button(
             onClick = onConfirm,
         ) {
-            Text("确定")
+            Text(strings.confirm)
         }
     }
 }

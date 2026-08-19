@@ -149,6 +149,7 @@ private fun AdapterWidthSlider(
     width: Int,
     onWidthChangeFinished: (Int) -> Unit,
 ) {
+    val strings = LocalStrings.current
     // 滑块拖动过程中的临时值，避免每次拖动都写回 SettingsRepository。
     var sliderValue by remember(width) { mutableFloatStateOf(width.toFloat()) }
 
@@ -166,7 +167,7 @@ private fun AdapterWidthSlider(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "阈值：${sliderValue.toInt()} px，当前列数：$columnCount",
+                text = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
                 style = MiuixTheme.textStyles.body2,
             )
 
@@ -180,7 +181,7 @@ private fun AdapterWidthSlider(
             )
 
             Text(
-                text = "预览",
+                text = strings.crossAdapterPreview,
                 style = MiuixTheme.textStyles.subtitle,
             )
 

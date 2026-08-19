@@ -55,12 +55,13 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -95,69 +96,59 @@ fun SearchScreen(
     banRepository: BanRepository,
     initialQuery: String = "",
 ) {
+    val strings = LocalStrings.current
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     // 存在初始查询词或点击标签后进入搜索结果模式。
     var isSearching by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
 
     // 搜索类型：0 = 作品，1 = 画师。
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
-    val searchTypes = listOf("作品", "画师")
+    val searchTypes = listOf(strings.searchTypeIllust, strings.searchTypeUser)
 
     // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值、Ugoira 过滤与时间范围（仅作品搜索有效）。
-    // searchAiType：0 表示包含 AI 生成作品，1 表示排除。
-    // bookmarkThreshold：0 表示不追加收藏数条件，非 0 时搜索词追加 " ${value}users入り"。
-    // ugoiraFilter：0 表示全部，1 表示仅动图，2 表示排除动图。
-    // startDate / endDate：格式 YYYY-MM-DD，空字符串表示未选择。
     var sort by rememberSaveable {
-        mutableStateOf(
-            settingsRepository.getString(SettingsKeys.SEARCH_SORT, "date_desc") ?: "date_desc",
-        )
+        mutableStateOf(settingsRepository.searchSort)
     }
     var searchTarget by rememberSaveable {
-        mutableStateOf(
-            settingsRepository.getString(
-                SettingsKeys.SEARCH_TARGET,
-                "partial_match_for_tags",
-            ) ?: "partial_match_for_tags",
-        )
+        mutableStateOf(settingsRepository.searchTarget)
     }
     var searchAiType by rememberSaveable {
-        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_AI_TYPE, 0))
+        mutableIntStateOf(settingsRepository.searchAiType)
     }
     var bookmarkThreshold by rememberSaveable {
-        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0))
+        mutableIntStateOf(settingsRepository.searchBookmarkThreshold)
     }
     var ugoiraFilter by rememberSaveable {
-        mutableIntStateOf(settingsRepository.getInt(SettingsKeys.SEARCH_UGOIRA_FILTER, 0))
+        mutableIntStateOf(settingsRepository.searchUgoiraFilter)
     }
     var startDate by rememberSaveable {
-        mutableStateOf(settingsRepository.getString(SettingsKeys.SEARCH_START_DATE, "") ?: "")
+        mutableStateOf(settingsRepository.searchStartDate)
     }
     var endDate by rememberSaveable {
-        mutableStateOf(settingsRepository.getString(SettingsKeys.SEARCH_END_DATE, "") ?: "")
+        mutableStateOf(settingsRepository.searchEndDate)
     }
 
     // 筛选条件变化时持久化回写设置。
     LaunchedEffect(sort) {
-        settingsRepository.setString(SettingsKeys.SEARCH_SORT, sort)
+        settingsRepository.searchSort = sort
     }
     LaunchedEffect(searchTarget) {
-        settingsRepository.setString(SettingsKeys.SEARCH_TARGET, searchTarget)
+        settingsRepository.searchTarget = searchTarget
     }
     LaunchedEffect(searchAiType) {
-        settingsRepository.setInt(SettingsKeys.SEARCH_AI_TYPE, searchAiType)
+        settingsRepository.searchAiType = searchAiType
     }
     LaunchedEffect(bookmarkThreshold) {
-        settingsRepository.setInt(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, bookmarkThreshold)
+        settingsRepository.searchBookmarkThreshold = bookmarkThreshold
     }
     LaunchedEffect(ugoiraFilter) {
-        settingsRepository.setInt(SettingsKeys.SEARCH_UGOIRA_FILTER, ugoiraFilter)
+        settingsRepository.searchUgoiraFilter = ugoiraFilter
     }
     LaunchedEffect(startDate) {
-        settingsRepository.setString(SettingsKeys.SEARCH_START_DATE, startDate)
+        settingsRepository.searchStartDate = startDate
     }
     LaunchedEffect(endDate) {
-        settingsRepository.setString(SettingsKeys.SEARCH_END_DATE, endDate)
+        settingsRepository.searchEndDate = endDate
     }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
@@ -172,13 +163,13 @@ fun SearchScreen(
         value = suspendRunCatchingNonCancel { repository.getTrendTags() }
     }
 
-    // 搜索历史从旧 Flutter 设置中读取并持久化回写。
+    // 搜索历史从设置中读取并持久化回写。
     var searchHistory by rememberSaveable {
-        mutableStateOf(settingsRepository.getStringList(SettingsKeys.SEARCH_HISTORY).orEmpty())
+        mutableStateOf(settingsRepository.searchHistory)
     }
     val updateHistory: (List<String>) -> Unit = { newHistory ->
         searchHistory = newHistory
-        settingsRepository.setStringList(SettingsKeys.SEARCH_HISTORY, newHistory)
+        settingsRepository.searchHistory = newHistory
     }
 
     val scrollBehavior = MiuixScrollBehavior()
@@ -187,7 +178,7 @@ fun SearchScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "搜索",
+                title = strings.tabSearch,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -216,16 +207,13 @@ fun SearchScreen(
                                 isSearching = true
                                 // 将新搜索词加入历史（去重，最多保留 20 条）。
                                 updateHistory(
-                                    buildList {
-                                        add(query)
-                                        addAll(searchHistory.filter { it != query })
-                                    }.take(20)
+                                    (listOf(query) + searchHistory.filter { it != query }).take(20)
                                 )
                             }
                         },
                         expanded = false,
                         onExpandedChange = { },
-                        label = "搜索作品或画师",
+                        label = strings.searchPlaceholder,
                     )
                 },
                 expanded = false,
@@ -250,9 +238,9 @@ fun SearchScreen(
 
                 if (searchTypeIndex == 0) {
                     val sortLabel = when (sort) {
-                        "date_asc" -> "旧序"
-                        "popular_desc" -> "人气"
-                        else -> "最新"
+                        "date_asc" -> strings.searchSortOldest
+                        "popular_desc" -> strings.searchSortPopular
+                        else -> strings.searchSortLatest
                     }
                     val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
                         startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
@@ -265,7 +253,7 @@ fun SearchScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         FilterChipButton(
-                            text = "排序: $sortLabel",
+                            text = strings.searchSortLabel.format(sortLabel),
                             isSelected = sort != "date_desc",
                             onClick = {
                                 sort = when (sort) {
@@ -277,7 +265,7 @@ fun SearchScreen(
                         )
 
                         FilterChipButton(
-                            text = if (searchAiType == 0) "包含AI" else "排除AI",
+                            text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
                             isSelected = searchAiType != 0,
                             onClick = {
                                 searchAiType = if (searchAiType == 0) 1 else 0
@@ -297,7 +285,7 @@ fun SearchScreen(
                         Spacer(modifier = Modifier.weight(1f))
 
                         FilterChipButton(
-                            text = if (hasActiveFilters) "筛选 (已选)" else "筛选",
+                            text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
                             isSelected = hasActiveFilters,
                             onClick = { showFilterSheet = true },
                         )
@@ -438,13 +426,14 @@ private fun SearchFilterBottomSheet(
         end: String,
     ) -> Unit,
 ) {
-    val targetOptions = listOf(
-        "标签部分" to "partial_match_for_tags",
-        "标签完全" to "exact_match_for_tags",
-        "标题说明" to "title_and_caption",
+    val strings = LocalStrings.current
+    val targetOptions: List<Pair<String, String>> = listOf(
+        strings.searchTargetPartialTag to "partial_match_for_tags",
+        strings.searchTargetExactTag to "exact_match_for_tags",
+        strings.searchTargetTitleCaption to "title_and_caption",
     )
-    val bookmarkOptions = listOf(
-        "全部" to 0,
+    val bookmarkOptions: List<Pair<String, Int>> = listOf(
+        strings.searchUgoiraAll to 0,
         "100+" to 100,
         "250+" to 250,
         "500+" to 500,
@@ -452,10 +441,10 @@ private fun SearchFilterBottomSheet(
         "5000+" to 5000,
         "10000+" to 10000,
     )
-    val ugoiraOptions = listOf(
-        "全部" to 0,
-        "仅动图" to 1,
-        "排除动图" to 2,
+    val ugoiraOptions: List<Pair<String, Int>> = listOf(
+        strings.searchUgoiraAll to 0,
+        strings.searchUgoiraOnly to 1,
+        strings.searchUgoiraExclude to 2,
     )
 
     var draftTarget by remember(searchTarget) { mutableStateOf(searchTarget) }
@@ -465,7 +454,6 @@ private fun SearchFilterBottomSheet(
     var draftStartDate by remember(startDate) { mutableStateOf(startDate) }
     var draftEndDate by remember(endDate) { mutableStateOf(endDate) }
 
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftTarget }.coerceAtLeast(0)
     val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftUgoira }.coerceAtLeast(0)
 
@@ -487,7 +475,7 @@ private fun SearchFilterBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = "匹配目标")
+                SmallTitle(text = strings.searchTargetExactTag)
                 TabRow(
                     tabs = targetOptions.map { it.first },
                     selectedTabIndex = selectedTargetIndex,
@@ -496,7 +484,7 @@ private fun SearchFilterBottomSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = "AI 作品")
+                SmallTitle(text = strings.filterAi)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -508,7 +496,7 @@ private fun SearchFilterBottomSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "包含 AI 生成作品",
+                            text = strings.searchAiIncludeWorks,
                             style = MiuixTheme.textStyles.body1,
                             color = MiuixTheme.colorScheme.onSurface,
                         )
@@ -521,7 +509,7 @@ private fun SearchFilterBottomSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = "收藏数门槛")
+                SmallTitle(text = strings.userBookmarkTab)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -538,7 +526,7 @@ private fun SearchFilterBottomSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = "作品类型")
+                SmallTitle(text = strings.searchTypeIllust)
                 TabRow(
                     tabs = ugoiraOptions.map { it.first },
                     selectedTabIndex = selectedUgoiraIndex,
@@ -547,7 +535,7 @@ private fun SearchFilterBottomSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = "发布日期范围")
+                SmallTitle(text = strings.rankingDateLabel.substringBefore(" "))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -556,18 +544,18 @@ private fun SearchFilterBottomSheet(
                     TextField(
                         value = draftStartDate,
                         onValueChange = { draftStartDate = it },
-                        label = "开始 (YYYY-MM-DD)",
+                        label = strings.searchDateRangeStart,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = "至",
+                        text = strings.searchDateRangeTo,
                         style = MiuixTheme.textStyles.body2,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                     TextField(
                         value = draftEndDate,
                         onValueChange = { draftEndDate = it },
-                        label = "结束 (YYYY-MM-DD)",
+                        label = strings.searchDateRangeEnd,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -594,7 +582,7 @@ private fun SearchFilterBottomSheet(
                         contentColor = MiuixTheme.colorScheme.onSurface,
                     ),
                 ) {
-                    Text(text = "重置全部")
+                    Text(text = strings.searchResetAll)
                 }
                 Button(
                     onClick = {
@@ -614,7 +602,7 @@ private fun SearchFilterBottomSheet(
                         contentColor = MiuixTheme.colorScheme.onPrimary,
                     ),
                 ) {
-                    Text(text = "确定")
+                    Text(text = strings.confirm)
                 }
             }
         }
@@ -755,6 +743,7 @@ private fun SearchIllustResultGrid(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val result = state.value
     when {
         result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
@@ -764,7 +753,7 @@ private fun SearchIllustResultGrid(
             }
             if (filteredIllusts.isEmpty() && !isLoadingMore) {
                 EmptyPlaceholder(
-                    message = "未找到相关作品",
+                    message = strings.searchEmptyIllust,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -796,6 +785,7 @@ private fun SearchUserResultList(
     onUserClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     // 画师搜索结果重试计数，作为 produceState 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 
@@ -866,7 +856,7 @@ private fun SearchUserResultList(
         result.isSuccess -> {
             if (previews.isEmpty()) {
                 EmptyPlaceholder(
-                    message = "未找到相关画师",
+                    message = strings.searchEmptyUser,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -903,7 +893,7 @@ private fun SearchUserResultList(
                                         ) {
                                             InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
                                             Text(
-                                                text = "正在加载更多...",
+                                                text = strings.loadingMore,
                                                 style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
                                                 color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
@@ -915,19 +905,19 @@ private fun SearchUserResultList(
                                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         ) {
                                             Text(
-                                                text = "加载失败，请重试",
+                                                text = strings.loadMoreFailedRetry,
                                                 style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
                                                 color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
                                             )
                                             TextButton(
-                                                text = "重试",
+                                                text = strings.retry,
                                                 onClick = ::loadMore,
                                             )
                                         }
                                     }
                                     else -> {
                                         Text(
-                                            text = "没有更多了",
+                                            text = strings.noMoreData,
                                             style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
                                             color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                         )
@@ -960,6 +950,7 @@ private fun SearchSuggestions(
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -974,7 +965,7 @@ private fun SearchSuggestions(
     ) {
         item {
             SmallTitle(
-                text = "热门标签",
+                text = strings.searchHotTags,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
             )
         }
@@ -992,7 +983,7 @@ private fun SearchSuggestions(
             }
             trendTags.isEmpty() -> item {
                 EmptyPlaceholder(
-                    message = "暂无热门标签",
+                    message = strings.searchHotTagsEmpty,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 )
             }
@@ -1021,7 +1012,7 @@ private fun SearchSuggestions(
         if (searchHistory.isNotEmpty()) {
             item {
                 SmallTitle(
-                    text = "搜索历史",
+                    text = strings.searchHistory,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             }
@@ -1054,7 +1045,7 @@ private fun SearchSuggestions(
                                 ) {
                                     Icon(
                                         imageVector = MiuixIcons.Close,
-                                        contentDescription = "删除",
+                                        contentDescription = strings.btnDelete,
                                     )
                                 }
                             }
@@ -1065,7 +1056,7 @@ private fun SearchSuggestions(
 
             item {
                 TextButton(
-                    text = "清空历史",
+                    text = strings.searchClearHistory,
                     onClick = onClearHistory,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -47,33 +47,37 @@ fun IllustCard(
     val isAI = illust.illustAIType == 2
     val showAIBadge = (settings?.feedAIBadge != false) && isAI
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val isNsfw = (settings?.nsfwMask == true) && (
-        illust.xRestrict > 0 || illust.sanityLevel > 5 || illust.tags.any { it.name.contains("R-18", ignoreCase = true) }
+        illust.sanityLevel > 4 ||
+            illust.xRestrict > 0 ||
+            illust.tags.any { it.name.contains("R-18", ignoreCase = true) || it.name.contains("R18", ignoreCase = true) }
     )
-
-    val aspectRatio = if (illust.width > 0) {
-        illust.width.toFloat() / illust.height.coerceAtLeast(1).toFloat()
-    } else {
-        1f
-    }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            val ratio = if (illust.width > 0 && illust.height > 0) {
+                (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.5f, 2.0f)
+            } else {
+                1.0f
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(aspectRatio.coerceIn(0.5f, 2f)),
-                contentAlignment = Alignment.Center,
+                    .aspectRatio(ratio),
             ) {
                 if (isNsfw) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MiuixTheme.colorScheme.surfaceVariant),
+                            .background(MiuixTheme.colorScheme.surfaceContainerHighest),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(
@@ -96,7 +100,7 @@ fun IllustCard(
                                 )
                             }
                             Text(
-                                text = "敏感内容已隐藏",
+                                text = strings.nsfwMaskSummaryOn,
                                 style = MiuixTheme.textStyles.footnote1,
                                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )

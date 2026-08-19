@@ -88,6 +88,8 @@ fun ShieldScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<DeleteTarget?>(null) }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     // 提示信息。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -110,13 +112,11 @@ fun ShieldScreen(
                 banIllusts = illusts.sortedBy { it.name.lowercase() }
             }.onFailure { e ->
                 Napier.e("加载屏蔽数据失败", e)
-                toastMessage = "加载失败：${e.message}"
+                toastMessage = "${strings.loadFailed}: ${e.message}"
             }
             isLoading = false
         }
     }
-
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     LaunchedEffect(banRepository) {
         loadAll()
@@ -267,7 +267,7 @@ fun ShieldScreen(
                         loadAll()
                     }.onFailure { e ->
                         Napier.e("添加屏蔽标签失败", e)
-                        toastMessage = "添加失败：${e.message}"
+                        toastMessage = "${strings.btnAdd}${strings.loadFailed}：${e.message}"
                     }
                     isAddingTag = false
                 }
@@ -278,9 +278,9 @@ fun ShieldScreen(
         val pendingDelete = deleteTarget
         if (pendingDelete != null) {
             val (title, summary) = when (pendingDelete) {
-                is DeleteTarget.Tag -> "删除屏蔽标签" to "确定删除标签「${pendingDelete.tag.name}」吗？"
-                is DeleteTarget.User -> "删除屏蔽画师" to "确定删除画师「${pendingDelete.user.name}」吗？"
-                is DeleteTarget.Illust -> "删除屏蔽作品" to "确定删除作品「${pendingDelete.illust.name}」吗？"
+                is DeleteTarget.Tag -> strings.shieldDeleteTagTitle to strings.shieldDeleteTagConfirm.format(pendingDelete.tag.name)
+                is DeleteTarget.User -> strings.shieldDeleteUserTitle to strings.shieldDeleteUserConfirm.format(pendingDelete.user.name)
+                is DeleteTarget.Illust -> strings.shieldDeleteIllustTitle to strings.shieldDeleteIllustConfirm.format(pendingDelete.illust.name)
             }
             DeleteConfirmationDialog(
                 title = title,
@@ -302,7 +302,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("删除屏蔽项失败", e)
-                            toastMessage = "删除失败：${e.message}"
+                            toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
                         }
                         isDeleting = false
                     }
@@ -377,8 +377,8 @@ private fun AddTagDialog(
     var name by remember(show) { mutableStateOf("") }
 
     OverlayDialog(
-        title = "添加屏蔽标签",
-        summary = "支持普通标签或正则表达式，正则请以 r' 开头、以 ' 结尾。",
+        title = strings.shieldAddTagTitle,
+        summary = strings.shieldAddTagSummary,
         show = show,
         onDismissRequest = onDismiss,
     ) {

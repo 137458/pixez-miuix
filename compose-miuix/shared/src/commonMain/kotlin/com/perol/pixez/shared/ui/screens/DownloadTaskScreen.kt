@@ -40,7 +40,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +73,7 @@ fun DownloadTaskScreen(
     downloadRepository: DownloadRepository,
     downloadHistoryRepository: DownloadHistoryRepository,
 ) {
+    val strings = LocalStrings.current
     // 当前选中的筛选标签，使用 enum + Saver 保证类型安全与进程恢复。
     var selectedFilter by rememberSaveable(stateSaver = TaskFilterSaver) { mutableStateOf(TaskFilter.All) }
     // 用于触发列表重新加载的令牌；删除/重试/清空后自增。
@@ -123,12 +124,12 @@ fun DownloadTaskScreen(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "下载任务",
+                title = strings.settingDownloadTask,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -139,7 +140,7 @@ fun DownloadTaskScreen(
                     ) {
                         Icon(
                             imageVector = MiuixIcons.More,
-                            contentDescription = "更多操作",
+                            contentDescription = strings.menuMoreActions,
                         )
                     }
                 },
@@ -191,10 +192,10 @@ fun DownloadTaskScreen(
                                                         suspendRunCatchingNonCancel {
                                                             downloadRepository.retry(task)
                                                         }.onSuccess {
-                                                            toastMessage = "重试成功"
+                                                            toastMessage = strings.downloadTaskRetrySuccess
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = "重试失败: ${it.message}"
+                                                            toastMessage = strings.downloadTaskRetryFailed.format(it.message ?: "")
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -214,7 +215,7 @@ fun DownloadTaskScreen(
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = "删除失败: ${it.message}"
+                                                            toastMessage = "${strings.btnDelete}${strings.loadFailed}: ${it.message}"
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -253,7 +254,7 @@ fun DownloadTaskScreen(
                                     }
                                 }.getOrDefault(emptyList())
                                 if (failedTasks.isEmpty()) {
-                                    toastMessage = "没有失败任务需要重试"
+                                    toastMessage = strings.downloadTaskEmptyFailed
                                     return@launch
                                 }
 
@@ -266,15 +267,15 @@ fun DownloadTaskScreen(
                                         .onFailure { failureCount++ }
                                 }
                                 toastMessage = when {
-                                    failureCount == 0 -> "已批量重试失败任务"
-                                    successCount == 0 -> "批量重试全部失败"
-                                    else -> "批量重试完成：成功 $successCount 条，失败 $failureCount 条"
+                                    failureCount == 0 -> strings.downloadTaskRetrySuccess
+                                    successCount == 0 -> strings.downloadTaskRetryFailed
+                                    else -> "${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)"
                                 }
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = "批量重试失败: ${e.message}"
+                                toastMessage = "${strings.downloadTaskRetryFailed}: ${e.message}"
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -304,7 +305,7 @@ fun DownloadTaskScreen(
                                     }
                                 }.getOrDefault(emptyList())
                                 if (completedTasks.isEmpty()) {
-                                    toastMessage = "没有已完成任务"
+                                    toastMessage = strings.downloadTaskEmptyCompleted
                                     return@launch
                                 }
 
@@ -316,12 +317,12 @@ fun DownloadTaskScreen(
                                         }
                                     }
                                 }
-                                toastMessage = "已清空已完成任务"
+                                toastMessage = strings.downloadTaskEmptyCompleted
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = "清空失败: ${e.message}"
+                                toastMessage = "${strings.btnDelete}: ${e.message}"
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -344,11 +345,22 @@ fun DownloadTaskScreen(
 /**
  * 下载任务筛选条件，替代 Int 常量以提升类型安全。
  */
-private enum class TaskFilter(val label: String) {
-    All("全部"),
-    Running("运行中"),
-    Completed("完成"),
-    Failed("失败"),
+private enum class TaskFilter {
+    All,
+    Running,
+    Completed,
+    Failed,
+}
+
+@Composable
+private fun TaskFilter.label(): String {
+    val strings = LocalStrings.current
+    return when (this) {
+        TaskFilter.All -> strings.downloadTaskFilterAll
+        TaskFilter.Running -> strings.downloadTaskFilterRunning
+        TaskFilter.Completed -> strings.downloadTaskFilterCompleted
+        TaskFilter.Failed -> strings.downloadTaskFilterFailed
+    }
 }
 
 /**
@@ -362,11 +374,15 @@ private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
 /**
  * 根据当前筛选条件返回空态提示文案（exhaustive when）。
  */
-private fun TaskFilter.emptyMessage(): String = when (this) {
-    TaskFilter.All -> "暂无下载任务"
-    TaskFilter.Running -> "暂无运行中的任务"
-    TaskFilter.Completed -> "暂无已完成的任务"
-    TaskFilter.Failed -> "暂无失败的任务"
+@Composable
+private fun TaskFilter.emptyMessage(): String {
+    val strings = LocalStrings.current
+    return when (this) {
+        TaskFilter.All -> strings.downloadTaskEmptyAll
+        TaskFilter.Running -> strings.downloadTaskEmptyRunning
+        TaskFilter.Completed -> strings.downloadTaskEmptyCompleted
+        TaskFilter.Failed -> strings.downloadTaskEmptyFailed
+    }
 }
 
 /**
@@ -396,7 +412,7 @@ private fun FilterTabRow(
     ) {
         TaskFilter.entries.forEach { filter ->
             FilterTab(
-                label = filter.label,
+                label = filter.label(),
                 selected = filter == selectedFilter,
                 onClick = { onFilterSelected(filter) },
                 modifier = Modifier.weight(1f),
@@ -454,6 +470,7 @@ private fun DownloadTaskItem(
     onRetry: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -479,7 +496,7 @@ private fun DownloadTaskItem(
                     style = MiuixTheme.textStyles.body1,
                 )
                 Text(
-                    text = "${task.userName} · 第 ${task.pageIndex + 1} 页",
+                    text = "${task.userName} · #${task.pageIndex + 1}",
                     style = MiuixTheme.textStyles.footnote2,
                 )
             }
@@ -493,7 +510,7 @@ private fun DownloadTaskItem(
             ) {
                 Icon(
                     imageVector = MiuixIcons.Refresh,
-                    contentDescription = "重试",
+                    contentDescription = strings.retry,
                     tint = MiuixTheme.colorScheme.primary,
                 )
             }
@@ -503,7 +520,7 @@ private fun DownloadTaskItem(
             ) {
                 Icon(
                     imageVector = MiuixIcons.Delete,
-                    contentDescription = "删除",
+                    contentDescription = strings.btnDelete,
                     tint = MiuixTheme.colorScheme.error,
                 )
             }
@@ -529,31 +546,32 @@ private fun StatusIcon(
     status: DownloadStatus,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     when (status) {
         DownloadStatus.Success -> Icon(
             imageVector = MiuixIcons.Ok, // 完成：用 Ok 语义最接近
-            contentDescription = "完成",
+            contentDescription = strings.downloadStatusSuccess,
             modifier = modifier,
             tint = MiuixTheme.colorScheme.primary,
         )
 
         DownloadStatus.Failed -> Icon(
             imageVector = MiuixIcons.Report, // 错误：用 Report 语义最接近
-            contentDescription = "失败",
+            contentDescription = strings.downloadStatusFailed,
             modifier = modifier,
             tint = MiuixTheme.colorScheme.error,
         )
 
         DownloadStatus.Downloading -> Icon(
             imageVector = MiuixIcons.Download,
-            contentDescription = "下载中",
+            contentDescription = strings.downloadStatusDownloading,
             modifier = modifier,
             tint = MiuixTheme.colorScheme.primary,
         )
 
         DownloadStatus.Pending -> Icon(
             imageVector = MiuixIcons.Stopwatch, // 等待中：用 Stopwatch 语义最接近
-            contentDescription = "等待中",
+            contentDescription = strings.downloadStatusPending,
             modifier = modifier,
             tint = MiuixTheme.colorScheme.onSurface,
         )
@@ -568,7 +586,7 @@ private fun BatchActionMenu(
     onDismissRequest: () -> Unit,
     onRetryFailed: () -> Unit,
     onClearCompleted: () -> Unit,
-    enabled: Boolean,
+    enabled: Boolean = true,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
@@ -599,6 +617,7 @@ private fun ClearConfirmBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -608,18 +627,18 @@ private fun ClearConfirmBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "确定清空所有已完成任务？",
+            text = strings.downloadTaskClearCompletedConfirm,
             modifier = Modifier.weight(1f),
             style = MiuixTheme.textStyles.body1,
         )
         top.yukonga.miuix.kmp.basic.TextButton(
-            text = "取消",
+            text = strings.cancel,
             onClick = onCancel,
         )
         top.yukonga.miuix.kmp.basic.Button(
             onClick = onConfirm,
         ) {
-            Text("确定")
+            Text(strings.confirm)
         }
     }
 }

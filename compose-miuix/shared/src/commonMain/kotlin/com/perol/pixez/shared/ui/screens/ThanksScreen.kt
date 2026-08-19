@@ -47,9 +47,7 @@ fun ThanksScreen(
         ) {
             item {
                 Text(
-                    text = "一路做到现在也过了好久，虽然多次下架，版本包名甚至名称多次变更，" +
-                            "但是在这些时间里得到了很多人的帮助、支持与鼓励，积累了许多开发经验与社会教训，" +
-                            "还能够有机会与想法出色、技术出众、审美出彩的用户、开发者、设计师交流，真是太棒了，非常感谢你们的支持。",
+                    text = strings.aboutThanksDesc,
                     modifier = Modifier.padding(16.dp),
                     style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
                 )

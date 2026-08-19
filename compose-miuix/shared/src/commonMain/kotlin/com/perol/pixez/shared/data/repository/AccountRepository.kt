@@ -65,26 +65,47 @@ class AccountRepository(
      * 智能统一登录：自动识别 Refresh Token、授权码或回调 URL 完成登录。
      *
      * 1. 若输入为 pixiv:// 回调 URL 或包含 code= 参数，自动提取 code 走 PKCE 授权码登录。
-     * 2. 若输入为纯文本，优先作为 Refresh Token 执行刷新登录；若失败则尝试作为授权码登录。
+     * 2. 若输入包含 JSON 结构（如导出或复制的 refresh_token JSON），自动提取 token 登录。
+     * 3. 自动剥离 Bearer、引号、换行符等常见噪音字符。
+     * 4. 纯文本凭证自动结合格式特征走 refresh_token 刷新或授权码交换。
      */
     suspend fun login(input: String): OAuthAccount {
-        val trimmed = input.trim()
-        require(trimmed.isNotBlank()) { "登录凭证不能为空" }
+        var raw = input.trim()
+        // 去除外层可能包裹的引号或换行
+        raw = raw.removeSurrounding("\"", "\"")
+            .removeSurrounding("'", "'")
+            .trim()
+        require(raw.isNotBlank()) { "登录凭证不能为空" }
 
-        // 1. 如果是回调 URL 或带有 code 参数
-        val codeMatch = Regex("[?&]code=([^&]+)").find(trimmed)
+        // 1. 如果是回调 URL 或带有 code 参数（例如 pixiv://account/login?code=xxx）
+        val codeMatch = Regex("""(?:[?&]|^)code=([^&\s"'#]+)""").find(raw)
         if (codeMatch != null) {
             val code = codeMatch.groupValues[1]
             return loginWithCode(code)
         }
 
-        // 2. 优先尝试作为 Refresh Token 登录
+        // 2. 如果是 JSON 格式凭证（例如 {"refresh_token": "xxx"}）
+        val jsonTokenMatch = Regex(""""refresh_token"\s*:\s*"([^"]+)"""").find(raw)
+        if (jsonTokenMatch != null) {
+            val token = jsonTokenMatch.groupValues[1].trim()
+            return loginWithToken(token)
+        }
+
+        // 3. 剥离可能存在的 Bearer / token: / refresh_token: 前缀
+        var clean = raw
+        for (prefix in listOf("bearer ", "token:", "token：", "refresh_token:", "refresh_token：")) {
+            if (clean.startsWith(prefix, ignoreCase = true)) {
+                clean = clean.substring(prefix.length).trim()
+                clean = clean.removeSurrounding("\"", "\"").removeSurrounding("'", "'").trim()
+            }
+        }
+
+        // 4. 优先尝试作为 Refresh Token 登录；若失败则降级尝试作为授权码登录
         return try {
-            loginWithToken(trimmed)
+            loginWithToken(clean)
         } catch (tokenEx: Exception) {
-            // 3. 降级尝试作为原始授权码登录
             try {
-                loginWithCode(trimmed)
+                loginWithCode(clean)
             } catch (codeEx: Exception) {
                 // 如果两项均失败，抛出最具诊断价值的异常信息
                 throw tokenEx

@@ -24,8 +24,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class OAuthClient(
     private val httpClient: HttpClient,
 ) {
-    // 实例级别保存最后一次生成的 verifier，避免多 OAuthClient 实例互相覆盖。
-    private var lastCodeVerifier: String? = null
+    // 维护最近生成的 verifier 列表（保留最近 10 个），避免用户重复点击生成或多页面跳转导致 verifier 丢失
+    private val verifierHistory = ArrayDeque<String>(10)
+
+    val lastCodeVerifier: String?
+        get() = verifierHistory.lastOrNull()
+
     /**
      * 生成新的 PKCE code_verifier 并计算对应的 code_challenge。
      *
@@ -34,7 +38,10 @@ class OAuthClient(
     @OptIn(ExperimentalEncodingApi::class)
     fun generatePkcePair(): PkcePair {
         val verifier = generateCodeVerifier()
-        lastCodeVerifier = verifier
+        if (verifierHistory.size >= 10) {
+            verifierHistory.removeFirst()
+        }
+        verifierHistory.addLast(verifier)
         val challenge = sha256(verifier.encodeToByteArray())
         val challengeBase64 = Base64.UrlSafe.encode(challenge).trimEnd { it == '=' }
         return PkcePair(verifier, challengeBase64)
@@ -60,17 +67,36 @@ class OAuthClient(
      *
      * @param code 从授权回调中提取的 code。
      * @param codeVerifier 与登录 URL 中 challenge 对应的 verifier；
-     *                     若为空则使用 [lastCodeVerifier]，但建议调用方显式传入。
+     *                     若为空则优先使用最近记录的 verifier，并支持历史记录回退。
      */
     suspend fun exchangeCodeForToken(
         code: String,
-        codeVerifier: String? = lastCodeVerifier,
+        codeVerifier: String? = null,
     ): Account {
-        require(!codeVerifier.isNullOrBlank()) {
-            "缺少 code_verifier，无法交换 token。"
+        val cleanCode = code.trim()
+        require(cleanCode.isNotBlank()) { "授权码 code 不能为空。" }
+
+        val candidateVerifiers = if (!codeVerifier.isNullOrBlank()) {
+            listOf(codeVerifier.trim())
+        } else {
+            verifierHistory.toList().reversed().ifEmpty {
+                throw IllegalArgumentException("缺少 code_verifier，无法交换 token。请重新在应用内点击“使用浏览器登录”。")
+            }
         }
+
+        var lastException: Exception? = null
+        for (verifier in candidateVerifiers) {
+            try {
+                return requestTokenWithCode(cleanCode, verifier)
+            } catch (e: Exception) {
+                lastException = e
+            }
+        }
+        throw lastException ?: IllegalStateException("授权码换取 Token 失败")
+    }
+
+    private suspend fun requestTokenWithCode(code: String, verifier: String): Account {
         return httpClient.post("/auth/token") {
-            header("Content-Type", "application/x-www-form-urlencoded")
             setBody(
                 FormDataContent(
                     Parameters.build {
@@ -80,7 +106,7 @@ class OAuthClient(
                         append("include_policy", "true")
                         append("client_id", CLIENT_ID)
                         append("client_secret", CLIENT_SECRET)
-                        append("code_verifier", codeVerifier)
+                        append("code_verifier", verifier)
                     },
                 ),
             )
@@ -91,15 +117,16 @@ class OAuthClient(
      * 用 refresh_token 刷新 access_token。
      */
     suspend fun refreshToken(refreshToken: String): Account {
+        val cleanToken = refreshToken.trim()
+        require(cleanToken.isNotBlank()) { "Refresh Token 不能为空" }
         return httpClient.post("/auth/token") {
-            header("Content-Type", "application/x-www-form-urlencoded")
             setBody(
                 FormDataContent(
                     Parameters.build {
                         append("client_id", CLIENT_ID)
                         append("client_secret", CLIENT_SECRET)
                         append("grant_type", "refresh_token")
-                        append("refresh_token", refreshToken)
+                        append("refresh_token", cleanToken)
                         append("include_policy", "true")
                     },
                 ),

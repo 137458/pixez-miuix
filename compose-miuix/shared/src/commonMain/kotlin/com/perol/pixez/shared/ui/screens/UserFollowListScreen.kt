@@ -126,16 +126,18 @@ fun UserFollowListScreen(
         }
     }
 
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = "关注",
+                title = strings.userFollowTitle,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Back,
-                            contentDescription = "返回",
+                            contentDescription = strings.back,
                         )
                     }
                 },
@@ -143,7 +145,7 @@ fun UserFollowListScreen(
                     IconButton(onClick = triggerManualRefresh) {
                         Icon(
                             imageVector = MiuixIcons.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = strings.refresh,
                         )
                     }
                 },
@@ -156,7 +158,7 @@ fun UserFollowListScreen(
                 result.isSuccess -> {
                     if (previews.isEmpty()) {
                         EmptyPlaceholder(
-                            message = "暂无关注用户",
+                            message = strings.userFollowEmpty,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(paddingValues),
@@ -196,16 +198,16 @@ fun UserFollowListScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
                                                 Text(
-                                                    text = "加载失败",
+                                                    text = strings.loadFailed,
                                                     style = MiuixTheme.textStyles.body2,
                                                     color = MiuixTheme.colorScheme.error,
                                                 )
                                                 Button(onClick = ::loadMore) {
-                                                    Text(text = "重试")
+                                                    Text(text = strings.retry)
                                                 }
                                             }
                                             nextUrl == null -> Text(
-                                                text = "没有更多了",
+                                                text = strings.noMoreData,
                                                 style = MiuixTheme.textStyles.footnote1,
                                             )
                                         }
