@@ -29,7 +29,7 @@ class AuthTokenStorage(
      *
      * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏。
      */
-    suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.IO) {
+    suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.Default) {
         mutex.withLock {
             try {
                 queries.selectAll().executeAsList().firstOrNull()
@@ -53,7 +53,7 @@ class AuthTokenStorage(
         account: AccountResponse,
         password: String = "no more",
         deviceToken: String = "",
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.Default) {
         mutex.withLock {
             val user = account.user
             val existing = queries.selectByUserId(user.id).executeAsList().firstOrNull()
@@ -78,7 +78,7 @@ class AuthTokenStorage(
     /**
      * 保存账号信息（直接使用已有的 [Account]）。
      */
-    suspend fun saveAccount(account: Account) = withContext(Dispatchers.IO) {
+    suspend fun saveAccount(account: Account) = withContext(Dispatchers.Default) {
         mutex.withLock {
             queries.insertOrReplace(
                 id = account.id,
@@ -103,7 +103,7 @@ class AuthTokenStorage(
      *
      * @throws IllegalStateException 当本地没有登录账号时。
      */
-    suspend fun updateTokens(accessToken: String, refreshToken: String) = withContext(Dispatchers.IO) {
+    suspend fun updateTokens(accessToken: String, refreshToken: String) = withContext(Dispatchers.Default) {
         mutex.withLock {
             val current = queries.selectAll().executeAsList().firstOrNull()
                 ?: throw IllegalStateException("没有登录账号，无法更新 token")
@@ -134,7 +134,7 @@ class AuthTokenStorage(
      *
      * @param transform 接收当前账号（未登录时为 null），返回更新后的账号；返回 null 表示不写入。
      */
-    suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.IO) {
+    suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.Default) {
         mutex.withLock {
             val current = queries.selectAll().executeAsList().firstOrNull()
             val updated = transform(current)
@@ -161,7 +161,7 @@ class AuthTokenStorage(
     /**
      * 清空所有账号信息，相当于登出。
      */
-    suspend fun clear() = withContext(Dispatchers.IO) {
+    suspend fun clear() = withContext(Dispatchers.Default) {
         mutex.withLock {
             queries.deleteAll()
         }

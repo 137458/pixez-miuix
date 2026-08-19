@@ -18,7 +18,7 @@ class MuteRepository(
     /**
      * 读取当前全部屏蔽数据。
      */
-    suspend fun getMuteData(): MuteData = withContext(Dispatchers.IO) {
+    suspend fun getMuteData(): MuteData = withContext(Dispatchers.Default) {
         val illusts = banRepository.getAllBanIllusts().map {
             MuteIllust(id = it.id, illustId = it.illustId, name = it.name)
         }
@@ -36,7 +36,7 @@ class MuteRepository(
      *
      * 每张表在单个事务内完成清空+插入，避免插入失败时旧数据已丢失。
      */
-    suspend fun importMuteData(data: MuteData) = withContext(Dispatchers.IO) {
+    suspend fun importMuteData(data: MuteData) = withContext(Dispatchers.Default) {
         banRepository.replaceAllBanIllusts(
             data.illusts.map { BanRepository.BanIllust(it.id ?: 0L, it.illustId, it.name) },
         )

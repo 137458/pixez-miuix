@@ -91,7 +91,7 @@ fun HistoryScreen(
         refreshToken,
     ) {
         value = suspendRunCatchingNonCancel {
-            withContext(Dispatchers.IO) { repository.getAll() }
+            withContext(Dispatchers.Default) { repository.getAll() }
         }
     }
 

@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * 下载任务历史仓库：封装对旧 task.db 的读写，支持记录、查询与清理下载历史。
- * 所有公开方法均为 suspend，内部切到 [Dispatchers.IO] 执行，避免阻塞 UI 线程。
+ * 所有公开方法均为 suspend，内部切到 [Dispatchers.Default] 执行，避免阻塞 UI 线程。
  *
  * 复用旧 Flutter 遗留的 `task` 表结构，status 字段映射如下：
  * - Pending = 0
@@ -33,7 +33,7 @@ class DownloadHistoryRepository(
      *
      * 不依赖 [remoteUrl] 反查 ID，因此允许同一 URL 产生多条历史记录（重复下载）。
      */
-    suspend fun saveTask(task: DownloadTaskHistory): DownloadTaskHistory = withContext(Dispatchers.IO) {
+    suspend fun saveTask(task: DownloadTaskHistory): DownloadTaskHistory = withContext(Dispatchers.Default) {
         if (task.id > 0) {
             queries.insertOrReplace(
                 id = task.id,
@@ -94,13 +94,13 @@ class DownloadHistoryRepository(
             userId = illust.user.id,
             medium = illust.imageUrls.medium,
         )
-        return withContext(Dispatchers.IO) { saveTask(history) }
+        return withContext(Dispatchers.Default) { saveTask(history) }
     }
 
     /**
      * 查询全部历史记录，按时间倒序排列。
      */
-    suspend fun getAllTasks(): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+    suspend fun getAllTasks(): List<DownloadTaskHistory> = withContext(Dispatchers.Default) {
         queries.selectAllPagedDesc(
             value_ = Long.MAX_VALUE,
             value__ = 0L,
@@ -110,7 +110,7 @@ class DownloadHistoryRepository(
     /**
      * 按状态查询历史记录，按时间倒序排列。
      */
-    suspend fun getTasksByStatus(status: DownloadStatus): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+    suspend fun getTasksByStatus(status: DownloadStatus): List<DownloadTaskHistory> = withContext(Dispatchers.Default) {
         queries.selectByStatusPagedDesc(
             status = status.toDbValue(),
             value_ = Long.MAX_VALUE,
@@ -121,14 +121,14 @@ class DownloadHistoryRepository(
     /**
      * 删除指定 ID 的历史记录。
      */
-    suspend fun deleteTask(id: Long) = withContext(Dispatchers.IO) {
+    suspend fun deleteTask(id: Long) = withContext(Dispatchers.Default) {
         queries.deleteById(id)
     }
 
     /**
      * 清空全部下载历史。
      */
-    suspend fun clearAll() = withContext(Dispatchers.IO) {
+    suspend fun clearAll() = withContext(Dispatchers.Default) {
         queries.deleteAll()
     }
 

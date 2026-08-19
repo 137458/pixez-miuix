@@ -22,7 +22,7 @@ inline fun <T> runCatchingNonCancel(block: () -> T): Result<T> = try {
  * 在协程中执行挂起代码块并包装为 [Result]，显式重新抛出 [CancellationException]。
  *
  * 与 [runCatchingNonCancel] 的区别：本函数接受 [suspend] 代码块，可在块内调用挂起函数
- *（例如 [withContext]、[Dispatchers.IO] 切换或 suspend 仓库方法）。
+ *（例如 [withContext]、[Dispatchers.Default] 切换或 suspend 仓库方法）。
  */
 suspend inline fun <T> suspendRunCatchingNonCancel(block: suspend () -> T): Result<T> = try {
     Result.success(block())

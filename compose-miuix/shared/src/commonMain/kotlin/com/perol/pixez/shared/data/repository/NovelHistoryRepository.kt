@@ -30,9 +30,9 @@ class NovelHistoryRepository(
      * 导入时批量替换小说浏览历史。
      *
      * 先清空旧记录，再按导入数据重新写入，避免重复记录与主键冲突。
-     * 操作在 [Dispatchers.IO] 中执行并在事务内完成。
+     * 操作在 [Dispatchers.Default] 中执行并在事务内完成。
      */
-    suspend fun replaceAll(items: List<NovelHistoryItem>) = withContext(Dispatchers.IO) {
+    suspend fun replaceAll(items: List<NovelHistoryItem>) = withContext(Dispatchers.Default) {
         queries.transaction {
             queries.deleteAll()
             items.forEach { item ->
