@@ -5,12 +5,12 @@ import androidx.compose.runtime.Composable
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 /**
  * 作品详情页底部操作菜单。
  *
- * 基于 [OverlayBottomSheet] 实现，必须在 [top.yukonga.miuix.kmp.basic.Scaffold] 内使用。
+ * 基于 [WindowBottomSheet] 实现，支持独立 Window 渲染，无需依赖页面级 Scaffold。
  * 当前提供「复制信息」「复制链接」「分享链接」与「屏蔽作品」四项操作，
  * 与原 Flutter PixEz 作品详情页「更多」菜单保持一致。
  *
@@ -34,7 +34,7 @@ fun IllustActionMenu(
 ) {
     val strings = LocalStrings.current
 
-    OverlayBottomSheet(
+    WindowBottomSheet(
         show = show,
         title = strings.menuMoreActions,
         onDismissRequest = onDismissRequest,
