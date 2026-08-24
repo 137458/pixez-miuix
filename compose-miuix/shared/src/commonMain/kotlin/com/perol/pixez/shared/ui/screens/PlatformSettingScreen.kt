@@ -91,7 +91,7 @@ fun PlatformSettingScreen(
             }
 
             item {
-                SmallTitle(text = strings.settingSectionDisplayLayout)
+                SmallTitle(text = strings.dialogDisplayMode)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.dialogDisplayMode,
@@ -152,7 +152,6 @@ fun PlatformSettingScreen(
                 onSelected = { value ->
                     displayMode = value
                     settingsRepository.displayMode = value
-                    // TODO: 后续接入实际平台显示模式设置接口（FlutterDisplayMode KMP 等价能力）。
                     editingDialog = null
                 },
             )
@@ -163,7 +162,7 @@ fun PlatformSettingScreen(
 }
 
 /**
- * 显示模式选择对话框：列出可选刷新率模式，选中后立即关闭并回写。
+ * 屏幕刷新率模式选择对话框：列出可选刷新率模式，选中后立即关闭并回写。
  */
 @Composable
 private fun DisplayModeDialog(
@@ -174,8 +173,8 @@ private fun DisplayModeDialog(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val options = listOf(
         0 to strings.platformDisplayModeFollowSystem,
-        1 to "60Hz",
-        2 to "120Hz",
+        1 to "标准 60Hz",
+        2 to "高刷新率 (90Hz / 120Hz / 144Hz)",
     )
 
     OverlayDialog(
@@ -200,14 +199,14 @@ private fun DisplayModeDialog(
 }
 
 /**
- * 将显示模式数值转换为展示文案；若数值不在选项范围内，返回默认「跟随系统」。
+ * 将屏幕刷新率数值转换为展示文案；若数值不在选项范围内，返回默认「跟随系统」。
  */
 @Composable
 private fun Int.toDisplayModeLabel(): String {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     return when (this) {
-        1 -> "60Hz"
-        2 -> "120Hz"
+        1 -> "标准 60Hz"
+        2 -> "高刷新率 (90Hz / 120Hz+)"
         else -> strings.platformDisplayModeFollowSystem
     }
 }

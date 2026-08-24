@@ -65,27 +65,14 @@ fun InteractionSettingScreen(
                 SmallTitle(text = strings.interactionSettingTitle)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = strings.interactionSettingBangs,
-                        summary = if (isBangs) strings.interactionSettingBangsSummaryOn else strings.interactionSettingBangsSummaryOff,
+                        title = strings.interactionSettingSwipeChange,
+                        summary = if (swipeChangeArtwork) strings.interactionSettingSwipeChangeSummaryOn else strings.interactionSettingSwipeChangeSummaryOff,
                         endActions = {
                             Switch(
-                                checked = isBangs,
+                                checked = swipeChangeArtwork,
                                 onCheckedChange = { checked ->
-                                    isBangs = checked
-                                    settingsRepository.isBangs = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.interactionSettingHNotAllow,
-                        summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = hIsNotAllow,
-                                onCheckedChange = { checked ->
-                                    hIsNotAllow = checked
-                                    settingsRepository.hIsNotAllow = checked
+                                    swipeChangeArtwork = checked
+                                    settingsRepository.swipeChangeArtwork = checked
                                 },
                             )
                         },
@@ -103,15 +90,40 @@ fun InteractionSettingScreen(
                             )
                         },
                     )
+                }
+            }
+
+            item {
+                SmallTitle(text = strings.settingShield)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = strings.interactionSettingSwipeChange,
-                        summary = if (swipeChangeArtwork) strings.interactionSettingSwipeChangeSummaryOn else strings.interactionSettingSwipeChangeSummaryOff,
+                        title = strings.interactionSettingHNotAllow,
+                        summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
                         endActions = {
                             Switch(
-                                checked = swipeChangeArtwork,
+                                checked = hIsNotAllow,
                                 onCheckedChange = { checked ->
-                                    swipeChangeArtwork = checked
-                                    settingsRepository.swipeChangeArtwork = checked
+                                    hIsNotAllow = checked
+                                    settingsRepository.hIsNotAllow = checked
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                SmallTitle(text = strings.settingSectionDisplayLayout)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.interactionSettingBangs,
+                        summary = if (isBangs) strings.interactionSettingBangsSummaryOn else strings.interactionSettingBangsSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = isBangs,
+                                onCheckedChange = { checked ->
+                                    isBangs = checked
+                                    settingsRepository.isBangs = checked
                                 },
                             )
                         },

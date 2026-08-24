@@ -181,6 +181,8 @@ interface AppStrings {
     val crossCountPortrait: String
     val crossCountLandscape: String
     val crossAdaptAuto: String
+    val crossAdaptAutoSummaryOn: String
+    val crossAdaptAutoSummaryOff: String
 
     // 保存与收藏联动设置
     val saveAfterStar: String
@@ -1007,6 +1009,8 @@ object ZhCnStrings : AppStrings {
     override val crossCountPortrait = "竖屏固定列数"
     override val crossCountLandscape = "横屏固定列数"
     override val crossAdaptAuto = "按宽度自适应列数"
+    override val crossAdaptAutoSummaryOn = "根据屏幕宽度自适应计算最佳列数"
+    override val crossAdaptAutoSummaryOff = "使用指定固定列数排布"
 
     override val saveAfterStar = "收藏后保存"
     override val saveAfterStarSummaryOn = "收藏作品后自动保存"
@@ -1085,7 +1089,7 @@ object ZhCnStrings : AppStrings {
     override val dialogPickSeedColorSummary = "点击预设颜色快速选择，或输入自定义 HEX 色值"
     override val dialogPaletteStyle = "调色板风格"
     override val dialogPaletteStyleSummary = "选择 Monet 动态取色的调色板风格"
-    override val dialogDisplayMode = "显示模式"
+    override val dialogDisplayMode = "屏幕刷新率"
     override val dialogNewVersionFound = "发现新版本"
     override val dialogNewVersionSummary = "检测到 PixEz 存在新版本发布"
     override val btnUpdate = "更新"
@@ -1544,6 +1548,8 @@ object ZhTwStrings : AppStrings {
     override val crossCountPortrait = "直向固定欄數"
     override val crossCountLandscape = "橫向固定欄數"
     override val crossAdaptAuto = "依寬度自適應欄數"
+    override val crossAdaptAutoSummaryOn = "依螢幕寬度自適應計算最佳欄數"
+    override val crossAdaptAutoSummaryOff = "使用指定固定欄數排布"
 
     override val saveAfterStar = "收藏後儲存"
     override val saveAfterStarSummaryOn = "收藏作品後自動儲存"
@@ -1622,7 +1628,7 @@ object ZhTwStrings : AppStrings {
     override val dialogPickSeedColorSummary = "點擊預設色彩快速選擇，或輸入自訂 HEX 色碼"
     override val dialogPaletteStyle = "調色板風格"
     override val dialogPaletteStyleSummary = "選擇 Monet 動態取色的調色板風格"
-    override val dialogDisplayMode = "顯示模式"
+    override val dialogDisplayMode = "螢幕更新率"
     override val dialogNewVersionFound = "發現新版本"
     override val dialogNewVersionSummary = "偵測到 PixEz 有新版本發布"
     override val btnUpdate = "更新"
@@ -2081,6 +2087,8 @@ object EnStrings : AppStrings {
     override val crossCountPortrait = "Portrait Grid Columns"
     override val crossCountLandscape = "Landscape Grid Columns"
     override val crossAdaptAuto = "Adaptive Columns by Width"
+    override val crossAdaptAutoSummaryOn = "Automatically calculate optimal column count based on screen width"
+    override val crossAdaptAutoSummaryOff = "Use fixed column count layout"
 
     override val saveAfterStar = "Save after Bookmarking"
     override val saveAfterStarSummaryOn = "Auto save artwork when bookmarked"
@@ -2159,7 +2167,7 @@ object EnStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Select a preset color or enter custom HEX value"
     override val dialogPaletteStyle = "Palette Style"
     override val dialogPaletteStyleSummary = "Select Monet dynamic palette style"
-    override val dialogDisplayMode = "Display Mode"
+    override val dialogDisplayMode = "Screen Refresh Rate"
     override val dialogNewVersionFound = "New Version Found"
     override val dialogNewVersionSummary = "A new version of PixEz is available."
     override val btnUpdate = "Update"
@@ -2618,6 +2626,8 @@ object JaStrings : AppStrings {
     override val crossCountPortrait = "縦向き列数"
     override val crossCountLandscape = "横向き列数"
     override val crossAdaptAuto = "幅に応じた適応列数"
+    override val crossAdaptAutoSummaryOn = "画面幅に応じて最適な列数を自動計算"
+    override val crossAdaptAutoSummaryOff = "指定した固定列数で配置"
 
     override val saveAfterStar = "ブックマーク後に保存"
     override val saveAfterStarSummaryOn = "作品をブックマークした後に自動保存"
@@ -2696,7 +2706,7 @@ object JaStrings : AppStrings {
     override val dialogPickSeedColorSummary = "プリセットカラーまたは HEX カラーコードを入力"
     override val dialogPaletteStyle = "パレットスタイル"
     override val dialogPaletteStyleSummary = "Monet ダイナミックパレットのスタイルを選択"
-    override val dialogDisplayMode = "表示モード"
+    override val dialogDisplayMode = "画面リフレッシュレート"
     override val dialogNewVersionFound = "新しいバージョンが見つかりました"
     override val dialogNewVersionSummary = "PixEz の最新バージョンが利用可能です。"
     override val btnUpdate = "アップデート"
@@ -3155,6 +3165,8 @@ object KoStrings : AppStrings {
     override val crossCountPortrait = "세로 고정 열 수"
     override val crossCountLandscape = "가로 고정 열 수"
     override val crossAdaptAuto = "너비 기반 적응형 열 수"
+    override val crossAdaptAutoSummaryOn = "화면 너비에 따라 최적의 열 수를 자동 계산"
+    override val crossAdaptAutoSummaryOff = "지정된 고정 열 수로 배치"
 
     override val saveAfterStar = "북마크 후 저장"
     override val saveAfterStarSummaryOn = "북마크 시 자동으로 작품 저장"
@@ -3233,7 +3245,7 @@ object KoStrings : AppStrings {
     override val dialogPickSeedColorSummary = "프리셋 컬러를 선택하거나 HEX 코드를 입력하세요"
     override val dialogPaletteStyle = "팔레트 스타일"
     override val dialogPaletteStyleSummary = "Monet 다이내믹 팔레트 스타일 선택"
-    override val dialogDisplayMode = "표시 모드"
+    override val dialogDisplayMode = "화면 재생률"
     override val dialogNewVersionFound = "새 버전 발견"
     override val dialogNewVersionSummary = "PixEz의 최신 버전이 준비되었습니다."
     override val btnUpdate = "업데이트"
@@ -3692,6 +3704,8 @@ object RuStrings : AppStrings {
     override val crossCountPortrait = "Колонки (портрет)"
     override val crossCountLandscape = "Колонки (альбом)"
     override val crossAdaptAuto = "Адаптивные колонки"
+    override val crossAdaptAutoSummaryOn = "Автоматический расчет оптимального числа колонок"
+    override val crossAdaptAutoSummaryOff = "Использовать фиксированное количество колонок"
 
     override val saveAfterStar = "Сохранять после закладки"
     override val saveAfterStarSummaryOn = "Автосохранение при добавлении в закладки"
@@ -3770,7 +3784,7 @@ object RuStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Выберите готовый цвет или введите HEX-код"
     override val dialogPaletteStyle = "Стиль палитры"
     override val dialogPaletteStyleSummary = "Стиль динамической палитры Monet"
-    override val dialogDisplayMode = "Режим отображения"
+    override val dialogDisplayMode = "Частота обновления экрана"
     override val dialogNewVersionFound = "Найдена новая версия"
     override val dialogNewVersionSummary = "Доступно обновление PixEz."
     override val btnUpdate = "Обновить"
@@ -4229,6 +4243,8 @@ object EsStrings : AppStrings {
     override val crossCountPortrait = "Columnas (vertical)"
     override val crossCountLandscape = "Columnas (horizontal)"
     override val crossAdaptAuto = "Columnas adaptativas"
+    override val crossAdaptAutoSummaryOn = "Calcular columnas óptimas según el ancho de pantalla"
+    override val crossAdaptAutoSummaryOff = "Usar número fijo de columnas"
 
     override val saveAfterStar = "Guardar al marcar"
     override val saveAfterStarSummaryOn = "Guardar automáticamente al marcar como favorito"
@@ -4307,7 +4323,7 @@ object EsStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Elige un color o introduce código HEX"
     override val dialogPaletteStyle = "Estilo de paleta"
     override val dialogPaletteStyleSummary = "Estilo de paleta dinámica Monet"
-    override val dialogDisplayMode = "Modo de visualización"
+    override val dialogDisplayMode = "Frecuencia de actualización"
     override val dialogNewVersionFound = "Nueva versión encontrada"
     override val dialogNewVersionSummary = "Una nueva versión de PixEz está disponible."
     override val btnUpdate = "Actualizar"
@@ -4766,6 +4782,8 @@ object TrStrings : AppStrings {
     override val crossCountPortrait = "Dikey Sütun Sayısı"
     override val crossCountLandscape = "Yatay Sütun Sayısı"
     override val crossAdaptAuto = "Genişliğe Göre Otomatik"
+    override val crossAdaptAutoSummaryOn = "Ekran genişliğine göre en uygun sütun sayısını hesapla"
+    override val crossAdaptAutoSummaryOff = "Sabit sütun sayısı düzenini kullan"
 
     override val saveAfterStar = "Kaydettikten Sonra İndir"
     override val saveAfterStarSummaryOn = "Yer imine ekleyince otomatik indir"
@@ -4844,7 +4862,7 @@ object TrStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Önceden ayarlanmış renk seçin veya HEX kodu girin"
     override val dialogPaletteStyle = "Palet Stili"
     override val dialogPaletteStyleSummary = "Monet dinamik palet stili seçin"
-    override val dialogDisplayMode = "Görüntüleme Modu"
+    override val dialogDisplayMode = "Ekran Yenileme Hızı"
     override val dialogNewVersionFound = "Yeni Sürüm Bulundu"
     override val dialogNewVersionSummary = "PixEz için yeni bir güncelleme mevcut."
     override val btnUpdate = "Güncelle"
@@ -5303,6 +5321,8 @@ object IdStrings : AppStrings {
     override val crossCountPortrait = "Kolom (Potret)"
     override val crossCountLandscape = "Kolom (Lanskap)"
     override val crossAdaptAuto = "Kolom Adaptif"
+    override val crossAdaptAutoSummaryOn = "Hitung jumlah kolom optimal berdasarkan lebar layar"
+    override val crossAdaptAutoSummaryOff = "Gunakan tata letak jumlah kolom tetap"
 
     override val saveAfterStar = "Simpan setelah Markah"
     override val saveAfterStarSummaryOn = "Simpan otomatis saat dimarkahi"
@@ -5381,7 +5401,7 @@ object IdStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Pilih warna prasetel atau masukkan kode HEX"
     override val dialogPaletteStyle = "Gaya Palet"
     override val dialogPaletteStyleSummary = "Pilih gaya palet dinamis Monet"
-    override val dialogDisplayMode = "Mode Tampilan"
+    override val dialogDisplayMode = "Kecepatan Refresh Layar"
     override val dialogNewVersionFound = "Versi Baru Ditemukan"
     override val dialogNewVersionSummary = "Versi terbaru PixEz telah tersedia."
     override val btnUpdate = "Perbarui"
@@ -5840,6 +5860,8 @@ object FilStrings : AppStrings {
     override val crossCountPortrait = "Mga Kolum (Portrait)"
     override val crossCountLandscape = "Mga Kolum (Landscape)"
     override val crossAdaptAuto = "Adaptive na mga Kolum"
+    override val crossAdaptAutoSummaryOn = "Awtomatikong kalkulahin ang pinakamainam na bilang ng kolum"
+    override val crossAdaptAutoSummaryOff = "Gamitin ang nakapirming bilang ng kolum"
 
     override val saveAfterStar = "I-save pagkatapos I-bookmark"
     override val saveAfterStarSummaryOn = "Awtomatikong i-save pagkatapos i-bookmark"
@@ -5918,7 +5940,7 @@ object FilStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Pumili ng preset na kulay o maglagay ng HEX code"
     override val dialogPaletteStyle = "Estilo ng Palette"
     override val dialogPaletteStyleSummary = "Pumili ng Monet dynamic palette style"
-    override val dialogDisplayMode = "Mode ng Display"
+    override val dialogDisplayMode = "Refresh Rate ng Screen"
     override val dialogNewVersionFound = "May Bagong Bersyon"
     override val dialogNewVersionSummary = "May available na bagong bersyon ng PixEz."
     override val btnUpdate = "I-update"
@@ -6377,6 +6399,8 @@ object DeStrings : AppStrings {
     override val crossCountPortrait = "Spalten (Hochformat)"
     override val crossCountLandscape = "Spalten (Querformat)"
     override val crossAdaptAuto = "Adaptive Spalten"
+    override val crossAdaptAutoSummaryOn = "Optimale Spaltenanzahl automatisch an Bildschirmbreite anpassen"
+    override val crossAdaptAutoSummaryOff = "Feste Spaltenanzahl verwenden"
 
     override val saveAfterStar = "Nach Lesezeichen speichern"
     override val saveAfterStarSummaryOn = "Automatisch speichern beim Setzen von Lesezeichen"
@@ -6455,7 +6479,7 @@ object DeStrings : AppStrings {
     override val dialogPickSeedColorSummary = "Voreinstellung wählen oder HEX-Code eingeben"
     override val dialogPaletteStyle = "Palettenstil"
     override val dialogPaletteStyleSummary = "Monet dynamischen Palettenstil wählen"
-    override val dialogDisplayMode = "Anzeigemodus"
+    override val dialogDisplayMode = "Bildwiederholfrequenz"
     override val dialogNewVersionFound = "Neue Version gefunden"
     override val dialogNewVersionSummary = "Eine neue Version von PixEz ist verfügbar."
     override val btnUpdate = "Aktualisieren"

@@ -118,7 +118,7 @@ fun LayoutSettingScreen(
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.crossAdaptAuto,
-                        summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        summary = if (crossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
                         endActions = {
                             Switch(
                                 checked = crossAdapt,
@@ -152,7 +152,7 @@ fun LayoutSettingScreen(
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.crossAdaptAuto,
-                        summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        summary = if (hCrossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
                         endActions = {
                             Switch(
                                 checked = hCrossAdapt,

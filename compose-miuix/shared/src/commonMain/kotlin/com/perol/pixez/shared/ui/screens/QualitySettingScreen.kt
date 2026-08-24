@@ -89,7 +89,7 @@ fun QualitySettingScreen(
             contentPadding = paddingValues,
         ) {
             item {
-                SmallTitle(text = strings.tabRecommend)
+                SmallTitle(text = strings.feedPreviewQuality)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
                         title = strings.feedPreviewQuality,
@@ -100,7 +100,7 @@ fun QualitySettingScreen(
             }
 
             item {
-                SmallTitle(text = strings.categoryIllust)
+                SmallTitle(text = strings.pictureQuality)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
                         title = strings.pictureQuality,

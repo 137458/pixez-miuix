@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
@@ -194,8 +195,38 @@ fun RootContent(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = stackAnimation(slide()),
                                     selector = { initialBackEvent, _, _ ->
-                                        com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.androidPredictiveBackAnimatable(
+                                        com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable(
                                             initialBackEvent = initialBackEvent,
+                                            exitModifier = { progress, edge ->
+                                                val scale = 1f - progress * 0.10f
+                                                val translationX = when (edge) {
+                                                    com.arkivanov.essenty.backhandler.BackEvent.SwipeEdge.LEFT -> progress * 48f
+                                                    com.arkivanov.essenty.backhandler.BackEvent.SwipeEdge.RIGHT -> -progress * 48f
+                                                    else -> 0f
+                                                }
+                                                Modifier.graphicsLayer {
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                    this.translationX = translationX
+                                                    shape = androidx.compose.foundation.shape.RoundedCornerShape((progress * 28).dp)
+                                                    clip = true
+                                                    shadowElevation = progress * 20f
+                                                }
+                                            },
+                                            enterModifier = { progress, edge ->
+                                                val scale = 0.90f + progress * 0.10f
+                                                val translationX = when (edge) {
+                                                    com.arkivanov.essenty.backhandler.BackEvent.SwipeEdge.LEFT -> (progress - 1f) * 36f
+                                                    com.arkivanov.essenty.backhandler.BackEvent.SwipeEdge.RIGHT -> (1f - progress) * 36f
+                                                    else -> 0f
+                                                }
+                                                Modifier.graphicsLayer {
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                    this.translationX = translationX
+                                                    alpha = 0.70f + progress * 0.30f
+                                                }
+                                            },
                                         )
                                     },
                                     onBack = { component.onBack() },
