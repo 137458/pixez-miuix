@@ -66,11 +66,19 @@ fun UpdateDialog(
                     .padding(12.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                Text(
-                    text = releaseInfo.changelog.ifBlank { strings.updateChangelogTitle },
-                    style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
+                if (releaseInfo.changelog.isNotBlank()) {
+                    MarkdownText(
+                        markdown = releaseInfo.changelog,
+                        modifier = Modifier.fillMaxWidth(),
+                        baseFontSize = 13,
+                    )
+                } else {
+                    Text(
+                        text = strings.updateChangelogTitle,
+                        style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

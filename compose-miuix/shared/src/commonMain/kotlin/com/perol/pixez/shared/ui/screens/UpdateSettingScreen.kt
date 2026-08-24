@@ -287,10 +287,10 @@ fun UpdateSettingScreen(
                                     color = MiuixTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = releaseInfo?.changelog ?: "",
-                                    style = MiuixTheme.textStyles.body2.copy(lineHeight = 20.sp),
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                com.perol.pixez.shared.ui.components.MarkdownText(
+                                    markdown = releaseInfo?.changelog ?: "",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    baseFontSize = 14,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 TextButton(
