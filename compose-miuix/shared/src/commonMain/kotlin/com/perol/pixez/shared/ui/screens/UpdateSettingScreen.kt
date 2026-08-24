@@ -2,9 +2,11 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -87,6 +89,12 @@ fun UpdateSettingScreen(
 
     var ignoredVersion by remember { mutableStateOf(settingsRepository.ignoreUpdateVersion) }
     var autoCheckUpdate by remember { mutableStateOf(settingsRepository.autoCheckUpdate) }
+
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var downloadedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var totalBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var downloadedFilePath by remember { mutableStateOf<String?>(null) }
 
     val hasNew = releaseInfo?.isNew == true
 
@@ -271,10 +279,15 @@ fun UpdateSettingScreen(
                     )
                 }
 
-                // ── 新版本更新日志（若存在更新） ──
-                if (hasNew && releaseInfo != null) {
+                // ── 更新日志卡片（获取到版本信息后常驻展示，保证稳定可见） ──
+                if (releaseInfo != null) {
                     item(key = "changelog") {
-                        SmallTitle(text = strings.updateChangelogTitle.format(releaseInfo?.versionName ?: ""))
+                        val changelogTitle = if (hasNew) {
+                            strings.updateChangelogTitle.format(releaseInfo?.versionName ?: "")
+                        } else {
+                            strings.updateCurrentChangelog.format(releaseInfo?.versionName ?: "")
+                        }
+                        SmallTitle(text = changelogTitle)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -292,17 +305,89 @@ fun UpdateSettingScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     baseFontSize = 14,
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                TextButton(
-                                    text = strings.updateDownloadNow,
-                                    onClick = {
-                                        releaseInfo?.releaseUrl?.let { url ->
-                                            openBrowser(url)
+
+                                if (isDownloading) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                                    ) {
+                                        Text(
+                                            text = strings.updateDownloading,
+                                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                                            color = MiuixTheme.colorScheme.primary,
+                                        )
+                                        val percent = if (downloadProgress >= 0f) "${(downloadProgress * 100).toInt()}%" else ""
+                                        val sizeText = if (totalBytes > 0) {
+                                            "${formatSize(downloadedBytes)} / ${formatSize(totalBytes)}"
+                                        } else {
+                                            formatSize(downloadedBytes)
                                         }
-                                    },
-                                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
+                                        Text(
+                                            text = if (percent.isNotEmpty()) "$sizeText ($percent)" else sizeText,
+                                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    if (downloadProgress >= 0f) {
+                                        top.yukonga.miuix.kmp.basic.LinearProgressIndicator(
+                                            progress = downloadProgress,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    } else {
+                                        top.yukonga.miuix.kmp.basic.LinearProgressIndicator(
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (downloadedFilePath != null) {
+                                    TextButton(
+                                        text = strings.updateInstallNow,
+                                        onClick = {
+                                            com.perol.pixez.shared.platform.AppInstaller().install(downloadedFilePath!!)
+                                        },
+                                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                } else if (!isDownloading) {
+                                    TextButton(
+                                        text = if (hasNew) strings.updateDownloadNow else strings.updateOpenInBrowser,
+                                        onClick = {
+                                            if (hasNew) {
+                                                val downloadUrl = releaseInfo?.downloadUrl ?: releaseInfo?.releaseUrl.orEmpty()
+                                                val fileName = releaseInfo?.fileName ?: "PixEz-MIUIX-${releaseInfo?.versionName}.apk"
+                                                isDownloading = true
+                                                downloadProgress = 0f
+                                                coroutineScope.launch {
+                                                    val result = com.perol.pixez.shared.platform.AppUpdateDownloader().download(
+                                                        downloadUrl = downloadUrl,
+                                                        fileName = fileName,
+                                                        onProgress = { progress, downloaded, total ->
+                                                            downloadProgress = progress
+                                                            downloadedBytes = downloaded
+                                                            totalBytes = total
+                                                        },
+                                                    )
+                                                    isDownloading = false
+                                                    result.onSuccess { path ->
+                                                        downloadedFilePath = path
+                                                        com.perol.pixez.shared.platform.AppInstaller().install(path)
+                                                    }.onFailure { error ->
+                                                        toastMessage = error.message ?: strings.updateDownloadFailed
+                                                    }
+                                                }
+                                            } else {
+                                                releaseInfo?.releaseUrl?.let { openBrowser(it) }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -438,3 +523,17 @@ fun UpdateSettingScreen(
         )
     }
 }
+
+private fun formatSize(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        gb >= 1.0 -> "${(gb * 10).toInt() / 10.0} GB"
+        mb >= 1.0 -> "${(mb * 10).toInt() / 10.0} MB"
+        kb >= 1.0 -> "${(kb * 10).toInt() / 10.0} KB"
+        else -> "$bytes B"
+    }
+}
+

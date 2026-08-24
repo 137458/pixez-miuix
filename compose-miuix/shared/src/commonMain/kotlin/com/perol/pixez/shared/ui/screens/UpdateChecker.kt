@@ -14,6 +14,16 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
+ * GitHub Release Asset 信息。
+ */
+@Serializable
+private data class GitHubReleaseAsset(
+    val name: String? = null,
+    val browser_download_url: String? = null,
+    val size: Long? = null,
+)
+
+/**
  * GitHub Release API 返回的完整版本信息。
  */
 @Serializable
@@ -23,6 +33,7 @@ private data class GitHubRelease(
     val body: String? = null,
     val html_url: String? = null,
     val published_at: String? = null,
+    val assets: List<GitHubReleaseAsset>? = null,
 )
 
 /**
@@ -36,6 +47,9 @@ data class ReleaseInfo(
     val releaseUrl: String,
     val publishedAt: String?,
     val isNew: Boolean,
+    val downloadUrl: String? = null,
+    val fileName: String? = null,
+    val fileSize: Long? = null,
 )
 
 /**
@@ -79,6 +93,14 @@ suspend fun fetchLatestReleaseInfo(
             .body()
         val tag = release.tag_name ?: ""
         val versionName = tag.removePrefix("v").ifBlank { "unknown" }
+
+        val apkAsset = release.assets?.firstOrNull { it.name?.endsWith(".apk", ignoreCase = true) == true }
+            ?: release.assets?.firstOrNull()
+        val downloadUrl = apkAsset?.browser_download_url
+            ?: "https://github.com/137458/pixez-miuix/releases/download/$tag/PixEz-MIUIX-$tag.apk"
+        val fileName = apkAsset?.name ?: "PixEz-MIUIX-$tag.apk"
+        val fileSize = apkAsset?.size
+
         val releaseInfo = ReleaseInfo(
             tagName = tag,
             versionName = versionName,
@@ -87,6 +109,9 @@ suspend fun fetchLatestReleaseInfo(
             releaseUrl = release.html_url ?: "https://github.com/137458/pixez-miuix/releases",
             publishedAt = release.published_at,
             isNew = hasNewVersion(versionName),
+            downloadUrl = downloadUrl,
+            fileName = fileName,
+            fileSize = fileSize,
         )
         Result.success(releaseInfo)
     } catch (e: CancellationException) {
