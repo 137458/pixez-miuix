@@ -18,11 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.androidPredictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.slide
+import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.perol.pixez.shared.platform.rememberScreenCornerRadius
-import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimatable
-import com.perol.pixez.shared.ui.navigation.animation.miuixStackAnimation
 
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -173,12 +173,6 @@ fun RootContent(
                     val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
                     val showNavigationRail = isWideScreen && isMainTab && !useFloatingBottomBar
                     val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
-                    val density = LocalDensity.current
-                    val screenCornerRadius = rememberScreenCornerRadius()
-                    val containerWidthPx = with(density) {
-                        val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
-                        availableWidth.toPx()
-                    }
 
                     Row(modifier = Modifier.fillMaxSize()) {
                         // 在平板/桌面宽屏且关闭悬浮底栏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
@@ -201,13 +195,10 @@ fun RootContent(
                                     .layerBackdrop(backdrop),
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
-                                    fallbackAnimation = miuixStackAnimation(),
+                                    fallbackAnimation = stackAnimation(slide()),
                                     selector = { initialBackEvent, _, _ ->
-                                        miuixPredictiveBackAnimatable(
+                                        androidPredictiveBackAnimatable(
                                             initialBackEvent = initialBackEvent,
-                                            density = density,
-                                            containerWidthPx = containerWidthPx,
-                                            deviceCornerRadius = screenCornerRadius,
                                         )
                                     },
                                     onBack = { component.onBack() },
