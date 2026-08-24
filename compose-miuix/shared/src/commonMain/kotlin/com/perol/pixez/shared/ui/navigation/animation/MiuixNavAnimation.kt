@@ -40,24 +40,16 @@ fun miuixSlidePredictiveBackAnimatable(
 ): PredictiveBackAnimatable {
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
-        exitModifier = { progress, edge ->
-            val translationX = when (edge) {
-                BackEvent.SwipeEdge.LEFT -> progress * containerWidthPx
-                BackEvent.SwipeEdge.RIGHT -> -progress * containerWidthPx
-                else -> progress * containerWidthPx
-            }
+        exitModifier = { progress, _ ->
+            val translationX = progress * containerWidthPx
             Modifier.graphicsLayer {
                 this.translationX = translationX
                 shadowElevation = 16f
             }
         },
-        enterModifier = { progress, edge ->
+        enterModifier = { progress, _ ->
             val parallaxRatio = 0.30f
-            val translationX = when (edge) {
-                BackEvent.SwipeEdge.LEFT -> -(1f - progress) * (containerWidthPx * parallaxRatio)
-                BackEvent.SwipeEdge.RIGHT -> (1f - progress) * (containerWidthPx * parallaxRatio)
-                else -> -(1f - progress) * (containerWidthPx * parallaxRatio)
-            }
+            val translationX = -(1f - progress) * (containerWidthPx * parallaxRatio)
             val scrimAlpha = (1f - progress) * 0.20f
 
             Modifier
