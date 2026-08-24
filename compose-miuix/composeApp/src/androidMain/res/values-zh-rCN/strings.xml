@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">日榜推荐</string>
+    <string name="shortcut_search">搜索插画</string>
+    <string name="shortcut_downloads">下载管理</string>
+    <string name="shortcut_history">浏览历史</string>
+</resources>

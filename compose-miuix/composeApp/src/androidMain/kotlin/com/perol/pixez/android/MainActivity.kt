@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
             componentContext = defaultComponentContext(),
             settingsRepository = dependencies.settingsRepository,
         )
-        handleAuthIntent(intent)
+        handleIntent(intent)
         setContent {
             PixEzApp(
                 dependencies = dependencies,
@@ -51,7 +51,37 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleAuthIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        val scheme = uri.scheme?.lowercase()
+        val host = uri.host?.lowercase()
+
+        when {
+            (scheme == "pixez" || scheme == "pixiv") -> {
+                when (host) {
+                    "ranking" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
+                    "search" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Search)
+                    "downloads", "download_task" -> rootComponent.onDownloadTaskClicked()
+                    "history" -> rootComponent.onHistoryClicked()
+                    "illust", "artworks" -> {
+                        val id = uri.lastPathSegment?.toIntOrNull()
+                        if (id != null) rootComponent.onIllustClicked(id)
+                    }
+                    "account", "oauth" -> handleAuthIntent(intent)
+                }
+            }
+            scheme == "https" && (host == "app-api.pixiv.net" || host == "www.pixiv.net") -> {
+                if (uri.path?.contains("/users/auth/pixiv/callback") == true) {
+                    handleAuthIntent(intent)
+                } else if (uri.path?.contains("/artworks/") == true) {
+                    val id = uri.lastPathSegment?.toIntOrNull()
+                    if (id != null) rootComponent.onIllustClicked(id)
+                }
+            }
+        }
     }
 
     private fun handleAuthIntent(intent: Intent?) {

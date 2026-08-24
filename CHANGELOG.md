@@ -8,6 +8,10 @@
 
 ### 新增
 
+- 接入 Android 14+ / 15+ 桌面快捷捷径（App Shortcuts）与深度链接路由，支持长按桌面图标快速直达日榜推荐、插画搜索、下载管理与浏览历史。
+- 接入 Android 14+ 系统级分享面板自定义动作（`ChooserAction` 快速复制）。
+- 接入 Android 14+ / 15+ 10-bit Display P3 广色域色彩渲染模式（`wideColorGamut`），充分发挥现代 OLED 与 HyperOS 屏幕高色域表现力。
+- 集成 `androidx.profileinstaller` 运行时编译安装器，利用 Baseline Profiles 自动触发 DEX AOT 预编译提升启动与滑动流畅度。
 - 接入 Android 12+ 官方启动屏幕（Splash Screen）API，消除冷启动闪屏。
 - 接入 Android 13+ 每应用独立语言偏好（Per-App Language Preferences）与动态取色自适应图标。
 - 评论区支持 Pixiv 官方 40 枚表情包解析与快捷输入面板。

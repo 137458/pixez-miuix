@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_ranking"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_ranking"
+        android:shortcutLongLabel="@string/shortcut_ranking">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.perol.pixez.miuix"
+            android:targetClass="com.perol.pixez.android.MainActivity"
+            android:data="pixez://ranking" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_search"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_search"
+        android:shortcutLongLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.perol.pixez.miuix"
+            android:targetClass="com.perol.pixez.android.MainActivity"
+            android:data="pixez://search" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_downloads"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_downloads"
+        android:shortcutLongLabel="@string/shortcut_downloads">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.perol.pixez.miuix"
+            android:targetClass="com.perol.pixez.android.MainActivity"
+            android:data="pixez://downloads" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_history"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_history"
+        android:shortcutLongLabel="@string/shortcut_history">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.perol.pixez.miuix"
+            android:targetClass="com.perol.pixez.android.MainActivity"
+            android:data="pixez://history" />
+    </shortcut>
+</shortcuts>

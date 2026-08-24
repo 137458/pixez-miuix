@@ -18,8 +18,12 @@
             android:name="com.perol.pixez.android.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:colorMode="wideColorGamut"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
             android:theme="@style/Theme.App.Starting">
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -41,6 +45,14 @@
                 <data android:scheme="https" android:host="app-api.pixiv.net" android:pathPrefix="/web/v1/users/auth/pixiv/callback" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name="com.perol.pixez.shared.platform.ShareActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.perol.pixez.action.COPY_TEXT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

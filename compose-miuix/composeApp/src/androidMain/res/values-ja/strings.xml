@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">ランキング</string>
+    <string name="shortcut_search">イラスト検索</string>
+    <string name="shortcut_downloads">ダウンロード</string>
+    <string name="shortcut_history">閲覧履歴</string>
+</resources>

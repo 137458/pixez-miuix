@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">Ranking</string>
+    <string name="shortcut_search">Search</string>
+    <string name="shortcut_downloads">Downloads</string>
+    <string name="shortcut_history">History</string>
 </resources>
