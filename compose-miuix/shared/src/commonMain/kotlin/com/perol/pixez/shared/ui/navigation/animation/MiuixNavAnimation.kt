@@ -9,7 +9,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
@@ -33,21 +35,29 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
  * 核心特性：
  * 1. **非线性物理阻尼**：手势滑动过程中对进度进行非线性拟合，提供跟手且具有物理质量的阻尼感。
  * 2. **视口自适应位移**：根据容器实际物理宽度 [containerWidthPx] 动态计算滑移距离，避免固定绝对像素导致的微小位移问题。
- * 3. **硬件级圆角倒角与立体阴影**：顶层卡片随手势进度从 0dp 演进至 28dp 标准圆角并投射多层景深阴影。
- * 4. **底页视差深度与暗色遮罩（Scrim）**：底层预览页面从 93% 深度微缩与轻微左偏视差推进至全屏，并随手势逐渐消退 28% 暗色遮罩，突出操作焦点。
+ * 3. **硬件级设备圆角自适应**：
+ *    - 初始状态（静止/未触发手势）严格贴合当前物理屏幕硬件圆角 [deviceCornerRadius]（直角屏/小圆角屏为 0~8dp，大曲率屏为 24~36dp）；
+ *    - 随手势滑动平滑渐进至卡片目标圆角 [targetCardCornerRadius]，彻底杜绝硬编码与小圆角设备割裂感。
+ * 4. **立体阴影**：顶层卡片随手势进度投射多层景深立体阴影。
+ * 5. **底页视差深度与暗色遮罩（Scrim）**：底层预览页面从 93% 深度微缩与轻微左偏视差推进至全屏，并随手势逐渐消退 28% 暗色遮罩，突出操作焦点。
  *
  * @param initialBackEvent 手势起始事件。
  * @param density 屏幕密度，用于精确换算 dp / px。
  * @param containerWidthPx 页面容器当前的物理像素宽度。
+ * @param deviceCornerRadius 设备屏幕硬件物理圆角（通过系统 WindowInsets 动态读取）。
+ * @param targetCardCornerRadius 预测性返回缩放后的目标卡片圆角，默认为 MIUIX 标准 28dp。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixPredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     density: Density,
     containerWidthPx: Float,
+    deviceCornerRadius: Dp = 0.dp,
+    targetCardCornerRadius: Dp = 28.dp,
 ): PredictiveBackAnimatable {
     val maxHorizontalShift = (containerWidthPx * 0.18f).coerceAtLeast(density.density * 60f)
     val maxParallaxShift = (containerWidthPx * 0.08f).coerceAtLeast(density.density * 28f)
+    val effectiveTargetRadius = maxOf(deviceCornerRadius, targetCardCornerRadius)
 
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
@@ -59,7 +69,7 @@ fun miuixPredictiveBackAnimatable(
                 BackEvent.SwipeEdge.RIGHT -> -eased * maxHorizontalShift
                 else -> 0f
             }
-            val cornerRadiusDp = (eased * 28f).dp
+            val cornerRadiusDp = lerp(deviceCornerRadius, effectiveTargetRadius, eased)
             val elevationDp = (eased * 20f).dp
 
             Modifier.graphicsLayer {

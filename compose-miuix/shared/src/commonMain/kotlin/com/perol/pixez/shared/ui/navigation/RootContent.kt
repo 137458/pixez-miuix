@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalDensity
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixStackAnimation
 
@@ -173,6 +174,7 @@ fun RootContent(
                     val showNavigationRail = isWideScreen && isMainTab && !useFloatingBottomBar
                     val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
                     val density = LocalDensity.current
+                    val screenCornerRadius = rememberScreenCornerRadius()
                     val containerWidthPx = with(density) {
                         val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
                         availableWidth.toPx()
@@ -205,6 +207,7 @@ fun RootContent(
                                             initialBackEvent = initialBackEvent,
                                             density = density,
                                             containerWidthPx = containerWidthPx,
+                                            deviceCornerRadius = screenCornerRadius,
                                         )
                                     },
                                     onBack = { component.onBack() },
