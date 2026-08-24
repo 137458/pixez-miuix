@@ -103,6 +103,10 @@ interface AppStrings {
     val settingLanguageSummary: String
     val settingWidgetRecommend: String
     val settingWidgetRecommendSummary: String
+    val settingWidgetFeedSection: String
+    val settingWidgetPictureSourceSection: String
+    val settingWidgetPictureSourceFollowGlobal: String
+    val widgetSourceFollow: String
     val settingHistory: String
     val settingHistorySummary: String
 
@@ -933,6 +937,10 @@ object ZhCnStrings : AppStrings {
     override val settingLanguageSummary = "选择应用界面语言"
     override val settingWidgetRecommend = "小部件推荐类型"
     override val settingWidgetRecommendSummary = "桌面小部件展示的内容来源"
+    override val settingWidgetFeedSection = "内容推荐类型"
+    override val settingWidgetPictureSourceSection = "小组件图片代理源"
+    override val settingWidgetPictureSourceFollowGlobal = "跟随全局网络设置"
+    override val widgetSourceFollow = "关注画师新作"
     override val settingHistory = "历史记录"
     override val settingHistorySummary = "查看本地插画浏览历史"
 
@@ -1472,6 +1480,10 @@ object ZhTwStrings : AppStrings {
     override val settingLanguageSummary = "選擇應用程式介面語言"
     override val settingWidgetRecommend = "小工具推薦類型"
     override val settingWidgetRecommendSummary = "桌面小工具顯示的內容來源"
+    override val settingWidgetFeedSection = "內容推薦類型"
+    override val settingWidgetPictureSourceSection = "小工具圖片代理來源"
+    override val settingWidgetPictureSourceFollowGlobal = "跟隨全域網路設定"
+    override val widgetSourceFollow = "追蹤畫師新作"
     override val settingHistory = "歷史紀錄"
     override val settingHistorySummary = "檢視本機插畫瀏覽紀錄"
 
@@ -2011,6 +2023,10 @@ object EnStrings : AppStrings {
     override val settingLanguageSummary = "Choose application display language"
     override val settingWidgetRecommend = "Widget Content Source"
     override val settingWidgetRecommendSummary = "Content source displayed in desktop widget"
+    override val settingWidgetFeedSection = "Content Feed Type"
+    override val settingWidgetPictureSourceSection = "Widget Image CDN / Proxy Host"
+    override val settingWidgetPictureSourceFollowGlobal = "Follow Global Network Settings"
+    override val widgetSourceFollow = "Following Artists' Works"
     override val settingHistory = "History"
     override val settingHistorySummary = "View local artwork browsing history"
 
@@ -2550,6 +2566,10 @@ object JaStrings : AppStrings {
     override val settingLanguageSummary = "アプリの表示言語を選択"
     override val settingWidgetRecommend = "ウィジェットおすすめタイプ"
     override val settingWidgetRecommendSummary = "ホームウィジェットに表示するコンテンツのソース"
+    override val settingWidgetFeedSection = "コンテンツおすすめタイプ"
+    override val settingWidgetPictureSourceSection = "ウィジェット画像プロキシ"
+    override val settingWidgetPictureSourceFollowGlobal = "全体ネットワーク設定に従う"
+    override val widgetSourceFollow = "フォロー新着作品"
     override val settingHistory = "閲覧履歴"
     override val settingHistorySummary = "ローカルのイラスト閲覧履歴を表示"
 
@@ -3089,6 +3109,10 @@ object KoStrings : AppStrings {
     override val settingLanguageSummary = "앱 표시 언어 선택"
     override val settingWidgetRecommend = "위젯 콘텐츠 소스"
     override val settingWidgetRecommendSummary = "홈 위젯에 표시할 콘텐츠 소스"
+    override val settingWidgetFeedSection = "콘텐츠 추천 유형"
+    override val settingWidgetPictureSourceSection = "위젯 이미지 프록시 소스"
+    override val settingWidgetPictureSourceFollowGlobal = "전역 네트워크 설정 따름"
+    override val widgetSourceFollow = "팔로우 작가 신작"
     override val settingHistory = "조회 기록"
     override val settingHistorySummary = "로컬 일러스트 열람 기록 확인"
 
@@ -3628,6 +3652,10 @@ object RuStrings : AppStrings {
     override val settingLanguageSummary = "Выбор языка интерфейса"
     override val settingWidgetRecommend = "Источник для виджета"
     override val settingWidgetRecommendSummary = "Источник контента для виджета на рабочем столе"
+    override val settingWidgetFeedSection = "Тип рекомендаций контента"
+    override val settingWidgetPictureSourceSection = "Прокси-сервер изображений виджета"
+    override val settingWidgetPictureSourceFollowGlobal = "Следовать глобальным настройкам сети"
+    override val widgetSourceFollow = "Новинки от подписок"
     override val settingHistory = "История просмотров"
     override val settingHistorySummary = "Просмотр локальной истории иллюстраций"
 
@@ -4167,6 +4195,10 @@ object EsStrings : AppStrings {
     override val settingLanguageSummary = "Seleccionar idioma de la interfaz"
     override val settingWidgetRecommend = "Fuente del widget"
     override val settingWidgetRecommendSummary = "Fuente del contenido del widget de inicio"
+    override val settingWidgetFeedSection = "Tipo de contenido recomendado"
+    override val settingWidgetPictureSourceSection = "Proxy de imágenes del widget"
+    override val settingWidgetPictureSourceFollowGlobal = "Seguir configuración global de red"
+    override val widgetSourceFollow = "Novedades de seguidos"
     override val settingHistory = "Historial"
     override val settingHistorySummary = "Ver historial local de ilustraciones"
 
@@ -4706,6 +4738,10 @@ object TrStrings : AppStrings {
     override val settingLanguageSummary = "Arayüz dilini seçin"
     override val settingWidgetRecommend = "Araç Takımı Kaynağı"
     override val settingWidgetRecommendSummary = "Ana ekran araç takımında gösterilecek içerik kaynağı"
+    override val settingWidgetFeedSection = "İçerik Öneri Türü"
+    override val settingWidgetPictureSourceSection = "Araç Takımı Resim Proxy Kaynağı"
+    override val settingWidgetPictureSourceFollowGlobal = "Genel Ağ Ayarlarını Takip Et"
+    override val widgetSourceFollow = "Takip Edilen Sanatçıların Yeni Eserleri"
     override val settingHistory = "Göz Atma Geçmişi"
     override val settingHistorySummary = "Yerel resim geçmişini görüntüle"
 
@@ -5245,6 +5281,10 @@ object IdStrings : AppStrings {
     override val settingLanguageSummary = "Pilih bahasa tampilan aplikasi"
     override val settingWidgetRecommend = "Sumber Widget"
     override val settingWidgetRecommendSummary = "Sumber konten yang ditampilkan di widget beranda"
+    override val settingWidgetFeedSection = "Tipe Rekomendasi Konten"
+    override val settingWidgetPictureSourceSection = "Host Proxy Gambar Widget"
+    override val settingWidgetPictureSourceFollowGlobal = "Ikuti Pengaturan Jaringan Global"
+    override val widgetSourceFollow = "Karya Baru Artis yang Diikuti"
     override val settingHistory = "Riwayat Penelusuran"
     override val settingHistorySummary = "Lihat riwayat karya yang dilihat secara lokal"
 
@@ -5784,6 +5824,10 @@ object FilStrings : AppStrings {
     override val settingLanguageSummary = "Piliin ang wika ng app"
     override val settingWidgetRecommend = "Pinagmulan ng Widget"
     override val settingWidgetRecommendSummary = "Pinagmulan ng nilalaman sa home widget"
+    override val settingWidgetFeedSection = "Uri ng Rekomendasyon ng Nilalaman"
+    override val settingWidgetPictureSourceSection = "Proxy ng Larawan para sa Widget"
+    override val settingWidgetPictureSourceFollowGlobal = "Sundin ang Pandaigdigang Setting ng Network"
+    override val widgetSourceFollow = "Mga Bagong Gawa mula sa Sinusundan"
     override val settingHistory = "Kasaysayan ng Pag-browse"
     override val settingHistorySummary = "Tingnan ang lokal na kasaysayan ng mga likha"
 
@@ -6323,6 +6367,10 @@ object DeStrings : AppStrings {
     override val settingLanguageSummary = "App-Sprache auswählen"
     override val settingWidgetRecommend = "Widget-Quelle"
     override val settingWidgetRecommendSummary = "Inhaltsquelle für das Startbildschirm-Widget"
+    override val settingWidgetFeedSection = "Inhaltsempfehlungstyp"
+    override val settingWidgetPictureSourceSection = "Widget-Bild-Proxy-Quelle"
+    override val settingWidgetPictureSourceFollowGlobal = "Globalen Netzwerkeinstellungen folgen"
+    override val widgetSourceFollow = "Neue Werke von gefolgten Künstlern"
     override val settingHistory = "Verlauf"
     override val settingHistorySummary = "Lokalen Verlauf angesehener Werke anzeigen"
 

@@ -16,6 +16,7 @@ internal object SettingsKeys {
     const val WELCOME_PAGE_TYPE = "welcome_page_type"
     const val WELCOME_PAGE_NUM_IOS_MIGRATION = "welcome_page_num_ios_migration_v2"
     const val WIDGET_ILLUST_TYPE = "widget_illust_type"
+    const val WIDGET_PICTURE_SOURCE = "widget_picture_source"
     const val CROSS_COUNT = "cross_count"
     const val H_CROSS_COUNT = "h_cross_count"
     const val PICTURE_QUALITY = "picture_quality"

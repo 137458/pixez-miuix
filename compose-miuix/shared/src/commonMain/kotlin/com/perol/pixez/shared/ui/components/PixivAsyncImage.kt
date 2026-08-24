@@ -1,7 +1,13 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -27,6 +33,8 @@ private val PixivisionHeaders = NetworkHeaders.Builder()
  *
  * i.pximg.net 要求请求头 `Referer: https://app-api.pixiv.net/`，否则返回 403。
  * 同时根据用户设置的图片源（如 i.pixiv.re）自动进行 Host 替换。
+ *
+ * 支持通过 [thumbnailUrl] 提供渐进式缩略图占位：在高清/原图尚未下载完成时，优先展示已缓存的缩略图，避免白屏/黑屏等待。
  */
 @Composable
 fun PixivAsyncImage(
@@ -34,6 +42,47 @@ fun PixivAsyncImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
+    thumbnailUrl: Any? = null,
+) {
+    if (thumbnailUrl != null && thumbnailUrl != model && (thumbnailUrl as? String)?.isNotBlank() == true) {
+        var isHighResLoaded by remember(model) { mutableStateOf(false) }
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center,
+        ) {
+            // 缩略图层：在原图未加载完成时优先撑开容器并显示缩略图
+            PixivAsyncImageInternal(
+                model = thumbnailUrl,
+                contentDescription = null,
+                modifier = if (isHighResLoaded) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                contentScale = contentScale,
+            )
+            // 高清/原图层：在后台加载完成后顺畅覆盖
+            PixivAsyncImageInternal(
+                model = model,
+                contentDescription = contentDescription,
+                modifier = if (isHighResLoaded) Modifier.fillMaxWidth() else Modifier.matchParentSize(),
+                contentScale = contentScale,
+                onSuccess = { isHighResLoaded = true },
+            )
+        }
+    } else {
+        PixivAsyncImageInternal(
+            model = model,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+        )
+    }
+}
+
+@Composable
+private fun PixivAsyncImageInternal(
+    model: Any?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    onSuccess: (() -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
@@ -63,6 +112,7 @@ fun PixivAsyncImage(
         contentDescription = contentDescription,
         contentScale = contentScale,
         modifier = modifier,
+        onSuccess = { onSuccess?.invoke() },
         onError = { state ->
             io.github.aakira.napier.Napier.e("PixivAsyncImage error for $transformedModel: ${state.result.throwable}", tag = "CoilImage")
         },

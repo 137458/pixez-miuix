@@ -301,14 +301,30 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value }
 
     /**
-     * 桌面小部件推荐类型：recom / rank / news。
+     * 桌面小部件推荐类型：recom / day / week / month / day_male / day_female / news / follow。
      */
     var widgetIllustType: String
         get() = settings.getStringWithLegacyFallback(
             SettingsKeys.WIDGET_ILLUST_TYPE,
             DEFAULT_WIDGET_ILLUST_TYPE,
         )
-        set(value) { settings[SettingsKeys.WIDGET_ILLUST_TYPE] = value }
+        set(value) {
+            settings[SettingsKeys.WIDGET_ILLUST_TYPE] = value
+            notifyChanged()
+        }
+
+    /**
+     * 桌面小部件独立图片代理源，为空时表示跟随全局设置。
+     */
+    var widgetPictureSource: String
+        get() = settings.getStringWithLegacyFallback(
+            SettingsKeys.WIDGET_PICTURE_SOURCE,
+            "",
+        )
+        set(value) {
+            settings[SettingsKeys.WIDGET_PICTURE_SOURCE] = value
+            notifyChanged()
+        }
 
     /**
      * 适配刘海/挖孔屏（异形屏）。

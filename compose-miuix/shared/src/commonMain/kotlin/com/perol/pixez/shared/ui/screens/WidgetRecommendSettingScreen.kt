@@ -14,22 +14,20 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
- * 桌面小组件推荐类型设置页：选择小部件展示的内容来源。
+ * 桌面小组件推荐类型与图源设置页：
+ * 支持独立配置小组件展示的内容来源（推荐、日榜、周榜、月榜、最新、关注等）以及独立的图片 CDN 代理源。
  *
- * 选项沿用旧 Flutter 版的字符串编码，写入 [SettingsRepository.widgetIllustType]，
- * 供桌面小部件在刷新时读取并决定请求哪类插画列表。
- *
- * @param settingsRepository 设置仓库，用于读写小组件推荐类型。
+ * @param settingsRepository 设置仓库，用于读写小组件推荐类型与图源。
  * @param onBack 返回上一级页面。
  */
 @Composable
@@ -37,15 +35,29 @@ fun WidgetRecommendSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前小组件推荐类型。
+    // 页面状态：从 SettingsRepository 读取当前小组件推荐类型与独立图源。
     var selectedType by remember { mutableStateOf(settingsRepository.widgetIllustType) }
+    var selectedPictureSource by remember { mutableStateOf(settingsRepository.widgetPictureSource) }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val widgetOptions = remember(strings) {
+    val widgetFeedOptions = remember(strings) {
         listOf(
             WidgetIllustOption(type = "recom", label = strings.tabRecommend),
-            WidgetIllustOption(type = "rank", label = strings.tabRanking),
+            WidgetIllustOption(type = "day", label = strings.rankingDay),
+            WidgetIllustOption(type = "week", label = strings.rankingWeek),
+            WidgetIllustOption(type = "month", label = strings.rankingMonth),
+            WidgetIllustOption(type = "day_male", label = strings.rankingDayMale),
+            WidgetIllustOption(type = "day_female", label = strings.rankingDayFemale),
             WidgetIllustOption(type = "news", label = strings.tabNew),
+            WidgetIllustOption(type = "follow", label = strings.widgetSourceFollow),
+        )
+    }
+
+    val widgetPictureSourceOptions = remember(strings) {
+        listOf(
+            WidgetPictureSourceOption(source = "", label = strings.settingWidgetPictureSourceFollowGlobal),
+            WidgetPictureSourceOption(source = "i.pximg.net", label = "i.pximg.net (Pixiv 官方原站)"),
+            WidgetPictureSourceOption(source = "i.pixiv.re", label = "i.pixiv.re (免代理镜像)"),
         )
     }
 
@@ -69,10 +81,15 @@ fun WidgetRecommendSettingScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
         ) {
+            // ── 1. 内容推荐类型 ──
             item {
-                SmallTitle(text = strings.settingWidgetRecommend)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    widgetOptions.forEach { option ->
+                SmallTitle(text = strings.settingWidgetFeedSection)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    widgetFeedOptions.forEach { option ->
+                        val isSelected = when (option.type) {
+                            "day" -> selectedType == "day" || selectedType == "rank"
+                            else -> selectedType == option.type
+                        }
                         BasicComponent(
                             title = option.label,
                             onClick = {
@@ -80,7 +97,26 @@ fun WidgetRecommendSettingScreen(
                                 settingsRepository.widgetIllustType = option.type
                             },
                             endActions = {
-                                CheckIndicator(selected = selectedType == option.type)
+                                CheckIndicator(selected = isSelected)
+                            },
+                        )
+                    }
+                }
+            }
+
+            // ── 2. 小组件图片代理源 ──
+            item {
+                SmallTitle(text = strings.settingWidgetPictureSourceSection)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    widgetPictureSourceOptions.forEach { option ->
+                        BasicComponent(
+                            title = option.label,
+                            onClick = {
+                                selectedPictureSource = option.source
+                                settingsRepository.widgetPictureSource = option.source
+                            },
+                            endActions = {
+                                CheckIndicator(selected = selectedPictureSource == option.source)
                             },
                         )
                     }
@@ -98,3 +134,10 @@ private data class WidgetIllustOption(
     val label: String,
 )
 
+/**
+ * 小组件图片源选项数据。
+ */
+private data class WidgetPictureSourceOption(
+    val source: String,
+    val label: String,
+)

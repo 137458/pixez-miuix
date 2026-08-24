@@ -254,8 +254,12 @@ private fun IllustDetailSingleContent(
                                         else -> page.imageUrls?.large.orEmpty()
                                     }
                                 }
+                                val thumbnailUrl = remember(page) {
+                                    page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
+                                }
                                 PixivAsyncImage(
                                     model = pageUrl,
+                                    thumbnailUrl = thumbnailUrl,
                                     contentDescription = "${illust.title} ($pageIndex)",
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier.fillMaxWidth(),
@@ -280,8 +284,12 @@ private fun IllustDetailSingleContent(
                                         else -> illust.imageUrls.large
                                     }
                                 }
+                                val thumbnailUrl = remember(illust) {
+                                    illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
+                                }
                                 PixivAsyncImage(
                                     model = singleUrl,
+                                    thumbnailUrl = thumbnailUrl,
                                     contentDescription = illust.title,
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier.fillMaxWidth(),
