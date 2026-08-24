@@ -21,6 +21,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -92,6 +93,13 @@ fun DownloadSettingScreen(
     }
     var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
 
+    val pickDirectory = rememberDirectoryPicker { pickedPath ->
+        if (!pickedPath.isNullOrBlank()) {
+            storePath = pickedPath
+            settingsRepository.storePath = pickedPath
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -118,10 +126,7 @@ fun DownloadSettingScreen(
                     BasicComponent(
                         title = strings.dialogSavePath,
                         summary = storePath.ifEmpty { strings.noData },
-                        onClick = {
-                            pathInput = storePath
-                            showPathDialog = true
-                        },
+                        onClick = { pickDirectory() },
                     )
                     BasicComponent(
                         title = strings.dialogSaveMode,

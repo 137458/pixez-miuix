@@ -4,4 +4,6 @@
     <string name="shortcut_search">Search</string>
     <string name="shortcut_downloads">Downloads</string>
     <string name="shortcut_history">History</string>
+    <string name="widget_name">PixEz Daily Illust</string>
+    <string name="widget_description">Display daily recommended and ranking Pixiv illustrations on home screen</string>
 </resources>

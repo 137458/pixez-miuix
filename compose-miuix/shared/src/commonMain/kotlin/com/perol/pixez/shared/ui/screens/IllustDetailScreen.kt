@@ -75,12 +75,84 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 
 import com.perol.pixez.shared.data.repository.HistoryRepository
 
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+
 /**
  * 作品详情页：沉浸式大图展示、单一大标题、高对比度 MIUIX Card 容器与胶囊标签（Capsule Chips）。
+ *
+ * 当开启 [SettingsRepository.swipeChangeArtwork] 时，通过 HorizontalPager 支持左右滑动切换关联作品。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IllustDetailScreen(
+    illustId: Int,
+    onBack: () -> Unit,
+    onUserClick: (Int) -> Unit,
+    onCommentsClick: (Int) -> Unit,
+    onRelatedIllustsClick: (Int) -> Unit,
+    onIllustSeriesClick: (Int) -> Unit,
+    onTagClick: (String) -> Unit,
+    repository: IllustRepository,
+    bookmarkRepository: BookmarkRepository,
+    downloadRepository: DownloadRepository,
+    banRepository: BanRepository,
+    historyRepository: HistoryRepository? = null,
+) {
+    val settings = LocalSettingsRepository.current
+    val swipeChangeArtwork = settings?.swipeChangeArtwork == true
+
+    if (swipeChangeArtwork) {
+        val relatedState = produceState<List<Int>>(initialValue = emptyList(), illustId) {
+            val list = suspendRunCatchingNonCancel { repository.getIllustRelated(illustId) }.getOrNull().orEmpty()
+            value = list.map { it.id }.filter { it != illustId }
+        }
+        val idList = remember(illustId, relatedState.value) {
+            listOf(illustId) + relatedState.value
+        }
+        val pagerState = rememberPagerState(initialPage = 0, pageCount = { idList.size })
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+            key = { idList[it] },
+        ) { page ->
+            IllustDetailSingleContent(
+                illustId = idList[page],
+                onBack = onBack,
+                onUserClick = onUserClick,
+                onCommentsClick = onCommentsClick,
+                onRelatedIllustsClick = onRelatedIllustsClick,
+                onIllustSeriesClick = onIllustSeriesClick,
+                onTagClick = onTagClick,
+                repository = repository,
+                bookmarkRepository = bookmarkRepository,
+                downloadRepository = downloadRepository,
+                banRepository = banRepository,
+                historyRepository = historyRepository,
+            )
+        }
+    } else {
+        IllustDetailSingleContent(
+            illustId = illustId,
+            onBack = onBack,
+            onUserClick = onUserClick,
+            onCommentsClick = onCommentsClick,
+            onRelatedIllustsClick = onRelatedIllustsClick,
+            onIllustSeriesClick = onIllustSeriesClick,
+            onTagClick = onTagClick,
+            repository = repository,
+            bookmarkRepository = bookmarkRepository,
+            downloadRepository = downloadRepository,
+            banRepository = banRepository,
+            historyRepository = historyRepository,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun IllustDetailSingleContent(
     illustId: Int,
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,

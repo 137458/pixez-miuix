@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity() {
             settingsRepository = dependencies.settingsRepository,
         )
         applyDisplayMode()
-        setupBackHandler()
         handleIntent(intent)
         setContent {
             PixEzApp(
@@ -60,28 +59,6 @@ class MainActivity : ComponentActivity() {
         if (::dependencies.isInitialized) {
             applyDisplayMode()
         }
-    }
-
-    private fun setupBackHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val handled = rootComponent.onBack()
-                if (!handled) {
-                    val isDoubleBack = dependencies.settingsRepository.isReturnAgainToExit
-                    val now = System.currentTimeMillis()
-                    if (isDoubleBack) {
-                        if (now - lastBackPressTime < 2000L) {
-                            finish()
-                        } else {
-                            lastBackPressTime = now
-                            Toast.makeText(this@MainActivity, "再次返回退出应用", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        finish()
-                    }
-                }
-            }
-        })
     }
 
     private fun applyDisplayMode() {

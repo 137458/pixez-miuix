@@ -193,6 +193,11 @@ fun RootContent(
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = stackAnimation(slide()),
+                                    selector = { initialBackEvent, _, _ ->
+                                        com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.androidPredictiveBackAnimatable(
+                                            initialBackEvent = initialBackEvent,
+                                        )
+                                    },
                                     onBack = { component.onBack() },
                                 ),
 

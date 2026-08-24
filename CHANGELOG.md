@@ -18,6 +18,9 @@
 - 接入 Android 12+ 官方启动屏幕（Splash Screen）API，消除冷启动闪屏。
 - 接入 Android 13+ 每应用独立语言偏好（Per-App Language Preferences）与动态取色自适应图标。
 - 评论区支持 Pixiv 官方 40 枚表情包解析与快捷输入面板。
+- 接入跨平台系统存储目录选择器（`rememberDirectoryPicker`），Android 端直接调用系统 SAF 文件选择器（`OpenDocumentTree`），彻底替代手动填写路径。
+- 实现 Android 桌面小部件 Provider（`PixEzAppWidgetProvider`），支持在主屏幕展示每日推荐与榜单插画并点击直达。
+- 插画详情页接入横向联动切换容器（`HorizontalPager`），开启「滑动切换作品」设置后支持左右手势流畅滑动切换关联作品。
 
 ### 优化
 
@@ -37,6 +40,7 @@
 
 ### 修复
 
+- 修复 Android 14/15/16 原生预测性返回手势（Predictive Back）被底层回调阻断的问题，接入 `androidPredictiveBackAnimatable` 还原丝滑物理跟手缩放动画。
 - 修复插画瀑布流网格（`IllustStaggeredGrid`）未响应横屏列数配置以及固定列数错误应用自适应宽度的问题，实现横竖屏自适应与固定列数精准匹配。
 - 修复插画详情页画质读取逻辑，为漫画作品正确应用「漫画详情页画质」独立配置。
 - 补齐收藏与下载的自动联动，支持「收藏后自动保存」、「保存后自动收藏」、「收藏后关注画师」与「收藏自动打标签」。
