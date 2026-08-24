@@ -28,8 +28,24 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.runtime.mutableFloatStateOf
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.AppConstants
+import kotlin.math.max
+
 /**
- * 布局设置页：管理底栏模式、平板模式、竖屏固定列数、横屏固定列数。
+ * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
  *
  * @param settingsRepository 设置仓库，用于读写布局相关偏好。
  * @param onBack 返回上一级页面。
@@ -43,6 +59,10 @@ fun LayoutSettingScreen(
     var padMode by remember { mutableIntStateOf(settingsRepository.padMode) }
     var crossCount by remember { mutableIntStateOf(settingsRepository.crossCount) }
     var hCrossCount by remember { mutableIntStateOf(settingsRepository.hCrossCount) }
+    var crossAdapt by remember { mutableStateOf(settingsRepository.crossAdapt) }
+    var crossAdapterWidth by remember { mutableStateOf(settingsRepository.crossAdapterWidth) }
+    var hCrossAdapt by remember { mutableStateOf(settingsRepository.hCrossAdapt) }
+    var hCrossAdapterWidth by remember { mutableStateOf(settingsRepository.hCrossAdapterWidth) }
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
 
     // 当前正在编辑的布局类型，null 表示没有对话框打开。
@@ -85,13 +105,7 @@ fun LayoutSettingScreen(
                             )
                         },
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.padMode)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    LayoutSettingItem(
+                    BasicComponent(
                         title = strings.padMode,
                         summary = padMode.toPadModeLabel(),
                         onClick = { editingType = LayoutType.PadMode },
@@ -102,22 +116,68 @@ fun LayoutSettingScreen(
             item {
                 SmallTitle(text = strings.crossCountPortrait)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    LayoutSettingItem(
-                        title = strings.crossCountPortrait,
-                        summary = crossCount.toCrossCountLabel(),
-                        onClick = { editingType = LayoutType.CrossCount },
+                    BasicComponent(
+                        title = strings.crossAdaptAuto,
+                        summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = crossAdapt,
+                                onCheckedChange = { checked ->
+                                    crossAdapt = checked
+                                    settingsRepository.crossAdapt = checked
+                                },
+                            )
+                        },
                     )
+                    if (crossAdapt) {
+                        AdapterWidthSlider(
+                            width = crossAdapterWidth,
+                            onWidthChangeFinished = { newWidth ->
+                                crossAdapterWidth = newWidth
+                                settingsRepository.crossAdapterWidth = newWidth
+                            },
+                        )
+                    } else {
+                        LayoutSettingItem(
+                            title = strings.crossCountPortrait,
+                            summary = crossCount.toCrossCountLabel(),
+                            onClick = { editingType = LayoutType.CrossCount },
+                        )
+                    }
                 }
             }
 
             item {
                 SmallTitle(text = strings.crossCountLandscape)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    LayoutSettingItem(
-                        title = strings.crossCountLandscape,
-                        summary = hCrossCount.toCrossCountLabel(),
-                        onClick = { editingType = LayoutType.HCrossCount },
+                    BasicComponent(
+                        title = strings.crossAdaptAuto,
+                        summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = hCrossAdapt,
+                                onCheckedChange = { checked ->
+                                    hCrossAdapt = checked
+                                    settingsRepository.hCrossAdapt = checked
+                                },
+                            )
+                        },
                     )
+                    if (hCrossAdapt) {
+                        AdapterWidthSlider(
+                            width = hCrossAdapterWidth,
+                            onWidthChangeFinished = { newWidth ->
+                                hCrossAdapterWidth = newWidth
+                                settingsRepository.hCrossAdapterWidth = newWidth
+                            },
+                        )
+                    } else {
+                        LayoutSettingItem(
+                            title = strings.crossCountLandscape,
+                            summary = hCrossCount.toCrossCountLabel(),
+                            onClick = { editingType = LayoutType.HCrossCount },
+                        )
+                    }
                 }
             }
         }
@@ -259,3 +319,89 @@ private val CROSS_COUNT_OPTIONS = listOf(
     3 to "3",
     4 to "4",
 )
+
+/**
+ * 宽度阈值滑块与实时预览。
+ */
+@Composable
+private fun AdapterWidthSlider(
+    width: Int,
+    onWidthChangeFinished: (Int) -> Unit,
+) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    var sliderValue by remember(width) { mutableFloatStateOf(width.toFloat()) }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        val containerWidth = maxWidth.value
+        val columnCount = max((containerWidth / sliderValue).toInt(), 1)
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
+                style = MiuixTheme.textStyles.body2,
+            )
+
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                valueRange = AppConstants.CrossAdapter.WIDTH_MIN.toFloat()..AppConstants.CrossAdapter.WIDTH_MAX.toFloat(),
+                onValueChangeFinished = {
+                    onWidthChangeFinished(sliderValue.toInt())
+                },
+            )
+
+            Text(
+                text = strings.crossAdapterPreview,
+                style = MiuixTheme.textStyles.subtitle,
+            )
+
+            PreviewGrid(
+                columnCount = columnCount,
+                itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
+            )
+        }
+    }
+}
+
+/**
+ * 简易网格预览：使用纯色方块展示当前阈值下的列数效果。
+ */
+@Composable
+private fun PreviewGrid(
+    columnCount: Int,
+    itemCount: Int,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columnCount),
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1.5f),
+        contentPadding = PaddingValues(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        userScrollEnabled = false,
+    ) {
+        items(itemCount) { index ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .background(MiuixTheme.colorScheme.tertiaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = index.toString(),
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onTertiaryContainer,
+                )
+            }
+        }
+    }
+}

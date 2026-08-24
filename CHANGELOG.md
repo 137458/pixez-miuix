@@ -21,6 +21,7 @@
 
 ### 优化
 
+- 重构设置中心层级结构，收敛为 4 大标准分类，消除“保存设置”与“下载设置”、“跨适配设置”与“布局设置”等重复分散页面，整合为统一清晰的「下载与保存」及「界面与布局」设置。
 - 开启 Android 15 16 KB 内存页对齐与未压缩 JNI 原生库打包配置（`useLegacyPackaging = false`），保障新型内核设备高性能运行。
 - 配置 Coil 3 全局 25% 内存缓存池（MemoryCache）与请求头重用，消除长列表滑动重复网络请求与对象分配开销。
 - 全量 Lazy 列表与瀑布流卡片接入 Compose `contentType` 槽位复用机制，大幅提升长列表滑动流畅度。
@@ -35,6 +36,8 @@
 - 优化桌面端应用启动命令行参数自动解析登录流程。
 
 ### 修复
+
+- 修复插画详情页未自动写入浏览历史导致本地历史无效的问题，完善 `HistoryRepository` 实时记录与降序时间排列。
 
 - 修复 iOS / macOS (Kotlin/Native) 跨平台编译错误，补全 `BrowserLauncher`、`Platform`、`RuntimeShaderCompat`、`DataExportFileHelper`、`IllustClipboard`、`IllustSaver` 与 `IllustShare` 的原生实际声明（`actual`）。
 - 新增跨平台 `String.format` 扩展实现，替代 Native 端缺失的 JVM `java.lang.String.format`。

@@ -8,10 +8,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+import com.perol.pixez.shared.data.model.Illust
+import kotlinx.datetime.Clock
+
 /**
- * 插画浏览历史仓库：封装对旧 Flutter `illustpersist.db` 的查询与清理。
- *
- * 仅消费已有历史记录，不新增埋点；表结构保持与旧版一致。
+ * 插画浏览历史仓库：封装对 `illustpersist.db` 的记录、查询与清理。
  */
 class HistoryRepository(
     driver: SqlDriver,
@@ -19,7 +20,32 @@ class HistoryRepository(
     private val queries = IllustPersistDatabase(driver).illustPersistQueries
 
     /**
-     * 查询浏览历史，按时间升序排列（与旧版 `ORDER BY time` 一致）。
+     * 写入一条插画浏览历史。
+     * 若该作品已存在历史记录，则更新其时间并前置到最新位置。
+     */
+    suspend fun insert(illust: Illust) = withContext(Dispatchers.Default) {
+        val pictureUrl = illust.imageUrls?.medium
+            ?: illust.imageUrls?.large
+            ?: illust.metaSinglePage?.originalImageUrl
+            ?: illust.metaPages?.firstOrNull()?.imageUrls?.medium
+            ?: illust.metaPages?.firstOrNull()?.imageUrls?.large
+            ?: ""
+        val now = Clock.System.now().toEpochMilliseconds()
+        queries.transaction {
+            queries.deleteByIllustId(illust.id.toLong())
+            queries.insertHistory(
+                illust_id = illust.id.toLong(),
+                user_id = illust.user.id.toLong(),
+                picture_url = pictureUrl,
+                title = illust.title,
+                user_name = illust.user.name,
+                time = now,
+            )
+        }
+    }
+
+    /**
+     * 查询浏览历史，按时间降序排列（最新浏览排在最前）。
      *
      * @param limit 最大返回条数，防止一次性加载过多历史记录导致内存/卡顿问题。
      */

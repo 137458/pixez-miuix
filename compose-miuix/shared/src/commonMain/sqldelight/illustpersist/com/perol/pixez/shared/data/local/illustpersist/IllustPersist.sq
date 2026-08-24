@@ -11,7 +11,7 @@ CREATE TABLE illustpersist (
 );
 
 selectAll:
-SELECT * FROM illustpersist ORDER BY time LIMIT :limit;
+SELECT * FROM illustpersist ORDER BY time DESC LIMIT :limit;
 
 selectByIllustId:
 SELECT * FROM illustpersist WHERE illust_id = ?;
@@ -24,8 +24,16 @@ INSERT OR REPLACE INTO illustpersist (
     id, illust_id, user_id, picture_url, title, user_name, time
 ) VALUES (?, ?, ?, ?, ?, ?, ?);
 
+insertHistory:
+INSERT INTO illustpersist (
+    illust_id, user_id, picture_url, title, user_name, time
+) VALUES (?, ?, ?, ?, ?, ?);
+
 deleteById:
 DELETE FROM illustpersist WHERE id = ?;
+
+deleteByIllustId:
+DELETE FROM illustpersist WHERE illust_id = ?;
 
 deleteAll:
 DELETE FROM illustpersist;

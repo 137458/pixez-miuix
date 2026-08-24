@@ -84,6 +84,14 @@ fun DownloadSettingScreen(
         )
     }
 
+    var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
+    var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
+    var longPressSaveConfirm by remember { mutableStateOf(settingsRepository.longPressSaveConfirm) }
+    var illustDetailSaveSkipLongPress by remember {
+        mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
+    }
+    var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -115,12 +123,6 @@ fun DownloadSettingScreen(
                             showPathDialog = true
                         },
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.dialogSaveMode)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.dialogSaveMode,
                         summary = saveMode.toSaveModeLabel(),
@@ -137,23 +139,6 @@ fun DownloadSettingScreen(
                         summary = if (fileNameEval) strings.settingShareFormat else format,
                         onClick = { showFormatDialog = true },
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingDownloadTask)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.dialogTaskCount,
-                        summary = maxRunningTask.toString(),
-                        onClick = { showTaskDialog = true },
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionStorage)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.downloadSingleFolder,
                         summary = strings.downloadSingleFolderSummary,
@@ -176,6 +161,88 @@ fun DownloadSettingScreen(
                                 onCheckedChange = { checked ->
                                     overSanityLevelFolder = checked
                                     settingsRepository.overSanityLevelFolder = checked
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                SmallTitle(text = strings.settingDownloadTask)
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.dialogTaskCount,
+                        summary = maxRunningTask.toString(),
+                        onClick = { showTaskDialog = true },
+                    )
+                    BasicComponent(
+                        title = strings.longPressSaveConfirm,
+                        summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = longPressSaveConfirm,
+                                onCheckedChange = { checked ->
+                                    longPressSaveConfirm = checked
+                                    settingsRepository.longPressSaveConfirm = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.illustDetailSkipLongPress,
+                        summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = illustDetailSaveSkipLongPress,
+                                onCheckedChange = { checked ->
+                                    illustDetailSaveSkipLongPress = checked
+                                    settingsRepository.illustDetailSaveSkipLongPress = checked
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                SmallTitle(text = strings.settingSectionBookmarkShare)
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.saveAfterStar,
+                        summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = saveAfterStar,
+                                onCheckedChange = { checked ->
+                                    saveAfterStar = checked
+                                    settingsRepository.saveAfterStar = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.starAfterSave,
+                        summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = starAfterSave,
+                                onCheckedChange = { checked ->
+                                    starAfterSave = checked
+                                    settingsRepository.starAfterSave = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.autoTagWhenStar,
+                        summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = autoTagWhenStar,
+                                onCheckedChange = { checked ->
+                                    autoTagWhenStar = checked
+                                    settingsRepository.autoTagWhenStar = checked
                                 },
                             )
                         },

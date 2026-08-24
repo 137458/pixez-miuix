@@ -222,6 +222,7 @@ fun RootContent(
                         bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
                         banRepository = banRepository,
+                        historyRepository = historyRepository,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(

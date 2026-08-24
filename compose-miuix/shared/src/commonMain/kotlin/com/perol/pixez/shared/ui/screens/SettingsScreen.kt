@@ -151,6 +151,7 @@ fun SettingsScreen(
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
 
+            // ── 1. 账号管理 ──
             item {
                 SmallTitle(text = strings.settingSectionAccount)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -182,9 +183,25 @@ fun SettingsScreen(
                 }
             }
 
+            // ── 2. 界面与个性化 ──
             item {
-                SmallTitle(text = strings.settingSectionStartup)
+                SmallTitle(text = strings.settingSectionTheme)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.settingTheme,
+                        summary = strings.settingThemeSummary,
+                        onClick = onThemeSettingClick,
+                    )
+                    BasicComponent(
+                        title = strings.settingLayout,
+                        summary = strings.settingLayoutSummary,
+                        onClick = onLayoutSettingClick,
+                    )
+                    BasicComponent(
+                        title = strings.settingLanguage,
+                        summary = strings.settingLanguageSummary,
+                        onClick = onLanguageSettingClick,
+                    )
                     BasicComponent(
                         title = strings.settingWelcomePage,
                         summary = strings.settingWelcomePageSummary,
@@ -198,52 +215,35 @@ fun SettingsScreen(
                 }
             }
 
+            // ── 3. 浏览与功能设置 ──
             item {
-                SmallTitle(text = strings.settingSectionGeneral)
+                SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = strings.settingLanguage,
-                        summary = strings.settingLanguageSummary,
-                        onClick = onLanguageSettingClick,
+                        title = strings.settingQuality,
+                        summary = strings.settingQualitySummary,
+                        onClick = onQualitySettingClick,
                     )
                     BasicComponent(
-                        title = strings.settingWidgetRecommend,
-                        summary = strings.settingWidgetRecommendSummary,
-                        onClick = onWidgetRecommendSettingClick,
+                        title = strings.settingDownload,
+                        summary = strings.settingDownloadSummary,
+                        onClick = onDownloadSettingClick,
                     )
                     BasicComponent(
-                        title = strings.settingHistory,
-                        summary = strings.settingHistorySummary,
-                        onClick = onHistoryClick,
+                        title = strings.interactionSettingTitle,
+                        summary = strings.interactionSettingSwipeChange,
+                        onClick = onInteractionSettingClick,
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionTheme)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = strings.settingTheme,
-                        summary = strings.settingThemeSummary,
-                        onClick = onThemeSettingClick,
+                        title = strings.feedSettingTitle,
+                        summary = strings.feedSettingAiBadge,
+                        onClick = onFeedSettingClick,
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionNetwork)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
-                        title = strings.settingNetwork,
-                        summary = strings.settingNetworkSummary,
-                        onClick = onNetworkSettingClick,
+                        title = strings.settingShareFormat,
+                        summary = strings.settingShareFormatSummary,
+                        onClick = onCopyTextSettingClick,
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionShieldPrivacy)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingShield,
                         summary = strings.settingShieldSummary,
@@ -254,64 +254,20 @@ fun SettingsScreen(
                         summary = strings.settingPrivacySummary,
                         onClick = onPrivacySettingClick,
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionBookmarkShare)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingBookTags,
                         summary = strings.settingBookTagsSummary,
                         onClick = onBookTagClick,
                     )
                     BasicComponent(
-                        title = strings.settingShareFormat,
-                        summary = strings.settingShareFormatSummary,
-                        onClick = onCopyTextSettingClick,
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionQualitySave)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.settingQuality,
-                        summary = strings.settingQualitySummary,
-                        onClick = onQualitySettingClick,
+                        title = strings.settingHistory,
+                        summary = strings.settingHistorySummary,
+                        onClick = onHistoryClick,
                     )
                     BasicComponent(
-                        title = strings.settingSave,
-                        summary = strings.settingSaveSummary,
-                        onClick = onSaveSettingClick,
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionDisplayLayout)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.settingCrossAdapter,
-                        summary = strings.settingCrossAdapterSummary,
-                        onClick = onCrossAdapterSettingClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingLayout,
-                        summary = strings.settingLayoutSummary,
-                        onClick = onLayoutSettingClick,
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionDownload)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.settingDownload,
-                        summary = strings.settingDownloadSummary,
-                        onClick = onDownloadSettingClick,
+                        title = strings.settingDownloadTask,
+                        summary = strings.settingDownloadTaskSummary,
+                        onClick = onDownloadTaskClick,
                     )
                     BasicComponent(
                         title = strings.settingDownloadHistory,
@@ -319,29 +275,29 @@ fun SettingsScreen(
                         onClick = onDownloadHistoryClick,
                     )
                     BasicComponent(
-                        title = strings.settingDownloadTask,
-                        summary = strings.settingDownloadTaskSummary,
-                        onClick = onDownloadTaskClick,
+                        title = strings.settingWidgetRecommend,
+                        summary = strings.settingWidgetRecommendSummary,
+                        onClick = onWidgetRecommendSettingClick,
                     )
                 }
             }
 
-            if (isAndroidPlatform()) {
-                item {
-                    SmallTitle(text = strings.settingSectionPlatform)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            // ── 4. 系统与数据 ──
+            item {
+                SmallTitle(text = strings.settingSectionStorage)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    if (isAndroidPlatform()) {
                         BasicComponent(
                             title = strings.settingPlatform,
                             summary = strings.settingPlatformSummary,
                             onClick = onPlatformSettingClick,
                         )
                     }
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionStorage)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.settingNetwork,
+                        summary = strings.settingNetworkSummary,
+                        onClick = onNetworkSettingClick,
+                    )
                     BasicComponent(
                         title = strings.settingClearCache,
                         summary = if (isClearingCache) strings.clearingCache else strings.settingClearCacheSummary,
@@ -377,6 +333,7 @@ fun SettingsScreen(
                 }
             }
 
+            // ── 5. 关于与更新 ──
             item {
                 SmallTitle(text = strings.settingSectionAbout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {

@@ -73,6 +73,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 
+import com.perol.pixez.shared.data.repository.HistoryRepository
+
 /**
  * 作品详情页：沉浸式大图展示、单一大标题、高对比度 MIUIX Card 容器与胶囊标签（Capsule Chips）。
  */
@@ -90,6 +92,7 @@ fun IllustDetailScreen(
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
+    historyRepository: HistoryRepository? = null,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val settings = LocalSettingsRepository.current
@@ -108,6 +111,16 @@ fun IllustDetailScreen(
 
     val result = state.value
     val illust = result?.getOrNull()
+
+    // 成功加载插画详情时，自动异步写入本地浏览历史
+    LaunchedEffect(illust) {
+        if (illust != null && historyRepository != null) {
+            suspendRunCatchingNonCancel {
+                historyRepository.insert(illust)
+            }
+        }
+    }
+
     var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
     var isBookmarkLoading by rememberSaveable { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
