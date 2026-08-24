@@ -17,6 +17,10 @@ import com.perol.pixez.shared.platform.BrowserLauncherContext
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.launch
 
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+
 /**
  * Android 应用入口。
  * 使用 ComponentActivity + setContent 承载 Compose Multiplatform 应用。
@@ -25,6 +29,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var dependencies: AppDependencies
     private lateinit var rootComponent: RootComponent
+    private var lastBackPressTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -39,12 +44,63 @@ class MainActivity : ComponentActivity() {
             componentContext = defaultComponentContext(),
             settingsRepository = dependencies.settingsRepository,
         )
+        applyDisplayMode()
+        setupBackHandler()
         handleIntent(intent)
         setContent {
             PixEzApp(
                 dependencies = dependencies,
                 rootComponent = rootComponent,
             )
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::dependencies.isInitialized) {
+            applyDisplayMode()
+        }
+    }
+
+    private fun setupBackHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val handled = rootComponent.onBack()
+                if (!handled) {
+                    val isDoubleBack = dependencies.settingsRepository.isReturnAgainToExit
+                    val now = System.currentTimeMillis()
+                    if (isDoubleBack) {
+                        if (now - lastBackPressTime < 2000L) {
+                            finish()
+                        } else {
+                            lastBackPressTime = now
+                            Toast.makeText(this@MainActivity, "再次返回退出应用", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        })
+    }
+
+    private fun applyDisplayMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            }
+            val modes = display?.supportedModes.orEmpty()
+            val targetMode = when (dependencies.settingsRepository.displayMode) {
+                1 -> modes.filter { it.refreshRate in 58f..62f }.maxByOrNull { it.physicalWidth * it.physicalHeight }
+                2 -> modes.filter { it.refreshRate >= 88f }.maxByOrNull { it.refreshRate }
+                else -> null
+            }
+            val layoutParams = window.attributes
+            layoutParams.preferredDisplayModeId = targetMode?.modeId ?: 0
+            window.attributes = layoutParams
         }
     }
 

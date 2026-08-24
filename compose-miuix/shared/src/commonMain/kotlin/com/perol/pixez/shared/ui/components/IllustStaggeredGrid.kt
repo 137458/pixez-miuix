@@ -30,6 +30,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+
 /**
  * 插画瀑布流网格。
  *
@@ -55,62 +57,82 @@ fun IllustStaggeredGrid(
     onRetryLoadMore: (() -> Unit)? = onLoadMore,
 ) {
     val settings = LocalSettingsRepository.current
-    val effectiveColumns = remember(columns, settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, settings?.changeVersion) {
-        if (columns != null) {
-            columns
-        } else if (settings?.crossAdapt == true) {
-            val minWidth = settings.crossAdapterWidth.coerceIn(100, 500)
-            StaggeredGridCells.Adaptive(minWidth.dp)
-        } else {
-            val configuredCols = settings?.crossCount ?: 2
-            if (configuredCols == 2) {
-                StaggeredGridCells.Adaptive(AppConstants.Layout.GRID_CARD_MIN_WIDTH_DP.dp)
-            } else {
-                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 6))
-            }
-        }
-    }
-
-    // 触底自动流式加载监听：当滑动到接近底部（倒数 6 个作品内）时自动触发下一页请求。
-    if (onLoadMore != null) {
-        val shouldLoadMore by remember(hasMore, isLoadingMore, loadMoreError, illusts.size) {
-            derivedStateOf {
-                if (!hasMore || isLoadingMore || loadMoreError != null || illusts.isEmpty()) {
-                    false
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        val isLandscape = maxWidth > maxHeight
+        val effectiveColumns = remember(
+            columns,
+            isLandscape,
+            settings?.crossAdapt,
+            settings?.crossAdapterWidth,
+            settings?.crossCount,
+            settings?.hCrossAdapt,
+            settings?.hCrossAdapterWidth,
+            settings?.hCrossCount,
+            settings?.changeVersion,
+        ) {
+            if (columns != null) {
+                columns
+            } else if (isLandscape) {
+                if (settings?.hCrossAdapt == true) {
+                    val minWidth = settings.hCrossAdapterWidth.coerceIn(100, 1000)
+                    StaggeredGridCells.Adaptive(minWidth.dp)
                 } else {
-                    val layoutInfo = state.layoutInfo
-                    val totalItems = layoutInfo.totalItemsCount
-                    val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
-                    lastVisibleIndex >= totalItems - 6
+                    val configuredCols = settings?.hCrossCount ?: 2
+                    StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
+                }
+            } else {
+                if (settings?.crossAdapt == true) {
+                    val minWidth = settings.crossAdapterWidth.coerceIn(100, 1000)
+                    StaggeredGridCells.Adaptive(minWidth.dp)
+                } else {
+                    val configuredCols = settings?.crossCount ?: 2
+                    StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
                 }
             }
         }
 
-        LaunchedEffect(shouldLoadMore) {
-            if (shouldLoadMore) {
-                onLoadMore()
+        // 触底自动流式加载监听：当滑动到接近底部（倒数 6 个作品内）时自动触发下一页请求。
+        if (onLoadMore != null) {
+            val shouldLoadMore by remember(hasMore, isLoadingMore, loadMoreError, illusts.size) {
+                derivedStateOf {
+                    if (!hasMore || isLoadingMore || loadMoreError != null || illusts.isEmpty()) {
+                        false
+                    } else {
+                        val layoutInfo = state.layoutInfo
+                        val totalItems = layoutInfo.totalItemsCount
+                        val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
+                        lastVisibleIndex >= totalItems - 6
+                    }
+                }
+            }
+
+            LaunchedEffect(shouldLoadMore) {
+                if (shouldLoadMore) {
+                    onLoadMore()
+                }
             }
         }
-    }
 
-    LazyVerticalStaggeredGrid(
-        columns = effectiveColumns,
-        state = state,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalItemSpacing = 8.dp,
-    ) {
-        items(
-            items = illusts,
-            key = { it.id },
-            contentType = { "illust_card" },
-        ) { illust ->
-            IllustCard(
-                illust = illust,
-                onClick = { onIllustClick(illust.id) },
-            )
-        }
+        LazyVerticalStaggeredGrid(
+            columns = effectiveColumns,
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalItemSpacing = 8.dp,
+        ) {
+            items(
+                items = illusts,
+                key = { it.id },
+                contentType = { "illust_card" },
+            ) { illust ->
+                IllustCard(
+                    illust = illust,
+                    onClick = { onIllustClick(illust.id) },
+                )
+            }
 
         // 底部加载更多状态区（跨整行展示）
         if (isLoadingMore || loadMoreError != null || (!hasMore && illusts.isNotEmpty() && onLoadMore != null)) {
@@ -169,4 +191,6 @@ fun IllustStaggeredGrid(
         }
     }
 }
+}
+
 

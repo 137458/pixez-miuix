@@ -168,8 +168,15 @@ fun IllustDetailScreen(
                                 contentType = { "meta_page" },
                             ) { pageIndex ->
                                 val page = illust.metaPages[pageIndex]
-                                val pageUrl = remember(page, settings?.pictureQuality, settings?.changeVersion) {
-                                    when (settings?.pictureQuality ?: 0) {
+                                val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
+                                    if (illust.type == "manga") {
+                                        settings?.mangaQuality ?: settings?.pictureQuality ?: 0
+                                    } else {
+                                        settings?.pictureQuality ?: 0
+                                    }
+                                }
+                                val pageUrl = remember(page, effectiveQuality) {
+                                    when (effectiveQuality) {
                                         1 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                                         2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
                                         else -> page.imageUrls?.large.orEmpty()
@@ -187,8 +194,15 @@ fun IllustDetailScreen(
                             }
                         } else {
                             item(key = "single_page", contentType = "single_page") {
-                                val singleUrl = remember(illust, settings?.pictureQuality, settings?.changeVersion) {
-                                    when (settings?.pictureQuality ?: 0) {
+                                val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
+                                    if (illust.type == "manga") {
+                                        settings?.mangaQuality ?: settings?.pictureQuality ?: 0
+                                    } else {
+                                        settings?.pictureQuality ?: 0
+                                    }
+                                }
+                                val singleUrl = remember(illust, effectiveQuality) {
+                                    when (effectiveQuality) {
                                         1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                                         2 -> illust.imageUrls.medium
                                         else -> illust.imageUrls.large
@@ -349,6 +363,18 @@ fun IllustDetailScreen(
                                                         )
                                                         val successCount = tasks.count { it.status == DownloadStatus.Success }
                                                         val failedCount = tasks.count { it.status == DownloadStatus.Failed }
+                                                        if (successCount > 0 && settings?.starAfterSave == true && !isBookmarked) {
+                                                            coroutineScope.launch {
+                                                                suspendRunCatchingNonCancel {
+                                                                    bookmarkRepository.addBookmark(
+                                                                        illustId = illust.id,
+                                                                        isPrivate = settings.defaultPrivateLike,
+                                                                    )
+                                                                }.onSuccess {
+                                                                    isBookmarked = true
+                                                                }
+                                                            }
+                                                        }
                                                         toastMessage = when {
                                                             failedCount == 0 -> "${strings.downloadStatusSuccess}: $successCount/${tasks.size}"
                                                             successCount == 0 -> strings.downloadStatusFailed
@@ -536,22 +562,41 @@ fun IllustDetailScreen(
                         .clickable(
                             enabled = !isBookmarkLoading && illust != null,
                             onClick = {
-                                illust?.let {
+                                illust?.let { targetIllust ->
                                     coroutineScope.launch {
                                         try {
                                             isBookmarkLoading = true
                                             bookmarkError = null
+                                            val wasBookmarked = isBookmarked
                                             suspendRunCatchingNonCancel {
-                                                if (isBookmarked) {
-                                                    bookmarkRepository.deleteBookmark(it.id)
+                                                if (wasBookmarked) {
+                                                    bookmarkRepository.deleteBookmark(targetIllust.id)
                                                 } else {
+                                                    val autoTags = if (settings?.autoTagWhenStar == true) {
+                                                        targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
+                                                    } else null
                                                     bookmarkRepository.addBookmark(
-                                                        illustId = it.id,
+                                                        illustId = targetIllust.id,
                                                         isPrivate = settings?.defaultPrivateLike ?: false,
+                                                        tags = autoTags,
                                                     )
                                                 }
                                             }.onSuccess {
-                                                isBookmarked = !isBookmarked
+                                                isBookmarked = !wasBookmarked
+                                                if (!wasBookmarked) {
+                                                    if (settings?.saveAfterStar == true) {
+                                                        coroutineScope.launch {
+                                                            downloadRepository.download(targetIllust, pageIndex = 0)
+                                                        }
+                                                    }
+                                                    if (settings?.followAfterStar == true) {
+                                                        coroutineScope.launch {
+                                                            suspendRunCatchingNonCancel {
+                                                                bookmarkRepository.followUser(targetIllust.user.id)
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }.onFailure { e ->
                                                 bookmarkError = e.message ?: strings.loadFailed
                                             }
@@ -593,7 +638,21 @@ fun IllustDetailScreen(
                                         toastMessage = "${strings.downloadStatusDownloading}…"
                                         val task = downloadRepository.download(illust, pageIndex = 0)
                                         toastMessage = when (task.status) {
-                                            DownloadStatus.Success -> strings.downloadStatusSuccess
+                                            DownloadStatus.Success -> {
+                                                if (settings?.starAfterSave == true && !isBookmarked) {
+                                                    coroutineScope.launch {
+                                                        suspendRunCatchingNonCancel {
+                                                            bookmarkRepository.addBookmark(
+                                                                illustId = illust.id,
+                                                                isPrivate = settings.defaultPrivateLike,
+                                                            )
+                                                        }.onSuccess {
+                                                            isBookmarked = true
+                                                        }
+                                                    }
+                                                }
+                                                strings.downloadStatusSuccess
+                                            }
                                             DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
                                             else -> null
                                         }

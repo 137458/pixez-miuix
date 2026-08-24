@@ -37,6 +37,11 @@
 
 ### 修复
 
+- 修复插画瀑布流网格（`IllustStaggeredGrid`）未响应横屏列数配置以及固定列数错误应用自适应宽度的问题，实现横竖屏自适应与固定列数精准匹配。
+- 修复插画详情页画质读取逻辑，为漫画作品正确应用「漫画详情页画质」独立配置。
+- 补齐收藏与下载的自动联动，支持「收藏后自动保存」、「保存后自动收藏」、「收藏后关注画师」与「收藏自动打标签」。
+- 接入 Android 原生「显示模式 (60Hz/高刷/系统默认)」切换与根页面「再次返回退出应用」拦截器。
+- 修复各作品列表流中「H 是不行的 (R-18过滤)」设置未生效的问题。
 - 修复插画详情页未自动写入浏览历史导致本地历史无效的问题，完善 `HistoryRepository` 实时记录与降序时间排列。
 
 - 修复 iOS / macOS (Kotlin/Native) 跨平台编译错误，补全 `BrowserLauncher`、`Platform`、`RuntimeShaderCompat`、`DataExportFileHelper`、`IllustClipboard`、`IllustSaver` 与 `IllustShare` 的原生实际声明（`actual`）。
