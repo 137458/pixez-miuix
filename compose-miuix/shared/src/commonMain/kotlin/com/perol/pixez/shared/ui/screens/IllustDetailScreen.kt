@@ -658,7 +658,13 @@ private fun IllustDetailSingleContent(
                                                 if (!wasBookmarked) {
                                                     if (settings?.saveAfterStar == true) {
                                                         coroutineScope.launch {
-                                                            downloadRepository.download(targetIllust, pageIndex = 0)
+                                                            toastMessage = "${strings.downloadStatusDownloading}…"
+                                                            val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                                                            toastMessage = when (task.status) {
+                                                                DownloadStatus.Success -> strings.downloadStatusSuccess
+                                                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                                else -> null
+                                                            }
                                                         }
                                                     }
                                                     if (settings?.followAfterStar == true) {

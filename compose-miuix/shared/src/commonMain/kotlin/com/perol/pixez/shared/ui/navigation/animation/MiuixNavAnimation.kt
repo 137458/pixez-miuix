@@ -7,13 +7,16 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import com.arkivanov.decompose.ExperimentalDecomposeApi
+import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
 import com.arkivanov.essenty.backhandler.BackEvent
+import com.perol.pixez.shared.ui.navigation.RootComponent
 
 /**
  * Xiaomi HyperOS / MIUIX 核心动效曲线：
@@ -67,16 +70,66 @@ fun miuixSlidePredictiveBackAnimatable(
 }
 
 /**
- * 创建 MIUIX / HyperOS 风格的默认页面出入栈平移转场动画（非手势返回与前进导航）。
- *
- * 采用 100% 不透明纯平移（带 320ms HyperOS 曲线），彻底杜绝透明度淡入淡出导致的黑屏闪烁。
+ * 底部主标签顺序表，用于判断标签切换时的前进/后退物理方向。
  */
-fun <C : Any, T : Any> miuixSlideStackAnimation(): StackAnimation<C, T> {
-    val slideAnimator: StackAnimator = slide(
+private val MAIN_TAB_ORDER = listOf(
+    RootComponent.MainTab.Hello,
+    RootComponent.MainTab.Search,
+    RootComponent.MainTab.Ranking,
+    RootComponent.MainTab.New,
+    RootComponent.MainTab.Spotlight,
+)
+
+/**
+ * 创建 MIUIX / HyperOS 风格的默认页面出入栈平移转场动画。
+ *
+ * 特性：
+ * 1. 一级主标签切换：智能感知目标标签物理顺序，从左往右切时向右滑出，从右往左切时向左滑出。
+ * 2. 二级详情页面推进（Push）：新页面从右侧滑入（100% 不透明），旧页面向左滑出。
+ * 3. 二级详情页面回退（Pop）：旧页面向右滑出，新页面自左侧滑回。
+ */
+@OptIn(com.arkivanov.decompose.FaultyDecomposeApi::class)
+fun miuixSlideStackAnimation(): StackAnimation<RootComponent.Config, RootComponent.Child> {
+    val forwardSlide: StackAnimator = slide(
         animationSpec = tween(
             durationMillis = 320,
             easing = HyperOSDecelerateEasing,
         ),
     )
-    return stackAnimation(slideAnimator)
+
+    val backwardSlide: StackAnimator = stackAnimator(
+        animationSpec = tween(
+            durationMillis = 320,
+            easing = HyperOSDecelerateEasing,
+        ),
+    ) { factor, direction, content ->
+        val translationXFactor = when (direction) {
+            Direction.ENTER_FRONT -> -factor
+            Direction.EXIT_BACK -> factor
+            Direction.ENTER_BACK -> factor
+            Direction.EXIT_FRONT -> -factor
+        }
+        content(
+            Modifier.graphicsLayer {
+                translationX = translationXFactor * size.width
+            },
+        )
+    }
+
+    return stackAnimation { child, otherChild, _ ->
+        val childInstance = child.instance
+        val otherInstance = otherChild.instance
+
+        if (childInstance is RootComponent.Child.Main && otherInstance is RootComponent.Child.Main) {
+            val childIdx = MAIN_TAB_ORDER.indexOf(childInstance.tab)
+            val otherIdx = MAIN_TAB_ORDER.indexOf(otherInstance.tab)
+            if (childIdx < otherIdx) {
+                backwardSlide
+            } else {
+                forwardSlide
+            }
+        } else {
+            forwardSlide
+        }
+    }
 }

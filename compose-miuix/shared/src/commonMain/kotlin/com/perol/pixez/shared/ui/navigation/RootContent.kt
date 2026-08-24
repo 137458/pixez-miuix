@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.ui.Alignment
@@ -86,6 +88,10 @@ import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.components.UpdateDialog
+import com.perol.pixez.shared.ui.screens.ReleaseInfo
+import com.perol.pixez.shared.ui.screens.fetchLatestReleaseInfo
 import com.perol.pixez.shared.ui.screens.BookTagScreen
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -159,14 +165,43 @@ fun RootContent(
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
     }
 
+    var appReleaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var showAppUpdateDialog by remember { mutableStateOf(false) }
 
-        MiuixTheme(controller = themeController) {
-            CompositionLocalProvider(
-                LocalSettingsRepository provides settingsRepository,
-                LocalBottomBarVisibility provides bottomBarVisible,
-                com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
-            ) {
-                BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    LaunchedEffect(Unit) {
+        if (settingsRepository.autoCheckUpdate) {
+            fetchLatestReleaseInfo().onSuccess { info ->
+                if (info.isNew && info.versionName != settingsRepository.ignoreUpdateVersion) {
+                    appReleaseInfo = info
+                    showAppUpdateDialog = true
+                }
+            }
+        }
+    }
+
+    MiuixTheme(controller = themeController) {
+        CompositionLocalProvider(
+            LocalSettingsRepository provides settingsRepository,
+            LocalBottomBarVisibility provides bottomBarVisible,
+            com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+        ) {
+            if (showAppUpdateDialog && appReleaseInfo != null) {
+                UpdateDialog(
+                    show = showAppUpdateDialog,
+                    releaseInfo = appReleaseInfo!!,
+                    onDismiss = { showAppUpdateDialog = false },
+                    onUpdate = { url ->
+                        showAppUpdateDialog = false
+                        openBrowser(url)
+                    },
+                    onIgnore = { ver ->
+                        settingsRepository.ignoreUpdateVersion = ver
+                        showAppUpdateDialog = false
+                    },
+                )
+            }
+
+            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
                     val isWideScreen = maxWidth >= 600.dp
                     val isMainTab = active is Child.Main
                     val useFloatingBottomBar = settingsRepository.useFloatingBottomBar

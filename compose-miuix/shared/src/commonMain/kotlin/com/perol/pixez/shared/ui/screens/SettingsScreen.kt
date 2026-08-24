@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 
 import androidx.compose.runtime.Composable
@@ -52,6 +57,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
@@ -114,10 +120,17 @@ fun SettingsScreen(
 
     // 公告板入口动态状态：仅在公告列表非空时显示。
     var boardList by remember { mutableStateOf<List<BoardInfo>?>(null) }
+    val settingsRepository = LocalSettingsRepository.current
+    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
 
-    // 页面进入时异步加载公告列表，用于判断「公告板」入口是否显示。
+    // 页面进入时异步加载公告列表与最新版本信息。
     LaunchedEffect(boardRepository) {
         boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
+    }
+    LaunchedEffect(Unit) {
+        fetchLatestReleaseInfo().onSuccess { info ->
+            releaseInfo = info
+        }
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -344,10 +357,28 @@ fun SettingsScreen(
                             onClick = onBoardClick,
                         )
                     }
+                    val hasNewUpdate = releaseInfo?.isNew == true && releaseInfo?.versionName != settingsRepository?.ignoreUpdateVersion
                     BasicComponent(
                         title = strings.settingUpdate,
-                        summary = strings.settingUpdateSummary,
+                        summary = if (hasNewUpdate) strings.updateFoundNew.format(releaseInfo?.versionName ?: "", AppInfo.VERSION_NAME) else strings.settingUpdateSummary,
                         onClick = onUpdateSettingClick,
+                        endActions = {
+                            if (hasNewUpdate) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MiuixTheme.colorScheme.primary)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                ) {
+                                    Text(
+                                        text = "NEW",
+                                        color = MiuixTheme.colorScheme.onPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
+                        },
                     )
                     BasicComponent(
                         title = strings.settingAbout,
