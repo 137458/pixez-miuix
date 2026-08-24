@@ -87,6 +87,7 @@ fun DownloadSettingScreen(
 
     var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
     var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
+    var followAfterStar by remember { mutableStateOf(settingsRepository.followAfterStar) }
     var longPressSaveConfirm by remember { mutableStateOf(settingsRepository.longPressSaveConfirm) }
     var illustDetailSaveSkipLongPress by remember {
         mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
@@ -235,6 +236,19 @@ fun DownloadSettingScreen(
                                 onCheckedChange = { checked ->
                                     starAfterSave = checked
                                     settingsRepository.starAfterSave = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.feedSettingFollowAfterStar,
+                        summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = followAfterStar,
+                                onCheckedChange = { checked ->
+                                    followAfterStar = checked
+                                    settingsRepository.followAfterStar = checked
                                 },
                             )
                         },

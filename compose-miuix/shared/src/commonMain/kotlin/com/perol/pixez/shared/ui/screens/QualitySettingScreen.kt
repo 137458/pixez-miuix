@@ -22,6 +22,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
@@ -29,9 +30,10 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
- * 画质设置页：管理 Feed 预览、插画详情、漫画详情、大图缩放等画质偏好。
+ * 画质与保存偏好设置页：
+ * 管理 Feed 预览、插画详情、漫画详情、大图缩放等各页面画质偏好，以及收藏与保存的联动开关。
  *
- * @param settingsRepository 设置仓库，用于读写画质相关偏好。
+ * @param settingsRepository 设置仓库，用于读写画质与保存相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
@@ -52,6 +54,15 @@ fun QualitySettingScreen(
     var zoomQuality by remember {
         mutableIntStateOf(settingsRepository.zoomQuality)
     }
+
+    // 保存行为联动开关
+    var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
+    var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
+    var longPressSaveConfirm by remember { mutableStateOf(settingsRepository.longPressSaveConfirm) }
+    var illustDetailSaveSkipLongPress by remember {
+        mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
+    }
+    var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
 
     // 当前正在编辑的画质类型，null 表示没有对话框打开。
     var editingType by rememberSaveable { mutableStateOf<QualityType?>(null) }
@@ -74,11 +85,13 @@ fun QualitySettingScreen(
             )
         },
     ) { paddingValues ->
+        // 画质映射（与 Pixiv 规范及 Flutter 版本完全对齐）：0=中等, 1=大图, 2=原图
         val qualityOptions3 = listOf(
-            0 to strings.qualityLow,
-            1 to strings.qualityMedium,
+            0 to strings.qualityMedium,
+            1 to strings.qualityLarge,
             2 to strings.qualityOriginal,
         )
+        // 缩放画质映射：0=大图, 1=原图
         val qualityOptions2 = listOf(
             0 to strings.qualityLarge,
             1 to strings.qualityOriginal,
@@ -88,20 +101,15 @@ fun QualitySettingScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = paddingValues,
         ) {
+            // ── 1. 画质配置 ──
             item {
-                SmallTitle(text = strings.feedPreviewQuality)
+                SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
                         title = strings.feedPreviewQuality,
                         summary = feedPreviewQuality.toQualityLabel(qualityOptions3),
                         onClick = { editingType = QualityType.FeedPreview },
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.pictureQuality)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
                         title = strings.pictureQuality,
                         summary = pictureQuality.toQualityLabel(qualityOptions3),
@@ -112,16 +120,89 @@ fun QualitySettingScreen(
                         summary = mangaQuality.toQualityLabel(qualityOptions3),
                         onClick = { editingType = QualityType.Manga },
                     )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.zoomQuality)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     QualitySettingItem(
                         title = strings.zoomQuality,
                         summary = zoomQuality.toQualityLabel(qualityOptions2),
                         onClick = { editingType = QualityType.Zoom },
+                    )
+                }
+            }
+
+            // ── 2. 保存与收藏行为联动 ──
+            item {
+                SmallTitle(text = strings.settingSectionBookmarkShare)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.saveAfterStar,
+                        summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = saveAfterStar,
+                                onCheckedChange = { checked ->
+                                    saveAfterStar = checked
+                                    settingsRepository.saveAfterStar = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.starAfterSave,
+                        summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = starAfterSave,
+                                onCheckedChange = { checked ->
+                                    starAfterSave = checked
+                                    settingsRepository.starAfterSave = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.autoTagWhenStar,
+                        summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = autoTagWhenStar,
+                                onCheckedChange = { checked ->
+                                    autoTagWhenStar = checked
+                                    settingsRepository.autoTagWhenStar = checked
+                                },
+                            )
+                        },
+                    )
+                }
+            }
+
+            // ── 3. 交互与确认 ──
+            item {
+                SmallTitle(text = strings.longPressSaveConfirm)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
+                        title = strings.longPressSaveConfirm,
+                        summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = longPressSaveConfirm,
+                                onCheckedChange = { checked ->
+                                    longPressSaveConfirm = checked
+                                    settingsRepository.longPressSaveConfirm = checked
+                                },
+                            )
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.illustDetailSkipLongPress,
+                        summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
+                        endActions = {
+                            Switch(
+                                checked = illustDetailSaveSkipLongPress,
+                                onCheckedChange = { checked ->
+                                    illustDetailSaveSkipLongPress = checked
+                                    settingsRepository.illustDetailSaveSkipLongPress = checked
+                                },
+                            )
+                        },
                     )
                 }
             }
@@ -242,4 +323,3 @@ private fun Int.toQualityLabel(options: List<Pair<Int, String>>): String {
     return options.firstOrNull { it.first == this }?.second
         ?: options.first().second
 }
-

@@ -221,6 +221,11 @@ fun SettingsScreen(
                         onClick = onWelcomePageSettingClick,
                     )
                     BasicComponent(
+                        title = strings.settingShareFormat,
+                        summary = strings.settingShareFormatSummary,
+                        onClick = onCopyTextSettingClick,
+                    )
+                    BasicComponent(
                         title = strings.settingGuideWizard,
                         summary = strings.settingGuideWizardSummary,
                         onClick = onGuideClick,
@@ -228,7 +233,7 @@ fun SettingsScreen(
                 }
             }
 
-            // ── 3. 浏览与功能设置 ──
+            // ── 3. 画质与保存 ──
             item {
                 SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -243,6 +248,23 @@ fun SettingsScreen(
                         onClick = onDownloadSettingClick,
                     )
                     BasicComponent(
+                        title = strings.settingDownloadTask,
+                        summary = strings.settingDownloadTaskSummary,
+                        onClick = onDownloadTaskClick,
+                    )
+                    BasicComponent(
+                        title = strings.settingDownloadHistory,
+                        summary = strings.settingDownloadHistorySummary,
+                        onClick = onDownloadHistoryClick,
+                    )
+                }
+            }
+
+            // ── 4. 浏览与交互 ──
+            item {
+                SmallTitle(text = strings.settingSectionGeneral)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    BasicComponent(
                         title = strings.interactionSettingTitle,
                         summary = strings.interactionSettingSwipeChange,
                         onClick = onInteractionSettingClick,
@@ -253,10 +275,27 @@ fun SettingsScreen(
                         onClick = onFeedSettingClick,
                     )
                     BasicComponent(
-                        title = strings.settingShareFormat,
-                        summary = strings.settingShareFormatSummary,
-                        onClick = onCopyTextSettingClick,
+                        title = strings.settingWidgetRecommend,
+                        summary = strings.settingWidgetRecommendSummary,
+                        onClick = onWidgetRecommendSettingClick,
                     )
+                    BasicComponent(
+                        title = strings.settingHistory,
+                        summary = strings.settingHistorySummary,
+                        onClick = onHistoryClick,
+                    )
+                    BasicComponent(
+                        title = strings.settingBookTags,
+                        summary = strings.settingBookTagsSummary,
+                        onClick = onBookTagClick,
+                    )
+                }
+            }
+
+            // ── 5. 屏蔽与隐私 ──
+            item {
+                SmallTitle(text = strings.settingSectionShieldPrivacy)
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     BasicComponent(
                         title = strings.settingShield,
                         summary = strings.settingShieldSummary,
@@ -266,31 +305,6 @@ fun SettingsScreen(
                         title = strings.settingPrivacy,
                         summary = strings.settingPrivacySummary,
                         onClick = onPrivacySettingClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingBookTags,
-                        summary = strings.settingBookTagsSummary,
-                        onClick = onBookTagClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingHistory,
-                        summary = strings.settingHistorySummary,
-                        onClick = onHistoryClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingDownloadTask,
-                        summary = strings.settingDownloadTaskSummary,
-                        onClick = onDownloadTaskClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingDownloadHistory,
-                        summary = strings.settingDownloadHistorySummary,
-                        onClick = onDownloadHistoryClick,
-                    )
-                    BasicComponent(
-                        title = strings.settingWidgetRecommend,
-                        summary = strings.settingWidgetRecommendSummary,
-                        onClick = onWidgetRecommendSettingClick,
                     )
                 }
             }
