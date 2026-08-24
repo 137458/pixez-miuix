@@ -152,6 +152,7 @@ fun IllustDetailScreen(
                             items(
                                 count = illust.metaPages.size,
                                 key = { "page_$it" },
+                                contentType = { "meta_page" },
                             ) { pageIndex ->
                                 val page = illust.metaPages[pageIndex]
                                 val pageUrl = remember(page, settings?.pictureQuality, settings?.changeVersion) {
@@ -172,7 +173,7 @@ fun IllustDetailScreen(
                                 }
                             }
                         } else {
-                            item(key = "single_page") {
+                            item(key = "single_page", contentType = "single_page") {
                                 val singleUrl = remember(illust, settings?.pictureQuality, settings?.changeVersion) {
                                     when (settings?.pictureQuality ?: 0) {
                                         1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
@@ -190,7 +191,7 @@ fun IllustDetailScreen(
                         }
 
                         // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
-                        item {
+                        item(key = "illust_info_card", contentType = "info_card") {
                             Spacer(modifier = Modifier.height(12.dp))
                             Card(
                                 modifier = Modifier

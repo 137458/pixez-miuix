@@ -18,6 +18,8 @@ import com.perol.pixez.shared.data.model.UserPreview
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 /**
  * 用户预览列表项：头像、名称、账号，以及最近几张作品预览。
  */
@@ -59,7 +61,9 @@ internal fun UserPreviewItem(
                 model = illust.imageUrls.squareMedium,
                 contentDescription = illust.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp)),
             )
         }
     }

@@ -104,6 +104,7 @@ fun IllustStaggeredGrid(
         items(
             items = illusts,
             key = { it.id },
+            contentType = { "illust_card" },
         ) { illust ->
             IllustCard(
                 illust = illust,
@@ -116,6 +117,7 @@ fun IllustStaggeredGrid(
             item(
                 key = "load_more_footer",
                 span = StaggeredGridItemSpan.FullLine,
+                contentType = "load_more_footer",
             ) {
                 val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
                 Box(

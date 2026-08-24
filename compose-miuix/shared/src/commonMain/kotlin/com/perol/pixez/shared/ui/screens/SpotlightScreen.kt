@@ -306,6 +306,7 @@ fun SpotlightScreen(
                         itemsIndexed(
                             items = currentCategoryState.articles,
                             key = { _, item -> "${selectedCategory.code}_${item.id}" },
+                            contentType = { _, _ -> "spotlight_article" },
                         ) { _, article ->
                             SpotlightArticleCard(
                                 article = article,
@@ -314,7 +315,10 @@ fun SpotlightScreen(
                         }
 
                         if (currentCategoryState.isLoadingMore) {
-                            item(span = StaggeredGridItemSpan.FullLine) {
+                            item(
+                                span = StaggeredGridItemSpan.FullLine,
+                                contentType = "loading_footer",
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -353,7 +357,10 @@ private fun SpotlightCategorySelector(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(SpotlightCategory.entries) { category ->
+        items(
+            items = SpotlightCategory.entries,
+            contentType = { "category_tab" },
+        ) { category ->
             val isSelected = category == selectedCategory
             Box(
                 modifier = Modifier

@@ -124,6 +124,7 @@ fun DownloadHistoryScreen(
                                 items(
                                     items = tasks,
                                     key = { it.id },
+                                    contentType = { "download_history_item" },
                                 ) { task ->
                                     DownloadHistoryItem(
                                         task = task,

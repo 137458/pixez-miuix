@@ -178,6 +178,7 @@ fun DownloadTaskScreen(
                                     items(
                                         items = tasks,
                                         key = { it.id },
+                                        contentType = { "download_task_item" },
                                     ) { task ->
                                         DownloadTaskItem(
                                             task = task,

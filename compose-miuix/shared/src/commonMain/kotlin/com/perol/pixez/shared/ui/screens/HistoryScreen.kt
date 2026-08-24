@@ -300,10 +300,11 @@ private fun HistoryGrid(
         verticalItemSpacing = 8.dp,
     ) {
         items(
-                items = items,
-                // 使用自增主键作为唯一 key；同一作品可多次浏览，illustId 会重复。
-                key = { it.id },
-            ) { item ->
+            items = items,
+            // 使用自增主键作为唯一 key；同一作品可多次浏览，illustId 会重复。
+            key = { it.id },
+            contentType = { "history_item" },
+        ) { item ->
             HistoryCard(
                 item = item,
                 onClick = { onIllustClick(item.illustId) },

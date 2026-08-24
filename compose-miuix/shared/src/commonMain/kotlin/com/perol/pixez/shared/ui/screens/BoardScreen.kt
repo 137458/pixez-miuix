@@ -160,6 +160,7 @@ fun BoardScreen(
                             // 公告模型无唯一 id，用标题与起始日期组合作为稳定 key，
                             // 避免列表项在刷新或重组时发生不必要的复用错位。
                             key = { it.title + it.startDate },
+                            contentType = { "board_item" },
                         ) { board ->
                             BoardItem(
                                 board = board,

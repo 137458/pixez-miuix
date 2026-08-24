@@ -44,15 +44,25 @@ fun IllustCard(
         }
     }
 
-    val isAI = illust.illustAIType == 2
-    val showAIBadge = (settings?.feedAIBadge != false) && isAI
+    val isAI = remember(illust.illustAIType) { illust.illustAIType == 2 }
+    val showAIBadge = remember(isAI, settings?.feedAIBadge) { (settings?.feedAIBadge != false) && isAI }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val isNsfw = (settings?.nsfwMask == true) && (
-        illust.sanityLevel > 4 ||
-            illust.xRestrict > 0 ||
-            illust.tags.any { it.name.contains("R-18", ignoreCase = true) || it.name.contains("R18", ignoreCase = true) }
-    )
+    val isNsfw = remember(illust.sanityLevel, illust.xRestrict, illust.tags, settings?.nsfwMask) {
+        (settings?.nsfwMask == true) && (
+            illust.sanityLevel > 4 ||
+                illust.xRestrict > 0 ||
+                illust.tags.any { it.name.contains("R-18", ignoreCase = true) || it.name.contains("R18", ignoreCase = true) }
+        )
+    }
+
+    val ratio = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.5f, 2.0f)
+        } else {
+            1.0f
+        }
+    }
 
     Card(
         modifier = modifier
@@ -62,12 +72,6 @@ fun IllustCard(
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            val ratio = if (illust.width > 0 && illust.height > 0) {
-                (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.5f, 2.0f)
-            } else {
-                1.0f
-            }
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

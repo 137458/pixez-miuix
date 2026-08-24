@@ -8,8 +8,19 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+
+private val StandardHeaders = NetworkHeaders.Builder()
+    .set("Referer", "https://app-api.pixiv.net/")
+    .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    .build()
+
+private val PixivisionHeaders = NetworkHeaders.Builder()
+    .set("Referer", "https://www.pixivision.net/")
+    .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    .build()
 
 /**
  * 自动附加 Pixiv 图片必需 Referer 的 AsyncImage 包装组件。
@@ -36,21 +47,14 @@ fun PixivAsyncImage(
         }
     }
 
-    val request = remember(transformedModel) {
-        val referer = when {
-            transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net")) ->
-                "https://www.pixivision.net/"
-            else ->
-                "https://app-api.pixiv.net/"
-        }
+    val request = remember(transformedModel, context) {
+        val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
+        val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
             .data(transformedModel)
-            .httpHeaders(
-                NetworkHeaders.Builder()
-                    .set("Referer", referer)
-                    .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .build(),
-            )
+            .httpHeaders(headers)
+            .memoryCacheKey(transformedModel?.toString())
+            .memoryCachePolicy(CachePolicy.ENABLED)
             .build()
     }
 

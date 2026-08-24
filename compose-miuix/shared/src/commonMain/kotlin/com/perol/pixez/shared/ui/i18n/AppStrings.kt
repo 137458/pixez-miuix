@@ -478,6 +478,7 @@ interface AppStrings {
     val commentsSend: String
     val commentsAnonymousUser: String
     val commentsReplyAction: String
+    val commentsEmojiPicker: String
     val historyEmpty: String
     val historyNoMatch: String
     val historyClearConfirm: String
@@ -763,6 +764,7 @@ object ZhCnStrings : AppStrings {
     override val commentsSend = "发送"
     override val commentsAnonymousUser = "未知用户"
     override val commentsReplyAction = "回复"
+    override val commentsEmojiPicker = "表情"
     override val historyEmpty = "暂无浏览历史"
     override val historyNoMatch = "未找到匹配记录"
     override val historyClearConfirm = "确定清空全部浏览历史？"
@@ -1299,6 +1301,7 @@ object ZhTwStrings : AppStrings {
     override val commentsSend = "發送"
     override val commentsAnonymousUser = "未知使用者"
     override val commentsReplyAction = "回覆"
+    override val commentsEmojiPicker = "表情"
     override val historyEmpty = "暫無瀏覽歷史"
     override val historyNoMatch = "未找到符合紀錄"
     override val historyClearConfirm = "確定清空全部瀏覽歷史？"
@@ -1835,6 +1838,7 @@ object EnStrings : AppStrings {
     override val commentsSend = "Send"
     override val commentsAnonymousUser = "Unknown User"
     override val commentsReplyAction = "Reply"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "No browsing history"
     override val historyNoMatch = "No matching records found"
     override val historyClearConfirm = "Clear all browsing history?"
@@ -2371,6 +2375,7 @@ object JaStrings : AppStrings {
     override val commentsSend = "送信"
     override val commentsAnonymousUser = "匿名のユーザー"
     override val commentsReplyAction = "返信"
+    override val commentsEmojiPicker = "絵文字"
     override val historyEmpty = "閲覧履歴はありません"
     override val historyNoMatch = "一致する履歴が見つかりません"
     override val historyClearConfirm = "閲覧履歴をすべて消去しますか？"
@@ -2907,6 +2912,7 @@ object KoStrings : AppStrings {
     override val commentsSend = "전송"
     override val commentsAnonymousUser = "알 수 없는 사용자"
     override val commentsReplyAction = "답글"
+    override val commentsEmojiPicker = "이모티콘"
     override val historyEmpty = "탐색 기록이 없습니다"
     override val historyNoMatch = "일치하는 기록을 찾을 수 없습니다"
     override val historyClearConfirm = "모든 탐색 기록을 삭제하시겠습니까?"
@@ -3443,6 +3449,7 @@ object RuStrings : AppStrings {
     override val commentsSend = "Отправить"
     override val commentsAnonymousUser = "Неизвестный пользователь"
     override val commentsReplyAction = "Ответить"
+    override val commentsEmojiPicker = "Смайлики"
     override val historyEmpty = "История просмотров пуста"
     override val historyNoMatch = "Совпадений не найдено"
     override val historyClearConfirm = "Очистить всю историю просмотров?"
@@ -3979,6 +3986,7 @@ object EsStrings : AppStrings {
     override val commentsSend = "Enviar"
     override val commentsAnonymousUser = "Usuario desconocido"
     override val commentsReplyAction = "Responder"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "No hay historial de navegación"
     override val historyNoMatch = "No se encontraron coincidencias"
     override val historyClearConfirm = "¿Borrar todo el historial de navegación?"
@@ -4515,6 +4523,7 @@ object TrStrings : AppStrings {
     override val commentsSend = "Gönder"
     override val commentsAnonymousUser = "Bilinmeyen Kullanıcı"
     override val commentsReplyAction = "Yanıtla"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "Göz atma geçmişi yok"
     override val historyNoMatch = "Eşleşen kayıt bulunamadı"
     override val historyClearConfirm = "Tüm göz atma geçmişini temizle?"
@@ -5051,6 +5060,7 @@ object IdStrings : AppStrings {
     override val commentsSend = "Kirim"
     override val commentsAnonymousUser = "Pengguna Tidak Dikenal"
     override val commentsReplyAction = "Balas"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "Tidak ada riwayat penjelajahan"
     override val historyNoMatch = "Tidak ditemukan rekaman yang cocok"
     override val historyClearConfirm = "Hapus seluruh riwayat penjelajahan?"
@@ -5587,6 +5597,7 @@ object FilStrings : AppStrings {
     override val commentsSend = "Ipadala"
     override val commentsAnonymousUser = "Hindi Kilalang Gumagamit"
     override val commentsReplyAction = "Sumagot"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "Walang kasaysayan ng pag-browse"
     override val historyNoMatch = "Walang nahanap na tugmang tala"
     override val historyClearConfirm = "Burahin ang lahat ng kasaysayan ng pag-browse?"
@@ -6123,6 +6134,7 @@ object DeStrings : AppStrings {
     override val commentsSend = "Senden"
     override val commentsAnonymousUser = "Unbekannter Benutzer"
     override val commentsReplyAction = "Antworten"
+    override val commentsEmojiPicker = "Emoji"
     override val historyEmpty = "Kein Browser-Verlauf"
     override val historyNoMatch = "Keine passenden Einträge gefunden"
     override val historyClearConfirm = "Gesamten Browser-Verlauf löschen?"

@@ -185,6 +185,7 @@ fun RecomUserScreen(
                                 items(
                                     items = previews,
                                     key = { it.user.id },
+                                    contentType = { "user_preview_item" },
                                 ) { preview ->
                                     UserPreviewItem(
                                         preview = preview,
@@ -192,7 +193,7 @@ fun RecomUserScreen(
                                     )
                                 }
 
-                                item(key = "load_more_footer") {
+                                item(key = "load_more_footer", contentType = "footer") {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()

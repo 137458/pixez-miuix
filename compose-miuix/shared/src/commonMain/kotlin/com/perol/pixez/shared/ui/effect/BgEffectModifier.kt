@@ -145,13 +145,9 @@ private class BgEffectNode(
         animationJob?.cancel()
         startOffset = animTime
         animationJob = coroutineScope.launch {
-            val minDeltaNanos = 1_000_000_000L / 60L
             val origin = withFrameNanos { it }
-            var lastEmit = origin
             while (isActive) {
                 val now = withFrameNanos { it }
-                if (now - lastEmit < minDeltaNanos) continue
-                lastEmit = now
                 animTime = startOffset + (now - origin) / 1_000_000_000f
                 invalidateDraw()
             }

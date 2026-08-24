@@ -49,14 +49,21 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
-
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.perol.pixez.shared.ui.components.CommentEmojiText
+import com.perol.pixez.shared.ui.components.PixivEmojis
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Send
+import top.yukonga.miuix.kmp.icon.extended.*
+import org.jetbrains.compose.resources.painterResource
+import pixez_miuix.shared.generated.resources.Res
+import pixez_miuix.shared.generated.resources.emoji_304
 
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
@@ -235,7 +242,11 @@ fun CommentsScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = paddingValues,
                         ) {
-                            items(comments, key = { it.id ?: it.hashCode() }) { comment ->
+                            items(
+                                items = comments,
+                                key = { it.id ?: it.hashCode() },
+                                contentType = { "comment_item" },
+                            ) { comment ->
                                 CommentItem(
                                     comment = comment,
                                     onUserClick = onUserClick,
@@ -244,7 +255,7 @@ fun CommentsScreen(
                                 )
                             }
 
-                            item(key = "comment_pagination_footer") {
+                            item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -291,7 +302,7 @@ fun CommentsScreen(
 
 
 /**
- * 评论输入栏：位于页面底部，提供输入框、发送按钮与回复目标提示。
+ * 评论输入栏：位于页面底部，提供输入框、表情面板切换、发送按钮与回复目标提示。
  */
 @Composable
 private fun CommentInputBar(
@@ -306,6 +317,8 @@ private fun CommentInputBar(
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    var showEmojiPanel by rememberSaveable { mutableStateOf(false) }
+
     Column(modifier = modifier.fillMaxWidth()) {
         error?.let {
             Text(
@@ -340,6 +353,17 @@ private fun CommentInputBar(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(
+                onClick = { showEmojiPanel = !showEmojiPanel },
+                enabled = !isSending && isLoggedIn != false,
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.emoji_304),
+                    contentDescription = strings.commentsEmojiPicker,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             TextField(
                 value = text,
                 onValueChange = onTextChange,
@@ -363,6 +387,40 @@ private fun CommentInputBar(
                         imageVector = MiuixIcons.Send,
                         contentDescription = strings.commentsSend,
                     )
+                }
+            }
+        }
+
+        if (showEmojiPanel && isLoggedIn != false) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 44.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(
+                    items = PixivEmojis.allEmojis,
+                    key = { it.code },
+                    contentType = { "emoji_item" },
+                ) { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                onTextChange(text + emoji.code)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(emoji.resource),
+                            contentDescription = emoji.code,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
                 }
             }
         }
@@ -420,11 +478,40 @@ private fun CommentItem(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = comment.comment.orEmpty(),
-            style = MiuixTheme.textStyles.body2,
-        )
+        // 回复对象提示
+        if (comment.parentComment?.user != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "To ${comment.parentComment.user.name}",
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.primary,
+            )
+        }
+
+        // 评论正文（支持行内表情图文混排）
+        if (!comment.comment.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            CommentEmojiText(
+                text = comment.comment,
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
+        }
+
+        // Stamp 图片/贴纸
+        val stampUrl = comment.stamp?.stampUrl
+        if (!stampUrl.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            PixivAsyncImage(
+                model = stampUrl,
+                contentDescription = "Stamp",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
+        }
+
         comment.date?.let { date ->
             Spacer(modifier = Modifier.height(4.dp))
             Text(

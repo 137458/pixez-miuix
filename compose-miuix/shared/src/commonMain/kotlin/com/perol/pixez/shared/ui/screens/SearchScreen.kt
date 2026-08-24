@@ -870,6 +870,7 @@ private fun SearchUserResultList(
                     items(
                         items = previews,
                         key = { it.user.id },
+                        contentType = { "user_preview_item" },
                     ) { preview ->
                         UserPreviewItem(
                             preview = preview,
@@ -878,7 +879,7 @@ private fun SearchUserResultList(
                     }
 
                     if (isLoadingMore || loadMoreError != null || (nextUrl == null && previews.isNotEmpty())) {
-                        item(key = "search_user_footer") {
+                        item(key = "search_user_footer", contentType = "footer") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

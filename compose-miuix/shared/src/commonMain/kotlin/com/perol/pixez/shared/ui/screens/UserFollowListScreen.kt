@@ -177,6 +177,7 @@ fun UserFollowListScreen(
                                 items(
                                     items = previews,
                                     key = { it.user.id },
+                                    contentType = { "user_preview_item" },
                                 ) { preview ->
                                     UserPreviewItem(
                                         preview = preview,
@@ -184,7 +185,7 @@ fun UserFollowListScreen(
                                     )
                                 }
 
-                                item(key = "follow_pagination_footer") {
+                                item(key = "follow_pagination_footer", contentType = "footer") {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()

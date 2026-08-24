@@ -11,6 +11,7 @@ miuix = "0.9.3"
 androidx-activity-compose = "1.10.1"
 androidx-lifecycle = "2.9.4"
 androidx-core-ktx = "1.16.0"
+androidx-core-splashscreen = "1.0.1"
 
 # 网络 / 序列化
 ktor = "3.1.2"
@@ -53,6 +54,7 @@ miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miu
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
 
 # Ktor
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

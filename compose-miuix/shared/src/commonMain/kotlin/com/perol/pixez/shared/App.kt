@@ -9,6 +9,7 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
+import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
 import com.arkivanov.decompose.DefaultComponentContext
@@ -40,6 +41,12 @@ fun App(
         ImageLoader.Builder(context)
             .components {
                 add(KtorNetworkFetcherFactory(httpClient = { dependencies.httpClient.downloadClient }))
+            }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .strongReferencesEnabled(true)
+                    .build()
             }
             .crossfade(true)
             .build()
