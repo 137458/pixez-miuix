@@ -12,6 +12,7 @@ import com.perol.pixez.shared.data.model.ImageUrls
 import com.perol.pixez.shared.data.model.MetaPage
 import com.perol.pixez.shared.data.model.MetaPageImageUrls
 import com.perol.pixez.shared.data.model.MetaSinglePage
+import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -26,12 +27,13 @@ import kotlinx.coroutines.CancellationException
  * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存，
  * 同时通过 [DownloadHistoryRepository] 将任务状态写入本地历史。
  *
- * 提供单页 [download] 与多页 [downloadAllPages] 下载入口，并将取消异常重新抛出以保留协程取消语义。
+ * 提供单页 [download] 与多页 [downloadAllPages] 下载入口，支持 Android 16 实时动态胶囊通知。
  */
 class DownloadRepository(
     private val httpClient: HttpClient,
     private val saver: IllustSaver,
     private val historyRepository: DownloadHistoryRepository,
+    private val notifier: DownloadNotifier = DownloadNotifier(),
 ) {
 
     /**
@@ -57,6 +59,9 @@ class DownloadRepository(
 
         // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
         var historyId = 0L
+        if (illust.pageCount <= 1) {
+            notifier.notifyProgress(illust.id, illust.title, 0, 1)
+        }
         return try {
             // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
             historyId = historyRepository.saveTask(pendingTask, illust).id
@@ -65,8 +70,14 @@ class DownloadRepository(
             Napier.d("下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepository.saveTask(successTask, illust, historyId)
+            if (illust.pageCount <= 1) {
+                notifier.notifyFinished(illust.id, illust.title, 1, 0)
+            }
             successTask
         } catch (e: CancellationException) {
+            if (illust.pageCount <= 1) {
+                notifier.cancel(illust.id)
+            }
             // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
             throw e
         } catch (e: Exception) {
@@ -75,6 +86,9 @@ class DownloadRepository(
                 status = DownloadStatus.Failed,
                 error = e.message ?: "下载失败",
             )
+            if (illust.pageCount <= 1) {
+                notifier.notifyFinished(illust.id, illust.title, 0, 1)
+            }
             if (historyId > 0) {
                 // 历史记录已创建时尽力回写失败状态；不因为回写失败而覆盖原始错误。
                 // 回写失败至少记录日志，便于排查 DB 状态与真实结果不一致的问题。
@@ -91,7 +105,7 @@ class DownloadRepository(
     /**
      * 下载作品全部页原图并保存到本地。
      *
-     * 按页码顺序逐页下载，返回每一页的下载任务结果。
+     * 按页码顺序逐页下载，实时向系统状态栏发送 Android 16 动态胶囊进度通知。
      *
      * @param illust 目标作品
      * @param onProgress 进度回调，参数为 (已完成数量, 总页数)
@@ -101,11 +115,24 @@ class DownloadRepository(
         illust: Illust,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null,
     ): List<DownloadTask> {
-        return (0 until illust.pageCount).mapIndexed { index, pageIndex ->
-            onProgress?.invoke(index, illust.pageCount)
-            download(illust, pageIndex)
-        }.also { tasks ->
-            onProgress?.invoke(tasks.size, illust.pageCount)
+        val total = illust.pageCount
+        notifier.notifyProgress(illust.id, illust.title, 0, total)
+        val results = mutableListOf<DownloadTask>()
+        try {
+            for (pageIndex in 0 until total) {
+                val task = download(illust, pageIndex)
+                results.add(task)
+                val current = results.size
+                onProgress?.invoke(current, total)
+                notifier.notifyProgress(illust.id, illust.title, current, total)
+            }
+            val successCount = results.count { it.status == DownloadStatus.Success }
+            val failedCount = results.count { it.status == DownloadStatus.Failed }
+            notifier.notifyFinished(illust.id, illust.title, successCount, failedCount)
+            return results
+        } catch (e: CancellationException) {
+            notifier.cancel(illust.id)
+            throw e
         }
     }
 

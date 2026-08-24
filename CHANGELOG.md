@@ -8,6 +8,9 @@
 
 ### 新增
 
+- 接入 Android 16 (API 36) 实时动态胶囊下载通知（Rich Ongoing Notifications），支持状态栏实时展示多页插画与漫画批量下载进度。
+- 接入 Android 15 (API 35) 私密空间（Private Space）兼容与 `FileProvider` 安全沙盒文件共享机制。
+- 接入 Android 16 现代化零权限照片选择器（Photo Picker）架构。
 - 接入 Android 14+ / 15+ 桌面快捷捷径（App Shortcuts）与深度链接路由，支持长按桌面图标快速直达日榜推荐、插画搜索、下载管理与浏览历史。
 - 接入 Android 14+ 系统级分享面板自定义动作（`ChooserAction` 快速复制）。
 - 接入 Android 14+ / 15+ 10-bit Display P3 广色域色彩渲染模式（`wideColorGamut`），充分发挥现代 OLED 与 HyperOS 屏幕高色域表现力。
@@ -18,6 +21,7 @@
 
 ### 优化
 
+- 开启 Android 15 16 KB 内存页对齐与未压缩 JNI 原生库打包配置（`useLegacyPackaging = false`），保障新型内核设备高性能运行。
 - 配置 Coil 3 全局 25% 内存缓存池（MemoryCache）与请求头重用，消除长列表滑动重复网络请求与对象分配开销。
 - 全量 Lazy 列表与瀑布流卡片接入 Compose `contentType` 槽位复用机制，大幅提升长列表滑动流畅度。
 - 记忆化插画卡片 NSFW 遮罩、宽高比与 AI 标识计算，降低高速滑动重组耗时。
