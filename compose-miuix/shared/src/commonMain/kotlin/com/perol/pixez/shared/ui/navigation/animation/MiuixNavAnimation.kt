@@ -1,22 +1,14 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
-import com.arkivanov.decompose.extensions.compose.stack.animation.fade
-import com.arkivanov.decompose.extensions.compose.stack.animation.plus
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
@@ -30,74 +22,47 @@ import com.arkivanov.essenty.backhandler.BackEvent
 val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
 /**
- * 创建 MIUIX / HyperOS 风格的预测性返回手势动画控制器（Predictive Back Animatable）。
+ * 创建 MIUIX / HyperOS 经典纯左右平移视差预测性返回手势（Slide Predictive Back Animatable）。
  *
  * 核心特性：
- * 1. **非线性物理阻尼**：手势滑动过程中对进度进行非线性拟合，提供跟手且具有物理质量的阻尼感。
- * 2. **视口自适应位移**：根据容器实际物理宽度 [containerWidthPx] 动态计算滑移距离，避免固定绝对像素导致的微小位移问题。
- * 3. **硬件级设备圆角自适应**：
- *    - 初始状态（静止/未触发手势）严格贴合当前物理屏幕硬件圆角 [deviceCornerRadius]（直角屏/小圆角屏为 0~8dp，大曲率屏为 24~36dp）；
- *    - 随手势滑动平滑渐进至卡片目标圆角 [targetCardCornerRadius]，彻底杜绝硬编码与小圆角设备割裂感。
- * 4. **立体阴影**：顶层卡片随手势进度投射多层景深立体阴影。
- * 5. **底页视差深度与暗色遮罩（Scrim）**：底层预览页面从 93% 深度微缩与轻微左偏视差推进至全屏，并随手势逐渐消退 28% 暗色遮罩，突出操作焦点。
+ * 1. **纯平移无缩小（No Scaling）**：保持 1.0 原始页面缩放比例，不作卡片缩小与圆角变形，符合 MIUIX / iOS 经典侧滑手势。
+ * 2. **100% 视口全行程位移**：顶层页面随手势从 0 平移至 containerWidthPx（100% 屏幕宽度滑出），左侧带有立体边缘阴影。
+ * 3. **底层页面 30% 视差滑入与柔和遮罩**：底层页面从 -30% 屏幕宽度平滑推进至 0，同时 20% 暗色遮罩随手势平滑消退。
+ * 4. **无缝生命周期终结**：手势确认完成时，顶层页面自然完全滑出屏幕右侧（translationX = 100%），出栈切换时绝对零闪现。
  *
  * @param initialBackEvent 手势起始事件。
- * @param density 屏幕密度，用于精确换算 dp / px。
  * @param containerWidthPx 页面容器当前的物理像素宽度。
- * @param deviceCornerRadius 设备屏幕硬件物理圆角（通过系统 WindowInsets 动态读取）。
- * @param targetCardCornerRadius 预测性返回缩放后的目标卡片圆角，默认为 MIUIX 标准 28dp。
  */
 @OptIn(ExperimentalDecomposeApi::class)
-fun miuixPredictiveBackAnimatable(
+fun miuixSlidePredictiveBackAnimatable(
     initialBackEvent: BackEvent,
-    density: Density,
     containerWidthPx: Float,
-    deviceCornerRadius: Dp = 0.dp,
-    targetCardCornerRadius: Dp = 28.dp,
 ): PredictiveBackAnimatable {
-    val maxHorizontalShift = (containerWidthPx * 0.18f).coerceAtLeast(density.density * 60f)
-    val maxParallaxShift = (containerWidthPx * 0.08f).coerceAtLeast(density.density * 28f)
-    val effectiveTargetRadius = maxOf(deviceCornerRadius, targetCardCornerRadius)
-
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, edge ->
-            val eased = FastOutSlowInEasing.transform(progress.coerceIn(0f, 1f))
-            val scale = 1f - (eased * 0.10f)
             val translationX = when (edge) {
-                BackEvent.SwipeEdge.LEFT -> eased * maxHorizontalShift
-                BackEvent.SwipeEdge.RIGHT -> -eased * maxHorizontalShift
-                else -> 0f
+                BackEvent.SwipeEdge.LEFT -> progress * containerWidthPx
+                BackEvent.SwipeEdge.RIGHT -> -progress * containerWidthPx
+                else -> progress * containerWidthPx
             }
-            val cornerRadiusDp = lerp(deviceCornerRadius, effectiveTargetRadius, eased)
-            val elevationDp = (eased * 20f).dp
-
             Modifier.graphicsLayer {
-                scaleX = scale
-                scaleY = scale
                 this.translationX = translationX
-                shape = RoundedCornerShape(cornerRadiusDp)
-                clip = true
-                shadowElevation = with(density) { elevationDp.toPx() }
+                shadowElevation = 16f
             }
         },
         enterModifier = { progress, edge ->
-            val eased = FastOutSlowInEasing.transform(progress.coerceIn(0f, 1f))
-            val scale = 0.93f + (eased * 0.07f)
+            val parallaxRatio = 0.30f
             val translationX = when (edge) {
-                BackEvent.SwipeEdge.LEFT -> -(1f - eased) * maxParallaxShift
-                BackEvent.SwipeEdge.RIGHT -> (1f - eased) * maxParallaxShift
-                else -> 0f
+                BackEvent.SwipeEdge.LEFT -> -(1f - progress) * (containerWidthPx * parallaxRatio)
+                BackEvent.SwipeEdge.RIGHT -> (1f - progress) * (containerWidthPx * parallaxRatio)
+                else -> -(1f - progress) * (containerWidthPx * parallaxRatio)
             }
-            val scrimAlpha = (1f - eased) * 0.28f
-            val contentAlpha = 0.85f + (eased * 0.15f)
+            val scrimAlpha = (1f - progress) * 0.20f
 
             Modifier
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
                     this.translationX = translationX
-                    alpha = contentAlpha
                 }
                 .drawWithContent {
                     drawContent()
@@ -110,23 +75,16 @@ fun miuixPredictiveBackAnimatable(
 }
 
 /**
- * 创建 MIUIX / HyperOS 风格的默认页面出入栈转场动画（非手势返回与前进导航）。
+ * 创建 MIUIX / HyperOS 风格的默认页面出入栈平移转场动画（非手势返回与前进导航）。
  *
- * 采用 HyperOS 2.0 连续空间位移与淡入淡出曲线，转场时长 320ms。
+ * 采用 100% 不透明纯平移（带 320ms HyperOS 曲线），彻底杜绝透明度淡入淡出导致的黑屏闪烁。
  */
-fun <C : Any, T : Any> miuixStackAnimation(): StackAnimation<C, T> {
+fun <C : Any, T : Any> miuixSlideStackAnimation(): StackAnimation<C, T> {
     val slideAnimator: StackAnimator = slide(
         animationSpec = tween(
             durationMillis = 320,
             easing = HyperOSDecelerateEasing,
         ),
     )
-    val fadeAnimator: StackAnimator = fade(
-        animationSpec = tween(
-            durationMillis = 240,
-            easing = HyperOSDecelerateEasing,
-        ),
-    )
-
-    return stackAnimation(slideAnimator + fadeAnimator)
+    return stackAnimation(slideAnimator)
 }
