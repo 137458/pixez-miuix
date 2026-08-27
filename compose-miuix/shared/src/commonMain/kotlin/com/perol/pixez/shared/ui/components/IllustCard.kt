@@ -119,19 +119,35 @@ fun IllustCard(
                     )
                 }
 
+                if (illust.pageCount > 1) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                    ) {
+                        top.yukonga.miuix.kmp.basic.Badge {
+                            Text(
+                                text = "${illust.pageCount}P",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                            )
+                        }
+                    }
+                }
+
                 if (showAIBadge) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                            .padding(6.dp),
                     ) {
-                        Text(
-                            text = "AI",
-                            fontSize = 10.sp,
-                            color = Color.White,
-                        )
+                        top.yukonga.miuix.kmp.basic.Badge {
+                            Text(
+                                text = "AI",
+                                fontSize = 10.sp,
+                                color = Color.White,
+                            )
+                        }
                     }
                 }
             }

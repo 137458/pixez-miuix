@@ -67,6 +67,7 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TooltipBox
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -599,26 +600,30 @@ private fun IllustDetailSingleContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             // 返回按钮
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(40.dp)
-                    .liquidGlass(
-                        backdrop = detailBackdrop,
-                        shape = CircleShape,
-                        blurRadius = 16.dp,
-                        tintColor = Color.Black,
-                        tintAlpha = 0.35f,
-                    )
-                    .clip(CircleShape)
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
+            TooltipBox(
+                text = strings.back,
+                modifier = Modifier.align(Alignment.CenterStart),
             ) {
-                Icon(
-                    imageVector = MiuixIcons.Back,
-                    contentDescription = strings.back,
-                    tint = Color.White,
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .liquidGlass(
+                            backdrop = detailBackdrop,
+                            shape = CircleShape,
+                            blurRadius = 16.dp,
+                            tintColor = Color.Black,
+                            tintAlpha = 0.35f,
+                        )
+                        .clip(CircleShape)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Back,
+                        contentDescription = strings.back,
+                        tint = Color.White,
+                    )
+                }
             }
 
             // 右侧操作按钮组（收藏、下载、更多）
@@ -628,158 +633,164 @@ private fun IllustDetailSingleContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 收藏按钮
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .liquidGlass(
-                            backdrop = detailBackdrop,
-                            shape = CircleShape,
-                            blurRadius = 16.dp,
-                            tintColor = Color.Black,
-                            tintAlpha = 0.35f,
-                        )
-                        .clip(CircleShape)
-                        .clickable(
-                            enabled = !isBookmarkLoading && illust != null,
-                            onClick = {
-                                illust?.let { targetIllust ->
-                                    coroutineScope.launch {
-                                        try {
-                                            isBookmarkLoading = true
-                                            bookmarkError = null
-                                            val wasBookmarked = isBookmarked
-                                            suspendRunCatchingNonCancel {
-                                                if (wasBookmarked) {
-                                                    bookmarkRepository.deleteBookmark(targetIllust.id)
-                                                } else {
-                                                    val autoTags = if (settings?.autoTagWhenStar == true) {
-                                                        targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
-                                                    } else null
-                                                    bookmarkRepository.addBookmark(
-                                                        illustId = targetIllust.id,
-                                                        isPrivate = settings?.defaultPrivateLike ?: false,
-                                                        tags = autoTags,
-                                                    )
-                                                }
-                                            }.onSuccess {
-                                                isBookmarked = !wasBookmarked
-                                                if (!wasBookmarked) {
-                                                    if (settings?.saveAfterStar == true) {
-                                                        coroutineScope.launch {
-                                                            toastMessage = "${strings.downloadStatusDownloading}…"
-                                                            val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                                                            toastMessage = when (task.status) {
-                                                                DownloadStatus.Success -> strings.downloadStatusSuccess
-                                                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                                else -> null
+                TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = CircleShape,
+                                blurRadius = 16.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.35f,
+                            )
+                            .clip(CircleShape)
+                            .clickable(
+                                enabled = !isBookmarkLoading && illust != null,
+                                onClick = {
+                                    illust?.let { targetIllust ->
+                                        coroutineScope.launch {
+                                            try {
+                                                isBookmarkLoading = true
+                                                bookmarkError = null
+                                                val wasBookmarked = isBookmarked
+                                                suspendRunCatchingNonCancel {
+                                                    if (wasBookmarked) {
+                                                        bookmarkRepository.deleteBookmark(targetIllust.id)
+                                                    } else {
+                                                        val autoTags = if (settings?.autoTagWhenStar == true) {
+                                                            targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
+                                                        } else null
+                                                        bookmarkRepository.addBookmark(
+                                                            illustId = targetIllust.id,
+                                                            isPrivate = settings?.defaultPrivateLike ?: false,
+                                                            tags = autoTags,
+                                                        )
+                                                    }
+                                                }.onSuccess {
+                                                    isBookmarked = !wasBookmarked
+                                                    if (!wasBookmarked) {
+                                                        if (settings?.saveAfterStar == true) {
+                                                            coroutineScope.launch {
+                                                                toastMessage = "${strings.downloadStatusDownloading}…"
+                                                                val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                                                                toastMessage = when (task.status) {
+                                                                    DownloadStatus.Success -> strings.downloadStatusSuccess
+                                                                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                                    else -> null
+                                                                }
+                                                            }
+                                                        }
+                                                        if (settings?.followAfterStar == true) {
+                                                            coroutineScope.launch {
+                                                                suspendRunCatchingNonCancel {
+                                                                    bookmarkRepository.followUser(targetIllust.user.id)
+                                                                }
                                                             }
                                                         }
                                                     }
-                                                    if (settings?.followAfterStar == true) {
-                                                        coroutineScope.launch {
-                                                            suspendRunCatchingNonCancel {
-                                                                bookmarkRepository.followUser(targetIllust.user.id)
-                                                            }
-                                                        }
-                                                    }
+                                                }.onFailure { e ->
+                                                    bookmarkError = e.message ?: strings.loadFailed
                                                 }
-                                            }.onFailure { e ->
-                                                bookmarkError = e.message ?: strings.loadFailed
+                                            } finally {
+                                                isBookmarkLoading = false
                                             }
-                                        } finally {
-                                            isBookmarkLoading = false
                                         }
                                     }
-                                }
-                            },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                        contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                        tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
-                    )
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                            contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                            tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
+                        )
+                    }
                 }
 
                 // 下载按钮
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .liquidGlass(
-                            backdrop = detailBackdrop,
-                            shape = CircleShape,
-                            blurRadius = 16.dp,
-                            tintColor = Color.Black,
-                            tintAlpha = 0.35f,
-                        )
-                        .clip(CircleShape)
-                        .clickable(
-                            enabled = !isDownloading && illust != null,
-                            onClick = {
-                                if (isDownloading || illust == null) return@clickable
-                                coroutineScope.launch {
-                                    try {
-                                        isDownloading = true
-                                        toastMessage = "${strings.downloadStatusDownloading}…"
-                                        val task = downloadRepository.download(illust, pageIndex = 0)
-                                        toastMessage = when (task.status) {
-                                            DownloadStatus.Success -> {
-                                                if (settings?.starAfterSave == true && !isBookmarked) {
-                                                    coroutineScope.launch {
-                                                        suspendRunCatchingNonCancel {
-                                                            bookmarkRepository.addBookmark(
-                                                                illustId = illust.id,
-                                                                isPrivate = settings.defaultPrivateLike,
-                                                            )
-                                                        }.onSuccess {
-                                                            isBookmarked = true
+                TooltipBox(text = strings.download) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = CircleShape,
+                                blurRadius = 16.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.35f,
+                            )
+                            .clip(CircleShape)
+                            .clickable(
+                                enabled = !isDownloading && illust != null,
+                                onClick = {
+                                    if (isDownloading || illust == null) return@clickable
+                                    coroutineScope.launch {
+                                        try {
+                                            isDownloading = true
+                                            toastMessage = "${strings.downloadStatusDownloading}…"
+                                            val task = downloadRepository.download(illust, pageIndex = 0)
+                                            toastMessage = when (task.status) {
+                                                DownloadStatus.Success -> {
+                                                    if (settings?.starAfterSave == true && !isBookmarked) {
+                                                        coroutineScope.launch {
+                                                            suspendRunCatchingNonCancel {
+                                                                bookmarkRepository.addBookmark(
+                                                                    illustId = illust.id,
+                                                                    isPrivate = settings.defaultPrivateLike,
+                                                                )
+                                                            }.onSuccess {
+                                                                isBookmarked = true
+                                                            }
                                                         }
                                                     }
+                                                    strings.downloadStatusSuccess
                                                 }
-                                                strings.downloadStatusSuccess
+                                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                else -> null
                                             }
-                                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                            else -> null
+                                        } finally {
+                                            isDownloading = false
                                         }
-                                    } finally {
-                                        isDownloading = false
                                     }
-                                }
-                            },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Download,
-                        contentDescription = strings.download,
-                        tint = Color.White,
-                    )
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Download,
+                            contentDescription = strings.download,
+                            tint = Color.White,
+                        )
+                    }
                 }
 
                 // 更多菜单按钮
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .liquidGlass(
-                            backdrop = detailBackdrop,
-                            shape = CircleShape,
-                            blurRadius = 16.dp,
-                            tintColor = Color.Black,
-                            tintAlpha = 0.35f,
+                TooltipBox(text = strings.menuMoreActions) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = CircleShape,
+                                blurRadius = 16.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.35f,
+                            )
+                            .clip(CircleShape)
+                            .clickable(
+                                enabled = illust != null,
+                                onClick = { showActionMenu = true },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.More,
+                            contentDescription = strings.menuMoreActions,
+                            tint = Color.White,
                         )
-                        .clip(CircleShape)
-                        .clickable(
-                            enabled = illust != null,
-                            onClick = { showActionMenu = true },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.More,
-                        contentDescription = strings.menuMoreActions,
-                        tint = Color.White,
-                    )
+                    }
                 }
             }
         }

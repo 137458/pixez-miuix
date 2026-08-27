@@ -27,8 +27,8 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -163,9 +163,7 @@ private fun AdapterWidthSlider(
     var sliderValue by remember(width) { mutableFloatStateOf(width.toFloat()) }
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         // 使用父容器可用宽度模拟原 Flutter MediaQuery 的屏幕宽度，保证跨平台一致。
         val containerWidth = maxWidth.value
@@ -173,16 +171,12 @@ private fun AdapterWidthSlider(
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
-                style = MiuixTheme.textStyles.body2,
-            )
-
-            Slider(
+            SliderPreference(
                 value = sliderValue,
                 onValueChange = { sliderValue = it },
+                title = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
+                valueText = "${sliderValue.toInt()} dp",
                 valueRange = AppConstants.CrossAdapter.WIDTH_MIN.toFloat()..AppConstants.CrossAdapter.WIDTH_MAX.toFloat(),
                 onValueChangeFinished = {
                     onWidthChangeFinished(sliderValue.toInt())
@@ -192,12 +186,17 @@ private fun AdapterWidthSlider(
             Text(
                 text = strings.crossAdapterPreview,
                 style = MiuixTheme.textStyles.subtitle,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            PreviewGrid(
-                columnCount = columnCount,
-                itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
-            )
+            Box(
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            ) {
+                PreviewGrid(
+                    columnCount = columnCount,
+                    itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
+                )
+            }
         }
     }
 }

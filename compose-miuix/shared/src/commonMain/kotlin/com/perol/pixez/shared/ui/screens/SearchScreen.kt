@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,6 +80,9 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -769,6 +773,7 @@ private fun SearchIllustResultGrid(
     }
 }
 
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 private fun SearchUserResultList(
     query: String,
@@ -851,73 +856,82 @@ private fun SearchUserResultList(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(bottom = 100.dp),
-                ) {
-                    items(
-                        items = previews,
-                        key = { it.user.id },
-                        contentType = { "user_preview_item" },
-                    ) { preview ->
-                        UserPreviewItem(
-                            preview = preview,
-                            onClick = { onUserClick(preview.user.id) },
-                        )
-                    }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(bottom = 100.dp),
+                    ) {
+                        items(
+                            items = previews,
+                            key = { it.user.id },
+                            contentType = { "user_preview_item" },
+                        ) { preview ->
+                            UserPreviewItem(
+                                preview = preview,
+                                onClick = { onUserClick(preview.user.id) },
+                            )
+                        }
 
-                    if (isLoadingMore || loadMoreError != null || (nextUrl == null && previews.isNotEmpty())) {
-                        item(key = "search_user_footer", contentType = "footer") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                when {
-                                    isLoadingMore -> {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
+                        if (isLoadingMore || loadMoreError != null || (nextUrl == null && previews.isNotEmpty())) {
+                            item(key = "search_user_footer", contentType = "footer") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    when {
+                                        isLoadingMore -> {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
+                                                InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
+                                                Text(
+                                                    text = strings.loadingMore,
+                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                                )
+                                            }
+                                        }
+                                        loadMoreError != null -> {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            ) {
+                                                Text(
+                                                    text = strings.loadMoreFailedRetry,
+                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
+                                                )
+                                                TextButton(
+                                                    text = strings.retry,
+                                                    onClick = ::loadMore,
+                                                )
+                                            }
+                                        }
+                                        else -> {
                                             Text(
-                                                text = strings.loadingMore,
+                                                text = strings.noMoreData,
                                                 style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
                                                 color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
                                         }
                                     }
-                                    loadMoreError != null -> {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        ) {
-                                            Text(
-                                                text = strings.loadMoreFailedRetry,
-                                                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
-                                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
-                                            )
-                                            TextButton(
-                                                text = strings.retry,
-                                                onClick = ::loadMore,
-                                            )
-                                        }
-                                    }
-                                    else -> {
-                                        Text(
-                                            text = strings.noMoreData,
-                                            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
-                                            color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        )
-                                    }
                                 }
                             }
                         }
                     }
+
+                    VerticalScrollBar(
+                        adapter = rememberScrollBarAdapter(listState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight(),
+                    )
                 }
             }
         }
@@ -930,6 +944,7 @@ private fun SearchUserResultList(
 }
 
 
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 private fun SearchSuggestions(
     trendTags: List<TrendTag>,
@@ -943,10 +958,13 @@ private fun SearchSuggestions(
     onRetryTrend: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+    val listState = rememberLazyListState()
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = PaddingValues(
             start = 0.dp,
             top = 0.dp,
@@ -1057,6 +1075,14 @@ private fun SearchSuggestions(
             }
         }
     }
+
+    VerticalScrollBar(
+        adapter = rememberScrollBarAdapter(listState),
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .fillMaxHeight(),
+    )
+}
 }
 
 /**

@@ -26,10 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.ColorPicker
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -269,7 +271,7 @@ fun ThemeSettingScreen(
 }
 
 /**
- * 颜色选择对话框：提供预设颜色网格与自定义 HEX 输入。
+ * 颜色选择对话框：提供原生 ColorPicker 拾色器、预设颜色网格与自定义 HEX 输入。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -292,6 +294,7 @@ private fun ColorPickerDialog(
         0xFFFB7299.toInt() to strings.themePresetBilibiliPink,
     )
 
+    var selectedColor by remember(show, currentColor) { mutableStateOf(Color(currentColor)) }
     var customHex by remember(show) { mutableStateOf("") }
     var toastMessage by remember(show) { mutableStateOf<String?>(null) }
 
@@ -304,28 +307,15 @@ private fun ColorPickerDialog(
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 当前选中的颜色预览。
-            Row(
+            // 原生 MIUIX ColorPicker 拾色器，支持连续取色与实时预览
+            ColorPicker(
+                color = selectedColor,
+                onColorChanged = { newColor ->
+                    selectedColor = newColor
+                    customHex = ""
+                },
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(currentColor))
-                        .border(
-                            width = 1.dp,
-                            color = MiuixTheme.colorScheme.outline,
-                            shape = RoundedCornerShape(8.dp),
-                        ),
-                )
-                Text(
-                    text = strings.themeDialogCurrentColor,
-                    style = MiuixTheme.textStyles.body1,
-                )
-            }
+            )
 
             // 预设颜色网格。
             FlowRow(
@@ -338,8 +328,11 @@ private fun ColorPickerDialog(
                     ColorPresetItem(
                         color = color,
                         name = name,
-                        selected = color == currentColor,
-                        onClick = { onColorSelected(color) },
+                        selected = color == selectedColor.copy(alpha = 1f).toArgb(),
+                        onClick = {
+                            selectedColor = Color(color)
+                            customHex = ""
+                        },
                     )
                 }
             }
@@ -347,7 +340,13 @@ private fun ColorPickerDialog(
             // 自定义 HEX 输入。
             TextField(
                 value = customHex,
-                onValueChange = { customHex = it },
+                onValueChange = { hex ->
+                    customHex = hex
+                    val parsed = parseHexColor(hex)
+                    if (parsed != null) {
+                        selectedColor = Color(parsed)
+                    }
+                },
                 label = strings.themeDialogCustomColorLabel,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -364,11 +363,15 @@ private fun ColorPickerDialog(
                 TextButton(
                     text = strings.confirm,
                     onClick = {
-                        val parsed = parseHexColor(customHex)
-                        if (parsed != null) {
-                            onColorSelected(parsed)
+                        if (customHex.isNotBlank()) {
+                            val parsed = parseHexColor(customHex)
+                            if (parsed != null) {
+                                onColorSelected(parsed)
+                            } else {
+                                toastMessage = strings.themeColorFormatError
+                            }
                         } else {
-                            toastMessage = strings.themeColorFormatError
+                            onColorSelected(selectedColor.copy(alpha = 1f).toArgb())
                         }
                     },
                     modifier = Modifier.weight(1f),

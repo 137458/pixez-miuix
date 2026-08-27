@@ -382,6 +382,13 @@ fun SettingsScreen(
                         title = strings.settingUpdate,
                         summary = if (hasNewUpdate) strings.updateFoundNew.format(releaseInfo?.versionName ?: "", AppInfo.VERSION_NAME) else strings.settingUpdateSummary,
                         onClick = onUpdateSettingClick,
+                        endActions = {
+                            if (hasNewUpdate) {
+                                top.yukonga.miuix.kmp.basic.Badge(modifier = Modifier.padding(end = 4.dp)) {
+                                    Text("NEW")
+                                }
+                            }
+                        },
                     )
                     ArrowPreference(
                         title = strings.settingAbout,

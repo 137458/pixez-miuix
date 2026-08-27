@@ -38,8 +38,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.runtime.mutableFloatStateOf
-import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.AppConstants
 import kotlin.math.max
@@ -218,25 +218,19 @@ private fun AdapterWidthSlider(
     var sliderValue by remember(width) { mutableFloatStateOf(width.toFloat()) }
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         val containerWidth = maxWidth.value
         val columnCount = max((containerWidth / sliderValue).toInt(), 1)
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
-                style = MiuixTheme.textStyles.body2,
-            )
-
-            Slider(
+            SliderPreference(
                 value = sliderValue,
                 onValueChange = { sliderValue = it },
+                title = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
+                valueText = "${sliderValue.toInt()} dp",
                 valueRange = AppConstants.CrossAdapter.WIDTH_MIN.toFloat()..AppConstants.CrossAdapter.WIDTH_MAX.toFloat(),
                 onValueChangeFinished = {
                     onWidthChangeFinished(sliderValue.toInt())
@@ -246,12 +240,17 @@ private fun AdapterWidthSlider(
             Text(
                 text = strings.crossAdapterPreview,
                 style = MiuixTheme.textStyles.subtitle,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            PreviewGrid(
-                columnCount = columnCount,
-                itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
-            )
+            Box(
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            ) {
+                PreviewGrid(
+                    columnCount = columnCount,
+                    itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
+                )
+            }
         }
     }
 }

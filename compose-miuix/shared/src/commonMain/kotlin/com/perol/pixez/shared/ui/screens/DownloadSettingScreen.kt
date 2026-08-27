@@ -28,6 +28,7 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.NumberPicker
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
@@ -35,6 +36,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -109,7 +111,6 @@ fun DownloadSettingScreen(
         }
     }
 
-    val taskCountOptions = remember { (1..10).map { it.toString() } }
     val saveModeLabels = remember(strings) {
         listOf(
             "Media (${strings.downloadSaveModeMedia})",
@@ -202,15 +203,10 @@ fun DownloadSettingScreen(
                 item {
                     SmallTitle(text = strings.settingDownloadTask)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        OverlayDropdownPreference(
+                        ArrowPreference(
                             title = strings.dialogTaskCount,
-                            items = taskCountOptions,
-                            selectedIndex = (maxRunningTask - 1).coerceIn(0, taskCountOptions.lastIndex),
-                            onSelectedIndexChange = { index ->
-                                val count = index + 1
-                                maxRunningTask = count
-                                settingsRepository.maxRunningTask = count
-                            },
+                            summary = maxRunningTask.toString(),
+                            onClick = { showTaskDialog = true },
                         )
                         SwitchPreference(
                             title = strings.longPressSaveConfirm,
@@ -286,7 +282,7 @@ fun DownloadSettingScreen(
         )
 
         // 保存格式编辑对话框，支持变量占位符快捷插入。
-        top.yukonga.miuix.kmp.overlay.OverlayDialog(
+        OverlayDialog(
             title = strings.dialogSaveFormat,
             show = showFormatDialog,
             onDismissRequest = { showFormatDialog = false },
@@ -336,6 +332,48 @@ fun DownloadSettingScreen(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                 )
+            }
+        }
+
+        var tempTaskCount by remember(showTaskDialog) { mutableIntStateOf(maxRunningTask) }
+
+        // 同时下载任务数选择对话框，使用原生 NumberPicker 滚轮。
+        OverlayDialog(
+            title = strings.dialogTaskCount,
+            show = showTaskDialog,
+            onDismissRequest = { showTaskDialog = false },
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                NumberPicker(
+                    value = tempTaskCount,
+                    onValueChange = { tempTaskCount = it },
+                    range = 1..10,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    TextButton(
+                        text = strings.cancel,
+                        onClick = { showTaskDialog = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        text = strings.confirm,
+                        onClick = {
+                            maxRunningTask = tempTaskCount
+                            settingsRepository.maxRunningTask = tempTaskCount
+                            showTaskDialog = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
             }
         }
     }

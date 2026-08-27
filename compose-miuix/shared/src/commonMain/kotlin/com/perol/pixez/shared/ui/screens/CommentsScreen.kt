@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -57,9 +58,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.perol.pixez.shared.ui.components.CommentEmojiText
 import com.perol.pixez.shared.ui.components.PixivEmojis
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.derivedStateOf
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.icon.extended.*
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
@@ -68,6 +73,7 @@ import pixez_miuix.shared.generated.resources.emoji_304
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
  */
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 fun CommentsScreen(
     illustId: Int,
@@ -237,53 +243,62 @@ fun CommentsScreen(
                         onRefresh = triggerManualRefresh,
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = paddingValues,
-                        ) {
-                            items(
-                                items = comments,
-                                key = { it.id ?: it.hashCode() },
-                                contentType = { "comment_item" },
-                            ) { comment ->
-                                CommentItem(
-                                    comment = comment,
-                                    onUserClick = onUserClick,
-                                    onReplyClick = { replyTarget = comment },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = paddingValues,
+                            ) {
+                                items(
+                                    items = comments,
+                                    key = { it.id ?: it.hashCode() },
+                                    contentType = { "comment_item" },
+                                ) { comment ->
+                                    CommentItem(
+                                        comment = comment,
+                                        onUserClick = onUserClick,
+                                        onReplyClick = { replyTarget = comment },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
 
-                            item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    when {
-                                        isLoadingMore -> InfiniteProgressIndicator()
-                                        loadMoreError != null -> Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = strings.loadFailed,
-                                                style = MiuixTheme.textStyles.body2,
-                                                color = MiuixTheme.colorScheme.error,
-                                            )
-                                            Button(onClick = ::loadMore) {
-                                                Text(text = strings.retry)
+                                item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        when {
+                                            isLoadingMore -> InfiniteProgressIndicator()
+                                            loadMoreError != null -> Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = strings.loadFailed,
+                                                    style = MiuixTheme.textStyles.body2,
+                                                    color = MiuixTheme.colorScheme.error,
+                                                )
+                                                Button(onClick = ::loadMore) {
+                                                    Text(text = strings.retry)
+                                                }
                                             }
+                                            nextUrl == null -> Text(
+                                                text = strings.commentsNoMore,
+                                                style = MiuixTheme.textStyles.footnote1,
+                                            )
                                         }
-                                        nextUrl == null -> Text(
-                                            text = strings.commentsNoMore,
-                                            style = MiuixTheme.textStyles.footnote1,
-                                        )
                                     }
                                 }
                             }
+
+                            VerticalScrollBar(
+                                adapter = rememberScrollBarAdapter(listState),
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight(),
+                            )
                         }
                     }
                 }
@@ -304,6 +319,7 @@ fun CommentsScreen(
 /**
  * 评论输入栏：位于页面底部，提供输入框、表情面板切换、发送按钮与回复目标提示。
  */
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 private fun CommentInputBar(
     text: String,
@@ -392,36 +408,49 @@ private fun CommentInputBar(
         }
 
         if (showEmojiPanel && isLoggedIn != false) {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 44.dp),
+            val emojiGridState = rememberLazyGridState()
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                items(
-                    items = PixivEmojis.allEmojis,
-                    key = { it.code },
-                    contentType = { "emoji_item" },
-                ) { emoji ->
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                onTextChange(text + emoji.code)
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(emoji.resource),
-                            contentDescription = emoji.code,
-                            modifier = Modifier.size(32.dp),
-                        )
+                LazyVerticalGrid(
+                    state = emojiGridState,
+                    columns = GridCells.Adaptive(minSize = 44.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(
+                        items = PixivEmojis.allEmojis,
+                        key = { it.code },
+                        contentType = { "emoji_item" },
+                    ) { emoji ->
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    onTextChange(text + emoji.code)
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                painter = painterResource(emoji.resource),
+                                contentDescription = emoji.code,
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
                     }
                 }
+
+                VerticalScrollBar(
+                    adapter = rememberScrollBarAdapter(emojiGridState),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight(),
+                )
             }
         }
     }
