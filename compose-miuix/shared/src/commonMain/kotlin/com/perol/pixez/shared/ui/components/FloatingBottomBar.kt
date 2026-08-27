@@ -60,6 +60,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -180,6 +182,7 @@ fun IosLiquidGlassNavigationBar(
 
     var currentIndex by remember { mutableIntStateOf(selectedIndex) }
     val onItemClickUpdated by rememberUpdatedState(onItemClick)
+    val hapticFeedback = LocalHapticFeedback.current
 
     fun indexAt(positionX: Float): Int {
         if (tabWidthPx == 0f) return currentIndex
@@ -206,6 +209,7 @@ fun IosLiquidGlassNavigationBar(
             },
             onDragStopped = {
                 val targetIndex = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                 if (currentIndex != targetIndex) {
                     currentIndex = targetIndex
                     onItemClickUpdated(targetIndex)
@@ -223,10 +227,13 @@ fun IosLiquidGlassNavigationBar(
             },
             onDrag = { _, dragAmount ->
                 if (tabWidthPx > 0f && dragAmount.x != 0f) {
-                    updateValue(
-                        (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
-                            .coerceIn(0f, (tabsCount - 1).toFloat()),
-                    )
+                    val prevTarget = targetValue
+                    val nextTarget = (prevTarget + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
+                        .coerceIn(0f, (tabsCount - 1).toFloat())
+                    if (prevTarget.roundToInt() != nextTarget.roundToInt()) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    updateValue(nextTarget)
                     animationScope.launch {
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
                     }
@@ -243,6 +250,7 @@ fun IosLiquidGlassNavigationBar(
     }
 
     fun activateTab(index: Int) {
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
         if (currentIndex != index) {
             currentIndex = index
             onItemClickUpdated(index)

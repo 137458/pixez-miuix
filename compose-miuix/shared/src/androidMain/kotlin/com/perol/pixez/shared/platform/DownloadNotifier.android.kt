@@ -53,15 +53,27 @@ actual class DownloadNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val percent = if (total > 0) (current * 100 / total) else 0
+        val subText = if (total > 0) "$percent%" else ""
+
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("正在下载: $title")
-            .setContentText("进度: $current / $total")
+            .setContentText("进度: $current / $total ($percent%)")
+            .setSubText(subText)
             .setProgress(total, current, false)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
+            .addExtras(android.os.Bundle().apply {
+                // Android 16 (API 36) 实时动态状态栏胶囊 (Rich Ongoing Notifications)
+                putBoolean("android.requestLiveStatusNotification", true)
+                // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
+                putBoolean("miui.focus.notification", true)
+                putBoolean("miui.live.notification", true)
+                putString("miui.subtext", "$percent%")
+            })
             .build()
 
         manager.notify(id, notification)

@@ -1,0 +1,50 @@
+# Baseline Profile for PixEz MIUIX
+# Startup & Core User Journey Rules
+
+# Application Entry & Activity Lifecycle
+HSPLcom/perol/pixez/android/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/perol/pixez/android/MainActivity;->onResume()V
+HSPLcom/perol/pixez/android/MainActivity;->applyDisplayMode()V
+HSPLcom/perol/pixez/PixEzAppKt;->PixEzApp(Lcom/perol/pixez/shared/AppDependencies;Lcom/perol/pixez/shared/ui/navigation/RootComponent;Landroidx/compose/runtime/Composer;II)V
+
+# Decompose Navigation Stack & Root Component
+HSPLcom/perol/pixez/shared/ui/navigation/RootComponent;-><init>(Lcom/arkivanov/decompose/ComponentContext;Lcom/perol/pixez/shared/data/settings/SettingsRepository;)V
+HSPLcom/perol/pixez/shared/ui/navigation/RootComponent;->onMainTabSelected(Lcom/perol/pixez/shared/ui/navigation/RootComponent$MainTab;)V
+HSPLcom/perol/pixez/shared/ui/navigation/RootComponent;->onBack()Z
+HSPLcom/perol/pixez/shared/ui/navigation/RootContentKt;->RootContent(Lcom/perol/pixez/shared/ui/navigation/RootComponent;Lcom/perol/pixez/shared/AppDependencies;Landroidx/compose/runtime/Composer;I)V
+
+# Dependency Injection & Startup Pre-warming
+HSPLcom/perol/pixez/shared/AppDependencies;-><init>(Lcom/perol/pixez/shared/data/local/DriverFactory;Lcom/perol/pixez/shared/data/settings/SettingsFactory;)V
+HSPLcom/perol/pixez/shared/AppDependencies;->warmupAsync(Lkotlinx/coroutines/CoroutineScope;)V
+HSPLcom/perol/pixez/shared/network/PixivHttpClient;->warmup()Ljava/lang/Object;
+HSPLcom/perol/pixez/shared/network/AuthTokenStorage;->getCachedAccountFast()Lcom/perol/pixez/shared/data/local/account/Account;
+HSPLcom/perol/pixez/shared/network/AuthTokenStorage;->getCurrentAccount(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+# Home Feed & Staggered Grid Rendering
+HSPLcom/perol/pixez/shared/ui/screens/HelloScreenKt;->HelloScreen(Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lcom/perol/pixez/shared/data/repository/IllustRepository;Lcom/perol/pixez/shared/data/repository/AccountRepository;Lcom/perol/pixez/shared/data/repository/BanRepository;Lcom/perol/pixez/shared/data/settings/SettingsRepository;Lkotlinx/coroutines/flow/Flow;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/perol/pixez/shared/ui/components/IllustStaggeredGridKt;->IllustStaggeredGrid(Ljava/util/List;Lkotlin/jvm/functions/Function1;Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/foundation/lazy/staggeredgrid/LazyStaggeredGridState;ZZLjava/lang/Throwable;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/perol/pixez/shared/ui/components/IllustCardKt;->IllustCard(Lcom/perol/pixez/shared/data/model/Illust;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+HSPLcom/perol/pixez/shared/ui/components/PixivAsyncImageKt;->PixivAsyncImage(Ljava/lang/Object;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/ui/layout/ContentScale;Ljava/lang/Object;Landroidx/compose/runtime/Composer;II)V
+
+# MIUIX Components & Liquid Glass Navigation
+HSPLcom/perol/pixez/shared/ui/components/FloatingBottomBarKt;->IosLiquidGlassNavigationBar(Ljava/util/List;ILkotlin/jvm/functions/Function1;Lcom/kyant/backdrop/Backdrop;ZILandroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+HSPLtop/yukonga/miuix/kmp/basic/CardKt;->Card(Landroidx/compose/ui/Modifier;Landroidx/compose/ui/graphics/Color;Landroidx/compose/ui/graphics/Shape;Landroidx/compose/foundation/BorderStroke;Landroidx/compose/foundation/interaction/MutableInteractionSource;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+HSPLtop/yukonga/miuix/kmp/theme/MiuixThemeKt;->MiuixTheme(Ltop/yukonga/miuix/kmp/theme/ThemeController;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+
+# Coil 3 Image Loader & Cache Pipeline
+HSPLcoil3/ImageLoader;->enqueue(Lcoil3/request/ImageRequest;)Lcoil3/request/Disposable;
+HSPLcoil3/disk/DiskCache;->get(Ljava/lang/String;)Lcoil3/disk/DiskCache$Snapshot;
+HSPLcoil3/memory/MemoryCache;->get(Lcoil3/memory/MemoryCache$Key;)Lcoil3/memory/MemoryCache$Value;
+
+# Core Classes
+Lcom/perol/pixez/android/MainActivity;
+Lcom/perol/pixez/PixEzAppKt;
+Lcom/perol/pixez/shared/AppDependencies;
+Lcom/perol/pixez/shared/ui/navigation/RootComponent;
+Lcom/perol/pixez/shared/ui/navigation/RootContentKt;
+Lcom/perol/pixez/shared/ui/screens/HelloScreenKt;
+Lcom/perol/pixez/shared/ui/components/IllustCardKt;
+Lcom/perol/pixez/shared/ui/components/IllustStaggeredGridKt;
+Lcom/perol/pixez/shared/ui/components/FloatingBottomBarKt;
+Ltop/yukonga/miuix/kmp/basic/CardKt;
+Ltop/yukonga/miuix/kmp/theme/MiuixThemeKt;

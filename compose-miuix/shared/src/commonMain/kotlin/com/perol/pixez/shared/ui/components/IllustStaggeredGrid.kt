@@ -2,8 +2,10 @@ package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,15 +30,16 @@ import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-import androidx.compose.foundation.layout.BoxWithConstraints
 
 /**
  * 插画瀑布流网格。
  *
  * 支持大屏响应式多列自适应、触底自动流式加载下一页、加载中指示器与重试。
  */
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 fun IllustStaggeredGrid(
     illusts: List<Illust>,
@@ -190,7 +193,15 @@ fun IllustStaggeredGrid(
             }
         }
     }
-}
+
+        VerticalScrollBar(
+            adapter = rememberStaggeredGridScrollBarAdapter(state),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = contentPadding,
+        )
+    }
 }
 
 

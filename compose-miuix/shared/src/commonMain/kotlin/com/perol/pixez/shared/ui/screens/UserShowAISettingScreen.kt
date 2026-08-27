@@ -16,14 +16,13 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -122,25 +121,19 @@ fun UserShowAISettingScreen(
                 item {
                     SmallTitle(text = strings.aiDisplayOptions)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        RadioButtonPreference(
                             title = strings.aiDisplayShow,
                             summary = strings.aiDisplayShowSummary,
+                            selected = currentShowAI,
                             onClick = { changeShowAI(true) },
-                            endActions = {
-                                if (currentShowAI) {
-                                    Text(text = "✓")
-                                }
-                            },
+                            enabled = !isUpdating,
                         )
-                        BasicComponent(
+                        RadioButtonPreference(
                             title = strings.aiDisplayHidePartial,
                             summary = strings.aiDisplayHidePartialSummary,
+                            selected = !currentShowAI,
                             onClick = { changeShowAI(false) },
-                            endActions = {
-                                if (!currentShowAI) {
-                                    Text(text = "✓")
-                                }
-                            },
+                            enabled = !isUpdating,
                         )
                     }
                 }
