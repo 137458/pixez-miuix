@@ -264,7 +264,9 @@ private fun IllustDetailSingleContent(
                                     thumbnailUrl = thumbnailUrl,
                                     contentDescription = "${illust.title} ($pageIndex)",
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .com.perol.pixez.shared.platform.illustDragAndDropSource(illust),
                                 )
                                 if (pageIndex < illust.metaPages.lastIndex) {
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -294,7 +296,9 @@ private fun IllustDetailSingleContent(
                                     thumbnailUrl = thumbnailUrl,
                                     contentDescription = illust.title,
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .com.perol.pixez.shared.platform.illustDragAndDropSource(illust),
                                 )
                             }
                         }

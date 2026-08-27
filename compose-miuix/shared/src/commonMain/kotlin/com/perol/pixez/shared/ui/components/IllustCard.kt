@@ -74,6 +74,7 @@ fun IllustCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .com.perol.pixez.shared.platform.illustDragAndDropSource(illust)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
