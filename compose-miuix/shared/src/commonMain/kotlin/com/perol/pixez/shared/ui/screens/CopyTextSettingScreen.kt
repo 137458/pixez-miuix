@@ -29,6 +29,14 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 分享格式设置页：编辑复制到剪贴板时的作品信息模板。
  *
@@ -70,11 +78,14 @@ fun CopyTextSettingScreen(
         )
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.copyTextFormatTitle,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -114,44 +125,54 @@ fun CopyTextSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionTemplate)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    TextField(
-                        value = textFieldValue,
-                        onValueChange = { textFieldValue = it },
-                        label = strings.copyTextFormatLabel,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        maxLines = 10,
-                    )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionTemplate)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        TextField(
+                            value = textFieldValue,
+                            onValueChange = { textFieldValue = it },
+                            label = strings.copyTextFormatLabel,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            maxLines = 10,
+                        )
+                    }
                 }
-            }
-            item {
-                top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionChips)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        placeholderChips.forEach { chip ->
-                            InsertChip(
-                                label = chip.label,
-                                onClick = {
-                                    textFieldValue = insertTextAtSelection(
-                                        textFieldValue,
-                                        chip.text,
-                                    )
-                                },
-                            )
+                item {
+                    top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionChips)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            placeholderChips.forEach { chip ->
+                                InsertChip(
+                                    label = chip.label,
+                                    onClick = {
+                                        textFieldValue = insertTextAtSelection(
+                                            textFieldValue,
+                                            chip.text,
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }

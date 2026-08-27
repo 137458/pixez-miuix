@@ -31,6 +31,14 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 平台专属设置页：仅 Android 平台展示实际设置项。
  *
@@ -55,12 +63,14 @@ fun PlatformSettingScreen(
     // 当前正在编辑的对话框类型，null 表示没有对话框打开。
     var editingDialog by rememberSaveable { mutableStateOf<PlatformDialogType?>(null) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingPlatform,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -72,74 +82,84 @@ fun PlatformSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            if (!isAndroidPlatform()) {
-                // Desktop 等不支持 Android 专属设置的平台展示占位提示。
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                if (!isAndroidPlatform()) {
+                    // Desktop 等不支持 Android 专属设置的平台展示占位提示。
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                            BasicComponent(
+                                title = strings.noData,
+                                summary = strings.settingPlatformSummary,
+                                onClick = {},
+                            )
+                        }
+                    }
+                    return@LazyColumn
+                }
+
                 item {
+                    SmallTitle(text = strings.dialogDisplayMode)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         BasicComponent(
-                            title = strings.noData,
-                            summary = strings.settingPlatformSummary,
+                            title = strings.dialogDisplayMode,
+                            summary = displayMode.toDisplayModeLabel(),
+                            onClick = { editingDialog = PlatformDialogType.DisplayMode },
+                        )
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.platformSettingSectionPicker)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.platformSettingPhotoPicker,
+                            summary = if (imagePickerType == "1") strings.platformSettingPhotoPickerSummaryOn else strings.platformSettingPhotoPickerSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = imagePickerType == "1",
+                                    onCheckedChange = { checked ->
+                                        imagePickerType = if (checked) "1" else "0"
+                                        settingsRepository.imagePickerType = imagePickerType
+                                    },
+                                )
+                            },
                             onClick = {},
                         )
                     }
                 }
-                return@LazyColumn
-            }
 
-            item {
-                SmallTitle(text = strings.dialogDisplayMode)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.dialogDisplayMode,
-                        summary = displayMode.toDisplayModeLabel(),
-                        onClick = { editingDialog = PlatformDialogType.DisplayMode },
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.platformSettingSectionPicker)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.platformSettingPhotoPicker,
-                        summary = if (imagePickerType == "1") strings.platformSettingPhotoPickerSummaryOn else strings.platformSettingPhotoPickerSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = imagePickerType == "1",
-                                onCheckedChange = { checked ->
-                                    imagePickerType = if (checked) "1" else "0"
-                                    settingsRepository.imagePickerType = imagePickerType
-                                },
-                            )
-                        },
-                        onClick = {},
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.platformSettingSectionDefaultOpen)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.platformSettingDefaultOpenLinks,
-                        summary = strings.platformSettingDefaultOpenLinksSummary,
-                        endActions = {
-                            Switch(
-                                checked = openByDefault,
-                                onCheckedChange = { checked ->
-                                    openByDefault = checked
-                                    settingsRepository.openByDefault = checked
-                                    // 同步跳转系统「默认打开方式」设置页。
-                                    openDefaultAppSettings()
-                                },
-                            )
-                        },
-                        onClick = {},
-                    )
+                item {
+                    SmallTitle(text = strings.platformSettingSectionDefaultOpen)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.platformSettingDefaultOpenLinks,
+                            summary = strings.platformSettingDefaultOpenLinksSummary,
+                            endActions = {
+                                Switch(
+                                    checked = openByDefault,
+                                    onCheckedChange = { checked ->
+                                        openByDefault = checked
+                                        settingsRepository.openByDefault = checked
+                                        // 同步跳转系统「默认打开方式」设置页。
+                                        openDefaultAppSettings()
+                                    },
+                                )
+                            },
+                            onClick = {},
+                        )
+                    }
                 }
             }
         }

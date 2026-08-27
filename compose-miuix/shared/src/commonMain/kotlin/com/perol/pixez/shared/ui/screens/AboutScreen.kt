@@ -59,6 +59,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 关于页：展示应用信息、开发者、贡献者、项目仓库与反馈入口。
  *
@@ -74,12 +79,14 @@ fun AboutScreen(
     val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingAbout,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -91,14 +98,22 @@ fun AboutScreen(
             )
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             Spacer(modifier = Modifier.height(20.dp))
 
             // 顶部 Squircle 应用图标
@@ -201,6 +216,7 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
 
         ToastMessage(
             message = toastMessage,

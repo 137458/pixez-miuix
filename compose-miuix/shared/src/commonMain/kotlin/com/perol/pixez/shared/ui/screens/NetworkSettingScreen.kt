@@ -32,6 +32,13 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 网络设置页：提供 OAuth / API 服务网络模式切换与图片源选择。
  *
@@ -124,11 +131,14 @@ fun NetworkSettingScreen(
         Triple("standard", strings.networkModeStandard, strings.networkModeStandardSummary),
     )
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingNetwork,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -140,81 +150,91 @@ fun NetworkSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.oauthNetworkMode)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    networkModes.forEach { (code, label, description) ->
-                        NetworkModeOption(
-                            label = label,
-                            description = description,
-                            selected = oauthNetworkMode == code,
-                            onClick = { setOAuthNetworkMode(code) },
-                        )
-                    }
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.apiNetworkMode)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    networkModes.forEach { (code, label, description) ->
-                        NetworkModeOption(
-                            label = label,
-                            description = description,
-                            selected = apiNetworkMode == code,
-                            onClick = { setApiNetworkMode(code) },
-                        )
-                    }
-                }
-            }
-
-            if (allowsImageSource) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
                 item {
-                    SmallTitle(text = strings.pictureSource)
+                    SmallTitle(text = strings.oauthNetworkMode)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
-                            title = DEFAULT_IMAGE_HOST,
-                            summary = "i.pximg.net",
-                            onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
-                            endActions = {
-                                CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
-                            },
-                        )
-                        BasicComponent(
-                            title = MIRROR_IMAGE_HOST,
-                            summary = "pixiv.re",
-                            onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
-                            endActions = {
-                                CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
-                            },
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(text = strings.customHost)
-                            TextField(
-                                value = customHostInput,
-                                onValueChange = { customHostInput = it },
-                                label = strings.customHost,
-                                modifier = Modifier.fillMaxWidth(),
+                        networkModes.forEach { (code, label, description) ->
+                            NetworkModeOption(
+                                label = label,
+                                description = description,
+                                selected = oauthNetworkMode == code,
+                                onClick = { setOAuthNetworkMode(code) },
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        }
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.apiNetworkMode)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        networkModes.forEach { (code, label, description) ->
+                            NetworkModeOption(
+                                label = label,
+                                description = description,
+                                selected = apiNetworkMode == code,
+                                onClick = { setApiNetworkMode(code) },
+                            )
+                        }
+                    }
+                }
+
+                if (allowsImageSource) {
+                    item {
+                        SmallTitle(text = strings.pictureSource)
+                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                            BasicComponent(
+                                title = DEFAULT_IMAGE_HOST,
+                                summary = "i.pximg.net",
+                                onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
+                                endActions = {
+                                    CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
+                                },
+                            )
+                            BasicComponent(
+                                title = MIRROR_IMAGE_HOST,
+                                summary = "pixiv.re",
+                                onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
+                                endActions = {
+                                    CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
+                                },
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                TextButton(
-                                    text = strings.confirm,
-                                    onClick = { setCustomPictureSource(customHostInput) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                Text(text = strings.customHost)
+                                TextField(
+                                    value = customHostInput,
+                                    onValueChange = { customHostInput = it },
+                                    label = strings.customHost,
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    TextButton(
+                                        text = strings.confirm,
+                                        onClick = { setCustomPictureSource(customHostInput) },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                                    )
+                                }
                             }
                         }
                     }

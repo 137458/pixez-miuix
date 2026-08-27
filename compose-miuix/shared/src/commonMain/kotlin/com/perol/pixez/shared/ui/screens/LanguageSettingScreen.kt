@@ -32,6 +32,13 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 语言设置页：选择应用显示语言。
  *
@@ -52,12 +59,14 @@ fun LanguageSettingScreen(
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingLanguage,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -69,39 +78,49 @@ fun LanguageSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.settingLanguage)
-                top.yukonga.miuix.kmp.basic.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                        BasicComponent(
-                            title = "${option.nativeName} (${option.displayName})",
-                            summary = option.code,
-                            onClick = {
-                                selectedIndex = index
-                                settingsRepository.languageNum = index
-                            },
-                            endActions = {
-                                CheckIndicator(selected = selectedIndex == index)
-                            },
-                        )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.settingLanguage)
+                    top.yukonga.miuix.kmp.basic.Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                            BasicComponent(
+                                title = "${option.nativeName} (${option.displayName})",
+                                summary = option.code,
+                                onClick = {
+                                    selectedIndex = index
+                                    settingsRepository.languageNum = index
+                                },
+                                endActions = {
+                                    CheckIndicator(selected = selectedIndex == index)
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            if (selectedLanguage.sponsors.isNotEmpty()) {
-                item {
-                    SmallTitle(text = strings.sponsor)
-                }
-                item {
-                    SponsorSection(sponsors = selectedLanguage.sponsors)
+                if (selectedLanguage.sponsors.isNotEmpty()) {
+                    item {
+                        SmallTitle(text = strings.sponsor)
+                    }
+                    item {
+                        SponsorSection(sponsors = selectedLanguage.sponsors)
+                    }
                 }
             }
         }

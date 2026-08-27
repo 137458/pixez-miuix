@@ -1,27 +1,34 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.unit.dp
 
 /**
  * 隐私设置页：管理 NSFW 遮罩、默认私密收藏等与隐私相关的开关。
@@ -38,12 +45,14 @@ fun PrivacySettingScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var nsfwMask by remember { mutableStateOf(settingsRepository.nsfwMask) }
     var defaultPrivateLike by remember { mutableStateOf(settingsRepository.defaultPrivateLike) }
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingPrivacy,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -55,45 +64,55 @@ fun PrivacySettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.settingSectionShieldPrivacy)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.nsfwMask,
-                        summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = nsfwMask,
-                                onCheckedChange = { checked ->
-                                    nsfwMask = checked
-                                    settingsRepository.nsfwMask = checked
-                                },
-                            )
-                        },
-                    )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.settingSectionShieldPrivacy)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.nsfwMask,
+                            summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = nsfwMask,
+                                    onCheckedChange = { checked ->
+                                        nsfwMask = checked
+                                        settingsRepository.nsfwMask = checked
+                                    },
+                                )
+                            },
+                        )
+                    }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.settingSectionBookmarkShare)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.defaultPrivateLike,
-                        summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = defaultPrivateLike,
-                                onCheckedChange = { checked ->
-                                    defaultPrivateLike = checked
-                                    settingsRepository.defaultPrivateLike = checked
-                                },
-                            )
-                        },
-                    )
+                item {
+                    SmallTitle(text = strings.settingSectionBookmarkShare)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.defaultPrivateLike,
+                            summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = defaultPrivateLike,
+                                    onCheckedChange = { checked ->
+                                        defaultPrivateLike = checked
+                                        settingsRepository.defaultPrivateLike = checked
+                                    },
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }

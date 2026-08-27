@@ -29,6 +29,14 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 画质与保存偏好设置页：
  * 管理 Feed 预览、插画详情、漫画详情、大图缩放等各页面画质偏好，以及收藏与保存的联动开关。
@@ -68,12 +76,14 @@ fun QualitySettingScreen(
     var editingType by rememberSaveable { mutableStateOf<QualityType?>(null) }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingQuality,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -97,10 +107,19 @@ fun QualitySettingScreen(
             1 to strings.qualityOriginal,
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
             // ── 1. 画质配置 ──
             item {
                 SmallTitle(text = strings.settingSectionQualitySave)
@@ -207,6 +226,7 @@ fun QualitySettingScreen(
                 }
             }
         }
+    }
 
         // 画质选择对话框。
         val currentType = editingType

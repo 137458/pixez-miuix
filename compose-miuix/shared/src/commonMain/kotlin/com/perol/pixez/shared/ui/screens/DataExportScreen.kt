@@ -40,6 +40,13 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 应用数据导入导出页：为搜索标签历史、收藏标签、插画历史、小说历史、屏蔽数据
  * 提供导出/导入入口，操作结果通过 [ToastMessage] 提示。
@@ -74,12 +81,14 @@ fun DataExportScreen(
     var isProcessing by remember { mutableStateOf(false) }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingDataExport,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -91,25 +100,35 @@ fun DataExportScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.settingDataExport)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    DataType.entries.forEach { type ->
-                        DataExportRow(
-                            type = type,
-                            onExportClick = {
-                                dialogKey++
-                                pendingOperation = PendingOperation(type, Action.Export)
-                            },
-                            onImportClick = {
-                                dialogKey++
-                                pendingOperation = PendingOperation(type, Action.Import)
-                            },
-                        )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.settingDataExport)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        DataType.entries.forEach { type ->
+                            DataExportRow(
+                                type = type,
+                                onExportClick = {
+                                    dialogKey++
+                                    pendingOperation = PendingOperation(type, Action.Export)
+                                },
+                                onImportClick = {
+                                    dialogKey++
+                                    pendingOperation = PendingOperation(type, Action.Import)
+                                },
+                            )
+                        }
                     }
                 }
             }

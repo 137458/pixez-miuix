@@ -660,13 +660,18 @@ private fun buildThemeController(
         ?: ThemePaletteStyle.TonalSpot
     val colorSpec = if (useSpec2025) ThemeColorSpec.Spec2025 else ThemeColorSpec.Spec2021
 
-    // 自定义浅色颜色方案：背景为浅灰色（#F6F7F9），卡片/容器为纯白（Color.White）。
+    // 自定义浅色颜色方案：背景为浅灰色（#F6F7F9），卡片/容器为纯白（Color.White），显式指定高对比度深色文本前景色。
     val lightColors = lightColorScheme(
         background = Color(0xFFF6F7F9),
         surface = Color(0xFFF6F7F9),
         surfaceContainer = Color.White,
         surfaceContainerHigh = Color(0xFFF0F1F4),
         surfaceContainerHighest = Color(0xFFE5E7EB),
+        onBackground = Color(0xFF191919),
+        onSurface = Color(0xFF191919),
+        onSurfaceContainer = Color(0xFF191919),
+        onSurfaceVariantSummary = Color(0xFF666666),
+        onSurfaceSecondary = Color(0xFF888888),
     )
 
     // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，并确保前景色为高对比度浅色。

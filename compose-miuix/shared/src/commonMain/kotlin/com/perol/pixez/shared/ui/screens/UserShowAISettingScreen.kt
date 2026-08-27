@@ -30,6 +30,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * AI 作品显示设置页：展示并更新 Pixiv 账号级 AI 作品显示偏好。
  *
@@ -79,11 +87,14 @@ fun UserShowAISettingScreen(
         }
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.userAISettings,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -95,33 +106,43 @@ fun UserShowAISettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.aiDisplayOptions)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.aiDisplayShow,
-                        summary = strings.aiDisplayShowSummary,
-                        onClick = { changeShowAI(true) },
-                        endActions = {
-                            if (currentShowAI) {
-                                Text(text = "✓")
-                            }
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.aiDisplayHidePartial,
-                        summary = strings.aiDisplayHidePartialSummary,
-                        onClick = { changeShowAI(false) },
-                        endActions = {
-                            if (!currentShowAI) {
-                                Text(text = "✓")
-                            }
-                        },
-                    )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.aiDisplayOptions)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.aiDisplayShow,
+                            summary = strings.aiDisplayShowSummary,
+                            onClick = { changeShowAI(true) },
+                            endActions = {
+                                if (currentShowAI) {
+                                    Text(text = "✓")
+                                }
+                            },
+                        )
+                        BasicComponent(
+                            title = strings.aiDisplayHidePartial,
+                            summary = strings.aiDisplayHidePartialSummary,
+                            onClick = { changeShowAI(false) },
+                            endActions = {
+                                if (!currentShowAI) {
+                                    Text(text = "✓")
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

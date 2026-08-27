@@ -44,6 +44,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.AppConstants
 import kotlin.math.max
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
  *
@@ -68,12 +73,14 @@ fun LayoutSettingScreen(
     // 当前正在编辑的布局类型，null 表示没有对话框打开。
     var editingType by rememberSaveable { mutableStateOf<LayoutType?>(null) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingLayout,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -85,98 +92,108 @@ fun LayoutSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.floatingBottomBar)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.floatingBottomBar,
-                        summary = if (useFloatingBottomBar) strings.floatingBottomBarSummaryOn else strings.floatingBottomBarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = useFloatingBottomBar,
-                                onCheckedChange = {
-                                    useFloatingBottomBar = it
-                                    settingsRepository.useFloatingBottomBar = it
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.padMode,
-                        summary = padMode.toPadModeLabel(),
-                        onClick = { editingType = LayoutType.PadMode },
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.crossCountPortrait)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.crossAdaptAuto,
-                        summary = if (crossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = crossAdapt,
-                                onCheckedChange = { checked ->
-                                    crossAdapt = checked
-                                    settingsRepository.crossAdapt = checked
-                                },
-                            )
-                        },
-                    )
-                    if (crossAdapt) {
-                        AdapterWidthSlider(
-                            width = crossAdapterWidth,
-                            onWidthChangeFinished = { newWidth ->
-                                crossAdapterWidth = newWidth
-                                settingsRepository.crossAdapterWidth = newWidth
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.floatingBottomBar)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.floatingBottomBar,
+                            summary = if (useFloatingBottomBar) strings.floatingBottomBarSummaryOn else strings.floatingBottomBarSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = useFloatingBottomBar,
+                                    onCheckedChange = {
+                                        useFloatingBottomBar = it
+                                        settingsRepository.useFloatingBottomBar = it
+                                    },
+                                )
                             },
                         )
-                    } else {
-                        LayoutSettingItem(
-                            title = strings.crossCountPortrait,
-                            summary = crossCount.toCrossCountLabel(),
-                            onClick = { editingType = LayoutType.CrossCount },
+                        BasicComponent(
+                            title = strings.padMode,
+                            summary = padMode.toPadModeLabel(),
+                            onClick = { editingType = LayoutType.PadMode },
                         )
                     }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.crossCountLandscape)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.crossAdaptAuto,
-                        summary = if (hCrossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = hCrossAdapt,
-                                onCheckedChange = { checked ->
-                                    hCrossAdapt = checked
-                                    settingsRepository.hCrossAdapt = checked
-                                },
-                            )
-                        },
-                    )
-                    if (hCrossAdapt) {
-                        AdapterWidthSlider(
-                            width = hCrossAdapterWidth,
-                            onWidthChangeFinished = { newWidth ->
-                                hCrossAdapterWidth = newWidth
-                                settingsRepository.hCrossAdapterWidth = newWidth
+                item {
+                    SmallTitle(text = strings.crossCountPortrait)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.crossAdaptAuto,
+                            summary = if (crossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = crossAdapt,
+                                    onCheckedChange = { checked ->
+                                        crossAdapt = checked
+                                        settingsRepository.crossAdapt = checked
+                                    },
+                                )
                             },
                         )
-                    } else {
-                        LayoutSettingItem(
-                            title = strings.crossCountLandscape,
-                            summary = hCrossCount.toCrossCountLabel(),
-                            onClick = { editingType = LayoutType.HCrossCount },
+                        if (crossAdapt) {
+                            AdapterWidthSlider(
+                                width = crossAdapterWidth,
+                                onWidthChangeFinished = { newWidth ->
+                                    crossAdapterWidth = newWidth
+                                    settingsRepository.crossAdapterWidth = newWidth
+                                },
+                            )
+                        } else {
+                            LayoutSettingItem(
+                                title = strings.crossCountPortrait,
+                                summary = crossCount.toCrossCountLabel(),
+                                onClick = { editingType = LayoutType.CrossCount },
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.crossCountLandscape)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.crossAdaptAuto,
+                            summary = if (hCrossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = hCrossAdapt,
+                                    onCheckedChange = { checked ->
+                                        hCrossAdapt = checked
+                                        settingsRepository.hCrossAdapt = checked
+                                    },
+                                )
+                            },
                         )
+                        if (hCrossAdapt) {
+                            AdapterWidthSlider(
+                                width = hCrossAdapterWidth,
+                                onWidthChangeFinished = { newWidth ->
+                                    hCrossAdapterWidth = newWidth
+                                    settingsRepository.hCrossAdapterWidth = newWidth
+                                },
+                            )
+                        } else {
+                            LayoutSettingItem(
+                                title = strings.crossCountLandscape,
+                                summary = hCrossCount.toCrossCountLabel(),
+                                onClick = { editingType = LayoutType.HCrossCount },
+                            )
+                        }
                     }
                 }
             }

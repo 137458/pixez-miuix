@@ -23,6 +23,14 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 桌面小组件推荐类型与图源设置页：
  * 支持独立配置小组件展示的内容来源（推荐、日榜、周榜、月榜、最新、关注等）以及独立的图片 CDN 代理源。
@@ -61,11 +69,14 @@ fun WidgetRecommendSettingScreen(
         )
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingWidgetRecommend,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -77,48 +88,58 @@ fun WidgetRecommendSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            // ── 1. 内容推荐类型 ──
-            item {
-                SmallTitle(text = strings.settingWidgetFeedSection)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    widgetFeedOptions.forEach { option ->
-                        val isSelected = when (option.type) {
-                            "day" -> selectedType == "day" || selectedType == "rank"
-                            else -> selectedType == option.type
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                // ── 1. 内容推荐类型 ──
+                item {
+                    SmallTitle(text = strings.settingWidgetFeedSection)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        widgetFeedOptions.forEach { option ->
+                            val isSelected = when (option.type) {
+                                "day" -> selectedType == "day" || selectedType == "rank"
+                                else -> selectedType == option.type
+                            }
+                            BasicComponent(
+                                title = option.label,
+                                onClick = {
+                                    selectedType = option.type
+                                    settingsRepository.widgetIllustType = option.type
+                                },
+                                endActions = {
+                                    CheckIndicator(selected = isSelected)
+                                },
+                            )
                         }
-                        BasicComponent(
-                            title = option.label,
-                            onClick = {
-                                selectedType = option.type
-                                settingsRepository.widgetIllustType = option.type
-                            },
-                            endActions = {
-                                CheckIndicator(selected = isSelected)
-                            },
-                        )
                     }
                 }
-            }
 
-            // ── 2. 小组件图片代理源 ──
-            item {
-                SmallTitle(text = strings.settingWidgetPictureSourceSection)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    widgetPictureSourceOptions.forEach { option ->
-                        BasicComponent(
-                            title = option.label,
-                            onClick = {
-                                selectedPictureSource = option.source
-                                settingsRepository.widgetPictureSource = option.source
-                            },
-                            endActions = {
-                                CheckIndicator(selected = selectedPictureSource == option.source)
-                            },
-                        )
+                // ── 2. 小组件图片代理源 ──
+                item {
+                    SmallTitle(text = strings.settingWidgetPictureSourceSection)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        widgetPictureSourceOptions.forEach { option ->
+                            BasicComponent(
+                                title = option.label,
+                                onClick = {
+                                    selectedPictureSource = option.source
+                                    settingsRepository.widgetPictureSource = option.source
+                                },
+                                endActions = {
+                                    CheckIndicator(selected = selectedPictureSource == option.source)
+                                },
+                            )
+                        }
                     }
                 }
             }

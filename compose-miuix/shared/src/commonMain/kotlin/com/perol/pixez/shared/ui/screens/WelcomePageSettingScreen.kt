@@ -23,6 +23,14 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.perol.pixez.shared.ui.AppConstants
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 欢迎页设置页：选择应用启动后默认进入的页面。
  *
@@ -51,11 +59,14 @@ fun WelcomePageSettingScreen(
         )
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingWelcomePage,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -67,24 +78,34 @@ fun WelcomePageSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.settingSectionStartup)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    welcomePageOptions.forEach { option ->
-                        BasicComponent(
-                            title = option.label,
-                            onClick = {
-                                selectedType = option.type
-                                settingsRepository.welcomePageType = option.type
-                            },
-                            endActions = {
-                                CheckIndicator(selected = selectedType == option.type)
-                            },
-                        )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.settingSectionStartup)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        welcomePageOptions.forEach { option ->
+                            BasicComponent(
+                                title = option.label,
+                                onClick = {
+                                    selectedType = option.type
+                                    settingsRepository.welcomePageType = option.type
+                                },
+                                endActions = {
+                                    CheckIndicator(selected = selectedType == option.type)
+                                },
+                            )
+                        }
                     }
                 }
             }

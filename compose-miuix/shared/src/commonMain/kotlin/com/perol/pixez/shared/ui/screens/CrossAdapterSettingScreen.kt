@@ -40,6 +40,11 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+
 /**
  * 跨适配设置页：调整竖屏/横屏下按宽度自适应网格列数的阈值。
  *
@@ -58,12 +63,14 @@ fun CrossAdapterSettingScreen(
     var crossAdapterWidth by remember { mutableStateOf(settingsRepository.crossAdapterWidth) }
     var hCrossAdapt by remember { mutableStateOf(settingsRepository.hCrossAdapt) }
     var hCrossAdapterWidth by remember { mutableStateOf(settingsRepository.hCrossAdapterWidth) }
+    val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingCrossAdapter,
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -75,62 +82,72 @@ fun CrossAdapterSettingScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            item {
-                SmallTitle(text = strings.crossCountPortrait)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.crossAdaptAuto,
-                        summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = crossAdapt,
-                                onCheckedChange = { checked ->
-                                    crossAdapt = checked
-                                    settingsRepository.crossAdapt = checked
-                                },
-                            )
-                        },
-                    )
-                    if (crossAdapt) {
-                        AdapterWidthSlider(
-                            width = crossAdapterWidth,
-                            onWidthChangeFinished = { newWidth ->
-                                crossAdapterWidth = newWidth
-                                settingsRepository.crossAdapterWidth = newWidth
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+            ) {
+                item {
+                    SmallTitle(text = strings.crossCountPortrait)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.crossAdaptAuto,
+                            summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = crossAdapt,
+                                    onCheckedChange = { checked ->
+                                        crossAdapt = checked
+                                        settingsRepository.crossAdapt = checked
+                                    },
+                                )
                             },
                         )
+                        if (crossAdapt) {
+                            AdapterWidthSlider(
+                                width = crossAdapterWidth,
+                                onWidthChangeFinished = { newWidth ->
+                                    crossAdapterWidth = newWidth
+                                    settingsRepository.crossAdapterWidth = newWidth
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.crossCountLandscape)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.crossAdaptAuto,
-                        summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = hCrossAdapt,
-                                onCheckedChange = { checked ->
-                                    hCrossAdapt = checked
-                                    settingsRepository.hCrossAdapt = checked
-                                },
-                            )
-                        },
-                    )
-                    if (hCrossAdapt) {
-                        AdapterWidthSlider(
-                            width = hCrossAdapterWidth,
-                            onWidthChangeFinished = { newWidth ->
-                                hCrossAdapterWidth = newWidth
-                                settingsRepository.hCrossAdapterWidth = newWidth
+                item {
+                    SmallTitle(text = strings.crossCountLandscape)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.crossAdaptAuto,
+                            summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                            endActions = {
+                                Switch(
+                                    checked = hCrossAdapt,
+                                    onCheckedChange = { checked ->
+                                        hCrossAdapt = checked
+                                        settingsRepository.hCrossAdapt = checked
+                                    },
+                                )
                             },
                         )
+                        if (hCrossAdapt) {
+                            AdapterWidthSlider(
+                                width = hCrossAdapterWidth,
+                                onWidthChangeFinished = { newWidth ->
+                                    hCrossAdapterWidth = newWidth
+                                    settingsRepository.hCrossAdapterWidth = newWidth
+                                },
+                            )
+                        }
                     }
                 }
             }
