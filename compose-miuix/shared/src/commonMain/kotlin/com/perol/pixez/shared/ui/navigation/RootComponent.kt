@@ -289,9 +289,10 @@ class RootComponent(
     }
 
     /**
-     * 登录成功：清空登录栈并跳转至首页。
+     * 登录成功：标记引导完成，清空登录栈并跳转至首页。
      */
     fun onLoginSuccess() {
+        settingsRepository.hasCompletedGuide = true
         navigation.navigate { listOf(Config.Main(MainTab.Hello)) }
     }
 
