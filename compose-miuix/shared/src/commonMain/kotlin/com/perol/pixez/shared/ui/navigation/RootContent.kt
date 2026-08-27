@@ -287,6 +287,7 @@ fun RootContent(
                     Child.Login -> LoginScreen(
                         onBack = component::onBack,
                         onLoginSuccess = component::onLoginSuccess,
+                        onNetworkSettingClick = component::onNetworkSettingClicked,
                         accountRepository = accountRepository,
                     )
 
