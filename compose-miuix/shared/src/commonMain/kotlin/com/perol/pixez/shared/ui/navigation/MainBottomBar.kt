@@ -12,6 +12,8 @@ import com.perol.pixez.shared.ui.components.IosLiquidGlassNavigationBar
 import com.perol.pixez.shared.ui.components.backdropBlur
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Badge
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBar
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
@@ -52,33 +54,23 @@ fun MainBottomBar(
     val hasUnreadBadge = (settingsRepository?.hasUnreadFeedBadge == true) && activeTab != RootComponent.MainTab.New
 
     if (isFloating) {
-        val currentPosition = mainTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
-        val navItems = remember(mainTabs) {
-            mainTabs.map { (_, pair) ->
+        val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+        FloatingNavigationBar(
+            modifier = modifier,
+        ) {
+            mainTabs.forEach { (tab, pair) ->
                 val (label, icon) = pair
-                NavigationItem(label = label, icon = icon)
+                FloatingNavigationBarItem(
+                    selected = activeTab == tab,
+                    onClick = {
+                        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        onTabSelected(tab)
+                    },
+                    icon = icon,
+                    label = label,
+                )
             }
         }
-
-        IosLiquidGlassNavigationBar(
-            items = navItems,
-            selectedIndex = currentPosition,
-            onItemClick = { index ->
-                mainTabs.getOrNull(index)?.let { (tab, _) ->
-                    onTabSelected(tab)
-                }
-            },
-            backdrop = backdrop,
-            isBlurActive = backdrop != null,
-            refractionLevel = refractionLevel,
-            badge = { index ->
-                if (hasUnreadBadge && mainTabs.getOrNull(index)?.first == RootComponent.MainTab.New) {
-                    { Badge() }
-                } else null
-            },
-            modifier = modifier,
-        )
-
     } else {
         // 标准固定底栏：应用 Backdrop Blur 毛玻璃效果
         val bottomBarModifier = if (backdrop != null) {
