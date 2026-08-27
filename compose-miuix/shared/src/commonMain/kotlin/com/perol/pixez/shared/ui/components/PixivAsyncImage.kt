@@ -49,19 +49,19 @@ fun PixivAsyncImage(
             modifier = modifier,
             contentAlignment = Alignment.Center,
         ) {
-            // 底层缩略图：未加载高清图前垫底展示，始终与容器尺寸匹配，不抢占主测量锚点
+            // 底层缩略图：首帧瞬间显示并稳定撑开容器高度，保证任何网络异常下均有完整图片展示
             PixivAsyncImageInternal(
                 model = thumbnailUrl,
                 contentDescription = null,
-                modifier = Modifier.matchParentSize(),
+                modifier = Modifier.fillMaxWidth(),
                 contentScale = contentScale,
             )
-            // 顶层高清图：撑开容器尺寸，并接入缩略图内存缓存占位，加载成功后平滑覆盖
+            // 顶层高清图：完全贴合父容器尺寸，后台加载完成后平滑覆盖，绝不反转测量修饰符
             PixivAsyncImageInternal(
                 model = model,
                 thumbnailCacheKey = thumbnailUrl,
                 contentDescription = contentDescription,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.matchParentSize(),
                 contentScale = contentScale,
             )
         }
