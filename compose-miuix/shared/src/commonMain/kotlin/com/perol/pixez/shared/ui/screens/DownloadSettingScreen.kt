@@ -24,6 +24,8 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.BreadcrumbBar
+import top.yukonga.miuix.kmp.basic.BreadcrumbItem
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -159,6 +161,21 @@ fun DownloadSettingScreen(
                             summary = storePath.ifEmpty { strings.noData },
                             onClick = { pickDirectory() },
                         )
+                        if (storePath.isNotBlank()) {
+                            val pathSegments = remember(storePath) {
+                                storePath.split(Regex("[/\\\\]")).filter { it.isNotBlank() }
+                            }
+                            if (pathSegments.isNotEmpty()) {
+                                val breadcrumbs = remember(pathSegments) {
+                                    pathSegments.map { BreadcrumbItem(path = it, text = it) }
+                                }
+                                BreadcrumbBar(
+                                    items = breadcrumbs,
+                                    onItemClick = { pickDirectory() },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
                         OverlayDropdownPreference(
                             title = strings.dialogSaveMode,
                             items = saveModeLabels,

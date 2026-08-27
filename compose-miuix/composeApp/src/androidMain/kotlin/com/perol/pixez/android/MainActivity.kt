@@ -40,10 +40,12 @@ class MainActivity : ComponentActivity() {
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
         )
+        dependencies.warmupAsync(lifecycleScope)
         rootComponent = RootComponent(
             componentContext = defaultComponentContext(),
             settingsRepository = dependencies.settingsRepository,
         )
+        setupBackPressHandler()
         applyDisplayMode()
         handleIntent(intent)
         setContent {
@@ -54,10 +56,44 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (rootComponent.onBack()) {
+                    return
+                }
+                val now = System.currentTimeMillis()
+                if (now - lastBackPressTime < 2000) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                } else {
+                    lastBackPressTime = now
+                    Toast.makeText(this@MainActivity, "再次点击返回退出应用", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+    }
+
     override fun onResume() {
         super.onResume()
         if (::dependencies.isInitialized) {
             applyDisplayMode()
+            checkClipboard()
+        }
+    }
+
+    private var lastHandledClipboardText: String? = null
+
+    private fun checkClipboard() {
+        val clipboard = com.perol.pixez.shared.platform.IllustClipboard()
+        val text = clipboard.getText()?.trim()
+        if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
+            val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
+            val hasUser = text.contains("users/")
+            if (hasIllust || hasUser) {
+                lastHandledClipboardText = text
+                parseAndNavigateUrlOrId(text)
+            }
         }
     }
 
@@ -88,9 +124,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
+        if (intent == null) return
+
+        if (intent.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            parseAndNavigateUrlOrId(text)
+            return
+        }
+
+        val uri = intent.data ?: return
         val scheme = uri.scheme?.lowercase()
-        val host = uri.host?.lowercase()
+        val host = uri.host?.lowercase().orEmpty()
+        val path = uri.path.orEmpty()
 
         when {
             (scheme == "pixez" || scheme == "pixiv") -> {
@@ -103,17 +148,51 @@ class MainActivity : ComponentActivity() {
                         val id = uri.lastPathSegment?.toIntOrNull()
                         if (id != null) rootComponent.onIllustClicked(id)
                     }
+                    "users", "user" -> {
+                        val id = uri.lastPathSegment?.toIntOrNull()
+                        if (id != null) rootComponent.onUserClicked(id)
+                    }
                     "account", "oauth" -> handleAuthIntent(intent)
                 }
             }
-            scheme == "https" && (host == "app-api.pixiv.net" || host == "www.pixiv.net") -> {
-                if (uri.path?.contains("/users/auth/pixiv/callback") == true) {
-                    handleAuthIntent(intent)
-                } else if (uri.path?.contains("/artworks/") == true) {
-                    val id = uri.lastPathSegment?.toIntOrNull()
-                    if (id != null) rootComponent.onIllustClicked(id)
+            host.contains("pixiv.net") || host.contains("pixiv.me") -> {
+                when {
+                    path.contains("/users/auth/pixiv/callback") -> handleAuthIntent(intent)
+                    path.contains("/artworks/") -> {
+                        val id = uri.lastPathSegment?.toIntOrNull()
+                        if (id != null) rootComponent.onIllustClicked(id)
+                    }
+                    path.contains("/users/") -> {
+                        val id = uri.lastPathSegment?.toIntOrNull()
+                        if (id != null) rootComponent.onUserClicked(id)
+                    }
+                    else -> parseAndNavigateUrlOrId(uri.toString())
                 }
             }
+        }
+    }
+
+    private fun parseAndNavigateUrlOrId(text: String?) {
+        if (text.isNullOrBlank()) return
+        val illustMatch = Regex("""(?:artworks/|illust_id=)(\d+)""").find(text)
+        if (illustMatch != null) {
+            val id = illustMatch.groupValues[1].toIntOrNull()
+            if (id != null) {
+                rootComponent.onIllustClicked(id)
+                return
+            }
+        }
+        val userMatch = Regex("""(?:users/|member\.php\?id=)(\d+)""").find(text)
+        if (userMatch != null) {
+            val id = userMatch.groupValues[1].toIntOrNull()
+            if (id != null) {
+                rootComponent.onUserClicked(id)
+                return
+            }
+        }
+        val pureId = text.trim().toIntOrNull()
+        if (pureId != null && text.trim().length in 6..10) {
+            rootComponent.onIllustClicked(pureId)
         }
     }
 

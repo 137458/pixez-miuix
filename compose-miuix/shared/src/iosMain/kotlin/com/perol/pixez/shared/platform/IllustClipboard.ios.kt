@@ -9,4 +9,8 @@ actual class IllustClipboard {
     actual fun copy(text: String) {
         UIPasteboard.generalPasteboard.string = text
     }
+
+    actual fun getText(): String? {
+        return UIPasteboard.generalPasteboard.string
+    }
 }

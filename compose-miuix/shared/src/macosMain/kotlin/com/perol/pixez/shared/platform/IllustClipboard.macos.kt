@@ -14,4 +14,8 @@ actual class IllustClipboard {
         pasteboard.clearContents()
         pasteboard.setString(text, forType = NSPasteboardTypeString)
     }
+
+    actual fun getText(): String? {
+        return NSPasteboard.generalPasteboard?.stringForType(NSPasteboardTypeString)
+    }
 }

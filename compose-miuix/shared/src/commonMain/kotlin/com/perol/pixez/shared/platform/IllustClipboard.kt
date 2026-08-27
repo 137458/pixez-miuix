@@ -16,4 +16,9 @@ expect class IllustClipboard() {
      * 失败时抛出异常，由调用方处理并提示用户。
      */
     fun copy(text: String)
+
+    /**
+     * 读取系统剪贴板中的纯文本内容，剪贴板为空或不支持时返回 null。
+     */
+    fun getText(): String?
 }

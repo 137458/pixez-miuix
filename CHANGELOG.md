@@ -8,12 +8,18 @@
 
 ### 优化
 
+- 升级 MIUIX 基础架构至 0.9.4-rc01 并同步升级 Compose Multiplatform 至 1.12.0-rc01，引入 BreadcrumbBar 面包屑路径导航。
 - 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference、ArrowPreference 与 SliderPreference 原生组件。
 - 接入 ColorPicker 拾色器、NumberPicker 滚轮选择器、OverlayIconDropdownMenu 锚点菜单、Badge 角标与 TooltipBox 提示气泡等 MIUIX 原生交互组件。
 - 全面为长列表与网格（设置页、评论区、搜索结果、下载历史）集成 VerticalScrollBar 垂直滚动条。
 - 补充与完善全平台项目文档、使用指南及应用内关于页免责声明。
 - 启用 R8 Full Mode 代码混淆与资源精简，大幅缩减 APK 安装包体积。
-- 接入 Coil 3 磁盘缓存，优化冷启动图片加载与网络日志开销。
+- 规范化多平台沙盒隔离的 Coil 3 本地磁盘缓存与后台网络连接预热，大幅缩减冷启动与首屏等待耗时。
+- 接入当前激活底栏再次点击平滑回顶并刷新交互，配合触感反馈。
+- 接入 MIUIX 触感反馈系统，覆盖卡片长按快捷操作、收藏点赞与回顶操作。
+- 补齐 Android 13+ 通知权限声明与常规 Pixiv 网页链接及系统分享外部拦截。
+- 接入前台智能识别剪贴板作品链接与主页双击返回退出防误触。
+- 桌面端新增最小窗口尺寸约束、全局 ESC 快捷键返回与网络预热。
 
 ### 修复
 

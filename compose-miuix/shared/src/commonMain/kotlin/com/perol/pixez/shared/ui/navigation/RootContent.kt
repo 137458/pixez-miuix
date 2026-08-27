@@ -589,6 +589,13 @@ private fun MainContent(
             accountRepository = accountRepository,
             banRepository = banRepository,
             settingsRepository = settingsRepository,
+            reselectFlow = remember(component) {
+                kotlinx.coroutines.flow.flow {
+                    component.tabReselectEvents.collect { tab ->
+                        if (tab == RootComponent.MainTab.Hello) emit(Unit)
+                    }
+                }
+            },
         )
 
         RootComponent.MainTab.Search -> SearchScreen(
@@ -613,6 +620,13 @@ private fun MainContent(
             accountRepository = accountRepository,
             banRepository = banRepository,
             settingsRepository = settingsRepository,
+            reselectFlow = remember(component) {
+                kotlinx.coroutines.flow.flow {
+                    component.tabReselectEvents.collect { tab ->
+                        if (tab == RootComponent.MainTab.New) emit(Unit)
+                    }
+                }
+            },
         )
 
         RootComponent.MainTab.Spotlight -> SpotlightScreen(

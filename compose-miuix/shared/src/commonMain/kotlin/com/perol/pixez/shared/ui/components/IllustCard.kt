@@ -1,7 +1,11 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.perol.pixez.shared.platform.IllustClipboard
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -64,10 +68,21 @@ fun IllustCard(
         }
     }
 
+    val hapticFeedback = LocalHapticFeedback.current
+
+    @OptIn(ExperimentalFoundationApi::class)
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    runCatching {
+                        IllustClipboard().copy("https://www.pixiv.net/artworks/${illust.id}")
+                    }
+                },
+            ),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

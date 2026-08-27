@@ -50,7 +50,7 @@ fun App(
             }
             .diskCache {
                 coil3.disk.DiskCache.Builder()
-                    .directory(okio.FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_image_cache")
+                    .directory(com.perol.pixez.shared.platform.getAppCacheDirectory() / "pixez_image_cache")
                     .maxSizeBytes(512L * 1024 * 1024)
                     .build()
             }

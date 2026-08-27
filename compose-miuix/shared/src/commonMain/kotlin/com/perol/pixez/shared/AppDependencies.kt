@@ -30,6 +30,7 @@ import kotlinx.serialization.json.Json
 import com.perol.pixez.shared.ui.screens.createUpdateCheckClient
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.launch
 
 /**
  * 应用级依赖容器。
@@ -250,6 +251,15 @@ class AppDependencies(
      */
     val banRepository: BanRepository by lazy {
         BanRepository(banDriver, banUserDriver, banTagDriver)
+    }
+
+    /**
+     * 应用启动预热：在后台异步预热常用网络连接与 TLS 握手。
+     */
+    fun warmupAsync(scope: kotlinx.coroutines.CoroutineScope) {
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            httpClient.warmup()
+        }
     }
 
     /**

@@ -6,6 +6,7 @@ import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.head
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -107,6 +108,19 @@ class PixivHttpClient(
         runCatching { accountClient.close() }
         runCatching { downloadClient.close() }
         runCatching { baseOAuthClient.close() }
+    }
+
+    /**
+     * 网络连接与 TLS 握手预热。
+     * 在后台静默预连接常用 API 与图片域名，消除冷启动首屏网络请求时的 DNS 解析与 TLS 握手延迟。
+     */
+    suspend fun warmup() {
+        runCatching {
+            apiClient.head("https://$APP_API_HOST/favicon.ico")
+        }
+        runCatching {
+            downloadClient.head("https://i.pximg.net/favicon.ico")
+        }
     }
 
     companion object {

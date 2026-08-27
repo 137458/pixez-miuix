@@ -24,15 +24,31 @@ class AuthTokenStorage(
     private val queries = database.accountQueries
     private val mutex = Mutex()
 
+    @kotlin.concurrent.Volatile
+    private var cachedAccount: Account? = null
+    @kotlin.concurrent.Volatile
+    private var isCacheInitialized = false
+
+    /**
+     * 快速同步获取已缓存的账号信息，若尚未初始化则返回 null。
+     */
+    fun getCachedAccountFast(): Account? = if (isCacheInitialized) cachedAccount else null
+
     /**
      * 读取当前最新账号（按数据库主键降序，取第一条）。
      *
+     * 内部使用内存缓存，优先从缓存返回，避免首屏频繁查询 SQLite 阻塞。
      * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏。
      */
     suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.Default) {
+        if (isCacheInitialized) return@withContext cachedAccount
         mutex.withLock {
+            if (isCacheInitialized) return@withLock cachedAccount
             try {
-                queries.selectAll().executeAsList().firstOrNull()
+                val acc = queries.selectAll().executeAsList().firstOrNull()
+                cachedAccount = acc
+                isCacheInitialized = true
+                acc
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -72,6 +88,8 @@ class AuthTokenStorage(
                 x_restrict = user.xRestrict.toLong(),
                 is_mail_authorized = boolToLong(user.isMailAuthorized),
             )
+            cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+            isCacheInitialized = true
         }
     }
 
@@ -95,6 +113,8 @@ class AuthTokenStorage(
                 x_restrict = account.x_restrict,
                 is_mail_authorized = account.is_mail_authorized,
             )
+            cachedAccount = account
+            isCacheInitialized = true
         }
     }
 
@@ -122,6 +142,8 @@ class AuthTokenStorage(
                 x_restrict = current.x_restrict,
                 is_mail_authorized = current.is_mail_authorized,
             )
+            cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+            isCacheInitialized = true
         }
     }
 
@@ -154,6 +176,8 @@ class AuthTokenStorage(
                     x_restrict = updated.x_restrict,
                     is_mail_authorized = updated.is_mail_authorized,
                 )
+                cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+                isCacheInitialized = true
             }
         }
     }
@@ -164,6 +188,8 @@ class AuthTokenStorage(
     suspend fun clear() = withContext(Dispatchers.Default) {
         mutex.withLock {
             queries.deleteAll()
+            cachedAccount = null
+            isCacheInitialized = true
         }
     }
 

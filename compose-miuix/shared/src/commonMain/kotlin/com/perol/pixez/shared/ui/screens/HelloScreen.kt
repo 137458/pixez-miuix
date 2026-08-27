@@ -61,6 +61,7 @@ fun HelloScreen(
     accountRepository: AccountRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
     val strings = LocalStrings.current
     // retryCount 作为 produceState 的 key，手动刷新或点击重试时自增触发重新加载。
@@ -138,6 +139,20 @@ fun HelloScreen(
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    LaunchedEffect(reselectFlow) {
+        reselectFlow?.collect {
+            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+            if (gridState.firstVisibleItemIndex > 0) {
+                gridState.animateScrollToItem(0)
+            } else {
+                retryCount++
+                isManualRefreshing = true
+            }
+        }
+    }
 
     LaunchedEffect(state.value) {
         state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
@@ -269,6 +284,7 @@ fun HelloScreen(
                     ) {
                         IllustStaggeredGrid(
                             illusts = illusts,
+                            state = gridState,
                             onIllustClick = onIllustClick,
                             modifier = Modifier
                                 .fillMaxSize()

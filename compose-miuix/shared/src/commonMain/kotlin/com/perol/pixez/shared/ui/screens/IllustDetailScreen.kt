@@ -205,6 +205,7 @@ private fun IllustDetailSingleContent(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
     LaunchedEffect(illustId) {
@@ -668,6 +669,7 @@ private fun IllustDetailSingleContent(
                                                         )
                                                     }
                                                 }.onSuccess {
+                                                    hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                                     isBookmarked = !wasBookmarked
                                                     if (!wasBookmarked) {
                                                         if (settings?.saveAfterStar == true) {

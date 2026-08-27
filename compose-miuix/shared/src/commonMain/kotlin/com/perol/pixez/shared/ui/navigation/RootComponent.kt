@@ -38,16 +38,26 @@ class RootComponent(
         childFactory = ::createChild,
     )
 
+    private val _tabReselectEvents = kotlinx.coroutines.flow.MutableSharedFlow<MainTab>(extraBufferCapacity = 1)
+    val tabReselectEvents: kotlinx.coroutines.flow.SharedFlow<MainTab> = _tabReselectEvents
+
+    fun onTabReselected(tab: MainTab) {
+        _tabReselectEvents.tryEmit(tab)
+    }
+
     /**
      * 底部标签切换：将栈重置为对应的主页标签。
      *
      * 使用 replaceCurrent 而非 push，避免底部标签切换累积栈深度，
      * 确保按返回键时直接退出应用而不是在历史标签间回退。
+     * 若已处于当前标签，则触发 reselect 回顶与刷新事件。
      */
     fun onMainTabSelected(tab: MainTab) {
-        // 当前已经在该标签时不重复替换。
         val active = stack.value.active.instance
-        if (active is Child.Main && active.tab == tab) return
+        if (active is Child.Main && active.tab == tab) {
+            onTabReselected(tab)
+            return
+        }
         navigation.replaceCurrent(Config.Main(tab))
     }
 

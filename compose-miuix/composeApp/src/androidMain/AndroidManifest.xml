@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -44,6 +45,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="app-api.pixiv.net" android:pathPrefix="/web/v1/users/auth/pixiv/callback" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.pixiv.net" android:pathPrefix="/artworks/" />
+                <data android:scheme="https" android:host="pixiv.net" android:pathPrefix="/artworks/" />
+                <data android:scheme="https" android:host="www.pixiv.net" android:pathPrefix="/users/" />
+                <data android:scheme="https" android:host="pixiv.net" android:pathPrefix="/users/" />
+                <data android:scheme="http" android:host="www.pixiv.net" android:pathPrefix="/artworks/" />
+                <data android:scheme="http" android:host="pixiv.net" android:pathPrefix="/artworks/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 

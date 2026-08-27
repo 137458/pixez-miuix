@@ -18,4 +18,14 @@ actual class IllustClipboard {
         val clipData = ClipData.newPlainText("PixEz", text)
         clipboardManager.setPrimaryClip(clipData)
     }
+
+    actual fun getText(): String? {
+        val context = BrowserLauncherContext.applicationContext ?: return null
+        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
+        val clip = clipboardManager.primaryClip ?: return null
+        if (clip.itemCount > 0) {
+            return clip.getItemAt(0).coerceToText(context)?.toString()
+        }
+        return null
+    }
 }
