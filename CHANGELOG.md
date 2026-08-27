@@ -8,6 +8,8 @@
 
 ### 优化
 
+- 全面升级登录页与初次启动引导流程，重塑 MIUIX 风格品牌 Hero 视觉、动态伸缩胶囊步骤指示器及大屏自适应排版。
+- 登录页接入剪贴板凭证智能读取、受限网络环境排障引导卡片与服务条款政策外链。
 - 优化多端与全尺寸屏幕开箱体验，首次启动默认按 180dp 卡片基准宽度自适应列数（手机 2 列、平板 3~4 列、桌面 5~8 列）。
 - 升级 MIUIX 基础架构至 0.9.4-rc01 并同步升级 Compose Multiplatform 至 1.12.0-rc01，引入 BreadcrumbBar 面包屑路径导航。
 - 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference、ArrowPreference 与 SliderPreference 原生组件。

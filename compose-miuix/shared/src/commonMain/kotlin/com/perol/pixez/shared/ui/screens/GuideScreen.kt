@@ -1,12 +1,16 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,16 +19,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,9 +51,13 @@ import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import org.jetbrains.compose.resources.painterResource
+import pixez_miuix.shared.generated.resources.Res
+import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -66,9 +77,9 @@ private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
 
 /**
  * 首次启动引导向导页（Onboarding Guide）：
- * Step 1: 语言选择（多语言切换并即时保存，支持更新 API 请求偏好）
- * Step 2: 网络模式配置（直连/SNI绕过/代理/图片源）
- * Step 3: 登录状态检测与完成欢迎页
+ * Step 1: 语言与界面偏好（品牌 Hero 欢迎区、即时语言切换、贡献者感谢）
+ * Step 2: 网络模式与加速源配置（镜像源直连免翻推荐、SNI 绕过与代理提示）
+ * Step 3: 账号与开启旅程（特性高光卡片、登录状态同步、游客体验模式）
  */
 @Composable
 fun GuideScreen(
@@ -157,7 +168,7 @@ fun GuideScreen(
 }
 
 /**
- * Step 1: 语言选择
+ * Step 1: 欢迎与语言选择
  */
 @Composable
 private fun GuideLanguageStep(
@@ -169,92 +180,120 @@ private fun GuideLanguageStep(
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))
     }
 
-    LazyColumn(
+    Box(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = strings.guideStepLanguage,
-                    style = MiuixTheme.textStyles.headline1,
-                    fontWeight = FontWeight.Bold,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = strings.guideStepLanguageDesc,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MiuixTheme.colorScheme.surfaceContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_pixez_logo),
+                            contentDescription = "PixEz Logo",
+                            modifier = Modifier.size(56.dp),
+                        )
+                    }
 
-        item {
-            SmallTitle(text = strings.settingLanguage)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                    BasicComponent(
-                        title = "${option.nativeName} (${option.displayName})",
-                        summary = option.code,
-                        onClick = {
-                            selectedIndex = index
-                            settingsRepository.languageNum = index
-                        },
-                        endActions = {
-                            CheckIndicator(selected = selectedIndex == index)
-                        },
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = strings.guideHeroWelcome,
+                        style = MiuixTheme.textStyles.headline1,
+                        fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = strings.guideHeroWelcomeSub,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
                 }
             }
-        }
 
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            val selectedOption = LANGUAGE_OPTIONS[selectedIndex]
-            if (selectedOption.sponsors.isNotEmpty()) {
-                SmallTitle(text = strings.sponsor)
+            item {
+                SmallTitle(text = strings.settingLanguage)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                        BasicComponent(
+                            title = "${option.nativeName} (${option.displayName})",
+                            summary = option.code,
+                            onClick = {
+                                selectedIndex = index
+                                settingsRepository.languageNum = index
+                            },
+                            endActions = {
+                                CheckIndicator(selected = selectedIndex == index)
+                            },
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                val selectedOption = LANGUAGE_OPTIONS[selectedIndex]
+                if (selectedOption.sponsors.isNotEmpty()) {
+                    SmallTitle(text = strings.sponsor)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        itemsIndexed(selectedOption.sponsors) { _, sponsor ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                AsyncImage(
-                                    model = sponsor.avatar,
-                                    contentDescription = sponsor.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape),
-                                )
-                                Text(
-                                    text = sponsor.name,
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    color = MiuixTheme.colorScheme.onSurface,
-                                )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            itemsIndexed(selectedOption.sponsors) { _, sponsor ->
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    AsyncImage(
+                                        model = sponsor.avatar,
+                                        contentDescription = sponsor.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape),
+                                    )
+                                    Text(
+                                        text = sponsor.name,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        color = MiuixTheme.colorScheme.onSurface,
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(24.dp))
             }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -275,101 +314,133 @@ private fun GuideNetworkStep(
         mutableStateOf(settingsRepository.apiNetworkMode)
     }
 
-    LazyColumn(
+    Box(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = strings.guideStepNetwork,
-                    style = MiuixTheme.textStyles.headline1,
-                    fontWeight = FontWeight.Bold,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = strings.guideStepNetworkDesc,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    textAlign = TextAlign.Center,
-                )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = strings.guideStepNetwork,
+                        style = MiuixTheme.textStyles.headline1,
+                        fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = strings.guideStepNetworkDesc,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                }
             }
-        }
 
-        item {
-            SmallTitle(text = strings.guideImageSource)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                BasicComponent(
-                    title = strings.guideImageMirror,
-                    summary = strings.guideImageMirrorDesc,
-                    onClick = {
-                        isMirrorEnabled = true
-                        settingsRepository.pictureSource = MIRROR_IMAGE_HOST
-                    },
-                    endActions = {
-                        CheckIndicator(selected = isMirrorEnabled)
-                    },
-                )
-                BasicComponent(
-                    title = strings.guideImageOfficial,
-                    summary = strings.guideImageOfficialDesc,
-                    onClick = {
-                        isMirrorEnabled = false
-                        settingsRepository.pictureSource = "i.pximg.net"
-                    },
-                    endActions = {
-                        CheckIndicator(selected = !isMirrorEnabled)
-                    },
-                )
+            item {
+                SmallTitle(text = strings.guideImageSource)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    BasicComponent(
+                        title = strings.guideImageMirror,
+                        summary = "${strings.guideImageMirrorDesc} • 推荐国内直连",
+                        onClick = {
+                            isMirrorEnabled = true
+                            settingsRepository.pictureSource = MIRROR_IMAGE_HOST
+                        },
+                        endActions = {
+                            CheckIndicator(selected = isMirrorEnabled)
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.guideImageOfficial,
+                        summary = "${strings.guideImageOfficialDesc} • 需配置网络代理",
+                        onClick = {
+                            isMirrorEnabled = false
+                            settingsRepository.pictureSource = "i.pximg.net"
+                        },
+                        endActions = {
+                            CheckIndicator(selected = !isMirrorEnabled)
+                        },
+                    )
+                }
             }
-        }
 
-        item {
-            Spacer(modifier = Modifier.height(12.dp))
-            SmallTitle(text = strings.guideStepNetwork)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                BasicComponent(
-                    title = strings.guideNetworkDirect,
-                    summary = strings.guideNetworkDirectDesc,
-                    onClick = {
-                        currentNetworkMode = "direct"
-                        settingsRepository.apiNetworkMode = "direct"
-                        settingsRepository.oauthNetworkMode = "direct"
-                    },
-                    endActions = {
-                        CheckIndicator(selected = currentNetworkMode == "direct")
-                    },
-                )
-                BasicComponent(
-                    title = strings.guideNetworkSni,
-                    summary = strings.guideNetworkSniDesc,
-                    onClick = {
-                        currentNetworkMode = "sni"
-                        settingsRepository.apiNetworkMode = "sni"
-                        settingsRepository.oauthNetworkMode = "sni"
-                    },
-                    endActions = {
-                        CheckIndicator(selected = currentNetworkMode == "sni")
-                    },
-                )
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SmallTitle(text = strings.guideStepNetwork)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    BasicComponent(
+                        title = strings.guideNetworkDirect,
+                        summary = strings.guideNetworkDirectDesc,
+                        onClick = {
+                            currentNetworkMode = "direct"
+                            settingsRepository.apiNetworkMode = "direct"
+                            settingsRepository.oauthNetworkMode = "direct"
+                        },
+                        endActions = {
+                            CheckIndicator(selected = currentNetworkMode == "direct")
+                        },
+                    )
+                    BasicComponent(
+                        title = strings.guideNetworkSni,
+                        summary = "${strings.guideNetworkSniDesc} • 推荐国内网络开启",
+                        onClick = {
+                            currentNetworkMode = "sni"
+                            settingsRepository.apiNetworkMode = "sni"
+                            settingsRepository.oauthNetworkMode = "sni"
+                        },
+                        endActions = {
+                            CheckIndicator(selected = currentNetworkMode == "sni")
+                        },
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = strings.loginTroubleTip,
+                            style = MiuixTheme.textStyles.title4,
+                            fontWeight = FontWeight.Bold,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = strings.loginTroubleDesc,
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }
 
 /**
- * Step 3: 登录状态检测与完成欢迎页
+ * Step 3: 登录状态检测、特性展示与完成欢迎页
  */
 @Composable
 private fun GuideWelcomeStep(
@@ -393,114 +464,158 @@ private fun GuideWelcomeStep(
         }
     }
 
-    LazyColumn(
+    Box(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        contentAlignment = Alignment.TopCenter,
     ) {
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "✨ ${strings.guideStepWelcome}",
-                style = MiuixTheme.textStyles.title1,
-                fontWeight = FontWeight.Bold,
-                color = MiuixTheme.colorScheme.onSurface,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = strings.guideStepWelcomeDesc,
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 24.dp),
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        item {
-            val current = currentAccount
-            if (current != null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = " ${strings.guideLoggedInStatus}",
-                            style = MiuixTheme.textStyles.title4,
-                            fontWeight = FontWeight.Bold,
-                            color = MiuixTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${current.name} (@${current.account})",
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        TextButton(
-                            text = strings.guideSwitchAccount,
-                            onClick = onLoginClick,
-                        )
-                    }
+                    Text(
+                        text = "✨ ${strings.guideStepWelcome}",
+                        style = MiuixTheme.textStyles.title1,
+                        fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = strings.guideStepWelcomeDesc,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    )
                 }
-            } else if (!isCheckingAccount) {
+            }
+
+            // 核心特性高光卡片
+            item {
+                SmallTitle(text = "PixEz 特性")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    BasicComponent(
+                        title = strings.guideFeatureIllust,
+                        summary = strings.guideFeatureIllustDesc,
+                    )
+                    BasicComponent(
+                        title = strings.guideFeatureRanking,
+                        summary = strings.guideFeatureRankingDesc,
+                    )
+                    BasicComponent(
+                        title = strings.guideFeatureDownload,
+                        summary = strings.guideFeatureDownloadDesc,
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // 账号状态卡片
+            item {
+                SmallTitle(text = strings.settingSectionAccount)
+                val current = currentAccount
+                if (current != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(
-                            text = strings.guideNotLoggedIn,
-                            style = MiuixTheme.textStyles.title4,
-                            fontWeight = FontWeight.Bold,
-                            color = MiuixTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = strings.guideLoginBenefits,
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onLoginClick,
-                            modifier = Modifier.fillMaxWidth(),
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text(strings.guideLoginNow)
+                            Text(
+                                text = strings.guideLoggedInStatus,
+                                style = MiuixTheme.textStyles.title4,
+                                fontWeight = FontWeight.Bold,
+                                color = MiuixTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${current.name} (@${current.account})",
+                                style = MiuixTheme.textStyles.body1,
+                                color = MiuixTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            TextButton(
+                                text = strings.guideSwitchAccount,
+                                onClick = onLoginClick,
+                            )
+                        }
+                    }
+                } else if (!isCheckingAccount) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = strings.guideNotLoggedIn,
+                                style = MiuixTheme.textStyles.title4,
+                                fontWeight = FontWeight.Bold,
+                                color = MiuixTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = strings.guideLoginBenefits,
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Button(
+                                colors = ButtonDefaults.buttonColorsPrimary(),
+                                onClick = onLoginClick,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(strings.guideLoginNow)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            TextButton(
+                                text = strings.guideGuestExplore,
+                                onClick = onFinish,
+                            )
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(28.dp))
-            Button(
-                onClick = onFinish,
-                modifier = Modifier.fillMaxWidth(0.85f),
-            ) {
-                Text(
-                    text = strings.guideStartJourney,
-                    style = MiuixTheme.textStyles.button,
-                )
+                Spacer(modifier = Modifier.height(28.dp))
+                Button(
+                    colors = ButtonDefaults.buttonColorsPrimary(),
+                    onClick = onFinish,
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                ) {
+                    Text(
+                        text = strings.guideStartJourney,
+                        style = MiuixTheme.textStyles.button,
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 /**
- * 底部向导导航栏：步骤指示点 + 上一步 / 下一步 / 完成按钮。
+ * 底部向导导航栏：平滑伸缩胶囊指示器 + 上一步 / 下一步 / 完成按钮。
  */
 @Composable
 private fun GuideBottomBar(
@@ -514,7 +629,7 @@ private fun GuideBottomBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -534,16 +649,26 @@ private fun GuideBottomBar(
             Spacer(modifier = Modifier.width(80.dp))
         }
 
+        // 平滑伸缩胶囊指示器
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             repeat(totalSteps) { step ->
                 val isActive = step == currentStep
+                val targetWidth = if (isActive) 24.dp else 8.dp
+                val indicatorWidth by animateDpAsState(
+                    targetValue = targetWidth,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow,
+                    ),
+                )
                 Box(
                     modifier = Modifier
-                        .size(if (isActive) 10.dp else 8.dp)
-                        .clip(CircleShape)
+                        .height(8.dp)
+                        .width(indicatorWidth)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(
                             if (isActive) MiuixTheme.colorScheme.primary
                             else MiuixTheme.colorScheme.surfaceContainerHighest
@@ -553,6 +678,7 @@ private fun GuideBottomBar(
         }
 
         Button(
+            colors = ButtonDefaults.buttonColorsPrimary(),
             onClick = onNext,
         ) {
             Text(
@@ -561,3 +687,4 @@ private fun GuideBottomBar(
         }
     }
 }
+
