@@ -430,20 +430,6 @@ fun IosLiquidGlassNavigationBar(
                             .layerBackdrop(tabsBackdrop)
                             .fillMaxWidth()
                             .graphicsLayer { translationX = panelOffset }
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { pillShape },
-                                effects = {
-                                    vibrancy()
-                                    blur(lensBlurDp.toPx())
-                                    lens(
-                                        refractionHeight = baseRefractionDp.toPx(),
-                                        refractionAmount = baseRefractionDp.toPx(),
-                                    )
-                                },
-                                onDrawSurface = { drawRect(containerColor) },
-                            )
-                            .then(interactiveHighlight.modifier)
                             .height(64.dp)
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically,

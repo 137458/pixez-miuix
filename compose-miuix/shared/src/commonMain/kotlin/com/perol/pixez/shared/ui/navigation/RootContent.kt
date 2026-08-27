@@ -183,7 +183,6 @@ fun RootContent(
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
-            com.perol.pixez.shared.ui.components.LocalBackdrop provides backdrop,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
         ) {
             if (showAppUpdateDialog && appReleaseInfo != null) {

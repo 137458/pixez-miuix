@@ -48,7 +48,6 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 
 
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.ui.components.miuixTopBarBlur
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
 
@@ -183,11 +182,8 @@ fun SearchScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            val backdrop = com.perol.pixez.shared.ui.components.LocalBackdrop.current
             TopAppBar(
                 title = strings.tabSearch,
-                modifier = Modifier.miuixTopBarBlur(backdrop),
-                color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else androidx.compose.ui.graphics.Color.Unspecified,
                 scrollBehavior = scrollBehavior,
             )
         },

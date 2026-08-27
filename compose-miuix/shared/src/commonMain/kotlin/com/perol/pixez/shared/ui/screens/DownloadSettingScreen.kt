@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.components.CheckIndicator
-import com.perol.pixez.shared.ui.components.miuixTopBarBlur
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BreadcrumbBar
 import top.yukonga.miuix.kmp.basic.BreadcrumbItem
@@ -127,11 +126,8 @@ fun DownloadSettingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            val backdrop = com.perol.pixez.shared.ui.components.LocalBackdrop.current
             TopAppBar(
                 title = strings.settingDownload,
-                modifier = Modifier.miuixTopBarBlur(backdrop),
-                color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else androidx.compose.ui.graphics.Color.Unspecified,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {

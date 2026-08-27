@@ -32,34 +32,7 @@ import com.kyant.backdrop.shadow.Shadow
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * 全局共享的 Backdrop 采样图层提供器，用于自适应顶栏与底栏毛玻璃采样。
- */
-val LocalBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 
-/**
- * 为顶栏应用自适应毛玻璃模糊效果。
- * 当存在有效 Backdrop 时，在顶栏背景应用毛玻璃模糊与主题 Surface 色调半透明层；
- * 当 Backdrop 为 null 时保持默认无效果。
- */
-@Composable
-fun Modifier.miuixTopBarBlur(
-    backdrop: Backdrop? = LocalBackdrop.current,
-    tintAlpha: Float = 0.85f,
-    blurRadius: Dp = 20.dp,
-): Modifier {
-    val surface = MiuixTheme.colorScheme.surface
-    return if (backdrop != null) {
-        this.backdropBlur(
-            backdrop = backdrop,
-            tintColor = surface,
-            tintAlpha = tintAlpha,
-            blurRadius = blurRadius,
-        )
-    } else {
-        this
-    }
-}
 
 /**
  * Liquid Glass Modifier using Kyant0/AndroidLiquidGlass (Backdrop 2.0).
