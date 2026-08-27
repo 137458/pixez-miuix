@@ -669,15 +669,20 @@ private fun buildThemeController(
         surfaceContainerHighest = Color(0xFFE5E7EB),
     )
 
-    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑。
+    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，并确保前景色为高对比度浅色。
     val darkColors = if (isAmoled) {
         darkColorScheme(
             background = Color.Black,
             surface = Color.Black,
-            surfaceVariant = Color.Black,
+            surfaceVariant = Color(0xFF121212),
             surfaceContainer = Color.Black,
-            surfaceContainerHigh = Color.Black,
-            surfaceContainerHighest = Color.Black,
+            surfaceContainerHigh = Color(0xFF1E1E1E),
+            surfaceContainerHighest = Color(0xFF2C2C2C),
+            onBackground = Color(0xFFF3F4F6),
+            onSurface = Color(0xFFF3F4F6),
+            onSurfaceContainer = Color(0xFFF3F4F6),
+            onSurfaceVariantSummary = Color(0xFF9CA3AF),
+            onSurfaceSecondary = Color(0xFF9CA3AF),
         )
     } else {
         null

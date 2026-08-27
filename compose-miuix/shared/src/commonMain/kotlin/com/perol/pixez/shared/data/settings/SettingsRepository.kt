@@ -72,19 +72,19 @@ class SettingsRepository(
     // region 主题与显示
     var themeMode: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.THEME_MODE, 0)
-        set(value) { settings[SettingsKeys.THEME_MODE] = value }
+        set(value) { settings[SettingsKeys.THEME_MODE] = value; notifyChanged() }
 
     var useDynamicColor: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, true)
-        set(value) { settings[SettingsKeys.USE_DYNAMIC_COLOR] = value }
+        set(value) { settings[SettingsKeys.USE_DYNAMIC_COLOR] = value; notifyChanged() }
 
     var seedColor: Int?
         get() = settings.getIntWithLegacyFallbackOrNull(SettingsKeys.SEED_COLOR)
-        set(value) { settings[SettingsKeys.SEED_COLOR] = value }
+        set(value) { settings[SettingsKeys.SEED_COLOR] = value; notifyChanged() }
 
     var isAmoled: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_AMOLED, false)
-        set(value) { settings[SettingsKeys.IS_AMOLED] = value }
+        set(value) { settings[SettingsKeys.IS_AMOLED] = value; notifyChanged() }
 
     /**
      * MIUIX 调色板风格索引，对应 [top.yukonga.miuix.kmp.theme.ThemePaletteStyle.entries] 顺序。
@@ -92,7 +92,7 @@ class SettingsRepository(
      */
     var miuixPaletteStyle: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.MIUIX_PALETTE_STYLE, 0)
-        set(value) { settings[SettingsKeys.MIUIX_PALETTE_STYLE] = value }
+        set(value) { settings[SettingsKeys.MIUIX_PALETTE_STYLE] = value; notifyChanged() }
 
     /**
      * 是否使用 Material 2025 色彩规范（Spec2025）。
@@ -100,7 +100,7 @@ class SettingsRepository(
      */
     var miuixUseSpec2025: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.MIUIX_USE_SPEC_2025, false)
-        set(value) { settings[SettingsKeys.MIUIX_USE_SPEC_2025] = value }
+        set(value) { settings[SettingsKeys.MIUIX_USE_SPEC_2025] = value; notifyChanged() }
 
     // region 保存与下载
     var saveMode: Int
