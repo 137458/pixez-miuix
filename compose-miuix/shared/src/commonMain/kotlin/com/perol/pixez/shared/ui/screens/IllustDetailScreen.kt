@@ -280,7 +280,7 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
-                                    .illustDragAndDropSource(illust)
+                                    .illustDragAndDropSource(illust, pageIndex = pageIndex)
 
                                 PixivAsyncImage(
                                     model = pageUrl,
@@ -321,7 +321,7 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
-                                    .illustDragAndDropSource(illust)
+                                    .illustDragAndDropSource(illust, pageIndex = 0)
 
                                 PixivAsyncImage(
                                     model = singleUrl,
