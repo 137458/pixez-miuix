@@ -32,6 +32,36 @@ class IllustRepository(
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
+    private val illustsMemoryCache = mutableMapOf<Int, Illust>()
+    private val illustsCacheOrder = mutableListOf<Int>()
+
+    /**
+     * 将单个插画作品存入内存缓存（LRU 策略，最大 500 条）。
+     */
+    fun cacheIllust(illust: Illust) {
+        val id = illust.id
+        illustsMemoryCache[id] = illust
+        illustsCacheOrder.remove(id)
+        illustsCacheOrder.add(id)
+        if (illustsCacheOrder.size > 500) {
+            val oldest = illustsCacheOrder.removeAt(0)
+            illustsMemoryCache.remove(oldest)
+        }
+    }
+
+    /**
+     * 将批量插画作品存入内存缓存。
+     */
+    fun cacheIllusts(illusts: Iterable<Illust>) {
+        for (illust in illusts) {
+            cacheIllust(illust)
+        }
+    }
+
+    /**
+     * 根据 ID 获取已在内存缓存中的插画作品，若未缓存则返回 null。
+     */
+    fun getCachedIllust(illustId: Int): Illust? = illustsMemoryCache[illustId]
 
     /**
      * 获取首页推荐插画响应（含 nextUrl），默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
@@ -41,7 +71,9 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Recommend = networkCall("获取推荐插画失败") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            val response: Recommend = apiClient.get(nextUrl).body()
+            cacheIllusts(response.illusts)
+            response
         } else {
             val cached = cachedRecommendedResponse
             if (!forceRefresh && cached != null) {
@@ -51,6 +83,7 @@ class IllustRepository(
                 parameter("filter", "for_ios")
                 parameter("include_ranking_label", "true")
             }.body()
+            cacheIllusts(response.illusts)
             cachedRecommendedResponse = response
             response
         }
@@ -70,13 +103,16 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Walkthrough = networkCall("获取匿名推荐插画失败") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            val response: Walkthrough = apiClient.get(nextUrl).body()
+            cacheIllusts(response.illusts)
+            response
         } else {
             val cached = cachedWalkthroughResponse
             if (!forceRefresh && cached != null) {
                 return@networkCall cached
             }
             val response: Walkthrough = apiClient.get("/v1/walkthrough/illusts").body()
+            cacheIllusts(response.illusts)
             cachedWalkthroughResponse = response
             response
         }
@@ -100,7 +136,7 @@ class IllustRepository(
         date: String? = null,
         nextUrl: String? = null,
     ): Ranking = networkCall("获取排行榜失败 mode=$mode") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: Ranking = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v1/illust/ranking") {
@@ -111,6 +147,8 @@ class IllustRepository(
                 }
             }.body()
         }
+        cacheIllusts(response.illusts)
+        response
     }
 
     /**
@@ -129,13 +167,15 @@ class IllustRepository(
         restrict: String = "all",
         nextUrl: String? = null,
     ): FollowIllusts = networkCall("获取关注插画失败 restrict=$restrict") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: FollowIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v2/illust/follow") {
                 parameter("restrict", restrict)
             }.body()
         }
+        cacheIllusts(response.illusts)
+        response
     }
 
     /**
@@ -244,6 +284,7 @@ class IllustRepository(
                 parameter("filter", "for_android")
                 parameter("illust_id", illustId)
             }.body()
+            cacheIllust(response.illust)
             response.illust
         }
 
@@ -304,7 +345,7 @@ class IllustRepository(
         illustId: Int,
         nextUrl: String? = null,
     ): Recommend = networkCall("获取相关作品失败 illustId=$illustId") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: Recommend = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v2/illust/related") {
@@ -312,6 +353,8 @@ class IllustRepository(
                 parameter("illust_id", illustId)
             }.body()
         }
+        cacheIllusts(response.illusts)
+        response
     }
 
     /**
@@ -328,13 +371,15 @@ class IllustRepository(
         seriesId: Int,
         nextUrl: String? = null,
     ): IllustSeriesWithIdModel = networkCall("获取系列详情失败 seriesId=$seriesId") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: IllustSeriesWithIdModel = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v1/illust/series") {
                 parameter("illust_series_id", seriesId)
             }.body()
         }
+        response.illusts?.let { cacheIllusts(it) }
+        response
     }
 
     /**

@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.miuix.ui)
             implementation(libs.miuix.preference)
             implementation(libs.miuix.icons)
+            implementation(libs.miuix.blur)
 
             // Kyant0 Backdrop (Liquid Glass & Realtime Blur Multiplatform)
             implementation(libs.backdrop)

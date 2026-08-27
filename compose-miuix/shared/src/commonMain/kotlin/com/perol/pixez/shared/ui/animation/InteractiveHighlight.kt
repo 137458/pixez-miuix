@@ -1,6 +1,5 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
-// Adapted from Kyant0/AndroidLiquidGlass — https://github.com/Kyant0/AndroidLiquidGlass (Apache 2.0).
 
 package com.perol.pixez.shared.ui.animation
 
@@ -18,6 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.blur.RuntimeShader
+import top.yukonga.miuix.kmp.blur.asBrush
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 
 internal class InteractiveHighlight(
     private val animationScope: CoroutineScope,
@@ -30,6 +32,11 @@ internal class InteractiveHighlight(
     private val pressProgressAnimation = Animatable(0f, 0.001f)
     private val positionAnimation = Animatable(Offset.Zero, Offset.VectorConverter, Offset.VisibilityThreshold)
     private var startPosition = Offset.Zero
+
+    // Smoothstep press spot; without runtime shader support, falls back to a radialGradient
+    // approximation (linear instead of S-curve falloff).
+    private val spotShader: RuntimeShader? =
+        if (isRuntimeShaderSupported()) RuntimeShader(SPOT_SHADER) else null
 
     val modifier: Modifier = Modifier.drawWithContent {
         val progress = pressProgressAnimation.value
@@ -45,18 +52,28 @@ internal class InteractiveHighlight(
                 y = pos.y.coerceIn(0f, size.height),
             )
             val spotColor = Color.White.copy(alpha = 0.12f * progress)
-            drawRect(
-                brush = Brush.radialGradient(
-                    colorStops = arrayOf(
-                        0.0f to spotColor,
-                        0.5f to spotColor,
-                        1.0f to Color.White.copy(alpha = 0f),
+            if (spotShader != null) {
+                spotShader.setColorUniform("color", spotColor)
+                spotShader.setFloatUniform("radius", radius)
+                spotShader.setFloatUniform("position", center.x, center.y)
+                drawRect(
+                    brush = spotShader.asBrush(),
+                    blendMode = BlendMode.Plus,
+                )
+            } else {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to spotColor,
+                            0.5f to spotColor,
+                            1.0f to Color.White.copy(alpha = 0f),
+                        ),
+                        center = center,
+                        radius = radius,
                     ),
-                    center = center,
-                    radius = radius,
-                ),
-                blendMode = BlendMode.Plus,
-            )
+                    blendMode = BlendMode.Plus,
+                )
+            }
         }
         drawContent()
     }
@@ -84,3 +101,15 @@ internal class InteractiveHighlight(
         }
     }
 }
+
+// Press spot: solid within half the radius, smoothstep falloff toward the edge.
+private const val SPOT_SHADER = """
+    layout(color) uniform half4 color;
+    uniform float radius;
+    uniform float2 position;
+
+    half4 main(float2 coord) {
+        float dist = distance(coord, position);
+        float intensity = smoothstep(radius, radius * 0.5, dist);
+        return color * intensity;
+    }"""

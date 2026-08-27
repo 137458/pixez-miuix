@@ -21,6 +21,7 @@ import io.ktor.http.Parameters
  */
 class UserRepository(
     private val apiClient: HttpClient,
+    private val illustRepository: IllustRepository? = null,
 ) {
     /**
      * 获取用户详情。
@@ -35,7 +36,6 @@ class UserRepository(
 
     /**
      * 获取用户插画/漫画作品响应（含 nextUrl）。
-
      *
      * @param userId 用户 ID。
      * @param type 作品类型：illust、manga、novel。
@@ -46,7 +46,7 @@ class UserRepository(
         type: String = "illust",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户作品失败 userId=$userId type=$type") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v1/user/illusts") {
@@ -55,6 +55,8 @@ class UserRepository(
                 parameter("type", type)
             }.body()
         }
+        illustRepository?.cacheIllusts(response.illusts)
+        response
     }
 
     /**
@@ -77,7 +79,7 @@ class UserRepository(
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v1/user/bookmarks/illust") {
@@ -86,6 +88,8 @@ class UserRepository(
                 parameter("restrict", restrict)
             }.body()
         }
+        illustRepository?.cacheIllusts(response.illusts)
+        response
     }
 
     /**

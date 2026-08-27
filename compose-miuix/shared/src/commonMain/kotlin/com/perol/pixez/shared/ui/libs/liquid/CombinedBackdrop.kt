@@ -1,4 +1,6 @@
+// Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
+
 package com.perol.pixez.shared.ui.libs.liquid
 
 import androidx.compose.runtime.Composable
@@ -8,12 +10,13 @@ import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.unit.Density
-import com.kyant.backdrop.Backdrop
+import top.yukonga.miuix.kmp.blur.Backdrop
 
 /**
- * 官方 Example 实现的 CombinedBackdrop：
- * 依次绘制 [first]（页面背景）和 [second]（激活项层 tabsBackdrop），
- * 供选择指示器在单个 Backdrop 采样中同时获取底层背景和激活图标。
+ * A [Backdrop] that draws [first] then [second] in order, allowing a tinted/overlay
+ * backdrop to be sampled on top of a base backdrop. Used in `FloatingBottomBar` to layer
+ * a recorded "tinted tabs" pass over the underlying app background as a single sampling
+ * source for the liquid glass lens indicator.
  */
 @Stable
 class CombinedBackdrop(
@@ -24,13 +27,17 @@ class CombinedBackdrop(
     override val isCoordinatesDependent: Boolean =
         first.isCoordinatesDependent || second.isCoordinatesDependent
 
+    override val offsetResidualX: Float get() = first.offsetResidualX
+    override val offsetResidualY: Float get() = first.offsetResidualY
+
     override fun DrawScope.drawBackdrop(
         density: Density,
         coordinates: LayoutCoordinates?,
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
+        downscaleFactor: Int,
     ) {
-        with(first) { drawBackdrop(density, coordinates, layerBlock) }
-        with(second) { drawBackdrop(density, coordinates, layerBlock) }
+        with(first) { drawBackdrop(density, coordinates, layerBlock, downscaleFactor) }
+        with(second) { drawBackdrop(density, coordinates, layerBlock, downscaleFactor) }
     }
 }
 

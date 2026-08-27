@@ -164,7 +164,7 @@ class AppDependencies(
     }
 
     val searchRepository: SearchRepository by lazy {
-        SearchRepository(httpClient.apiClient)
+        SearchRepository(httpClient.apiClient, illustRepository)
     }
 
     /**
@@ -200,7 +200,7 @@ class AppDependencies(
     }
 
     val userRepository: UserRepository by lazy {
-        UserRepository(httpClient.apiClient)
+        UserRepository(httpClient.apiClient, illustRepository)
     }
 
     val bookmarkRepository: BookmarkRepository by lazy {

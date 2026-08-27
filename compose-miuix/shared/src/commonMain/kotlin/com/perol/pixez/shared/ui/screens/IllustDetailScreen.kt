@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,8 +41,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.components.liquidGlass
@@ -174,8 +175,10 @@ private fun IllustDetailSingleContent(
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
 
+    val cachedIllust = remember(illustId) { repository.getCachedIllust(illustId) }
+
     val state = produceState<Result<Illust>?>(
-        initialValue = null,
+        initialValue = cachedIllust?.let { Result.success(it) },
         illustId,
         repository,
         retryCount,
@@ -230,6 +233,14 @@ private fun IllustDetailSingleContent(
                     modifier = Modifier.fillMaxSize(),
                 )
                 else -> {
+                    val illustAspectRatio = remember(illust.width, illust.height) {
+                        if (illust.width > 0 && illust.height > 0) {
+                            (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.1f, 10.0f)
+                        } else {
+                            null
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -260,14 +271,23 @@ private fun IllustDetailSingleContent(
                                 val thumbnailUrl = remember(page) {
                                     page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
                                 }
+                                val pageModifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (pageIndex == 0 && illustAspectRatio != null) {
+                                            Modifier.aspectRatio(illustAspectRatio)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .illustDragAndDropSource(illust)
+
                                 PixivAsyncImage(
                                     model = pageUrl,
                                     thumbnailUrl = thumbnailUrl,
                                     contentDescription = "${illust.title} ($pageIndex)",
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .illustDragAndDropSource(illust),
+                                    modifier = pageModifier,
                                 )
                                 if (pageIndex < illust.metaPages.lastIndex) {
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -292,14 +312,23 @@ private fun IllustDetailSingleContent(
                                 val thumbnailUrl = remember(illust) {
                                     illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
                                 }
+                                val singleModifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (illustAspectRatio != null) {
+                                            Modifier.aspectRatio(illustAspectRatio)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .illustDragAndDropSource(illust)
+
                                 PixivAsyncImage(
                                     model = singleUrl,
                                     thumbnailUrl = thumbnailUrl,
                                     contentDescription = illust.title,
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .illustDragAndDropSource(illust),
+                                    modifier = singleModifier,
                                 )
                             }
                         }

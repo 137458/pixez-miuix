@@ -45,25 +45,24 @@ fun PixivAsyncImage(
     thumbnailUrl: Any? = null,
 ) {
     if (thumbnailUrl != null && thumbnailUrl != model && (thumbnailUrl as? String)?.isNotBlank() == true) {
-        var isHighResLoaded by remember(model) { mutableStateOf(false) }
         Box(
             modifier = modifier,
             contentAlignment = Alignment.Center,
         ) {
-            // 缩略图层：在原图未加载完成时优先撑开容器并显示缩略图
+            // 底层缩略图：未加载高清图前垫底展示，始终与容器尺寸匹配，不抢占主测量锚点
             PixivAsyncImageInternal(
                 model = thumbnailUrl,
                 contentDescription = null,
-                modifier = if (isHighResLoaded) Modifier.matchParentSize() else Modifier.fillMaxWidth(),
+                modifier = Modifier.matchParentSize(),
                 contentScale = contentScale,
             )
-            // 高清/原图层：在后台加载完成后顺畅覆盖
+            // 顶层高清图：撑开容器尺寸，并接入缩略图内存缓存占位，加载成功后平滑覆盖
             PixivAsyncImageInternal(
                 model = model,
+                thumbnailCacheKey = thumbnailUrl,
                 contentDescription = contentDescription,
-                modifier = if (isHighResLoaded) Modifier.fillMaxWidth() else Modifier.matchParentSize(),
+                modifier = Modifier.fillMaxWidth(),
                 contentScale = contentScale,
-                onSuccess = { isHighResLoaded = true },
             )
         }
     } else {
@@ -82,6 +81,7 @@ private fun PixivAsyncImageInternal(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
+    thumbnailCacheKey: Any? = null,
     onSuccess: (() -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
@@ -96,13 +96,28 @@ private fun PixivAsyncImageInternal(
         }
     }
 
-    val request = remember(transformedModel, context) {
+    val transformedThumbnailCacheKey = remember(thumbnailCacheKey, settings?.pictureSource, settings?.changeVersion) {
+        val pictureSource = settings?.pictureSource
+        if (thumbnailCacheKey is String && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
+            thumbnailCacheKey.replace("://i.pximg.net", "://$pictureSource")
+        } else {
+            thumbnailCacheKey
+        }
+    }
+
+    val request = remember(transformedModel, transformedThumbnailCacheKey, context) {
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
             .data(transformedModel)
             .httpHeaders(headers)
             .memoryCacheKey(transformedModel?.toString())
+            .apply {
+                val thumbKey = transformedThumbnailCacheKey?.toString()
+                if (!thumbKey.isNullOrBlank() && thumbKey != transformedModel?.toString()) {
+                    placeholderMemoryCacheKey(thumbKey)
+                }
+            }
             .memoryCachePolicy(CachePolicy.ENABLED)
             .build()
     }

@@ -16,6 +16,7 @@ import io.ktor.client.request.parameter
  */
 class SearchRepository(
     private val apiClient: HttpClient,
+    private val illustRepository: IllustRepository? = null,
 ) {
     /**
      * 获取热门标签列表。
@@ -39,7 +40,7 @@ class SearchRepository(
         endDate: String? = null,
         nextUrl: String? = null,
     ): Search = networkCall("搜索插画失败 word=$word") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
+        val response: Search = if (nextUrl != null && nextUrl.isNotBlank()) {
             apiClient.get(nextUrl).body()
         } else {
             apiClient.get("/v1/search/illust") {
@@ -53,6 +54,8 @@ class SearchRepository(
                 endDate?.let { parameter("end_date", it.toPixivDateFormat()) }
             }.body()
         }
+        illustRepository?.cacheIllusts(response.illusts)
+        response
     }
 
     /**

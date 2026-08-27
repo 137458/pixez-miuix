@@ -1,90 +1,191 @@
+// Copyright 2026, compose-miuix-ui contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.highlight.HighlightStyle
+import com.perol.pixez.shared.ui.libs.liquid.lens
+import com.perol.pixez.shared.ui.libs.liquid.vibrancy
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.highlight.BloomStroke
+import top.yukonga.miuix.kmp.blur.highlight.Highlight
+import top.yukonga.miuix.kmp.blur.highlight.LightPosition
+import top.yukonga.miuix.kmp.blur.highlight.LightSource
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.squircle.squircleBorder
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * Liquid Glass Modifier using Kyant0 Backdrop 2.0 (Multiplatform).
- * Provides real GPU shader-based blur and highlight rendering.
- */
-fun Modifier.liquidGlass(
-    backdrop: Backdrop,
-    shape: Shape = RoundedCornerShape(32.dp),
-    blurRadius: Dp = 20.dp,
-    tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.45f,
-): Modifier = this.drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        vibrancy()
-        blur(blurRadius.toPx())
-        lens(16.dp.toPx(), 20.dp.toPx())
-    },
-    highlight = {
-        Highlight(
-            width = 1.dp,
-            blurRadius = 1.dp,
-            alpha = 0.35f,
-            style = HighlightStyle.Default,
-        )
-    },
-    onDrawSurface = {
-        val color = if (tintColor != Color.Unspecified) tintColor else Color.White
-        drawRect(color.copy(alpha = tintAlpha))
-    }
+private val DefaultBlurRadius = 20.dp
+private val DefaultCornerRadius = 24.dp
+private const val DefaultRefractionRatio = 0.12f
+private const val DefaultChromaticAberration = 0.15f
+private const val PressedScale = 0.96f
+private val GlassBorderWidth = 0.5.dp
+
+private val LiquidGlassHighlightLight = Highlight(
+    width = 1.dp,
+    alpha = 0.85f,
+    style = BloomStroke(
+        color = Color.White.copy(alpha = 0.08f),
+        innerBlurRadius = 2.8.dp,
+        primaryLight = LightSource(
+            position = LightPosition(0.5f, -0.2f, -0.15f),
+            color = Color.White,
+            intensity = 0.55f,
+        ),
+        secondaryLight = LightSource(
+            position = LightPosition(0.5f, 0.85f, -0.5f),
+            color = Color.White,
+            intensity = 0.3f,
+        ),
+        dualPeak = true,
+    ),
+)
+
+private val LiquidGlassHighlightDark = Highlight(
+    width = 0.8.dp,
+    alpha = 0.9f,
+    style = BloomStroke(
+        color = Color.White.copy(alpha = 0.12f),
+        innerBlurRadius = 2.0.dp,
+        primaryLight = LightSource(
+            position = LightPosition(0.5f, -0.15f, -0.1f),
+            color = Color.White,
+            intensity = 0.65f,
+        ),
+        secondaryLight = LightSource(
+            position = LightPosition(0.5f, 0.8f, -0.45f),
+            color = Color.White,
+            intensity = 0.25f,
+        ),
+        dualPeak = true,
+    ),
 )
 
 /**
- * 液态玻璃效果 Modifier，针对悬浮底栏优化。
+ * MIUIX Liquid Glass 物理液态玻璃容器。
  */
-fun Modifier.liquidGlassBar(
+@Composable
+fun LiquidGlass(
     backdrop: Backdrop,
-    shape: Shape = CircleShape,
-    tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.40f,
-): Modifier = this.drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        vibrancy()
-        blur(4.dp.toPx())
-        lens(24.dp.toPx(), 24.dp.toPx())
-    },
-    highlight = {
-        Highlight(
-            width = 1.dp,
-            blurRadius = 2.dp,
-            alpha = 0.75f,
-            style = HighlightStyle.Default,
-        )
-    },
-    onDrawSurface = {
-        val color = if (tintColor != Color.Unspecified) tintColor else Color.White
-        drawRect(color.copy(alpha = tintAlpha))
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = DefaultCornerRadius,
+    blurRadius: Dp = DefaultBlurRadius,
+    refractionRatio: Float = DefaultRefractionRatio,
+    chromaticAberration: Float = DefaultChromaticAberration,
+    enabled: Boolean = true,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+    if (!isRuntimeShaderSupported() || !enabled) {
+        Box(modifier = modifier.clip(RoundedCornerShape(cornerRadius)), content = content)
+        return
     }
-)
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val pressScale = remember { Animatable(1f) }
+    LaunchedEffect(isPressed) {
+        pressScale.animateTo(
+            targetValue = if (isPressed) PressedScale else 1f,
+            animationSpec = spring(
+                dampingRatio = 0.7f,
+                stiffness = 400f,
+            ),
+        )
+    }
+
+    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+    val highlight = remember(isDark) {
+        if (isDark) LiquidGlassHighlightDark else LiquidGlassHighlightLight
+    }
+
+    val density = LocalDensity.current
+    val blurRadiusPx = with(density) { blurRadius.toPx() }
+    val refractionAmountPx = blurRadiusPx * refractionRatio.coerceIn(0.08f, 0.15f)
+
+    val borderColor = remember(isDark) {
+        if (isDark) {
+            Color.White.copy(alpha = 0.12f)
+        } else {
+            Color.White.copy(alpha = 0.4f)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {},
+            )
+            .graphicsLayer {
+                scaleX = pressScale.value
+                scaleY = pressScale.value
+            }
+            .squircleClip(cornerRadius)
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { shape },
+                effects = {
+                    padding = maxOf(padding, 40.dp.toPx())
+                    vibrancy()
+                    blur(blurRadiusPx, blurRadiusPx)
+                    lens(
+                        refractionHeight = blurRadiusPx * 0.9f,
+                        refractionAmount = refractionAmountPx,
+                        depthEffect = true,
+                        chromaticAberration = chromaticAberration,
+                    )
+                },
+                highlight = { highlight },
+                onDrawSurface = {
+                    drawRect(
+                        color = if (isDark) {
+                            Color.White.copy(alpha = 0.03f)
+                        } else {
+                            Color.White.copy(alpha = 0.06f)
+                        },
+                    )
+                },
+            )
+            .squircleBorder(
+                width = GlassBorderWidth,
+                color = borderColor,
+                cornerRadius = cornerRadius,
+            ),
+        content = content,
+    )
+}
 
 /**
  * 纯毛玻璃模糊效果 Modifier，用于标准底栏与浮层。
@@ -99,13 +200,39 @@ fun Modifier.backdropBlur(
     backdrop = backdrop,
     shape = { shape },
     effects = {
-        blur(blurRadius.toPx())
+        blur(blurRadius.toPx(), blurRadius.toPx())
     },
     highlight = null,
     onDrawSurface = {
         val color = if (tintColor != Color.Unspecified) tintColor else Color.White
         drawRect(color.copy(alpha = tintAlpha))
-    }
+    },
+)
+
+/**
+ * Liquid Glass Modifier using MIUIX Blur & Shader pipeline.
+ */
+fun Modifier.liquidGlass(
+    backdrop: Backdrop,
+    shape: Shape = RoundedCornerShape(32.dp),
+    blurRadius: Dp = 20.dp,
+    tintColor: Color = Color.Unspecified,
+    tintAlpha: Float = 0.45f,
+): Modifier = this.drawBackdrop(
+    backdrop = backdrop,
+    shape = { shape },
+    effects = {
+        vibrancy()
+        blur(blurRadius.toPx(), blurRadius.toPx())
+        lens(16.dp.toPx(), 20.dp.toPx())
+    },
+    highlight = {
+        LiquidGlassHighlightLight
+    },
+    onDrawSurface = {
+        val color = if (tintColor != Color.Unspecified) tintColor else Color.White
+        drawRect(color.copy(alpha = tintAlpha))
+    },
 )
 
 /**

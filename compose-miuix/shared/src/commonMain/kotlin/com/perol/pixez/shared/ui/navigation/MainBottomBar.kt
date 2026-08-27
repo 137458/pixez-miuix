@@ -7,16 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.kyant.backdrop.Backdrop
 import com.perol.pixez.shared.ui.components.IosLiquidGlassNavigationBar
 import com.perol.pixez.shared.ui.components.backdropBlur
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Badge
-import top.yukonga.miuix.kmp.basic.FloatingNavigationBar
-import top.yukonga.miuix.kmp.basic.FloatingNavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
+import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -25,7 +23,7 @@ val LocalBottomBarVisibility = compositionLocalOf { mutableStateOf(true) }
 
 /**
  * 底部 5 标签导航栏。
- * - 悬浮模式 (isFloating = true)：与官方 compose-miuix-ui 示例 1:1 对齐的 IosLiquidGlassNavigationBar。
+ * - 悬浮模式 (isFloating = true)：与 InstallerX-Revived / compose-miuix-ui 对齐的 Liquid Glass 液态玻璃悬浮导航栏。
  * - 标准模式 (isFloating = false)：使用原生 MIUIX NavigationBar + 背景毛玻璃模糊。
  */
 @Composable
@@ -54,23 +52,32 @@ fun MainBottomBar(
     val hasUnreadBadge = (settingsRepository?.hasUnreadFeedBadge == true) && activeTab != RootComponent.MainTab.New
 
     if (isFloating) {
-        val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-        FloatingNavigationBar(
-            modifier = modifier,
-        ) {
-            mainTabs.forEach { (tab, pair) ->
+        val navItems = remember(mainTabs) {
+            mainTabs.map { (_, pair) ->
                 val (label, icon) = pair
-                FloatingNavigationBarItem(
-                    selected = activeTab == tab,
-                    onClick = {
-                        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        onTabSelected(tab)
-                    },
-                    icon = icon,
-                    label = label,
-                )
+                NavigationItem(label = label, icon = icon)
             }
         }
+        val selectedIndex = mainTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
+
+        IosLiquidGlassNavigationBar(
+            items = navItems,
+            selectedIndex = selectedIndex,
+            onItemClick = { index ->
+                val targetTab = mainTabs.getOrNull(index)?.first ?: return@IosLiquidGlassNavigationBar
+                onTabSelected(targetTab)
+            },
+            backdrop = backdrop,
+            modifier = modifier,
+            badge = { index ->
+                val tab = mainTabs.getOrNull(index)?.first
+                if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
+                    { Badge() }
+                } else {
+                    null
+                }
+            },
+        )
     } else {
         // 标准固定底栏：应用 Backdrop Blur 毛玻璃效果
         val bottomBarModifier = if (backdrop != null) {
@@ -102,7 +109,9 @@ fun MainBottomBar(
                     label = label,
                     badge = if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
                         { Badge() }
-                    } else null,
+                    } else {
+                        null
+                    },
                 )
             }
         }

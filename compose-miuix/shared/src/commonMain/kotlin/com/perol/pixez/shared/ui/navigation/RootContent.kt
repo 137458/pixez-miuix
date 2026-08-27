@@ -25,9 +25,9 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixSlideStackAnimation
 
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
