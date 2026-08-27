@@ -79,13 +79,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.ui.util.lerp
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.blur
-import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.HighlightStyle
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.highlight.HighlightStyle
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.animation.DampedDragAnimation
 import com.perol.pixez.shared.ui.animation.InteractiveHighlight
@@ -105,6 +107,7 @@ private val LocalIosTabScale = staticCompositionLocalOf { { 1f } }
 
 private val iosIndicatorSpecular: Highlight = Highlight(
     width = 1.dp,
+    blurRadius = 2.dp,
     alpha = 0.75f,
     style = HighlightStyle.Default,
 )
@@ -384,7 +387,12 @@ fun IosLiquidGlassNavigationBar(
                                     backdrop = backdrop,
                                     shape = { pillShape },
                                     effects = {
+                                        vibrancy()
                                         blur(lensBlurDp.toPx())
+                                        lens(
+                                            refractionHeight = baseRefractionDp.toPx(),
+                                            refractionAmount = baseRefractionDp.toPx(),
+                                        )
                                     },
                                     highlight = { baseHighlight.copy(alpha = highlightAlpha) },
                                     onDrawSurface = { drawRect(containerColor) },
@@ -451,7 +459,12 @@ fun IosLiquidGlassNavigationBar(
                                 backdrop = combinedBackdrop,
                                 shape = { pillShape },
                                 effects = {
-                                    blur(lensBlurDp.toPx())
+                                    val progress = dampedDrag.pressProgress
+                                    lens(
+                                        refractionHeight = indicatorRefractionDp.toPx() * progress,
+                                        refractionAmount = (indicatorRefractionDp * 1.35f).toPx() * progress,
+                                        chromaticAberration = true,
+                                    )
                                 },
                                 highlight = { pillHighlight.copy(alpha = highlightAlpha * dampedDrag.pressProgress) },
                                 onDrawSurface = {
