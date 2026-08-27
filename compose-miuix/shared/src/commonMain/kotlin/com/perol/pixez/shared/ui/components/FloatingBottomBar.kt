@@ -327,7 +327,8 @@ fun FloatingBottomBar(
         }
     }
 
-    var currentIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex()) }
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+    val updatedOnSelected by rememberUpdatedState(onSelected)
 
     class DampedDragAnimationHolder {
         var instance: DampedDragAnimation? = null
@@ -359,11 +360,13 @@ fun FloatingBottomBar(
             },
             onDragStarted = {},
             onDragStopped = {
-                val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
-                currentIndex = targetIndex
-                animateToValue(targetIndex.toFloat())
+                val dropIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
+                animateToValue(dropIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
+                }
+                if (dropIndex != currentSelectedIndex()) {
+                    updatedOnSelected(dropIndex)
                 }
             },
             onDrag = { _, dragAmount ->
@@ -380,13 +383,12 @@ fun FloatingBottomBar(
         ).also { holder.instance = it }
     }
 
-    LaunchedEffect(selectedIndex) {
-        snapshotFlow { selectedIndex() }.collectLatest { currentIndex = it }
-    }
     LaunchedEffect(dampedDragAnimation) {
-        snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
-            dampedDragAnimation.animateToValue(index.toFloat())
-            onSelected(index)
+        snapshotFlow { currentSelectedIndex() }.collectLatest { index ->
+            val coercedIndex = index.coerceIn(0, tabsCount - 1)
+            if (abs(dampedDragAnimation.value - coercedIndex.toFloat()) > 0.001f) {
+                dampedDragAnimation.animateToValue(coercedIndex.toFloat())
+            }
         }
     }
 
