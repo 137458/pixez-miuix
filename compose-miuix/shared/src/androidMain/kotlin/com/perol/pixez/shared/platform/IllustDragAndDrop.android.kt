@@ -1,17 +1,14 @@
 package com.perol.pixez.shared.platform
 
 import android.content.ClipData
-import android.content.ClipDescription
 import android.net.Uri
 import android.os.Build
 import android.view.View
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import coil3.SingletonImageLoader
 import com.perol.pixez.shared.data.model.Illust
@@ -19,21 +16,19 @@ import java.io.File
 
 @Composable
 actual fun Modifier.illustDragAndDropSource(illust: Illust): Modifier {
-    val view = LocalView.current
-    val context = view.context.applicationContext
-    val hapticFeedback = LocalHapticFeedback.current
+    val context = LocalContext.current.applicationContext
 
-    return this.pointerInput(illust.id) {
-        detectDragGesturesAfterLongPress(
-            onDragStart = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                val url = "https://www.pixiv.net/artworks/${illust.id}"
+    return this.dragAndDropSource(
+        transferData = {
+            val url = "https://www.pixiv.net/artworks/${illust.id}"
+            val dragDir = File(context.cacheDir, "drag_shares").apply { mkdirs() }
+            val imageFile = File(dragDir, "${illust.id}.jpg")
 
-                // 准备跨应用拖拽图片文件：优先从 Coil 缓存中提取已加载的图片文件
-                val dragDir = File(context.cacheDir, "drag_shares").apply { mkdirs() }
-                val imageFile = File(dragDir, "${illust.id}.jpg")
-
-                try {
+            var hasValidImage = false
+            try {
+                if (imageFile.exists() && imageFile.length() > 0) {
+                    hasValidImage = true
+                } else {
                     val imageLoader = SingletonImageLoader.get(context)
                     val diskCache = imageLoader.diskCache
                     val imageUrls = listOfNotNull(
@@ -41,54 +36,47 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust): Modifier {
                         illust.imageUrls.medium,
                         illust.imageUrls.squareMedium,
                     )
-                    var foundCache = false
                     for (candidateUrl in imageUrls) {
                         diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
-                            val sourcePath = snapshot.data.toFile()
-                            if (sourcePath.exists() && sourcePath.length() > 0) {
-                                sourcePath.copyTo(imageFile, overwrite = true)
-                                foundCache = true
+                            val sourceFile = snapshot.data.toFile()
+                            if (sourceFile.exists() && sourceFile.length() > 0) {
+                                sourceFile.copyTo(imageFile, overwrite = true)
+                                hasValidImage = true
                             }
                         }
-                        if (foundCache) break
-                    }
-                    if (!imageFile.exists()) {
-                        imageFile.createNewFile()
-                    }
-                } catch (_: Exception) {
-                    if (!imageFile.exists()) {
-                        imageFile.createNewFile()
+                        if (hasValidImage) break
                     }
                 }
+            } catch (_: Throwable) {
+                hasValidImage = false
+            }
 
-                val contentUri: Uri = try {
-                    FileProvider.getUriForFile(
+            val clipData: ClipData = if (hasValidImage && imageFile.exists() && imageFile.length() > 0) {
+                try {
+                    val contentUri: Uri = FileProvider.getUriForFile(
                         context,
                         "com.perol.pixez.miuix.fileprovider",
                         imageFile,
                     )
-                } catch (_: Exception) {
-                    Uri.parse(url)
+                    ClipData.newUri(context.contentResolver, illust.title, contentUri)
+                } catch (_: Throwable) {
+                    ClipData.newPlainText(illust.title, url)
                 }
+            } else {
+                ClipData.newPlainText(illust.title, url)
+            }
 
-                val clipDescription = ClipDescription(
-                    illust.title,
-                    arrayOf("image/jpeg", "image/*", ClipDescription.MIMETYPE_TEXT_PLAIN, ClipDescription.MIMETYPE_TEXT_URILIST),
-                )
-                val clipData = ClipData(clipDescription, ClipData.Item(contentUri)).apply {
-                    addItem(ClipData.Item(illust.title))
-                    addItem(ClipData.Item(Uri.parse(url)))
-                }
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
+            } else {
+                0
+            }
 
-                val shadow = View.DragShadowBuilder(view)
-                val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
-                } else {
-                    0
-                }
-                view.startDragAndDrop(clipData, shadow, null, flags)
-            },
-            onDrag = { _, _ -> },
-        )
-    }
+            DragAndDropTransferData(
+                clipData = clipData,
+                flags = flags,
+            )
+        }
+    )
 }
+

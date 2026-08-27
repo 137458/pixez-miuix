@@ -6,7 +6,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.illustDragAndDropSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -75,7 +74,6 @@ fun IllustCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .illustDragAndDropSource(illust)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
