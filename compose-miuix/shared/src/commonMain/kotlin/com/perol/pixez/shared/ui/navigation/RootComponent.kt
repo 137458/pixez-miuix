@@ -53,6 +53,9 @@ class RootComponent(
      * 若已处于当前标签，则触发 reselect 回顶与刷新事件。
      */
     fun onMainTabSelected(tab: MainTab) {
+        if (tab == MainTab.New) {
+            settingsRepository.hasUnreadFeedBadge = false
+        }
         val active = stack.value.active.instance
         if (active is Child.Main && active.tab == tab) {
             onTabReselected(tab)

@@ -263,13 +263,13 @@ private fun GuideLanguageStep(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        LazyRow(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            itemsIndexed(selectedOption.sponsors) { _, sponsor ->
+                            selectedOption.sponsors.forEach { sponsor ->
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(6.dp),

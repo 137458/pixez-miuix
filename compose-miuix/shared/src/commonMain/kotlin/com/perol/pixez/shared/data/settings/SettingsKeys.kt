@@ -79,6 +79,7 @@ internal object SettingsKeys {
     const val USE_FLOATING_BOTTOM_BAR = "use_floating_bottom_bar"
     const val LIQUID_REFRACTION_LEVEL = "liquid_refraction_level"
     const val AUTO_CHECK_UPDATE = "auto_check_update"
+    const val HAS_UNREAD_FEED_BADGE = "has_unread_feed_badge"
 
     // Android 平台专属设置键
     const val DISPLAY_MODE = "display_mode"

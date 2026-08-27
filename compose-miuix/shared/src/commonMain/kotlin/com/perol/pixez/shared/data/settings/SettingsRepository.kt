@@ -181,6 +181,16 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.LANGUAGE_NUM] = value; notifyChanged() }
 
     /**
+     * 动态/关注页是否显示未读红点标记。
+     */
+    var hasUnreadFeedBadge: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.HAS_UNREAD_FEED_BADGE, false)
+        set(value) {
+            settings[SettingsKeys.HAS_UNREAD_FEED_BADGE] = value
+            notifyChanged()
+        }
+
+    /**
      * 是否已完成初次启动向导流程。
      * 旧版 Flutter 中 guide_enable 为 false 时表示向导已完成；null 表示尚未执行向导。
      */

@@ -48,6 +48,9 @@ fun MainBottomBar(
         )
     }
 
+    val settingsRepository = com.perol.pixez.shared.data.settings.LocalSettingsRepository.current
+    val hasUnreadBadge = (settingsRepository?.hasUnreadFeedBadge == true) && activeTab != RootComponent.MainTab.New
+
     if (isFloating) {
         val currentPosition = mainTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
         val navItems = remember(mainTabs) {
@@ -69,7 +72,7 @@ fun MainBottomBar(
             isBlurActive = backdrop != null,
             refractionLevel = refractionLevel,
             badge = { index ->
-                if (mainTabs.getOrNull(index)?.first == RootComponent.MainTab.New) {
+                if (hasUnreadBadge && mainTabs.getOrNull(index)?.first == RootComponent.MainTab.New) {
                     { Badge() }
                 } else null
             },
@@ -105,7 +108,7 @@ fun MainBottomBar(
                     },
                     icon = icon,
                     label = label,
-                    badge = if (tab == RootComponent.MainTab.New) {
+                    badge = if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
                         { Badge() }
                     } else null,
                 )

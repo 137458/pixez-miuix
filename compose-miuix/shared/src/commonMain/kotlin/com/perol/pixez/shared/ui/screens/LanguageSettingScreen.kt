@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -101,13 +102,15 @@ fun LanguageSettingScreen(
                             .padding(horizontal = 16.dp),
                     ) {
                         LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                            RadioButtonPreference(
+                            BasicComponent(
                                 title = "${option.nativeName} (${option.displayName})",
                                 summary = option.code,
-                                selected = selectedIndex == index,
                                 onClick = {
                                     selectedIndex = index
                                     settingsRepository.languageNum = index
+                                },
+                                endActions = {
+                                    CheckIndicator(selected = selectedIndex == index)
                                 },
                             )
                         }
@@ -129,22 +132,18 @@ fun LanguageSettingScreen(
 
 
 /**
- * Sponsor 横向列表：头像 + 名称，统一只做展示。
- *
- * 任务要求 Android 端点击可跳转、Desktop 端不跳转；但当前仅有 `openBrowser` expect/actual，
- * 没有现成的平台判断工具，且本次仅允许创建屏幕文件，因此先统一只展示不跳转，
- * 后续若需要平台相关跳转可在平台层补充判断能力后再接入。
+ * Sponsor 列表：头像 + 名称，统一做展示。
  */
 @Composable
 private fun SponsorSection(sponsors: List<Sponsor>) {
-    LazyRow(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        items(sponsors.size) { index ->
-            SponsorItem(sponsor = sponsors[index])
+        sponsors.forEach { sponsor ->
+            SponsorItem(sponsor = sponsor)
         }
     }
 }

@@ -37,9 +37,13 @@ object AppConstants {
         val TASK_COUNT_RANGE = TASK_COUNT_MIN..TASK_COUNT_MAX
 
         const val EXTRA_ANDROID_LIVE_STATUS = "android.requestLiveStatusNotification"
+        const val EXTRA_ANDROID_LIVE = "android.liveStatus"
         const val EXTRA_MIUI_FOCUS = "miui.focus.notification"
         const val EXTRA_MIUI_LIVE = "miui.live.notification"
         const val EXTRA_MIUI_SUBTEXT = "miui.subtext"
+        const val EXTRA_MIUI_LIVE_TYPE = "miui.live_type"
+        const val EXTRA_MIUI_ENABLE_FLOAT = "miui.enable_float"
+        const val EXTRA_MIUI_CATEGORY = "miui.category"
     }
 
     /**

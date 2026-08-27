@@ -71,6 +71,7 @@ fun NewScreen(
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        settingsRepository.hasUnreadFeedBadge = false
         // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
         isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
     }

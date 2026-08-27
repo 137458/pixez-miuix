@@ -56,7 +56,7 @@ actual class DownloadNotifier {
         val percent = if (total > 0) (current * 100 / total) else 0
         val subText = if (total > 0) "$percent%" else ""
 
-        val notification = NotificationCompat.Builder(context, channelId)
+        val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("正在下载: $title")
             .setContentText("进度: $current / $total ($percent%)")
@@ -65,17 +65,27 @@ actual class DownloadNotifier {
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setOnlyAlertOnce(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setColorized(true)
+            .setColor(0xFF2196F3.toInt())
+            .setShowWhen(true)
             .setContentIntent(pendingIntent)
             .addExtras(android.os.Bundle().apply {
-                // Android 16 (API 36) 实时动态状态栏胶囊 (Rich Ongoing Notifications)
+                // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_STATUS, true)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE, true)
+                putString("android.substName", "PixEz")
+
                 // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FOCUS, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE, true)
+                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE_TYPE, 1)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_ENABLE_FLOAT, true)
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_CATEGORY, "download")
                 putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, "$percent%")
             })
-            .build()
 
+        val notification = notificationBuilder.build()
         manager.notify(id, notification)
     }
 

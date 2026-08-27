@@ -32,6 +32,9 @@ fun MainNavigationRail(
         )
     }
 
+    val settingsRepository = com.perol.pixez.shared.data.settings.LocalSettingsRepository.current
+    val hasUnreadBadge = (settingsRepository?.hasUnreadFeedBadge == true) && activeTab != RootComponent.MainTab.New
+
     NavigationRail(
         modifier = modifier.fillMaxHeight(),
     ) {
@@ -42,6 +45,9 @@ fun MainNavigationRail(
                 onClick = { onTabSelected(tab) },
                 icon = icon,
                 label = label,
+                badge = if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
+                    { top.yukonga.miuix.kmp.basic.Badge() }
+                } else null,
             )
         }
     }
