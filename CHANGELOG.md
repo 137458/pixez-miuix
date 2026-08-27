@@ -15,7 +15,7 @@
 - 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference、ArrowPreference 与 SliderPreference 原生组件。
 - 接入 ColorPicker 拾色器、NumberPicker 滚轮选择器、OverlayIconDropdownMenu 锚点菜单、Badge 角标与 TooltipBox 提示气泡等 MIUIX 原生交互组件。
 - 实现自适应多列瀑布流适配器，为长列表与插画交错瀑布流（首页推荐、排行榜、搜索结果、历史记录）全量集成 VerticalScrollBar 垂直滚动条。
-- 全局顶栏（TopAppBar）深度集成 Backdrop 毛玻璃模糊采样体系，列表滑动穿透时呈现真实磨砂通透质感。
+- 全面升级并统一毛玻璃特效架构，多平台（Android / Desktop / iOS / macOS）深度集成 Backdrop 实时模糊与液态玻璃折射体系。
 - 底部导航栏双模式（标准底栏与悬浮底栏）接入原生动态未读徽标与按压触感反馈。
 - 补充与完善全平台项目文档、使用指南及应用内关于页免责声明。
 - 启用 R8 Full Mode 代码混淆与资源精简，大幅缩减 APK 安装包体积。

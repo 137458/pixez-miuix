@@ -14,16 +14,18 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.highlight.HighlightStyle
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.blur
-import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.HighlightStyle
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * Liquid Glass Modifier using official top.yukonga.miuix.kmp:miuix-blur.
+ * Liquid Glass Modifier using Kyant0 Backdrop 2.0 (Multiplatform).
  * Provides real GPU shader-based blur and highlight rendering.
  */
 fun Modifier.liquidGlass(
@@ -36,11 +38,14 @@ fun Modifier.liquidGlass(
     backdrop = backdrop,
     shape = { shape },
     effects = {
+        vibrancy()
         blur(blurRadius.toPx())
+        lens(16.dp.toPx(), 20.dp.toPx())
     },
     highlight = {
         Highlight(
             width = 1.dp,
+            blurRadius = 1.dp,
             alpha = 0.35f,
             style = HighlightStyle.Default,
         )
@@ -63,11 +68,14 @@ fun Modifier.liquidGlassBar(
     backdrop = backdrop,
     shape = { shape },
     effects = {
-        blur(12.dp.toPx())
+        vibrancy()
+        blur(4.dp.toPx())
+        lens(24.dp.toPx(), 24.dp.toPx())
     },
     highlight = {
         Highlight(
             width = 1.dp,
+            blurRadius = 2.dp,
             alpha = 0.75f,
             style = HighlightStyle.Default,
         )
