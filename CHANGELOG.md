@@ -11,7 +11,8 @@
 - 升级 MIUIX 基础架构至 0.9.4-rc01 并同步升级 Compose Multiplatform 至 1.12.0-rc01，引入 BreadcrumbBar 面包屑路径导航。
 - 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference、ArrowPreference 与 SliderPreference 原生组件。
 - 接入 ColorPicker 拾色器、NumberPicker 滚轮选择器、OverlayIconDropdownMenu 锚点菜单、Badge 角标与 TooltipBox 提示气泡等 MIUIX 原生交互组件。
-- 全面为长列表与网格（设置页、评论区、搜索结果、下载历史）集成 VerticalScrollBar 垂直滚动条。
+- 实现自适应多列瀑布流适配器，为长列表与插画交错瀑布流（首页推荐、排行榜、搜索结果、历史记录）全量集成 VerticalScrollBar 垂直滚动条。
+- 底部导航栏双模式（标准底栏与悬浮底栏）接入原生动态未读徽标与按压触感反馈。
 - 补充与完善全平台项目文档、使用指南及应用内关于页免责声明。
 - 启用 R8 Full Mode 代码混淆与资源精简，大幅缩减 APK 安装包体积。
 - 规范化多平台沙盒隔离的 Coil 3 本地磁盘缓存与后台网络连接预热，大幅缩减冷启动与首屏等待耗时。

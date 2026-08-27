@@ -10,11 +10,26 @@ import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 class LazyStaggeredGridScrollBarAdapter(
     private val scrollState: LazyStaggeredGridState,
 ) : ScrollBarAdapter {
+
+    private val dynamicLaneCount: Int
+        get() = scrollState.layoutInfo.visibleItemsInfo
+            .maxOfOrNull { it.lane }
+            ?.plus(1)
+            ?.coerceAtLeast(1) ?: 2
+
+    private val averageItemHeight: Double
+        get() = scrollState.layoutInfo.visibleItemsInfo
+            .map { it.size.height }
+            .average()
+            .takeIf { !it.isNaN() && it > 0 } ?: 240.0
+
     override val scrollOffset: Double
         get() {
+            val laneCount = dynamicLaneCount
             val firstItem = scrollState.firstVisibleItemIndex
-            val offset = scrollState.firstVisibleItemScrollOffset
-            return firstItem.toDouble() * 100.0 + offset.toDouble()
+            val row = firstItem / laneCount
+            val offsetRatio = scrollState.firstVisibleItemScrollOffset.toDouble() / averageItemHeight.coerceAtLeast(1.0)
+            return (row + offsetRatio) * averageItemHeight
         }
 
     override val viewportSize: Double
@@ -23,13 +38,16 @@ class LazyStaggeredGridScrollBarAdapter(
     override val contentSize: Double
         get() {
             val totalItems = scrollState.layoutInfo.totalItemsCount
-            val rowCount = (totalItems + 1) / 2
-            return (rowCount.toDouble() * 100.0).coerceAtLeast(viewportSize)
+            val laneCount = dynamicLaneCount
+            val rowCount = (totalItems + laneCount - 1) / laneCount
+            return (rowCount.toDouble() * averageItemHeight).coerceAtLeast(viewportSize)
         }
 
     override suspend fun scrollTo(scrollOffset: Double) {
-        val targetRow = (scrollOffset / 100.0).toInt()
-        val targetIndex = (targetRow * 2).coerceIn(0, (scrollState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+        val laneCount = dynamicLaneCount
+        val avgHeight = averageItemHeight.coerceAtLeast(1.0)
+        val targetRow = (scrollOffset / avgHeight).toInt()
+        val targetIndex = (targetRow * laneCount).coerceIn(0, (scrollState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
         scrollState.scrollToItem(targetIndex)
     }
 }

@@ -12,7 +12,6 @@ import com.perol.pixez.shared.ui.components.IosLiquidGlassNavigationBar
 import com.perol.pixez.shared.ui.components.backdropBlur
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Badge
-import top.yukonga.miuix.kmp.basic.BadgedBox
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem

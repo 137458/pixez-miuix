@@ -68,11 +68,11 @@ actual class DownloadNotifier {
             .setContentIntent(pendingIntent)
             .addExtras(android.os.Bundle().apply {
                 // Android 16 (API 36) 实时动态状态栏胶囊 (Rich Ongoing Notifications)
-                putBoolean("android.requestLiveStatusNotification", true)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_STATUS, true)
                 // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
-                putBoolean("miui.focus.notification", true)
-                putBoolean("miui.live.notification", true)
-                putString("miui.subtext", "$percent%")
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FOCUS, true)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE, true)
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, "$percent%")
             })
             .build()
 
