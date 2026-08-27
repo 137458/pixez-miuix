@@ -183,19 +183,11 @@ private fun IllustDetailSingleContent(
         repository,
         retryCount,
     ) {
-        val detailResult = suspendRunCatchingNonCancel { repository.getIllustDetail(illustId) }
-        // 关键容灾：后台刷新若遇网络抖动或异常，保留已有有效作品数据展示，绝不覆盖为 Failure 造成全屏灰色占位
-        if (detailResult.isFailure && (value?.getOrNull() != null || cachedIllust != null)) {
-            detailResult.exceptionOrNull()?.let { e ->
-                io.github.aakira.napier.Napier.w("后台更新作品详情失败: ${e.message}", e, tag = "IllustDetail")
-            }
-        } else {
-            value = detailResult
-        }
+        value = suspendRunCatchingNonCancel { repository.getIllustDetail(illustId) }
     }
 
     val result = state.value
-    val illust = result?.getOrNull() ?: cachedIllust
+    val illust = result?.getOrNull()
 
     // 成功加载插画详情时，自动异步写入本地浏览历史
     LaunchedEffect(illust) {
@@ -233,7 +225,8 @@ private fun IllustDetailSingleContent(
             .background(MiuixTheme.colorScheme.surface),
     ) {
         when {
-            illust != null -> when {
+            result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+            result.isSuccess && illust != null -> when {
                 isBanned && !isTempView -> BanPage(
                     name = illust.title,
                     onView = { isTempView = true },
@@ -619,13 +612,11 @@ private fun IllustDetailSingleContent(
                     }
                 }
             }
-            result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-            result?.isFailure == true -> ErrorPlaceholder(
+            else -> ErrorPlaceholder(
                 error = result.exceptionOrNull(),
                 onRetry = { retryCount++ },
                 modifier = Modifier.fillMaxSize(),
             )
-            else -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         }
 
         // 浮动悬浮顶部操作栏（半透明暗色胶囊/圆形按钮，平滑渐变，不遮挡大图，在任何明暗底色下清晰可见）
