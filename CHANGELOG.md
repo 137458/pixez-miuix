@@ -8,6 +8,8 @@
 
 ### 优化
 
+- 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference 与 ArrowPreference 原生组件。
+- 为设置主页等长列表接入 MIUIX 垂直滚动条（VerticalScrollBar）。
 - 补充与完善全平台项目文档、使用指南及应用内关于页免责声明。
 - 启用 R8 Full Mode 代码混淆与资源精简，大幅缩减 APK 安装包体积。
 - 接入 Coil 3 磁盘缓存，优化冷启动图片加载与网络日志开销。
