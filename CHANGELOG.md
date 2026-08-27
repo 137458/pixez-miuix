@@ -8,6 +8,7 @@
 
 ### 优化
 
+- 优化多端与全尺寸屏幕开箱体验，首次启动默认按 180dp 卡片基准宽度自适应列数（手机 2 列、平板 3~4 列、桌面 5~8 列）。
 - 升级 MIUIX 基础架构至 0.9.4-rc01 并同步升级 Compose Multiplatform 至 1.12.0-rc01，引入 BreadcrumbBar 面包屑路径导航。
 - 全面接入 miuix-preference 架构，统一设置页与偏好控件为 SwitchPreference、OverlayDropdownPreference、RadioButtonPreference、ArrowPreference 与 SliderPreference 原生组件。
 - 接入 ColorPicker 拾色器、NumberPicker 滚轮选择器、OverlayIconDropdownMenu 锚点菜单、Badge 角标与 TooltipBox 提示气泡等 MIUIX 原生交互组件。

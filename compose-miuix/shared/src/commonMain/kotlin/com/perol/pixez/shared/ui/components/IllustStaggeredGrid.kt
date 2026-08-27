@@ -84,7 +84,7 @@ fun IllustStaggeredGrid(
                     val minWidth = (settings?.hCrossAdapterWidth ?: defaultCardWidth).coerceIn(100, 1000)
                     StaggeredGridCells.Adaptive(minWidth.dp)
                 } else {
-                    val configuredCols = settings?.hCrossCount ?: 2
+                    val configuredCols = settings.hCrossCount
                     StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
                 }
             } else {
@@ -93,7 +93,7 @@ fun IllustStaggeredGrid(
                     val minWidth = (settings?.crossAdapterWidth ?: defaultCardWidth).coerceIn(100, 1000)
                     StaggeredGridCells.Adaptive(minWidth.dp)
                 } else {
-                    val configuredCols = settings?.crossCount ?: 2
+                    val configuredCols = settings.crossCount
                     StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
                 }
             }
