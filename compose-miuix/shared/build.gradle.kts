@@ -49,7 +49,7 @@ kotlin {
             implementation(libs.miuix.preference)
             implementation(libs.miuix.icons)
 
-            // Kyant0 Backdrop (Liquid Glass 毛玻璃特效)
+            // Kyant0 Backdrop (Liquid Glass & Realtime Blur Multiplatform)
             implementation(libs.backdrop)
 
             // Ktor

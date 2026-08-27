@@ -2,7 +2,6 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,8 +21,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.components.CheckIndicator
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -58,7 +55,7 @@ fun LanguageSettingScreen(
     onBack: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    var selectedIndex by remember(settingsRepository.languageNum, settingsRepository.changeVersion) {
+    var selectedIndex by remember(settingsRepository.languageNum) {
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
@@ -102,15 +99,13 @@ fun LanguageSettingScreen(
                             .padding(horizontal = 16.dp),
                     ) {
                         LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = "${option.nativeName} (${option.displayName})",
                                 summary = option.code,
+                                selected = selectedIndex == index,
                                 onClick = {
                                     selectedIndex = index
                                     settingsRepository.languageNum = index
-                                },
-                                endActions = {
-                                    CheckIndicator(selected = selectedIndex == index)
                                 },
                             )
                         }
@@ -120,9 +115,13 @@ fun LanguageSettingScreen(
                 if (selectedLanguage.sponsors.isNotEmpty()) {
                     item {
                         SmallTitle(text = strings.sponsor)
-                    }
-                    item {
-                        SponsorSection(sponsors = selectedLanguage.sponsors)
+                        top.yukonga.miuix.kmp.basic.Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                        ) {
+                            SponsorSection(sponsors = selectedLanguage.sponsors)
+                        }
                     }
                 }
             }
@@ -136,14 +135,15 @@ fun LanguageSettingScreen(
  */
 @Composable
 private fun SponsorSection(sponsors: List<Sponsor>) {
-    Row(
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        sponsors.forEach { sponsor ->
-            SponsorItem(sponsor = sponsor)
+        items(sponsors.size) { index ->
+            SponsorItem(sponsor = sponsors[index])
         }
     }
 }

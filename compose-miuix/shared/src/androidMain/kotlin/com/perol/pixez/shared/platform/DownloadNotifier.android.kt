@@ -13,8 +13,8 @@ import androidx.core.app.NotificationCompat
  * Android 平台实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。
  */
 actual class DownloadNotifier {
-    private val channelId = "pixez_download_channel"
-    private val channelName = "下载任务"
+    private val channelId = "pixez_download_live_channel"
+    private val channelName = "下载任务与实时进度"
 
     private fun getNotificationManager(context: Context): NotificationManager? {
         return context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
@@ -23,14 +23,23 @@ actual class DownloadNotifier {
     private fun createChannelIfNeeded(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getNotificationManager(context) ?: return
-            if (manager.getNotificationChannel(channelId) == null) {
+            // 尝试移除旧版低优先级渠道，确保状态栏实时动态胶囊不受抑制
+            try {
+                manager.deleteNotificationChannel("pixez_download_channel")
+            } catch (_: Throwable) {}
+
+            val existing = manager.getNotificationChannel(channelId)
+            if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT) {
                 val channel = NotificationChannel(
                     channelId,
                     channelName,
-                    NotificationManager.IMPORTANCE_LOW,
+                    NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = "显示插画与漫画下载进度"
+                    description = "显示插画与漫画实时下载进度及状态栏胶囊"
                     setShowBadge(false)
+                    enableLights(false)
+                    enableVibration(false)
+                    setSound(null, null)
                 }
                 manager.createNotificationChannel(channel)
             }
@@ -71,18 +80,31 @@ actual class DownloadNotifier {
             .setShowWhen(true)
             .setContentIntent(pendingIntent)
             .addExtras(android.os.Bundle().apply {
-                // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications)
+                // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications / Live Status)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_STATUS, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE, true)
-                putString("android.substName", "PixEz")
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_SUBST_NAME, "PixEz")
+                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TITLE, "正在下载: $title")
+                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TEXT, "$current / $total ($percent%)")
+                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_PROGRESS, percent)
 
                 // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FOCUS, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE, true)
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE_TYPE, 1)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_ENABLE_FLOAT, true)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FLOAT, true)
                 putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_CATEGORY, "download")
                 putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, "$percent%")
+                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS, percent)
+                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS_MAX, 100)
+
+                // OPLUS / ColorOS / OxygenOS 智慧胶囊与流体云协议支持
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE, true)
+                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_ONGOING, true)
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TITLE, "正在下载: $title")
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TEXT, "$percent%")
+                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
             })
 
         val notification = notificationBuilder.build()

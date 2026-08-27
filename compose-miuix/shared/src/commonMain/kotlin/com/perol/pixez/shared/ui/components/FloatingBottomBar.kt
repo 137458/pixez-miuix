@@ -79,16 +79,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.ui.util.lerp
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.highlight.HighlightStyle
-import com.kyant.backdrop.shadow.InnerShadow
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.highlight.Highlight
+import top.yukonga.miuix.kmp.blur.highlight.HighlightStyle
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.animation.DampedDragAnimation
 import com.perol.pixez.shared.ui.animation.InteractiveHighlight
@@ -108,7 +105,6 @@ private val LocalIosTabScale = staticCompositionLocalOf { { 1f } }
 
 private val iosIndicatorSpecular: Highlight = Highlight(
     width = 1.dp,
-    blurRadius = 2.dp,
     alpha = 0.75f,
     style = HighlightStyle.Default,
 )
@@ -369,7 +365,13 @@ fun IosLiquidGlassNavigationBar(
                             val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
                             tabWidthPx = (contentWidthPx / tabsCount).coerceAtLeast(0f)
                         }
-                        .graphicsLayer { translationX = panelOffset }
+                        .graphicsLayer {
+                            val width = totalWidthPx.coerceAtLeast(1f)
+                            val s = lerp(1f, 1f + with(density) { 16.dp.toPx() } / width, dampedDrag.pressProgress)
+                            scaleX = s
+                            scaleY = s
+                            translationX = panelOffset
+                        }
                         .shadow(
                             elevation = 10.dp,
                             shape = pillShape,
@@ -382,20 +384,9 @@ fun IosLiquidGlassNavigationBar(
                                     backdrop = backdrop,
                                     shape = { pillShape },
                                     effects = {
-                                        vibrancy()
                                         blur(lensBlurDp.toPx())
-                                        lens(
-                                            refractionHeight = baseRefractionDp.toPx(),
-                                            refractionAmount = baseRefractionDp.toPx(),
-                                        )
                                     },
                                     highlight = { baseHighlight.copy(alpha = highlightAlpha) },
-                                    layerBlock = {
-                                        val width = size.width.coerceAtLeast(1f)
-                                        val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDrag.pressProgress)
-                                        scaleX = s
-                                        scaleY = s
-                                    },
                                     onDrawSurface = { drawRect(containerColor) },
                                 )
                             } else {
@@ -450,27 +441,19 @@ fun IosLiquidGlassNavigationBar(
                                 val singleTabWidth = tabWidthPx
                                 val progressOffset = dampedDrag.value * singleTabWidth
                                 translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
+                                scaleX = dampedDrag.scaleX
+                                scaleY = dampedDrag.scaleY
+                                val v = dampedDrag.velocity / 10f
+                                scaleX /= 1f - (v * 0.75f).coerceIn(-0.2f, 0.2f)
+                                scaleY *= 1f - (v * 0.25f).coerceIn(-0.2f, 0.2f)
                             }
                             .drawBackdrop(
                                 backdrop = combinedBackdrop,
                                 shape = { pillShape },
                                 effects = {
-                                    val progress = dampedDrag.pressProgress
-                                    lens(
-                                        refractionHeight = indicatorRefractionDp.toPx() * progress,
-                                        refractionAmount = (indicatorRefractionDp * 1.35f).toPx() * progress,
-                                        chromaticAberration = true,
-                                    )
+                                    blur(lensBlurDp.toPx())
                                 },
                                 highlight = { pillHighlight.copy(alpha = highlightAlpha * dampedDrag.pressProgress) },
-
-                                layerBlock = {
-                                    scaleX = dampedDrag.scaleX
-                                    scaleY = dampedDrag.scaleY
-                                    val v = dampedDrag.velocity / 10f
-                                    scaleX /= 1f - (v * 0.75f).coerceIn(-0.2f, 0.2f)
-                                    scaleY *= 1f - (v * 0.25f).coerceIn(-0.2f, 0.2f)
-                                },
                                 onDrawSurface = {
                                     val progress = dampedDrag.pressProgress
                                     drawRect(
@@ -479,16 +462,9 @@ fun IosLiquidGlassNavigationBar(
                                     )
                                     drawRect(Color.Black.copy(alpha = 0.03f * progress))
                                 },
-                                innerShadow = {
-                                    InnerShadow(
-                                        radius = 8.dp * dampedDrag.pressProgress,
-                                        color = Color.Black.copy(alpha = 0.15f),
-                                        alpha = dampedDrag.pressProgress,
-                                    )
-                                },
                             )
-                            .height(56.dp)
-                            .width(tabWidthDp),
+                            .width(tabWidthDp)
+                            .fillMaxHeight(),
                     )
                 } else {
                     Box(

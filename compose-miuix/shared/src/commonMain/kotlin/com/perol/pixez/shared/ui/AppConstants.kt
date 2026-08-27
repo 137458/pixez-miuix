@@ -38,12 +38,26 @@ object AppConstants {
 
         const val EXTRA_ANDROID_LIVE_STATUS = "android.requestLiveStatusNotification"
         const val EXTRA_ANDROID_LIVE = "android.liveStatus"
+        const val EXTRA_ANDROID_LIVE_TITLE = "android.liveStatusTitle"
+        const val EXTRA_ANDROID_LIVE_TEXT = "android.liveStatusText"
+        const val EXTRA_ANDROID_LIVE_PROGRESS = "android.liveStatusProgress"
+        const val EXTRA_ANDROID_SUBST_NAME = "android.substName"
+
         const val EXTRA_MIUI_FOCUS = "miui.focus.notification"
         const val EXTRA_MIUI_LIVE = "miui.live.notification"
         const val EXTRA_MIUI_SUBTEXT = "miui.subtext"
         const val EXTRA_MIUI_LIVE_TYPE = "miui.live_type"
         const val EXTRA_MIUI_ENABLE_FLOAT = "miui.enable_float"
+        const val EXTRA_MIUI_FLOAT = "miui.float"
         const val EXTRA_MIUI_CATEGORY = "miui.category"
+        const val EXTRA_MIUI_PROGRESS = "miui.progress"
+        const val EXTRA_MIUI_PROGRESS_MAX = "miui.progress_max"
+
+        const val EXTRA_OPLUS_CAPSULE = "oplus.capsule.notification"
+        const val EXTRA_OPLUS_CAPSULE_ONGOING = "oplus.capsule.ongoing"
+        const val EXTRA_OPLUS_CAPSULE_TITLE = "oplus.capsule.title"
+        const val EXTRA_OPLUS_CAPSULE_TEXT = "oplus.capsule.text"
+        const val EXTRA_OPLUS_CAPSULE_PROGRESS = "oplus.capsule.progress"
     }
 
     /**

@@ -57,6 +57,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -235,15 +236,13 @@ private fun GuideLanguageStep(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                        BasicComponent(
+                        RadioButtonPreference(
                             title = "${option.nativeName} (${option.displayName})",
                             summary = option.code,
+                            selected = selectedIndex == index,
                             onClick = {
                                 selectedIndex = index
                                 settingsRepository.languageNum = index
-                            },
-                            endActions = {
-                                CheckIndicator(selected = selectedIndex == index)
                             },
                         )
                     }
