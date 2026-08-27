@@ -18,17 +18,16 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
  * 交互设置页：管理异形屏适配、H 内容过滤、再次返回退出、滑动切换作品等开关。
@@ -82,30 +81,22 @@ fun InteractionSettingScreen(
                 item {
                     SmallTitle(text = strings.interactionSettingTitle)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.interactionSettingSwipeChange,
                             summary = if (swipeChangeArtwork) strings.interactionSettingSwipeChangeSummaryOn else strings.interactionSettingSwipeChangeSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = swipeChangeArtwork,
-                                    onCheckedChange = { checked ->
-                                        swipeChangeArtwork = checked
-                                        settingsRepository.swipeChangeArtwork = checked
-                                    },
-                                )
+                            checked = swipeChangeArtwork,
+                            onCheckedChange = { checked ->
+                                swipeChangeArtwork = checked
+                                settingsRepository.swipeChangeArtwork = checked
                             },
                         )
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.interactionSettingDoubleBackExit,
                             summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = isReturnAgainToExit,
-                                    onCheckedChange = { checked ->
-                                        isReturnAgainToExit = checked
-                                        settingsRepository.isReturnAgainToExit = checked
-                                    },
-                                )
+                            checked = isReturnAgainToExit,
+                            onCheckedChange = { checked ->
+                                isReturnAgainToExit = checked
+                                settingsRepository.isReturnAgainToExit = checked
                             },
                         )
                     }
@@ -114,17 +105,13 @@ fun InteractionSettingScreen(
                 item {
                     SmallTitle(text = strings.settingShield)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.interactionSettingHNotAllow,
                             summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = hIsNotAllow,
-                                    onCheckedChange = { checked ->
-                                        hIsNotAllow = checked
-                                        settingsRepository.hIsNotAllow = checked
-                                    },
-                                )
+                            checked = hIsNotAllow,
+                            onCheckedChange = { checked ->
+                                hIsNotAllow = checked
+                                settingsRepository.hIsNotAllow = checked
                             },
                         )
                     }
@@ -133,17 +120,13 @@ fun InteractionSettingScreen(
                 item {
                     SmallTitle(text = strings.settingSectionDisplayLayout)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.interactionSettingBangs,
                             summary = if (isBangs) strings.interactionSettingBangsSummaryOn else strings.interactionSettingBangsSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = isBangs,
-                                    onCheckedChange = { checked ->
-                                        isBangs = checked
-                                        settingsRepository.isBangs = checked
-                                    },
-                                )
+                            checked = isBangs,
+                            onCheckedChange = { checked ->
+                                isBangs = checked
+                                settingsRepository.isBangs = checked
                             },
                         )
                     }

@@ -31,6 +31,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+
 /**
  * 欢迎页设置页：选择应用启动后默认进入的页面。
  *
@@ -95,14 +97,12 @@ fun WelcomePageSettingScreen(
                     SmallTitle(text = strings.settingSectionStartup)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         welcomePageOptions.forEach { option ->
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = option.label,
+                                selected = selectedType == option.type,
                                 onClick = {
                                     selectedType = option.type
                                     settingsRepository.welcomePageType = option.type
-                                },
-                                endActions = {
-                                    CheckIndicator(selected = selectedType == option.type)
                                 },
                             )
                         }

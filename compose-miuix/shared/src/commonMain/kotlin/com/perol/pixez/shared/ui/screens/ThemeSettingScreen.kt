@@ -50,6 +50,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
  * 主题设置页：提供主题模式、AMOLED、动态颜色与种子色设置。
@@ -71,9 +74,8 @@ fun ThemeSettingScreen(
     var paletteStyle by remember { mutableIntStateOf(settingsRepository.miuixPaletteStyle) }
     var useSpec2025 by remember { mutableStateOf(settingsRepository.miuixUseSpec2025) }
 
-    // 颜色选择对话框与调色板风格对话框显示状态。
+    // 颜色选择对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var showPaletteStylePicker by rememberSaveable { mutableStateOf(false) }
 
     // 本地修改辅助函数：写回仓库并更新页面状态。
     fun setThemeMode(value: Int) {
@@ -109,6 +111,20 @@ fun ThemeSettingScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
 
+    val paletteStyleOptions = remember {
+        listOf(
+            "TonalSpot (Material You)",
+            "Neutral",
+            "Vibrant",
+            "Expressive",
+            "Rainbow",
+            "FruitSalad",
+            "Monochrome",
+            "Fidelity",
+            "Content",
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -139,117 +155,106 @@ fun ThemeSettingScreen(
                     .fillMaxWidth()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
-            item {
-                SmallTitle(text = strings.settingTheme)
-                top.yukonga.miuix.kmp.basic.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    ThemeModeOption(
-                        label = strings.themeModeSystem,
-                        selected = themeMode == 0,
-                        onClick = { setThemeMode(0) },
-                    )
-                    ThemeModeOption(
-                        label = strings.themeModeLight,
-                        selected = themeMode == 1,
-                        onClick = { setThemeMode(1) },
-                    )
-                    ThemeModeOption(
-                        label = strings.themeModeDark,
-                        selected = themeMode == 2,
-                        onClick = { setThemeMode(2) },
-                    )
-                }
-            }
-
-            item {
-                SmallTitle(text = strings.settingSectionDisplayLayout)
-                top.yukonga.miuix.kmp.basic.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    BasicComponent(
-                        title = strings.themeAmoled,
-                        summary = strings.themeAmoledSummary,
-                        endActions = {
-                            Switch(
-                                checked = isAmoled,
-                                onCheckedChange = { setIsAmoled(it) },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.themeDynamicColor,
-                        summary = if (useDynamicColor) strings.themeDynamicColorSummaryOn else strings.themeDynamicColorSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = useDynamicColor,
-                                onCheckedChange = { setUseDynamicColor(it) },
-                            )
-                        },
-                    )
-                }
-            }
-
-            if (!useDynamicColor) {
                 item {
-                    SmallTitle(text = strings.dialogPickSeedColor)
+                    SmallTitle(text = strings.settingTheme)
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                     ) {
-                        BasicComponent(
-                            title = strings.dialogPickSeedColor,
-                            summary = strings.dialogPickSeedColorSummary,
-                            onClick = { showColorPicker = true },
-                            endActions = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(seedColor))
-                                        .border(
-                                            width = 1.dp,
-                                            color = MiuixTheme.colorScheme.outline,
-                                            shape = RoundedCornerShape(6.dp),
-                                        ),
-                                )
-                            },
+                        RadioButtonPreference(
+                            title = strings.themeModeSystem,
+                            selected = themeMode == 0,
+                            onClick = { setThemeMode(0) },
+                        )
+                        RadioButtonPreference(
+                            title = strings.themeModeLight,
+                            selected = themeMode == 1,
+                            onClick = { setThemeMode(1) },
+                        )
+                        RadioButtonPreference(
+                            title = strings.themeModeDark,
+                            selected = themeMode == 2,
+                            onClick = { setThemeMode(2) },
+                        )
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.settingSectionDisplayLayout)
+                    top.yukonga.miuix.kmp.basic.Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        SwitchPreference(
+                            title = strings.themeAmoled,
+                            summary = strings.themeAmoledSummary,
+                            checked = isAmoled,
+                            onCheckedChange = { setIsAmoled(it) },
+                        )
+                        SwitchPreference(
+                            title = strings.themeDynamicColor,
+                            summary = if (useDynamicColor) strings.themeDynamicColorSummaryOn else strings.themeDynamicColorSummaryOff,
+                            checked = useDynamicColor,
+                            onCheckedChange = { setUseDynamicColor(it) },
+                        )
+                    }
+                }
+
+                if (!useDynamicColor) {
+                    item {
+                        SmallTitle(text = strings.dialogPickSeedColor)
+                        top.yukonga.miuix.kmp.basic.Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                        ) {
+                            BasicComponent(
+                                title = strings.dialogPickSeedColor,
+                                summary = strings.dialogPickSeedColorSummary,
+                                onClick = { showColorPicker = true },
+                                endActions = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(seedColor))
+                                            .border(
+                                                width = 1.dp,
+                                                color = MiuixTheme.colorScheme.outline,
+                                                shape = RoundedCornerShape(6.dp),
+                                            ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.themePersonalization)
+                    top.yukonga.miuix.kmp.basic.Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        OverlayDropdownPreference(
+                            title = strings.dialogPaletteStyle,
+                            items = paletteStyleOptions,
+                            selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
+                            onSelectedIndexChange = { setPaletteStyle(it) },
+                        )
+                        SwitchPreference(
+                            title = strings.themeSpec2025,
+                            summary = if (useSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
+                            checked = useSpec2025,
+                            onCheckedChange = { setUseSpec2025(it) },
                         )
                     }
                 }
             }
-
-            item {
-                SmallTitle(text = strings.themePersonalization)
-                top.yukonga.miuix.kmp.basic.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    BasicComponent(
-                        title = strings.dialogPaletteStyle,
-                        summary = paletteStyleName(paletteStyle),
-                        onClick = { showPaletteStylePicker = true },
-                    )
-                    BasicComponent(
-                        title = strings.themeSpec2025,
-                        summary = if (useSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = useSpec2025,
-                                onCheckedChange = { setUseSpec2025(it) },
-                            )
-                        },
-                    )
-                }
-            }
         }
-    }
 
         ColorPickerDialog(
             show = showColorPicker,
@@ -260,37 +265,7 @@ fun ThemeSettingScreen(
                 showColorPicker = false
             },
         )
-
-        PaletteStylePickerDialog(
-            show = showPaletteStylePicker,
-            currentPaletteStyle = paletteStyle,
-            onDismiss = { showPaletteStylePicker = false },
-            onPaletteStyleSelected = { selectedStyle ->
-                setPaletteStyle(selectedStyle)
-                showPaletteStylePicker = false
-            },
-        )
     }
-}
-
-/**
- * 主题模式单选行。
- */
-@Composable
-private fun ThemeModeOption(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    BasicComponent(
-        title = label,
-        onClick = onClick,
-        endActions = {
-            if (selected) {
-                Text(text = "✓")
-            }
-        },
-    )
 }
 
 /**
@@ -449,75 +424,6 @@ private fun ColorPresetItem(
             text = name,
             style = MiuixTheme.textStyles.footnote2,
         )
-    }
-}
-
-/**
- * 调色板风格选择对话框：列出 MIUIX 支持的调色板风格并单选。
- */
-@Composable
-private fun PaletteStylePickerDialog(
-    show: Boolean,
-    currentPaletteStyle: Int,
-    onDismiss: () -> Unit,
-    onPaletteStyleSelected: (Int) -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-
-    // 调色板风格列表，顺序与 [top.yukonga.miuix.kmp.theme.ThemePaletteStyle.entries] 保持一致。
-    val paletteStyles = listOf(
-        "TonalSpot" to "Material You",
-        "Neutral" to "Neutral",
-        "Vibrant" to "Vibrant",
-        "Expressive" to "Expressive",
-        "Rainbow" to "Rainbow",
-        "FruitSalad" to "Fruit Salad",
-        "Monochrome" to "Monochrome",
-        "Fidelity" to "Fidelity",
-        "Content" to "Content",
-    )
-
-    OverlayDialog(
-        title = strings.dialogPaletteStyle,
-        summary = strings.dialogPaletteStyleSummary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            paletteStyles.forEachIndexed { index, (name, description) ->
-                BasicComponent(
-                    title = name,
-                    summary = description,
-                    onClick = { onPaletteStyleSelected(index) },
-                    endActions = {
-                        if (index == currentPaletteStyle) {
-                            Text(text = "✓")
-                        }
-                    },
-                )
-            }
-        }
-    }
-}
-
-/**
- * 根据调色板风格索引返回显示名称。
- */
-private fun paletteStyleName(index: Int): String {
-    // 顺序与 MIUIX [ThemePaletteStyle.entries] 一致，越界时回退到默认名称。
-    return when (index) {
-        0 -> "TonalSpot"
-        1 -> "Neutral"
-        2 -> "Vibrant"
-        3 -> "Expressive"
-        4 -> "Rainbow"
-        5 -> "FruitSalad"
-        6 -> "Monochrome"
-        7 -> "Fidelity"
-        8 -> "Content"
-        else -> "TonalSpot"
     }
 }
 

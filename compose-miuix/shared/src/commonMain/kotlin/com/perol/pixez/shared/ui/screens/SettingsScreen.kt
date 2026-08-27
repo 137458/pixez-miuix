@@ -57,9 +57,13 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 /**
  * 设置页：分组展示账号、启动、通用、主题、交互、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
@@ -135,6 +139,7 @@ fun SettingsScreen(
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
+    val listState = rememberLazyListState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -157,6 +162,7 @@ fun SettingsScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
@@ -187,7 +193,7 @@ fun SettingsScreen(
                         strings = strings,
                     )
                     if (account != null) {
-                        BasicComponent(
+                        ArrowPreference(
                             title = strings.settingAccountInfo,
                             summary = strings.settingAccountInfoSummary,
                             onClick = onAccountEditClick,
@@ -200,32 +206,32 @@ fun SettingsScreen(
             item {
                 SmallTitle(text = strings.settingSectionTheme)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingTheme,
                         summary = strings.settingThemeSummary,
                         onClick = onThemeSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingLayout,
                         summary = strings.settingLayoutSummary,
                         onClick = onLayoutSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingLanguage,
                         summary = strings.settingLanguageSummary,
                         onClick = onLanguageSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingWelcomePage,
                         summary = strings.settingWelcomePageSummary,
                         onClick = onWelcomePageSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingShareFormat,
                         summary = strings.settingShareFormatSummary,
                         onClick = onCopyTextSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingGuideWizard,
                         summary = strings.settingGuideWizardSummary,
                         onClick = onGuideClick,
@@ -237,22 +243,22 @@ fun SettingsScreen(
             item {
                 SmallTitle(text = strings.settingSectionQualitySave)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingQuality,
                         summary = strings.settingQualitySummary,
                         onClick = onQualitySettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingDownload,
                         summary = strings.settingDownloadSummary,
                         onClick = onDownloadSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingDownloadTask,
                         summary = strings.settingDownloadTaskSummary,
                         onClick = onDownloadTaskClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingDownloadHistory,
                         summary = strings.settingDownloadHistorySummary,
                         onClick = onDownloadHistoryClick,
@@ -264,27 +270,27 @@ fun SettingsScreen(
             item {
                 SmallTitle(text = strings.settingSectionGeneral)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.interactionSettingTitle,
                         summary = strings.interactionSettingSwipeChange,
                         onClick = onInteractionSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.feedSettingTitle,
                         summary = strings.feedSettingAiBadge,
                         onClick = onFeedSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingWidgetRecommend,
                         summary = strings.settingWidgetRecommendSummary,
                         onClick = onWidgetRecommendSettingClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingHistory,
                         summary = strings.settingHistorySummary,
                         onClick = onHistoryClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingBookTags,
                         summary = strings.settingBookTagsSummary,
                         onClick = onBookTagClick,
@@ -296,12 +302,12 @@ fun SettingsScreen(
             item {
                 SmallTitle(text = strings.settingSectionShieldPrivacy)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingShield,
                         summary = strings.settingShieldSummary,
                         onClick = onShieldClick,
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingPrivacy,
                         summary = strings.settingPrivacySummary,
                         onClick = onPrivacySettingClick,
@@ -309,18 +315,18 @@ fun SettingsScreen(
                 }
             }
 
-            // ── 4. 系统与数据 ──
+            // ── 6. 系统与数据 ──
             item {
                 SmallTitle(text = strings.settingSectionStorage)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (isAndroidPlatform()) {
-                        BasicComponent(
+                        ArrowPreference(
                             title = strings.settingPlatform,
                             summary = strings.settingPlatformSummary,
                             onClick = onPlatformSettingClick,
                         )
                     }
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingNetwork,
                         summary = strings.settingNetworkSummary,
                         onClick = onNetworkSettingClick,
@@ -352,7 +358,7 @@ fun SettingsScreen(
                             }
                         },
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingDataExport,
                         summary = strings.settingDataExportSummary,
                         onClick = onDataExportClick,
@@ -360,41 +366,24 @@ fun SettingsScreen(
                 }
             }
 
-            // ── 5. 关于与更新 ──
+            // ── 7. 关于与更新 ──
             item {
                 SmallTitle(text = strings.settingSectionAbout)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (!boardList.isNullOrEmpty()) {
-                        BasicComponent(
+                        ArrowPreference(
                             title = strings.settingBoard,
                             summary = strings.settingBoardSummary,
                             onClick = onBoardClick,
                         )
                     }
                     val hasNewUpdate = releaseInfo?.isNew == true && releaseInfo?.versionName != settingsRepository?.ignoreUpdateVersion
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingUpdate,
                         summary = if (hasNewUpdate) strings.updateFoundNew.format(releaseInfo?.versionName ?: "", AppInfo.VERSION_NAME) else strings.settingUpdateSummary,
                         onClick = onUpdateSettingClick,
-                        endActions = {
-                            if (hasNewUpdate) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(MiuixTheme.colorScheme.primary)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                                ) {
-                                    Text(
-                                        text = "NEW",
-                                        color = MiuixTheme.colorScheme.onPrimary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
-                        },
                     )
-                    BasicComponent(
+                    ArrowPreference(
                         title = strings.settingAbout,
                         summary = "${strings.version} ${AppInfo.VERSION_NAME}",
                         onClick = onAboutClick,
@@ -402,6 +391,13 @@ fun SettingsScreen(
                 }
             }
         }
+
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+        )
     }
 
         ToastMessage(

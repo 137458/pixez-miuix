@@ -65,3 +65,9 @@ Juga, umpan balik di Telegram: [@PixEzViewer](https://t.me/PixEzViewer)
 (Terutama bahasa Mandarin, bahasa Inggris dipersilakan)
 
 Jika kamu memiliki pertanyaan tentang pendaftaran atau 🔞, tolong jangan meminta solusi.
+
+# Penafian (Disclaimer)
+
+1. **Klien Tidak Resmi**: PixEz MIUIX adalah klien pihak ketiga open-source untuk Pixiv yang dikembangkan untuk tujuan pembelajaran, riset, dan penggunaan pribadi. Proyek ini tidak berafiliasi dengan, didukung oleh, atau terkait dengan pixiv Inc.
+2. **Hak Cipta & Kekayaan Intelektual**: Semua karya seni, ilustrasi, komik, novel, ugoira, dan konten yang ditampilkan dalam aplikasi ini adalah hak milik dari pembuat aslinya dan pixiv Inc. Konten yang diakses atau diunduh hanya ditujukan untuk apresiasi dan penggunaan pribadi non-komersial.
+3. **Kepatuhan Hukum**: Fitur koneksi langsung disediakan semata-mata untuk eksplorasi teknis. Pengguna bertanggung jawab penuh untuk mematuhi hukum setempat dan Ketentuan Layanan Pixiv. Pengembang dan kontributor tidak bertanggung jawab atas segala penyalahgunaan aplikasi ini.

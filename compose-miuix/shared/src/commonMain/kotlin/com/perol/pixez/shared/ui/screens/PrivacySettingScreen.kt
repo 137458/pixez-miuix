@@ -18,20 +18,20 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
- * 隐私设置页：管理 NSFW 遮罩、默认私密收藏等与隐私相关的开关。
+ * 隐私与安全偏好设置页：
+ * 管理 NSFW 遮罩、默认非公开收藏等与隐私相关的偏好设置。
  *
  * @param settingsRepository 设置仓库，用于读写隐私相关偏好。
  * @param onBack 返回上一级页面。
@@ -41,10 +41,11 @@ fun PrivacySettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前隐私设置。
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 页面状态：从 SettingsRepository 读取当前隐私相关设置。
     var nsfwMask by remember { mutableStateOf(settingsRepository.nsfwMask) }
     var defaultPrivateLike by remember { mutableStateOf(settingsRepository.defaultPrivateLike) }
+
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
@@ -77,39 +78,26 @@ fun PrivacySettingScreen(
                     .fillMaxWidth()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
+                // ── 1. 内容遮罩 ──
                 item {
-                    SmallTitle(text = strings.settingSectionShieldPrivacy)
+                    SmallTitle(text = strings.settingPrivacy)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.nsfwMask,
                             summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = nsfwMask,
-                                    onCheckedChange = { checked ->
-                                        nsfwMask = checked
-                                        settingsRepository.nsfwMask = checked
-                                    },
-                                )
+                            checked = nsfwMask,
+                            onCheckedChange = { checked ->
+                                nsfwMask = checked
+                                settingsRepository.nsfwMask = checked
                             },
                         )
-                    }
-                }
-
-                item {
-                    SmallTitle(text = strings.settingSectionBookmarkShare)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.defaultPrivateLike,
                             summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = defaultPrivateLike,
-                                    onCheckedChange = { checked ->
-                                        defaultPrivateLike = checked
-                                        settingsRepository.defaultPrivateLike = checked
-                                    },
-                                )
+                            checked = defaultPrivateLike,
+                            onCheckedChange = { checked ->
+                                defaultPrivateLike = checked
+                                settingsRepository.defaultPrivateLike = checked
                             },
                         )
                     }

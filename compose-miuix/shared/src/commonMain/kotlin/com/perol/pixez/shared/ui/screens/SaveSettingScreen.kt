@@ -18,17 +18,16 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
  * 保存设置页：管理与保存/收藏行为相关的开关。
@@ -85,30 +84,22 @@ fun SaveSettingScreen(
                 item {
                     SmallTitle(text = strings.settingSectionQualitySave)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.saveAfterStar,
                             summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = saveAfterStar,
-                                    onCheckedChange = { checked ->
-                                        saveAfterStar = checked
-                                        settingsRepository.saveAfterStar = checked
-                                    },
-                                )
+                            checked = saveAfterStar,
+                            onCheckedChange = { checked ->
+                                saveAfterStar = checked
+                                settingsRepository.saveAfterStar = checked
                             },
                         )
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.starAfterSave,
                             summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = starAfterSave,
-                                    onCheckedChange = { checked ->
-                                        starAfterSave = checked
-                                        settingsRepository.starAfterSave = checked
-                                    },
-                                )
+                            checked = starAfterSave,
+                            onCheckedChange = { checked ->
+                                starAfterSave = checked
+                                settingsRepository.starAfterSave = checked
                             },
                         )
                     }
@@ -117,30 +108,22 @@ fun SaveSettingScreen(
                 item {
                     SmallTitle(text = strings.longPressSaveConfirm)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.longPressSaveConfirm,
                             summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = longPressSaveConfirm,
-                                    onCheckedChange = { checked ->
-                                        longPressSaveConfirm = checked
-                                        settingsRepository.longPressSaveConfirm = checked
-                                    },
-                                )
+                            checked = longPressSaveConfirm,
+                            onCheckedChange = { checked ->
+                                longPressSaveConfirm = checked
+                                settingsRepository.longPressSaveConfirm = checked
                             },
                         )
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.illustDetailSkipLongPress,
                             summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = illustDetailSaveSkipLongPress,
-                                    onCheckedChange = { checked ->
-                                        illustDetailSaveSkipLongPress = checked
-                                        settingsRepository.illustDetailSaveSkipLongPress = checked
-                                    },
-                                )
+                            checked = illustDetailSaveSkipLongPress,
+                            onCheckedChange = { checked ->
+                                illustDetailSaveSkipLongPress = checked
+                                settingsRepository.illustDetailSaveSkipLongPress = checked
                             },
                         )
                     }
@@ -149,17 +132,13 @@ fun SaveSettingScreen(
                 item {
                     SmallTitle(text = strings.settingBookTags)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.autoTagWhenStar,
                             summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = autoTagWhenStar,
-                                    onCheckedChange = { checked ->
-                                        autoTagWhenStar = checked
-                                        settingsRepository.autoTagWhenStar = checked
-                                    },
-                                )
+                            checked = autoTagWhenStar,
+                            onCheckedChange = { checked ->
+                                autoTagWhenStar = checked
+                                settingsRepository.autoTagWhenStar = checked
                             },
                         )
                     }

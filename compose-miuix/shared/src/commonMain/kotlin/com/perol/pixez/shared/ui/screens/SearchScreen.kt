@@ -82,6 +82,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -488,23 +489,11 @@ private fun SearchFilterBottomSheet(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = strings.searchAiIncludeWorks,
-                            style = MiuixTheme.textStyles.body1,
-                            color = MiuixTheme.colorScheme.onSurface,
-                        )
-                        Switch(
-                            checked = draftAiType == 0,
-                            onCheckedChange = { draftAiType = if (it) 0 else 1 },
-                        )
-                    }
+                    SwitchPreference(
+                        title = strings.searchAiIncludeWorks,
+                        checked = draftAiType == 0,
+                        onCheckedChange = { draftAiType = if (it) 0 else 1 },
+                    )
                 }
             }
 

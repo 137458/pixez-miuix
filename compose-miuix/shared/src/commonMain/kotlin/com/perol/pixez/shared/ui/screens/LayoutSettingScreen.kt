@@ -48,6 +48,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
  * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
@@ -70,10 +72,11 @@ fun LayoutSettingScreen(
     var hCrossAdapterWidth by remember { mutableStateOf(settingsRepository.hCrossAdapterWidth) }
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
 
-    // 当前正在编辑的布局类型，null 表示没有对话框打开。
-    var editingType by rememberSaveable { mutableStateOf<LayoutType?>(null) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
+
+    val padModeOptions = remember { listOf("V:H", "V:V", "H:H") }
+    val crossCountOptions = remember { listOf("2", "3", "4") }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -108,23 +111,23 @@ fun LayoutSettingScreen(
                 item {
                     SmallTitle(text = strings.floatingBottomBar)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.floatingBottomBar,
                             summary = if (useFloatingBottomBar) strings.floatingBottomBarSummaryOn else strings.floatingBottomBarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = useFloatingBottomBar,
-                                    onCheckedChange = {
-                                        useFloatingBottomBar = it
-                                        settingsRepository.useFloatingBottomBar = it
-                                    },
-                                )
+                            checked = useFloatingBottomBar,
+                            onCheckedChange = {
+                                useFloatingBottomBar = it
+                                settingsRepository.useFloatingBottomBar = it
                             },
                         )
-                        BasicComponent(
+                        OverlayDropdownPreference(
                             title = strings.padMode,
-                            summary = padMode.toPadModeLabel(),
-                            onClick = { editingType = LayoutType.PadMode },
+                            items = padModeOptions,
+                            selectedIndex = padMode.coerceIn(0, padModeOptions.lastIndex),
+                            onSelectedIndexChange = { index ->
+                                padMode = index
+                                settingsRepository.padMode = index
+                            },
                         )
                     }
                 }
@@ -132,17 +135,13 @@ fun LayoutSettingScreen(
                 item {
                     SmallTitle(text = strings.crossCountPortrait)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (crossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = crossAdapt,
-                                    onCheckedChange = { checked ->
-                                        crossAdapt = checked
-                                        settingsRepository.crossAdapt = checked
-                                    },
-                                )
+                            checked = crossAdapt,
+                            onCheckedChange = { checked ->
+                                crossAdapt = checked
+                                settingsRepository.crossAdapt = checked
                             },
                         )
                         if (crossAdapt) {
@@ -154,10 +153,15 @@ fun LayoutSettingScreen(
                                 },
                             )
                         } else {
-                            LayoutSettingItem(
+                            OverlayDropdownPreference(
                                 title = strings.crossCountPortrait,
-                                summary = crossCount.toCrossCountLabel(),
-                                onClick = { editingType = LayoutType.CrossCount },
+                                items = crossCountOptions,
+                                selectedIndex = (crossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
+                                onSelectedIndexChange = { index ->
+                                    val count = index + 2
+                                    crossCount = count
+                                    settingsRepository.crossCount = count
+                                },
                             )
                         }
                     }
@@ -166,17 +170,13 @@ fun LayoutSettingScreen(
                 item {
                     SmallTitle(text = strings.crossCountLandscape)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (hCrossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = hCrossAdapt,
-                                    onCheckedChange = { checked ->
-                                        hCrossAdapt = checked
-                                        settingsRepository.hCrossAdapt = checked
-                                    },
-                                )
+                            checked = hCrossAdapt,
+                            onCheckedChange = { checked ->
+                                hCrossAdapt = checked
+                                settingsRepository.hCrossAdapt = checked
                             },
                         )
                         if (hCrossAdapt) {
@@ -188,154 +188,23 @@ fun LayoutSettingScreen(
                                 },
                             )
                         } else {
-                            LayoutSettingItem(
+                            OverlayDropdownPreference(
                                 title = strings.crossCountLandscape,
-                                summary = hCrossCount.toCrossCountLabel(),
-                                onClick = { editingType = LayoutType.HCrossCount },
+                                items = crossCountOptions,
+                                selectedIndex = (hCrossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
+                                onSelectedIndexChange = { index ->
+                                    val count = index + 2
+                                    hCrossCount = count
+                                    settingsRepository.hCrossCount = count
+                                },
                             )
                         }
                     }
                 }
             }
         }
-
-        // 布局选项选择对话框。
-        val currentType = editingType
-        if (currentType != null) {
-            val dialogTitle = when (currentType) {
-                LayoutType.PadMode -> strings.padMode
-                LayoutType.CrossCount -> strings.crossCountPortrait
-                LayoutType.HCrossCount -> strings.crossCountLandscape
-            }
-            when (currentType) {
-                LayoutType.PadMode -> LayoutSelectDialog(
-                    title = dialogTitle,
-                    currentValue = padMode,
-                    options = PAD_MODE_OPTIONS,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        padMode = value
-                        settingsRepository.padMode = value
-                        editingType = null
-                    },
-                )
-
-                LayoutType.CrossCount -> LayoutSelectDialog(
-                    title = dialogTitle,
-                    currentValue = crossCount,
-                    options = CROSS_COUNT_OPTIONS,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        crossCount = value
-                        settingsRepository.crossCount = value
-                        editingType = null
-                    },
-                )
-
-                LayoutType.HCrossCount -> LayoutSelectDialog(
-                    title = dialogTitle,
-                    currentValue = hCrossCount,
-                    options = CROSS_COUNT_OPTIONS,
-                    onDismiss = { editingType = null },
-                    onSelected = { value ->
-                        hCrossCount = value
-                        settingsRepository.hCrossCount = value
-                        editingType = null
-                    },
-                )
-            }
-        }
     }
 }
-
-/**
- * 正在编辑的布局设置类型。
- */
-private enum class LayoutType {
-    PadMode,
-    CrossCount,
-    HCrossCount,
-}
-
-/**
- * 单个布局设置项：展示标题与当前选项摘要，点击后打开选择对话框。
- */
-@Composable
-private fun LayoutSettingItem(
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    BasicComponent(
-        title = title,
-        summary = summary,
-        onClick = onClick,
-    )
-}
-
-/**
- * 布局选项选择对话框：展示互斥选项列表，选中后立即关闭并回调。
- */
-@Composable
-private fun LayoutSelectDialog(
-    title: String,
-    currentValue: Int,
-    options: List<Pair<Int, String>>,
-    onDismiss: () -> Unit,
-    onSelected: (Int) -> Unit,
-) {
-    OverlayDialog(
-        title = title,
-        show = true,
-        onDismissRequest = onDismiss,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            options.forEach { (value, label) ->
-                BasicComponent(
-                    title = label,
-                    onClick = { onSelected(value) },
-                    endActions = {
-                        CheckIndicator(selected = currentValue == value)
-                    },
-                )
-            }
-        }
-    }
-}
-
-/**
- * 将平板模式数值转换为展示文案；若数值不在选项范围内，返回默认 "V:H"。
- */
-private fun Int.toPadModeLabel(): String {
-    return PAD_MODE_OPTIONS.firstOrNull { it.first == this }?.second ?: "V:H"
-}
-
-/**
- * 将固定列数数值转换为展示文案；若数值不在选项范围内，返回默认 "2"。
- */
-private fun Int.toCrossCountLabel(): String {
-    return CROSS_COUNT_OPTIONS.firstOrNull { it.first == this }?.second ?: "2"
-}
-
-/**
- * 平板模式选项：0=V:H、1=V:V、2=H:H，与旧 Flutter 版 padMode 取值约定一致。
- */
-private val PAD_MODE_OPTIONS = listOf(
-    0 to "V:H",
-    1 to "V:V",
-    2 to "H:H",
-)
-
-/**
- * 固定网格列数选项：2 / 3 / 4，与旧 Flutter 版 crossCount / hCrossCount 取值约定一致。
- */
-private val CROSS_COUNT_OPTIONS = listOf(
-    2 to "2",
-    3 to "3",
-    4 to "4",
-)
 
 /**
  * 宽度阈值滑块与实时预览。

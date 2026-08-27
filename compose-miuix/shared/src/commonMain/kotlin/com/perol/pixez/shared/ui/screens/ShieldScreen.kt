@@ -162,41 +162,37 @@ fun ShieldScreen(
             ) {
                 item {
                     SmallTitle(text = strings.filterAi)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.banAIIllust,
-                        summary = if (banAIIllust) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = banAIIllust,
-                                onCheckedChange = { checked ->
-                                    banAIIllust = checked
-                                    settingsRepository.banAIIllust = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.userAISettings,
-                        summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
-                        onClick = {
-                            if (isLoadingAISetting) return@BasicComponent
-                            coroutineScope.launch {
-                                isLoadingAISetting = true
-                                suspendRunCatchingNonCancel {
-                                    userRepository.getUserAISettings()
-                                }.onSuccess { response ->
-                                    onAISettingClick(response.showAI)
-                                }.onFailure { e ->
-                                    Napier.e("加载 AI 显示设置失败", e)
-                                    toastMessage = "${strings.loadFailed}: ${e.message}"
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
+                            title = strings.banAIIllust,
+                            summary = if (banAIIllust) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                            checked = banAIIllust,
+                            onCheckedChange = { checked ->
+                                banAIIllust = checked
+                                settingsRepository.banAIIllust = checked
+                            },
+                        )
+                        top.yukonga.miuix.kmp.preference.ArrowPreference(
+                            title = strings.userAISettings,
+                            summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
+                            onClick = {
+                                if (isLoadingAISetting) return@ArrowPreference
+                                coroutineScope.launch {
+                                    isLoadingAISetting = true
+                                    suspendRunCatchingNonCancel {
+                                        userRepository.getUserAISettings()
+                                    }.onSuccess { response ->
+                                        onAISettingClick(response.showAI)
+                                    }.onFailure { e ->
+                                        Napier.e("加载 AI 显示设置失败", e)
+                                        toastMessage = "${strings.loadFailed}: ${e.message}"
+                                    }
+                                    isLoadingAISetting = false
                                 }
-                                isLoadingAISetting = false
-                            }
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
-            }
 
             // 标签分组：展示、添加、删除。
             item {

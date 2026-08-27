@@ -18,17 +18,16 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
  * Feed 设置页：管理 Feed AI 标识、收藏后关注画师以及 SauceNAO 打开方式等开关。
@@ -82,18 +81,13 @@ fun FeedSettingScreen(
                 item {
                     SmallTitle(text = strings.feedSettingSectionDisplay)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.feedSettingAiBadge,
                             summary = if (feedAIBadge) strings.feedSettingAiBadgeSummaryOn else strings.feedSettingAiBadgeSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = feedAIBadge,
-                                    onCheckedChange = { checked ->
-                                        // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                        feedAIBadge = checked
-                                        settingsRepository.feedAIBadge = checked
-                                    },
-                                )
+                            checked = feedAIBadge,
+                            onCheckedChange = { checked ->
+                                feedAIBadge = checked
+                                settingsRepository.feedAIBadge = checked
                             },
                         )
                     }
@@ -102,18 +96,13 @@ fun FeedSettingScreen(
                 item {
                     SmallTitle(text = strings.feedSettingSectionBehavior)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.feedSettingFollowAfterStar,
                             summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = followAfterStar,
-                                    onCheckedChange = { checked ->
-                                        // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                        followAfterStar = checked
-                                        settingsRepository.followAfterStar = checked
-                                    },
-                                )
+                            checked = followAfterStar,
+                            onCheckedChange = { checked ->
+                                followAfterStar = checked
+                                settingsRepository.followAfterStar = checked
                             },
                         )
                     }
@@ -122,18 +111,13 @@ fun FeedSettingScreen(
                 item {
                     SmallTitle(text = strings.feedSettingSectionSearchImage)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        SwitchPreference(
                             title = strings.feedSettingSauceNaoWebview,
                             summary = if (useSaunceNaoWebview) strings.feedSettingSauceNaoWebviewSummaryOn else strings.feedSettingSauceNaoWebviewSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = useSaunceNaoWebview,
-                                    onCheckedChange = { checked ->
-                                        // 更新本地状态并立即写回仓库，保证偏好持久化。
-                                        useSaunceNaoWebview = checked
-                                        settingsRepository.useSaunceNaoWebview = checked
-                                    },
-                                )
+                            checked = useSaunceNaoWebview,
+                            onCheckedChange = { checked ->
+                                useSaunceNaoWebview = checked
+                                settingsRepository.useSaunceNaoWebview = checked
                             },
                         )
                     }

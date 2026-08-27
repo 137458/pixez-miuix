@@ -45,13 +45,16 @@ import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -79,6 +82,7 @@ fun AboutScreen(
     val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    var showDisclaimerDialog by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
@@ -205,6 +209,11 @@ fun AboutScreen(
                     summary = strings.aboutThanksDesc,
                     onClick = onThanksClick,
                 )
+                BasicComponent(
+                    title = strings.aboutDisclaimer,
+                    summary = strings.aboutDisclaimerSummary,
+                    onClick = { showDisclaimerDialog = true },
+                )
                 if (onUpdateClick != null) {
                     BasicComponent(
                         title = strings.settingUpdate,
@@ -217,6 +226,22 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+
+        if (showDisclaimerDialog) {
+            OverlayDialog(
+                title = strings.aboutDisclaimer,
+                summary = strings.aboutDisclaimerContent,
+                show = true,
+                onDismissRequest = { showDisclaimerDialog = false },
+            ) {
+                TextButton(
+                    text = strings.confirm,
+                    onClick = { showDisclaimerDialog = false },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        }
 
         ToastMessage(
             message = toastMessage,

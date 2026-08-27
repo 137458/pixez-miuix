@@ -35,10 +35,11 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -108,6 +109,15 @@ fun DownloadSettingScreen(
         }
     }
 
+    val taskCountOptions = remember { (1..10).map { it.toString() } }
+    val saveModeLabels = remember(strings) {
+        listOf(
+            "Media (${strings.downloadSaveModeMedia})",
+            "SAF (${strings.downloadSaveModeSaf})",
+            "${strings.qualityMedium} (${strings.downloadSaveModeLegacy})",
+        )
+    }
+
     val scrollBehavior = MiuixScrollBehavior()
 
     Scaffold(
@@ -140,161 +150,132 @@ fun DownloadSettingScreen(
                     .fillMaxWidth()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
-            item {
-                SmallTitle(text = strings.dialogSavePath)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.dialogSavePath,
-                        summary = storePath.ifEmpty { strings.noData },
-                        onClick = { pickDirectory() },
-                    )
-                    BasicComponent(
-                        title = strings.dialogSaveMode,
-                        summary = saveMode.toSaveModeLabel(),
-                        onClick = { showSaveModeDialog = true },
-                    )
+                item {
+                    SmallTitle(text = strings.dialogSavePath)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        ArrowPreference(
+                            title = strings.dialogSavePath,
+                            summary = storePath.ifEmpty { strings.noData },
+                            onClick = { pickDirectory() },
+                        )
+                        OverlayDropdownPreference(
+                            title = strings.dialogSaveMode,
+                            items = saveModeLabels,
+                            selectedIndex = saveMode.coerceIn(0, saveModeLabels.lastIndex),
+                            onSelectedIndexChange = { index ->
+                                saveMode = index
+                                settingsRepository.saveMode = index
+                            },
+                        )
+                    }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.dialogSaveFormat)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.dialogSaveFormat,
-                        summary = if (fileNameEval) strings.settingShareFormat else format,
-                        onClick = { showFormatDialog = true },
-                    )
-                    BasicComponent(
-                        title = strings.downloadSingleFolder,
-                        summary = strings.downloadSingleFolderSummary,
-                        endActions = {
-                            Switch(
-                                checked = singleFolder,
-                                onCheckedChange = { checked ->
-                                    singleFolder = checked
-                                    settingsRepository.singleFolder = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.downloadSanityFolder,
-                        summary = strings.downloadSanityFolderSummary,
-                        endActions = {
-                            Switch(
-                                checked = overSanityLevelFolder,
-                                onCheckedChange = { checked ->
-                                    overSanityLevelFolder = checked
-                                    settingsRepository.overSanityLevelFolder = checked
-                                },
-                            )
-                        },
-                    )
+                item {
+                    SmallTitle(text = strings.dialogSaveFormat)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        ArrowPreference(
+                            title = strings.dialogSaveFormat,
+                            summary = if (fileNameEval) strings.settingShareFormat else format,
+                            onClick = { showFormatDialog = true },
+                        )
+                        SwitchPreference(
+                            title = strings.downloadSingleFolder,
+                            summary = strings.downloadSingleFolderSummary,
+                            checked = singleFolder,
+                            onCheckedChange = { checked ->
+                                singleFolder = checked
+                                settingsRepository.singleFolder = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.downloadSanityFolder,
+                            summary = strings.downloadSanityFolderSummary,
+                            checked = overSanityLevelFolder,
+                            onCheckedChange = { checked ->
+                                overSanityLevelFolder = checked
+                                settingsRepository.overSanityLevelFolder = checked
+                            },
+                        )
+                    }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.settingDownloadTask)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.dialogTaskCount,
-                        summary = maxRunningTask.toString(),
-                        onClick = { showTaskDialog = true },
-                    )
-                    BasicComponent(
-                        title = strings.longPressSaveConfirm,
-                        summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = longPressSaveConfirm,
-                                onCheckedChange = { checked ->
-                                    longPressSaveConfirm = checked
-                                    settingsRepository.longPressSaveConfirm = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.illustDetailSkipLongPress,
-                        summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = illustDetailSaveSkipLongPress,
-                                onCheckedChange = { checked ->
-                                    illustDetailSaveSkipLongPress = checked
-                                    settingsRepository.illustDetailSaveSkipLongPress = checked
-                                },
-                            )
-                        },
-                    )
+                item {
+                    SmallTitle(text = strings.settingDownloadTask)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        OverlayDropdownPreference(
+                            title = strings.dialogTaskCount,
+                            items = taskCountOptions,
+                            selectedIndex = (maxRunningTask - 1).coerceIn(0, taskCountOptions.lastIndex),
+                            onSelectedIndexChange = { index ->
+                                val count = index + 1
+                                maxRunningTask = count
+                                settingsRepository.maxRunningTask = count
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.longPressSaveConfirm,
+                            summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
+                            checked = longPressSaveConfirm,
+                            onCheckedChange = { checked ->
+                                longPressSaveConfirm = checked
+                                settingsRepository.longPressSaveConfirm = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.illustDetailSkipLongPress,
+                            summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
+                            checked = illustDetailSaveSkipLongPress,
+                            onCheckedChange = { checked ->
+                                illustDetailSaveSkipLongPress = checked
+                                settingsRepository.illustDetailSaveSkipLongPress = checked
+                            },
+                        )
+                    }
                 }
-            }
 
-            item {
-                SmallTitle(text = strings.settingSectionBookmarkShare)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    BasicComponent(
-                        title = strings.saveAfterStar,
-                        summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = saveAfterStar,
-                                onCheckedChange = { checked ->
-                                    saveAfterStar = checked
-                                    settingsRepository.saveAfterStar = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.starAfterSave,
-                        summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = starAfterSave,
-                                onCheckedChange = { checked ->
-                                    starAfterSave = checked
-                                    settingsRepository.starAfterSave = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.feedSettingFollowAfterStar,
-                        summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = followAfterStar,
-                                onCheckedChange = { checked ->
-                                    followAfterStar = checked
-                                    settingsRepository.followAfterStar = checked
-                                },
-                            )
-                        },
-                    )
-                    BasicComponent(
-                        title = strings.autoTagWhenStar,
-                        summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
-                        endActions = {
-                            Switch(
-                                checked = autoTagWhenStar,
-                                onCheckedChange = { checked ->
-                                    autoTagWhenStar = checked
-                                    settingsRepository.autoTagWhenStar = checked
-                                },
-                            )
-                        },
-                    )
+                item {
+                    SmallTitle(text = strings.settingSectionBookmarkShare)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        SwitchPreference(
+                            title = strings.saveAfterStar,
+                            summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                            checked = saveAfterStar,
+                            onCheckedChange = { checked ->
+                                saveAfterStar = checked
+                                settingsRepository.saveAfterStar = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.starAfterSave,
+                            summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
+                            checked = starAfterSave,
+                            onCheckedChange = { checked ->
+                                starAfterSave = checked
+                                settingsRepository.starAfterSave = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.feedSettingFollowAfterStar,
+                            summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
+                            checked = followAfterStar,
+                            onCheckedChange = { checked ->
+                                followAfterStar = checked
+                                settingsRepository.followAfterStar = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.autoTagWhenStar,
+                            summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
+                            checked = autoTagWhenStar,
+                            onCheckedChange = { checked ->
+                                autoTagWhenStar = checked
+                                settingsRepository.autoTagWhenStar = checked
+                            },
+                        )
+                    }
                 }
             }
         }
-    }
-
-        val saveModeOptions = listOf(
-            SaveModeOption(0, "Media", strings.downloadSaveModeMedia),
-            SaveModeOption(1, "SAF", strings.downloadSaveModeSaf),
-            SaveModeOption(2, strings.qualityMedium, strings.downloadSaveModeLegacy),
-        )
 
         val formatPlaceholderChips = listOf(
             FormatPlaceholderChip(label = strings.copyTextChipIllustId, text = "{illust_id}"),
@@ -304,72 +285,8 @@ fun DownloadSettingScreen(
             FormatPlaceholderChip(label = strings.copyTextChipUserName, text = "{user_name}"),
         )
 
-        // 保存路径编辑对话框。
-        OverlayDialog(
-            title = strings.dialogSavePath,
-            show = showPathDialog,
-            onDismissRequest = { showPathDialog = false },
-        ) {
-            TextField(
-                value = pathInput,
-                onValueChange = { pathInput = it },
-                label = strings.dialogSavePath,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = { showPathDialog = false },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    onClick = {
-                        val trimmed = pathInput.trim()
-                        storePath = trimmed
-                        settingsRepository.storePath = trimmed.takeIf { it.isNotEmpty() }
-                        showPathDialog = false
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
-
-        // 保存模式三选一对话框。
-        OverlayDialog(
-            title = strings.dialogSaveMode,
-            show = showSaveModeDialog,
-            onDismissRequest = { showSaveModeDialog = false },
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                saveModeOptions.forEach { option ->
-                    BasicComponent(
-                        title = option.label,
-                        summary = option.description,
-                        onClick = {
-                            saveMode = option.value
-                            settingsRepository.saveMode = option.value
-                            showSaveModeDialog = false
-                        },
-                        endActions = {
-                            CheckIndicator(selected = saveMode == option.value)
-                        },
-                    )
-                }
-            }
-        }
-
         // 保存格式编辑对话框，支持变量占位符快捷插入。
-        OverlayDialog(
+        top.yukonga.miuix.kmp.overlay.OverlayDialog(
             title = strings.dialogSaveFormat,
             show = showFormatDialog,
             onDismissRequest = { showFormatDialog = false },
@@ -421,32 +338,6 @@ fun DownloadSettingScreen(
                 )
             }
         }
-
-        // 同时下载任务数选择对话框。
-        OverlayDialog(
-            title = strings.dialogTaskCount,
-            show = showTaskDialog,
-            onDismissRequest = { showTaskDialog = false },
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                AppConstants.Download.MAX_TASK_OPTIONS.forEach { value ->
-                    BasicComponent(
-                        title = value.toString(),
-                        onClick = {
-                            maxRunningTask = value
-                            settingsRepository.maxRunningTask = value
-                            showTaskDialog = false
-                        },
-                        endActions = {
-                            CheckIndicator(selected = maxRunningTask == value)
-                        },
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -474,7 +365,7 @@ private fun FormatInsertChip(
     ) {
         Text(
             text = label,
-            style = MiuixTheme.textStyles.footnote2,
+            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
         )
     }
 }
@@ -499,23 +390,4 @@ private fun insertTextAtSelection(
         text = newText,
         selection = TextRange(newCursor, newCursor),
     )
-}
-
-/**
- * 保存模式选项：取值与原 Flutter 版一致。
- */
-private data class SaveModeOption(
-    val value: Int,
-    val label: String,
-    val description: String,
-)
-
-/**
- * 将保存模式数值转换为显示文案。
- */
-private fun Int.toSaveModeLabel(): String = when (this) {
-    0 -> "Media"
-    1 -> "SAF"
-    2 -> "Legacy"
-    else -> "Media"
 }

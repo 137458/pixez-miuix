@@ -98,17 +98,13 @@ fun CrossAdapterSettingScreen(
                 item {
                     SmallTitle(text = strings.crossCountPortrait)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (crossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = crossAdapt,
-                                    onCheckedChange = { checked ->
-                                        crossAdapt = checked
-                                        settingsRepository.crossAdapt = checked
-                                    },
-                                )
+                            checked = crossAdapt,
+                            onCheckedChange = { checked ->
+                                crossAdapt = checked
+                                settingsRepository.crossAdapt = checked
                             },
                         )
                         if (crossAdapt) {
@@ -126,17 +122,13 @@ fun CrossAdapterSettingScreen(
                 item {
                     SmallTitle(text = strings.crossCountLandscape)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        BasicComponent(
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (hCrossAdapt) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                            endActions = {
-                                Switch(
-                                    checked = hCrossAdapt,
-                                    onCheckedChange = { checked ->
-                                        hCrossAdapt = checked
-                                        settingsRepository.hCrossAdapt = checked
-                                    },
-                                )
+                            checked = hCrossAdapt,
+                            onCheckedChange = { checked ->
+                                hCrossAdapt = checked
+                                settingsRepository.hCrossAdapt = checked
                             },
                         )
                         if (hCrossAdapt) {

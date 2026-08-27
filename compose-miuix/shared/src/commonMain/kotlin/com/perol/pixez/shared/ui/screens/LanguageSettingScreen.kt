@@ -39,6 +39,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+
 /**
  * 语言设置页：选择应用显示语言。
  *
@@ -99,15 +101,13 @@ fun LanguageSettingScreen(
                             .padding(horizontal = 16.dp),
                     ) {
                         LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = "${option.nativeName} (${option.displayName})",
                                 summary = option.code,
+                                selected = selectedIndex == index,
                                 onClick = {
                                     selectedIndex = index
                                     settingsRepository.languageNum = index
-                                },
-                                endActions = {
-                                    CheckIndicator(selected = selectedIndex == index)
                                 },
                             )
                         }

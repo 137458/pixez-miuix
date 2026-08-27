@@ -243,6 +243,9 @@ interface AppStrings {
     val aboutFeedback: String
     val aboutThanksDesc: String
     val aboutDesc: String
+    val aboutDisclaimer: String
+    val aboutDisclaimerSummary: String
+    val aboutDisclaimerContent: String
 
     // 弹窗与通用对话框
     val dialogNeedLogin: String
@@ -1083,6 +1086,9 @@ object ZhCnStrings : AppStrings {
     override val aboutFeedback = "反馈邮箱"
     override val aboutThanksDesc = "感谢帮助、支持与鼓励我的朋友们"
     override val aboutDesc = "使用 MIUIX + Compose Multiplatform 重构的 PixEz 客户端，还原 HyperOS 精致交互体验。"
+    override val aboutDisclaimer = "免责声明"
+    override val aboutDisclaimerSummary = "非官方客户端、版权与合规声明"
+    override val aboutDisclaimerContent = "1. 本项目（PixEz MIUIX）为开源社区与个人开发者基于学习、研究与技术交流目的开发的 Pixiv 第三方客户端，与 pixiv Inc. 无任何商业关联或合作关系。\n2. 本应用展示的所有插画、漫画、小说、动图及特辑等内容版权均归原作者及 pixiv Inc. 所有。用户通过本应用获取或下载的资源仅供个人学习、鉴赏与研究，严禁用于任何商业用途或侵权行为。\n3. 本应用提供的免代理直连等技术方案仅用于网络连通性研究与技术探索，使用者请自觉遵守当地法律法规及平台规范。因使用者个人行为导致的纠纷与损失，由使用者自行承担。"
 
     override val dialogNeedLogin = "需要登录"
     override val dialogNeedLoginSummary = "当前未登录，登录后可使用完整功能"
@@ -1631,6 +1637,9 @@ object ZhTwStrings : AppStrings {
     override val aboutFeedback = "意見回饋信箱"
     override val aboutThanksDesc = "感謝幫助、支持與鼓勵我的朋友們"
     override val aboutDesc = "使用 MIUIX + Compose Multiplatform 重構的 PixEz 用戶端，還原 HyperOS 精緻互動體驗。"
+    override val aboutDisclaimer = "免責聲明"
+    override val aboutDisclaimerSummary = "非官方用戶端、版權與合規聲明"
+    override val aboutDisclaimerContent = "1. 本專案（PixEz MIUIX）為開源社群與個人開發者基於學習、研究與技術交流目的開發的 Pixiv 第三方用戶端，與 pixiv Inc. 無任何商業關聯或合作關係。\n2. 本應用程式展示的所有插畫、漫畫、小說、動圖及特輯等內容版權均歸原作者及 pixiv Inc. 所有。使用者透過本應用程式獲取或下載的資源僅供個人學習、鑑賞與研究，嚴禁用於任何商業用途或侵權行為。\n3. 本應用程式提供的免代理直連等技術方案僅用於網路連通性研究與技術探索，使用者請自覺遵守當地法律法規及平台規範。因使用者個人行為導致的糾紛與損失，由使用者自行承擔。"
 
     override val dialogNeedLogin = "需要登入"
     override val dialogNeedLoginSummary = "目前尚未登入，登入後可使用完整功能"
@@ -2180,6 +2189,9 @@ object EnStrings : AppStrings {
     override val aboutFeedback = "Feedback Email"
     override val aboutThanksDesc = "Thanks to all friends who supported and encouraged me"
     override val aboutDesc = "PixEz client rebuilt with MIUIX and Compose Multiplatform for authentic HyperOS interaction."
+    override val aboutDisclaimer = "Disclaimer"
+    override val aboutDisclaimerSummary = "Unofficial client, copyright & compliance notice"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX is an open-source third-party Pixiv client developed for educational, research, and technical exploration purposes. It is not affiliated with, endorsed by, or associated with pixiv Inc.\n2. All illustrations, comics, novels, animations, and Spotlight articles accessible via this application are the copyrighted property of their respective creators and pixiv Inc. Resources obtained or downloaded are strictly for personal study and non-commercial appreciation; commercial use or unauthorized redistribution is strictly prohibited.\n3. Direct connection features and technical capabilities are provided solely for network connectivity research. Users are responsible for complying with local laws, regulations, and Pixiv's Terms of Service. Developers and contributors assume no liability for any misuse."
 
     override val dialogNeedLogin = "Login Required"
     override val dialogNeedLoginSummary = "You are not logged in. Log in to unlock full features."
@@ -2729,6 +2741,9 @@ object JaStrings : AppStrings {
     override val aboutFeedback = "フィードバック"
     override val aboutThanksDesc = "応援・ご支援いただいた皆様に感謝いたします"
     override val aboutDesc = "MIUIX と Compose Multiplatform で構築された、HyperOS ライクな Pixiv クライアント。"
+    override val aboutDisclaimer = "免責事項"
+    override val aboutDisclaimerSummary = "非公式クライアント・著作権および利用規約"
+    override val aboutDisclaimerContent = "1. 本プロジェクト（PixEz MIUIX）は、学習・研究および技術交流を目的としてオープンソースコミュニティと個人開発者により開発された非公式の Pixiv クライアントであり、pixiv Inc. との提携や商業関係はありません。\n2. アプリ内で表示されるすべてのイラスト・マンガ・小説・うごイラ・特集等のコンテンツの著作権は、各クリエイターおよび pixiv Inc. に帰属します。私的使用・鑑賞・研究のみを目的としており、商用利用や無断転載・再配布は固く禁止されています。\n3. 提供される通信・直接接続技術は接続性研究のみを目的としています。現地の法令およびプラットフォーム利用規約を遵守してご利用ください。利用者の行為により生じたいかなる損害についても開発者は責任を負いません。"
 
     override val dialogNeedLogin = "ログインが必要です"
     override val dialogNeedLoginSummary = "全機能を利用するには Pixiv にログインしてください。"
@@ -3278,6 +3293,9 @@ object KoStrings : AppStrings {
     override val aboutFeedback = "피드백 이메일"
     override val aboutThanksDesc = "도움과 응원을 보내주신 모든 분들께 감사드립니다"
     override val aboutDesc = "MIUIX와 Compose Multiplatform으로 제작된 HyperOS 감성의 Pixiv 클라이언트."
+    override val aboutDisclaimer = "면책 조항"
+    override val aboutDisclaimerSummary = "비공식 클라이언트, 저작권 및 준수 사항"
+    override val aboutDisclaimerContent = "1. 본 프로젝트(PixEz MIUIX)는 학습, 연구 및 기술 교류 목적으로 오픈소스 커뮤니티와 개인 개발자가 개발한 비공식 Pixiv 클라이언트이며, pixiv Inc.와 어떠한 제휴나 상업적 관계도 없습니다.\n2. 본 앱에서 제공되는 모든 일러스트, 만화, 소설, 우고이라 및 기사의 저작권은 원작자 및 pixiv Inc.에 귀속됩니다. 콘텐츠는 개인적인 학습 및 감상 용도로만 제공되며, 상업적 이용 및 무단 재배포는 엄격히 금지됩니다.\n3. 제공되는 직접 연결 기능은 네트워크 연결성 연구를 위한 것입니다. 이용자는 관련 법규 및 플랫폼 이용약관을 준수해야 하며, 사용자 개인의 행위로 인한 분쟁이나 손실에 대해 개발자는 책임을 지지 않습니다."
 
     override val dialogNeedLogin = "로그인 필요"
     override val dialogNeedLoginSummary = "전체 기능을 이용하려면 Pixiv에 로그인하세요."
@@ -3827,6 +3845,9 @@ object RuStrings : AppStrings {
     override val aboutFeedback = "Почта для отзывов"
     override val aboutThanksDesc = "Спасибо всем друзьям за поддержку и помощь"
     override val aboutDesc = "Клиент PixEz на MIUIX и Compose Multiplatform с изящным интерфейсом HyperOS."
+    override val aboutDisclaimer = "Отказ от ответственности"
+    override val aboutDisclaimerSummary = "Неофициальный клиент, авторские права и правила"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX — это неофициальный клиент Pixiv с открытым исходным кодом, созданный сообществом в образовательных и исследовательских целях. Проект не связан с pixiv Inc.\n2. Все иллюстрации, манга, новеллы, анимации и статьи принадлежат их авторам и pixiv Inc. Материалы предназначены исключительно для личного ознакомления; коммерческое использование или распространение запрещено.\n3. Функции прямого подключения предоставлены для изучения сетевых протоколов. Пользователи обязаны соблюдать применимое законодательство и правила Pixiv."
 
     override val dialogNeedLogin = "Требуется вход"
     override val dialogNeedLoginSummary = "Войдите в аккаунт Pixiv для доступа ко всем функциям."
@@ -4376,6 +4397,9 @@ object EsStrings : AppStrings {
     override val aboutFeedback = "Correo de contacto"
     override val aboutThanksDesc = "Gracias a todos los que me apoyaron"
     override val aboutDesc = "Cliente de PixEz reconstruido con MIUIX y Compose Multiplatform para HyperOS."
+    override val aboutDisclaimer = "Descargo de responsabilidad"
+    override val aboutDisclaimerSummary = "Cliente no oficial, derechos de autor y cumplimiento"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX es un cliente de Pixiv de código abierto no oficial desarrollado con fines educativos y de investigación. No está afiliado a pixiv Inc.\n2. Todas las ilustraciones, cómics, novelas, animaciones y artículos accesibles en esta aplicación son propiedad de sus respectivos creadores y de pixiv Inc. Su uso es estrictamente personal; se prohíbe el uso comercial o la redistribución no autorizada.\n3. Las funciones de conexión directa se proporcionan para la investigación de redes. Los usuarios son responsables de cumplir con las leyes locales y los Términos de Servicio de Pixiv."
 
     override val dialogNeedLogin = "Inicio de sesión requerido"
     override val dialogNeedLoginSummary = "Inicia sesión en Pixiv para desbloquear todas las funciones."
@@ -4925,6 +4949,9 @@ object TrStrings : AppStrings {
     override val aboutFeedback = "Geri Bildirim E-postası"
     override val aboutThanksDesc = "Destek olan herkese teşekkür ederiz"
     override val aboutDesc = "HyperOS deneyimi için MIUIX ve Compose Multiplatform ile geliştirilmiş Pixiv istemcisi."
+    override val aboutDisclaimer = "Sorumluluk Reddi"
+    override val aboutDisclaimerSummary = "Resmi olmayan istemci, telif hakkı ve yasal uyarı"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX, eğitim ve araştırma amacıyla geliştirilmiş açık kaynaklı, resmi olmayan bir Pixiv istemcisidir. pixiv Inc. ile herhangi bir bağlantısı yoktur.\n2. Bu uygulama üzerinden erişilen tüm çizimler, mangalar, romanlar ve içerikler ilgili üreticilerin ve pixiv Inc.'in mülkiyetindedir. Yalnızca kişisel kullanım içindir; ticari kullanım veya yetkisiz yeniden dağıtım kesinlikle yasaktır.\n3. Doğrudan bağlantı özellikleri ağ bağlantısı araştırmaları için sağlanmıştır. Kullanıcılar yerel yasalara ve Pixiv Hizmet Şartlarına uymaktan sorumludur."
 
     override val dialogNeedLogin = "Giriş Yapılması Gerekiyor"
     override val dialogNeedLoginSummary = "Tüm özellikleri kullanabilmek için Pixiv ile giriş yapın."
@@ -5474,6 +5501,9 @@ object IdStrings : AppStrings {
     override val aboutFeedback = "Email Masukan"
     override val aboutThanksDesc = "Terima kasih kepada semua pendukung"
     override val aboutDesc = "Klien PixEz yang dibangun dengan MIUIX & Compose Multiplatform untuk HyperOS."
+    override val aboutDisclaimer = "Penafian"
+    override val aboutDisclaimerSummary = "Klien tidak resmi, hak cipta & kepatuhan"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX adalah klien pihak ketiga open-source untuk Pixiv yang dikembangkan untuk tujuan pembelajaran, penelitian, dan eksplorasi teknis. Aplikasi ini tidak berafiliasi dengan pixiv Inc.\n2. Semua ilustrasi, manga, novel, animasi, dan artikel yang dapat diakses adalah milik hak cipta dari pembuat aslinya dan pixiv Inc. Konten hanya untuk studi dan apresiasi pribadi; penggunaan komersial atau redistribusi tanpa izin dilarang keras.\n3. Fitur koneksi langsung disediakan hanya untuk penelitian jaringan. Pengguna bertanggung jawab untuk mematuhi hukum setempat dan Ketentuan Layanan Pixiv."
 
     override val dialogNeedLogin = "Perlu Masuk"
     override val dialogNeedLoginSummary = "Masuk ke akun Pixiv untuk membuka semua fitur."
@@ -6023,6 +6053,9 @@ object FilStrings : AppStrings {
     override val aboutFeedback = "Email ng Feedback"
     override val aboutThanksDesc = "Salamat sa lahat ng sumuporta at nagpalakas ng loob"
     override val aboutDesc = "PixEz client na binuo gamit ang MIUIX at Compose Multiplatform para sa HyperOS."
+    override val aboutDisclaimer = "Pagtatanggi"
+    override val aboutDisclaimerSummary = "Di-opisyal na kliyente, copyright at pagsunod"
+    override val aboutDisclaimerContent = "1. Ang PixEz MIUIX ay isang open-source na third-party Pixiv client na binuo para sa pag-aaral, pananaliksik, at personal na paggamit. Hindi ito kaakibat o ineendorso ng pixiv Inc.\n2. Ang lahat ng mga ilustrasyon, manga, nobela, animasyon, at artikulo na naa-access sa app na ito ay pag-aari ng kani-kanilang mga tagalikha at ng pixiv Inc. Para lamang ito sa personal na pag-aaral at kasiyahan; mahigpit na ipinagbabawal ang komersyal na paggamit.\n3. Ang mga feature ng direktang koneksyon ay para lamang sa pananaliksik sa network. Responsibilidad ng mga gumagamit na sumunod sa mga lokal na batas at Mga Tuntunin ng Serbisyo ng Pixiv."
 
     override val dialogNeedLogin = "Kailangan Mag-login"
     override val dialogNeedLoginSummary = "Mag-login sa Pixiv para magamit ang lahat ng feature."
@@ -6572,6 +6605,9 @@ object DeStrings : AppStrings {
     override val aboutFeedback = "Feedback-E-Mail"
     override val aboutThanksDesc = "Vielen Dank an alle Unterstützer"
     override val aboutDesc = "PixEz-Client, entwickelt mit MIUIX und Compose Multiplatform für HyperOS."
+    override val aboutDisclaimer = "Haftungsausschluss"
+    override val aboutDisclaimerSummary = "Inoffizieller Client, Urheberrecht und Nutzungsbedingungen"
+    override val aboutDisclaimerContent = "1. PixEz MIUIX ist ein quelloffener, inoffizieller Pixiv-Client, der für Bildungs-, Forschungs- und persönliche Zwecke entwickelt wurde. Es besteht keine Verbindung zu pixiv Inc.\n2. Alle über diese App zugänglichen Illustrationen, Mangas, Romane, Animationen und Artikel sind urheberrechtlich geschütztes Eigentum der jeweiligen Ersteller und von pixiv Inc. Die Nutzung ist ausschließlich für den persönlichen Gebrauch bestimmt; eine kommerzielle Nutzung oder Weiterverbreitung ist untersagt.\n3. Direktverbindungsfunktionen dienen ausschließlich der Erforschung der Netzwerkverbindung. Nutzer sind für die Einhaltung lokaler Gesetze und der Nutzungsbedingungen von Pixiv verantwortlich."
 
     override val dialogNeedLogin = "Anmeldung erforderlich"
     override val dialogNeedLoginSummary = "Melden Sie sich bei Pixiv an, um alle Funktionen zu nutzen."

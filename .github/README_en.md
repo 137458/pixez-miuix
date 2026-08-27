@@ -130,6 +130,14 @@ Special thanks to [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/m
 
 ---
 
+## ⚠️ Disclaimer
+
+1. **Unofficial Client**: PixEz MIUIX is an open-source third-party Pixiv client developed by independent developers and the open-source community for educational, research, and personal use. It is not affiliated with, endorsed by, or associated with pixiv Inc. in any way.
+2. **Copyright & Intellectual Property**: All illustrations, comics, novels, animations, Spotlight articles, and related media accessible via this application belong to their respective creators and pixiv Inc. Any content accessed or downloaded through this app is strictly for personal study, appreciation, and non-commercial research. Commercial use or unauthorized redistribution is strictly prohibited.
+3. **Network & Legal Compliance**: Direct connection features and technical capabilities within this application are provided solely for networking research and accessibility exploration. Users are responsible for complying with local laws, regulations, and Pixiv's Terms of Service. The developers and contributors assume no liability for any misuse or legal repercussions resulting from the use of this software.
+
+---
+
 ## 📄 License
 
 This project is licensed under the [GPL-3.0 License](../LICENSE).

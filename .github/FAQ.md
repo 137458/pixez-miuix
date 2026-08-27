@@ -30,6 +30,10 @@
 - **PixEz MIUIX**：基于 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 全新打造，深度融合 **Xiaomi HyperOS (MIUIX)** 现代设计语言与交互动效，全面覆盖 Android、桌面端（Windows / macOS / Linux）与 iOS。
 - **原版 PixEz**：原版基于 Flutter 构建（[Notsfsssf/pixez-flutter](https://github.com/Notsfsssf/pixez-flutter)），由社区持续维护。
 - **关于本 FAQ**：本指南主要面向 **PixEz MIUIX** 版本的各项功能特性、设置项与常见问题解答。
+- **免责声明与版权提示**：
+  - 本项目为个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无任何关联或商业合作。
+  - 本应用内所有插画、漫画、小说、动图及特辑版权均归原作者及 pixiv Inc. 所有。用户通过本客户端获取的资源仅限个人学习鉴赏，严禁用于任何商业用途或侵权行为。
+  - 内置直连等技术仅供网络通信研究，使用者应自觉遵守当地法律法规。使用过程中产生的任何纠纷由使用者自行承担。
 
 ---
 
