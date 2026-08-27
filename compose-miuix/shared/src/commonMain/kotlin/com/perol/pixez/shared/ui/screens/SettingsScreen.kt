@@ -384,9 +384,7 @@ fun SettingsScreen(
                         onClick = onUpdateSettingClick,
                         endActions = {
                             if (hasNewUpdate) {
-                                top.yukonga.miuix.kmp.basic.Badge(modifier = Modifier.padding(end = 4.dp)) {
-                                    Text("NEW")
-                                }
+                                top.yukonga.miuix.kmp.basic.Badge(modifier = Modifier.padding(end = 4.dp))
                             }
                         },
                     )

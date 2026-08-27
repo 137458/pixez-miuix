@@ -32,6 +32,9 @@ object AppConstants {
         )
 
         val MAX_TASK_OPTIONS = listOf(1, 2, 3, 5, 8, 10)
+        const val TASK_COUNT_MIN = 1
+        const val TASK_COUNT_MAX = 10
+        val TASK_COUNT_RANGE = TASK_COUNT_MIN..TASK_COUNT_MAX
     }
 
     /**

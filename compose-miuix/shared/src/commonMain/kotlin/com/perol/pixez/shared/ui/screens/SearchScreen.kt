@@ -931,6 +931,7 @@ private fun SearchUserResultList(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .fillMaxHeight(),
+                        trackPadding = PaddingValues(bottom = 100.dp),
                     )
                 }
             }
@@ -1081,6 +1082,7 @@ private fun SearchSuggestions(
         modifier = Modifier
             .align(Alignment.CenterEnd)
             .fillMaxHeight(),
+        trackPadding = PaddingValues(bottom = 100.dp),
     )
 }
 }

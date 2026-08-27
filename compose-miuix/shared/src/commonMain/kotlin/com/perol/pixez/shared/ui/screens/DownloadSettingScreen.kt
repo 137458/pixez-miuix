@@ -351,7 +351,7 @@ fun DownloadSettingScreen(
                 NumberPicker(
                     value = tempTaskCount,
                     onValueChange = { tempTaskCount = it },
-                    range = 1..10,
+                    range = AppConstants.Download.TASK_COUNT_RANGE,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(
