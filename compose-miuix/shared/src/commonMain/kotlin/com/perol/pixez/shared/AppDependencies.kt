@@ -139,7 +139,7 @@ class AppDependencies(
                 val num = settingsRepository.languageNum
                 com.perol.pixez.shared.ui.screens.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
             },
-            enableLogging = true,
+            enableLogging = false,
         )
     }
 

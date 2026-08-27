@@ -48,6 +48,12 @@ fun App(
                     .strongReferencesEnabled(true)
                     .build()
             }
+            .diskCache {
+                coil3.disk.DiskCache.Builder()
+                    .directory(okio.FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_image_cache")
+                    .maxSizeBytes(512L * 1024 * 1024)
+                    .build()
+            }
             .crossfade(true)
             .build()
     }

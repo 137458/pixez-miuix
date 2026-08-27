@@ -74,7 +74,12 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -93,6 +98,19 @@ android {
         jniLibs {
             useLegacyPackaging = false
         }
+        resources {
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/INDEX.LIST",
+                "/META-INF/LICENSE*",
+                "/META-INF/NOTICE*",
+                "/META-INF/*.version",
+                "/META-INF/*.txt",
+                "/META-INF/*.properties",
+                "DebugProbesKt.bin"
+            )
+        }
     }
 }
 
@@ -105,6 +123,13 @@ compose.desktop {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "PixEz"
             packageVersion = "0.9.108"
+
+            jvmArgs += listOf(
+                "-XX:+UseG1GC",
+                "-XX:+UseStringDeduplication",
+                "-Xms64m",
+                "-Dfile.encoding=UTF-8"
+            )
         }
     }
 }
