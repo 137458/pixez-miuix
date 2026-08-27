@@ -6,7 +6,7 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.navigate
 import com.arkivanov.decompose.router.stack.pop
-import com.arkivanov.decompose.router.stack.push
+import com.arkivanov.decompose.router.stack.pushToFront
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
 import com.perol.pixez.shared.data.model.SpotlightArticle
@@ -83,56 +83,56 @@ class RootComponent(
      * 打开作品详情页。
      */
     fun onIllustClicked(illustId: Int) {
-        navigation.push(Config.IllustDetail(illustId))
+        navigation.pushToFront(Config.IllustDetail(illustId))
     }
 
     /**
      * 打开用户详情页。
      */
     fun onUserClicked(userId: Int) {
-        navigation.push(Config.UserDetail(userId))
+        navigation.pushToFront(Config.UserDetail(userId))
     }
 
     /**
      * 打开设置页。
      */
     fun onSettingsClicked() {
-        navigation.push(Config.Settings)
+        navigation.pushToFront(Config.Settings)
     }
 
     /**
      * 打开关于页。
      */
     fun onAboutClicked() {
-        navigation.push(Config.About)
+        navigation.pushToFront(Config.About)
     }
 
     /**
      * 打开平台专属设置页（Android only）。
      */
     fun onPlatformSettingClicked() {
-        navigation.push(Config.PlatformSetting)
+        navigation.pushToFront(Config.PlatformSetting)
     }
 
     /**
      * 打开收藏标签页。
      */
     fun onBookTagClicked() {
-        navigation.push(Config.BookTag)
+        navigation.pushToFront(Config.BookTag)
     }
 
     /**
      * 打开致谢页。
      */
     fun onThanksClicked() {
-        navigation.push(Config.Thanks)
+        navigation.pushToFront(Config.Thanks)
     }
 
     /**
      * 打开屏蔽设置页。
      */
     fun onShieldClicked() {
-        navigation.push(Config.Shield)
+        navigation.pushToFront(Config.Shield)
     }
 
     /**
@@ -141,154 +141,154 @@ class RootComponent(
      * @param showAI 当前账号是否显示 AI 作品，由入口页面从服务器加载后传入。
      */
     fun onAISettingClicked(showAI: Boolean) {
-        navigation.push(Config.AISetting(showAI))
+        navigation.pushToFront(Config.AISetting(showAI))
     }
 
     /**
      * 打开主题设置页。
      */
     fun onThemeSettingClicked() {
-        navigation.push(Config.ThemeSetting)
+        navigation.pushToFront(Config.ThemeSetting)
     }
 
     /**
      * 打开网络设置页。
      */
     fun onNetworkSettingClicked() {
-        navigation.push(Config.NetworkSetting)
+        navigation.pushToFront(Config.NetworkSetting)
     }
 
     /**
      * 打开下载设置页。
      */
     fun onDownloadSettingClicked() {
-        navigation.push(Config.DownloadSetting)
+        navigation.pushToFront(Config.DownloadSetting)
     }
 
     /**
      * 打开保存设置页。
      */
     fun onSaveSettingClicked() {
-        navigation.push(Config.SaveSetting)
+        navigation.pushToFront(Config.SaveSetting)
     }
 
     /**
      * 打开跨适配设置页。
      */
     fun onCrossAdapterSettingClicked() {
-        navigation.push(Config.CrossAdapterSetting)
+        navigation.pushToFront(Config.CrossAdapterSetting)
     }
 
     /**
      * 打开布局设置页。
      */
     fun onLayoutSettingClicked() {
-        navigation.push(Config.LayoutSetting)
+        navigation.pushToFront(Config.LayoutSetting)
     }
 
     /**
      * 打开语言设置页。
      */
     fun onLanguageSettingClicked() {
-        navigation.push(Config.LanguageSetting)
+        navigation.pushToFront(Config.LanguageSetting)
     }
 
     /**
      * 打开小部件推荐类型设置页。
      */
     fun onWidgetRecommendSettingClicked() {
-        navigation.push(Config.WidgetRecommendSetting)
+        navigation.pushToFront(Config.WidgetRecommendSetting)
     }
 
     /**
      * 打开交互习惯开关页。
      */
     fun onInteractionSettingClicked() {
-        navigation.push(Config.InteractionSetting)
+        navigation.pushToFront(Config.InteractionSetting)
     }
 
     /**
      * 打开动态与搜索开关页。
      */
     fun onFeedSettingClicked() {
-        navigation.push(Config.FeedSetting)
+        navigation.pushToFront(Config.FeedSetting)
     }
 
     /**
      * 打开更新设置页。
      */
     fun onUpdateSettingClicked() {
-        navigation.push(Config.UpdateSetting)
+        navigation.pushToFront(Config.UpdateSetting)
     }
 
     /**
      * 打开账号信息编辑页。
      */
     fun onAccountEditClicked() {
-        navigation.push(Config.AccountEdit)
+        navigation.pushToFront(Config.AccountEdit)
     }
 
     /**
      * 打开浏览历史页。
      */
     fun onHistoryClicked() {
-        navigation.push(Config.History)
+        navigation.pushToFront(Config.History)
     }
 
     /**
      * 打开下载任务页。
      */
     fun onDownloadTaskClicked() {
-        navigation.push(Config.DownloadTask)
+        navigation.pushToFront(Config.DownloadTask)
     }
 
     /**
      * 打开应用数据导入导出页。
      */
     fun onDataExportClicked() {
-        navigation.push(Config.DataExport)
+        navigation.pushToFront(Config.DataExport)
     }
 
     /**
      * 打开公告板页。
      */
     fun onBoardClicked() {
-        navigation.push(Config.Board)
+        navigation.pushToFront(Config.Board)
     }
 
     /**
      * 打开画质设置页。
      */
     fun onQualitySettingClicked() {
-        navigation.push(Config.QualitySetting)
+        navigation.pushToFront(Config.QualitySetting)
     }
 
     /**
      * 打开分享格式设置页。
      */
     fun onCopyTextSettingClicked() {
-        navigation.push(Config.CopyTextSetting)
+        navigation.pushToFront(Config.CopyTextSetting)
     }
 
     /**
      * 打开隐私设置页。
      */
     fun onPrivacySettingClicked() {
-        navigation.push(Config.PrivacySetting)
+        navigation.pushToFront(Config.PrivacySetting)
     }
 
     /**
      * 打开欢迎页设置页。
      */
     fun onWelcomePageSettingClicked() {
-        navigation.push(Config.WelcomePageSetting)
+        navigation.pushToFront(Config.WelcomePageSetting)
     }
 
     /**
      * 打开登录页。
      */
     fun onLoginClicked() {
-        navigation.push(Config.Login)
+        navigation.pushToFront(Config.Login)
     }
 
     /**
@@ -304,70 +304,70 @@ class RootComponent(
      * 打开作品评论页。
      */
     fun onCommentsClicked(illustId: Int) {
-        navigation.push(Config.Comments(illustId))
+        navigation.pushToFront(Config.Comments(illustId))
     }
 
     /**
      * 打开相关作品页。
      */
     fun onRelatedIllustsClicked(illustId: Int) {
-        navigation.push(Config.RelatedIllusts(illustId))
+        navigation.pushToFront(Config.RelatedIllusts(illustId))
     }
 
     /**
      * 打开插画系列页。
      */
     fun onIllustSeriesClicked(seriesId: Int) {
-        navigation.push(Config.IllustSeries(seriesId))
+        navigation.pushToFront(Config.IllustSeries(seriesId))
     }
 
     /**
      * 打开用户关注列表页。
      */
     fun onUserFollowListClicked(userId: Int) {
-        navigation.push(Config.UserFollowList(userId))
+        navigation.pushToFront(Config.UserFollowList(userId))
     }
 
     /**
      * 打开用户粉丝列表页。
      */
     fun onUserFollowerListClicked(userId: Int) {
-        navigation.push(Config.UserFollowerList(userId))
+        navigation.pushToFront(Config.UserFollowerList(userId))
     }
 
     /**
      * 打开推荐用户列表页。
      */
     fun onRecomUserListClicked() {
-        navigation.push(Config.RecomUserList)
+        navigation.pushToFront(Config.RecomUserList)
     }
 
     /**
      * 打开搜索页并填入指定关键词。
      */
     fun onSearchClicked(query: String) {
-        navigation.push(Config.Search(query))
+        navigation.pushToFront(Config.Search(query))
     }
 
     /**
      * 打开下载历史页。
      */
     fun onDownloadHistoryClicked() {
-        navigation.push(Config.DownloadHistory)
+        navigation.pushToFront(Config.DownloadHistory)
     }
 
     /**
      * 打开 Spotlight 原生特辑阅读页。
      */
     fun onSpotlightArticleClicked(article: SpotlightArticle) {
-        navigation.push(Config.SpotlightDetail(article))
+        navigation.pushToFront(Config.SpotlightDetail(article))
     }
 
     /**
      * 打开启动向导页。
      */
     fun onGuideClicked() {
-        navigation.push(Config.Guide)
+        navigation.pushToFront(Config.Guide)
     }
 
     /**

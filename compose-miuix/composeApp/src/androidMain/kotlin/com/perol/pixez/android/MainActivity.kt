@@ -174,25 +174,29 @@ class MainActivity : ComponentActivity() {
 
     private fun parseAndNavigateUrlOrId(text: String?) {
         if (text.isNullOrBlank()) return
-        val illustMatch = Regex("""(?:artworks/|illust_id=)(\d+)""").find(text)
-        if (illustMatch != null) {
-            val id = illustMatch.groupValues[1].toIntOrNull()
-            if (id != null) {
-                rootComponent.onIllustClicked(id)
-                return
+        try {
+            val illustMatch = Regex("""(?:artworks/|illust_id=)(\d+)""").find(text)
+            if (illustMatch != null) {
+                val id = illustMatch.groupValues[1].toIntOrNull()
+                if (id != null) {
+                    rootComponent.onIllustClicked(id)
+                    return
+                }
             }
-        }
-        val userMatch = Regex("""(?:users/|member\.php\?id=)(\d+)""").find(text)
-        if (userMatch != null) {
-            val id = userMatch.groupValues[1].toIntOrNull()
-            if (id != null) {
-                rootComponent.onUserClicked(id)
-                return
+            val userMatch = Regex("""(?:users/|member\.php\?id=)(\d+)""").find(text)
+            if (userMatch != null) {
+                val id = userMatch.groupValues[1].toIntOrNull()
+                if (id != null) {
+                    rootComponent.onUserClicked(id)
+                    return
+                }
             }
-        }
-        val pureId = text.trim().toIntOrNull()
-        if (pureId != null && text.trim().length in 6..10) {
-            rootComponent.onIllustClicked(pureId)
+            val pureId = text.trim().toIntOrNull()
+            if (pureId != null && text.trim().length in 6..10) {
+                rootComponent.onIllustClicked(pureId)
+            }
+        } catch (_: Throwable) {
+            // 忽略重复导航或异常 URL 导致的解析错误
         }
     }
 
