@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.components.miuixTopBarBlur
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -144,8 +145,11 @@ fun SettingsScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
+            val backdrop = com.perol.pixez.shared.ui.components.LocalBackdrop.current
             TopAppBar(
                 title = strings.settingsTitle,
+                modifier = Modifier.miuixTopBarBlur(backdrop),
+                color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else androidx.compose.ui.graphics.Color.Unspecified,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(onClick = onBack) {

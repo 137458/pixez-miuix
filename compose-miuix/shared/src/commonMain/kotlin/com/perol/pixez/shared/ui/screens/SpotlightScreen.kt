@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.miuixTopBarBlur
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -229,8 +230,11 @@ fun SpotlightScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
+            val backdrop = com.perol.pixez.shared.ui.components.LocalBackdrop.current
             TopAppBar(
                 title = strings.spotlightTitle,
+                modifier = Modifier.miuixTopBarBlur(backdrop),
+                color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else androidx.compose.ui.graphics.Color.Unspecified,
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {

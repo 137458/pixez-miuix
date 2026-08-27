@@ -116,14 +116,15 @@ fun miuixSlideStackAnimation(): StackAnimation<RootComponent.Config, RootCompone
         )
     }
 
-    return stackAnimation { child, otherChild, _ ->
+    return stackAnimation { child, otherChild, direction ->
         val childInstance = child.instance
         val otherInstance = otherChild.instance
 
         if (childInstance is RootComponent.Child.Main && otherInstance is RootComponent.Child.Main) {
-            val childIdx = MAIN_TAB_ORDER.indexOf(childInstance.tab)
-            val otherIdx = MAIN_TAB_ORDER.indexOf(otherInstance.tab)
-            if (childIdx < otherIdx) {
+            val isEnter = direction == Direction.ENTER_FRONT || direction == Direction.ENTER_BACK
+            val targetIdx = MAIN_TAB_ORDER.indexOf(if (isEnter) childInstance.tab else otherInstance.tab)
+            val sourceIdx = MAIN_TAB_ORDER.indexOf(if (isEnter) otherInstance.tab else childInstance.tab)
+            if (targetIdx < sourceIdx) {
                 backwardSlide
             } else {
                 forwardSlide

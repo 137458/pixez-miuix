@@ -9,7 +9,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -180,12 +182,11 @@ fun IosLiquidGlassNavigationBar(
         }
     }
 
-    var currentIndex by remember { mutableIntStateOf(selectedIndex) }
     val onItemClickUpdated by rememberUpdatedState(onItemClick)
     val hapticFeedback = LocalHapticFeedback.current
 
     fun indexAt(positionX: Float): Int {
-        if (tabWidthPx == 0f) return currentIndex
+        if (tabWidthPx == 0f) return selectedIndex
         val horizontalPaddingPx = with(density) { 4.dp.toPx() }
         val logicalX = if (isLtr) positionX else totalWidthPx - positionX
         return ((logicalX - horizontalPaddingPx) / tabWidthPx)
@@ -210,17 +211,14 @@ fun IosLiquidGlassNavigationBar(
             onDragStopped = {
                 val targetIndex = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                if (currentIndex != targetIndex) {
-                    currentIndex = targetIndex
-                    onItemClickUpdated(targetIndex)
-                }
+                onItemClickUpdated(targetIndex)
                 updateValue(targetIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
             },
             onDragCancelled = {
-                updateValue(currentIndex.toFloat())
+                updateValue(selectedIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -243,18 +241,12 @@ fun IosLiquidGlassNavigationBar(
     }
 
     LaunchedEffect(selectedIndex) {
-        if (currentIndex != selectedIndex) {
-            currentIndex = selectedIndex
-            dampedDrag.animateToValue(selectedIndex.toFloat())
-        }
+        dampedDrag.animateToValue(selectedIndex.toFloat())
     }
 
     fun activateTab(index: Int) {
         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-        if (currentIndex != index) {
-            currentIndex = index
-            onItemClickUpdated(index)
-        }
+        onItemClickUpdated(index)
         dampedDrag.animateToValue(index.toFloat())
     }
 
@@ -287,13 +279,15 @@ fun IosLiquidGlassNavigationBar(
         items.forEachIndexed { index, item ->
             Column(
                 modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        activateTab(index)
+                    }
                     .semantics(mergeDescendants = true) {
-                        selected = index == currentIndex
+                        selected = index == selectedIndex
                         role = Role.Tab
-                        onClick {
-                            activateTab(index)
-                            true
-                        }
                     }
                     .onKeyEvent { event ->
                         val isActivationKey = event.key == Key.Enter ||
@@ -341,7 +335,7 @@ fun IosLiquidGlassNavigationBar(
                 Text(
                     text = item.label,
                     fontSize = 11.sp,
-                    fontWeight = if (index == currentIndex) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -410,7 +404,7 @@ fun IosLiquidGlassNavigationBar(
                         )
                         .then(
                             if (isBlurActive && backdrop != null) {
-                                interactiveHighlight.modifier.then(interactiveHighlight.gestureModifier)
+                                interactiveHighlight.modifier
                             } else {
                                 Modifier
                             },
