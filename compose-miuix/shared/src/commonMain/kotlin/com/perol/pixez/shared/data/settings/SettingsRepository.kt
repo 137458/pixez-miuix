@@ -392,17 +392,17 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.USE_SAUNCE_NAO_WEBVIEW] = value }
 
     /**
-     * 竖屏是否启用按宽度自适应网格列数。
+     * 竖屏是否启用按宽度自适应网格列数（默认开启，以实现全尺寸设备开箱自适应）。
      */
     var crossAdapt: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, false)
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, true)
         set(value) { settings[SettingsKeys.CROSS_ADAPT] = value }
 
     /**
-     * 竖屏自适应宽度阈值（100-2160）。
+     * 竖屏自适应宽度阈值（100-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
      */
     var crossAdapterWidth: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, 100)
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
             .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
         set(value) {
             settings[SettingsKeys.CROSS_ADAPT_WIDTH] = value.coerceIn(
@@ -412,17 +412,17 @@ class SettingsRepository(
         }
 
     /**
-     * 横屏是否启用按宽度自适应网格列数。
+     * 横屏是否启用按宽度自适应网格列数（默认开启，以实现横屏/桌面自适应）。
      */
     var hCrossAdapt: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT, false)
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT, true)
         set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value }
 
     /**
-     * 横屏自适应宽度阈值（100-2160）。
+     * 横屏自适应宽度阈值（100-2160，默认 180dp）。
      */
     var hCrossAdapterWidth: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT_WIDTH, 100)
+        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
             .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
         set(value) {
             settings[SettingsKeys.H_CROSS_ADAPT_WIDTH] = value.coerceIn(
@@ -612,7 +612,8 @@ class SettingsRepository(
         private const val SAVE_MODE_LEGACY_SAFE = 1
         private const val SAVE_MODE_LEGACY_HELPLESS = 2
 
-        // 跨适配宽度阈值范围，与旧版 setting_cross_adapter_page.dart 保持一致
+        // 跨适配宽度阈值范围与默认自适应基准宽度（180dp：手机竖屏 2 列，平板/横屏 3~6 列）
+        private const val DEFAULT_CROSS_ADAPTER_WIDTH = 180
         private const val MIN_CROSS_ADAPTER_WIDTH = 100
         private const val MAX_CROSS_ADAPTER_WIDTH = 2160
 

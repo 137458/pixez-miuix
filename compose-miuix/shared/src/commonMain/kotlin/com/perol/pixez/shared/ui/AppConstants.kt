@@ -53,6 +53,7 @@ object AppConstants {
      * 跨适配网格预设
      */
     object CrossAdapter {
+        const val WIDTH_DEFAULT = 180
         const val WIDTH_MIN = 100
         const val WIDTH_MAX = 2160
         const val PREVIEW_ITEM_COUNT = 20

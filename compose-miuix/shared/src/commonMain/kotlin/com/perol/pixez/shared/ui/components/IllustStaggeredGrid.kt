@@ -64,6 +64,7 @@ fun IllustStaggeredGrid(
         modifier = modifier.fillMaxSize(),
     ) {
         val isLandscape = maxWidth > maxHeight
+        val defaultCardWidth = AppConstants.Layout.GRID_CARD_MIN_WIDTH_DP
         val effectiveColumns = remember(
             columns,
             isLandscape,
@@ -78,16 +79,18 @@ fun IllustStaggeredGrid(
             if (columns != null) {
                 columns
             } else if (isLandscape) {
-                if (settings?.hCrossAdapt == true) {
-                    val minWidth = settings.hCrossAdapterWidth.coerceIn(100, 1000)
+                val adapt = settings?.hCrossAdapt ?: true
+                if (adapt) {
+                    val minWidth = (settings?.hCrossAdapterWidth ?: defaultCardWidth).coerceIn(100, 1000)
                     StaggeredGridCells.Adaptive(minWidth.dp)
                 } else {
                     val configuredCols = settings?.hCrossCount ?: 2
                     StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
                 }
             } else {
-                if (settings?.crossAdapt == true) {
-                    val minWidth = settings.crossAdapterWidth.coerceIn(100, 1000)
+                val adapt = settings?.crossAdapt ?: true
+                if (adapt) {
+                    val minWidth = (settings?.crossAdapterWidth ?: defaultCardWidth).coerceIn(100, 1000)
                     StaggeredGridCells.Adaptive(minWidth.dp)
                 } else {
                     val configuredCols = settings?.crossCount ?: 2

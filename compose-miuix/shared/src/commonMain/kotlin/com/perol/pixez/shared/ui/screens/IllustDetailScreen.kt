@@ -52,6 +52,7 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -266,7 +267,7 @@ private fun IllustDetailSingleContent(
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .com.perol.pixez.shared.platform.illustDragAndDropSource(illust),
+                                        .illustDragAndDropSource(illust),
                                 )
                                 if (pageIndex < illust.metaPages.lastIndex) {
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -298,7 +299,7 @@ private fun IllustDetailSingleContent(
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .com.perol.pixez.shared.platform.illustDragAndDropSource(illust),
+                                        .illustDragAndDropSource(illust),
                                 )
                             }
                         }
