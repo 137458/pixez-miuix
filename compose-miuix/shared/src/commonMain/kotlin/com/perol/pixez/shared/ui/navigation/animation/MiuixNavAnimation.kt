@@ -70,67 +70,19 @@ fun miuixSlidePredictiveBackAnimatable(
 }
 
 /**
- * 底部主标签顺序表，用于判断标签切换时的前进/后退物理方向。
- */
-private val MAIN_TAB_ORDER = listOf(
-    RootComponent.MainTab.Hello,
-    RootComponent.MainTab.Search,
-    RootComponent.MainTab.Ranking,
-    RootComponent.MainTab.New,
-    RootComponent.MainTab.Spotlight,
-)
-
-/**
  * 创建 MIUIX / HyperOS 风格的默认页面出入栈平移转场动画。
  *
  * 特性：
- * 1. 一级主标签切换：智能感知目标标签物理顺序，从左往右切时向右滑出，从右往左切时向左滑出。
- * 2. 二级详情页面推进（Push）：新页面从右侧滑入（100% 不透明），旧页面向左滑出。
- * 3. 二级详情页面回退（Pop）：旧页面向右滑出，新页面自左侧滑回。
+ * 1. 二级详情页面推进（Push）：新页面从右侧滑入（100% 不透明），旧页面向左滑出。
+ * 2. 二级详情页面回退（Pop）：旧页面向右滑出，新页面自左侧滑回。
  */
 @OptIn(com.arkivanov.decompose.FaultyDecomposeApi::class)
 fun miuixSlideStackAnimation(): StackAnimation<RootComponent.Config, RootComponent.Child> {
-    val forwardSlide: StackAnimator = slide(
+    return slide(
         animationSpec = tween(
             durationMillis = 320,
             easing = HyperOSDecelerateEasing,
         ),
     )
-
-    val backwardSlide: StackAnimator = stackAnimator(
-        animationSpec = tween(
-            durationMillis = 320,
-            easing = HyperOSDecelerateEasing,
-        ),
-    ) { factor, direction, content ->
-        val translationXFactor = when (direction) {
-            Direction.ENTER_FRONT -> -factor
-            Direction.EXIT_BACK -> factor
-            Direction.ENTER_BACK -> factor
-            Direction.EXIT_FRONT -> -factor
-        }
-        content(
-            Modifier.graphicsLayer {
-                translationX = translationXFactor * size.width
-            },
-        )
-    }
-
-    return stackAnimation { child, otherChild, direction ->
-        val childInstance = child.instance
-        val otherInstance = otherChild.instance
-
-        if (childInstance is RootComponent.Child.Main && otherInstance is RootComponent.Child.Main) {
-            val isEnter = direction == Direction.ENTER_FRONT || direction == Direction.ENTER_BACK
-            val targetIdx = MAIN_TAB_ORDER.indexOf(if (isEnter) childInstance.tab else otherInstance.tab)
-            val sourceIdx = MAIN_TAB_ORDER.indexOf(if (isEnter) otherInstance.tab else childInstance.tab)
-            if (targetIdx < sourceIdx) {
-                backwardSlide
-            } else {
-                forwardSlide
-            }
-        } else {
-            forwardSlide
-        }
-    }
 }
+

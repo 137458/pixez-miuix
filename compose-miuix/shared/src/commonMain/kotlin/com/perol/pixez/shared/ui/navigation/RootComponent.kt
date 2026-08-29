@@ -38,6 +38,14 @@ class RootComponent(
         childFactory = ::createChild,
     )
 
+    private val initialTab = when (val init = resolveWelcomePageConfig(settingsRepository)) {
+        is Config.Main -> init.tab
+        else -> MainTab.Hello
+    }
+
+    private val _selectedTab = kotlinx.coroutines.flow.MutableStateFlow(initialTab)
+    val selectedTab: kotlinx.coroutines.flow.StateFlow<MainTab> = _selectedTab
+
     private val _tabReselectEvents = kotlinx.coroutines.flow.MutableSharedFlow<MainTab>(extraBufferCapacity = 1)
     val tabReselectEvents: kotlinx.coroutines.flow.SharedFlow<MainTab> = _tabReselectEvents
 
@@ -46,22 +54,38 @@ class RootComponent(
     }
 
     /**
-     * 底部标签切换：将栈重置为对应的主页标签。
+     * 底部标签切换：驱动 Pager 切换或回退至主界面。
      *
-     * 使用 replaceCurrent 而非 push，避免底部标签切换累积栈深度，
-     * 确保按返回键时直接退出应用而不是在历史标签间回退。
-     * 若已处于当前标签，则触发 reselect 回顶与刷新事件。
+     * 若当前在二级页面，先将栈重置为主页；
+     * 若已处于当前标签，触发 reselect 回顶与刷新事件；
+     * 否则更新选中标签，驱动 Pager 平滑滚动。
      */
     fun onMainTabSelected(tab: MainTab) {
         if (tab == MainTab.New) {
             settingsRepository.hasUnreadFeedBadge = false
         }
         val active = stack.value.active.instance
-        if (active is Child.Main && active.tab == tab) {
-            onTabReselected(tab)
-            return
+        if (active !is Child.Main) {
+            navigation.navigate { currentStack ->
+                val mainConfig = currentStack.firstOrNull { it is Config.Main } ?: Config.Main(tab)
+                listOf(mainConfig)
+            }
         }
-        navigation.replaceCurrent(Config.Main(tab))
+        if (_selectedTab.value == tab && active is Child.Main) {
+            onTabReselected(tab)
+        } else {
+            _selectedTab.value = tab
+        }
+    }
+
+    /**
+     * 用户手势滑动 Pager 时同步组件选中标签。
+     */
+    fun onPageSwiped(tab: MainTab) {
+        if (tab == MainTab.New) {
+            settingsRepository.hasUnreadFeedBadge = false
+        }
+        _selectedTab.value = tab
     }
 
     /**
@@ -611,6 +635,16 @@ class RootComponent(
         data object PrivacySetting : Child()
         data object WelcomePageSetting : Child()
         data object PlatformSetting : Child()
+    }
+
+    companion object {
+        val MAIN_TAB_ORDER = listOf(
+            MainTab.Hello,
+            MainTab.Search,
+            MainTab.Ranking,
+            MainTab.New,
+            MainTab.Spotlight,
+        )
     }
 }
 
