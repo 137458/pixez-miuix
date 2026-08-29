@@ -37,20 +37,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
-
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-
-
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
-
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
@@ -178,6 +178,8 @@ fun SearchScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -185,6 +187,8 @@ fun SearchScreen(
             TopAppBar(
                 title = strings.tabSearch,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
             )
         },
     ) { paddingValues ->

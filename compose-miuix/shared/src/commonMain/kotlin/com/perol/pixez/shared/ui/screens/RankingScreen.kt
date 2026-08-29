@@ -1,7 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +27,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
@@ -43,14 +52,16 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 
 /**
  * 排行榜页：支持日/周/月等模式切换，展示真实排行榜数据。
@@ -156,6 +167,8 @@ fun RankingScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
@@ -165,6 +178,8 @@ fun RankingScreen(
             TopAppBar(
                 title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -248,29 +263,88 @@ private fun RankingModeSelector(
     onModeSelected: (RankingMode) -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(RankingMode.entries) { mode ->
             val isSelected = mode == selectedMode
-            Text(
-                text = mode.label(strings),
+            val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val pressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+
+            LaunchedEffect(isPressed) {
+                pressScale.animateTo(
+                    targetValue = if (isPressed) 0.93f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.7f,
+                        stiffness = 500f,
+                    ),
+                )
+            }
+
+            val pillShape = remember { RoundedCornerShape(16.dp) }
+            val itemBackground = if (isSelected) {
+                MiuixTheme.colorScheme.primary
+            } else {
+                if (isDark) {
+                    Color.White.copy(alpha = 0.08f)
+                } else {
+                    Color.Black.copy(alpha = 0.05f)
+                }
+            }
+
+            val itemBorderColor = if (isSelected) {
+                Color.Transparent
+            } else {
+                if (isDark) {
+                    Color.White.copy(alpha = 0.10f)
+                } else {
+                    Color.Black.copy(alpha = 0.06f)
+                }
+            }
+
+            Box(
                 modifier = Modifier
-                    .clickable { onModeSelected(mode) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                style = if (isSelected) {
-                    MiuixTheme.textStyles.body1
-                } else {
-                    MiuixTheme.textStyles.body2
-                },
-                color = if (isSelected) {
-                    MiuixTheme.colorScheme.primary
-                } else {
-                    MiuixTheme.colorScheme.onSurface
-                },
-            )
+                    .graphicsLayer {
+                        scaleX = pressScale.value
+                        scaleY = pressScale.value
+                    }
+                    .clip(pillShape)
+                    .background(itemBackground)
+                    .squircleBorder(
+                        width = 0.5.dp,
+                        color = itemBorderColor,
+                        cornerRadius = 16.dp,
+                    )
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                            if (!isSelected) {
+                                hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                onModeSelected(mode)
+                            }
+                        },
+                    )
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = mode.label(strings),
+                    style = MiuixTheme.textStyles.body2,
+                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
+                    color = if (isSelected) {
+                        Color.White
+                    } else {
+                        MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    },
+                )
+            }
         }
     }
 }

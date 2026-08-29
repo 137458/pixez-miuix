@@ -1,5 +1,9 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +31,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
-
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +46,6 @@ import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.AppConstants
 import kotlin.math.max
-
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -74,6 +76,8 @@ fun LayoutSettingScreen(
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     val padModeOptions = remember { listOf("V:H", "V:V", "H:H") }
     val crossCountOptions = remember { listOf("2", "3", "4") }

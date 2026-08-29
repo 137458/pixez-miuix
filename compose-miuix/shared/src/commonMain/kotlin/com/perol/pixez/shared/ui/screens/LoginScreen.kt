@@ -1,5 +1,12 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,7 +59,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
@@ -64,7 +69,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 登录页：支持通过系统浏览器 OAuth 授权或直接输入 Pixiv Refresh Token 完成登录。
@@ -98,6 +102,8 @@ fun LoginScreen(
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -105,6 +111,8 @@ fun LoginScreen(
             TopAppBar(
                 title = strings.goLogin,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

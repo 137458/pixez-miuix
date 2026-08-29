@@ -1,18 +1,23 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -23,14 +28,12 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
-
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -127,6 +130,8 @@ fun RelatedIllustsScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
@@ -136,6 +141,8 @@ fun RelatedIllustsScreen(
             TopAppBar(
                 title = strings.relatedIllusts,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

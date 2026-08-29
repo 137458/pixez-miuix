@@ -41,6 +41,10 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.RectangleShape
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val DefaultBlurRadius = 20.dp
@@ -188,6 +192,11 @@ fun LiquidGlass(
 }
 
 /**
+ * 全局 Backdrop 采样源 CompositionLocal。
+ */
+val LocalBackdrop = compositionLocalOf<LayerBackdrop?> { null }
+
+/**
  * 纯毛玻璃模糊效果 Modifier，用于标准底栏与浮层。
  */
 fun Modifier.backdropBlur(
@@ -208,6 +217,36 @@ fun Modifier.backdropBlur(
         drawRect(color.copy(alpha = tintAlpha))
     },
 )
+
+/**
+ * 顶栏专用背景毛玻璃模糊 Modifier。
+ *
+ * @param backdrop 全局或页面层级的 Backdrop 采样源。若为 null 则保持原样。
+ * @param tintColor 表面着色，默认取当前主题表面色。
+ * @param tintAlpha 表面着色不透明度，默认 0.85f 与标准底栏对齐。
+ */
+fun Modifier.topAppBarBlur(
+    backdrop: Backdrop?,
+    tintColor: Color = Color.Unspecified,
+    tintAlpha: Float = 0.85f,
+): Modifier = if (backdrop != null) {
+    this.backdropBlur(
+        backdrop = backdrop,
+        shape = RectangleShape,
+        blurRadius = 20.dp,
+        tintColor = tintColor,
+        tintAlpha = tintAlpha,
+    )
+} else {
+    this
+}
+
+/**
+ * 安全挂载 layerBackdrop 采样源的扩展 Modifier。
+ * 当 backdrop 为非 null 时注册为 Backdrop 图层采样源，为 null 时保持原样。
+ */
+fun Modifier.blurBackdropSource(backdrop: LayerBackdrop?): Modifier =
+    if (backdrop != null) this.layerBackdrop(backdrop) else this
 
 /**
  * Liquid Glass Modifier using MIUIX Blur & Shader pipeline.

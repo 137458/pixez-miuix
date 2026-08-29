@@ -1,5 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +55,8 @@ fun SaveSettingScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

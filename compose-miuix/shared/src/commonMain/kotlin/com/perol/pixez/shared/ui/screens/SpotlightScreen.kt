@@ -44,6 +44,10 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import androidx.compose.ui.graphics.Color
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -226,12 +230,17 @@ fun SpotlightScreen(
     }
 
 
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.spotlightTitle,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 actions = {
                     IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
                         Icon(
@@ -293,6 +302,7 @@ fun SpotlightScreen(
                         state = currentGridState,
                         modifier = Modifier
                             .fillMaxSize()
+                            .blurBackdropSource(backdrop)
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             start = 16.dp,

@@ -1,5 +1,11 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,12 +122,18 @@ fun HistoryScreen(
     val hasHistory = historyResult.value?.getOrNull().orEmpty().isNotEmpty()
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = strings.settingHistory,
+                scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -200,6 +212,7 @@ fun HistoryScreen(
                             } else {
                                 HistoryGrid(
                                     items = filteredItems,
+                                    modifier = Modifier.fillMaxSize().blurBackdropSource(backdrop).nestedScroll(scrollBehavior.nestedScrollConnection),
                                     onIllustClick = onIllustClick,
                                     onLongClick = { itemToDelete = it.id },
                                 )

@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import top.yukonga.miuix.kmp.basic.Icon
@@ -31,14 +32,15 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.perol.pixez.shared.ui.AppConstants
+import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 
 /**
@@ -62,6 +64,8 @@ fun LanguageSettingScreen(
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -69,6 +73,8 @@ fun LanguageSettingScreen(
             TopAppBar(
                 title = strings.settingLanguage,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -88,8 +94,9 @@ fun LanguageSettingScreen(
                 contentPadding = paddingValues,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .widthIn(max = com.perol.pixez.shared.ui.AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
+                    .blurBackdropSource(backdrop)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
                 item {

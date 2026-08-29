@@ -121,10 +121,13 @@ fun IllustStaggeredGrid(
             }
         }
 
+        val backdrop = LocalBackdrop.current
         LazyVerticalStaggeredGrid(
             columns = effectiveColumns,
             state = state,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .blurBackdropSource(backdrop),
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalItemSpacing = 8.dp,

@@ -43,10 +43,14 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import androidx.compose.ui.graphics.Color
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalBackdrop
+import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.icon.extended.Settings
-
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
@@ -217,6 +221,8 @@ fun HelloScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = LocalBackdrop.current
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -224,6 +230,8 @@ fun HelloScreen(
             TopAppBar(
                 title = strings.tabRecommend,
                 scrollBehavior = scrollBehavior,
+                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,

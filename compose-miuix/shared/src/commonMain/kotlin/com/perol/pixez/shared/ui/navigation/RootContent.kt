@@ -185,6 +185,7 @@ fun RootContent(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+            com.perol.pixez.shared.ui.components.LocalBackdrop provides backdrop,
         ) {
             if (showAppUpdateDialog && appReleaseInfo != null) {
                 UpdateDialog(
@@ -230,9 +231,7 @@ fun RootContent(
                         ) {
                             Children(
                                 stack = component.stack,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .layerBackdrop(backdrop),
+                                modifier = Modifier.fillMaxSize(),
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = miuixSlideStackAnimation(),
