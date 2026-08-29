@@ -78,10 +78,12 @@ fun miuixSlidePredictiveBackAnimatable(
  */
 @OptIn(com.arkivanov.decompose.FaultyDecomposeApi::class)
 fun miuixSlideStackAnimation(): StackAnimation<RootComponent.Config, RootComponent.Child> {
-    return slide(
-        animationSpec = tween(
-            durationMillis = 320,
-            easing = HyperOSDecelerateEasing,
+    return stackAnimation(
+        animator = slide(
+            animationSpec = tween(
+                durationMillis = 320,
+                easing = HyperOSDecelerateEasing,
+            ),
         ),
     )
 }

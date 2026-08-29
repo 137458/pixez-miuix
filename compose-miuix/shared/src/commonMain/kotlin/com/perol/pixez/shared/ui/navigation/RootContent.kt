@@ -1,13 +1,17 @@
 package com.perol.pixez.shared.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -203,23 +207,32 @@ fun RootContent(
                 )
             }
 
-            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+            BoxWithConstraints(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(MiuixTheme.colorScheme.surface),
+            ) {
                     val isWideScreen = maxWidth >= 600.dp
                     val isMainTab = active is Child.Main
                     val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
                     val showNavigationRail = isWideScreen && isMainTab && !useFloatingBottomBar
                     val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
+                    val activeTab by component.selectedTab.collectAsState()
                     val density = LocalDensity.current
                     val containerWidthPx = with(density) {
                         val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
                         availableWidth.toPx()
                     }
 
-                    Row(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MiuixTheme.colorScheme.surface),
+                    ) {
                         // 在平板/桌面宽屏且关闭悬浮底栏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
                         if (showNavigationRail) {
                             MainNavigationRail(
-                                activeTab = active.tab,
+                                activeTab = activeTab,
                                 onTabSelected = component::onMainTabSelected,
                             )
                         }
@@ -227,7 +240,8 @@ fun RootContent(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxHeight(),
+                                .fillMaxHeight()
+                                .background(MiuixTheme.colorScheme.surface),
                         ) {
                             Children(
                                 stack = component.stack,
@@ -247,7 +261,7 @@ fun RootContent(
 
                     when (val instance = child.instance) {
                         is Child.Main -> MainContent(
-                            tab = instance.tab,
+                            initialTab = instance.tab,
                             component = component,
                             illustRepository = illustRepository,
                             searchRepository = searchRepository,
@@ -551,7 +565,7 @@ fun RootContent(
                             val _changeVersion = settingsRepository.changeVersion
                             if (showBottomBar && active is Child.Main) {
                                 MainBottomBar(
-                                    activeTab = active.tab,
+                                    activeTab = activeTab,
                                     onTabSelected = component::onMainTabSelected,
                                     isFloating = useFloatingBottomBar,
                                     backdrop = backdrop,
@@ -567,11 +581,17 @@ fun RootContent(
 
 
 /**
- * 根据当前底部标签渲染对应一级页面。
+ * 使用 HorizontalPager 管理并渲染 5 个一级主页面。
+ *
+ * 参考 localsend-miuix 实现：
+ * 1. 5 个主页面在水平方向物理相邻排布，切换标签时通过 Pager 平滑滚动，
+ *    彻底避免了栈替换导致的白边与重新挂载问题。
+ * 2. 配合 beyondViewportPageCount = 4 预加载与保持状态，保留各标签的滚动位置与网络缓存。
+ * 3. 双向同步：底栏点击驱动 Pager 滚动，手势滑动 Pager 同步底栏选中高亮。
  */
 @Composable
 private fun MainContent(
-    tab: RootComponent.MainTab,
+    initialTab: RootComponent.MainTab,
     component: RootComponent,
     illustRepository: IllustRepository,
     searchRepository: SearchRepository,
@@ -580,60 +600,93 @@ private fun MainContent(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
-    when (tab) {
-        RootComponent.MainTab.Hello -> HelloScreen(
-            onIllustClick = component::onIllustClicked,
-            onSettingsClick = component::onSettingsClicked,
-            onLoginClick = component::onLoginClicked,
-            onRecomUserClick = component::onRecomUserListClicked,
-            repository = illustRepository,
-            accountRepository = accountRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
-            reselectFlow = remember(component) {
-                kotlinx.coroutines.flow.flow {
-                    component.tabReselectEvents.collect { tab ->
-                        if (tab == RootComponent.MainTab.Hello) emit(Unit)
+    val initialIndex = remember { RootComponent.MAIN_TAB_ORDER.indexOf(initialTab).coerceAtLeast(0) }
+    val pagerState = rememberPagerState(
+        initialPage = initialIndex,
+        pageCount = { RootComponent.MAIN_TAB_ORDER.size },
+    )
+    val selectedTab by component.selectedTab.collectAsState()
+
+    // 响应外部或底部导航栏点击驱动 Pager 平滑滚动
+    LaunchedEffect(selectedTab) {
+        val targetIndex = RootComponent.MAIN_TAB_ORDER.indexOf(selectedTab)
+        if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+            if (kotlin.math.abs(pagerState.currentPage - targetIndex) > 1) {
+                pagerState.scrollToPage(targetIndex)
+            } else {
+                pagerState.animateScrollToPage(targetIndex)
+            }
+        }
+    }
+
+    // 响应用户手势滑动 Pager 同步组件状态
+    LaunchedEffect(pagerState.currentPage) {
+        val currentTab = RootComponent.MAIN_TAB_ORDER.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+        if (component.selectedTab.value != currentTab) {
+            component.onPageSwiped(currentTab)
+        }
+    }
+
+    HorizontalPager(
+        state = pagerState,
+        beyondViewportPageCount = 4,
+        modifier = Modifier.fillMaxSize(),
+    ) { page ->
+        when (RootComponent.MAIN_TAB_ORDER[page]) {
+            RootComponent.MainTab.Hello -> HelloScreen(
+                onIllustClick = component::onIllustClicked,
+                onSettingsClick = component::onSettingsClicked,
+                onLoginClick = component::onLoginClicked,
+                onRecomUserClick = component::onRecomUserListClicked,
+                repository = illustRepository,
+                accountRepository = accountRepository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+                reselectFlow = remember(component) {
+                    kotlinx.coroutines.flow.flow {
+                        component.tabReselectEvents.collect { tab ->
+                            if (tab == RootComponent.MainTab.Hello) emit(Unit)
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
 
-        RootComponent.MainTab.Search -> SearchScreen(
-            onIllustClick = component::onIllustClicked,
-            onUserClick = component::onUserClicked,
-            repository = searchRepository,
-            settingsRepository = settingsRepository,
-            banRepository = banRepository,
-        )
+            RootComponent.MainTab.Search -> SearchScreen(
+                onIllustClick = component::onIllustClicked,
+                onUserClick = component::onUserClicked,
+                repository = searchRepository,
+                settingsRepository = settingsRepository,
+                banRepository = banRepository,
+            )
 
-        RootComponent.MainTab.Ranking -> RankingScreen(
-            onIllustClick = component::onIllustClicked,
-            repository = illustRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
-        )
+            RootComponent.MainTab.Ranking -> RankingScreen(
+                onIllustClick = component::onIllustClicked,
+                repository = illustRepository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+            )
 
-        RootComponent.MainTab.New -> NewScreen(
-            onIllustClick = component::onIllustClicked,
-            onLoginClick = component::onLoginClicked,
-            repository = illustRepository,
-            accountRepository = accountRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
-            reselectFlow = remember(component) {
-                kotlinx.coroutines.flow.flow {
-                    component.tabReselectEvents.collect { tab ->
-                        if (tab == RootComponent.MainTab.New) emit(Unit)
+            RootComponent.MainTab.New -> NewScreen(
+                onIllustClick = component::onIllustClicked,
+                onLoginClick = component::onLoginClicked,
+                repository = illustRepository,
+                accountRepository = accountRepository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+                reselectFlow = remember(component) {
+                    kotlinx.coroutines.flow.flow {
+                        component.tabReselectEvents.collect { tab ->
+                            if (tab == RootComponent.MainTab.New) emit(Unit)
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
 
-        RootComponent.MainTab.Spotlight -> SpotlightScreen(
-            repository = illustRepository,
-            onArticleClick = component::onSpotlightArticleClicked,
-        )
+            RootComponent.MainTab.Spotlight -> SpotlightScreen(
+                repository = illustRepository,
+                onArticleClick = component::onSpotlightArticleClicked,
+            )
+        }
     }
 }
 
