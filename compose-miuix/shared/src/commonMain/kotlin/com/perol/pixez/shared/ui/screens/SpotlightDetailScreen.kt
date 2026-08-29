@@ -130,8 +130,6 @@ fun SpotlightDetailScreen(
             TopAppBar(
                 title = article.pureTitle.ifBlank { article.title },
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -184,7 +182,7 @@ fun SpotlightDetailScreen(
                         columns = effectiveColumns,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blurBackdropSource(backdrop)
+                            
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             start = 16.dp,

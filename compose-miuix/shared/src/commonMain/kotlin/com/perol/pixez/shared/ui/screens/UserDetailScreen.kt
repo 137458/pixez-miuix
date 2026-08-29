@@ -2,9 +2,6 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
-import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.clickable
@@ -115,16 +112,18 @@ fun UserDetailScreen(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
+    val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = userDetail?.user?.name ?: "",
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TooltipBox(text = strings.back) {
                         IconButton(onClick = onBack) {
@@ -207,10 +206,11 @@ fun UserDetailScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             )
                         }
-                        UserProfileHeader(
+                        UserDetailTabContent(
+                            userId = userId,
                             userDetail = userDetail,
                             isFollowed = isFollowed,
-                            isLoading = isFollowLoading,
+                            isFollowLoading = isFollowLoading,
                             onFollowClick = {
                                 if (!isFollowLoading) {
                                     coroutineScope.launch {
@@ -236,10 +236,6 @@ fun UserDetailScreen(
                             },
                             onFollowListClick = { onFollowListClick(userDetail.user.id) },
                             onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
-                            modifier = Modifier.padding(16.dp),
-                        )
-                        UserDetailTabContent(
-                            userId = userId,
                             onIllustClick = onIllustClick,
                             repository = repository,
                             banRepository = banRepository,
@@ -267,44 +263,62 @@ fun UserDetailScreen(
 @Composable
 private fun UserDetailTabContent(
     userId: Int,
+    userDetail: UserDetail,
+    isFollowed: Boolean,
+    isFollowLoading: Boolean,
+    onFollowClick: () -> Unit,
+    onFollowListClick: () -> Unit,
+    onFollowerListClick: () -> Unit,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
 ) {
     val strings = LocalStrings.current
-    // 主 Tab 选中状态：0 = 作品，1 = 收藏。
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf(strings.userWorkTab, strings.userBookmarkTab)
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            tabs = tabs,
-            selectedTabIndex = selectedTabIndex,
-            onTabSelected = { selectedTabIndex = it },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+    val headerContent: @Composable () -> Unit = {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            when (selectedTabIndex) {
-                0 -> UserWorksTab(
-                    userId = userId,
-                    onIllustClick = onIllustClick,
-                    repository = repository,
-                    banRepository = banRepository,
-                    settingsRepository = settingsRepository,
-                )
-                1 -> UserBookmarksTab(
-                    userId = userId,
-                    onIllustClick = onIllustClick,
-                    repository = repository,
-                    banRepository = banRepository,
-                    settingsRepository = settingsRepository,
-                )
-            }
+            UserProfileHeader(
+                userDetail = userDetail,
+                isFollowed = isFollowed,
+                isLoading = isFollowLoading,
+                onFollowClick = onFollowClick,
+                onFollowListClick = onFollowListClick,
+                onFollowerListClick = onFollowerListClick,
+            )
+            TabRow(
+                tabs = tabs,
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        when (selectedTabIndex) {
+            0 -> UserWorksTab(
+                userId = userId,
+                header = headerContent,
+                onIllustClick = onIllustClick,
+                repository = repository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+            )
+            1 -> UserBookmarksTab(
+                userId = userId,
+                header = headerContent,
+                onIllustClick = onIllustClick,
+                repository = repository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+            )
         }
     }
 }
@@ -315,6 +329,7 @@ private fun UserDetailTabContent(
 @Composable
 private fun UserWorksTab(
     userId: Int,
+    header: (@Composable () -> Unit)? = null,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
@@ -394,6 +409,7 @@ private fun UserWorksTab(
         hasMore = nextUrl != null,
         isLoadingMore = isLoadingMore,
         loadMoreError = loadMoreError,
+        header = header,
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
         onRetry = { retryCount++ },
@@ -407,6 +423,7 @@ private fun UserWorksTab(
 @Composable
 private fun UserBookmarksTab(
     userId: Int,
+    header: (@Composable () -> Unit)? = null,
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
@@ -486,35 +503,34 @@ private fun UserBookmarksTab(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            tabs = restrictTabs,
-            selectedTabIndex = selectedRestrictIndex,
-            onTabSelected = { selectedRestrictIndex = it },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            IllustTabBody(
-                state = state.value,
-                illusts = illusts,
-                hasMore = nextUrl != null,
-                isLoadingMore = isLoadingMore,
-                loadMoreError = loadMoreError,
-                onLoadMore = ::loadMore,
-                onIllustClick = onIllustClick,
-                onRetry = { retryCount++ },
-                emptyText = if (restrict == "public") {
-                    strings.userNoBookmarks.format(strings.userPublicRestrict)
-                } else {
-                    strings.userNoBookmarks.format(strings.userPrivateRestrict)
-                },
+    val bookmarkHeader: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (header != null) header()
+            TabRow(
+                tabs = restrictTabs,
+                selectedTabIndex = selectedRestrictIndex,
+                onTabSelected = { selectedRestrictIndex = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
         }
     }
+
+    IllustTabBody(
+        state = state.value,
+        illusts = illusts,
+        hasMore = nextUrl != null,
+        isLoadingMore = isLoadingMore,
+        loadMoreError = loadMoreError,
+        header = bookmarkHeader,
+        onLoadMore = ::loadMore,
+        onIllustClick = onIllustClick,
+        onRetry = { retryCount++ },
+        emptyText = if (restrict == "public") {
+            strings.userNoBookmarks.format(strings.userPublicRestrict)
+        } else {
+            strings.userNoBookmarks.format(strings.userPrivateRestrict)
+        },
+    )
 }
 
 /**
@@ -527,6 +543,7 @@ private fun IllustTabBody(
     hasMore: Boolean,
     isLoadingMore: Boolean,
     loadMoreError: Throwable?,
+    header: (@Composable () -> Unit)? = null,
     onLoadMore: () -> Unit,
     onIllustClick: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -536,14 +553,20 @@ private fun IllustTabBody(
         state == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
         state.isSuccess -> {
             if (illusts.isEmpty() && !isLoadingMore) {
-                EmptyPlaceholder(
-                    message = emptyText,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (header != null) header()
+                    EmptyPlaceholder(
+                        message = emptyText,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                    )
+                }
             } else {
                 IllustStaggeredGrid(
                     illusts = illusts,
                     onIllustClick = onIllustClick,
+                    header = header,
                     modifier = Modifier.fillMaxSize(),
                     hasMore = hasMore,
                     isLoadingMore = isLoadingMore,

@@ -112,8 +112,6 @@ fun LoginScreen(
             TopAppBar(
                 title = strings.goLogin,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

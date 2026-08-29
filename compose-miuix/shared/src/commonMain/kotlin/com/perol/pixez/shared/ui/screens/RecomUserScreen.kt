@@ -146,8 +146,6 @@ fun RecomUserScreen(
             TopAppBar(
                 title = strings.recomUserTitle,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -186,7 +184,7 @@ fun RecomUserScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blurBackdropSource(backdrop)
+                                    
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 contentPadding = paddingValues,
                             ) {

@@ -240,8 +240,6 @@ fun SpotlightScreen(
             TopAppBar(
                 title = strings.spotlightTitle,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 actions = {
                     IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
                         Icon(
@@ -303,7 +301,7 @@ fun SpotlightScreen(
                         state = currentGridState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blurBackdropSource(backdrop)
+                            
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             start = 16.dp,

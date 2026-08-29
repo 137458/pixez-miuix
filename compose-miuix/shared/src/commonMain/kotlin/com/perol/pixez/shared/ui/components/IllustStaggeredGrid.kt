@@ -47,6 +47,7 @@ fun IllustStaggeredGrid(
     modifier: Modifier = Modifier,
     state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     columns: StaggeredGridCells? = null,
+    header: (@Composable () -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(
         start = 8.dp,
         top = 8.dp,
@@ -125,13 +126,20 @@ fun IllustStaggeredGrid(
         LazyVerticalStaggeredGrid(
             columns = effectiveColumns,
             state = state,
-            modifier = Modifier
-                .fillMaxSize()
-                .blurBackdropSource(backdrop),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalItemSpacing = 8.dp,
         ) {
+            if (header != null) {
+                item(
+                    key = "grid_custom_header",
+                    span = StaggeredGridItemSpan.FullLine,
+                    contentType = "grid_custom_header",
+                ) {
+                    header()
+                }
+            }
             items(
                 items = illusts,
                 key = { it.id },

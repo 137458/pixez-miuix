@@ -67,7 +67,7 @@ import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
+import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -962,7 +962,7 @@ private fun IllustDetailSingleContent(
                             )
                         }
 
-                        OverlayIconDropdownMenu(
+                        WindowIconDropdownMenu(
                             entry = moreMenuEntry,
                             modifier = Modifier
                                 .size(42.dp)

@@ -186,8 +186,6 @@ fun CommentsScreen(
             TopAppBar(
                 title = strings.commentsTitle,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -261,7 +259,7 @@ fun CommentsScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blurBackdropSource(backdrop)
+                                    
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 contentPadding = paddingValues,
                             ) {

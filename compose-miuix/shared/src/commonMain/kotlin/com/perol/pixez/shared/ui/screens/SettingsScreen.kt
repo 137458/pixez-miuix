@@ -152,8 +152,6 @@ fun SettingsScreen(
             TopAppBar(
                 title = strings.settingsTitle,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = MiuixIcons.Back, contentDescription = strings.back)
@@ -173,7 +171,7 @@ fun SettingsScreen(
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
-                    .blurBackdropSource(backdrop)
+                    
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
 

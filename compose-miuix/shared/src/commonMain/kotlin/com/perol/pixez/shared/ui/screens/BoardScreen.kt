@@ -106,8 +106,6 @@ fun BoardScreen(
             TopAppBar(
                 title = strings.boardTitle,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -163,7 +161,7 @@ fun BoardScreen(
 
                 else -> {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize().blurBackdropSource(backdrop).nestedScroll(scrollBehavior.nestedScrollConnection),
+                        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = paddingValues,
                     ) {
                         items(

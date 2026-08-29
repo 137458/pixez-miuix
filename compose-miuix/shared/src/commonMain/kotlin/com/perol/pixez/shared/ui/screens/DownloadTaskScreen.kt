@@ -137,8 +137,6 @@ fun DownloadTaskScreen(
             TopAppBar(
                 title = strings.settingDownloadTask,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -186,7 +184,7 @@ fun DownloadTaskScreen(
                                 )
                             } else {
                                 LazyColumn(
-                                    modifier = Modifier.fillMaxSize().blurBackdropSource(backdrop).nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
                                     contentPadding = PaddingValues(bottom = 16.dp),
                                 ) {
                                     items(

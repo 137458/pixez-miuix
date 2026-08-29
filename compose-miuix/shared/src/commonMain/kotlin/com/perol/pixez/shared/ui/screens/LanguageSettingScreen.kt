@@ -74,8 +74,6 @@ fun LanguageSettingScreen(
             TopAppBar(
                 title = strings.settingLanguage,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -97,7 +95,7 @@ fun LanguageSettingScreen(
                     .fillMaxHeight()
                     .widthIn(max = com.perol.pixez.shared.ui.AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
-                    .blurBackdropSource(backdrop)
+                    
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
                 item {

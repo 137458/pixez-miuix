@@ -179,8 +179,6 @@ fun RankingScreen(
             TopAppBar(
                 title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,

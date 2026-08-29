@@ -188,8 +188,6 @@ fun SearchScreen(
             TopAppBar(
                 title = strings.tabSearch,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
             )
         },
     ) { paddingValues ->

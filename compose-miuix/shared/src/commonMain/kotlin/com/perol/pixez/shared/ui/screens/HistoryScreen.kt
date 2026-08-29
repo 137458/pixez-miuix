@@ -133,8 +133,6 @@ fun HistoryScreen(
             TopAppBar(
                 title = strings.settingHistory,
                 scrollBehavior = scrollBehavior,
-                color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                modifier = Modifier.topAppBarBlur(backdrop = backdrop, tintColor = colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -213,7 +211,7 @@ fun HistoryScreen(
                             } else {
                                 HistoryGrid(
                                     items = filteredItems,
-                                    modifier = Modifier.fillMaxSize().blurBackdropSource(backdrop).nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
                                     onIllustClick = onIllustClick,
                                     onLongClick = { itemToDelete = it.id },
                                 )
