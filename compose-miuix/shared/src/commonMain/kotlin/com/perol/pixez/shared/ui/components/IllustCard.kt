@@ -18,10 +18,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Card
@@ -92,24 +95,42 @@ fun IllustCard(
                     .fillMaxWidth()
                     .aspectRatio(ratio),
             ) {
+                PixivAsyncImage(
+                    model = previewUrl,
+                    contentDescription = illust.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+
                 if (isNsfw) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MiuixTheme.colorScheme.surfaceContainerHighest),
+                            .background(
+                                color = if (MiuixTheme.colorScheme.surface.luminance() < 0.5f) {
+                                    Color.Black.copy(alpha = 0.82f)
+                                } else {
+                                    Color.White.copy(alpha = 0.85f)
+                                },
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
+                         ) {
                             Box(
                                 modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(8.dp),
+                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.18f),
                                     )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    .squircleBorder(
+                                        width = 0.8.dp,
+                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.40f),
+                                        cornerRadius = 10.dp,
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
@@ -125,45 +146,24 @@ fun IllustCard(
                             )
                         }
                     }
-                } else {
-                    PixivAsyncImage(
-                        model = previewUrl,
-                        contentDescription = illust.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
                 }
 
-                if (illust.pageCount > 1) {
-                    Box(
+                if (!isNsfw && illust.pageCount > 1) {
+                    MicroGlassBadge(
+                        text = "${illust.pageCount}P",
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(6.dp),
-                    ) {
-                        top.yukonga.miuix.kmp.basic.Badge {
-                            Text(
-                                text = "${illust.pageCount}P",
-                                fontSize = 10.sp,
-                                color = Color.White,
-                            )
-                        }
-                    }
+                    )
                 }
 
-                if (showAIBadge) {
-                    Box(
+                if (!isNsfw && showAIBadge) {
+                    MicroGlassBadge(
+                        text = "AI",
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp),
-                    ) {
-                        top.yukonga.miuix.kmp.basic.Badge {
-                            Text(
-                                text = "AI",
-                                fontSize = 10.sp,
-                                color = Color.White,
-                            )
-                        }
-                    }
+                    )
                 }
             }
 
@@ -187,6 +187,35 @@ fun IllustCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * 瀑布流卡片微型液态磨砂玻璃徽标。
+ */
+@Composable
+private fun MicroGlassBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.Black.copy(alpha = 0.50f))
+            .squircleBorder(
+                width = 0.5.dp,
+                color = Color.White.copy(alpha = 0.30f),
+                cornerRadius = 6.dp,
+            )
+            .padding(horizontal = 5.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+            color = Color.White,
+        )
     }
 }
 
