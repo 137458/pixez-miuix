@@ -66,7 +66,7 @@ fun IllustSeriesScreen(
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.equals("R-18", ignoreCase = true) || tag.name.equals("R-18G", ignoreCase = true) })) &&
+                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.contains("R-18", ignoreCase = true) || tag.name.contains("R18", ignoreCase = true) })) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
