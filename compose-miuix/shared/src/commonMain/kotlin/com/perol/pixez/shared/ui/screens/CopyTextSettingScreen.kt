@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
@@ -89,7 +91,7 @@ fun CopyTextSettingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.copyTextFormatTitle,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

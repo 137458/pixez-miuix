@@ -45,6 +45,7 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -121,7 +122,7 @@ fun UserDetailScreen(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = userDetail?.user?.name ?: "",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

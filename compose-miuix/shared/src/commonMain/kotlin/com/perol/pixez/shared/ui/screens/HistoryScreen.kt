@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
@@ -130,7 +132,7 @@ fun HistoryScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.settingHistory,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

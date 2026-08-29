@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -96,7 +98,7 @@ fun GuideScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = when (currentStep) {
                     0 -> "1. ${strings.guideStepLanguage}"
                     1 -> "2. ${strings.guideStepNetwork}"

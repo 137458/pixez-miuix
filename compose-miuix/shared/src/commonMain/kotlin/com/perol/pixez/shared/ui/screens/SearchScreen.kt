@@ -42,9 +42,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
-import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -185,7 +183,7 @@ fun SearchScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.tabSearch,
                 scrollBehavior = scrollBehavior,
             )

@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -71,7 +73,7 @@ fun LanguageSettingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.settingLanguage,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

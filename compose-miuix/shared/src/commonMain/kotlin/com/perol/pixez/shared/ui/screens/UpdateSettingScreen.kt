@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

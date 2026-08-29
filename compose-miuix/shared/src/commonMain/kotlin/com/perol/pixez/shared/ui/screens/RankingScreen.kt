@@ -39,6 +39,7 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -176,7 +177,7 @@ fun RankingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
                 actions = {

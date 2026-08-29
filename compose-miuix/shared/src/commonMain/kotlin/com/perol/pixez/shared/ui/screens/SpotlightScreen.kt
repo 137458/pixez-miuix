@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
@@ -237,7 +238,7 @@ fun SpotlightScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.spotlightTitle,
                 scrollBehavior = scrollBehavior,
                 actions = {

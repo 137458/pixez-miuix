@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -135,7 +137,7 @@ fun ThemeSettingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.settingTheme,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {

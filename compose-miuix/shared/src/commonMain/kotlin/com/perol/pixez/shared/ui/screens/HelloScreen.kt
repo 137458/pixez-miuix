@@ -23,6 +23,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -228,7 +229,7 @@ fun HelloScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
+            FrostedTopAppBar(
                 title = strings.tabRecommend,
                 scrollBehavior = scrollBehavior,
                 actions = {
