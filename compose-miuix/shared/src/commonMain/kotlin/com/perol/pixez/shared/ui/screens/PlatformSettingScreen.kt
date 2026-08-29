@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 平台专属设置页：仅 Android 平台展示实际设置项。
@@ -68,7 +69,7 @@ fun PlatformSettingScreen(
     var editingDialog by rememberSaveable { mutableStateOf<PlatformDialogType?>(null) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

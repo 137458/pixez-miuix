@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * AI 作品显示设置页：展示并更新 Pixiv 账号级 AI 作品显示偏好。
@@ -91,7 +92,7 @@ fun UserShowAISettingScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

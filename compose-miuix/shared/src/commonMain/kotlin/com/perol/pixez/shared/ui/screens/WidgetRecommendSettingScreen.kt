@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 桌面小组件推荐类型与图源设置页：
@@ -74,7 +75,7 @@ fun WidgetRecommendSettingScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

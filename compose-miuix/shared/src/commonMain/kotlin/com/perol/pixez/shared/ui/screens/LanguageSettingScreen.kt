@@ -42,6 +42,7 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 语言设置页：选择应用显示语言。
@@ -64,7 +65,7 @@ fun LanguageSettingScreen(
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

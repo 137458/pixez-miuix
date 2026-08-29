@@ -54,6 +54,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 下载历史列表页：展示本地 task 表中记录的下载任务，支持删除单条与清空全部。
@@ -85,7 +86,7 @@ fun DownloadHistoryScreen(
     val coroutineScope = rememberCoroutineScope()
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

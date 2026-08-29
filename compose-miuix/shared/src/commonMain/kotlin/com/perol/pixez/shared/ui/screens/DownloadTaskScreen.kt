@@ -64,6 +64,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 下载任务页：展示全部 / 运行中 / 完成 / 失败四类下载任务，
@@ -127,7 +128,7 @@ fun DownloadTaskScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 网络设置页：提供 OAuth / API 服务网络模式切换与图片源选择。
@@ -136,7 +137,7 @@ fun NetworkSettingScreen(
     )
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

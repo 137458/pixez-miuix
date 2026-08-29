@@ -36,6 +36,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 画质与保存偏好设置页：
@@ -73,7 +74,7 @@ fun QualitySettingScreen(
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     val feedPreviewQualityOptions = remember(strings) {

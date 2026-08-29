@@ -67,6 +67,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 关于页：展示应用信息、开发者、贡献者、项目仓库与反馈入口。
@@ -85,7 +86,7 @@ fun AboutScreen(
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showDisclaimerDialog by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

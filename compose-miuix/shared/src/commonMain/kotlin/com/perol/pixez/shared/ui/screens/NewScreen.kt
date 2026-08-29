@@ -50,6 +50,7 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 最新/关注页：展示已登录用户关注画师的最新插画。
@@ -223,7 +224,7 @@ fun NewScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

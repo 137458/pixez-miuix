@@ -95,42 +95,24 @@ fun IllustCard(
                     .fillMaxWidth()
                     .aspectRatio(ratio),
             ) {
-                PixivAsyncImage(
-                    model = previewUrl,
-                    contentDescription = illust.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-
                 if (isNsfw) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(
-                                color = if (MiuixTheme.colorScheme.surface.luminance() < 0.5f) {
-                                    Color.Black.copy(alpha = 0.82f)
-                                } else {
-                                    Color.White.copy(alpha = 0.85f)
-                                },
-                            ),
+                            .background(MiuixTheme.colorScheme.surfaceContainerHighest),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
-                         ) {
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.18f),
+                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp),
                                     )
-                                    .squircleBorder(
-                                        width = 0.8.dp,
-                                        color = MiuixTheme.colorScheme.error.copy(alpha = 0.40f),
-                                        cornerRadius = 10.dp,
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
@@ -146,6 +128,13 @@ fun IllustCard(
                             )
                         }
                     }
+                } else {
+                    PixivAsyncImage(
+                        model = previewUrl,
+                        contentDescription = illust.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
 
                 if (!isNsfw && illust.pageCount > 1) {

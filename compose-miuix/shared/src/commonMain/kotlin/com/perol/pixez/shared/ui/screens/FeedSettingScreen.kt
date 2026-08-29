@@ -33,6 +33,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * Feed 设置页：管理 Feed AI 标识、收藏后关注画师以及 SauceNAO 打开方式等开关。
@@ -52,7 +53,7 @@ fun FeedSettingScreen(
     var followAfterStar by remember { mutableStateOf(settingsRepository.followAfterStar) }
     var useSaunceNaoWebview by remember { mutableStateOf(settingsRepository.useSaunceNaoWebview) }
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

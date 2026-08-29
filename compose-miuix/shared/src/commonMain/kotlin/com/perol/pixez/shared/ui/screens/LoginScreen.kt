@@ -69,6 +69,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 登录页：支持通过系统浏览器 OAuth 授权或直接输入 Pixiv Refresh Token 完成登录。
@@ -102,7 +103,7 @@ fun LoginScreen(
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

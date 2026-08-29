@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,6 +72,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 用户详情页：头部信息 + 「作品 / 收藏」Tab 切换。
@@ -111,7 +115,7 @@ fun UserDetailScreen(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
@@ -568,95 +572,135 @@ private fun UserProfileHeader(
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    var isBioExpanded by rememberSaveable { mutableStateOf(false) }
+
     Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // 背景图：仅在存在非空背景图链接时展示，位于头像上方。
-        userDetail.profile.backgroundImageUrl?.takeIf { it.isNotBlank() }?.let { backgroundUrl ->
+        // 第一行：头像 + 名字/账号 + 关注按钮
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             PixivAsyncImage(
-                model = backgroundUrl,
-                contentDescription = null,
+                model = userDetail.user.profileImageUrls.medium,
+                contentDescription = userDetail.user.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                    .size(56.dp)
+                    .clip(CircleShape),
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = userDetail.user.name,
+                    style = MiuixTheme.textStyles.title3,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "@${userDetail.user.account}",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Button(
+                onClick = onFollowClick,
+                enabled = !isLoading,
+                colors = if (isFollowed) ButtonDefaults.buttonColors() else ButtonDefaults.buttonColorsPrimary(),
+            ) {
+                Text(
+                    text = if (isFollowed) strings.followed else strings.follow,
+                    style = MiuixTheme.textStyles.footnote1,
+                )
+            }
         }
-        PixivAsyncImage(
-            model = userDetail.user.profileImageUrls.medium,
-            contentDescription = userDetail.user.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(88.dp)
-                .clip(CircleShape),
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = userDetail.user.name,
-            style = MiuixTheme.textStyles.title1,
-        )
-        Text(
-            text = "@${userDetail.user.account}",
-            style = MiuixTheme.textStyles.footnote1,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = userDetail.user.comment ?: "",
-            style = MiuixTheme.textStyles.body2,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+
+        // 第二行：关注数 / 粉丝数 / 外部链接（紧凑横向排布）
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             val followCount = userDetail.profile.totalFollowUsers
             Text(
                 text = strings.userFollowCount.format(followCount),
-                style = MiuixTheme.textStyles.body2,
+                style = MiuixTheme.textStyles.footnote1,
                 modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
                     .clickable(enabled = followCount > 0, onClick = onFollowListClick)
-                    .padding(4.dp),
+                    .padding(vertical = 2.dp),
             )
+
             val followerCount = userDetail.profile.totalMypixivUsers
             Text(
                 text = strings.userFollowerCount.format(followerCount),
-                style = MiuixTheme.textStyles.body2,
+                style = MiuixTheme.textStyles.footnote1,
                 modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
                     .clickable(enabled = followerCount > 0, onClick = onFollowerListClick)
-                    .padding(4.dp),
+                    .padding(vertical = 2.dp),
             )
-        }
-        // 外部链接：仅在存在非空链接时展示。
-        val externalLinks: List<Pair<String, String>> = listOfNotNull(
-            userDetail.profile.twitterUrl?.takeIf { it.isNotBlank() }?.let { "Twitter" to it },
-            userDetail.profile.webpage?.takeIf { it.isNotBlank() }?.let { strings.userWebpage to it },
-            userDetail.profile.pawooUrl?.takeIf { it.isNotBlank() }?.let { "Pawoo" to it },
-        )
-        if (externalLinks.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                externalLinks.forEach { (label, url) ->
-                    Text(
-                        text = label,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .clickable { runCatching { openBrowser(url) } }
-                            .padding(4.dp),
-                    )
-                }
+
+            // 外部链接
+            userDetail.profile.twitterUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                Text(
+                    text = "Twitter",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { runCatching { openBrowser(url) } }
+                        .padding(vertical = 2.dp),
+                )
+            }
+            userDetail.profile.pawooUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                Text(
+                    text = "Pawoo",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { runCatching { openBrowser(url) } }
+                        .padding(vertical = 2.dp),
+                )
+            }
+            userDetail.profile.webpage?.takeIf { it.isNotBlank() }?.let { url ->
+                Text(
+                    text = strings.userWebpage,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { runCatching { openBrowser(url) } }
+                        .padding(vertical = 2.dp),
+                )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onFollowClick,
-            enabled = !isLoading,
-            colors = ButtonDefaults.buttonColorsPrimary(),
-        ) {
-            Text(text = if (isFollowed) strings.followed else strings.follow)
+
+        // 第三行：个性签名/简介（若存在，可折叠/展开）
+        userDetail.user.comment?.takeIf { it.isNotBlank() }?.let { bio ->
+            Text(
+                text = bio,
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                maxLines = if (isBioExpanded) Int.MAX_VALUE else 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isBioExpanded = !isBioExpanded },
+            )
         }
     }
 }

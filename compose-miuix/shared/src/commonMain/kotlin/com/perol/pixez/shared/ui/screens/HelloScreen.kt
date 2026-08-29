@@ -51,6 +51,7 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
@@ -221,7 +222,7 @@ fun HelloScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

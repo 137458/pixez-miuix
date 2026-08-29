@@ -33,6 +33,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 交互设置页：管理异形屏适配、H 内容过滤、再次返回退出、滑动切换作品等开关。
@@ -52,7 +53,7 @@ fun InteractionSettingScreen(
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

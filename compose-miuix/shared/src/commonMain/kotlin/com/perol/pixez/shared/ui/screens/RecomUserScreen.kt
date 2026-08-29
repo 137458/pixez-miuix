@@ -53,6 +53,7 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 推荐用户列表页：支持触底自动流式加载与下拉刷新。
@@ -136,7 +137,7 @@ fun RecomUserScreen(
     }
 
     val strings = LocalStrings.current
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

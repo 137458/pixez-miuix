@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 插画系列页：展示指定系列内的作品列表，支持流式分页与下拉刷新。
@@ -138,7 +139,7 @@ fun IllustSeriesScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

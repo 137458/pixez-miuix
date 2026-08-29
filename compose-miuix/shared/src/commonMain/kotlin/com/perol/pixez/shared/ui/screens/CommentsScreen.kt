@@ -75,6 +75,7 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.emoji_304
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
@@ -176,7 +177,7 @@ fun CommentsScreen(
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

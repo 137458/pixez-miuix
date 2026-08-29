@@ -33,6 +33,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 保存设置页：管理与保存/收藏行为相关的开关。
@@ -55,7 +56,7 @@ fun SaveSettingScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = LocalBackdrop.current
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(

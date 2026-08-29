@@ -65,6 +65,9 @@ import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -202,7 +205,6 @@ private fun IllustDetailSingleContent(
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by rememberSaveable { mutableStateOf(false) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var showActionMenu by rememberSaveable { mutableStateOf(false) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
@@ -702,191 +704,250 @@ private fun IllustDetailSingleContent(
                 }
             }
 
-            // 右侧一体式悬浮操作胶囊栏（收藏、下载、更多）
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .liquidGlass(
-                        backdrop = detailBackdrop,
-                        shape = RoundedCornerShape(22.dp),
-                        blurRadius = 18.dp,
-                        tintColor = Color.Black,
-                        tintAlpha = 0.40f,
-                    )
-                    .clip(RoundedCornerShape(22.dp))
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            // 右侧三个独立悬浮操作按钮（收藏、下载、更多）
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // 收藏按钮
-                    TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
-                        val favInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        val isFavPressed by favInteractionSource.collectIsPressedAsState()
-                        val favPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                        LaunchedEffect(isFavPressed) {
-                            favPressScale.animateTo(
-                                targetValue = if (isFavPressed) 0.90f else 1f,
-                                animationSpec = androidx.compose.animation.core.spring(
-                                    dampingRatio = 0.7f,
-                                    stiffness = 500f,
-                                ),
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .graphicsLayer {
-                                    scaleX = favPressScale.value
-                                    scaleY = favPressScale.value
-                                }
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = favInteractionSource,
-                                    indication = null,
-                                    enabled = !isBookmarkLoading && illust != null,
-                                    onClick = {
-                                        illust?.let { targetIllust ->
-                                            coroutineScope.launch {
-                                                try {
-                                                    isBookmarkLoading = true
-                                                    bookmarkError = null
-                                                    val wasBookmarked = isBookmarked
-                                                    suspendRunCatchingNonCancel {
-                                                        if (wasBookmarked) {
-                                                            bookmarkRepository.deleteBookmark(targetIllust.id)
-                                                        } else {
-                                                            val autoTags = if (settings?.autoTagWhenStar == true) {
-                                                                targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
-                                                            } else null
-                                                            bookmarkRepository.addBookmark(
-                                                                illustId = targetIllust.id,
-                                                                isPrivate = settings?.defaultPrivateLike ?: false,
-                                                                tags = autoTags,
-                                                            )
-                                                        }
-                                                    }.onSuccess {
-                                                        hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                                        isBookmarked = !wasBookmarked
-                                                        if (!wasBookmarked) {
-                                                            if (settings?.saveAfterStar == true) {
-                                                                coroutineScope.launch {
-                                                                    toastMessage = "${strings.downloadStatusDownloading}…"
-                                                                    val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                                                                    toastMessage = when (task.status) {
-                                                                        DownloadStatus.Success -> strings.downloadStatusSuccess
-                                                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                                        else -> null
-                                                                    }
-                                                                }
-                                                            }
-                                                            if (settings?.followAfterStar == true) {
-                                                                coroutineScope.launch {
-                                                                    suspendRunCatchingNonCancel {
-                                                                        bookmarkRepository.followUser(targetIllust.user.id)
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }.onFailure { e ->
-                                                        bookmarkError = e.message ?: strings.loadFailed
-                                                    }
-                                                } finally {
-                                                    isBookmarkLoading = false
-                                                }
-                                            }
-                                        }
-                                    },
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                                tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .graphicsLayer {
-                                        scaleX = bookmarkHeartScale.value
-                                        scaleY = bookmarkHeartScale.value
-                                    },
-                            )
-                        }
+                // 1. 收藏按钮（独立悬浮圆形胶囊）
+                TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
+                    val favInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val isFavPressed by favInteractionSource.collectIsPressedAsState()
+                    val favPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                    LaunchedEffect(isFavPressed) {
+                        favPressScale.animateTo(
+                            targetValue = if (isFavPressed) 0.90f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = 0.7f,
+                                stiffness = 500f,
+                            ),
+                        )
                     }
 
-                    // 下载按钮
-                    TooltipBox(text = strings.download) {
-                        val dlInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        val isDlPressed by dlInteractionSource.collectIsPressedAsState()
-                        val dlPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                        LaunchedEffect(isDlPressed) {
-                            dlPressScale.animateTo(
-                                targetValue = if (isDlPressed) 0.90f else 1f,
-                                animationSpec = androidx.compose.animation.core.spring(
-                                    dampingRatio = 0.7f,
-                                    stiffness = 500f,
-                                ),
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .graphicsLayer {
+                                scaleX = favPressScale.value
+                                scaleY = favPressScale.value
+                            }
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = CircleShape,
+                                blurRadius = 18.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.40f,
                             )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .graphicsLayer {
-                                    scaleX = dlPressScale.value
-                                    scaleY = dlPressScale.value
-                                }
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = dlInteractionSource,
-                                    indication = null,
-                                    enabled = !isDownloading && illust != null,
-                                    onClick = {
-                                        if (isDownloading || illust == null) return@clickable
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = favInteractionSource,
+                                indication = null,
+                                enabled = !isBookmarkLoading && illust != null,
+                                onClick = {
+                                    illust?.let { targetIllust ->
                                         coroutineScope.launch {
                                             try {
-                                                isDownloading = true
-                                                toastMessage = "${strings.downloadStatusDownloading}…"
-                                                val task = downloadRepository.download(illust, pageIndex = 0)
-                                                toastMessage = when (task.status) {
-                                                    DownloadStatus.Success -> {
-                                                        if (settings?.starAfterSave == true && !isBookmarked) {
+                                                isBookmarkLoading = true
+                                                bookmarkError = null
+                                                val wasBookmarked = isBookmarked
+                                                suspendRunCatchingNonCancel {
+                                                    if (wasBookmarked) {
+                                                        bookmarkRepository.deleteBookmark(targetIllust.id)
+                                                    } else {
+                                                        val autoTags = if (settings?.autoTagWhenStar == true) {
+                                                            targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
+                                                        } else null
+                                                        bookmarkRepository.addBookmark(
+                                                            illustId = targetIllust.id,
+                                                            isPrivate = settings?.defaultPrivateLike ?: false,
+                                                            tags = autoTags,
+                                                        )
+                                                    }
+                                                }.onSuccess {
+                                                    hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                                    isBookmarked = !wasBookmarked
+                                                    if (!wasBookmarked) {
+                                                        if (settings?.saveAfterStar == true) {
                                                             coroutineScope.launch {
-                                                                suspendRunCatchingNonCancel {
-                                                                    bookmarkRepository.addBookmark(
-                                                                        illustId = illust.id,
-                                                                        isPrivate = settings.defaultPrivateLike,
-                                                                    )
-                                                                }.onSuccess {
-                                                                    isBookmarked = true
+                                                                toastMessage = "${strings.downloadStatusDownloading}…"
+                                                                val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                                                                toastMessage = when (task.status) {
+                                                                    DownloadStatus.Success -> strings.downloadStatusSuccess
+                                                                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                                    else -> null
                                                                 }
                                                             }
                                                         }
-                                                        strings.downloadStatusSuccess
+                                                        if (settings?.followAfterStar == true) {
+                                                            coroutineScope.launch {
+                                                                suspendRunCatchingNonCancel {
+                                                                    bookmarkRepository.followUser(targetIllust.user.id)
+                                                                }
+                                                            }
+                                                        }
                                                     }
-                                                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                    else -> null
+                                                }.onFailure { e ->
+                                                    bookmarkError = e.message ?: strings.loadFailed
                                                 }
                                             } finally {
-                                                isDownloading = false
+                                                isBookmarkLoading = false
                                             }
                                         }
-                                    },
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Download,
-                                contentDescription = strings.download,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
+                                    }
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                            contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                            tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .graphicsLayer {
+                                    scaleX = bookmarkHeartScale.value
+                                    scaleY = bookmarkHeartScale.value
+                                },
+                        )
+                    }
+                }
+
+                // 2. 下载按钮（独立悬浮圆形胶囊）
+                TooltipBox(text = strings.download) {
+                    val dlInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val isDlPressed by dlInteractionSource.collectIsPressedAsState()
+                    val dlPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                    LaunchedEffect(isDlPressed) {
+                        dlPressScale.animateTo(
+                            targetValue = if (isDlPressed) 0.90f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = 0.7f,
+                                stiffness = 500f,
+                            ),
+                        )
                     }
 
-                    // 更多菜单按钮
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .graphicsLayer {
+                                scaleX = dlPressScale.value
+                                scaleY = dlPressScale.value
+                            }
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = CircleShape,
+                                blurRadius = 18.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.40f,
+                            )
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = dlInteractionSource,
+                                indication = null,
+                                enabled = !isDownloading && illust != null,
+                                onClick = {
+                                    if (isDownloading || illust == null) return@clickable
+                                    coroutineScope.launch {
+                                        try {
+                                            isDownloading = true
+                                            toastMessage = "${strings.downloadStatusDownloading}…"
+                                            val task = downloadRepository.download(illust, pageIndex = 0)
+                                            toastMessage = when (task.status) {
+                                                DownloadStatus.Success -> {
+                                                    if (settings?.starAfterSave == true && !isBookmarked) {
+                                                        coroutineScope.launch {
+                                                            suspendRunCatchingNonCancel {
+                                                                bookmarkRepository.addBookmark(
+                                                                    illustId = illust.id,
+                                                                    isPrivate = settings.defaultPrivateLike,
+                                                                )
+                                                            }.onSuccess {
+                                                                isBookmarked = true
+                                                            }
+                                                        }
+                                                    }
+                                                    strings.downloadStatusSuccess
+                                                }
+                                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                else -> null
+                                            }
+                                        } finally {
+                                            isDownloading = false
+                                        }
+                                    }
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Download,
+                            contentDescription = strings.download,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+
+                // 3. 更多菜单按钮（独立悬浮圆形胶囊，以自身为锚定弹出 DropdownMenu）
+                if (illust != null) {
+                    val currentIllust = illust
+                    val moreMenuEntry = remember(currentIllust, isBanned) {
+                        DropdownEntry(
+                            items = listOfNotNull<DropdownItem>(
+                                DropdownItem(
+                                    text = strings.menuCopyInfo,
+                                    onClick = {
+                                        val text = buildIllustCopyInfo(currentIllust)
+                                        runCatching { clipboard.copy(text) }.fold(
+                                            onSuccess = { toastMessage = strings.copiedToClipboard },
+                                            onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                        )
+                                    },
+                                ),
+                                DropdownItem(
+                                    text = strings.menuCopyLink,
+                                    onClick = {
+                                        val link = buildIllustShareLink(currentIllust)
+                                        runCatching { clipboard.copy(link) }.fold(
+                                            onSuccess = { toastMessage = strings.copiedToClipboard },
+                                            onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                        )
+                                    },
+                                ),
+                                DropdownItem(
+                                    text = strings.share,
+                                    onClick = {
+                                        val link = buildIllustShareLink(currentIllust)
+                                        runCatching { share.share(link, currentIllust.title) }.fold(
+                                            onSuccess = { toastMessage = strings.share },
+                                            onFailure = { e -> toastMessage = "${strings.share}: ${e.message}" },
+                                        )
+                                    },
+                                ),
+                                if (!isBanned) {
+                                    DropdownItem(
+                                        text = strings.menuBanWork,
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                suspendRunCatchingNonCancel {
+                                                    banRepository.insertBanIllust(currentIllust.id, currentIllust.title)
+                                                }.fold(
+                                                    onSuccess = {
+                                                        isBanned = true
+                                                        toastMessage = strings.menuBanWork
+                                                    },
+                                                    onFailure = { e -> toastMessage = "${strings.menuBanWork}: ${e.message}" },
+                                                )
+                                            }
+                                        },
+                                    )
+                                } else null,
+                            ),
+                        )
+                    }
+
                     TooltipBox(text = strings.menuMoreActions) {
                         val moreInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                         val isMorePressed by moreInteractionSource.collectIsPressedAsState()
@@ -901,21 +962,22 @@ private fun IllustDetailSingleContent(
                             )
                         }
 
-                        Box(
+                        OverlayIconDropdownMenu(
+                            entry = moreMenuEntry,
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(42.dp)
                                 .graphicsLayer {
                                     scaleX = morePressScale.value
                                     scaleY = morePressScale.value
                                 }
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = moreInteractionSource,
-                                    indication = null,
-                                    enabled = illust != null,
-                                    onClick = { showActionMenu = true },
-                                ),
-                            contentAlignment = Alignment.Center,
+                                .liquidGlass(
+                                    backdrop = detailBackdrop,
+                                    shape = CircleShape,
+                                    blurRadius = 18.dp,
+                                    tintColor = Color.Black,
+                                    tintAlpha = 0.40f,
+                                )
+                                .clip(CircleShape),
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.More,
@@ -937,52 +999,6 @@ private fun IllustDetailSingleContent(
                 bookmarkError = null
             },
         )
-
-        illust?.let {
-            IllustActionMenu(
-                show = showActionMenu,
-                showBan = !isBanned,
-                onDismissRequest = { showActionMenu = false },
-                onCopyInfo = {
-                    showActionMenu = false
-                    val text = buildIllustCopyInfo(it)
-                    runCatching { clipboard.copy(text) }.fold(
-                        onSuccess = { toastMessage = strings.copiedToClipboard },
-                        onFailure = { e -> toastMessage = "${strings.copy}: ${e.message}" },
-                    )
-                },
-                onCopyLink = {
-                    showActionMenu = false
-                    val link = buildIllustShareLink(it)
-                    runCatching { clipboard.copy(link) }.fold(
-                        onSuccess = { toastMessage = strings.copiedToClipboard },
-                        onFailure = { e -> toastMessage = "${strings.copy}: ${e.message}" },
-                    )
-                },
-                onShareLink = {
-                    showActionMenu = false
-                    val link = buildIllustShareLink(it)
-                    runCatching { share.share(link, it.title) }.fold(
-                        onSuccess = { toastMessage = strings.share },
-                        onFailure = { e -> toastMessage = "${strings.share}: ${e.message}" },
-                    )
-                },
-                onBan = {
-                    showActionMenu = false
-                    coroutineScope.launch {
-                        suspendRunCatchingNonCancel {
-                            banRepository.insertBanIllust(it.id, it.title)
-                        }.fold(
-                            onSuccess = {
-                                isBanned = true
-                                toastMessage = strings.menuBanWork
-                            },
-                            onFailure = { e -> toastMessage = "${strings.menuBanWork}: ${e.message}" },
-                        )
-                    }
-                },
-            )
-        }
     }
 }
 
