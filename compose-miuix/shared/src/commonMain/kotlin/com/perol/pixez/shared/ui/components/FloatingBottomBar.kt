@@ -335,6 +335,8 @@ fun FloatingBottomBar(
     }
 
     val holder = remember { DampedDragAnimationHolder() }
+    var totalDragPx by remember { mutableFloatStateOf(0f) }
+    val touchSlopPx = with(density) { 8.dp.toPx() }
 
     val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
@@ -358,18 +360,24 @@ fun FloatingBottomBar(
                 }
                 globalTouchX in 0f..totalWidthPx
             },
-            onDragStarted = {},
+            onDragStarted = {
+                totalDragPx = 0f
+            },
             onDragStopped = {
                 val dropIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
+                val isTapOnSameTab = (dropIndex == currentSelectedIndex()) && (totalDragPx < touchSlopPx)
+                val isSwitched = dropIndex != currentSelectedIndex()
+
                 animateToValue(dropIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
-                if (dropIndex != currentSelectedIndex()) {
+                if (isSwitched || isTapOnSameTab) {
                     updatedOnSelected(dropIndex)
                 }
             },
             onDrag = { _, dragAmount ->
+                totalDragPx += abs(dragAmount.x)
                 if (tabWidthPx > 0f) {
                     updateValue(
                         (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
