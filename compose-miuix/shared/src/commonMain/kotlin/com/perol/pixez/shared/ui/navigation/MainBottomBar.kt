@@ -81,6 +81,7 @@ fun MainBottomBar(
                 }
             },
         )
+    } else {
         // 标准固定底栏：应用 Backdrop Blur 96% 高密度毛玻璃与顶部分割线
         val bottomBarModifier = if (backdrop != null) {
             modifier
