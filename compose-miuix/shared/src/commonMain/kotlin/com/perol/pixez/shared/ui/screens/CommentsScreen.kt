@@ -1,7 +1,5 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
-
 import androidx.compose.foundation.background
 
 import androidx.compose.foundation.layout.Arrangement
@@ -50,9 +48,6 @@ import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
-import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Button
@@ -82,8 +77,6 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.emoji_304
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
@@ -185,16 +178,15 @@ fun CommentsScreen(
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
+            TopAppBar(
                 title = strings.commentsTitle,
                 scrollBehavior = scrollBehavior,
-                backdrop = backdrop,
+                color = colorScheme.surface,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -211,6 +203,7 @@ fun CommentsScreen(
                         )
                     }
                 },
+                modifier = Modifier.fillMaxWidth(),
             )
         },
         bottomBar = {
@@ -274,9 +267,7 @@ fun CommentsScreen(
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .layerBackdrop(backdrop),
+                                modifier = Modifier.fillMaxSize(),
                             ) {
                                 LazyColumn(
                                     state = listState,
