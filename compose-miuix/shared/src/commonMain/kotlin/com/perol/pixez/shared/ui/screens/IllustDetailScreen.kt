@@ -59,8 +59,19 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.mutableFloatStateOf
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -1326,7 +1337,8 @@ private fun IllustDetailSingleContent(
 
 /**
  * 插画全屏/高清缩放预览组件：
- * 支持双指平滑手势缩放 (Pinch-to-zoom)、双击放大/复原 (Double-tap-to-zoom)、拖拽平移 (Pan) 以及多 P 左右切页。
+ * 支持双指平滑手势缩放 (Pinch-to-zoom)、鼠标滚轮定点缩放、鼠标拖拽平移 (Pan)、双击放大/复原 (Double-tap-to-zoom)、
+ * 键盘左右方向键/翻页键切页、ESC 快速退出以及多 P 左右切页。
  * 根据 [SettingsRepository.zoomQuality] 加载对应画质大图，优先使用已有内存缓存作为过渡底图。
  */
 @Composable
@@ -1342,15 +1354,52 @@ private fun IllustFullScreenViewer(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
         pageCount = { pageCount },
     )
+    val coroutineScope = rememberCoroutineScope()
+    val focusRequester = remember { FocusRequester() }
     var currentPageScale by remember { mutableFloatStateOf(1f) }
     var showControls by remember { mutableStateOf(true) }
 
     PlatformBackHandler(onBack = onDismiss)
 
+    LaunchedEffect(Unit) {
+        try {
+            focusRequester.requestFocus()
+        } catch (_: Throwable) {}
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .focusRequester(focusRequester)
+            .focusable()
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyEvent.key) {
+                        Key.Escape -> {
+                            onDismiss()
+                            true
+                        }
+                        Key.DirectionLeft, Key.PageUp, Key.A -> {
+                            if (pageCount > 1 && pagerState.currentPage > 0) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                }
+                                true
+                            } else false
+                        }
+                        Key.DirectionRight, Key.PageDown, Key.D, Key.Spacebar -> {
+                            if (pageCount > 1 && pagerState.currentPage < pageCount - 1) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                                true
+                            } else false
+                        }
+                        else -> false
+                    }
+                } else false
+            },
     ) {
         if (pageCount > 1) {
             HorizontalPager(
@@ -1458,7 +1507,7 @@ private fun IllustFullScreenViewer(
 }
 
 /**
- * 支持双指手势平滑缩放、双击放大/重置与边界限制拖拽平移的图片组件。
+ * 支持双指手势平滑缩放、鼠标滚轮定点缩放、双击放大/重置与边界限制拖拽平移的图片组件。
  */
 @Composable
 private fun ZoomableImage(
@@ -1475,6 +1524,39 @@ private fun ZoomableImage(
     Box(
         modifier = modifier
             .clipToBounds()
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Scroll) {
+                            val change = event.changes.firstOrNull() ?: continue
+                            val scrollDelta = change.scrollDelta.y
+                            if (scrollDelta != 0f) {
+                                val zoomFactor = if (scrollDelta < 0f) 1.15f else 0.8695f
+                                val newScale = (scale * zoomFactor).coerceIn(1f, 8f)
+                                val mousePos = change.position
+                                val center = Offset(size.width / 2f, size.height / 2f)
+
+                                if (newScale > 1.05f) {
+                                    val scaleRatio = newScale / scale
+                                    val newOffset = (offset + (center - mousePos)) * scaleRatio - (center - mousePos)
+                                    val maxOffsetX = (size.width * (newScale - 1f)) / 2f
+                                    val maxOffsetY = (size.height * (newScale - 1f)) / 2f
+                                    offset = Offset(
+                                        newOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
+                                        newOffset.y.coerceIn(-maxOffsetY, maxOffsetY),
+                                    )
+                                } else {
+                                    offset = Offset.Zero
+                                }
+                                scale = newScale
+                                onScaleChanged?.invoke(newScale)
+                                change.consume()
+                            }
+                        }
+                    }
+                }
+            }
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { tapOffset ->
@@ -1500,7 +1582,7 @@ private fun ZoomableImage(
             }
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                    val newScale = (scale * zoom).coerceIn(1f, 8f)
                     scale = newScale
                     onScaleChanged?.invoke(newScale)
                     if (newScale > 1.05f) {
@@ -1513,7 +1595,8 @@ private fun ZoomableImage(
                         offset = Offset.Zero
                     }
                 }
-            },
+            }
+            .pointerHoverIcon(if (scale > 1.05f) PointerIcon.Hand else PointerIcon.Default),
         contentAlignment = Alignment.Center,
     ) {
         PixivAsyncImage(
