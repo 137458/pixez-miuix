@@ -230,8 +230,8 @@ fun Modifier.backdropBlur(
 fun Modifier.topAppBarBlur(
     backdrop: Backdrop?,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.85f,
-    blurRadius: Dp = 16.dp,
+    tintAlpha: Float = 0.68f,
+    blurRadius: Dp = 25.dp,
 ): Modifier = if (backdrop != null) {
     this.backdropBlur(
         backdrop = backdrop,

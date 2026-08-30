@@ -270,7 +270,7 @@ fun CommentsScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = pinnedHeaderHeight + 28.dp),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding() + 28.dp),
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(

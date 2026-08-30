@@ -12,9 +12,9 @@ import top.yukonga.miuix.kmp.blur.colorControls
  * while expanding saturation so illustrations and avatars remain vibrant.
  */
 fun BackdropEffectScope.vibrancy(
-    brightness: Float = 0.2f,
-    contrast: Float = 0.8f,
-    saturation: Float = 1.7f,
+    brightness: Float = 0.08f,
+    contrast: Float = 0.95f,
+    saturation: Float = 1.35f,
 ) {
     colorControls(
         brightness = brightness,

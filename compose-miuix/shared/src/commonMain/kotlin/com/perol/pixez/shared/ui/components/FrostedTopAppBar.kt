@@ -39,11 +39,21 @@ fun FrostedTopAppBar(
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val pinnedHeaderHeight = statusBarTop + 56.dp
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
-    val outlineAlpha = (collapsedFraction * 0.15f).coerceIn(0f, 0.15f)
-    val outlineColor = colorScheme.outline
+
+    // 表面不透明度与模糊随滚动折叠平滑过渡，未滚动折叠时保持透明，滚动折叠时渐入为 0.68f 通透毛玻璃
+    val effectiveTintAlpha = if (scrollBehavior != null) {
+        (collapsedFraction * 0.68f).coerceIn(0f, 0.68f)
+    } else {
+        0.68f
+    }
+    val effectiveBlurRadius = if (scrollBehavior != null) {
+        (collapsedFraction * 25f).coerceIn(0f, 25f).dp
+    } else {
+        25.dp
+    }
 
     Box(modifier = modifier.fillMaxWidth()) {
-        if (backdrop != null) {
+        if (backdrop != null && (scrollBehavior == null || collapsedFraction > 0.01f)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -51,8 +61,8 @@ fun FrostedTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.88f,
-                        blurRadius = 16.dp,
+                        tintAlpha = effectiveTintAlpha,
+                        blurRadius = effectiveBlurRadius,
                     ),
             )
         }
@@ -84,8 +94,13 @@ fun FrostedSmallTopAppBar(
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val pinnedHeaderHeight = statusBarTop + 56.dp
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
-    val outlineAlpha = if (scrollBehavior != null) (collapsedFraction * 0.15f).coerceIn(0f, 0.15f) else 0.12f
-    val outlineColor = colorScheme.outline
+
+    val effectiveTintAlpha = if (scrollBehavior != null) {
+        (0.35f + collapsedFraction * 0.33f).coerceIn(0.35f, 0.68f)
+    } else {
+        0.68f
+    }
+    val effectiveBlurRadius = 25.dp
 
     Box(modifier = modifier.fillMaxWidth()) {
         if (backdrop != null) {
@@ -96,8 +111,8 @@ fun FrostedSmallTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.88f,
-                        blurRadius = 16.dp,
+                        tintAlpha = effectiveTintAlpha,
+                        blurRadius = effectiveBlurRadius,
                     ),
             )
         }
