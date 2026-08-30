@@ -45,6 +45,10 @@ import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.liquidGlass
+import top.yukonga.miuix.kmp.blur.Backdrop
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -267,6 +271,7 @@ fun SpotlightScreen(
                                 selectedCategory = category
                             }
                         },
+                        backdrop = backdrop,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -369,6 +374,7 @@ private fun SpotlightCategorySelector(
     selectedCategory: SpotlightCategory,
     strings: AppStrings,
     onCategorySelected: (SpotlightCategory) -> Unit,
+    backdrop: Backdrop? = null,
     modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
@@ -385,33 +391,64 @@ private fun SpotlightCategorySelector(
             contentType = { "category_tab" },
         ) { category ->
             val isSelected = category == selectedCategory
+            val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val pressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+
+            LaunchedEffect(isPressed) {
+                pressScale.animateTo(
+                    targetValue = if (isPressed) 0.93f else 1f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.7f,
+                        stiffness = 500f,
+                    ),
+                )
+            }
+
             val pillShape = remember { RoundedCornerShape(16.dp) }
             val itemBackground = if (isSelected) {
                 MiuixTheme.colorScheme.primary
             } else {
-                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
+                if (isDark) Color(0xFF2A2A2E) else Color.White
             }
+            val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
+
             val itemBorderColor = if (isSelected) {
-                Color.Transparent
+                Color.White.copy(alpha = 0.35f)
             } else {
-                MiuixTheme.colorScheme.outline.copy(alpha = 0.15f)
+                if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f)
             }
+
             Box(
                 modifier = Modifier
-                    .clip(pillShape)
-                    .background(itemBackground)
+                    .graphicsLayer {
+                        scaleX = pressScale.value
+                        scaleY = pressScale.value
+                    }
+                    .liquidGlass(
+                        backdrop = backdrop,
+                        shape = pillShape,
+                        blurRadius = 16.dp,
+                        tintColor = itemBackground,
+                        tintAlpha = tintAlpha,
+                    )
                     .squircleBorder(
                         width = 0.5.dp,
                         color = itemBorderColor,
                         cornerRadius = 16.dp,
                     )
-                    .clickable {
+                    .clip(pillShape)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
                         if (!isSelected) {
                             hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                             onCategorySelected(category)
                         }
                     }
                     .padding(horizontal = 16.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = category.labelFor(strings),

@@ -42,6 +42,9 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.liquidGlass
+import top.yukonga.miuix.kmp.blur.Backdrop
+import androidx.compose.ui.text.font.FontWeight
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -248,6 +251,7 @@ fun RankingScreen(
                             selectedMode = it
                             retryCount = 0
                         },
+                        backdrop = backdrop,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -319,6 +323,7 @@ fun RankingScreen(
 private fun RankingModeSelector(
     selectedMode: RankingMode,
     onModeSelected: (RankingMode) -> Unit,
+    backdrop: Backdrop? = null,
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -350,13 +355,14 @@ private fun RankingModeSelector(
             val itemBackground = if (isSelected) {
                 MiuixTheme.colorScheme.primary
             } else {
-                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
+                if (isDark) Color(0xFF2A2A2E) else Color.White
             }
+            val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
 
             val itemBorderColor = if (isSelected) {
-                Color.Transparent
+                Color.White.copy(alpha = 0.35f)
             } else {
-                MiuixTheme.colorScheme.outline.copy(alpha = 0.15f)
+                if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f)
             }
 
             Box(
@@ -365,13 +371,19 @@ private fun RankingModeSelector(
                         scaleX = pressScale.value
                         scaleY = pressScale.value
                     }
-                    .clip(pillShape)
-                    .background(itemBackground)
+                    .liquidGlass(
+                        backdrop = backdrop,
+                        shape = pillShape,
+                        blurRadius = 16.dp,
+                        tintColor = itemBackground,
+                        tintAlpha = tintAlpha,
+                    )
                     .squircleBorder(
                         width = 0.5.dp,
                         color = itemBorderColor,
                         cornerRadius = 16.dp,
                     )
+                    .clip(pillShape)
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
@@ -388,7 +400,7 @@ private fun RankingModeSelector(
                 Text(
                     text = mode.label(strings),
                     style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (isSelected) {
                         Color.White
                     } else {

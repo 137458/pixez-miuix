@@ -54,6 +54,11 @@ import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.liquidGlass
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.squircle.squircleBorder
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -190,23 +195,25 @@ fun SearchScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
+    val coroutineScope = rememberCoroutineScope()
 
     var isSearchCollapsed by rememberSaveable { mutableStateOf(false) }
 
-    val searchNestedScrollConnection = remember {
+    val searchNestedScrollConnection = remember(scrollBehavior) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // 1. 同步更新 MIUIX TopAppBar 的 heightOffset，驱动大标题与紧凑标题的双向平滑折叠
+                val limit = scrollBehavior.state.heightOffsetLimit
+                if (limit < 0f) {
+                    scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
+                }
+
+                // 2. 协同折叠全宽搜索框与快捷筛选行
                 val delta = available.y
                 if (delta < -8f) {
-                    // 手指向上推（向下滚动内容）：折叠全宽搜索框，释放瀑布流空间
-                    if (!isSearchCollapsed) {
-                        isSearchCollapsed = true
-                    }
+                    if (!isSearchCollapsed) isSearchCollapsed = true
                 } else if (delta > 8f) {
-                    // 手指向下划（回看上方内容）：展开全宽搜索框
-                    if (isSearchCollapsed) {
-                        isSearchCollapsed = false
-                    }
+                    if (isSearchCollapsed) isSearchCollapsed = false
                 }
                 return Offset.Zero
             }
@@ -219,15 +226,19 @@ fun SearchScreen(
         bottomBarVisibility.value = !showFilterSheet
     }
 
+    val currentTopBarTitle = if (isSearching && query.isNotBlank()) query else strings.tabSearch
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             BlurredBar(
                 backdrop = backdrop,
+                scrollBehavior = scrollBehavior,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TopAppBar(
-                        title = if (isSearchCollapsed && query.isNotBlank()) query else strings.tabSearch,
+                        title = currentTopBarTitle,
+                        scrollBehavior = scrollBehavior,
                         color = if (backdrop != null) Color.Transparent else colorScheme.surface,
                         navigationIcon = {
                             if (isSearching) {
@@ -236,6 +247,9 @@ fun SearchScreen(
                                         isSearching = false
                                         query = ""
                                         isSearchCollapsed = false
+                                        coroutineScope.launch {
+                                            scrollBehavior.state.heightOffset = 0f
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -250,6 +264,9 @@ fun SearchScreen(
                                 IconButton(
                                     onClick = {
                                         isSearchCollapsed = false
+                                        coroutineScope.launch {
+                                            scrollBehavior.state.heightOffset = 0f
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -354,6 +371,7 @@ fun SearchScreen(
                                         FilterChipButton(
                                             text = strings.searchSortLabel.format(sortLabel),
                                             isSelected = sort != "date_desc",
+                                            backdrop = backdrop,
                                             onClick = {
                                                 sort = when (sort) {
                                                     "date_desc" -> "popular_desc"
@@ -366,6 +384,7 @@ fun SearchScreen(
                                         FilterChipButton(
                                             text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
                                             isSelected = searchAiType != 0,
+                                            backdrop = backdrop,
                                             onClick = {
                                                 searchAiType = if (searchAiType == 0) 1 else 0
                                             },
@@ -375,6 +394,7 @@ fun SearchScreen(
                                             FilterChipButton(
                                                 text = "${bookmarkThreshold}+ ✕",
                                                 isSelected = true,
+                                                backdrop = backdrop,
                                                 onClick = {
                                                     bookmarkThreshold = 0
                                                 },
@@ -386,6 +406,7 @@ fun SearchScreen(
                                         FilterChipButton(
                                             text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
                                             isSelected = hasActiveFilters,
+                                            backdrop = backdrop,
                                             onClick = { showFilterSheet = true },
                                         )
                                     }
@@ -488,30 +509,37 @@ fun SearchScreen(
 }
 
 /**
- * 搜索结果页统一的快捷筛选/排序芯片按钮。
+ * 搜索结果页统一的快捷筛选/排序芯片按钮（液态玻璃/晶体材质）。
  */
 @Composable
 private fun FilterChipButton(
     text: String,
     isSelected: Boolean,
     onClick: () -> Unit,
+    backdrop: Backdrop? = null,
     modifier: Modifier = Modifier,
 ) {
-    val backgroundColor = if (isSelected) {
-        MiuixTheme.colorScheme.primary.copy(alpha = 0.12f)
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer
-    }
-    val contentColor = if (isSelected) {
-        MiuixTheme.colorScheme.primary
-    } else {
-        MiuixTheme.colorScheme.onSurface
-    }
+    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+    val pillShape = remember { RoundedCornerShape(16.dp) }
+    val tintColor = if (isSelected) MiuixTheme.colorScheme.primary else (if (isDark) Color(0xFF2A2A2E) else Color.White)
+    val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
+    val itemBorderColor = if (isSelected) Color.White.copy(alpha = 0.35f) else (if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f))
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(backgroundColor)
+            .liquidGlass(
+                backdrop = backdrop,
+                shape = pillShape,
+                blurRadius = 14.dp,
+                tintColor = tintColor,
+                tintAlpha = tintAlpha,
+            )
+            .squircleBorder(
+                width = 0.5.dp,
+                color = itemBorderColor,
+                cornerRadius = 16.dp,
+            )
+            .clip(pillShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
@@ -519,7 +547,8 @@ private fun FilterChipButton(
         Text(
             text = text,
             style = MiuixTheme.textStyles.footnote1,
-            color = contentColor,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
             maxLines = 1,
         )
     }
