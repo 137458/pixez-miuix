@@ -195,6 +195,142 @@ tasks.register<Zip>("packageWindowsPortableZip") {
     destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/zip"))
 }
 
+tasks.register("packageWindowsSingleFileExe") {
+    group = "compose desktop"
+    description = "Packs the entire application and JRE runtime into a standalone single-file self-contained EXE."
+    dependsOn("packageWindowsPortableZip")
+
+    doLast {
+        val os = org.gradle.internal.os.OperatingSystem.current()
+        if (!os.isWindows) {
+            logger.warn("packageWindowsSingleFileExe is only supported on Windows.")
+            return@doLast
+        }
+
+        val zipFile = layout.buildDirectory.file("compose/binaries/main/zip/PixEz-windows-x64-portable.zip").get().asFile
+        if (!zipFile.exists()) {
+            throw GradleException("Portable zip archive not found: ${zipFile.absolutePath}")
+        }
+
+        val iconFile = file("src/desktopMain/resources/icon.ico")
+        val outputDir = layout.buildDirectory.dir("compose/binaries/main/single-exe").get().asFile
+        outputDir.mkdirs()
+        val targetExe = File(outputDir, "PixEz-Standalone.exe")
+
+        val cscPaths = listOf(
+            File("C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe"),
+            File("C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe"),
+        )
+        val csc = cscPaths.firstOrNull { it.exists() }
+            ?: throw GradleException("csc.exe (.NET Framework compiler) not found.")
+
+        val sourceFile = File(temporaryDir, "Launcher.cs")
+        sourceFile.writeText(
+            """
+            using System;
+            using System.Diagnostics;
+            using System.IO;
+            using System.IO.Compression;
+            using System.Reflection;
+
+            namespace PixEzLauncher
+            {
+                static class Program
+                {
+                    [STAThread]
+                    static int Main(string[] args)
+                    {
+                        try
+                        {
+                            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                            string appDir = Path.Combine(localAppData, "PixEz", "standalone_runtime");
+                            string targetExe = Path.Combine(appDir, "PixEz", "PixEz.exe");
+
+                            string stampFile = Path.Combine(appDir, ".version_stamp");
+                            string currentExePath = Assembly.GetExecutingAssembly().Location;
+                            string exeStamp = File.GetLastWriteTimeUtc(currentExePath).Ticks.ToString();
+
+                            if (!File.Exists(targetExe) || !File.Exists(stampFile) || File.ReadAllText(stampFile) != exeStamp)
+                            {
+                                if (Directory.Exists(appDir))
+                                {
+                                    try { Directory.Delete(appDir, true); } catch { }
+                                }
+                                Directory.CreateDirectory(appDir);
+
+                                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip"))
+                                {
+                                    if (stream == null)
+                                    {
+                                        throw new Exception("Embedded runtime payload not found.");
+                                    }
+                                    using (ZipArchive archive = new ZipArchive(stream))
+                                    {
+                                        archive.ExtractToDirectory(appDir);
+                                    }
+                                }
+                                try { File.WriteAllText(stampFile, exeStamp); } catch { }
+                            }
+
+                            ProcessStartInfo psi = new ProcessStartInfo();
+                            psi.FileName = targetExe;
+                            psi.WorkingDirectory = Path.GetDirectoryName(targetExe);
+                            psi.UseShellExecute = false;
+
+                            if (args != null && args.Length > 0)
+                            {
+                                psi.Arguments = string.Join(" ", Array.ConvertAll(args, a => a.Contains(" ") ? "\"" + a + "\"" : a));
+                            }
+
+                            using (Process proc = Process.Start(psi))
+                            {
+                                proc.WaitForExit();
+                                return proc.ExitCode;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Windows.Forms.MessageBox.Show("启动 PixEz 失败: " + ex.Message, "PixEz Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                            return 1;
+                        }
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val command = mutableListOf(
+            csc.absolutePath,
+            "/target:winexe",
+            "/optimize+",
+            "/platform:x64",
+            "/r:System.dll",
+            "/r:System.IO.Compression.dll",
+            "/r:System.IO.Compression.FileSystem.dll",
+            "/r:System.Windows.Forms.dll",
+            "/resource:${zipFile.absolutePath},payload.zip",
+            "/out:${targetExe.absolutePath}",
+        )
+        if (iconFile.exists()) {
+            command.add("/win32icon:${iconFile.absolutePath}")
+        }
+        command.add(sourceFile.absolutePath)
+
+        val process = ProcessBuilder(command)
+            .redirectErrorStream(true)
+            .start()
+
+        val output = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            throw GradleException("Failed to compile single-file EXE: \n$output")
+        }
+
+        println("Successfully generated Single-File Self-Contained EXE: ${targetExe.absolutePath} (${targetExe.length() / 1024 / 1024} MB)")
+    }
+}
+
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
 }
