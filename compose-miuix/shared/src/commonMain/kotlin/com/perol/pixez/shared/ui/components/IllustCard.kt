@@ -3,9 +3,18 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import coil3.compose.LocalPlatformContext
+import coil3.SingletonImageLoader
 import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.illustDragAndDropSource
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -73,18 +82,64 @@ fun IllustCard(
     }
 
     val hapticFeedback = LocalHapticFeedback.current
+    var showActionMenu by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalPlatformContext.current
+
+    if (showActionMenu) {
+        IllustActionMenu(
+            show = showActionMenu,
+            showBan = true,
+            onDismissRequest = { showActionMenu = false },
+            onCopyInfo = {
+                showActionMenu = false
+                runCatching { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
+            },
+            onCopyImage = {
+                showActionMenu = false
+                coroutineScope.launch {
+                    runCatching {
+                        val imageLoader = SingletonImageLoader.get(context)
+                        val diskCache = imageLoader.diskCache
+                        val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
+                        var bytes: ByteArray? = null
+                        for (candidateUrl in candidateUrls) {
+                            diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
+                                val file = snapshot.data.toFile()
+                                if (file.exists() && file.length() > 0) {
+                                    bytes = file.readBytes()
+                                }
+                            }
+                            if (bytes != null) break
+                        }
+                        bytes?.let { IllustClipboard().copyImage(it) }
+                    }
+                }
+            },
+            onCopyLink = {
+                showActionMenu = false
+                runCatching { IllustClipboard().copy(buildIllustShareLink(illust)) }
+            },
+            onShareLink = {
+                showActionMenu = false
+                runCatching { IllustShare().share(buildIllustShareLink(illust), illust.title) }
+            },
+            onBan = {
+                showActionMenu = false
+            },
+        )
+    }
 
     @OptIn(ExperimentalFoundationApi::class)
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .illustDragAndDropSource(illust, 0)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    runCatching {
-                        IllustClipboard().copy("https://www.pixiv.net/artworks/${illust.id}")
-                    }
+                    showActionMenu = true
                 },
             ),
     ) {

@@ -15,6 +15,10 @@ actual class IllustClipboard {
         pasteboard.setString(text, forType = NSPasteboardTypeString)
     }
 
+    actual fun copyImage(imageBytes: ByteArray) {
+        // macOS 平台支持
+    }
+
     actual fun getText(): String? {
         return NSPasteboard.generalPasteboard?.stringForType(NSPasteboardTypeString)
     }

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.platform.FileLocator
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
@@ -503,6 +504,7 @@ private fun DownloadTaskItem(
     onDelete: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val settingsRepository = com.perol.pixez.shared.data.settings.LocalSettingsRepository.current
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -536,6 +538,27 @@ private fun DownloadTaskItem(
                 status = task.status,
                 modifier = Modifier.size(20.dp),
             )
+            if (task.status == DownloadStatus.Success) {
+                IconButton(
+                    onClick = {
+                        val settings = settingsRepository
+                        val storePath = settings?.storePath
+                        val filePath = if (!storePath.isNullOrBlank()) {
+                            "$storePath/${task.fileName}"
+                        } else {
+                            val userHome = System.getProperty("user.home") ?: ""
+                            "$userHome/Pictures/PixEz/${task.fileName}"
+                        }
+                        FileLocator().showInFileManager(filePath)
+                    },
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Show,
+                        contentDescription = strings.downloadTaskShowInFolder,
+                        tint = MiuixTheme.colorScheme.primary,
+                    )
+                }
+            }
             IconButton(
                 onClick = onRetry,
                 enabled = task.status == DownloadStatus.Failed && !isProcessing,

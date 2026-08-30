@@ -240,6 +240,7 @@ private fun IllustDetailSingleContent(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
+    val context = coil3.compose.LocalPlatformContext.current
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
@@ -1192,6 +1193,45 @@ private fun IllustDetailSingleContent(
                                     onSuccess = { toastMessage = strings.copiedToClipboard },
                                     onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
                                 )
+                            },
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .height(0.5.dp)
+                                .background(Color.White.copy(alpha = 0.10f)),
+                        )
+                        LiquidMenuItem(
+                            icon = MiuixIcons.Show,
+                            text = strings.menuCopyImage,
+                            onClick = {
+                                showMoreMenu = false
+                                coroutineScope.launch {
+                                    suspendRunCatchingNonCancel {
+                                        val imageLoader = coil3.SingletonImageLoader.get(context)
+                                        val diskCache = imageLoader.diskCache
+                                        val candidateUrls = listOf(
+                                            currentIllust.imageUrls.large,
+                                            currentIllust.imageUrls.medium,
+                                            currentIllust.imageUrls.squareMedium,
+                                        )
+                                        var bytes: ByteArray? = null
+                                        for (candidateUrl in candidateUrls) {
+                                            diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
+                                                val file = snapshot.data.toFile()
+                                                if (file.exists() && file.length() > 0) {
+                                                    bytes = file.readBytes()
+                                                }
+                                            }
+                                            if (bytes != null) break
+                                        }
+                                        bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException("未找到图片缓存")
+                                    }.fold(
+                                        onSuccess = { toastMessage = strings.imageCopySuccess },
+                                        onFailure = { e -> toastMessage = "${strings.menuCopyImage}: ${e.message}" },
+                                    )
+                                }
                             },
                         )
                         Box(

@@ -28,6 +28,7 @@ fun IllustActionMenu(
     showBan: Boolean,
     onDismissRequest: () -> Unit,
     onCopyInfo: () -> Unit,
+    onCopyImage: (() -> Unit)? = null,
     onCopyLink: () -> Unit,
     onShareLink: () -> Unit,
     onBan: () -> Unit,
@@ -44,6 +45,12 @@ fun IllustActionMenu(
                 title = strings.menuCopyInfo,
                 onClick = onCopyInfo,
             )
+            if (onCopyImage != null) {
+                BasicComponent(
+                    title = strings.menuCopyImage,
+                    onClick = onCopyImage,
+                )
+            }
             BasicComponent(
                 title = strings.menuCopyLink,
                 onClick = onCopyLink,

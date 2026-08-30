@@ -18,6 +18,11 @@ expect class IllustClipboard() {
     fun copy(text: String)
 
     /**
+     * 将图片二进制数据 [imageBytes] 复制为系统剪贴板位图。
+     */
+    fun copyImage(imageBytes: ByteArray)
+
+    /**
      * 读取系统剪贴板中的纯文本内容，剪贴板为空或不支持时返回 null。
      */
     fun getText(): String?

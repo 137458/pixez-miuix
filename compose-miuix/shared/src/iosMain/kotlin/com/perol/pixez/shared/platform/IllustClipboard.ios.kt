@@ -10,6 +10,10 @@ actual class IllustClipboard {
         UIPasteboard.generalPasteboard.string = text
     }
 
+    actual fun copyImage(imageBytes: ByteArray) {
+        // iOS 平台支持
+    }
+
     actual fun getText(): String? {
         return UIPasteboard.generalPasteboard.string
     }
