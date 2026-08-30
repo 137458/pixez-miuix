@@ -11,6 +11,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -190,6 +191,8 @@ fun RecomUserScreen(
                                 isRefreshing = isManualRefreshing,
                                 onRefresh = triggerManualRefresh,
                                 modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                                topAppBarScrollBehavior = scrollBehavior,
                             ) {
                                 LazyColumn(
                                     state = listState,

@@ -299,6 +299,8 @@ fun HelloScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             IllustStaggeredGrid(
                                 illusts = illusts,

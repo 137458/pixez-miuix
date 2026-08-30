@@ -10,6 +10,7 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -189,6 +190,8 @@ fun UserFollowListScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             LazyColumn(
                                 state = listState,

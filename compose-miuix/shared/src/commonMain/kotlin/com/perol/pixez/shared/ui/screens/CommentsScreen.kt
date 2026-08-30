@@ -258,6 +258,8 @@ fun CommentsScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
