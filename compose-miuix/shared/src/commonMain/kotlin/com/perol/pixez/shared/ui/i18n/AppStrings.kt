@@ -39,6 +39,8 @@ interface AppStrings {
     val loadFailed: String
     val noData: String
     val actionClear: String
+    val expand: String
+    val collapse: String
 
     // Spotlight 特辑
     val spotlightTitle: String
@@ -924,6 +926,8 @@ object ZhCnStrings : AppStrings {
     override val loadFailed = "加载失败"
     override val noData = "暂无数据"
     override val actionClear = "清空"
+    override val expand = "展开"
+    override val collapse = "收起"
 
     override val spotlightTitle = "Pixivision 特辑"
     override val categoryAll = "全部"
@@ -1492,6 +1496,8 @@ object ZhTwStrings : AppStrings {
     override val loadFailed = "載入失敗"
     override val noData = "暫無資料"
     override val actionClear = "清空"
+    override val expand = "展開"
+    override val collapse = "收起"
 
     override val spotlightTitle = "Pixivision 特輯"
     override val categoryAll = "全部"
@@ -2059,6 +2065,8 @@ object EnStrings : AppStrings {
     override val loadFailed = "Failed to load"
     override val noData = "No data available"
     override val actionClear = "Clear"
+    override val expand = "Expand"
+    override val collapse = "Collapse"
 
     override val spotlightTitle = "Pixivision Spotlight"
     override val categoryAll = "All"
@@ -2627,6 +2635,8 @@ object JaStrings : AppStrings {
     override val loadFailed = "読み込み失敗"
     override val noData = "データがありません"
     override val actionClear = "クリア"
+    override val expand = "もっと見る"
+    override val collapse = "閉じる"
 
     override val spotlightTitle = "Pixivision 特集"
     override val categoryAll = "すべて"
@@ -3179,6 +3189,8 @@ object KoStrings : AppStrings {
     override val loadFailed = "로드 실패"
     override val noData = "데이터 없음"
     override val actionClear = "지우기"
+    override val expand = "더보기"
+    override val collapse = "접기"
 
     override val spotlightTitle = "Pixivision 특집"
     override val categoryAll = "전체"
@@ -3731,6 +3743,8 @@ object RuStrings : AppStrings {
     override val loadFailed = "Ошибка загрузки"
     override val noData = "Нет данных"
     override val actionClear = "Очистить"
+    override val expand = "Развернуть"
+    override val collapse = "Свернуть"
 
     override val spotlightTitle = "Подборки Pixivision"
     override val categoryAll = "Все"
@@ -4283,6 +4297,8 @@ object EsStrings : AppStrings {
     override val loadFailed = "Error al cargar"
     override val noData = "Sin datos disponibles"
     override val actionClear = "Limpiar"
+    override val expand = "Expandir"
+    override val collapse = "Colapsar"
 
     override val spotlightTitle = "Pixivision Destacados"
     override val categoryAll = "Todo"
@@ -4835,6 +4851,8 @@ object TrStrings : AppStrings {
     override val loadFailed = "Yükleme Başarısız"
     override val noData = "Veri yok"
     override val actionClear = "Temizle"
+    override val expand = "Genişlet"
+    override val collapse = "Daralt"
 
     override val spotlightTitle = "Pixivision Özel Seçki"
     override val categoryAll = "Tümü"
@@ -5387,6 +5405,8 @@ object IdStrings : AppStrings {
     override val loadFailed = "Gagal memuat"
     override val noData = "Tidak ada data"
     override val actionClear = "Bersihkan"
+    override val expand = "Perluas"
+    override val collapse = "Ciutkan"
 
     override val spotlightTitle = "Sorotan Pixivision"
     override val categoryAll = "Semua"
@@ -5939,6 +5959,8 @@ object FilStrings : AppStrings {
     override val loadFailed = "Nabigong i-load"
     override val noData = "Walang datos"
     override val actionClear = "I-clear"
+    override val expand = "I-expand"
+    override val collapse = "I-collapse"
 
     override val spotlightTitle = "Tampok na Pixivision"
     override val categoryAll = "Lahat"
@@ -6491,6 +6513,8 @@ object DeStrings : AppStrings {
     override val loadFailed = "Laden fehlgeschlagen"
     override val noData = "Keine Daten verfügbar"
     override val actionClear = "Leeren"
+    override val expand = "Ausklappen"
+    override val collapse = "Einklappen"
 
     override val spotlightTitle = "Pixivision Spotlight"
     override val categoryAll = "Alle"

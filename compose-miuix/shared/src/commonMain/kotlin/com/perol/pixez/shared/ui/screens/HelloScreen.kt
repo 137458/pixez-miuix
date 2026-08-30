@@ -232,6 +232,7 @@ fun HelloScreen(
             FrostedTopAppBar(
                 title = strings.tabRecommend,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -296,6 +297,7 @@ fun HelloScreen(
                             onIllustClick = onIllustClick,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .blurBackdropSource(backdrop)
                                 .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(
                                 start = 8.dp,

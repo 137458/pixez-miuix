@@ -57,6 +57,7 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -102,6 +103,7 @@ fun IllustDetailScreen(
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
+    onIllustClick: ((Int) -> Unit)? = null,
 ) {
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
@@ -135,6 +137,7 @@ fun IllustDetailScreen(
                 downloadRepository = downloadRepository,
                 banRepository = banRepository,
                 historyRepository = historyRepository,
+                onIllustClick = onIllustClick,
             )
         }
     } else {
@@ -151,6 +154,7 @@ fun IllustDetailScreen(
             downloadRepository = downloadRepository,
             banRepository = banRepository,
             historyRepository = historyRepository,
+            onIllustClick = onIllustClick,
         )
     }
 }
@@ -170,6 +174,7 @@ private fun IllustDetailSingleContent(
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
+    onIllustClick: ((Int) -> Unit)? = null,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val settings = LocalSettingsRepository.current
@@ -539,8 +544,10 @@ private fun IllustDetailSingleContent(
                                             style = MiuixTheme.textStyles.title4,
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = illust.caption,
+                                        HtmlCaptionText(
+                                            html = illust.caption,
+                                            onUserClick = onUserClick,
+                                            onIllustClick = onIllustClick,
                                             style = MiuixTheme.textStyles.body2,
                                         )
                                     }

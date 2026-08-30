@@ -180,6 +180,7 @@ fun RankingScreen(
             FrostedTopAppBar(
                 title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -196,6 +197,7 @@ fun RankingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .blurBackdropSource(backdrop)
                 .padding(top = paddingValues.calculateTopPadding()),
         ) {
             RankingModeSelector(

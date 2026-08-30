@@ -286,6 +286,7 @@ fun RootContent(
                         downloadRepository = downloadRepository,
                         banRepository = banRepository,
                         historyRepository = historyRepository,
+                        onIllustClick = component::onIllustClicked,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(

@@ -8,7 +8,8 @@
 
 ### 优化
 
-- 全量上线 FrostedTopAppBar 沉浸式磨砂毛玻璃顶栏体系，具备动态滚动感知与精细微光分割线，彻底解决 Backdrop 灰底遮罩与多图层争抢冲突。
+- 全量升级 FrostedTopAppBar 接入 MIUIX Backdrop 实时毛玻璃模糊管线，与底栏实现一致的通透物理模糊质感与折叠光影过渡。
+- 作品详情页简介全面接入 HtmlCaptionText 富文本引擎，支持 HTML 实体解码、LinkAnnotation 现代超链接、Pixiv 站内深层链接分发及文案长按选取复制。
 - 优化画师个人主页为原生 MIUIX 大标题折叠联动架构，头部与 Tab 栏随瀑布流列表平滑滚动折叠，大幅扩充作品展示面积。
 - 修复作品详情页更多操作菜单无法弹出的问题，采用独立的 WindowIconDropdownMenu 锚定弹窗组件。
 - 彻底恢复液态玻璃悬浮底栏全局 Backdrop 采样与物理透镜折射效果，移除顶栏不稳定的灰色遮罩。

@@ -234,6 +234,7 @@ fun NewScreen(
             FrostedTopAppBar(
                 title = strings.tabNew,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -259,6 +260,7 @@ fun NewScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .blurBackdropSource(backdrop)
                 .padding(top = paddingValues.calculateTopPadding()),
         ) {
             when (isLoggedIn) {

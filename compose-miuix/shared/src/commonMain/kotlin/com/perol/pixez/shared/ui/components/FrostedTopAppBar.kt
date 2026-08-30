@@ -8,13 +8,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 带有 Xiaomi HyperOS / MIUIX 沉浸式磨砂质感与动态滚动感知的大标题顶栏。
+ * 带有 Xiaomi HyperOS / MIUIX 沉浸式毛玻璃模糊质感与动态滚动感知的大标题顶栏。
  */
 @Composable
 fun FrostedTopAppBar(
@@ -23,6 +26,7 @@ fun FrostedTopAppBar(
     scrollBehavior: ScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
+    backdrop: Backdrop? = LocalBackdrop.current,
 ) {
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
@@ -38,13 +42,25 @@ fun FrostedTopAppBar(
     val outlineAlpha = (collapsedFraction * 0.25f).coerceIn(0f, 0.25f)
     val outlineColor = colorScheme.outline
 
-    TopAppBar(
-        title = title,
-        scrollBehavior = scrollBehavior,
-        color = colorScheme.surface.copy(alpha = animatedAlpha),
-        navigationIcon = navigationIcon,
-        actions = actions,
-        modifier = modifier.drawBehind {
+    val barModifier = if (backdrop != null) {
+        modifier
+            .backdropBlur(
+                backdrop = backdrop,
+                tintColor = colorScheme.surface,
+                tintAlpha = animatedAlpha,
+            )
+            .drawBehind {
+                if (outlineAlpha > 0.01f) {
+                    drawLine(
+                        color = outlineColor.copy(alpha = outlineAlpha),
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width, size.height),
+                        strokeWidth = 1f,
+                    )
+                }
+            }
+    } else {
+        modifier.drawBehind {
             if (outlineAlpha > 0.01f) {
                 drawLine(
                     color = outlineColor.copy(alpha = outlineAlpha),
@@ -53,12 +69,21 @@ fun FrostedTopAppBar(
                     strokeWidth = 1f,
                 )
             }
-        },
+        }
+    }
+
+    TopAppBar(
+        title = title,
+        scrollBehavior = scrollBehavior,
+        color = if (backdrop != null) Color.Transparent else colorScheme.surface.copy(alpha = animatedAlpha),
+        navigationIcon = navigationIcon,
+        actions = actions,
+        modifier = barModifier,
     )
 }
 
 /**
- * 带有 Xiaomi HyperOS / MIUIX 沉浸式磨砂质感的紧凑型小顶栏。
+ * 带有 Xiaomi HyperOS / MIUIX 沉浸式毛玻璃模糊质感的紧凑型小顶栏。
  */
 @Composable
 fun FrostedSmallTopAppBar(
@@ -67,6 +92,7 @@ fun FrostedSmallTopAppBar(
     scrollBehavior: ScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
+    backdrop: Backdrop? = LocalBackdrop.current,
 ) {
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
@@ -82,13 +108,25 @@ fun FrostedSmallTopAppBar(
     val outlineAlpha = (collapsedFraction * 0.25f).coerceIn(0f, 0.25f)
     val outlineColor = colorScheme.outline
 
-    SmallTopAppBar(
-        title = title,
-        scrollBehavior = scrollBehavior,
-        color = colorScheme.surface.copy(alpha = animatedAlpha),
-        navigationIcon = navigationIcon,
-        actions = actions,
-        modifier = modifier.drawBehind {
+    val barModifier = if (backdrop != null) {
+        modifier
+            .backdropBlur(
+                backdrop = backdrop,
+                tintColor = colorScheme.surface,
+                tintAlpha = animatedAlpha,
+            )
+            .drawBehind {
+                if (outlineAlpha > 0.01f) {
+                    drawLine(
+                        color = outlineColor.copy(alpha = outlineAlpha),
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width, size.height),
+                        strokeWidth = 1f,
+                    )
+                }
+            }
+    } else {
+        modifier.drawBehind {
             if (outlineAlpha > 0.01f) {
                 drawLine(
                     color = outlineColor.copy(alpha = outlineAlpha),
@@ -97,6 +135,16 @@ fun FrostedSmallTopAppBar(
                     strokeWidth = 1f,
                 )
             }
-        },
+        }
+    }
+
+    SmallTopAppBar(
+        title = title,
+        scrollBehavior = scrollBehavior,
+        color = if (backdrop != null) Color.Transparent else colorScheme.surface.copy(alpha = animatedAlpha),
+        navigationIcon = navigationIcon,
+        actions = actions,
+        modifier = barModifier,
     )
 }
+
