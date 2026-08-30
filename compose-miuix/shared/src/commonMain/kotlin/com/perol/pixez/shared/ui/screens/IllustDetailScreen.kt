@@ -50,7 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import top.yukonga.miuix.kmp.blur.layerBackdrop
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.model.DownloadStatus
@@ -233,6 +237,13 @@ private fun IllustDetailSingleContent(
     }
 
     val detailBackdrop = rememberBlurBackdrop()
+    val listState = rememberLazyListState()
+    val collapseProgress by remember {
+        derivedStateOf {
+            if (listState.firstVisibleItemIndex > 0) 1f
+            else (listState.firstVisibleItemScrollOffset / 280f).coerceIn(0f, 1f)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -257,6 +268,7 @@ private fun IllustDetailSingleContent(
                     }
 
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .blurBackdropSource(detailBackdrop),
@@ -660,82 +672,189 @@ private fun IllustDetailSingleContent(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = if (isDarkTheme) 0.55f else 0.40f),
-                            Color.Transparent,
-                        ),
-                    ),
-                )
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            // 返回按钮（独立液态玻璃圆形胶囊）
-            TooltipBox(
-                text = strings.back,
-                modifier = Modifier.align(Alignment.CenterStart),
-            ) {
-                val backInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                val isBackPressed by backInteractionSource.collectIsPressedAsState()
-                val backPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                LaunchedEffect(isBackPressed) {
-                    backPressScale.animateTo(
-                        targetValue = if (isBackPressed) 0.92f else 1f,
-                        animationSpec = androidx.compose.animation.core.spring(
-                            dampingRatio = 0.7f,
-                            stiffness = 500f,
-                        ),
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .graphicsLayer {
-                            scaleX = backPressScale.value
-                            scaleY = backPressScale.value
+        // 提取通用业务操作逻辑
+        val performBookmark: () -> Unit = {
+            illust?.let { targetIllust ->
+                coroutineScope.launch {
+                    try {
+                        isBookmarkLoading = true
+                        bookmarkError = null
+                        val wasBookmarked = isBookmarked
+                        suspendRunCatchingNonCancel {
+                            if (wasBookmarked) {
+                                bookmarkRepository.deleteBookmark(targetIllust.id)
+                            } else {
+                                val autoTags = if (settings?.autoTagWhenStar == true) {
+                                    targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
+                                } else null
+                                bookmarkRepository.addBookmark(
+                                    illustId = targetIllust.id,
+                                    isPrivate = settings?.defaultPrivateLike ?: false,
+                                    tags = autoTags,
+                                )
+                            }
+                        }.onSuccess {
+                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            isBookmarked = !wasBookmarked
+                            if (!wasBookmarked) {
+                                if (settings?.saveAfterStar == true) {
+                                    coroutineScope.launch {
+                                        toastMessage = "${strings.downloadStatusDownloading}…"
+                                        val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                                        toastMessage = when (task.status) {
+                                            DownloadStatus.Success -> strings.downloadStatusSuccess
+                                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                            else -> null
+                                        }
+                                    }
+                                }
+                                if (settings?.followAfterStar == true) {
+                                    coroutineScope.launch {
+                                        suspendRunCatchingNonCancel {
+                                            bookmarkRepository.followUser(targetIllust.user.id)
+                                        }
+                                    }
+                                }
+                            }
+                        }.onFailure { e ->
+                            bookmarkError = e.message ?: strings.loadFailed
                         }
-                        .liquidGlass(
-                            backdrop = detailBackdrop,
-                            shape = CircleShape,
-                            blurRadius = 18.dp,
-                            tintColor = Color.Black,
-                            tintAlpha = 0.40f,
-                        )
-                        .clip(CircleShape)
-                        .clickable(
-                            interactionSource = backInteractionSource,
-                            indication = null,
-                            onClick = onBack,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Back,
-                        contentDescription = strings.back,
-                        tint = Color.White,
-                    )
+                    } finally {
+                        isBookmarkLoading = false
+                    }
                 }
             }
+        }
 
-            // 右侧三个独立悬浮操作按钮（收藏、下载、更多）
-            Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        val performDownload: () -> Unit = {
+            if (!isDownloading && illust != null) {
+                val targetIllust = illust
+                coroutineScope.launch {
+                    try {
+                        isDownloading = true
+                        toastMessage = "${strings.downloadStatusDownloading}…"
+                        val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                        toastMessage = when (task.status) {
+                            DownloadStatus.Success -> {
+                                if (settings?.starAfterSave == true && !isBookmarked) {
+                                    coroutineScope.launch {
+                                        suspendRunCatchingNonCancel {
+                                            bookmarkRepository.addBookmark(
+                                                illustId = targetIllust.id,
+                                                isPrivate = settings.defaultPrivateLike,
+                                            )
+                                        }.onSuccess {
+                                            isBookmarked = true
+                                        }
+                                    }
+                                }
+                                strings.downloadStatusSuccess
+                            }
+                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                            else -> null
+                        }
+                    } finally {
+                        isDownloading = false
+                    }
+                }
+            }
+        }
+
+        // 1. 折叠态：随内容滚动平滑淡入的 MIUIX 官方标准 BlurredBar + SmallTopAppBar
+        if (collapseProgress > 0.01f) {
+            BlurredBar(
+                backdrop = detailBackdrop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = collapseProgress },
             ) {
-                // 1. 收藏按钮（独立悬浮圆形胶囊）
-                TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
-                    val favInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    val isFavPressed by favInteractionSource.collectIsPressedAsState()
-                    val favPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                    LaunchedEffect(isFavPressed) {
-                        favPressScale.animateTo(
-                            targetValue = if (isFavPressed) 0.90f else 1f,
+                SmallTopAppBar(
+                    title = illust?.title.orEmpty(),
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                                tint = MiuixTheme.colorScheme.onSurface,
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = performBookmark,
+                            enabled = !isBookmarkLoading && illust != null,
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                                tint = if (isBookmarked) Color(0xFFFF4D6A) else MiuixTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer {
+                                        scaleX = bookmarkHeartScale.value
+                                        scaleY = bookmarkHeartScale.value
+                                    },
+                            )
+                        }
+                        IconButton(
+                            onClick = performDownload,
+                            enabled = !isDownloading && illust != null,
+                        ) {
+                            if (isDownloading) {
+                                InfiniteProgressIndicator(
+                                    color = MiuixTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = MiuixIcons.Download,
+                                    contentDescription = strings.download,
+                                    tint = MiuixTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                        }
+                        if (illust != null) {
+                            IconButton(
+                                onClick = { showMoreMenu = !showMoreMenu },
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.More,
+                                    contentDescription = strings.menuMoreActions,
+                                    tint = MiuixTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                        }
+                    },
+                    color = if (detailBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        // 2. 展开态：大图沉浸式悬浮液态玻璃按钮（移除粗糙的黑色大矩形渐变，仅保留轻巧透气圆形胶囊）
+        if (collapseProgress < 0.99f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = (1f - collapseProgress * 1.5f).coerceIn(0f, 1f) }
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                // 返回按钮（独立液态玻璃圆形胶囊）
+                TooltipBox(
+                    text = strings.back,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                ) {
+                    val backInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val isBackPressed by backInteractionSource.collectIsPressedAsState()
+                    val backPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                    LaunchedEffect(isBackPressed) {
+                        backPressScale.animateTo(
+                            targetValue = if (isBackPressed) 0.92f else 1f,
                             animationSpec = androidx.compose.animation.core.spring(
                                 dampingRatio = 0.7f,
                                 stiffness = 500f,
@@ -747,185 +866,46 @@ private fun IllustDetailSingleContent(
                         modifier = Modifier
                             .size(42.dp)
                             .graphicsLayer {
-                                scaleX = favPressScale.value
-                                scaleY = favPressScale.value
+                                scaleX = backPressScale.value
+                                scaleY = backPressScale.value
                             }
                             .liquidGlass(
                                 backdrop = detailBackdrop,
                                 shape = CircleShape,
                                 blurRadius = 18.dp,
                                 tintColor = Color.Black,
-                                tintAlpha = 0.40f,
+                                tintAlpha = 0.38f,
                             )
                             .clip(CircleShape)
                             .clickable(
-                                interactionSource = favInteractionSource,
+                                interactionSource = backInteractionSource,
                                 indication = null,
-                                enabled = !isBookmarkLoading && illust != null,
-                                onClick = {
-                                    illust?.let { targetIllust ->
-                                        coroutineScope.launch {
-                                            try {
-                                                isBookmarkLoading = true
-                                                bookmarkError = null
-                                                val wasBookmarked = isBookmarked
-                                                suspendRunCatchingNonCancel {
-                                                    if (wasBookmarked) {
-                                                        bookmarkRepository.deleteBookmark(targetIllust.id)
-                                                    } else {
-                                                        val autoTags = if (settings?.autoTagWhenStar == true) {
-                                                            targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
-                                                        } else null
-                                                        bookmarkRepository.addBookmark(
-                                                            illustId = targetIllust.id,
-                                                            isPrivate = settings?.defaultPrivateLike ?: false,
-                                                            tags = autoTags,
-                                                        )
-                                                    }
-                                                }.onSuccess {
-                                                    hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                                    isBookmarked = !wasBookmarked
-                                                    if (!wasBookmarked) {
-                                                        if (settings?.saveAfterStar == true) {
-                                                            coroutineScope.launch {
-                                                                toastMessage = "${strings.downloadStatusDownloading}…"
-                                                                val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                                                                toastMessage = when (task.status) {
-                                                                    DownloadStatus.Success -> strings.downloadStatusSuccess
-                                                                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                                    else -> null
-                                                                }
-                                                            }
-                                                        }
-                                                        if (settings?.followAfterStar == true) {
-                                                            coroutineScope.launch {
-                                                                suspendRunCatchingNonCancel {
-                                                                    bookmarkRepository.followUser(targetIllust.user.id)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }.onFailure { e ->
-                                                    bookmarkError = e.message ?: strings.loadFailed
-                                                }
-                                            } finally {
-                                                isBookmarkLoading = false
-                                            }
-                                        }
-                                    }
-                                },
+                                onClick = onBack,
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                            contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                            tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .graphicsLayer {
-                                    scaleX = bookmarkHeartScale.value
-                                    scaleY = bookmarkHeartScale.value
-                                },
+                            imageVector = MiuixIcons.Back,
+                            contentDescription = strings.back,
+                            tint = Color.White,
                         )
                     }
                 }
 
-                // 2. 下载按钮（独立悬浮圆形胶囊）
-                TooltipBox(text = strings.download) {
-                    val dlInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    val isDlPressed by dlInteractionSource.collectIsPressedAsState()
-                    val dlPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                    LaunchedEffect(isDlPressed) {
-                        dlPressScale.animateTo(
-                            targetValue = if (isDlPressed) 0.90f else 1f,
-                            animationSpec = androidx.compose.animation.core.spring(
-                                dampingRatio = 0.7f,
-                                stiffness = 500f,
-                            ),
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .graphicsLayer {
-                                scaleX = dlPressScale.value
-                                scaleY = dlPressScale.value
-                            }
-                            .liquidGlass(
-                                backdrop = detailBackdrop,
-                                shape = CircleShape,
-                                blurRadius = 18.dp,
-                                tintColor = Color.Black,
-                                tintAlpha = 0.40f,
-                            )
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = dlInteractionSource,
-                                indication = null,
-                                enabled = !isDownloading && illust != null,
-                                onClick = {
-                                    if (isDownloading || illust == null) return@clickable
-                                    coroutineScope.launch {
-                                        try {
-                                            isDownloading = true
-                                            toastMessage = "${strings.downloadStatusDownloading}…"
-                                            val task = downloadRepository.download(illust, pageIndex = 0)
-                                            toastMessage = when (task.status) {
-                                                DownloadStatus.Success -> {
-                                                    if (settings?.starAfterSave == true && !isBookmarked) {
-                                                        coroutineScope.launch {
-                                                            suspendRunCatchingNonCancel {
-                                                                bookmarkRepository.addBookmark(
-                                                                    illustId = illust.id,
-                                                                    isPrivate = settings.defaultPrivateLike,
-                                                                )
-                                                            }.onSuccess {
-                                                                isBookmarked = true
-                                                            }
-                                                        }
-                                                    }
-                                                    strings.downloadStatusSuccess
-                                                }
-                                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                else -> null
-                                            }
-                                        } finally {
-                                            isDownloading = false
-                                        }
-                                    }
-                                },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (isDownloading) {
-                            InfiniteProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        } else {
-                            Icon(
-                                imageVector = MiuixIcons.Download,
-                                contentDescription = strings.download,
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .offset(x = (-0.3).dp, y = (-1).dp),
-                            )
-                        }
-                    }
-                }
-
-                // 3. 更多菜单按钮（独立悬浮圆形胶囊）
-                if (illust != null) {
-                    TooltipBox(text = strings.menuMoreActions) {
-                        val moreInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        val isMorePressed by moreInteractionSource.collectIsPressedAsState()
-                        val morePressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-                        LaunchedEffect(isMorePressed) {
-                            morePressScale.animateTo(
-                                targetValue = if (isMorePressed) 0.90f else 1f,
+                // 右侧三个独立悬浮操作按钮（收藏、下载、更多）
+                Row(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 1. 收藏按钮
+                    TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
+                        val favInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        val isFavPressed by favInteractionSource.collectIsPressedAsState()
+                        val favPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                        LaunchedEffect(isFavPressed) {
+                            favPressScale.animateTo(
+                                targetValue = if (isFavPressed) 0.90f else 1f,
                                 animationSpec = androidx.compose.animation.core.spring(
                                     dampingRatio = 0.7f,
                                     stiffness = 500f,
@@ -937,30 +917,140 @@ private fun IllustDetailSingleContent(
                             modifier = Modifier
                                 .size(42.dp)
                                 .graphicsLayer {
-                                    scaleX = morePressScale.value
-                                    scaleY = morePressScale.value
+                                    scaleX = favPressScale.value
+                                    scaleY = favPressScale.value
                                 }
                                 .liquidGlass(
                                     backdrop = detailBackdrop,
                                     shape = CircleShape,
                                     blurRadius = 18.dp,
                                     tintColor = Color.Black,
-                                    tintAlpha = 0.40f,
+                                    tintAlpha = 0.38f,
                                 )
                                 .clip(CircleShape)
                                 .clickable(
-                                    interactionSource = moreInteractionSource,
+                                    interactionSource = favInteractionSource,
                                     indication = null,
-                                    onClick = { showMoreMenu = !showMoreMenu },
+                                    enabled = !isBookmarkLoading && illust != null,
+                                    onClick = performBookmark,
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = MiuixIcons.More,
-                                contentDescription = strings.menuMoreActions,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp),
+                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                                tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer {
+                                        scaleX = bookmarkHeartScale.value
+                                        scaleY = bookmarkHeartScale.value
+                                    },
                             )
+                        }
+                    }
+
+                    // 2. 下载按钮
+                    TooltipBox(text = strings.download) {
+                        val dlInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        val isDlPressed by dlInteractionSource.collectIsPressedAsState()
+                        val dlPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                        LaunchedEffect(isDlPressed) {
+                            dlPressScale.animateTo(
+                                targetValue = if (isDlPressed) 0.90f else 1f,
+                                animationSpec = androidx.compose.animation.core.spring(
+                                    dampingRatio = 0.7f,
+                                    stiffness = 500f,
+                                ),
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .graphicsLayer {
+                                    scaleX = dlPressScale.value
+                                    scaleY = dlPressScale.value
+                                }
+                                .liquidGlass(
+                                    backdrop = detailBackdrop,
+                                    shape = CircleShape,
+                                    blurRadius = 18.dp,
+                                    tintColor = Color.Black,
+                                    tintAlpha = 0.38f,
+                                )
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = dlInteractionSource,
+                                    indication = null,
+                                    enabled = !isDownloading && illust != null,
+                                    onClick = performDownload,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isDownloading) {
+                                InfiniteProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = MiuixIcons.Download,
+                                    contentDescription = strings.download,
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .offset(x = (-0.3).dp, y = (-1).dp),
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. 更多菜单按钮
+                    if (illust != null) {
+                        TooltipBox(text = strings.menuMoreActions) {
+                            val moreInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            val isMorePressed by moreInteractionSource.collectIsPressedAsState()
+                            val morePressScale = remember { androidx.compose.animation.core.Animatable(1f) }
+                            LaunchedEffect(isMorePressed) {
+                                morePressScale.animateTo(
+                                    targetValue = if (isMorePressed) 0.90f else 1f,
+                                    animationSpec = androidx.compose.animation.core.spring(
+                                        dampingRatio = 0.7f,
+                                        stiffness = 500f,
+                                    ),
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .graphicsLayer {
+                                        scaleX = morePressScale.value
+                                        scaleY = morePressScale.value
+                                    }
+                                    .liquidGlass(
+                                        backdrop = detailBackdrop,
+                                        shape = CircleShape,
+                                        blurRadius = 18.dp,
+                                        tintColor = Color.Black,
+                                        tintAlpha = 0.38f,
+                                    )
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = moreInteractionSource,
+                                        indication = null,
+                                        onClick = { showMoreMenu = !showMoreMenu },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.More,
+                                    contentDescription = strings.menuMoreActions,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
                     }
                 }

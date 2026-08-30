@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -61,8 +62,10 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.window.WindowDialog
+import top.yukonga.miuix.kmp.icon.extended.Recent
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 排行榜页：支持日/周/月等模式切换，展示真实排行榜数据。
@@ -172,6 +175,34 @@ fun RankingScreen(
     val colorScheme = MiuixTheme.colorScheme
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    var showDateDialog by rememberSaveable { mutableStateOf(false) }
+
+    // 日期筛选弹窗
+    WindowDialog(
+        title = strings.rankingDateLabel,
+        show = showDateDialog,
+        onDismissRequest = { showDateDialog = false },
+    ) {
+        RankingDateInput(
+            date = dateInput,
+            onDateChange = { dateInput = it },
+            onClear = {
+                dateInput = ""
+                showDateDialog = false
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(
+                text = strings.confirm,
+                onClick = { showDateDialog = false },
+            )
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -180,21 +211,46 @@ fun RankingScreen(
                 backdrop = backdrop,
                 scrollBehavior = scrollBehavior,
             ) {
-                TopAppBar(
-                    title = strings.tabRanking,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else colorScheme.surface,
-                    actions = {
-                        IconButton(
-                            onClick = triggerManualRefresh,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                    },
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TopAppBar(
+                        title = strings.tabRanking,
+                        scrollBehavior = scrollBehavior,
+                        color = if (backdrop != null) androidx.compose.ui.graphics.Color.Transparent else colorScheme.surface,
+                        actions = {
+                            if (dateInput.isNotBlank()) {
+                                TextButton(
+                                    text = dateInput,
+                                    onClick = { showDateDialog = true },
+                                )
+                            } else {
+                                IconButton(
+                                    onClick = { showDateDialog = true },
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Recent,
+                                        contentDescription = strings.rankingDateLabel,
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = triggerManualRefresh,
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Refresh,
+                                    contentDescription = strings.refresh,
+                                )
+                            }
+                        },
+                    )
+                    RankingModeSelector(
+                        selectedMode = selectedMode,
+                        onModeSelected = {
+                            selectedMode = it
+                            retryCount = 0
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
     ) { paddingValues ->
@@ -204,88 +260,73 @@ fun RankingScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding()),
-            ) {
-                RankingModeSelector(
-                    selectedMode = selectedMode,
-                    onModeSelected = {
-                        selectedMode = it
-                        retryCount = 0
-                    },
-                )
-
-                RankingDateInput(
-                    date = dateInput,
-                    onDateChange = { dateInput = it },
-                    onClear = { dateInput = "" },
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .fillMaxSize()
+                        .padding(paddingValues),
                 )
-
-                val result = state.value
-                when {
-                    result == null -> LoadingPlaceholder(
-                        modifier = Modifier.weight(1f),
-                    )
-                    result.isSuccess -> {
-                        if (illusts.isEmpty()) {
-                            EmptyPlaceholder(
-                                message = strings.rankingEmpty,
-                                modifier = Modifier.weight(1f),
+                result.isSuccess -> {
+                    if (illusts.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = strings.rankingEmpty,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                            topAppBarScrollBehavior = scrollBehavior,
+                        ) {
+                            IllustStaggeredGrid(
+                                illusts = illusts,
+                                onIllustClick = onIllustClick,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = PaddingValues(
+                                    start = 8.dp,
+                                    top = paddingValues.calculateTopPadding() + 8.dp,
+                                    end = 8.dp,
+                                    bottom = 100.dp,
+                                ),
+                                hasMore = nextUrl != null,
+                                isLoadingMore = isLoadingMore,
+                                loadMoreError = loadMoreError,
+                                onLoadMore = ::loadMore,
                             )
-                        } else {
-                            PullToRefresh(
-                                isRefreshing = isManualRefreshing,
-                                onRefresh = triggerManualRefresh,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                IllustStaggeredGrid(
-                                    illusts = illusts,
-                                    onIllustClick = onIllustClick,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    contentPadding = PaddingValues(
-                                        start = 8.dp,
-                                        top = 8.dp,
-                                        end = 8.dp,
-                                        bottom = 100.dp,
-                                    ),
-                                    hasMore = nextUrl != null,
-                                    isLoadingMore = isLoadingMore,
-                                    loadMoreError = loadMoreError,
-                                    onLoadMore = ::loadMore,
-                                )
-                            }
                         }
                     }
-                    else -> ErrorPlaceholder(
-                        error = result.exceptionOrNull(),
-                        onRetry = { triggerManualRefresh() },
-                        modifier = Modifier.weight(1f),
-                    )
                 }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
             }
         }
     }
 }
 
-
 @Composable
 private fun RankingModeSelector(
     selectedMode: RankingMode,
     onModeSelected: (RankingMode) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

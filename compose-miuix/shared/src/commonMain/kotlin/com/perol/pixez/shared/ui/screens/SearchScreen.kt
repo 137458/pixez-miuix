@@ -182,6 +182,12 @@ fun SearchScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+    val bottomBarVisibility = LocalBottomBarVisibility.current
+    LaunchedEffect(showFilterSheet) {
+        bottomBarVisibility.value = !showFilterSheet
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -189,11 +195,111 @@ fun SearchScreen(
                 backdrop = backdrop,
                 scrollBehavior = scrollBehavior,
             ) {
-                TopAppBar(
-                    title = strings.tabSearch,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TopAppBar(
+                        title = strings.tabSearch,
+                        scrollBehavior = scrollBehavior,
+                        color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    )
+                    SearchBar(
+                        inputField = {
+                            InputField(
+                                query = query,
+                                onQueryChange = {
+                                    query = it
+                                    if (it.isBlank()) isSearching = false
+                                },
+                                onSearch = {
+                                    if (query.isNotBlank()) {
+                                        isSearching = true
+                                        // 将新搜索词加入历史（去重，最多保留 20 条）。
+                                        updateHistory(
+                                            (listOf(query) + searchHistory.filter { it != query }).take(20)
+                                        )
+                                    }
+                                },
+                                expanded = false,
+                                onExpandedChange = { },
+                                label = strings.searchPlaceholder,
+                            )
+                        },
+                        expanded = false,
+                        onExpandedChange = { },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) {
+                        // SearchBar 展开状态下的内容区域，M4 暂空。
+                    }
+
+                    if (isSearching && query.isNotBlank()) {
+                        // 搜索类型切换：作品 / 画师
+                        TabRow(
+                            tabs = searchTypes,
+                            selectedTabIndex = searchTypeIndex,
+                            onTabSelected = { searchTypeIndex = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+
+                        if (searchTypeIndex == 0) {
+                            val sortLabel = when (sort) {
+                                "date_asc" -> strings.searchSortOldest
+                                "popular_desc" -> strings.searchSortPopular
+                                else -> strings.searchSortLatest
+                            }
+                            val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
+                                startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                FilterChipButton(
+                                    text = strings.searchSortLabel.format(sortLabel),
+                                    isSelected = sort != "date_desc",
+                                    onClick = {
+                                        sort = when (sort) {
+                                            "date_desc" -> "popular_desc"
+                                            "popular_desc" -> "date_asc"
+                                            else -> "date_desc"
+                                        }
+                                    },
+                                )
+
+                                FilterChipButton(
+                                    text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
+                                    isSelected = searchAiType != 0,
+                                    onClick = {
+                                        searchAiType = if (searchAiType == 0) 1 else 0
+                                    },
+                                )
+
+                                if (bookmarkThreshold > 0) {
+                                    FilterChipButton(
+                                        text = "${bookmarkThreshold}+ ✕",
+                                        isSelected = true,
+                                        onClick = {
+                                            bookmarkThreshold = 0
+                                        },
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                FilterChipButton(
+                                    text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
+                                    isSelected = hasActiveFilters,
+                                    onClick = { showFilterSheet = true },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
     ) { paddingValues ->
@@ -203,143 +309,39 @@ fun SearchScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            var showFilterSheet by rememberSaveable { mutableStateOf(false) }
-            val bottomBarVisibility = LocalBottomBarVisibility.current
-            LaunchedEffect(showFilterSheet) {
-                bottomBarVisibility.value = !showFilterSheet
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding()),
-            ) {
-            SearchBar(
-                inputField = {
-                    InputField(
-                        query = query,
-                        onQueryChange = {
-                            query = it
-                            if (it.isBlank()) isSearching = false
-                        },
-                        onSearch = {
-                            if (query.isNotBlank()) {
-                                isSearching = true
-                                // 将新搜索词加入历史（去重，最多保留 20 条）。
-                                updateHistory(
-                                    (listOf(query) + searchHistory.filter { it != query }).take(20)
-                                )
-                            }
-                        },
-                        expanded = false,
-                        onExpandedChange = { },
-                        label = strings.searchPlaceholder,
-                    )
-                },
-                expanded = false,
-                onExpandedChange = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            ) {
-                // SearchBar 展开状态下的内容区域，M4 暂空。
-            }
+            val contentTopPadding = paddingValues.calculateTopPadding() + 8.dp
+            val effectiveContentPadding = PaddingValues(
+                start = 8.dp,
+                top = contentTopPadding,
+                end = 8.dp,
+                bottom = 100.dp,
+            )
 
             if (isSearching && query.isNotBlank()) {
-                // 搜索类型切换：作品 / 画师
-                TabRow(
-                    tabs = searchTypes,
-                    selectedTabIndex = searchTypeIndex,
-                    onTabSelected = { searchTypeIndex = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-
-                if (searchTypeIndex == 0) {
-                    val sortLabel = when (sort) {
-                        "date_asc" -> strings.searchSortOldest
-                        "popular_desc" -> strings.searchSortPopular
-                        else -> strings.searchSortLatest
-                    }
-                    val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
-                        startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FilterChipButton(
-                            text = strings.searchSortLabel.format(sortLabel),
-                            isSelected = sort != "date_desc",
-                            onClick = {
-                                sort = when (sort) {
-                                    "date_desc" -> "popular_desc"
-                                    "popular_desc" -> "date_asc"
-                                    else -> "date_desc"
-                                }
-                            },
-                        )
-
-                        FilterChipButton(
-                            text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
-                            isSelected = searchAiType != 0,
-                            onClick = {
-                                searchAiType = if (searchAiType == 0) 1 else 0
-                            },
-                        )
-
-                        if (bookmarkThreshold > 0) {
-                            FilterChipButton(
-                                text = "${bookmarkThreshold}+ ✕",
-                                isSelected = true,
-                                onClick = {
-                                    bookmarkThreshold = 0
-                                },
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        FilterChipButton(
-                            text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
-                            isSelected = hasActiveFilters,
-                            onClick = { showFilterSheet = true },
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                ) {
-                    when (searchTypeIndex) {
-                        0 -> SearchIllustResultGrid(
-                            query = query,
-                            sort = sort,
-                            searchTarget = searchTarget,
-                            searchAiType = searchAiType,
-                            bookmarkThreshold = bookmarkThreshold,
-                            ugoiraFilter = ugoiraFilter,
-                            startDate = startDate.takeIf { it.isNotBlank() },
-                            endDate = endDate.takeIf { it.isNotBlank() },
-                            repository = repository,
-                            banRepository = banRepository,
-                            settingsRepository = settingsRepository,
-                            onIllustClick = onIllustClick,
-                            scrollBehavior = scrollBehavior,
-                        )
-                        1 -> SearchUserResultList(
-                            query = query,
-                            repository = repository,
-                            onUserClick = onUserClick,
-                            scrollBehavior = scrollBehavior,
-                        )
-                    }
+                when (searchTypeIndex) {
+                    0 -> SearchIllustResultGrid(
+                        query = query,
+                        sort = sort,
+                        searchTarget = searchTarget,
+                        searchAiType = searchAiType,
+                        bookmarkThreshold = bookmarkThreshold,
+                        ugoiraFilter = ugoiraFilter,
+                        startDate = startDate.takeIf { it.isNotBlank() },
+                        endDate = endDate.takeIf { it.isNotBlank() },
+                        repository = repository,
+                        banRepository = banRepository,
+                        settingsRepository = settingsRepository,
+                        onIllustClick = onIllustClick,
+                        scrollBehavior = scrollBehavior,
+                        contentPadding = effectiveContentPadding,
+                    )
+                    1 -> SearchUserResultList(
+                        query = query,
+                        repository = repository,
+                        onUserClick = onUserClick,
+                        scrollBehavior = scrollBehavior,
+                        contentPadding = effectiveContentPadding,
+                    )
                 }
 
                 if (showFilterSheet) {
@@ -369,6 +371,12 @@ fun SearchScreen(
                     isLoadingTrend = trendResult == null,
                     trendError = trendResult?.exceptionOrNull(),
                     scrollBehavior = scrollBehavior,
+                    contentPadding = PaddingValues(
+                        start = 0.dp,
+                        top = contentTopPadding,
+                        end = 0.dp,
+                        bottom = 100.dp,
+                    ),
                     onTagClick = { tag ->
                         query = tag
                         isSearching = true
@@ -382,7 +390,6 @@ fun SearchScreen(
             }
         }
     }
-}
 }
 
 /**
@@ -633,6 +640,12 @@ private fun SearchIllustResultGrid(
     settingsRepository: SettingsRepository,
     onIllustClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
+    contentPadding: PaddingValues = PaddingValues(
+        start = 8.dp,
+        top = 8.dp,
+        end = 8.dp,
+        bottom = 100.dp,
+    ),
 ) {
     // 根据收藏数阈值构建实际搜索词：先清除原有 \d+users入り，再按需追加 " ${value}users入り"。
     val searchWord = remember(query, bookmarkThreshold) {
@@ -774,6 +787,7 @@ private fun SearchIllustResultGrid(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = contentPadding,
                     hasMore = nextUrl != null,
                     isLoadingMore = isLoadingMore,
                     loadMoreError = loadMoreError,
@@ -796,6 +810,7 @@ private fun SearchUserResultList(
     repository: SearchRepository,
     onUserClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
+    contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     // 画师搜索结果重试计数，作为 produceState 的 key 触发重新加载。
@@ -878,7 +893,7 @@ private fun SearchUserResultList(
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(bottom = 100.dp),
+                        contentPadding = contentPadding,
                     ) {
                         items(
                             items = previews,
@@ -973,6 +988,12 @@ private fun SearchSuggestions(
     onHistoryRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(
+        start = 0.dp,
+        top = 0.dp,
+        end = 0.dp,
+        bottom = 100.dp,
+    ),
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val listState = rememberLazyListState()
@@ -980,12 +1001,7 @@ private fun SearchSuggestions(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 0.dp,
-                top = 0.dp,
-                end = 0.dp,
-                bottom = 100.dp,
-            ),
+            contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
         item {

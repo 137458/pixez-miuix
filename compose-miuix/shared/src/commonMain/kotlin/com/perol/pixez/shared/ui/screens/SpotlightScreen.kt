@@ -47,6 +47,7 @@ import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -242,19 +243,32 @@ fun SpotlightScreen(
                 backdrop = backdrop,
                 scrollBehavior = scrollBehavior,
             ) {
-                TopAppBar(
-                    title = strings.spotlightTitle,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    actions = {
-                        IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                    },
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TopAppBar(
+                        title = strings.spotlightTitle,
+                        scrollBehavior = scrollBehavior,
+                        color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                        actions = {
+                            IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
+                                Icon(
+                                    imageVector = MiuixIcons.Refresh,
+                                    contentDescription = strings.refresh,
+                                )
+                            }
+                        },
+                    )
+                    // 分类选择横条
+                    SpotlightCategorySelector(
+                        selectedCategory = selectedCategory,
+                        strings = strings,
+                        onCategorySelected = { category ->
+                            if (selectedCategory != category) {
+                                selectedCategory = category
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
     ) { paddingValues ->
@@ -264,66 +278,50 @@ fun SpotlightScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding()),
-            ) {
-                // 分类选择横条
-                SpotlightCategorySelector(
-                    selectedCategory = selectedCategory,
-                    strings = strings,
-                    onCategorySelected = { category ->
-                        if (selectedCategory != category) {
-                            selectedCategory = category
-                        }
-                    },
+            when {
+                currentCategoryState.isInitialLoading -> LoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                 )
 
-                when {
-                    currentCategoryState.isInitialLoading -> LoadingPlaceholder(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
-                    )
+                currentCategoryState.error != null && currentCategoryState.articles.isEmpty() -> ErrorPlaceholder(
+                    error = currentCategoryState.error,
+                    onRetry = { loadCategoryData(selectedCategory, false) },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
 
-                    currentCategoryState.error != null && currentCategoryState.articles.isEmpty() -> ErrorPlaceholder(
-                        error = currentCategoryState.error,
-                        onRetry = { loadCategoryData(selectedCategory, false) },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
-                    )
+                currentCategoryState.articles.isEmpty() -> EmptyPlaceholder(
+                    message = strings.noData,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
 
-                    currentCategoryState.articles.isEmpty() -> EmptyPlaceholder(
-                        message = strings.noData,
+                else -> PullToRefresh(
+                    isRefreshing = currentCategoryState.isRefreshing,
+                    onRefresh = { loadCategoryData(selectedCategory, true) },
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                    topAppBarScrollBehavior = scrollBehavior,
+                ) {
+                    LazyVerticalStaggeredGrid(
+                        columns = effectiveColumns,
+                        state = currentGridState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .weight(1f),
-                    )
-
-                    else -> PullToRefresh(
-                        isRefreshing = currentCategoryState.isRefreshing,
-                        onRefresh = { loadCategoryData(selectedCategory, true) },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            top = paddingValues.calculateTopPadding() + 12.dp,
+                            end = 16.dp,
+                            bottom = 96.dp,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalItemSpacing = 12.dp,
                     ) {
-                        LazyVerticalStaggeredGrid(
-                            columns = effectiveColumns,
-                            state = currentGridState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                top = 12.dp,
-                                end = 16.dp,
-                                bottom = 96.dp,
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalItemSpacing = 12.dp,
-                        ) {
                         itemsIndexed(
                             items = currentCategoryState.articles,
                             key = { _, item -> "${selectedCategory.code}_${item.id}" },
@@ -361,7 +359,6 @@ fun SpotlightScreen(
         }
     }
 }
-}
 
 /**
  * 分类选择横条，采用 MIUIX 胶囊按钮风格。
@@ -373,10 +370,13 @@ private fun SpotlightCategorySelector(
     onCategorySelected: (SpotlightCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(
@@ -384,24 +384,29 @@ private fun SpotlightCategorySelector(
             contentType = { "category_tab" },
         ) { category ->
             val isSelected = category == selectedCategory
+            val pillShape = remember { RoundedCornerShape(16.dp) }
+            val itemBackground = if (isSelected) {
+                MiuixTheme.colorScheme.primary
+            } else {
+                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+            }
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSelected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.surfaceContainer
-                    )
-                    .clickable { onCategorySelected(category) },
+                    .clip(pillShape)
+                    .background(itemBackground)
+                    .clickable {
+                        if (!isSelected) {
+                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onCategorySelected(category)
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text(
                     text = category.labelFor(strings),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                    style = MiuixTheme.textStyles.title4,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) {
-                        MiuixTheme.colorScheme.onPrimary
-                    } else {
-                        MiuixTheme.colorScheme.onSurface
-                    },
+                    style = MiuixTheme.textStyles.body2,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }

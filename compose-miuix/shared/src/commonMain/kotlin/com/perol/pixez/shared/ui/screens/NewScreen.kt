@@ -47,6 +47,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.luminance
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -54,7 +58,6 @@ import com.perol.pixez.shared.ui.components.LocalBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 最新/关注页：展示已登录用户关注画师的最新插画。
@@ -238,30 +241,40 @@ fun NewScreen(
                 backdrop = backdrop,
                 scrollBehavior = scrollBehavior,
             ) {
-                TopAppBar(
-                    title = strings.tabNew,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    actions = {
-                        IconButton(
-                            onClick = triggerManualRefresh,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                        if (isLoggedIn == false) {
-                            Button(
-                                onClick = onLoginClick,
-                                colors = ButtonDefaults.buttonColorsPrimary(),
-                                modifier = Modifier.padding(end = 12.dp),
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TopAppBar(
+                        title = strings.tabNew,
+                        scrollBehavior = scrollBehavior,
+                        color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                        actions = {
+                            IconButton(
+                                onClick = triggerManualRefresh,
                             ) {
-                                Text(strings.btnGoLogin)
+                                Icon(
+                                    imageVector = MiuixIcons.Refresh,
+                                    contentDescription = strings.refresh,
+                                )
                             }
-                        }
-                    },
-                )
+                            if (isLoggedIn == false) {
+                                Button(
+                                    onClick = onLoginClick,
+                                    colors = ButtonDefaults.buttonColorsPrimary(),
+                                    modifier = Modifier.padding(end = 12.dp),
+                                ) {
+                                    Text(strings.btnGoLogin)
+                                }
+                            }
+                        },
+                    )
+                    if (isLoggedIn == true) {
+                        RestrictSelector(
+                            options = restrictOptions.map { it.first },
+                            selectedIndex = selectedRestrictIndex,
+                            onSelect = { selectedRestrictIndex = it },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         },
     ) { paddingValues ->
@@ -271,75 +284,75 @@ fun NewScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding()),
-            ) {
-                when (isLoggedIn) {
-                    false -> {
-                        EmptyPlaceholder(
-                            message = strings.loginNewNeedLogin,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
+            when (isLoggedIn) {
+                false -> {
+                    EmptyPlaceholder(
+                        message = strings.loginNewNeedLogin,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                    )
+                }
 
-                    null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                null -> LoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
 
-                    true -> {
-                        // 登录后显示筛选器与列表。
-                        RestrictSelector(
-                            options = restrictOptions.map { it.first },
-                            selectedIndex = selectedRestrictIndex,
-                            onSelect = { selectedRestrictIndex = it },
+                true -> {
+                    val result = state.value
+                    when {
+                        result == null -> LoadingPlaceholder(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .fillMaxSize()
+                                .padding(paddingValues),
                         )
-
-                        val result = state.value
-                        when {
-                            result == null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
-                            result.isSuccess -> {
-                                if (illusts.isEmpty()) {
-                                    EmptyPlaceholder(
-                                        message = strings.loginNewEmpty,
-                                        modifier = Modifier.weight(1f),
+                        result.isSuccess -> {
+                            if (illusts.isEmpty()) {
+                                EmptyPlaceholder(
+                                    message = strings.loginNewEmpty,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(paddingValues),
+                                )
+                            } else {
+                                PullToRefresh(
+                                    isRefreshing = isManualRefreshing,
+                                    onRefresh = triggerManualRefresh,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                                    topAppBarScrollBehavior = scrollBehavior,
+                                ) {
+                                    IllustStaggeredGrid(
+                                        illusts = illusts,
+                                        state = gridState,
+                                        onIllustClick = onIllustClick,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        contentPadding = PaddingValues(
+                                            start = 8.dp,
+                                            top = paddingValues.calculateTopPadding() + 8.dp,
+                                            end = 8.dp,
+                                            bottom = 100.dp,
+                                        ),
+                                        hasMore = nextUrl != null,
+                                        isLoadingMore = isLoadingMore,
+                                        loadMoreError = loadMoreError,
+                                        onLoadMore = ::loadMore,
                                     )
-                                } else {
-                                    PullToRefresh(
-                                        isRefreshing = isManualRefreshing,
-                                        onRefresh = triggerManualRefresh,
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        IllustStaggeredGrid(
-                                            illusts = illusts,
-                                            state = gridState,
-                                            onIllustClick = onIllustClick,
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                            contentPadding = PaddingValues(
-                                                start = 8.dp,
-                                                top = 8.dp,
-                                                end = 8.dp,
-                                                bottom = 100.dp,
-                                            ),
-                                            hasMore = nextUrl != null,
-                                            isLoadingMore = isLoadingMore,
-                                            loadMoreError = loadMoreError,
-                                            onLoadMore = ::loadMore,
-                                        )
-                                    }
                                 }
                             }
-
-                            else -> ErrorPlaceholder(
-                                error = result.exceptionOrNull(),
-                                onRetry = { triggerManualRefresh() },
-                                modifier = Modifier.weight(1f),
-                            )
                         }
+
+                        else -> ErrorPlaceholder(
+                            error = result.exceptionOrNull(),
+                            onRetry = { triggerManualRefresh() },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
                     }
                 }
             }
@@ -354,22 +367,44 @@ private fun RestrictSelector(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+
     Row(
-        modifier = modifier,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         options.forEachIndexed { index, label ->
-            Button(
-                onClick = { onSelect(index) },
-                colors = if (index == selectedIndex) {
-                    ButtonDefaults.buttonColorsPrimary()
-                } else {
-                    ButtonDefaults.buttonColors()
-                },
-                modifier = Modifier.weight(1f),
+            val isSelected = index == selectedIndex
+            val pillShape = remember { RoundedCornerShape(16.dp) }
+            val itemBackground = if (isSelected) {
+                MiuixTheme.colorScheme.primary
+            } else {
+                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(pillShape)
+                    .background(itemBackground)
+                    .clickable {
+                        if (!isSelected) {
+                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onSelect(index)
+                        }
+                    }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(label)
+                Text(
+                    text = label,
+                    style = MiuixTheme.textStyles.body2,
+                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
+                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
             }
         }
     }
