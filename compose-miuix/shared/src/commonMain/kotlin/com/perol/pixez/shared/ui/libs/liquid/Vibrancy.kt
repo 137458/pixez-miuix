@@ -7,18 +7,12 @@ import top.yukonga.miuix.kmp.blur.BackdropEffectScope
 import top.yukonga.miuix.kmp.blur.colorControls
 
 /**
- * Lightweight saturation boost and luminance-floor lifting for Liquid Glass refraction optics.
- * Lifts the black level of text to prevent dark smudges under frosted blur,
- * while expanding saturation so illustrations and avatars remain vibrant.
+ * Lightweight saturation boost for Liquid Glass refraction optics.
  */
-fun BackdropEffectScope.vibrancy(
-    brightness: Float = 0.08f,
-    contrast: Float = 0.95f,
-    saturation: Float = 1.35f,
-) {
+fun BackdropEffectScope.vibrancy() {
     colorControls(
-        brightness = brightness,
-        contrast = contrast,
-        saturation = saturation,
+        brightness = 0f,
+        contrast = 1f,
+        saturation = 1.5f,
     )
 }

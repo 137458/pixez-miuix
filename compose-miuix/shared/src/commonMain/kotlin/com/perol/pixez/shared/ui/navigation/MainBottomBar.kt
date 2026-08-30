@@ -82,15 +82,15 @@ fun MainBottomBar(
             },
         )
     } else {
-        // 标准固定底栏：应用 Backdrop Blur 85% 通透毛玻璃与顶部分割线
+        // 标准固定底栏：应用 Backdrop Blur 96% 高密度毛玻璃与顶部分割线
         val bottomBarModifier = if (backdrop != null) {
             modifier
                 .fillMaxWidth()
                 .backdropBlur(
                     backdrop = backdrop,
                     tintColor = colorScheme.surface,
-                    tintAlpha = 0.85f,
-                    blurRadius = 16.dp,
+                    tintAlpha = 0.96f,
+                    blurRadius = 20.dp,
                 )
                 .drawBehind {
                     drawLine(

@@ -9,10 +9,6 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -167,12 +163,11 @@ fun UserFollowerListScreen(
             )
         },
     ) { paddingValues ->
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val pinnedHeaderHeight = statusBarTop + 56.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
             val result = state.value
             when {
@@ -190,59 +185,51 @@ fun UserFollowerListScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding() + 28.dp),
-                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
-                            Box(
+                            LazyColumn(
+                                state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .layerBackdrop(backdrop),
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = paddingValues,
                             ) {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    contentPadding = paddingValues,
-                                ) {
-                                    items(
-                                        items = previews,
-                                        key = { it.user.id },
-                                        contentType = { "user_preview_item" },
-                                    ) { preview ->
-                                        UserPreviewItem(
-                                            preview = preview,
-                                            onClick = { onUserClick(preview.user.id) },
-                                        )
-                                    }
+                                items(
+                                    items = previews,
+                                    key = { it.user.id },
+                                    contentType = { "user_preview_item" },
+                                ) { preview ->
+                                    UserPreviewItem(
+                                        preview = preview,
+                                        onClick = { onUserClick(preview.user.id) },
+                                    )
+                                }
 
-                                    item(key = "follower_pagination_footer", contentType = "footer") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 16.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            when {
-                                                isLoadingMore -> InfiniteProgressIndicator()
-                                                loadMoreError != null -> Row(
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    Text(
-                                                        text = strings.loadFailed,
-                                                        style = MiuixTheme.textStyles.body2,
-                                                        color = MiuixTheme.colorScheme.error,
-                                                    )
-                                                    Button(onClick = ::loadMore) {
-                                                        Text(text = strings.retry)
-                                                    }
-                                                }
-                                                nextUrl == null -> Text(
-                                                    text = strings.noMoreData,
-                                                    style = MiuixTheme.textStyles.footnote1,
+                                item(key = "follower_pagination_footer", contentType = "footer") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        when {
+                                            isLoadingMore -> InfiniteProgressIndicator()
+                                            loadMoreError != null -> Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = strings.loadFailed,
+                                                    style = MiuixTheme.textStyles.body2,
+                                                    color = MiuixTheme.colorScheme.error,
                                                 )
+                                                Button(onClick = ::loadMore) {
+                                                    Text(text = strings.retry)
+                                                }
                                             }
+                                            nextUrl == null -> Text(
+                                                text = strings.noMoreData,
+                                                style = MiuixTheme.textStyles.footnote1,
+                                            )
                                         }
                                     }
                                 }

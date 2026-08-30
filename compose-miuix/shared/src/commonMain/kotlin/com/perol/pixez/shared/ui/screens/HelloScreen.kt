@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +29,7 @@ import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -280,12 +277,11 @@ fun HelloScreen(
             )
         },
     ) { paddingValues ->
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val pinnedHeaderHeight = statusBarTop + 56.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
             val result = state.value
             when {
@@ -303,15 +299,8 @@ fun HelloScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding() + 28.dp),
-                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .layerBackdrop(backdrop),
-                            ) {
-                                IllustStaggeredGrid(
+                            IllustStaggeredGrid(
                                 illusts = illusts,
                                 state = gridState,
                                 onIllustClick = onIllustClick,
@@ -329,7 +318,6 @@ fun HelloScreen(
                                 loadMoreError = loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
-                            }
                         }
                     }
                 }

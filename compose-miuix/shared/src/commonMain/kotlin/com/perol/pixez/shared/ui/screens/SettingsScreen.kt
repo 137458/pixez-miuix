@@ -22,9 +22,6 @@ import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.asPaddingValues
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
@@ -167,8 +164,6 @@ fun SettingsScreen(
             )
         },
     ) { paddingValues ->
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val pinnedHeaderHeight = statusBarTop + 56.dp
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,

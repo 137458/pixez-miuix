@@ -202,14 +202,13 @@ val LocalBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 fun Modifier.backdropBlur(
     backdrop: Backdrop,
     shape: Shape = RoundedCornerShape(0.dp),
-    blurRadius: Dp = 16.dp,
+    blurRadius: Dp = 20.dp,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.85f,
+    tintAlpha: Float = 0.96f,
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
     effects = {
-        vibrancy()
         blur(blurRadius.toPx(), blurRadius.toPx())
     },
     highlight = null,
@@ -224,14 +223,13 @@ fun Modifier.backdropBlur(
  *
  * @param backdrop 全局或页面层级的 Backdrop 采样源。若为 null 则保持原样。
  * @param tintColor 表面着色，默认取当前主题表面色。
- * @param tintAlpha 表面着色不透明度，默认 0.85f 通透毛玻璃磨砂。
- * @param blurRadius 模糊半径，默认 16.dp 紧凑平滑模糊核。
+ * @param tintAlpha 表面着色不透明度，默认 0.96f 高密度磨砂。
  */
 fun Modifier.topAppBarBlur(
     backdrop: Backdrop?,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.68f,
-    blurRadius: Dp = 25.dp,
+    tintAlpha: Float = 0.96f,
+    blurRadius: Dp = 20.dp,
 ): Modifier = if (backdrop != null) {
     this.backdropBlur(
         backdrop = backdrop,
@@ -243,8 +241,6 @@ fun Modifier.topAppBarBlur(
 } else {
     this
 }
-
-
 
 /**
  * 安全挂载 layerBackdrop 采样源的扩展 Modifier。

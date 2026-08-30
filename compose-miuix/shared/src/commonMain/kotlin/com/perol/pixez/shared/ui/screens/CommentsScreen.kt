@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -240,8 +237,6 @@ fun CommentsScreen(
             )
         },
     ) { paddingValues ->
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val pinnedHeaderHeight = statusBarTop + 56.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -263,8 +258,6 @@ fun CommentsScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding() + 28.dp),
-                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
