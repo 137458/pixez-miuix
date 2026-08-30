@@ -1,11 +1,11 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -70,7 +70,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 关于页：展示应用信息、开发者、贡献者、项目仓库与反馈入口。
@@ -89,32 +88,37 @@ fun AboutScreen(
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showDisclaimerDialog by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.settingAbout,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                        )
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.settingAbout,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(

@@ -1,10 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,7 +55,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
@@ -80,7 +79,7 @@ fun LayoutSettingScreen(
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     val padModeOptions = remember { listOf("V:H", "V:V", "H:H") }
@@ -89,26 +88,31 @@ fun LayoutSettingScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.settingLayout,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                        )
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.settingLayout,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

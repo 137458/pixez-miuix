@@ -51,7 +51,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.components.liquidGlass
@@ -231,7 +232,7 @@ private fun IllustDetailSingleContent(
             .onSuccess { isBanned = it }
     }
 
-    val detailBackdrop = rememberLayerBackdrop()
+    val detailBackdrop = rememberBlurBackdrop()
 
     Box(
         modifier = Modifier
@@ -258,7 +259,7 @@ private fun IllustDetailSingleContent(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .layerBackdrop(detailBackdrop),
+                            .blurBackdropSource(detailBackdrop),
                     ) {
                         // 1. 沉浸式顶部大图（从屏幕最顶端开始渲染，消除生硬的一刀切顶栏）
                         if (illust.metaPages.isNotEmpty()) {

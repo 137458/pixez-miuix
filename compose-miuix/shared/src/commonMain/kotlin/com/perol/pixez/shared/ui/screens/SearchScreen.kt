@@ -42,7 +42,9 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -87,7 +89,6 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 搜索页：搜索栏 + 真实热门标签 + 历史记录，输入后展示真实搜索结果。
@@ -178,24 +179,29 @@ fun SearchScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.tabSearch,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.tabSearch,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             var showFilterSheet by rememberSaveable { mutableStateOf(false) }
             val bottomBarVisibility = LocalBottomBarVisibility.current

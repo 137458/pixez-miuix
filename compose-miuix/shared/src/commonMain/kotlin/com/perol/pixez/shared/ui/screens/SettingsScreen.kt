@@ -1,6 +1,9 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,10 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
-import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
@@ -69,7 +68,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 设置页：分组展示账号、启动、通用、主题、交互、网络、屏蔽、隐私、收藏、分享、画质、保存、显示、下载、存储、关于等入口。
@@ -146,22 +144,27 @@ fun SettingsScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.settingsTitle,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = MiuixIcons.Back, contentDescription = strings.back)
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.settingsTitle,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = MiuixIcons.Back, contentDescription = strings.back)
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
@@ -172,7 +175,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(colorScheme.surface)
-                    .layerBackdrop(backdrop),
+                    .blurBackdropSource(backdrop),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 LazyColumn(

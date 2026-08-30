@@ -1,10 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +56,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
@@ -136,32 +135,37 @@ fun ShieldScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.settingShield,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                        )
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.settingShield,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

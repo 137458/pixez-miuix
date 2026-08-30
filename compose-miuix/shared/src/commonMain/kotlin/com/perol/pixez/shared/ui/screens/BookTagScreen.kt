@@ -1,11 +1,11 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -44,7 +44,6 @@ import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 收藏标签管理页：展示用户收藏的标签列表，支持添加、删除与点击搜索。
@@ -79,43 +78,48 @@ fun BookTagScreen(
     val isEmpty = bookTags.isEmpty()
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.settingBookTags,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { showAddDialog = true },
-                        enabled = !isAdding && !isReordering,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Add,
-                            contentDescription = strings.btnAdd,
-                        )
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.settingBookTags,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { showAddDialog = true },
+                            enabled = !isAdding && !isReordering,
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Add,
+                                contentDescription = strings.btnAdd,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

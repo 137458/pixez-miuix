@@ -23,9 +23,10 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -49,13 +50,11 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
@@ -226,62 +225,67 @@ fun HelloScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.tabRecommend,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                actions = {
-                    IconButton(
-                        onClick = triggerManualRefresh,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Refresh,
-                            contentDescription = strings.refresh,
-                        )
-                    }
-                    if (isLoggedIn == false) {
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.tabRecommend,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    actions = {
                         IconButton(
-                            onClick = onLoginClick,
+                            onClick = triggerManualRefresh,
                         ) {
                             Icon(
-                                imageVector = MiuixIcons.Contacts,
-                                contentDescription = strings.goLogin,
+                                imageVector = MiuixIcons.Refresh,
+                                contentDescription = strings.refresh,
                             )
                         }
-                    }
-                    if (isLoggedIn == true) {
+                        if (isLoggedIn == false) {
+                            IconButton(
+                                onClick = onLoginClick,
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Contacts,
+                                    contentDescription = strings.goLogin,
+                                )
+                            }
+                        }
+                        if (isLoggedIn == true) {
+                            IconButton(
+                                onClick = onRecomUserClick,
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.AddCircle,
+                                    contentDescription = strings.recomUserTitle,
+                                )
+                            }
+                        }
                         IconButton(
-                            onClick = onRecomUserClick,
+                            onClick = onSettingsClick,
                         ) {
                             Icon(
-                                imageVector = MiuixIcons.AddCircle,
-                                contentDescription = strings.recomUserTitle,
+                                imageVector = MiuixIcons.Settings,
+                                contentDescription = strings.tabSettings,
                             )
                         }
-                    }
-                    IconButton(
-                        onClick = onSettingsClick,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Settings,
-                            contentDescription = strings.tabSettings,
-                        )
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             val result = state.value
             when {

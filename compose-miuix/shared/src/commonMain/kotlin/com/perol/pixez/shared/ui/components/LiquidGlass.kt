@@ -5,6 +5,7 @@ package com.perol.pixez.shared.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -99,7 +100,7 @@ private val LiquidGlassHighlightDark = Highlight(
  */
 @Composable
 fun LiquidGlass(
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     modifier: Modifier = Modifier,
     cornerRadius: Dp = DefaultCornerRadius,
     blurRadius: Dp = DefaultBlurRadius,
@@ -109,7 +110,7 @@ fun LiquidGlass(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
-    if (!isRuntimeShaderSupported() || !enabled) {
+    if (backdrop == null || !isRuntimeShaderSupported() || !enabled) {
         Box(modifier = modifier.clip(RoundedCornerShape(cornerRadius)), content = content)
         return
     }
@@ -200,23 +201,28 @@ val LocalBackdrop = compositionLocalOf<LayerBackdrop?> { null }
  * 纯毛玻璃模糊效果 Modifier，用于标准底栏、顶栏与浮层。
  */
 fun Modifier.backdropBlur(
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     shape: Shape = RoundedCornerShape(0.dp),
     blurRadius: Dp = 20.dp,
     tintColor: Color = Color.Unspecified,
     tintAlpha: Float = 0.96f,
-): Modifier = this.drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        blur(blurRadius.toPx(), blurRadius.toPx())
-    },
-    highlight = null,
-    onDrawSurface = {
-        val color = if (tintColor != Color.Unspecified) tintColor else Color.White
-        drawRect(color.copy(alpha = tintAlpha))
-    },
-)
+): Modifier = if (backdrop != null) {
+    this.drawBackdrop(
+        backdrop = backdrop,
+        shape = { shape },
+        effects = {
+            blur(blurRadius.toPx(), blurRadius.toPx())
+        },
+        highlight = null,
+        onDrawSurface = {
+            val color = if (tintColor != Color.Unspecified) tintColor else Color.White
+            drawRect(color.copy(alpha = tintAlpha))
+        },
+    )
+} else {
+    val color = if (tintColor != Color.Unspecified) tintColor else Color.White
+    this.background(color.copy(alpha = tintAlpha), shape)
+}
 
 /**
  * 顶栏专用背景毛玻璃模糊 Modifier。
@@ -225,6 +231,10 @@ fun Modifier.backdropBlur(
  * @param tintColor 表面着色，默认取当前主题表面色。
  * @param tintAlpha 表面着色不透明度，默认 0.96f 高密度磨砂。
  */
+@Deprecated(
+    message = "Use BlurredBar wrapper instead.",
+    replaceWith = ReplaceWith("this"),
+)
 fun Modifier.topAppBarBlur(
     backdrop: Backdrop?,
     tintColor: Color = Color.Unspecified,
@@ -253,34 +263,39 @@ fun Modifier.blurBackdropSource(backdrop: LayerBackdrop?): Modifier =
  * Liquid Glass Modifier using MIUIX Blur & Shader pipeline.
  */
 fun Modifier.liquidGlass(
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     shape: Shape = RoundedCornerShape(32.dp),
     blurRadius: Dp = 20.dp,
     tintColor: Color = Color.Unspecified,
     tintAlpha: Float = 0.45f,
-): Modifier = this.drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        vibrancy()
-        blur(blurRadius.toPx(), blurRadius.toPx())
-        lens(16.dp.toPx(), 20.dp.toPx())
-    },
-    highlight = {
-        LiquidGlassHighlightLight
-    },
-    onDrawSurface = {
-        val color = if (tintColor != Color.Unspecified) tintColor else Color.White
-        drawRect(color.copy(alpha = tintAlpha))
-    },
-)
+): Modifier = if (backdrop != null) {
+    this.drawBackdrop(
+        backdrop = backdrop,
+        shape = { shape },
+        effects = {
+            vibrancy()
+            blur(blurRadius.toPx(), blurRadius.toPx())
+            lens(16.dp.toPx(), 20.dp.toPx())
+        },
+        highlight = {
+            LiquidGlassHighlightLight
+        },
+        onDrawSurface = {
+            val color = if (tintColor != Color.Unspecified) tintColor else Color.White
+            drawRect(color.copy(alpha = tintAlpha))
+        },
+    )
+} else {
+    val color = if (tintColor != Color.Unspecified) tintColor else Color.White
+    this.background(color.copy(alpha = tintAlpha), shape)
+}
 
 /**
  * Liquid Glass Icon Button with real backdrop blur.
  */
 @Composable
 fun LiquidGlassIconButton(
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     imageVector: ImageVector,
     contentDescription: String?,
     onClick: () -> Unit,

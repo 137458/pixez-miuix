@@ -43,11 +43,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.IllustRepository
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -71,7 +71,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * Spotlight 特辑分类枚举。
@@ -233,32 +232,37 @@ fun SpotlightScreen(
     }
 
 
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.spotlightTitle,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                actions = {
-                    IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
-                        Icon(
-                            imageVector = MiuixIcons.Refresh,
-                            contentDescription = strings.refresh,
-                        )
-                    }
-                },
-            )
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.spotlightTitle,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    actions = {
+                        IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
+                            Icon(
+                                imageVector = MiuixIcons.Refresh,
+                                contentDescription = strings.refresh,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             Column(
                 modifier = Modifier

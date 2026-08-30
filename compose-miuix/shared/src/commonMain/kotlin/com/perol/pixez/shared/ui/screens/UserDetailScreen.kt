@@ -46,7 +46,9 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -73,7 +75,6 @@ import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 用户详情页：头部信息 + 「作品 / 收藏」Tab 切换。
@@ -117,7 +118,7 @@ fun UserDetailScreen(
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
@@ -125,79 +126,84 @@ fun UserDetailScreen(
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            FrostedTopAppBar(
-                title = userDetail?.user?.name ?: "",
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    TooltipBox(text = strings.back) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (userDetail != null) {
-                        val currentDetail = userDetail
-                        val entry = remember(currentDetail) {
-                            DropdownEntry(
-                                items = listOf(
-                                    DropdownItem(
-                                        text = strings.menuCopyInfo,
-                                        onClick = {
-                                            val text = buildUserCopyInfo(currentDetail)
-                                            runCatching { clipboard.copy(text) }.fold(
-                                                onSuccess = { toastMessage = strings.copiedToClipboard },
-                                                onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
-                                            )
-                                        }
-                                    ),
-                                    DropdownItem(
-                                        text = strings.menuCopyLink,
-                                        onClick = {
-                                            val link = buildUserShareLink(currentDetail.user.id)
-                                            runCatching { clipboard.copy(link) }.fold(
-                                                onSuccess = { toastMessage = strings.copiedToClipboard },
-                                                onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
-                                            )
-                                        }
-                                    ),
-                                    DropdownItem(
-                                        text = strings.menuShareLink,
-                                        onClick = {
-                                            val link = buildUserShareLink(currentDetail.user.id)
-                                            runCatching { share.share(link, currentDetail.user.name) }.fold(
-                                                onSuccess = { toastMessage = strings.share },
-                                                onFailure = { e -> toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}" },
-                                            )
-                                        }
-                                    ),
-                                )
-                            )
-                        }
-                        TooltipBox(text = strings.menuMoreActions) {
-                            OverlayIconDropdownMenu(
-                                entry = entry,
-                            ) {
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = userDetail?.user?.name ?: "",
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        TooltipBox(text = strings.back) {
+                            IconButton(onClick = onBack) {
                                 Icon(
-                                    imageVector = MiuixIcons.More,
-                                    contentDescription = strings.menuMoreActions,
+                                    imageVector = MiuixIcons.Back,
+                                    contentDescription = strings.back,
                                 )
                             }
                         }
-                    }
-                },
-            )
+                    },
+                    actions = {
+                        if (userDetail != null) {
+                            val currentDetail = userDetail
+                            val entry = remember(currentDetail) {
+                                DropdownEntry(
+                                    items = listOf(
+                                        DropdownItem(
+                                            text = strings.menuCopyInfo,
+                                            onClick = {
+                                                val text = buildUserCopyInfo(currentDetail)
+                                                runCatching { clipboard.copy(text) }.fold(
+                                                    onSuccess = { toastMessage = strings.copiedToClipboard },
+                                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                                )
+                                            }
+                                        ),
+                                        DropdownItem(
+                                            text = strings.menuCopyLink,
+                                            onClick = {
+                                                val link = buildUserShareLink(currentDetail.user.id)
+                                                runCatching { clipboard.copy(link) }.fold(
+                                                    onSuccess = { toastMessage = strings.copiedToClipboard },
+                                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                                )
+                                            }
+                                        ),
+                                        DropdownItem(
+                                            text = strings.menuShareLink,
+                                            onClick = {
+                                                val link = buildUserShareLink(currentDetail.user.id)
+                                                runCatching { share.share(link, currentDetail.user.name) }.fold(
+                                                    onSuccess = { toastMessage = strings.share },
+                                                    onFailure = { e -> toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}" },
+                                                )
+                                            }
+                                        ),
+                                    )
+                                )
+                            }
+                            TooltipBox(text = strings.menuMoreActions) {
+                                OverlayIconDropdownMenu(
+                                    entry = entry,
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.More,
+                                        contentDescription = strings.menuMoreActions,
+                                    )
+                                }
+                            }
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             when {
                 result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())

@@ -27,7 +27,8 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -50,12 +51,10 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
-import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 最新/关注页：展示已登录用户关注画师的最新插画。
@@ -229,43 +228,48 @@ fun NewScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = strings.tabNew,
-                scrollBehavior = scrollBehavior,
+            BlurredBar(
                 backdrop = backdrop,
-                actions = {
-                    IconButton(
-                        onClick = triggerManualRefresh,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Refresh,
-                            contentDescription = strings.refresh,
-                        )
-                    }
-                    if (isLoggedIn == false) {
-                        Button(
-                            onClick = onLoginClick,
-                            colors = ButtonDefaults.buttonColorsPrimary(),
-                            modifier = Modifier.padding(end = 12.dp),
+                scrollBehavior = scrollBehavior,
+            ) {
+                TopAppBar(
+                    title = strings.tabNew,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    actions = {
+                        IconButton(
+                            onClick = triggerManualRefresh,
                         ) {
-                            Text(strings.btnGoLogin)
+                            Icon(
+                                imageVector = MiuixIcons.Refresh,
+                                contentDescription = strings.refresh,
+                            )
                         }
-                    }
-                },
-            )
+                        if (isLoggedIn == false) {
+                            Button(
+                                onClick = onLoginClick,
+                                colors = ButtonDefaults.buttonColorsPrimary(),
+                                modifier = Modifier.padding(end = 12.dp),
+                            ) {
+                                Text(strings.btnGoLogin)
+                            }
+                        }
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             Column(
                 modifier = Modifier

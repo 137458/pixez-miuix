@@ -1,6 +1,9 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.ui.graphics.Color
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
@@ -71,7 +74,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
 
@@ -91,7 +93,7 @@ fun GuideScreen(
 ) {
     val strings = LocalStrings.current
     var currentStep by remember { mutableIntStateOf(0) }
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     val finishGuide: () -> Unit = {
@@ -102,30 +104,34 @@ fun GuideScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            FrostedTopAppBar(
-                title = when (currentStep) {
-                    0 -> "1. ${strings.guideStepLanguage}"
-                    1 -> "2. ${strings.guideStepNetwork}"
-                    else -> "3. ${strings.guideStepWelcome}"
-                },
+            BlurredBar(
                 backdrop = backdrop,
-                navigationIcon = {
-                    if (currentStep > 0) {
-                        IconButton(onClick = { currentStep-- }) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.guidePrev,
-                            )
+            ) {
+                TopAppBar(
+                    title = when (currentStep) {
+                        0 -> "1. ${strings.guideStepLanguage}"
+                        1 -> "2. ${strings.guideStepNetwork}"
+                        else -> "3. ${strings.guideStepWelcome}"
+                    },
+                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
+                    navigationIcon = {
+                        if (currentStep > 0) {
+                            IconButton(onClick = { currentStep-- }) {
+                                Icon(
+                                    imageVector = MiuixIcons.Back,
+                                    contentDescription = strings.guidePrev,
+                                )
+                            }
                         }
-                    }
-                },
-                actions = {
-                    TextButton(
-                        text = strings.guideSkipLogin,
-                        onClick = finishGuide,
-                    )
-                },
-            )
+                    },
+                    actions = {
+                        TextButton(
+                            text = strings.guideSkipLogin,
+                            onClick = finishGuide,
+                        )
+                    },
+                )
+            }
         },
         bottomBar = {
             GuideBottomBar(
@@ -146,7 +152,7 @@ fun GuideScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .blurBackdropSource(backdrop),
         ) {
             AnimatedContent(
                 targetState = currentStep,

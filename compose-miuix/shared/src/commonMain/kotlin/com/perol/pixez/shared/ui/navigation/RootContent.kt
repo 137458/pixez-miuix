@@ -30,8 +30,8 @@ import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAn
 import com.perol.pixez.shared.ui.navigation.animation.miuixSlideStackAnimation
 
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -163,7 +163,7 @@ fun RootContent(
     val stack by component.stack.subscribeAsState()
     val active = stack.active.instance
 
-    val backdrop = rememberLayerBackdrop()
+    val backdrop = rememberBlurBackdrop()
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
@@ -247,7 +247,7 @@ fun RootContent(
                                 stack = component.stack,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .layerBackdrop(backdrop),
+                                    .blurBackdropSource(backdrop),
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = miuixSlideStackAnimation(),
