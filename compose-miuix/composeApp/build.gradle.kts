@@ -68,8 +68,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010052
-        versionName = "0.9.108.2-miuix"
+        versionCode = 10010053
+        versionName = "0.9.109-miuix"
     }
 
     buildTypes {
@@ -122,7 +122,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "PixEz"
-            packageVersion = "0.9.108"
+            packageVersion = "0.9.109"
 
             jvmArgs += listOf(
                 "-XX:+UseG1GC",
