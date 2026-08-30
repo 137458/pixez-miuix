@@ -406,7 +406,7 @@ class SettingsRepository(
      */
     var crossAdapt: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, true)
-        set(value) { settings[SettingsKeys.CROSS_ADAPT] = value }
+        set(value) { settings[SettingsKeys.CROSS_ADAPT] = value; notifyChanged() }
 
     /**
      * 竖屏自适应宽度阈值（100-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
@@ -419,6 +419,7 @@ class SettingsRepository(
                 MIN_CROSS_ADAPTER_WIDTH,
                 MAX_CROSS_ADAPTER_WIDTH,
             )
+            notifyChanged()
         }
 
     /**
@@ -426,7 +427,7 @@ class SettingsRepository(
      */
     var hCrossAdapt: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT, true)
-        set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value }
+        set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value; notifyChanged() }
 
     /**
      * 横屏自适应宽度阈值（100-2160，默认 180dp）。
@@ -439,6 +440,7 @@ class SettingsRepository(
                 MIN_CROSS_ADAPTER_WIDTH,
                 MAX_CROSS_ADAPTER_WIDTH,
             )
+            notifyChanged()
         }
 
     /**
@@ -447,7 +449,10 @@ class SettingsRepository(
     var padMode: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.PAD_MODE, 0)
             .coerceIn(PAD_MODE_MIN, PAD_MODE_MAX)
-        set(value) { settings[SettingsKeys.PAD_MODE] = value.coerceIn(PAD_MODE_MIN, PAD_MODE_MAX) }
+        set(value) {
+            settings[SettingsKeys.PAD_MODE] = value.coerceIn(PAD_MODE_MIN, PAD_MODE_MAX)
+            notifyChanged()
+        }
 
     /**
      * 竖屏固定网格列数（2-4）。
