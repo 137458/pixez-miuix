@@ -171,6 +171,7 @@ fun DownloadHistoryScreen(
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
                                         .fillMaxHeight(),
+                                    trackPadding = paddingValues,
                                 )
                             }
                         }

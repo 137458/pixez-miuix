@@ -324,7 +324,7 @@ fun CommentsScreen(
                                 modifier = Modifier
                                     .align(Alignment.CenterEnd)
                                     .fillMaxHeight(),
-                                trackPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                                trackPadding = paddingValues,
                             )
                         }
                     }

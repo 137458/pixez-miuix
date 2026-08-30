@@ -165,21 +165,25 @@ fun SettingsScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
         ) {
-            LazyColumn(
-                state = listState,
-                contentPadding = paddingValues,
+            Box(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                    .fillMaxWidth()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    .fillMaxSize()
+                    .background(colorScheme.surface)
+                    .layerBackdrop(backdrop),
+                contentAlignment = Alignment.TopCenter,
             ) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = paddingValues,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                        .fillMaxWidth()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                ) {
 
             // ── 1. 账号管理 ──
             item {
@@ -407,20 +411,22 @@ fun SettingsScreen(
                 }
             }
         }
-
-        VerticalScrollBar(
-            adapter = rememberScrollBarAdapter(listState),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight(),
-        )
     }
 
-        ToastMessage(
-            message = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
-    }
+    VerticalScrollBar(
+        adapter = rememberScrollBarAdapter(listState),
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .fillMaxHeight(),
+        trackPadding = paddingValues,
+    )
+}
+
+ToastMessage(
+    message = toastMessage,
+    onDismiss = { toastMessage = null },
+)
+}
 }
 
 

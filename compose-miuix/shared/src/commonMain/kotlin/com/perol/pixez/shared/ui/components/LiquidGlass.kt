@@ -204,7 +204,7 @@ fun Modifier.backdropBlur(
     shape: Shape = RoundedCornerShape(0.dp),
     blurRadius: Dp = 25.dp,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.85f,
+    tintAlpha: Float = 0.92f,
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
@@ -223,12 +223,12 @@ fun Modifier.backdropBlur(
  *
  * @param backdrop 全局或页面层级的 Backdrop 采样源。若为 null 则保持原样。
  * @param tintColor 表面着色，默认取当前主题表面色。
- * @param tintAlpha 表面着色不透明度，默认 0.85f 与标准底栏对齐。
+ * @param tintAlpha 表面着色不透明度，默认 0.92f。
  */
 fun Modifier.topAppBarBlur(
     backdrop: Backdrop?,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.85f,
+    tintAlpha: Float = 0.92f,
 ): Modifier = if (backdrop != null) {
     this.backdropBlur(
         backdrop = backdrop,
