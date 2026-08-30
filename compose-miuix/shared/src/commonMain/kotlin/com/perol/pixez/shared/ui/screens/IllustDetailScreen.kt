@@ -7,12 +7,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -38,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -55,6 +62,7 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
@@ -66,18 +74,17 @@ import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.DropdownEntry
-import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TooltipBox
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.data.repository.HistoryRepository
@@ -212,6 +219,7 @@ private fun IllustDetailSingleContent(
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
+    var showMoreMenu by rememberSaveable(illustId) { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
@@ -890,73 +898,26 @@ private fun IllustDetailSingleContent(
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = MiuixIcons.Download,
-                            contentDescription = strings.download,
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
+                        if (isDownloading) {
+                            InfiniteProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        } else {
+                            Icon(
+                                imageVector = MiuixIcons.Download,
+                                contentDescription = strings.download,
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .offset(x = (-0.3).dp, y = (-1).dp),
+                            )
+                        }
                     }
                 }
 
-                // 3. 更多菜单按钮（独立悬浮圆形胶囊，以自身为锚定弹出 DropdownMenu）
+                // 3. 更多菜单按钮（独立悬浮圆形胶囊）
                 if (illust != null) {
-                    val currentIllust = illust
-                    val moreMenuEntry = remember(currentIllust, isBanned) {
-                        DropdownEntry(
-                            items = listOfNotNull<DropdownItem>(
-                                DropdownItem(
-                                    text = strings.menuCopyInfo,
-                                    onClick = {
-                                        val text = buildIllustCopyInfo(currentIllust)
-                                        runCatching { clipboard.copy(text) }.fold(
-                                            onSuccess = { toastMessage = strings.copiedToClipboard },
-                                            onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
-                                        )
-                                    },
-                                ),
-                                DropdownItem(
-                                    text = strings.menuCopyLink,
-                                    onClick = {
-                                        val link = buildIllustShareLink(currentIllust)
-                                        runCatching { clipboard.copy(link) }.fold(
-                                            onSuccess = { toastMessage = strings.copiedToClipboard },
-                                            onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
-                                        )
-                                    },
-                                ),
-                                DropdownItem(
-                                    text = strings.share,
-                                    onClick = {
-                                        val link = buildIllustShareLink(currentIllust)
-                                        runCatching { share.share(link, currentIllust.title) }.fold(
-                                            onSuccess = { toastMessage = strings.share },
-                                            onFailure = { e -> toastMessage = "${strings.share}: ${e.message}" },
-                                        )
-                                    },
-                                ),
-                                if (!isBanned) {
-                                    DropdownItem(
-                                        text = strings.menuBanWork,
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                suspendRunCatchingNonCancel {
-                                                    banRepository.insertBanIllust(currentIllust.id, currentIllust.title)
-                                                }.fold(
-                                                    onSuccess = {
-                                                        isBanned = true
-                                                        toastMessage = strings.menuBanWork
-                                                    },
-                                                    onFailure = { e -> toastMessage = "${strings.menuBanWork}: ${e.message}" },
-                                                )
-                                            }
-                                        },
-                                    )
-                                } else null,
-                            ),
-                        )
-                    }
-
                     TooltipBox(text = strings.menuMoreActions) {
                         val moreInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                         val isMorePressed by moreInteractionSource.collectIsPressedAsState()
@@ -971,8 +932,7 @@ private fun IllustDetailSingleContent(
                             )
                         }
 
-                        WindowIconDropdownMenu(
-                            entry = moreMenuEntry,
+                        Box(
                             modifier = Modifier
                                 .size(42.dp)
                                 .graphicsLayer {
@@ -986,13 +946,161 @@ private fun IllustDetailSingleContent(
                                     tintColor = Color.Black,
                                     tintAlpha = 0.40f,
                                 )
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = moreInteractionSource,
+                                    indication = null,
+                                    onClick = { showMoreMenu = !showMoreMenu },
+                                ),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.More,
                                 contentDescription = strings.menuMoreActions,
                                 tint = Color.White,
                                 modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 更多操作液态玻璃浮动菜单 ──
+        if (illust != null) {
+            val currentIllust = illust
+            PlatformBackHandler(enabled = showMoreMenu) {
+                showMoreMenu = false
+            }
+
+            AnimatedVisibility(
+                visible = showMoreMenu,
+                enter = fadeIn(androidx.compose.animation.core.spring(dampingRatio = 0.8f)) +
+                    scaleIn(
+                        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = 420f),
+                        initialScale = 0.80f,
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.95f, 0f),
+                    ),
+                exit = fadeOut(androidx.compose.animation.core.spring(dampingRatio = 0.9f)) +
+                    scaleOut(
+                        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.85f),
+                        targetScale = 0.85f,
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.95f, 0f),
+                    ),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    // 全屏透明遮罩（点击外部关闭菜单）
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null,
+                                onClick = { showMoreMenu = false },
+                            ),
+                    )
+
+                    // 悬浮液态玻璃菜单卡片（位于右上角更多按钮正下方）
+                    val menuCornerRadius = 18.dp
+                    val menuShape = remember { RoundedCornerShape(menuCornerRadius) }
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(top = 58.dp, end = 16.dp)
+                            .widthIn(min = 160.dp, max = 200.dp)
+                            .liquidGlass(
+                                backdrop = detailBackdrop,
+                                shape = menuShape,
+                                blurRadius = 18.dp,
+                                tintColor = Color.Black,
+                                tintAlpha = 0.45f,
+                            )
+                            .squircleBorder(
+                                width = 0.6.dp,
+                                color = Color.White.copy(alpha = 0.18f),
+                                cornerRadius = menuCornerRadius,
+                            )
+                            .clip(menuShape)
+                            .padding(vertical = 4.dp),
+                    ) {
+                        LiquidMenuItem(
+                            icon = MiuixIcons.Copy,
+                            text = strings.menuCopyInfo,
+                            onClick = {
+                                showMoreMenu = false
+                                val text = buildIllustCopyInfo(currentIllust)
+                                runCatching { clipboard.copy(text) }.fold(
+                                    onSuccess = { toastMessage = strings.copiedToClipboard },
+                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                )
+                            },
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .height(0.5.dp)
+                                .background(Color.White.copy(alpha = 0.10f)),
+                        )
+                        LiquidMenuItem(
+                            icon = MiuixIcons.Link,
+                            text = strings.menuCopyLink,
+                            onClick = {
+                                showMoreMenu = false
+                                val link = buildIllustShareLink(currentIllust)
+                                runCatching { clipboard.copy(link) }.fold(
+                                    onSuccess = { toastMessage = strings.copiedToClipboard },
+                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                )
+                            },
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .height(0.5.dp)
+                                .background(Color.White.copy(alpha = 0.10f)),
+                        )
+                        LiquidMenuItem(
+                            icon = MiuixIcons.Share,
+                            text = strings.share,
+                            onClick = {
+                                showMoreMenu = false
+                                val link = buildIllustShareLink(currentIllust)
+                                runCatching { share.share(link, currentIllust.title) }.fold(
+                                    onSuccess = { toastMessage = strings.share },
+                                    onFailure = { e -> toastMessage = "${strings.share}: ${e.message}" },
+                                )
+                            },
+                        )
+                        if (!isBanned) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
+                                    .height(0.5.dp)
+                                    .background(Color.White.copy(alpha = 0.10f)),
+                            )
+                            LiquidMenuItem(
+                                icon = MiuixIcons.Blocklist,
+                                text = strings.menuBanWork,
+                                onClick = {
+                                    showMoreMenu = false
+                                    coroutineScope.launch {
+                                        suspendRunCatchingNonCancel {
+                                            banRepository.insertBanIllust(currentIllust.id, currentIllust.title)
+                                        }.fold(
+                                            onSuccess = {
+                                                isBanned = true
+                                                toastMessage = strings.menuBanWork
+                                            },
+                                            onFailure = { e -> toastMessage = "${strings.menuBanWork}: ${e.message}" },
+                                        )
+                                    }
+                                },
                             )
                         }
                     }
@@ -1068,3 +1176,44 @@ private fun BanPage(
         }
     }
 }
+
+/**
+ * 液态玻璃菜单单项组件。
+ */
+@Composable
+private fun LiquidMenuItem(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.12f) else Color.Transparent,
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = text,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = text,
+            style = MiuixTheme.textStyles.body2,
+            color = Color.White,
+        )
+    }
+}
+

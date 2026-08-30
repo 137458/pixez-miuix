@@ -6,7 +6,10 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.components.IosLiquidGlassNavigationBar
 import com.perol.pixez.shared.ui.components.backdropBlur
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -78,16 +81,24 @@ fun MainBottomBar(
                 }
             },
         )
-    } else {
-        // 标准固定底栏：应用 Backdrop Blur 毛玻璃效果
+        // 标准固定底栏：应用 Backdrop Blur 96% 高密度毛玻璃与顶部分割线
         val bottomBarModifier = if (backdrop != null) {
             modifier
                 .fillMaxWidth()
                 .backdropBlur(
                     backdrop = backdrop,
                     tintColor = colorScheme.surface,
-                    tintAlpha = 0.85f,
+                    tintAlpha = 0.96f,
+                    blurRadius = 20.dp,
                 )
+                .drawBehind {
+                    drawLine(
+                        color = colorScheme.outline.copy(alpha = 0.12f),
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, 0f),
+                        strokeWidth = 1f,
+                    )
+                }
         } else {
             modifier.fillMaxWidth()
         }
