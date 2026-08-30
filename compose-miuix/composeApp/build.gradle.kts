@@ -59,6 +59,7 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation("net.java.dev.jna:jna:5.14.0")
             implementation("net.java.dev.jna:jna-platform:5.14.0")
+            implementation("com.mayakapps.compose:window-styler:0.3.2")
         }
     }
 }
@@ -150,7 +151,8 @@ compose.desktop {
                 "-XX:+UseG1GC",
                 "-XX:+UseStringDeduplication",
                 "-Xms64m",
-                "-Dfile.encoding=UTF-8"
+                "-Dfile.encoding=UTF-8",
+                "-Djava.net.useSystemProxies=true"
             )
         }
     }

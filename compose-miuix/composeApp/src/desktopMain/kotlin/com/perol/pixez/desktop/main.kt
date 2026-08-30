@@ -1,5 +1,6 @@
 package com.perol.pixez.desktop
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +28,8 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.mayakapps.compose.windowstyler.WindowBackdrop
+import com.mayakapps.compose.windowstyler.WindowStyle
 import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
@@ -47,149 +50,155 @@ private object PixEzTrayPainter : Painter() {
 }
 
 /**
- * Desktop(JVM) 应用入口，集成 Windows 11 Mica 材质、自定义沉浸式无边框标题栏、系统托盘与手机版同款应用图标。
+ * Desktop(JVM) 应用入口，集成 Windows 11 原生硬件加速 Mica 材质、全自动智能代理选择器、系统托盘与手机版同款应用图标。
  */
-fun main(args: Array<String>) = application {
-    val dependencies = remember {
-        AppDependencies(
-            driverFactory = DriverFactory(),
-            settingsFactory = SettingsFactory(),
-        )
-    }
+fun main(args: Array<String>) {
+    // 启动即激活全自动系统代理探测（支持 Clash/v2rayN/Windows 设置实时同步）
+    DesktopProxySelector.install()
 
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
-        dependencies.warmupAsync(scope)
-    }
-
-    val rootComponent = remember {
-        RootComponent(
-            componentContext = DefaultComponentContext(LifecycleRegistry()),
-            settingsRepository = dependencies.settingsRepository,
-        )
-    }
-
-    var isWindowVisible by remember { mutableStateOf(true) }
-
-    // 加载手机版同款 App 图标
-    val appIconPainter: Painter? = remember {
-        try {
-            val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
-                ?: PixEzTrayPainter::class.java.getResourceAsStream("/icon.png")
-            if (stream != null) {
-                val bytes = stream.readBytes()
-                loadImageBitmap(bytes.inputStream()).let { BitmapPainter(it) }
-            } else null
-        } catch (e: Exception) {
-            null
+    application {
+        val dependencies = remember {
+            AppDependencies(
+                driverFactory = DriverFactory(),
+                settingsFactory = SettingsFactory(),
+            )
         }
-    }
 
-    LaunchedEffect(args) {
-        val loginArg = args.firstOrNull { it.contains("pixiv://") || it.contains("code=") }
-        if (!loginArg.isNullOrBlank()) {
-            try {
-                dependencies.accountRepository.login(loginArg)
-                println("桌面端通过启动参数登录成功: $loginArg")
-            } catch (e: Exception) {
-                System.err.println("桌面端处理启动参数登录失败: $loginArg - ${e.message}")
-            }
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            dependencies.warmupAsync(scope)
         }
-    }
 
-    // 系统托盘集成（使用手机版同款图标）
-    Tray(
-        icon = appIconPainter ?: PixEzTrayPainter,
-        tooltip = "PixEz MIUIX",
-        onAction = { isWindowVisible = true },
-        menu = {
-            Item("打开主界面", onClick = { isWindowVisible = true })
-            Item("下载任务", onClick = {
-                isWindowVisible = true
-                rootComponent.onDownloadTaskClicked()
-            })
-            Item("退出", onClick = {
-                dependencies.close()
-                exitApplication()
-            })
-        },
-    )
-
-    val windowState = rememberWindowState(size = DpSize(1120.dp, 760.dp))
-
-    if (isWindowVisible) {
-        Window(
-            onCloseRequest = {
-                dependencies.close()
-                exitApplication()
-            },
-            state = windowState,
-            title = "PixEz",
-            icon = appIconPainter ?: PixEzTrayPainter,
-            undecorated = true,
-            transparent = true,
-            onKeyEvent = { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    val isModifier = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
-                    when {
-                        keyEvent.key == Key.Escape -> rootComponent.onBack()
-                        isModifier && keyEvent.key == Key.F -> {
-                            rootComponent.onSearchClicked("")
-                            true
-                        }
-                        isModifier && keyEvent.key == Key.One -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.Hello)
-                            true
-                        }
-                        isModifier && keyEvent.key == Key.Two -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
-                            true
-                        }
-                        isModifier && keyEvent.key == Key.Three -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.New)
-                            true
-                        }
-                        isModifier && keyEvent.key == Key.Four -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.Spotlight)
-                            true
-                        }
-                        isModifier && (keyEvent.key == Key.J || keyEvent.key == Key.D) -> {
-                            rootComponent.onDownloadTaskClicked()
-                            true
-                        }
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            },
-        ) {
-            window.minimumSize = Dimension(600, 500)
-
-            DisposableEffect(window) {
-                val mouseListener = object : java.awt.event.MouseAdapter() {
-                    override fun mousePressed(e: java.awt.event.MouseEvent) {
-                        // 鼠标侧键（Back 键：AWT button 4）直接触发全局返回
-                        if (e.button == 4) {
-                            rootComponent.onBack()
-                        }
-                    }
-                }
-                window.addMouseListener(mouseListener)
-                onDispose {
-                    window.removeMouseListener(mouseListener)
-                }
-            }
-
-            DesktopWindowScaffold(
-                windowState = windowState,
+        val rootComponent = remember {
+            RootComponent(
+                componentContext = DefaultComponentContext(LifecycleRegistry()),
                 settingsRepository = dependencies.settingsRepository,
-                appIcon = appIconPainter,
+            )
+        }
+
+        var isWindowVisible by remember { mutableStateOf(true) }
+
+        // 加载手机版同款 App 图标
+        val appIconPainter: Painter? = remember {
+            try {
+                val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
+                    ?: PixEzTrayPainter::class.java.getResourceAsStream("/icon.png")
+                if (stream != null) {
+                    val bytes = stream.readBytes()
+                    loadImageBitmap(bytes.inputStream()).let { BitmapPainter(it) }
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        LaunchedEffect(args) {
+            val loginArg = args.firstOrNull { it.contains("pixiv://") || it.contains("code=") }
+            if (!loginArg.isNullOrBlank()) {
+                try {
+                    dependencies.accountRepository.login(loginArg)
+                    println("桌面端通过启动参数登录成功: $loginArg")
+                } catch (e: Exception) {
+                    System.err.println("桌面端处理启动参数登录失败: $loginArg - ${e.message}")
+                }
+            }
+        }
+
+        // 系统托盘集成（使用手机版同款图标）
+        Tray(
+            icon = appIconPainter ?: PixEzTrayPainter,
+            tooltip = "PixEz MIUIX",
+            onAction = { isWindowVisible = true },
+            menu = {
+                Item("打开主界面", onClick = { isWindowVisible = true })
+                Item("下载任务", onClick = {
+                    isWindowVisible = true
+                    rootComponent.onDownloadTaskClicked()
+                })
+                Item("退出", onClick = {
+                    dependencies.close()
+                    exitApplication()
+                })
+            },
+        )
+
+        val windowState = rememberWindowState(size = DpSize(1120.dp, 760.dp))
+
+        if (isWindowVisible) {
+            Window(
                 onCloseRequest = {
                     dependencies.close()
                     exitApplication()
                 },
+                state = windowState,
+                title = "PixEz",
+                icon = appIconPainter ?: PixEzTrayPainter,
+                onKeyEvent = { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown) {
+                        val isModifier = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
+                        when {
+                            keyEvent.key == Key.Escape -> rootComponent.onBack()
+                            isModifier && keyEvent.key == Key.F -> {
+                                rootComponent.onSearchClicked("")
+                                true
+                            }
+                            isModifier && keyEvent.key == Key.One -> {
+                                rootComponent.onMainTabSelected(RootComponent.MainTab.Hello)
+                                true
+                            }
+                            isModifier && keyEvent.key == Key.Two -> {
+                                rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
+                                true
+                            }
+                            isModifier && keyEvent.key == Key.Three -> {
+                                rootComponent.onMainTabSelected(RootComponent.MainTab.New)
+                                true
+                            }
+                            isModifier && keyEvent.key == Key.Four -> {
+                                rootComponent.onMainTabSelected(RootComponent.MainTab.Spotlight)
+                                true
+                            }
+                            isModifier && (keyEvent.key == Key.J || keyEvent.key == Key.D) -> {
+                                rootComponent.onDownloadTaskClicked()
+                                true
+                            }
+                            else -> false
+                        }
+                    } else {
+                        false
+                    }
+                },
             ) {
+                window.minimumSize = Dimension(600, 500)
+
+                val isSystemDark = isSystemInDarkTheme()
+                val isDark = when (dependencies.settingsRepository.themeMode) {
+                    1 -> false
+                    2 -> true
+                    else -> isSystemDark
+                }
+
+                // 注入系统级硬件加速 Mica 材质与暗色标题栏联动
+                WindowStyle(
+                    isDarkTheme = isDark,
+                    backdropType = WindowBackdrop.Mica,
+                )
+
+                DisposableEffect(window) {
+                    val mouseListener = object : java.awt.event.MouseAdapter() {
+                        override fun mousePressed(e: java.awt.event.MouseEvent) {
+                            // 鼠标侧键（Back 键：AWT button 4）直接触发全局返回
+                            if (e.button == 4) {
+                                rootComponent.onBack()
+                            }
+                        }
+                    }
+                    window.addMouseListener(mouseListener)
+                    onDispose {
+                        window.removeMouseListener(mouseListener)
+                    }
+                }
+
                 PixEzApp(
                     dependencies = dependencies,
                     rootComponent = rootComponent,
