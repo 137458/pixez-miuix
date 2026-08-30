@@ -5,6 +5,8 @@ on:
     paths:
       - 'compose-miuix/**'
       - '.github/workflows/build_compose_miuix.yml'
+    tags:
+      - 'v*'
   pull_request:
     paths:
       - 'compose-miuix/**'
@@ -132,3 +134,46 @@ jobs:
 
       - name: 编译 iOS / macOS 共享模块
         run: ./gradlew :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinMacosArm64 --no-daemon --stacktrace -Dorg.gradle.java.home=$JAVA_HOME
+
+  publish:
+    needs: [android, desktop]
+    name: GitHub Release 自动发布
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+      discussions: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: 签出仓库
+        uses: actions/checkout@v4
+
+      - name: 下载 Android APK 产物
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-apk
+          path: release-artifacts
+
+      - name: 下载 Desktop 单文件自包含 EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: pixez-desktop-windows-x64-standalone-exe
+          path: release-artifacts
+
+      - name: 下载 Desktop 便携绿色版 ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: pixez-desktop-windows-x64-portable
+          path: release-artifacts
+
+      - name: 下载 Desktop Windows MSI 安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: pixez-desktop-windows-x64-installer-msi
+          path: release-artifacts
+
+      - name: 发布至 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+          generate_release_notes: true
+
