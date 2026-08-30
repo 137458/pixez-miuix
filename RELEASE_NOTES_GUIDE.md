@@ -34,16 +34,18 @@ GitHub Release 更新日志应基于 `CHANGELOG.md` 提炼编写，不应直接�
 ## 安装方法
 
 ### Android
-1. 下载下方 Assets 中的 `PixEz-MIUIX-vX.Y.Z.apk` 安装包并在设备上直接安装。
+1. 下载下方 Assets 中的 `PixEz-MIUIX-vX.Y.Z.apk`（或 `android-debug-apk`）安装包并在设备上直接安装。
 
-### 桌面端 (Windows / macOS / Linux)
-1. 下载下方 Assets 中的 `PixEz-MIUIX-vX.Y.Z-windows-x64.jar`。
-2. 确保本地安装有 Java 17 或 21 运行环境，在终端执行 `java -jar <jar-file-name>` 即可运行。
+### Windows 桌面端 (无需预装 Java 环境)
+- **单文件独立版 (推荐)**：下载 `PixEz-Standalone.exe`，内嵌完整运行环境与渲染库，双击即可直接运行，无需解压。
+- **免安装绿色便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击目录内的 `PixEz.exe` 即可运行。
+- **MSI 安装向导包**：下载 `PixEz-*.msi` 安装包，双击按提示安装至系统，自动创建桌面与开始菜单快捷方式。
 
 ## 系统要求
 
 - **Android**: Android 7.0 (API 24) 及以上版本。
-- **桌面端**: 支持 Windows 10/11、macOS (Apple Silicon / Intel)、Linux，需配备 JRE/JDK 17 或 21。
+- **Windows**: Windows 10 / 11 64 位系统（已内嵌专属优化 JRE 运行环境，开箱即用零依赖）。
+- **macOS / Linux**: macOS 12+ / Ubuntu 20.04+。
 
 ## 致谢
 
@@ -104,3 +106,47 @@ GitHub Release 更新日志应基于 `CHANGELOG.md` 提炼编写，不应直接�
 - 修复关注与粉丝较多时列表触底无法翻页的问题。
 - 修复连载系列作品超出 30 话无法查看完整章节的问题。
 ```
+
+---
+
+## 5. 标准全自动发布流程 (Automated Release Workflow)
+
+本项目已接入 GitHub Actions 全自动打包与 Release 发布工作流，发布新版本的标准操作步骤如下：
+
+### 步骤 1：确认版本号
+在 `compose-miuix/composeApp/build.gradle.kts` 中确认或升级版本信息：
+- `versionCode`（例如 `10010054`）
+- `versionName`（例如 `"0.9.109-miuix"`）
+- `packageVersion`（例如 `"0.9.109"`）
+
+### 步骤 2：归档更新日志
+在 `CHANGELOG.md` 中：
+1. 将当前 `## [未发布]` 区块下的条目归档为新版本区块（例如 `## [v0.9.109] - 2026-08-30`）；
+2. 在顶部重新开辟一个空的 `## [未发布]` 区块供后续迭代使用。
+
+### 步骤 3：本地编译与打包验证
+在提交前运行本地多平台验证指令：
+```bash
+./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
+```
+
+### 步骤 4：Git 提交与打标签
+```bash
+git add .
+git commit -m "chore(release): release v0.9.109"
+git tag v0.9.109
+```
+
+### 步骤 5：推送代码与标签触发自动发布
+```bash
+git push origin master --tags
+```
+
+### 步骤 6：CI 全自动构建与 GitHub Release 挂载
+- GitHub Actions 检测到 `v*` 标签推送后，将自动并行执行：
+  - 构建 Android Debug APK；
+  - 构建 Windows 单文件自包含 EXE（`PixEz-Standalone.exe`）；
+  - 构建 Windows 免安装绿色便携 ZIP（`PixEz-windows-x64-portable.zip`）；
+  - 构建 Windows MSI 安装包（`PixEz-*.msi`）；
+- 构建完成后，Actions 会**全自动创建 GitHub Release**，生成 Release Notes，并将上述全套多端产物自动挂载至 Release 附件中供用户下载。
+

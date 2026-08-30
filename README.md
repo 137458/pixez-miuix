@@ -85,9 +85,13 @@
 ### Android
 - 下载 `PixEz-MIUIX-v*.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统，已适配手机、折叠屏与平板）。
 
-### 桌面端 (Windows / macOS / Linux)
-- **跨平台可执行包**: 下载 `PixEz-MIUIX-v*-windows-x64.jar`（或跨平台 JAR 包），确保本地配备 Java 17 或 21 运行环境，在终端执行 `java -jar <文件名>.jar` 或直接双击即可运行。
-- **Windows 安装包**: 可在 Release 页面或 Actions 构建产物中下载 `.msi` 安装包与便携版。
+### Windows 桌面端 (无需预装 Java 环境)
+- **单文件独立版 (推荐)**：下载 `PixEz-Standalone.exe`，内嵌完整裁剪 JRE 运行时与硬件加速渲染库，双击即可直接运行，无需解压。
+- **免安装绿色便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
+- **MSI 安装向导包**：下载 `PixEz-*.msi` 安装包，双击按提示安装至系统，自动创建桌面与开始菜单快捷方式。
+
+### macOS / Linux
+- 支持通过源码或跨平台发行包运行。
 
 ---
 
