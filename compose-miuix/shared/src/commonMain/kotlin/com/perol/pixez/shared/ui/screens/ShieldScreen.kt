@@ -83,8 +83,11 @@ fun ShieldScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    // AI 作品过滤开关状态。
+    // 敏感内容过滤与 AI 开关状态。
+    var hIsNotAllow by remember { mutableStateOf(settingsRepository.hIsNotAllow) }
+    var nsfwMask by remember { mutableStateOf(settingsRepository.nsfwMask) }
     var banAIIllust by remember { mutableStateOf(settingsRepository.banAIIllust) }
+    var feedAIBadge by remember { mutableStateOf(settingsRepository.feedAIBadge) }
 
     // AI 作品显示设置入口加载态，防止重复点击。
     var isLoadingAISetting by remember { mutableStateOf(false) }
@@ -176,16 +179,51 @@ fun ShieldScreen(
                     .fillMaxWidth()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
+                // ── 1. 分级与敏感内容过滤 ──
+                item {
+                    SmallTitle(text = strings.settingPrivacy)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
+                            title = strings.interactionSettingHNotAllow,
+                            summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
+                            checked = hIsNotAllow,
+                            onCheckedChange = { checked ->
+                                hIsNotAllow = checked
+                                settingsRepository.hIsNotAllow = checked
+                            },
+                        )
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
+                            title = strings.nsfwMask,
+                            summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
+                            checked = nsfwMask,
+                            onCheckedChange = { checked ->
+                                nsfwMask = checked
+                                settingsRepository.nsfwMask = checked
+                            },
+                        )
+                    }
+                }
+
+                // ── 2. AI 生成内容控制 ──
                 item {
                     SmallTitle(text = strings.filterAi)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         top.yukonga.miuix.kmp.preference.SwitchPreference(
                             title = strings.banAIIllust,
-                            summary = if (banAIIllust) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
+                            summary = strings.banAIIllustSummary,
                             checked = banAIIllust,
                             onCheckedChange = { checked ->
                                 banAIIllust = checked
                                 settingsRepository.banAIIllust = checked
+                            },
+                        )
+                        top.yukonga.miuix.kmp.preference.SwitchPreference(
+                            title = strings.feedSettingAiBadge,
+                            summary = if (feedAIBadge) strings.feedSettingAiBadgeSummaryOn else strings.feedSettingAiBadgeSummaryOff,
+                            checked = feedAIBadge,
+                            onCheckedChange = { checked ->
+                                feedAIBadge = checked
+                                settingsRepository.feedAIBadge = checked
                             },
                         )
                         top.yukonga.miuix.kmp.preference.ArrowPreference(

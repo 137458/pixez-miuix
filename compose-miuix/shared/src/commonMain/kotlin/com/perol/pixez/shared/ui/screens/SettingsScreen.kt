@@ -43,6 +43,7 @@ import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.platform.isAndroidPlatform
+import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -86,18 +87,13 @@ fun SettingsScreen(
     onThemeSettingClick: () -> Unit,
     onNetworkSettingClick: () -> Unit,
     onDownloadSettingClick: () -> Unit,
-    onSaveSettingClick: () -> Unit,
-    onCrossAdapterSettingClick: () -> Unit,
     onLayoutSettingClick: () -> Unit,
     onLanguageSettingClick: () -> Unit,
     onWidgetRecommendSettingClick: () -> Unit,
     onInteractionSettingClick: () -> Unit,
-    onFeedSettingClick: () -> Unit,
     onQualitySettingClick: () -> Unit,
     onCopyTextSettingClick: () -> Unit,
-    onPrivacySettingClick: () -> Unit,
     onWelcomePageSettingClick: () -> Unit,
-    onPlatformSettingClick: () -> Unit,
     onBookTagClick: () -> Unit,
     onUpdateSettingClick: () -> Unit,
     onAccountEditClick: () -> Unit,
@@ -294,11 +290,6 @@ fun SettingsScreen(
                         onClick = onInteractionSettingClick,
                     )
                     ArrowPreference(
-                        title = strings.feedSettingTitle,
-                        summary = strings.feedSettingAiBadge,
-                        onClick = onFeedSettingClick,
-                    )
-                    ArrowPreference(
                         title = strings.settingWidgetRecommend,
                         summary = strings.settingWidgetRecommendSummary,
                         onClick = onWidgetRecommendSettingClick,
@@ -316,7 +307,7 @@ fun SettingsScreen(
                 }
             }
 
-            // ── 5. 屏蔽与隐私 ──
+            // ── 5. 内容过滤与屏蔽 ──
             item {
                 SmallTitle(text = strings.settingSectionShieldPrivacy)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -324,11 +315,6 @@ fun SettingsScreen(
                         title = strings.settingShield,
                         summary = strings.settingShieldSummary,
                         onClick = onShieldClick,
-                    )
-                    ArrowPreference(
-                        title = strings.settingPrivacy,
-                        summary = strings.settingPrivacySummary,
-                        onClick = onPrivacySettingClick,
                     )
                 }
             }
@@ -338,10 +324,10 @@ fun SettingsScreen(
                 SmallTitle(text = strings.settingSectionStorage)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (isAndroidPlatform()) {
-                        ArrowPreference(
-                            title = strings.settingPlatform,
-                            summary = strings.settingPlatformSummary,
-                            onClick = onPlatformSettingClick,
+                        BasicComponent(
+                            title = strings.platformSettingDefaultOpenLinks,
+                            summary = strings.platformSettingDefaultOpenLinksSummary,
+                            onClick = { openDefaultAppSettings() },
                         )
                     }
                     ArrowPreference(

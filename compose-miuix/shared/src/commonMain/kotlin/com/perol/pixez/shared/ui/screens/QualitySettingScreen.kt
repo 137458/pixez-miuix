@@ -63,17 +63,6 @@ fun QualitySettingScreen(
     var mangaQuality by remember {
         mutableIntStateOf(settingsRepository.mangaQuality)
     }
-    var zoomQuality by remember {
-        mutableIntStateOf(settingsRepository.zoomQuality)
-    }
-
-    // 保存行为联动开关
-    var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
-    var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
-    var longPressSaveConfirm by remember { mutableStateOf(settingsRepository.longPressSaveConfirm) }
-    var illustDetailSaveSkipLongPress by remember {
-        mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
-    }
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
@@ -93,13 +82,6 @@ fun QualitySettingScreen(
             strings.qualityOriginal,
             strings.qualityLarge,
             strings.qualityMedium,
-        )
-    }
-
-    val zoomQualityOptions = remember(strings) {
-        listOf(
-            strings.qualityOriginal,
-            strings.qualityLarge,
         )
     }
 
@@ -170,65 +152,6 @@ fun QualitySettingScreen(
                             onSelectedIndexChange = { index ->
                                 mangaQuality = index
                                 settingsRepository.mangaQuality = index
-                            },
-                        )
-                        OverlayDropdownPreference(
-                            title = strings.zoomQuality,
-                            items = zoomQualityOptions,
-                            selectedIndex = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex),
-                            onSelectedIndexChange = { index ->
-                                zoomQuality = index
-                                settingsRepository.zoomQuality = index
-                            },
-                        )
-                    }
-                }
-
-                // ── 2. 保存行为联动 ──
-                item {
-                    SmallTitle(text = strings.settingSectionBookmarkShare)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        SwitchPreference(
-                            title = strings.saveAfterStar,
-                            summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
-                            checked = saveAfterStar,
-                            onCheckedChange = { checked ->
-                                saveAfterStar = checked
-                                settingsRepository.saveAfterStar = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.starAfterSave,
-                            summary = if (starAfterSave) strings.starAfterSaveSummaryOn else strings.starAfterSaveSummaryOff,
-                            checked = starAfterSave,
-                            onCheckedChange = { checked ->
-                                starAfterSave = checked
-                                settingsRepository.starAfterSave = checked
-                            },
-                        )
-                    }
-                }
-
-                // ── 3. 长按确认 ──
-                item {
-                    SmallTitle(text = strings.longPressSaveConfirm)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        SwitchPreference(
-                            title = strings.longPressSaveConfirm,
-                            summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
-                            checked = longPressSaveConfirm,
-                            onCheckedChange = { checked ->
-                                longPressSaveConfirm = checked
-                                settingsRepository.longPressSaveConfirm = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.illustDetailSkipLongPress,
-                            summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
-                            checked = illustDetailSaveSkipLongPress,
-                            onCheckedChange = { checked ->
-                                illustDetailSaveSkipLongPress = checked
-                                settingsRepository.illustDetailSaveSkipLongPress = checked
                             },
                         )
                     }

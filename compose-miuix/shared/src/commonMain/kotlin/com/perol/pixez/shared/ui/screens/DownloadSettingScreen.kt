@@ -78,21 +78,11 @@ fun DownloadSettingScreen(
 
     // 页面状态：从 SettingsRepository 读取当前各项下载设置。
     var storePath by remember { mutableStateOf(settingsRepository.storePath.orEmpty()) }
-    var saveMode by remember { mutableIntStateOf(settingsRepository.saveMode) }
     var format by remember { mutableStateOf(settingsRepository.format) }
     var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
-    var overSanityLevelFolder by remember { mutableStateOf(settingsRepository.overSanityLevelFolder) }
-    var maxRunningTask by remember { mutableIntStateOf(settingsRepository.maxRunningTask) }
-    var singleFolder by remember { mutableStateOf(settingsRepository.singleFolder) }
 
     // 对话框显隐状态。
-    var showPathDialog by rememberSaveable { mutableStateOf(false) }
-    var showSaveModeDialog by rememberSaveable { mutableStateOf(false) }
     var showFormatDialog by rememberSaveable { mutableStateOf(false) }
-    var showTaskDialog by rememberSaveable { mutableStateOf(false) }
-
-    // 保存路径输入框状态，打开对话框时与当前设置同步。
-    var pathInput by remember(showPathDialog) { mutableStateOf(storePath) }
 
     // 保存格式输入框状态，使用 TextFieldValue 以便跟踪光标/选区。
     var formatFieldValue by remember(showFormatDialog) {
@@ -104,28 +94,18 @@ fun DownloadSettingScreen(
         )
     }
 
+    // 收藏与保存联动开关
+    var defaultPrivateLike by remember { mutableStateOf(settingsRepository.defaultPrivateLike) }
+    var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
+    var followAfterStar by remember { mutableStateOf(settingsRepository.followAfterStar) }
     var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
     var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
-    var followAfterStar by remember { mutableStateOf(settingsRepository.followAfterStar) }
-    var longPressSaveConfirm by remember { mutableStateOf(settingsRepository.longPressSaveConfirm) }
-    var illustDetailSaveSkipLongPress by remember {
-        mutableStateOf(settingsRepository.illustDetailSaveSkipLongPress)
-    }
-    var autoTagWhenStar by remember { mutableStateOf(settingsRepository.autoTagWhenStar) }
 
     val pickDirectory = rememberDirectoryPicker { pickedPath ->
         if (!pickedPath.isNullOrBlank()) {
             storePath = pickedPath
             settingsRepository.storePath = pickedPath
         }
-    }
-
-    val saveModeLabels = remember(strings) {
-        listOf(
-            "Media (${strings.downloadSaveModeMedia})",
-            "SAF (${strings.downloadSaveModeSaf})",
-            "${strings.qualityMedium} (${strings.downloadSaveModeLegacy})",
-        )
     }
 
     val scrollBehavior = MiuixScrollBehavior()
@@ -193,15 +173,6 @@ fun DownloadSettingScreen(
                                 )
                             }
                         }
-                        OverlayDropdownPreference(
-                            title = strings.dialogSaveMode,
-                            items = saveModeLabels,
-                            selectedIndex = saveMode.coerceIn(0, saveModeLabels.lastIndex),
-                            onSelectedIndexChange = { index ->
-                                saveMode = index
-                                settingsRepository.saveMode = index
-                            },
-                        )
                     }
                 }
 
@@ -213,59 +184,39 @@ fun DownloadSettingScreen(
                             summary = if (fileNameEval) strings.settingShareFormat else format,
                             onClick = { showFormatDialog = true },
                         )
-                        SwitchPreference(
-                            title = strings.downloadSingleFolder,
-                            summary = strings.downloadSingleFolderSummary,
-                            checked = singleFolder,
-                            onCheckedChange = { checked ->
-                                singleFolder = checked
-                                settingsRepository.singleFolder = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.downloadSanityFolder,
-                            summary = strings.downloadSanityFolderSummary,
-                            checked = overSanityLevelFolder,
-                            onCheckedChange = { checked ->
-                                overSanityLevelFolder = checked
-                                settingsRepository.overSanityLevelFolder = checked
-                            },
-                        )
-                    }
-                }
-
-                item {
-                    SmallTitle(text = strings.settingDownloadTask)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        ArrowPreference(
-                            title = strings.dialogTaskCount,
-                            summary = maxRunningTask.toString(),
-                            onClick = { showTaskDialog = true },
-                        )
-                        SwitchPreference(
-                            title = strings.longPressSaveConfirm,
-                            summary = if (longPressSaveConfirm) strings.longPressSaveConfirmSummaryOn else strings.longPressSaveConfirmSummaryOff,
-                            checked = longPressSaveConfirm,
-                            onCheckedChange = { checked ->
-                                longPressSaveConfirm = checked
-                                settingsRepository.longPressSaveConfirm = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.illustDetailSkipLongPress,
-                            summary = if (illustDetailSaveSkipLongPress) strings.illustDetailSkipLongPressSummaryOn else strings.illustDetailSkipLongPressSummaryOff,
-                            checked = illustDetailSaveSkipLongPress,
-                            onCheckedChange = { checked ->
-                                illustDetailSaveSkipLongPress = checked
-                                settingsRepository.illustDetailSaveSkipLongPress = checked
-                            },
-                        )
                     }
                 }
 
                 item {
                     SmallTitle(text = strings.settingSectionBookmarkShare)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        SwitchPreference(
+                            title = strings.defaultPrivateLike,
+                            summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,
+                            checked = defaultPrivateLike,
+                            onCheckedChange = { checked ->
+                                defaultPrivateLike = checked
+                                settingsRepository.defaultPrivateLike = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.autoTagWhenStar,
+                            summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
+                            checked = autoTagWhenStar,
+                            onCheckedChange = { checked ->
+                                autoTagWhenStar = checked
+                                settingsRepository.autoTagWhenStar = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.feedSettingFollowAfterStar,
+                            summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
+                            checked = followAfterStar,
+                            onCheckedChange = { checked ->
+                                followAfterStar = checked
+                                settingsRepository.followAfterStar = checked
+                            },
+                        )
                         SwitchPreference(
                             title = strings.saveAfterStar,
                             summary = if (saveAfterStar) strings.saveAfterStarSummaryOn else strings.saveAfterStarSummaryOff,
@@ -282,24 +233,6 @@ fun DownloadSettingScreen(
                             onCheckedChange = { checked ->
                                 starAfterSave = checked
                                 settingsRepository.starAfterSave = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.feedSettingFollowAfterStar,
-                            summary = if (followAfterStar) strings.feedSettingFollowAfterStarSummaryOn else strings.feedSettingFollowAfterStarSummaryOff,
-                            checked = followAfterStar,
-                            onCheckedChange = { checked ->
-                                followAfterStar = checked
-                                settingsRepository.followAfterStar = checked
-                            },
-                        )
-                        SwitchPreference(
-                            title = strings.autoTagWhenStar,
-                            summary = if (autoTagWhenStar) strings.autoTagWhenStarSummaryOn else strings.autoTagWhenStarSummaryOff,
-                            checked = autoTagWhenStar,
-                            onCheckedChange = { checked ->
-                                autoTagWhenStar = checked
-                                settingsRepository.autoTagWhenStar = checked
                             },
                         )
                     }
@@ -366,48 +299,6 @@ fun DownloadSettingScreen(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                 )
-            }
-        }
-
-        var tempTaskCount by remember(showTaskDialog) { mutableIntStateOf(maxRunningTask) }
-
-        // 同时下载任务数选择对话框，使用原生 NumberPicker 滚轮。
-        OverlayDialog(
-            title = strings.dialogTaskCount,
-            show = showTaskDialog,
-            onDismissRequest = { showTaskDialog = false },
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                NumberPicker(
-                    value = tempTaskCount,
-                    onValueChange = { tempTaskCount = it },
-                    range = AppConstants.Download.TASK_COUNT_RANGE,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = { showTaskDialog = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        text = strings.confirm,
-                        onClick = {
-                            maxRunningTask = tempTaskCount
-                            settingsRepository.maxRunningTask = tempTaskCount
-                            showTaskDialog = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
             }
         }
     }

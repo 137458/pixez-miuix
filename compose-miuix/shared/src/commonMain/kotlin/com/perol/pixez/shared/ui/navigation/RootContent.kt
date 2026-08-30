@@ -61,18 +61,13 @@ import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
 import com.perol.pixez.shared.ui.screens.NewScreen
-import com.perol.pixez.shared.ui.screens.PlatformSettingScreen
-import com.perol.pixez.shared.ui.screens.SaveSettingScreen
-import com.perol.pixez.shared.ui.screens.CrossAdapterSettingScreen
 import com.perol.pixez.shared.ui.screens.GuideScreen
 import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
 import com.perol.pixez.shared.ui.screens.LanguageSettingScreen
 import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
 import com.perol.pixez.shared.ui.screens.InteractionSettingScreen
-import com.perol.pixez.shared.ui.screens.FeedSettingScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
 import com.perol.pixez.shared.ui.screens.CopyTextSettingScreen
-import com.perol.pixez.shared.ui.screens.PrivacySettingScreen
 import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
 import com.perol.pixez.shared.ui.screens.RankingScreen
 import com.perol.pixez.shared.ui.screens.RecomUserScreen
@@ -364,18 +359,13 @@ fun RootContent(
                         onThemeSettingClick = component::onThemeSettingClicked,
                         onNetworkSettingClick = component::onNetworkSettingClicked,
                         onDownloadSettingClick = component::onDownloadSettingClicked,
-                        onSaveSettingClick = component::onSaveSettingClicked,
-                        onCrossAdapterSettingClick = component::onCrossAdapterSettingClicked,
                         onLayoutSettingClick = component::onLayoutSettingClicked,
                         onLanguageSettingClick = component::onLanguageSettingClicked,
                         onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
                         onInteractionSettingClick = component::onInteractionSettingClicked,
-                        onFeedSettingClick = component::onFeedSettingClicked,
                         onQualitySettingClick = component::onQualitySettingClicked,
                         onCopyTextSettingClick = component::onCopyTextSettingClicked,
-                        onPrivacySettingClick = component::onPrivacySettingClicked,
                         onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
-                        onPlatformSettingClick = component::onPlatformSettingClicked,
                         onBookTagClick = component::onBookTagClicked,
                         onUpdateSettingClick = component::onUpdateSettingClicked,
                         onAccountEditClick = component::onAccountEditClicked,
@@ -432,16 +422,6 @@ fun RootContent(
                         onBack = component::onBack,
                     )
 
-                    Child.SaveSetting -> SaveSettingScreen(
-                        settingsRepository = settingsRepository,
-                        onBack = component::onBack,
-                    )
-
-                    Child.CrossAdapterSetting -> CrossAdapterSettingScreen(
-                        settingsRepository = settingsRepository,
-                        onBack = component::onBack,
-                    )
-
                     Child.LayoutSetting -> LayoutSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
@@ -458,11 +438,6 @@ fun RootContent(
                     )
 
                     Child.InteractionSetting -> InteractionSettingScreen(
-                        settingsRepository = settingsRepository,
-                        onBack = component::onBack,
-                    )
-
-                    Child.FeedSetting -> FeedSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )
@@ -515,17 +490,7 @@ fun RootContent(
                         onBack = component::onBack,
                     )
 
-                    Child.PrivacySetting -> PrivacySettingScreen(
-                        settingsRepository = settingsRepository,
-                        onBack = component::onBack,
-                    )
-
                     Child.WelcomePageSetting -> WelcomePageSettingScreen(
-                        settingsRepository = settingsRepository,
-                        onBack = component::onBack,
-                    )
-
-                    Child.PlatformSetting -> PlatformSettingScreen(
                         settingsRepository = settingsRepository,
                         onBack = component::onBack,
                     )

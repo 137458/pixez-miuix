@@ -50,8 +50,6 @@ fun InteractionSettingScreen(
     onBack: () -> Unit,
 ) {
     // 页面状态：从 SettingsRepository 读取当前交互相关设置，用于驱动 Switch 的显示与回写。
-    var isBangs by remember { mutableStateOf(settingsRepository.isBangs) }
-    var hIsNotAllow by remember { mutableStateOf(settingsRepository.hIsNotAllow) }
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -116,36 +114,6 @@ fun InteractionSettingScreen(
                             onCheckedChange = { checked ->
                                 isReturnAgainToExit = checked
                                 settingsRepository.isReturnAgainToExit = checked
-                            },
-                        )
-                    }
-                }
-
-                item {
-                    SmallTitle(text = strings.settingShield)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        SwitchPreference(
-                            title = strings.interactionSettingHNotAllow,
-                            summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
-                            checked = hIsNotAllow,
-                            onCheckedChange = { checked ->
-                                hIsNotAllow = checked
-                                settingsRepository.hIsNotAllow = checked
-                            },
-                        )
-                    }
-                }
-
-                item {
-                    SmallTitle(text = strings.settingSectionDisplayLayout)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        SwitchPreference(
-                            title = strings.interactionSettingBangs,
-                            summary = if (isBangs) strings.interactionSettingBangsSummaryOn else strings.interactionSettingBangsSummaryOff,
-                            checked = isBangs,
-                            onCheckedChange = { checked ->
-                                isBangs = checked
-                                settingsRepository.isBangs = checked
                             },
                         )
                     }

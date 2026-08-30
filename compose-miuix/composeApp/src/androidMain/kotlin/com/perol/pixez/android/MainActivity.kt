@@ -62,6 +62,11 @@ class MainActivity : ComponentActivity() {
                 if (rootComponent.onBack()) {
                     return
                 }
+                if (!dependencies.settingsRepository.isReturnAgainToExit) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    return
+                }
                 val now = System.currentTimeMillis()
                 if (now - lastBackPressTime < 2000) {
                     isEnabled = false

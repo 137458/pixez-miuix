@@ -132,13 +132,6 @@ class RootComponent(
     }
 
     /**
-     * 打开平台专属设置页（Android only）。
-     */
-    fun onPlatformSettingClicked() {
-        navigation.pushToFront(Config.PlatformSetting)
-    }
-
-    /**
      * 打开收藏标签页。
      */
     fun onBookTagClicked() {
@@ -190,20 +183,6 @@ class RootComponent(
     }
 
     /**
-     * 打开保存设置页。
-     */
-    fun onSaveSettingClicked() {
-        navigation.pushToFront(Config.SaveSetting)
-    }
-
-    /**
-     * 打开跨适配设置页。
-     */
-    fun onCrossAdapterSettingClicked() {
-        navigation.pushToFront(Config.CrossAdapterSetting)
-    }
-
-    /**
      * 打开布局设置页。
      */
     fun onLayoutSettingClicked() {
@@ -229,13 +208,6 @@ class RootComponent(
      */
     fun onInteractionSettingClicked() {
         navigation.pushToFront(Config.InteractionSetting)
-    }
-
-    /**
-     * 打开动态与搜索开关页。
-     */
-    fun onFeedSettingClicked() {
-        navigation.pushToFront(Config.FeedSetting)
     }
 
     /**
@@ -292,13 +264,6 @@ class RootComponent(
      */
     fun onCopyTextSettingClicked() {
         navigation.pushToFront(Config.CopyTextSetting)
-    }
-
-    /**
-     * 打开隐私设置页。
-     */
-    fun onPrivacySettingClicked() {
-        navigation.pushToFront(Config.PrivacySetting)
     }
 
     /**
@@ -429,13 +394,10 @@ class RootComponent(
         Config.ThemeSetting -> Child.ThemeSetting
         Config.NetworkSetting -> Child.NetworkSetting
         Config.DownloadSetting -> Child.DownloadSetting
-        Config.SaveSetting -> Child.SaveSetting
-        Config.CrossAdapterSetting -> Child.CrossAdapterSetting
         Config.LayoutSetting -> Child.LayoutSetting
         Config.LanguageSetting -> Child.LanguageSetting
         Config.WidgetRecommendSetting -> Child.WidgetRecommendSetting
         Config.InteractionSetting -> Child.InteractionSetting
-        Config.FeedSetting -> Child.FeedSetting
         Config.UpdateSetting -> Child.UpdateSetting
         Config.AccountEdit -> Child.AccountEdit
         Config.History -> Child.History
@@ -444,9 +406,7 @@ class RootComponent(
         Config.Board -> Child.Board
         Config.QualitySetting -> Child.QualitySetting
         Config.CopyTextSetting -> Child.CopyTextSetting
-        Config.PrivacySetting -> Child.PrivacySetting
         Config.WelcomePageSetting -> Child.WelcomePageSetting
-        Config.PlatformSetting -> Child.PlatformSetting
         Config.About -> Child.About
         Config.BookTag -> Child.BookTag
         Config.Thanks -> Child.Thanks
@@ -539,12 +499,6 @@ class RootComponent(
         data object DownloadSetting : Config()
 
         @Serializable
-        data object SaveSetting : Config()
-
-        @Serializable
-        data object CrossAdapterSetting : Config()
-
-        @Serializable
         data object LayoutSetting : Config()
 
         @Serializable
@@ -555,9 +509,6 @@ class RootComponent(
 
         @Serializable
         data object InteractionSetting : Config()
-
-        @Serializable
-        data object FeedSetting : Config()
 
         @Serializable
         data object UpdateSetting : Config()
@@ -584,13 +535,7 @@ class RootComponent(
         data object CopyTextSetting : Config()
 
         @Serializable
-        data object PrivacySetting : Config()
-
-        @Serializable
         data object WelcomePageSetting : Config()
-
-        @Serializable
-        data object PlatformSetting : Config()
     }
 
     sealed class Child {
@@ -617,13 +562,10 @@ class RootComponent(
         data object ThemeSetting : Child()
         data object NetworkSetting : Child()
         data object DownloadSetting : Child()
-        data object SaveSetting : Child()
-        data object CrossAdapterSetting : Child()
         data object LayoutSetting : Child()
         data object LanguageSetting : Child()
         data object WidgetRecommendSetting : Child()
         data object InteractionSetting : Child()
-        data object FeedSetting : Child()
         data object UpdateSetting : Child()
         data object AccountEdit : Child()
         data object History : Child()
@@ -632,9 +574,7 @@ class RootComponent(
         data object Board : Child()
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
-        data object PrivacySetting : Child()
         data object WelcomePageSetting : Child()
-        data object PlatformSetting : Child()
     }
 
     companion object {

@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -68,7 +69,6 @@ fun LayoutSettingScreen(
     onBack: () -> Unit,
 ) {
     // 页面状态：从 SettingsRepository 读取当前布局设置，用于驱动组件显示与回写。
-    var padMode by remember { mutableStateOf(settingsRepository.padMode) }
     var crossCount by remember { mutableStateOf(settingsRepository.crossCount) }
     var hCrossCount by remember { mutableStateOf(settingsRepository.hCrossCount) }
     var crossAdapt by remember { mutableStateOf(settingsRepository.crossAdapt) }
@@ -76,13 +76,14 @@ fun LayoutSettingScreen(
     var hCrossAdapt by remember { mutableStateOf(settingsRepository.hCrossAdapt) }
     var hCrossAdapterWidth by remember { mutableStateOf(settingsRepository.hCrossAdapterWidth) }
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
+    var displayMode by remember { mutableIntStateOf(settingsRepository.displayMode) }
+    var showDisplayModeDialog by rememberSaveable { mutableStateOf(false) }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    val padModeOptions = remember { listOf("V:H", "V:V", "H:H") }
     val crossCountOptions = remember { listOf("2", "3", "4") }
 
     Scaffold(
@@ -135,15 +136,19 @@ fun LayoutSettingScreen(
                                 settingsRepository.useFloatingBottomBar = it
                             },
                         )
-                        OverlayDropdownPreference(
-                            title = strings.padMode,
-                            items = padModeOptions,
-                            selectedIndex = padMode.coerceIn(0, padModeOptions.lastIndex),
-                            onSelectedIndexChange = { index ->
-                                padMode = index
-                                settingsRepository.padMode = index
-                            },
-                        )
+                    }
+                }
+
+                if (isAndroidPlatform()) {
+                    item {
+                        SmallTitle(text = strings.dialogDisplayMode)
+                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                            BasicComponent(
+                                title = strings.dialogDisplayMode,
+                                summary = displayMode.toDisplayModeLabel(),
+                                onClick = { showDisplayModeDialog = true },
+                            )
+                        }
                     }
                 }
 
@@ -218,6 +223,48 @@ fun LayoutSettingScreen(
                 }
             }
         }
+
+        if (showDisplayModeDialog) {
+            val options = listOf(
+                0 to strings.platformDisplayModeFollowSystem,
+                1 to "标准 60Hz",
+                2 to "高刷新率 (90Hz / 120Hz+)",
+            )
+            OverlayDialog(
+                title = strings.dialogDisplayMode,
+                show = true,
+                onDismissRequest = { showDisplayModeDialog = false },
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    options.forEach { (value, label) ->
+                        BasicComponent(
+                            title = label,
+                            onClick = {
+                                displayMode = value
+                                settingsRepository.displayMode = value
+                                showDisplayModeDialog = false
+                            },
+                            endActions = {
+                                CheckIndicator(selected = displayMode == value)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 将屏幕刷新率数值转换为展示文案。
+ */
+@Composable
+private fun Int.toDisplayModeLabel(): String {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    return when (this) {
+        1 -> "标准 60Hz"
+        2 -> "高刷新率 (90Hz / 120Hz+)"
+        else -> strings.platformDisplayModeFollowSystem
     }
 }
 

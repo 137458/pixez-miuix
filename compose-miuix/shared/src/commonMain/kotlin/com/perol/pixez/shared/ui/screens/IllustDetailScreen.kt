@@ -53,6 +53,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -240,11 +244,32 @@ private fun IllustDetailSingleContent(
     val detailBackdrop = rememberBlurBackdrop()
     val listState = rememberLazyListState()
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val scrollThresholdPx = with(density) { 180.dp.toPx() }
+    val scrollThresholdPx = with(density) { 72.dp.toPx() }
+    var scrollOffset by remember { mutableStateOf(0f) }
+
+    val detailNestedScrollConnection = remember(scrollThresholdPx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                scrollOffset = (scrollOffset - delta).coerceIn(0f, scrollThresholdPx)
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+            scrollOffset = 0f
+        }
+    }
+
     val collapseProgress by remember(scrollThresholdPx) {
         derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) 1f
-            else (listState.firstVisibleItemScrollOffset / scrollThresholdPx).coerceIn(0f, 1f)
+            if (listState.firstVisibleItemIndex > 0) {
+                1f
+            } else {
+                (scrollOffset / scrollThresholdPx).coerceIn(0f, 1f)
+            }
         }
     }
 
@@ -274,7 +299,8 @@ private fun IllustDetailSingleContent(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blurBackdropSource(detailBackdrop),
+                            .blurBackdropSource(detailBackdrop)
+                            .nestedScroll(detailNestedScrollConnection),
                     ) {
                         // 1. 沉浸式顶部大图（从屏幕最顶端开始渲染，消除生硬的一刀切顶栏）
                         if (illust.metaPages.isNotEmpty()) {
