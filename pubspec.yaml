@@ -13,7 +13,7 @@ publish_to: none
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.9.84+508
+version: 1.9.86+511
 
 environment:
   sdk: ">=3.11.5"
@@ -149,6 +149,11 @@ msix_config:
   publisher: CN=Notsfsssf, C=CN
 
 dependency_overrides:
+  # Local fork of permission_handler_apple: strips CoreLocation/location
+  # permission support (avoids ITMS-90683) and resolves permission defines
+  # from Info.plist via Package.swift. See ios/permission_handler_apple_override/.
+  permission_handler_apple:
+    path: ios/permission_handler_apple_override
   wakelock_plus:
     path: ./plugins/wakelock_plus_stub
 
