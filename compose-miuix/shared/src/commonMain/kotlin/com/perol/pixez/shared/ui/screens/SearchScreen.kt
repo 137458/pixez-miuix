@@ -45,7 +45,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -197,23 +200,56 @@ fun SearchScreen(
     val colorScheme = MiuixTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
 
+    val suggestionsListState = rememberLazyListState()
+    val illustGridState = rememberLazyStaggeredGridState()
+    val userListState = rememberLazyListState()
+
     var isSearchCollapsed by rememberSaveable { mutableStateOf(false) }
+
+    val isCurrentListAtTop by remember(isSearching, query, searchTypeIndex) {
+        derivedStateOf {
+            if (!isSearching || query.isBlank()) {
+                suggestionsListState.firstVisibleItemIndex == 0 && suggestionsListState.firstVisibleItemScrollOffset == 0
+            } else if (searchTypeIndex == 0) {
+                illustGridState.firstVisibleItemIndex == 0 && illustGridState.firstVisibleItemScrollOffset == 0
+            } else {
+                userListState.firstVisibleItemIndex == 0 && userListState.firstVisibleItemScrollOffset == 0
+            }
+        }
+    }
+
+    LaunchedEffect(isCurrentListAtTop) {
+        if (isCurrentListAtTop) {
+            isSearchCollapsed = false
+            scrollBehavior.state.heightOffset = 0f
+        }
+    }
 
     val searchNestedScrollConnection = remember(scrollBehavior) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // 1. 同步更新 MIUIX TopAppBar 的 heightOffset，驱动大标题与紧凑标题的双向平滑折叠
-                val limit = scrollBehavior.state.heightOffsetLimit
-                if (limit < 0f) {
-                    scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
-                }
-
-                // 2. 协同折叠全宽搜索框与快捷筛选行
+                // 手指向上推（向下浏览内容）：折叠大标题与全宽搜索框
                 val delta = available.y
                 if (delta < -8f) {
+                    val limit = scrollBehavior.state.heightOffsetLimit
+                    if (limit < 0f) {
+                        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + delta).coerceIn(limit, 0f)
+                    }
                     if (!isSearchCollapsed) isSearchCollapsed = true
-                } else if (delta > 8f) {
+                }
+                // 注意：手指往下拉时不在此处盲目展开！必须等列表真正滚回最顶端时才展开，避免在列表中间浏览时误触发放大。
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // 当列表已滑动到最顶端无法再继续往下拉（available.y > 0 表示列表已触顶过冲）：
+                // 此时向下拉动，顺畅展开大标题与搜索框
+                if (available.y > 4f) {
                     if (isSearchCollapsed) isSearchCollapsed = false
+                    val limit = scrollBehavior.state.heightOffsetLimit
+                    if (limit < 0f) {
+                        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
+                    }
                 }
                 return Offset.Zero
             }
@@ -449,6 +485,7 @@ fun SearchScreen(
                         settingsRepository = settingsRepository,
                         onIllustClick = onIllustClick,
                         scrollBehavior = scrollBehavior,
+                        gridState = illustGridState,
                         contentPadding = effectiveContentPadding,
                     )
                     1 -> SearchUserResultList(
@@ -456,6 +493,7 @@ fun SearchScreen(
                         repository = repository,
                         onUserClick = onUserClick,
                         scrollBehavior = scrollBehavior,
+                        listState = userListState,
                         contentPadding = effectiveContentPadding,
                     )
                 }
@@ -487,6 +525,7 @@ fun SearchScreen(
                     isLoadingTrend = trendResult == null,
                     trendError = trendResult?.exceptionOrNull(),
                     scrollBehavior = scrollBehavior,
+                    listState = suggestionsListState,
                     contentPadding = PaddingValues(
                         start = 0.dp,
                         top = contentTopPadding,
@@ -764,6 +803,7 @@ private fun SearchIllustResultGrid(
     settingsRepository: SettingsRepository,
     onIllustClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues = PaddingValues(
         start = 8.dp,
         top = 8.dp,
@@ -908,6 +948,7 @@ private fun SearchIllustResultGrid(
                 IllustStaggeredGrid(
                     illusts = filteredIllusts,
                     onIllustClick = onIllustClick,
+                    state = gridState,
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -934,6 +975,7 @@ private fun SearchUserResultList(
     repository: SearchRepository,
     onUserClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
+    listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -953,7 +995,6 @@ private fun SearchUserResultList(
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
 
     LaunchedEffect(state.value) {
         state.value?.onSuccess { response ->
@@ -1112,6 +1153,7 @@ private fun SearchSuggestions(
     onHistoryRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
+    listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(
         start = 0.dp,
         top = 0.dp,
@@ -1120,7 +1162,6 @@ private fun SearchSuggestions(
     ),
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val listState = rememberLazyListState()
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
