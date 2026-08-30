@@ -56,12 +56,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var exitCallback: OnBackPressedCallback? = null
+
     private fun setupBackPressHandler() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+        val callback = object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
-                if (rootComponent.onBack()) {
-                    return
-                }
                 if (!dependencies.settingsRepository.isReturnAgainToExit) {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
@@ -76,7 +75,21 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this@MainActivity, "再次点击返回退出应用", Toast.LENGTH_SHORT).show()
                 }
             }
-        })
+        }
+        exitCallback = callback
+        onBackPressedDispatcher.addCallback(this, callback)
+
+        // 监听 Decompose 页面栈变化：仅在处于一级主页面且开启「再次返回退出」时启用拦截器。
+        // 在二级详情页面时 isEnabled = false，将手势完全放行给 Decompose 的 predictiveBackAnimation。
+        rootComponent.stack.subscribe { updateExitCallbackState() }
+    }
+
+    private fun updateExitCallbackState() {
+        val callback = exitCallback ?: return
+        if (!::rootComponent.isInitialized || !::dependencies.isInitialized) return
+        val childStack = rootComponent.stack.value
+        val isAtRoot = childStack.backStack.isEmpty() && childStack.active.instance is RootComponent.Child.Main
+        callback.isEnabled = isAtRoot && dependencies.settingsRepository.isReturnAgainToExit
     }
 
     override fun onResume() {
@@ -84,6 +97,7 @@ class MainActivity : ComponentActivity() {
         if (::dependencies.isInitialized) {
             applyDisplayMode()
             checkClipboard()
+            updateExitCallbackState()
         }
     }
 
