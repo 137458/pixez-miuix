@@ -24,6 +24,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  *
  * 毛玻璃模糊仅作用于顶部固定高度标头区 (statusBars + 56.dp)，
  * 绝不下潜侵入下方的大标题与列表内容区，彻底消除模糊滤镜边缘对下方分类标题 (SmallTitle) 的切割与光晕块。
+ * 采用 96% 高密度表面磨砂层，将滑入顶栏后方的文字充分柔化散射，杜绝暗色文字形成可见脏块。
  */
 @Composable
 fun FrostedTopAppBar(
@@ -50,7 +51,8 @@ fun FrostedTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.92f,
+                        tintAlpha = 0.96f,
+                        blurRadius = 20.dp,
                     )
                     .drawBehind {
                         if (outlineAlpha > 0.01f) {
@@ -68,7 +70,7 @@ fun FrostedTopAppBar(
         TopAppBar(
             title = title,
             scrollBehavior = scrollBehavior,
-            color = Color.Transparent,
+            color = if (backdrop != null) Color.Transparent else colorScheme.surface,
             navigationIcon = navigationIcon,
             actions = actions,
             modifier = Modifier.fillMaxWidth(),
@@ -104,7 +106,8 @@ fun FrostedSmallTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.92f,
+                        tintAlpha = 0.96f,
+                        blurRadius = 20.dp,
                     )
                     .drawBehind {
                         if (outlineAlpha > 0.01f) {
@@ -122,7 +125,7 @@ fun FrostedSmallTopAppBar(
         SmallTopAppBar(
             title = title,
             scrollBehavior = scrollBehavior,
-            color = Color.Transparent,
+            color = if (backdrop != null) Color.Transparent else colorScheme.surface,
             navigationIcon = navigationIcon,
             actions = actions,
             modifier = Modifier.fillMaxWidth(),
