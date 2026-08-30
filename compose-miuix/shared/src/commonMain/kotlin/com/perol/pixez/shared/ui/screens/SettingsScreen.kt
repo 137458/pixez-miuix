@@ -145,7 +145,6 @@ fun SettingsScreen(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
-    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
@@ -154,7 +153,6 @@ fun SettingsScreen(
             FrostedTopAppBar(
                 title = strings.settingsTitle,
                 scrollBehavior = scrollBehavior,
-                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = MiuixIcons.Back, contentDescription = strings.back)
@@ -174,7 +172,6 @@ fun SettingsScreen(
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
-                    .blurBackdropSource(backdrop)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
 

@@ -26,7 +26,7 @@ fun FrostedTopAppBar(
     scrollBehavior: ScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
-    backdrop: Backdrop? = LocalBackdrop.current,
+    backdrop: Backdrop? = null,
 ) {
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
@@ -92,7 +92,7 @@ fun FrostedSmallTopAppBar(
     scrollBehavior: ScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
-    backdrop: Backdrop? = LocalBackdrop.current,
+    backdrop: Backdrop? = null,
 ) {
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
