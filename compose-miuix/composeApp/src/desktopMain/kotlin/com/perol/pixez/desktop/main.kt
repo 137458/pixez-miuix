@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -17,6 +18,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
@@ -33,7 +35,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 import java.awt.Dimension
 
 /**
- * PixEz 桌面系统托盘图标绘制。
+ * 托盘图标回退绘制（当资源未就绪时使用）。
  */
 private object PixEzTrayPainter : Painter() {
     override val intrinsicSize: Size = Size(32f, 32f)
@@ -45,7 +47,7 @@ private object PixEzTrayPainter : Painter() {
 }
 
 /**
- * Desktop(JVM) 应用入口，集成系统托盘、全局快捷键、鼠标侧键导航、命令行参数处理与网络预热。
+ * Desktop(JVM) 应用入口，集成 Windows 11 Mica 材质、自定义沉浸式无边框标题栏、系统托盘与手机版同款应用图标。
  */
 fun main(args: Array<String>) = application {
     val dependencies = remember {
@@ -69,6 +71,20 @@ fun main(args: Array<String>) = application {
 
     var isWindowVisible by remember { mutableStateOf(true) }
 
+    // 加载手机版同款 App 图标
+    val appIconPainter: Painter? = remember {
+        try {
+            val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
+                ?: PixEzTrayPainter::class.java.getResourceAsStream("/icon.png")
+            if (stream != null) {
+                val bytes = stream.readBytes()
+                loadImageBitmap(bytes.inputStream()).let { BitmapPainter(it) }
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     LaunchedEffect(args) {
         val loginArg = args.firstOrNull { it.contains("pixiv://") || it.contains("code=") }
         if (!loginArg.isNullOrBlank()) {
@@ -81,9 +97,9 @@ fun main(args: Array<String>) = application {
         }
     }
 
-    // 系统托盘集成
+    // 系统托盘集成（使用手机版同款图标）
     Tray(
-        icon = PixEzTrayPainter,
+        icon = appIconPainter ?: PixEzTrayPainter,
         tooltip = "PixEz MIUIX",
         onAction = { isWindowVisible = true },
         menu = {
@@ -99,7 +115,7 @@ fun main(args: Array<String>) = application {
         },
     )
 
-    val windowState = rememberWindowState(size = DpSize(1100.dp, 750.dp))
+    val windowState = rememberWindowState(size = DpSize(1120.dp, 760.dp))
 
     if (isWindowVisible) {
         Window(
@@ -109,6 +125,9 @@ fun main(args: Array<String>) = application {
             },
             state = windowState,
             title = "PixEz",
+            icon = appIconPainter ?: PixEzTrayPainter,
+            undecorated = true,
+            transparent = true,
             onKeyEvent = { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     val isModifier = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
@@ -162,11 +181,22 @@ fun main(args: Array<String>) = application {
                 }
             }
 
-            PixEzApp(
-                dependencies = dependencies,
-                rootComponent = rootComponent,
-            )
+            DesktopWindowScaffold(
+                windowState = windowState,
+                settingsRepository = dependencies.settingsRepository,
+                appIcon = appIconPainter,
+                onCloseRequest = {
+                    dependencies.close()
+                    exitApplication()
+                },
+            ) {
+                PixEzApp(
+                    dependencies = dependencies,
+                    rootComponent = rootComponent,
+                )
+            }
         }
     }
 }
+
 

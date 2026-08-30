@@ -42,6 +42,8 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(projects.shared)
+            implementation(libs.miuix.ui)
+            implementation(libs.napier)
             implementation(libs.decompose)
             implementation(libs.decompose.compose)
         }
@@ -55,6 +57,8 @@ kotlin {
 
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation("net.java.dev.jna:jna:5.14.0")
+            implementation("net.java.dev.jna:jna-platform:5.14.0")
         }
     }
 }
@@ -123,6 +127,12 @@ compose.desktop {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "PixEz"
             packageVersion = "0.9.108"
+
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
+                menu = true
+                shortcut = true
+            }
 
             modules(
                 "java.base",
