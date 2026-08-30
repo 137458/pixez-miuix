@@ -27,7 +27,7 @@ class SettingsBridgeTest {
         assertEquals("ech", repo.oauthNetworkMode)
         assertEquals("home", repo.welcomePageType)
         assertEquals(0, repo.saveMode)
-        assertTrue(repo.useDynamicColor)
+        assertFalse(repo.useDynamicColor)
         assertFalse(repo.isAmoled)
         assertEquals(2, repo.maxRunningTask)
         assertEquals("title:{title}\npainter:{user_name}\nillust id:{illust_id}", repo.copyInfoText)
@@ -47,14 +47,14 @@ class SettingsBridgeTest {
         repo.pictureSource = "i.pximg.net"
         repo.apiNetworkMode = "ech"
         repo.themeMode = 1
-        repo.useDynamicColor = false
+        repo.useDynamicColor = true
         repo.isAmoled = true
 
         assertEquals(2, repo.zoomQuality)
         assertEquals("i.pximg.net", repo.pictureSource)
         assertEquals("ech", repo.apiNetworkMode)
         assertEquals(1, repo.themeMode)
-        assertFalse(repo.useDynamicColor)
+        assertTrue(repo.useDynamicColor)
         assertTrue(repo.isAmoled)
 
         // 验证底层 Preferences 里确实写入了对应的键

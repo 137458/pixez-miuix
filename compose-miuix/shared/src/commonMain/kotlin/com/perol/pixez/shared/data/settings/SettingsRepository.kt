@@ -75,7 +75,7 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.THEME_MODE] = value; notifyChanged() }
 
     var useDynamicColor: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, true)
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, false)
         set(value) { settings[SettingsKeys.USE_DYNAMIC_COLOR] = value; notifyChanged() }
 
     var seedColor: Int?

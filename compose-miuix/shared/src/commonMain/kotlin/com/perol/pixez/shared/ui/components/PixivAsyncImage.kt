@@ -16,6 +16,7 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 
 private val StandardHeaders = NetworkHeaders.Builder()
@@ -43,45 +44,6 @@ fun PixivAsyncImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
     thumbnailUrl: Any? = null,
-) {
-    if (thumbnailUrl != null && thumbnailUrl != model && (thumbnailUrl as? String)?.isNotBlank() == true) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center,
-        ) {
-            // 底层缩略图：未加载高清图前垫底展示，始终与容器尺寸匹配，不抢占主测量锚点
-            PixivAsyncImageInternal(
-                model = thumbnailUrl,
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = contentScale,
-            )
-            // 顶层高清图：撑开容器尺寸，并接入缩略图内存缓存占位，加载成功后平滑覆盖
-            PixivAsyncImageInternal(
-                model = model,
-                thumbnailCacheKey = thumbnailUrl,
-                contentDescription = contentDescription,
-                modifier = Modifier.fillMaxWidth(),
-                contentScale = contentScale,
-            )
-        }
-    } else {
-        PixivAsyncImageInternal(
-            model = model,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale,
-        )
-    }
-}
-
-@Composable
-private fun PixivAsyncImageInternal(
-    model: Any?,
-    contentDescription: String?,
-    modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Fit,
-    thumbnailCacheKey: Any? = null,
     onSuccess: (() -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
@@ -96,29 +58,33 @@ private fun PixivAsyncImageInternal(
         }
     }
 
-    val transformedThumbnailCacheKey = remember(thumbnailCacheKey, settings?.pictureSource, settings?.changeVersion) {
+    val transformedThumbnailCacheKey = remember(thumbnailUrl, settings?.pictureSource, settings?.changeVersion) {
         val pictureSource = settings?.pictureSource
-        if (thumbnailCacheKey is String && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
-            thumbnailCacheKey.replace("://i.pximg.net", "://$pictureSource")
+        if (thumbnailUrl is String && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
+            thumbnailUrl.replace("://i.pximg.net", "://$pictureSource")
         } else {
-            thumbnailCacheKey
+            thumbnailUrl
         }
     }
 
-    val request = remember(transformedModel, transformedThumbnailCacheKey, context) {
+    val request = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context) {
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
             .data(transformedModel)
             .httpHeaders(headers)
             .memoryCacheKey(transformedModel?.toString())
+            .diskCacheKey(transformedModel?.toString())
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .networkCachePolicy(CachePolicy.ENABLED)
             .apply {
                 val thumbKey = transformedThumbnailCacheKey?.toString()
                 if (!thumbKey.isNullOrBlank() && thumbKey != transformedModel?.toString()) {
                     placeholderMemoryCacheKey(thumbKey)
                 }
             }
-            .memoryCachePolicy(CachePolicy.ENABLED)
+            .crossfade(200)
             .build()
     }
 

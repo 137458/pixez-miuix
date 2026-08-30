@@ -58,6 +58,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.mutableFloatStateOf
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -301,9 +306,7 @@ private fun IllustDetailSingleContent(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .widthIn(max = 920.dp)
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .blurBackdropSource(detailBackdrop)
                             .nestedScroll(detailNestedScrollConnection),
                     ) {
@@ -342,8 +345,11 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
-                                    .clickable { fullScreenPageIndex = pageIndex }
                                     .illustDragAndDropSource(illust, pageIndex = pageIndex)
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null,
+                                    ) { fullScreenPageIndex = pageIndex }
 
                                 PixivAsyncImage(
                                     model = pageUrl,
@@ -385,8 +391,11 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
-                                    .clickable { fullScreenPageIndex = 0 }
                                     .illustDragAndDropSource(illust, pageIndex = 0)
+                                    .clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null,
+                                    ) { fullScreenPageIndex = 0 }
 
                                 PixivAsyncImage(
                                     model = singleUrl,
@@ -823,7 +832,6 @@ private fun IllustDetailSingleContent(
             // 2. 顶栏主体内容行（单套恒定按钮与动态平滑标题）
             Row(
                 modifier = Modifier
-                    .widthIn(max = 920.dp)
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .height(56.dp)
@@ -1278,7 +1286,8 @@ private fun IllustDetailSingleContent(
 
 /**
  * 插画全屏/高清缩放预览组件：
- * 支持根据 [SettingsRepository.zoomQuality] 加载对应画质大图，支持多 P 左右滑动翻页与页码指示。
+ * 支持双指平滑手势缩放 (Pinch-to-zoom)、双击放大/复原 (Double-tap-to-zoom)、拖拽平移 (Pan) 以及多 P 左右切页。
+ * 根据 [SettingsRepository.zoomQuality] 加载对应画质大图，优先使用已有内存缓存作为过渡底图。
  */
 @Composable
 private fun IllustFullScreenViewer(
@@ -1293,6 +1302,8 @@ private fun IllustFullScreenViewer(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
         pageCount = { pageCount },
     )
+    var currentPageScale by remember { mutableFloatStateOf(1f) }
+    var showControls by remember { mutableStateOf(true) }
 
     PlatformBackHandler(onBack = onDismiss)
 
@@ -1304,6 +1315,7 @@ private fun IllustFullScreenViewer(
         if (pageCount > 1) {
             HorizontalPager(
                 state = pagerState,
+                userScrollEnabled = currentPageScale <= 1.05f,
                 modifier = Modifier.fillMaxSize(),
             ) { pageIndex ->
                 val page = illust.metaPages[pageIndex]
@@ -1319,24 +1331,18 @@ private fun IllustFullScreenViewer(
                     page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null,
-                            onClick = onDismiss,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    PixivAsyncImage(
-                        model = zoomUrl,
-                        thumbnailUrl = thumbnailUrl,
-                        contentDescription = "${illust.title} ($pageIndex)",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                ZoomableImage(
+                    model = zoomUrl,
+                    thumbnailUrl = thumbnailUrl,
+                    contentDescription = "${illust.title} ($pageIndex)",
+                    onTap = { showControls = !showControls },
+                    onScaleChanged = { scale ->
+                        if (pagerState.currentPage == pageIndex) {
+                            currentPageScale = scale
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         } else {
             val singleZoomUrl = remember(illust, zoomQuality) {
@@ -1351,67 +1357,139 @@ private fun IllustFullScreenViewer(
                 illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null,
-                            onClick = onDismiss,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                PixivAsyncImage(
-                    model = singleZoomUrl,
-                    thumbnailUrl = thumbnailUrl,
-                    contentDescription = illust.title,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            ZoomableImage(
+                model = singleZoomUrl,
+                thumbnailUrl = thumbnailUrl,
+                contentDescription = illust.title,
+                onTap = { showControls = !showControls },
+                onScaleChanged = { scale -> currentPageScale = scale },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
-        // 顶部浮层：返回/关闭按钮与页码指示器
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .align(Alignment.TopCenter),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        // 顶部浮层：返回按钮与页码指示器（带淡入淡出动画）
+        AnimatedVisibility(
+            visible = showControls,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.50f))
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    imageVector = MiuixIcons.Back,
-                    contentDescription = strings.back,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-
-            if (pageCount > 1) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.50f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "${pagerState.currentPage + 1} / $pageCount",
-                        style = MiuixTheme.textStyles.body2,
-                        color = Color.White,
+                    Icon(
+                        imageVector = MiuixIcons.Back,
+                        contentDescription = strings.back,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp),
                     )
+                }
+
+                if (pageCount > 1) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            text = "${pagerState.currentPage + 1} / $pageCount",
+                            style = MiuixTheme.textStyles.body2,
+                            color = Color.White,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * 支持双指手势平滑缩放、双击放大/重置与边界限制拖拽平移的图片组件。
+ */
+@Composable
+private fun ZoomableImage(
+    model: Any?,
+    thumbnailUrl: Any?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    onTap: () -> Unit = {},
+    onScaleChanged: ((Float) -> Unit)? = null,
+) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    Box(
+        modifier = modifier
+            .clipToBounds()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = { tapOffset ->
+                        if (scale > 1.05f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                            onScaleChanged?.invoke(1f)
+                        } else {
+                            scale = 2.5f
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val targetOffset = (center - tapOffset) * 1.5f
+                            val maxOffsetX = (size.width * 1.5f) / 2f
+                            val maxOffsetY = (size.height * 1.5f) / 2f
+                            offset = Offset(
+                                targetOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
+                                targetOffset.y.coerceIn(-maxOffsetY, maxOffsetY),
+                            )
+                            onScaleChanged?.invoke(2.5f)
+                        }
+                    },
+                    onTap = { onTap() },
+                )
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                    scale = newScale
+                    onScaleChanged?.invoke(newScale)
+                    if (newScale > 1.05f) {
+                        val maxOffsetX = (size.width * (newScale - 1f)) / 2f
+                        val maxOffsetY = (size.height * (newScale - 1f)) / 2f
+                        val newOffsetX = (offset.x + pan.x * newScale).coerceIn(-maxOffsetX, maxOffsetX)
+                        val newOffsetY = (offset.y + pan.y * newScale).coerceIn(-maxOffsetY, maxOffsetY)
+                        offset = Offset(newOffsetX, newOffsetY)
+                    } else {
+                        offset = Offset.Zero
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        PixivAsyncImage(
+            model = model,
+            thumbnailUrl = thumbnailUrl,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                },
+        )
     }
 }
 
