@@ -124,6 +124,18 @@ compose.desktop {
             packageName = "PixEz"
             packageVersion = "0.9.108"
 
+            modules(
+                "java.base",
+                "java.desktop",
+                "java.sql",
+                "java.naming",
+                "java.management",
+                "java.net.http",
+                "java.security.jgss",
+                "java.xml",
+                "jdk.unsupported"
+            )
+
             jvmArgs += listOf(
                 "-XX:+UseG1GC",
                 "-XX:+UseStringDeduplication",
