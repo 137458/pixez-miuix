@@ -548,6 +548,8 @@ private fun IllustDetailSingleContent(
                                             html = illust.caption,
                                             onUserClick = onUserClick,
                                             onIllustClick = onIllustClick,
+                                            onIllustSeriesClick = onIllustSeriesClick,
+                                            onTagClick = onTagClick,
                                             style = MiuixTheme.textStyles.body2,
                                         )
                                     }

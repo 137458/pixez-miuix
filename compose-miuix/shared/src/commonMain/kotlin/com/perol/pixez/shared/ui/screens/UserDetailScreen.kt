@@ -46,6 +46,7 @@ import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.FrostedTopAppBar
+import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -290,6 +291,7 @@ private fun UserDetailTabContent(
                 onFollowClick = onFollowClick,
                 onFollowListClick = onFollowListClick,
                 onFollowerListClick = onFollowerListClick,
+                onIllustClick = onIllustClick,
             )
             TabRow(
                 tabs = tabs,
@@ -594,9 +596,9 @@ private fun UserProfileHeader(
     onFollowListClick: () -> Unit,
     onFollowerListClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onIllustClick: (Int) -> Unit = {},
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    var isBioExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -713,17 +715,15 @@ private fun UserProfileHeader(
             }
         }
 
-        // 第三行：个性签名/简介（若存在，可折叠/展开）
+        // 第三行：个性签名/简介（若存在，支持超链接解析与折叠）
         userDetail.user.comment?.takeIf { it.isNotBlank() }?.let { bio ->
-            Text(
-                text = bio,
+            HtmlCaptionText(
+                html = bio,
+                onIllustClick = onIllustClick,
                 style = MiuixTheme.textStyles.footnote2,
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                maxLines = if (isBioExpanded) Int.MAX_VALUE else 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isBioExpanded = !isBioExpanded },
+                collapsible = true,
+                collapsedMaxLines = 2,
             )
         }
     }
