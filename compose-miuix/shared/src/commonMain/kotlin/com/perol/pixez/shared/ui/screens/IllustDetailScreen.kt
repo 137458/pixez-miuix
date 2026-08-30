@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -238,10 +239,12 @@ private fun IllustDetailSingleContent(
 
     val detailBackdrop = rememberBlurBackdrop()
     val listState = rememberLazyListState()
-    val collapseProgress by remember {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val scrollThresholdPx = with(density) { 180.dp.toPx() }
+    val collapseProgress by remember(scrollThresholdPx) {
         derivedStateOf {
             if (listState.firstVisibleItemIndex > 0) 1f
-            else (listState.firstVisibleItemScrollOffset / 280f).coerceIn(0f, 1f)
+            else (listState.firstVisibleItemScrollOffset / scrollThresholdPx).coerceIn(0f, 1f)
         }
     }
 
@@ -760,95 +763,47 @@ private fun IllustDetailSingleContent(
             }
         }
 
-        // 1. 折叠态：随内容滚动平滑淡入的 MIUIX 官方标准 BlurredBar + SmallTopAppBar
-        if (collapseProgress > 0.01f) {
-            BlurredBar(
-                backdrop = detailBackdrop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .graphicsLayer { alpha = collapseProgress },
-            ) {
-                SmallTopAppBar(
-                    title = illust?.title.orEmpty(),
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                                tint = MiuixTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = performBookmark,
-                            enabled = !isBookmarkLoading && illust != null,
-                        ) {
-                            Icon(
-                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                                tint = if (isBookmarked) Color(0xFFFF4D6A) else MiuixTheme.colorScheme.onSurface,
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .graphicsLayer {
-                                        scaleX = bookmarkHeartScale.value
-                                        scaleY = bookmarkHeartScale.value
-                                    },
-                            )
-                        }
-                        IconButton(
-                            onClick = performDownload,
-                            enabled = !isDownloading && illust != null,
-                        ) {
-                            if (isDownloading) {
-                                InfiniteProgressIndicator(
-                                    color = MiuixTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = MiuixIcons.Download,
-                                    contentDescription = strings.download,
-                                    tint = MiuixTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                        if (illust != null) {
-                            IconButton(
-                                onClick = { showMoreMenu = !showMoreMenu },
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.More,
-                                    contentDescription = strings.menuMoreActions,
-                                    tint = MiuixTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                    },
-                    color = if (detailBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // 2. 展开态：大图沉浸式悬浮液态玻璃按钮（移除粗糙的黑色大矩形渐变，仅保留轻巧透气圆形胶囊）
-        if (collapseProgress < 0.99f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .graphicsLayer { alpha = (1f - collapseProgress * 1.5f).coerceIn(0f, 1f) }
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                // 返回按钮（独立液态玻璃圆形胶囊）
-                TooltipBox(
-                    text = strings.back,
-                    modifier = Modifier.align(Alignment.CenterStart),
+        // ── 统一锚点单层顶栏（物理坐标绝对恒定，材质与标题平滑演变，彻底根除跳变与闪烁） ──
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
+        ) {
+            // 1. 底层全宽毛玻璃背景（随滚动进度平滑淡入）
+            if (collapseProgress > 0.01f) {
+                BlurredBar(
+                    backdrop = detailBackdrop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer { alpha = collapseProgress },
                 ) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .height(56.dp),
+                    )
+                }
+            }
+
+            // 2. 顶栏主体内容行（单套恒定按钮与动态平滑标题）
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(56.dp)
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val bubbleAlpha = (1f - collapseProgress * 2f).coerceIn(0f, 1f)
+                val dynamicIconTint = androidx.compose.ui.graphics.lerp(
+                    Color.White,
+                    MiuixTheme.colorScheme.onSurface,
+                    collapseProgress,
+                )
+
+                // ── 返回按钮（物理锚点固定，微气泡背景平滑消退） ──
+                TooltipBox(text = strings.back) {
                     val backInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     val isBackPressed by backInteractionSource.collectIsPressedAsState()
                     val backPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
@@ -864,17 +819,23 @@ private fun IllustDetailSingleContent(
 
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(40.dp)
                             .graphicsLayer {
                                 scaleX = backPressScale.value
                                 scaleY = backPressScale.value
                             }
-                            .liquidGlass(
-                                backdrop = detailBackdrop,
-                                shape = CircleShape,
-                                blurRadius = 18.dp,
-                                tintColor = Color.Black,
-                                tintAlpha = 0.38f,
+                            .then(
+                                if (bubbleAlpha > 0.01f) {
+                                    Modifier.liquidGlass(
+                                        backdrop = detailBackdrop,
+                                        shape = CircleShape,
+                                        blurRadius = 16.dp,
+                                        tintColor = Color.Black,
+                                        tintAlpha = 0.38f * bubbleAlpha,
+                                    )
+                                } else {
+                                    Modifier
+                                }
                             )
                             .clip(CircleShape)
                             .clickable(
@@ -887,15 +848,34 @@ private fun IllustDetailSingleContent(
                         Icon(
                             imageVector = MiuixIcons.Back,
                             contentDescription = strings.back,
-                            tint = Color.White,
+                            tint = dynamicIconTint,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
 
-                // 右侧三个独立悬浮操作按钮（收藏、下载、更多）
+                // ── 中间标题区（随上滑折叠平滑淡入作品标题） ──
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 10.dp)
+                        .graphicsLayer {
+                            alpha = ((collapseProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                        },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = illust?.title.orEmpty(),
+                        style = MiuixTheme.textStyles.title3,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                }
+
+                // ── 右侧操作按钮组（收藏、下载、更多） ──
                 Row(
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // 1. 收藏按钮
@@ -915,17 +895,23 @@ private fun IllustDetailSingleContent(
 
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(40.dp)
                                 .graphicsLayer {
                                     scaleX = favPressScale.value
                                     scaleY = favPressScale.value
                                 }
-                                .liquidGlass(
-                                    backdrop = detailBackdrop,
-                                    shape = CircleShape,
-                                    blurRadius = 18.dp,
-                                    tintColor = Color.Black,
-                                    tintAlpha = 0.38f,
+                                .then(
+                                    if (bubbleAlpha > 0.01f) {
+                                        Modifier.liquidGlass(
+                                            backdrop = detailBackdrop,
+                                            shape = CircleShape,
+                                            blurRadius = 16.dp,
+                                            tintColor = Color.Black,
+                                            tintAlpha = 0.38f * bubbleAlpha,
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                                 .clip(CircleShape)
                                 .clickable(
@@ -939,7 +925,7 @@ private fun IllustDetailSingleContent(
                             Icon(
                                 imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
                                 contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                                tint = if (isBookmarked) Color(0xFFFF4D6A) else Color.White,
+                                tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
                                 modifier = Modifier
                                     .size(22.dp)
                                     .graphicsLayer {
@@ -967,17 +953,23 @@ private fun IllustDetailSingleContent(
 
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(40.dp)
                                 .graphicsLayer {
                                     scaleX = dlPressScale.value
                                     scaleY = dlPressScale.value
                                 }
-                                .liquidGlass(
-                                    backdrop = detailBackdrop,
-                                    shape = CircleShape,
-                                    blurRadius = 18.dp,
-                                    tintColor = Color.Black,
-                                    tintAlpha = 0.38f,
+                                .then(
+                                    if (bubbleAlpha > 0.01f) {
+                                        Modifier.liquidGlass(
+                                            backdrop = detailBackdrop,
+                                            shape = CircleShape,
+                                            blurRadius = 16.dp,
+                                            tintColor = Color.Black,
+                                            tintAlpha = 0.38f * bubbleAlpha,
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                                 .clip(CircleShape)
                                 .clickable(
@@ -990,17 +982,15 @@ private fun IllustDetailSingleContent(
                         ) {
                             if (isDownloading) {
                                 InfiniteProgressIndicator(
-                                    color = Color.White,
+                                    color = if (collapseProgress > 0.5f) MiuixTheme.colorScheme.primary else Color.White,
                                     modifier = Modifier.size(20.dp),
                                 )
                             } else {
                                 Icon(
                                     imageVector = MiuixIcons.Download,
                                     contentDescription = strings.download,
-                                    tint = Color.White,
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .offset(x = (-0.3).dp, y = (-1).dp),
+                                    tint = dynamicIconTint,
+                                    modifier = Modifier.size(22.dp),
                                 )
                             }
                         }
@@ -1024,17 +1014,23 @@ private fun IllustDetailSingleContent(
 
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .size(40.dp)
                                     .graphicsLayer {
                                         scaleX = morePressScale.value
                                         scaleY = morePressScale.value
                                     }
-                                    .liquidGlass(
-                                        backdrop = detailBackdrop,
-                                        shape = CircleShape,
-                                        blurRadius = 18.dp,
-                                        tintColor = Color.Black,
-                                        tintAlpha = 0.38f,
+                                    .then(
+                                        if (bubbleAlpha > 0.01f) {
+                                            Modifier.liquidGlass(
+                                                backdrop = detailBackdrop,
+                                                shape = CircleShape,
+                                                blurRadius = 16.dp,
+                                                tintColor = Color.Black,
+                                                tintAlpha = 0.38f * bubbleAlpha,
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
                                     )
                                     .clip(CircleShape)
                                     .clickable(
@@ -1047,7 +1043,7 @@ private fun IllustDetailSingleContent(
                                 Icon(
                                     imageVector = MiuixIcons.More,
                                     contentDescription = strings.menuMoreActions,
-                                    tint = Color.White,
+                                    tint = dynamicIconTint,
                                     modifier = Modifier.size(22.dp),
                                 )
                             }

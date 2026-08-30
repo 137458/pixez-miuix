@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -388,12 +389,22 @@ private fun SpotlightCategorySelector(
             val itemBackground = if (isSelected) {
                 MiuixTheme.colorScheme.primary
             } else {
-                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
+            }
+            val itemBorderColor = if (isSelected) {
+                Color.Transparent
+            } else {
+                MiuixTheme.colorScheme.outline.copy(alpha = 0.15f)
             }
             Box(
                 modifier = Modifier
                     .clip(pillShape)
                     .background(itemBackground)
+                    .squircleBorder(
+                        width = 0.5.dp,
+                        color = itemBorderColor,
+                        cornerRadius = 16.dp,
+                    )
                     .clickable {
                         if (!isSelected) {
                             hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
@@ -405,8 +416,8 @@ private fun SpotlightCategorySelector(
                 Text(
                     text = category.labelFor(strings),
                     style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
                 )
             }
         }

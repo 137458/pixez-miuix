@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.luminance
+import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -383,13 +384,23 @@ private fun RestrictSelector(
             val itemBackground = if (isSelected) {
                 MiuixTheme.colorScheme.primary
             } else {
-                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
+            }
+            val itemBorderColor = if (isSelected) {
+                Color.Transparent
+            } else {
+                MiuixTheme.colorScheme.outline.copy(alpha = 0.15f)
             }
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(pillShape)
                     .background(itemBackground)
+                    .squircleBorder(
+                        width = 0.5.dp,
+                        color = itemBorderColor,
+                        cornerRadius = 16.dp,
+                    )
                     .clickable {
                         if (!isSelected) {
                             hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
@@ -402,8 +413,8 @@ private fun RestrictSelector(
                 Text(
                     text = label,
                     style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
-                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
                 )
             }
         }

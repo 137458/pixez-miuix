@@ -17,6 +17,12 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -85,7 +91,7 @@ import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -181,6 +187,21 @@ fun SearchScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
+    val coroutineScope = rememberCoroutineScope()
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val collapseThresholdPx = with(density) { 36.dp.toPx() }
+    var isSearchManuallyExpanded by remember { mutableStateOf(false) }
+    val isSearchCollapsed by remember(collapseThresholdPx) {
+        derivedStateOf {
+            !isSearchManuallyExpanded && (-scrollBehavior.state.contentOffset > collapseThresholdPx)
+        }
+    }
+    LaunchedEffect(scrollBehavior.state.contentOffset) {
+        if (-scrollBehavior.state.contentOffset <= collapseThresholdPx) {
+            isSearchManuallyExpanded = false
+        }
+    }
 
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val bottomBarVisibility = LocalBottomBarVisibility.current
@@ -197,105 +218,173 @@ fun SearchScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TopAppBar(
-                        title = strings.tabSearch,
+                        title = if (isSearchCollapsed && query.isNotBlank()) query else strings.tabSearch,
                         scrollBehavior = scrollBehavior,
                         color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    )
-                    SearchBar(
-                        inputField = {
-                            InputField(
-                                query = query,
-                                onQueryChange = {
-                                    query = it
-                                    if (it.isBlank()) isSearching = false
-                                },
-                                onSearch = {
-                                    if (query.isNotBlank()) {
-                                        isSearching = true
-                                        // 将新搜索词加入历史（去重，最多保留 20 条）。
-                                        updateHistory(
-                                            (listOf(query) + searchHistory.filter { it != query }).take(20)
-                                        )
-                                    }
-                                },
-                                expanded = false,
-                                onExpandedChange = { },
-                                label = strings.searchPlaceholder,
-                            )
+                        navigationIcon = {
+                            if (isSearching) {
+                                IconButton(
+                                    onClick = {
+                                        isSearching = false
+                                        query = ""
+                                        isSearchManuallyExpanded = false
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Back,
+                                        contentDescription = strings.back,
+                                    )
+                                }
+                            }
                         },
-                        expanded = false,
-                        onExpandedChange = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                    ) {
-                        // SearchBar 展开状态下的内容区域，M4 暂空。
-                    }
+                        actions = {
+                            if (isSearchCollapsed) {
+                                IconButton(
+                                    onClick = {
+                                        isSearchManuallyExpanded = true
+                                        coroutineScope.launch {
+                                            scrollBehavior.state.contentOffset = 0f
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Search,
+                                        contentDescription = strings.tabSearch,
+                                    )
+                                }
+                            }
+                        },
+                    )
 
-                    if (isSearching && query.isNotBlank()) {
-                        // 搜索类型切换：作品 / 画师
-                        TabRow(
-                            tabs = searchTypes,
-                            selectedTabIndex = searchTypeIndex,
-                            onTabSelected = { searchTypeIndex = it },
+                    AnimatedVisibility(
+                        visible = !isSearchCollapsed,
+                        enter = expandVertically(
+                            animationSpec = spring(
+                                dampingRatio = 0.8f,
+                                stiffness = 500f,
+                            ),
+                        ) + fadeIn(),
+                        exit = shrinkVertically(
+                            animationSpec = spring(
+                                dampingRatio = 0.8f,
+                                stiffness = 500f,
+                            ),
+                        ) + fadeOut(),
+                    ) {
+                        SearchBar(
+                            inputField = {
+                                InputField(
+                                    query = query,
+                                    onQueryChange = {
+                                        query = it
+                                        if (it.isBlank()) isSearching = false
+                                    },
+                                    onSearch = {
+                                        if (query.isNotBlank()) {
+                                            isSearching = true
+                                            // 将新搜索词加入历史（去重，最多保留 20 条）。
+                                            updateHistory(
+                                                (listOf(query) + searchHistory.filter { it != query }).take(20)
+                                            )
+                                        }
+                                    },
+                                    expanded = false,
+                                    onExpandedChange = { },
+                                    label = strings.searchPlaceholder,
+                                )
+                            },
+                            expanded = false,
+                            onExpandedChange = { },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp),
-                        )
+                        ) {
+                            // SearchBar 展开状态下的内容区域，M4 暂空。
+                        }
+                    }
 
-                        if (searchTypeIndex == 0) {
-                            val sortLabel = when (sort) {
-                                "date_asc" -> strings.searchSortOldest
-                                "popular_desc" -> strings.searchSortPopular
-                                else -> strings.searchSortLatest
-                            }
-                            val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
-                                startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
+                    if (isSearching && query.isNotBlank()) {
+                        AnimatedVisibility(
+                            visible = !isSearchCollapsed,
+                            enter = expandVertically(
+                                animationSpec = spring(
+                                    dampingRatio = 0.8f,
+                                    stiffness = 500f,
+                                ),
+                            ) + fadeIn(),
+                            exit = shrinkVertically(
+                                animationSpec = spring(
+                                    dampingRatio = 0.8f,
+                                    stiffness = 500f,
+                                ),
+                            ) + fadeOut(),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // 搜索类型切换：作品 / 画师
+                                TabRow(
+                                    tabs = searchTypes,
+                                    selectedTabIndex = searchTypeIndex,
+                                    onTabSelected = { searchTypeIndex = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                )
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                FilterChipButton(
-                                    text = strings.searchSortLabel.format(sortLabel),
-                                    isSelected = sort != "date_desc",
-                                    onClick = {
-                                        sort = when (sort) {
-                                            "date_desc" -> "popular_desc"
-                                            "popular_desc" -> "date_asc"
-                                            else -> "date_desc"
+                                if (searchTypeIndex == 0) {
+                                    val sortLabel = when (sort) {
+                                        "date_asc" -> strings.searchSortOldest
+                                        "popular_desc" -> strings.searchSortPopular
+                                        else -> strings.searchSortLatest
+                                    }
+                                    val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
+                                        startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        FilterChipButton(
+                                            text = strings.searchSortLabel.format(sortLabel),
+                                            isSelected = sort != "date_desc",
+                                            onClick = {
+                                                sort = when (sort) {
+                                                    "date_desc" -> "popular_desc"
+                                                    "popular_desc" -> "date_asc"
+                                                    else -> "date_desc"
+                                                }
+                                            },
+                                        )
+
+                                        FilterChipButton(
+                                            text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
+                                            isSelected = searchAiType != 0,
+                                            onClick = {
+                                                searchAiType = if (searchAiType == 0) 1 else 0
+                                            },
+                                        )
+
+                                        if (bookmarkThreshold > 0) {
+                                            FilterChipButton(
+                                                text = "${bookmarkThreshold}+ ✕",
+                                                isSelected = true,
+                                                onClick = {
+                                                    bookmarkThreshold = 0
+                                                },
+                                            )
                                         }
-                                    },
-                                )
 
-                                FilterChipButton(
-                                    text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
-                                    isSelected = searchAiType != 0,
-                                    onClick = {
-                                        searchAiType = if (searchAiType == 0) 1 else 0
-                                    },
-                                )
+                                        Spacer(modifier = Modifier.weight(1f))
 
-                                if (bookmarkThreshold > 0) {
-                                    FilterChipButton(
-                                        text = "${bookmarkThreshold}+ ✕",
-                                        isSelected = true,
-                                        onClick = {
-                                            bookmarkThreshold = 0
-                                        },
-                                    )
+                                        FilterChipButton(
+                                            text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
+                                            isSelected = hasActiveFilters,
+                                            onClick = { showFilterSheet = true },
+                                        )
+                                    }
                                 }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                FilterChipButton(
-                                    text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
-                                    isSelected = hasActiveFilters,
-                                    onClick = { showFilterSheet = true },
-                                )
                             }
                         }
                     }

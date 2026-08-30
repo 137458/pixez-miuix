@@ -350,21 +350,13 @@ private fun RankingModeSelector(
             val itemBackground = if (isSelected) {
                 MiuixTheme.colorScheme.primary
             } else {
-                if (isDark) {
-                    Color.White.copy(alpha = 0.08f)
-                } else {
-                    Color.Black.copy(alpha = 0.05f)
-                }
+                MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f)
             }
 
             val itemBorderColor = if (isSelected) {
                 Color.Transparent
             } else {
-                if (isDark) {
-                    Color.White.copy(alpha = 0.10f)
-                } else {
-                    Color.Black.copy(alpha = 0.06f)
-                }
+                MiuixTheme.colorScheme.outline.copy(alpha = 0.15f)
             }
 
             Box(
@@ -396,11 +388,11 @@ private fun RankingModeSelector(
                 Text(
                     text = mode.label(strings),
                     style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
+                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
                     color = if (isSelected) {
                         Color.White
                     } else {
-                        MiuixTheme.colorScheme.onSurfaceVariantSummary
+                        MiuixTheme.colorScheme.onSurface
                     },
                 )
             }
