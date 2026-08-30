@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,6 +41,9 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.UpdateDialog
+import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.effect.BgEffectBackground
 import com.perol.pixez.shared.ui.effect.isRuntimeShaderSupported
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -144,28 +148,41 @@ fun UpdateSettingScreen(
     val density = LocalDensity.current
     var logoHeightDp by remember { mutableStateOf(240.dp) }
 
+    val backdrop = rememberBlurBackdrop()
+    val colorScheme = MiuixTheme.colorScheme
+
     Scaffold(
         topBar = {
-            val barColor = if (scrollProgress == 1f) MiuixTheme.colorScheme.surface else Color.Transparent
-            val titleColor = MiuixTheme.colorScheme.onSurface.copy(
+            val barColor = if (backdrop != null) Color.Transparent else colorScheme.surface
+            val titleColor = colorScheme.onSurface.copy(
                 alpha = ((scrollProgress - 0.35f) / 0.65f).coerceIn(0f, 1f),
             )
-            SmallTopAppBar(
-                title = strings.settingUpdate,
+            BlurredBar(
+                backdrop = backdrop,
                 scrollBehavior = topAppBarScrollBehavior,
-                color = barColor,
-                titleColor = titleColor,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                        )
-                    }
-                },
-            )
+            ) {
+                SmallTopAppBar(
+                    title = strings.settingUpdate,
+                    scrollBehavior = topAppBarScrollBehavior,
+                    color = barColor,
+                    titleColor = titleColor,
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                            )
+                        }
+                    },
+                )
+            }
         },
     ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blurBackdropSource(backdrop),
+        ) {
         BgEffectBackground(
             dynamicBackground = isRuntimeShaderSupported(),
             isOs3Effect = isOs3Effect,
@@ -265,7 +282,9 @@ fun UpdateSettingScreen(
             // ── 滚动内容列表 ──
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     bottom = innerPadding.calculateBottomPadding() + 24.dp,
@@ -493,6 +512,7 @@ fun UpdateSettingScreen(
                     }
                 }
             }
+        }
         }
 
         // 官方 Miuix 风格更新弹窗

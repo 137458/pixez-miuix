@@ -77,6 +77,9 @@ Scaffold(
 - [x] 3.3 **批次 3：用户、插画详情与辅助功能页面 (17 个页面)**
   - `AboutScreen.kt`, `AccountEditScreen.kt`, `LoginScreen.kt`, `BookTagScreen.kt`, `DownloadHistoryScreen.kt`, `DownloadTaskScreen.kt`, `GuideScreen.kt`, `IllustSeriesScreen.kt`, `RecomUserScreen.kt`, `RelatedIllustsScreen.kt`, `ShieldScreen.kt`, `ThanksScreen.kt`, `UserFollowListScreen.kt`, `UserFollowerListScreen.kt`, `IllustDetailScreen.kt`, `SearchScreen.kt` 等剩余页面。
   - **审查**：编译验证与语法检查。
+- [x] 3.4 **批次 4：遗留页面补齐 (2 个页面)**
+  - `CommentsScreen.kt`, `UpdateSettingScreen.kt` — 补充接入 `BlurredBar` + 原生 `TopAppBar`，使用 `rememberBlurBackdrop()` 与 `blurBackdropSource`，并移除旧 import。
+  - **审查**：Desktop/Android 三端编译验证与语法检查。
 
 ### 步骤 4：统一底栏视觉规范与废弃清理
 - [x] 4.1 审查 `MainBottomBar.kt:89`，将其磨砂与颜色方案与 `BlurredBar` 保持体系化一致。
