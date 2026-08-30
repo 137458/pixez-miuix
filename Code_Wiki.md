@@ -138,7 +138,7 @@ compose-miuix/
                 ├── effect/                    # 液态玻璃与动态着色器
                 ├── i18n/                      # 多语言国际化体系
                 ├── navigation/                # 路由导航定义
-                ├── screens/                   # 全部 46 个业务界面
+                ├── screens/                   # 全部 41 个业务界面
                 ├── theme/                     # MIUIX 主题配置
                 └── utils/                     # 挂起与协程辅助工具
 ```
@@ -149,6 +149,13 @@ compose-miuix/
 
 ### 4.1 UI 表现层 (UI Layer)
 - **`screens/`**：包含首页推荐（`HelloScreen`）、关注动态（`NewScreen`）、搜索（`SearchScreen`）、排行榜（`RankingScreen`）、插画详情（`IllustDetailScreen`）、画师主页（`UserDetailScreen`）等完整业务页。
+- **设置架构 (Settings Architecture)**：
+  - `SettingsScreen`：主设置中枢，统一聚合 5 大高内聚业务分组（账号、界面、画质保存、浏览交互、过滤屏蔽、系统数据），精简入口层级。
+  - `ShieldScreen`（统一过滤与屏蔽中心）：集中整合分级过滤（`hIsNotAllow`）、敏感内容模糊遮罩（`nsfwMask`）、AI 生成内容控制与标识（`banAIIllust`、`feedAIBadge`、官方 AI 设置）及多重本地黑名单库（标签、画师、作品）。
+  - `DownloadSettingScreen`（下载与联动中心）：集中管理保存目录、命名格式及全部 5 项收藏与保存双向联动逻辑（`defaultPrivateLike`、`autoTagWhenStar`、`followAfterStar`、`saveAfterStar`、`starAfterSave`）。
+  - `QualitySettingScreen`（画质中心）：独立管理列表缩略图、插画详情原图与漫画阅读画质档位。
+  - `LayoutSettingScreen`（布局中心）：管理自适应多列阈值、悬浮底栏开关与 Android 屏幕高刷新率模式切换。
+  - `InteractionSettingScreen`（交互中心）：管理双击返回退出与手势滑动切换作品。
 - **`components/`**：
   - `IllustStaggeredGrid`：具备动态多列、触底预加载、加载指示器与错误重试的全功能插画瀑布流。
   - `FloatingBottomBar`：集成 Liquid Glass 模糊滤镜、弹性拖拽手势与大屏居中限制的悬浮底栏。

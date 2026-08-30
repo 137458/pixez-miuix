@@ -170,6 +170,18 @@
   }
   ```
 
+### 2.6 设置项与偏好组件规范 (Preferences & Settings Architecture)
+
+- **原生偏好组件选型**：
+  - **开关项**：统一使用 `SwitchPreference`，要求标题清晰，并提供随开启/关闭状态切换的语义化 `summaryOn` / `summaryOff` 文案。
+  - **二级页面与详情跳转**：统一使用 `ArrowPreference`。
+  - **连续数值或断点调节**：统一使用 `SliderPreference`。
+  - **单选枚举切换**：优先使用 `OverlayDropdownPreference` 或基于 `OverlayDialog` + `CheckIndicator` 的单选列表。
+  - **操作触发与外部跳转**：使用 `BasicComponent`。
+- **架构内聚与反碎片化准则**：
+  - **严禁碎片化孤岛**：严禁仅为 1~2 个开关开辟独立的二级设置页面。
+  - **领域聚合归类**：强相关联的业务开关（如敏感内容过滤与黑名单、收藏与下载联动）必须内聚收敛在同一个设置子页面中，通过 `SmallTitle` + `Card` 进行清晰的领域分组。
+
 ---
 
 ## 3. 视觉动效与高级材质标准
