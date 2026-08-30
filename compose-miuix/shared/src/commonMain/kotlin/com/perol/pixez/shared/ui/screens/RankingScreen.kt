@@ -195,71 +195,77 @@ fun RankingScreen(
             )
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
-            RankingModeSelector(
-                selectedMode = selectedMode,
-                onModeSelected = {
-                    selectedMode = it
-                    retryCount = 0
-                },
-            )
-
-            RankingDateInput(
-                date = dateInput,
-                onDateChange = { dateInput = it },
-                onClear = { dateInput = "" },
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-
-            val result = state.value
-            when {
-                result == null -> LoadingPlaceholder(
-                    modifier = Modifier.weight(1f),
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
+                RankingModeSelector(
+                    selectedMode = selectedMode,
+                    onModeSelected = {
+                        selectedMode = it
+                        retryCount = 0
+                    },
                 )
-                result.isSuccess -> {
-                    if (illusts.isEmpty()) {
-                        EmptyPlaceholder(
-                            message = strings.rankingEmpty,
-                            modifier = Modifier.weight(1f),
-                        )
-                    } else {
-                        PullToRefresh(
-                            isRefreshing = isManualRefreshing,
-                            onRefresh = triggerManualRefresh,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            IllustStaggeredGrid(
-                                illusts = illusts,
-                                onIllustClick = onIllustClick,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .layerBackdrop(backdrop)
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = PaddingValues(
-                                    start = 8.dp,
-                                    top = 8.dp,
-                                    end = 8.dp,
-                                    bottom = 100.dp,
-                                ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
-                                onLoadMore = ::loadMore,
+
+                RankingDateInput(
+                    date = dateInput,
+                    onDateChange = { dateInput = it },
+                    onClear = { dateInput = "" },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+
+                val result = state.value
+                when {
+                    result == null -> LoadingPlaceholder(
+                        modifier = Modifier.weight(1f),
+                    )
+                    result.isSuccess -> {
+                        if (illusts.isEmpty()) {
+                            EmptyPlaceholder(
+                                message = strings.rankingEmpty,
+                                modifier = Modifier.weight(1f),
                             )
+                        } else {
+                            PullToRefresh(
+                                isRefreshing = isManualRefreshing,
+                                onRefresh = triggerManualRefresh,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                IllustStaggeredGrid(
+                                    illusts = illusts,
+                                    onIllustClick = onIllustClick,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = PaddingValues(
+                                        start = 8.dp,
+                                        top = 8.dp,
+                                        end = 8.dp,
+                                        bottom = 100.dp,
+                                    ),
+                                    hasMore = nextUrl != null,
+                                    isLoadingMore = isLoadingMore,
+                                    loadMoreError = loadMoreError,
+                                    onLoadMore = ::loadMore,
+                                )
+                            }
                         }
                     }
+                    else -> ErrorPlaceholder(
+                        error = result.exceptionOrNull(),
+                        onRetry = { triggerManualRefresh() },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier.weight(1f),
-                )
             }
         }
     }

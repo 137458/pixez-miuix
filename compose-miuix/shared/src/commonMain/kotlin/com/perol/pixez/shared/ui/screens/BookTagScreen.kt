@@ -42,10 +42,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
- * 收藏标签页：管理本地收藏标签列表，点击标签可跳转搜索。
+ * 收藏标签管理页：展示用户收藏的标签列表，支持添加、删除与点击搜索。
  *
  * @param settingsRepository 设置仓库，用于读写 `book_tag_list`。
  * @param onBack 返回上一级页面。
@@ -86,6 +88,7 @@ fun BookTagScreen(
             FrostedTopAppBar(
                 title = strings.settingBookTags,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -109,7 +112,10 @@ fun BookTagScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

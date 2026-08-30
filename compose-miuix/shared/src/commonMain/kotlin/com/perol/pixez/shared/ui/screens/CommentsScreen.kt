@@ -2,6 +2,8 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.FrostedTopAppBar
 
+import androidx.compose.foundation.background
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +79,7 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.emoji_304
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -188,6 +191,7 @@ fun CommentsScreen(
             FrostedTopAppBar(
                 title = strings.commentsTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -228,9 +232,10 @@ fun CommentsScreen(
                         }.onSuccess {
                             inputText = ""
                             replyTarget = null
+                            // 重新刷新评论列表以显示最新评论
                             triggerManualRefresh()
                         }.onFailure { e ->
-                            sendError = e.message ?: "${strings.commentsSend}${strings.loadFailed}"
+                            sendError = e.message ?: "发表评论失败"
                         }
                         isSending = false
                     }
@@ -239,33 +244,38 @@ fun CommentsScreen(
             )
         },
     ) { paddingValues ->
-        val result = state.value
-        when {
-            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            result.isSuccess -> {
-                if (comments.isEmpty()) {
-                    EmptyPlaceholder(
-                        message = strings.noComments,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    )
-                } else {
-                    PullToRefresh(
-                        isRefreshing = isManualRefreshing,
-                        onRefresh = triggerManualRefresh,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = paddingValues,
-                            ) {
-                                items(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                result.isSuccess -> {
+                    if (comments.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = strings.noComments,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = paddingValues,
+                                ) {
+                                    items(
                                     items = comments,
                                     key = { it.id ?: it.hashCode() },
                                     contentType = { "comment_item" },
@@ -330,6 +340,7 @@ fun CommentsScreen(
             )
         }
     }
+}
 }
 
 

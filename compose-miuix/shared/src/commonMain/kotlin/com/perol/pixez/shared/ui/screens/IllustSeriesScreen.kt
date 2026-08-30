@@ -36,6 +36,10 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -150,6 +154,7 @@ fun IllustSeriesScreen(
             FrostedTopAppBar(
                 title = seriesTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -169,54 +174,61 @@ fun IllustSeriesScreen(
             )
         },
     ) { paddingValues ->
-        val result = state.value
-        when {
-            result == null -> LoadingPlaceholder(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            )
-            result.isSuccess -> {
-                if (illusts.isEmpty()) {
-                    EmptyPlaceholder(
-                        message = strings.seriesEmpty,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    )
-                } else {
-                    PullToRefresh(
-                        isRefreshing = isManualRefreshing,
-                        onRefresh = triggerManualRefresh,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        IllustStaggeredGrid(
-                            illusts = illusts,
-                            onIllustClick = onIllustClick,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+                result.isSuccess -> {
+                    if (illusts.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = strings.seriesEmpty,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                            contentPadding = PaddingValues(
-                                start = 8.dp,
-                                top = paddingValues.calculateTopPadding() + 8.dp,
-                                end = 8.dp,
-                                bottom = 100.dp,
-                            ),
-                            hasMore = nextUrl != null,
-                            isLoadingMore = isLoadingMore,
-                            loadMoreError = loadMoreError,
-                            onLoadMore = ::loadMore,
+                                .padding(paddingValues),
                         )
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            IllustStaggeredGrid(
+                                illusts = illusts,
+                                onIllustClick = onIllustClick,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = PaddingValues(
+                                    start = 8.dp,
+                                    top = paddingValues.calculateTopPadding() + 8.dp,
+                                    end = 8.dp,
+                                    bottom = 100.dp,
+                                ),
+                                hasMore = nextUrl != null,
+                                isLoadingMore = isLoadingMore,
+                                loadMoreError = loadMoreError,
+                                onLoadMore = ::loadMore,
+                            )
+                        }
                     }
                 }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
             }
-            else -> ErrorPlaceholder(
-                error = result.exceptionOrNull(),
-                onRetry = { triggerManualRefresh() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            )
         }
     }
 }

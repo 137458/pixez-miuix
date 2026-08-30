@@ -41,6 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -94,6 +96,7 @@ fun CopyTextSettingScreen(
             FrostedTopAppBar(
                 title = strings.copyTextFormatTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -134,7 +137,10 @@ fun CopyTextSettingScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

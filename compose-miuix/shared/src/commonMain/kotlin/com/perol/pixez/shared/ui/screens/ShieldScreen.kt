@@ -54,7 +54,10 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
  * 删除目标：标签、画师或作品。
@@ -91,7 +94,6 @@ fun ShieldScreen(
     var banTags by remember { mutableStateOf<List<BanRepository.BanTag>>(emptyList()) }
     var banUsers by remember { mutableStateOf<List<BanRepository.BanUser>>(emptyList()) }
     var banIllusts by remember { mutableStateOf<List<BanRepository.BanIllust>>(emptyList()) }
-
     // 初始加载态与分组操作加载态。
     var isLoading by remember { mutableStateOf(false) }
     var isAddingTag by remember { mutableStateOf(false) }
@@ -101,24 +103,22 @@ fun ShieldScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<DeleteTarget?>(null) }
 
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 统一的 Toast 提示文本。
+    var toastMessage by remember { mutableStateOf<String?>(null) }
 
-    // 提示信息。
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val strings = LocalStrings.current
 
     /**
-     * 同时加载标签、画师、作品三类屏蔽数据，并按名称字典序排序。
+     * 加载全量屏蔽数据（标签、画师、作品）。
      */
     fun loadAll() {
         coroutineScope.launch {
             isLoading = true
-            // 当前处于协程 launch 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
             suspendRunCatchingNonCancel {
-                Triple(
-                    banRepository.getAllBanTags(),
-                    banRepository.getAllBanUsers(),
-                    banRepository.getAllBanIllusts(),
-                )
+                val tags = banRepository.getAllBanTags()
+                val users = banRepository.getAllBanUsers()
+                val illusts = banRepository.getAllBanIllusts()
+                Triple(tags, users, illusts)
             }.onSuccess { (tags, users, illusts) ->
                 banTags = tags.sortedBy { it.name.lowercase() }
                 banUsers = users.sortedBy { it.name.lowercase() }
@@ -145,6 +145,7 @@ fun ShieldScreen(
             FrostedTopAppBar(
                 title = strings.settingShield,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -157,7 +158,10 @@ fun ShieldScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

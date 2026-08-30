@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -259,75 +261,81 @@ fun NewScreen(
             )
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
-            when (isLoggedIn) {
-                false -> {
-                    EmptyPlaceholder(
-                        message = strings.loginNewNeedLogin,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
+                when (isLoggedIn) {
+                    false -> {
+                        EmptyPlaceholder(
+                            message = strings.loginNewNeedLogin,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
 
-                null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                    null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
 
-                true -> {
-                    // 登录后显示筛选器与列表。
-                    RestrictSelector(
-                        options = restrictOptions.map { it.first },
-                        selectedIndex = selectedRestrictIndex,
-                        onSelect = { selectedRestrictIndex = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    true -> {
+                        // 登录后显示筛选器与列表。
+                        RestrictSelector(
+                            options = restrictOptions.map { it.first },
+                            selectedIndex = selectedRestrictIndex,
+                            onSelect = { selectedRestrictIndex = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
 
-                    val result = state.value
-                    when {
-                        result == null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
-                        result.isSuccess -> {
-                            if (illusts.isEmpty()) {
-                                EmptyPlaceholder(
-                                    message = strings.loginNewEmpty,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                PullToRefresh(
-                                    isRefreshing = isManualRefreshing,
-                                    onRefresh = triggerManualRefresh,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    IllustStaggeredGrid(
-                                        illusts = illusts,
-                                        state = gridState,
-                                        onIllustClick = onIllustClick,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .layerBackdrop(backdrop)
-                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                        contentPadding = PaddingValues(
-                                            start = 8.dp,
-                                            top = 8.dp,
-                                            end = 8.dp,
-                                            bottom = 100.dp,
-                                        ),
-                                        hasMore = nextUrl != null,
-                                        isLoadingMore = isLoadingMore,
-                                        loadMoreError = loadMoreError,
-                                        onLoadMore = ::loadMore,
+                        val result = state.value
+                        when {
+                            result == null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
+                            result.isSuccess -> {
+                                if (illusts.isEmpty()) {
+                                    EmptyPlaceholder(
+                                        message = strings.loginNewEmpty,
+                                        modifier = Modifier.weight(1f),
                                     )
+                                } else {
+                                    PullToRefresh(
+                                        isRefreshing = isManualRefreshing,
+                                        onRefresh = triggerManualRefresh,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        IllustStaggeredGrid(
+                                            illusts = illusts,
+                                            state = gridState,
+                                            onIllustClick = onIllustClick,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                            contentPadding = PaddingValues(
+                                                start = 8.dp,
+                                                top = 8.dp,
+                                                end = 8.dp,
+                                                bottom = 100.dp,
+                                            ),
+                                            hasMore = nextUrl != null,
+                                            isLoadingMore = isLoadingMore,
+                                            loadMoreError = loadMoreError,
+                                            onLoadMore = ::loadMore,
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        else -> ErrorPlaceholder(
-                            error = result.exceptionOrNull(),
-                            onRetry = { triggerManualRefresh() },
-                            modifier = Modifier.weight(1f),
-                        )
+                            else -> ErrorPlaceholder(
+                                error = result.exceptionOrNull(),
+                                onRetry = { triggerManualRefresh() },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }

@@ -29,6 +29,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -51,6 +53,7 @@ fun ThanksScreen(
             FrostedTopAppBar(
                 title = strings.settingThanks,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -63,7 +66,10 @@ fun ThanksScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

@@ -44,6 +44,8 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -76,6 +78,7 @@ fun LanguageSettingScreen(
             FrostedTopAppBar(
                 title = strings.settingLanguage,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -88,7 +91,10 @@ fun LanguageSettingScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

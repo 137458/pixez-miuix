@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -275,52 +277,58 @@ fun HelloScreen(
             )
         },
     ) { paddingValues ->
-        val result = state.value
-        when {
-            result == null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            result.isSuccess -> {
-                if (illusts.isEmpty()) {
-                    EmptyPlaceholder(
-                        message = strings.noData,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    )
-                } else {
-                    PullToRefresh(
-                        isRefreshing = isManualRefreshing,
-                        onRefresh = triggerManualRefresh,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        IllustStaggeredGrid(
-                            illusts = illusts,
-                            state = gridState,
-                            onIllustClick = onIllustClick,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                result.isSuccess -> {
+                    if (illusts.isEmpty()) {
+                        EmptyPlaceholder(
+                            message = strings.noData,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .layerBackdrop(backdrop)
-                                .nestedScroll(scrollBehavior.nestedScrollConnection),
-                            contentPadding = PaddingValues(
-                                start = 8.dp,
-                                top = paddingValues.calculateTopPadding() + 8.dp,
-                                end = 8.dp,
-                                bottom = 100.dp,
-                            ),
-                            hasMore = nextUrl != null,
-                            isLoadingMore = isLoadingMore,
-                            loadMoreError = loadMoreError,
-                            onLoadMore = ::loadMore,
+                                .padding(paddingValues),
                         )
+                    } else {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            IllustStaggeredGrid(
+                                illusts = illusts,
+                                state = gridState,
+                                onIllustClick = onIllustClick,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = PaddingValues(
+                                    start = 8.dp,
+                                    top = paddingValues.calculateTopPadding() + 8.dp,
+                                    end = 8.dp,
+                                    bottom = 100.dp,
+                                ),
+                                hasMore = nextUrl != null,
+                                isLoadingMore = isLoadingMore,
+                                loadMoreError = loadMoreError,
+                                onLoadMore = ::loadMore,
+                            )
+                        }
                     }
                 }
+                else -> ErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
             }
-            else -> ErrorPlaceholder(
-                error = result.exceptionOrNull(),
-                onRetry = { triggerManualRefresh() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            )
         }
     }
 }

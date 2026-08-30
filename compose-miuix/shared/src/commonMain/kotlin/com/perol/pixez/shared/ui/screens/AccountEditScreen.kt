@@ -7,6 +7,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,10 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
  * 简单邮箱格式校验正则，用于保存前的基础格式检查。
@@ -90,28 +95,25 @@ fun AccountEditScreen(
     var currentPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var newPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
-    // 保存操作加载态，用于防止重复提交；使用 remember，配置变更后允许重新提交。
+    // 操作中的 loading 状态。
     var isSaving by remember { mutableStateOf(false) }
 
-    // 账号注销二次确认栏显示状态。
-    var showDeletionConfirm by rememberSaveable { mutableStateOf(false) }
+    // 是否显示注销确认对话框。
+    var showDeletionConfirm by remember { mutableStateOf(false) }
 
-    // Toast 提示文本，为 null 时不显示。
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    // 统一的 Toast 提示文本。
+    var toastMessage by remember { mutableStateOf<String?>(null) }
 
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
 
-    LaunchedEffect(accountRepository) {
-        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        suspendRunCatchingNonCancel { accountRepository.currentAccount() }
-            .onSuccess { loaded ->
-                account = loaded
-                loaded?.let {
-                    email = it.mailAddress
-                    if (it.isMailAuthorized != 1) {
-                        currentPassword = it.passWord
-                    }
-                }
+    // 进入页面时异步加载当前账号。
+    LaunchedEffect(Unit) {
+        suspendRunCatchingNonCancel {
+            accountRepository.currentAccount()
+        }
+            .onSuccess { active ->
+                account = active
+                email = active?.mailAddress.orEmpty()
             }
             .onFailure { e ->
                 Napier.e("加载账号信息失败", e)
@@ -120,6 +122,8 @@ fun AccountEditScreen(
     }
 
     val scrollBehavior = top.yukonga.miuix.kmp.basic.MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
+    val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -127,6 +131,7 @@ fun AccountEditScreen(
             FrostedTopAppBar(
                 title = strings.accountEditTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -139,7 +144,10 @@ fun AccountEditScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

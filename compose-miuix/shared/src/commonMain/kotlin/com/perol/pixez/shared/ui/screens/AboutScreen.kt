@@ -69,6 +69,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -81,7 +82,7 @@ import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 fun AboutScreen(
     onBack: () -> Unit,
     onThanksClick: () -> Unit,
-    onUpdateClick: (() -> Unit)? = null,
+    onUpdateClick: () -> Unit = {},
 ) {
     val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
@@ -97,6 +98,7 @@ fun AboutScreen(
             FrostedTopAppBar(
                 title = strings.settingAbout,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -111,7 +113,8 @@ fun AboutScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             Column(
@@ -120,7 +123,12 @@ fun AboutScreen(
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding(),
+                        start = 16.dp,
+                        end = 16.dp,
+                    )
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {

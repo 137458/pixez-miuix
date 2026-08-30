@@ -66,6 +66,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -139,6 +140,7 @@ fun DownloadTaskScreen(
             FrostedTopAppBar(
                 title = strings.settingDownloadTask,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -164,9 +166,14 @@ fun DownloadTaskScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
                 // 顶部筛选标签：全部 / 运行中 / 完成 / 失败。
                 FilterTabRow(
                     selectedFilter = selectedFilter,

@@ -7,8 +7,9 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -108,6 +110,7 @@ fun BoardScreen(
             FrostedTopAppBar(
                 title = strings.boardTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -136,7 +139,10 @@ fun BoardScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
             when {
                 isRefreshing && boardList.isEmpty() -> {

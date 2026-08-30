@@ -44,6 +44,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -109,9 +111,6 @@ fun NetworkSettingScreen(
         customHostInput = ""
     }
 
-    /**
-     * 设置图片源为自定义 Host，并进行基础校验。
-     */
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     /**
@@ -132,6 +131,7 @@ fun NetworkSettingScreen(
         toastMessage = null
     }
 
+    // 网络模式选项数据：code -> (label, description)。
     val networkModes = listOf(
         Triple("ech", "ECH", strings.networkModeEchSummary),
         Triple("compat", strings.networkModeCompat, strings.networkModeCompatSummary),
@@ -148,6 +148,7 @@ fun NetworkSettingScreen(
             FrostedTopAppBar(
                 title = strings.settingNetwork,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -160,7 +161,10 @@ fun NetworkSettingScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

@@ -86,6 +86,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -190,17 +191,23 @@ fun SearchScreen(
             )
         },
     ) { paddingValues ->
-        var showFilterSheet by rememberSaveable { mutableStateOf(false) }
-        val bottomBarVisibility = LocalBottomBarVisibility.current
-        LaunchedEffect(showFilterSheet) {
-            bottomBarVisibility.value = !showFilterSheet
-        }
-
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
+            var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+            val bottomBarVisibility = LocalBottomBarVisibility.current
+            LaunchedEffect(showFilterSheet) {
+                bottomBarVisibility.value = !showFilterSheet
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
             SearchBar(
                 inputField = {
                     InputField(
@@ -369,6 +376,7 @@ fun SearchScreen(
             }
         }
     }
+}
 }
 
 /**

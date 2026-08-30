@@ -55,6 +55,8 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -148,6 +150,7 @@ fun RecomUserScreen(
             FrostedTopAppBar(
                 title = strings.recomUserTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -167,29 +170,34 @@ fun RecomUserScreen(
             )
         },
     ) { paddingValues ->
-        when (val result = initialState.value) {
-            null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-            else -> when {
-                result.isSuccess -> {
-                    if (previews.isEmpty()) {
-                        EmptyPlaceholder(
-                            message = strings.recomUserEmpty,
-                            modifier = Modifier.fillMaxSize().padding(paddingValues),
-                        )
-                    } else {
-                        PullToRefresh(
-                            isRefreshing = isManualRefreshing,
-                            onRefresh = triggerManualRefresh,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = paddingValues,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            when (val result = initialState.value) {
+                null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                else -> when {
+                    result.isSuccess -> {
+                        if (previews.isEmpty()) {
+                            EmptyPlaceholder(
+                                message = strings.recomUserEmpty,
+                                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                            )
+                        } else {
+                            PullToRefresh(
+                                isRefreshing = isManualRefreshing,
+                                onRefresh = triggerManualRefresh,
+                                modifier = Modifier.fillMaxSize(),
                             ) {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = paddingValues,
+                                ) {
                                 items(
                                     items = previews,
                                     key = { it.user.id },
@@ -242,5 +250,6 @@ fun RecomUserScreen(
             }
         }
     }
+}
 }
 

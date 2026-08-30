@@ -8,6 +8,7 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +62,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -135,6 +137,7 @@ fun HistoryScreen(
             FrostedTopAppBar(
                 title = strings.settingHistory,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -165,9 +168,14 @@ fun HistoryScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
                 // 顶部搜索框：按作品 ID 或标题过滤本地历史。
                 TextField(
                     value = query,

@@ -197,19 +197,18 @@ fun LiquidGlass(
 val LocalBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 
 /**
- * 纯毛玻璃模糊效果 Modifier，用于标准底栏与浮层。
+ * 纯毛玻璃模糊效果 Modifier，用于标准底栏、顶栏与浮层。
  */
 fun Modifier.backdropBlur(
     backdrop: Backdrop,
     shape: Shape = RoundedCornerShape(0.dp),
-    blurRadius: Dp = 20.dp,
+    blurRadius: Dp = 25.dp,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.75f,
+    tintAlpha: Float = 0.85f,
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
     effects = {
-        vibrancy()
         blur(blurRadius.toPx(), blurRadius.toPx())
     },
     highlight = null,
@@ -234,7 +233,7 @@ fun Modifier.topAppBarBlur(
     this.backdropBlur(
         backdrop = backdrop,
         shape = RectangleShape,
-        blurRadius = 20.dp,
+        blurRadius = 25.dp,
         tintColor = tintColor,
         tintAlpha = tintAlpha,
     )

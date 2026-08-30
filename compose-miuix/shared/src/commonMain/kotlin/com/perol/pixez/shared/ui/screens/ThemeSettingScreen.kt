@@ -59,35 +59,38 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
- * 主题设置页：提供主题模式、AMOLED、动态颜色与种子色设置。
+ * 主题设置页：切换日间/夜间模式、AMOLED 纯黑、动态取色与自定义主题色。
  *
  * @param settingsRepository 设置仓库，用于读写主题相关偏好。
  * @param onBack 返回上一级页面。
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThemeSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前主题设置。
-    var themeMode by remember { mutableIntStateOf(settingsRepository.themeMode) }
+    // 页面状态：从 SettingsRepository 读取当前主题设置，用于驱动组件显示与回写。
+    var themeMode by remember { mutableStateOf(settingsRepository.themeMode) }
     var isAmoled by remember { mutableStateOf(settingsRepository.isAmoled) }
     var useDynamicColor by remember { mutableStateOf(settingsRepository.useDynamicColor) }
-    var seedColor by remember { mutableIntStateOf(settingsRepository.seedColor ?: DEFAULT_SEED_COLOR) }
-    var paletteStyle by remember { mutableIntStateOf(settingsRepository.miuixPaletteStyle) }
+    var seedColor by remember { mutableStateOf(settingsRepository.seedColor ?: 0xFF2196F3.toInt()) }
+    var paletteStyle by remember { mutableStateOf(settingsRepository.miuixPaletteStyle) }
     var useSpec2025 by remember { mutableStateOf(settingsRepository.miuixUseSpec2025) }
 
     // 颜色选择对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
 
-    // 本地修改辅助函数：写回仓库并更新页面状态。
-    fun setThemeMode(value: Int) {
-        themeMode = value
-        settingsRepository.themeMode = value
+    // 统一的 Toast 提示文本。
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    fun setThemeMode(mode: Int) {
+        themeMode = mode
+        settingsRepository.themeMode = mode
     }
 
     fun setIsAmoled(value: Boolean) {
@@ -140,6 +143,7 @@ fun ThemeSettingScreen(
             FrostedTopAppBar(
                 title = strings.settingTheme,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -152,7 +156,10 @@ fun ThemeSettingScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

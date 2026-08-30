@@ -2,8 +2,9 @@ package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.BoardInfo
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import kotlinx.serialization.json.Json
 
 /**
  * 公告板仓库：从原 Flutter 项目托管在 GitHub Raw 上的 JSON 拉取公告列表。
@@ -15,15 +16,17 @@ import io.ktor.client.request.get
 class BoardRepository(
     private val client: HttpClient,
 ) {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     /**
      * 从远端加载公告列表。
-     *
-     * 依赖 [client] 已安装的 ContentNegotiation 插件直接反序列化为 [BoardInfo] 列表；
-     * 解析失败或网络异常时抛出异常。
      */
     suspend fun loadBoardList(): List<BoardInfo> = networkCall("加载公告板失败") {
-        client.get(BOARD_URL).body<List<BoardInfo>>()
+        val text = client.get(BOARD_URL).bodyAsText()
+        json.decodeFromString<List<BoardInfo>>(text)
     }
 
     companion object {

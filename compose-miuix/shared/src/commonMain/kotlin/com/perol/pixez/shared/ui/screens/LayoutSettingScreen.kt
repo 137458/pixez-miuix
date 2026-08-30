@@ -54,6 +54,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -67,10 +68,10 @@ fun LayoutSettingScreen(
     settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
-    // 页面状态：从 SettingsRepository 读取当前布局设置。
-    var padMode by remember { mutableIntStateOf(settingsRepository.padMode) }
-    var crossCount by remember { mutableIntStateOf(settingsRepository.crossCount) }
-    var hCrossCount by remember { mutableIntStateOf(settingsRepository.hCrossCount) }
+    // 页面状态：从 SettingsRepository 读取当前布局设置，用于驱动组件显示与回写。
+    var padMode by remember { mutableStateOf(settingsRepository.padMode) }
+    var crossCount by remember { mutableStateOf(settingsRepository.crossCount) }
+    var hCrossCount by remember { mutableStateOf(settingsRepository.hCrossCount) }
     var crossAdapt by remember { mutableStateOf(settingsRepository.crossAdapt) }
     var crossAdapterWidth by remember { mutableStateOf(settingsRepository.crossAdapterWidth) }
     var hCrossAdapt by remember { mutableStateOf(settingsRepository.hCrossAdapt) }
@@ -91,6 +92,7 @@ fun LayoutSettingScreen(
             FrostedTopAppBar(
                 title = strings.settingLayout,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -103,7 +105,10 @@ fun LayoutSettingScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(

@@ -51,7 +51,10 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import com.perol.pixez.shared.data.model.UserPreviewsResponse
 
 /**
  * 用户好P友/粉丝列表页：支持流式分页与下拉刷新。
@@ -63,41 +66,41 @@ fun UserFollowerListScreen(
     onUserClick: (Int) -> Unit,
     repository: UserRepository,
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
 
-    val state = produceState<Result<Pair<List<UserPreview>, String?>>?>(
+    var previews by remember(userId) { mutableStateOf<List<UserPreview>>(emptyList()) }
+    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
+    var isLoadingMore by remember(userId) { mutableStateOf(false) }
+    var loadMoreError by remember(userId) { mutableStateOf<Throwable?>(null) }
+
+    val state = produceState<Result<UserPreviewsResponse>?>(
         initialValue = null,
         userId,
         retryCount,
     ) {
-        val followerResult = suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId) }
+        val result = suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId) }
+        result.onSuccess { response ->
+            previews = response.userPreviews
+            nextUrl = response.nextUrl
+        }
+        value = result
         isManualRefreshing = false
-        value = followerResult.map { it.userPreviews to it.nextUrl }
     }
 
-    var previews by remember(userId) { mutableStateOf(listOf<UserPreview>()) }
-    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialPreviews, initialNextUrl) ->
-            previews = initialPreviews
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
-        }
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
+        val url = nextUrl ?: return
         if (isLoadingMore) return
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId, nextUrl = currentNextUrl) }
+            suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId = userId, nextUrl = url) }
                 .onSuccess { response ->
                     previews = previews + response.userPreviews
                     nextUrl = response.nextUrl
@@ -109,11 +112,7 @@ fun UserFollowerListScreen(
         }
     }
 
-    val triggerManualRefresh: () -> Unit = {
-        isManualRefreshing = true
-        retryCount++
-    }
-
+    val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
     val shouldLoadMore by remember(previews.size, nextUrl, isLoadingMore, loadMoreError) {
@@ -135,7 +134,6 @@ fun UserFollowerListScreen(
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
@@ -145,6 +143,7 @@ fun UserFollowerListScreen(
             FrostedTopAppBar(
                 title = strings.userFollowerTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -164,9 +163,15 @@ fun UserFollowerListScreen(
             )
         },
     ) { paddingValues ->
-        when (val result = state.value) {
-            null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            else -> when {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
                 result.isSuccess -> {
                     if (previews.isEmpty()) {
                         EmptyPlaceholder(
@@ -183,7 +188,9 @@ fun UserFollowerListScreen(
                         ) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 contentPadding = paddingValues,
                             ) {
                                 items(

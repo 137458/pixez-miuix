@@ -51,6 +51,8 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -145,6 +147,7 @@ fun UserFollowListScreen(
             FrostedTopAppBar(
                 title = strings.userFollowTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -164,9 +167,15 @@ fun UserFollowListScreen(
             )
         },
     ) { paddingValues ->
-        when (val result = state.value) {
-            null -> LoadingPlaceholder(modifier = Modifier.padding(paddingValues))
-            else -> when {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
                 result.isSuccess -> {
                     if (previews.isEmpty()) {
                         EmptyPlaceholder(
@@ -183,7 +192,9 @@ fun UserFollowListScreen(
                         ) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
                                 contentPadding = paddingValues,
                             ) {
                                 items(

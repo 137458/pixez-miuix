@@ -254,67 +254,72 @@ fun SpotlightScreen(
             )
         },
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
-            // 分类选择横条
-            SpotlightCategorySelector(
-                selectedCategory = selectedCategory,
-                strings = strings,
-                onCategorySelected = { category ->
-                    if (selectedCategory != category) {
-                        selectedCategory = category
-                    }
-                },
-            )
-
-            when {
-                currentCategoryState.isInitialLoading -> LoadingPlaceholder(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()),
+            ) {
+                // 分类选择横条
+                SpotlightCategorySelector(
+                    selectedCategory = selectedCategory,
+                    strings = strings,
+                    onCategorySelected = { category ->
+                        if (selectedCategory != category) {
+                            selectedCategory = category
+                        }
+                    },
                 )
 
-                currentCategoryState.error != null && currentCategoryState.articles.isEmpty() -> ErrorPlaceholder(
-                    error = currentCategoryState.error,
-                    onRetry = { loadCategoryData(selectedCategory, false) },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                )
-
-                currentCategoryState.articles.isEmpty() -> EmptyPlaceholder(
-                    message = strings.noData,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                )
-
-                else -> PullToRefresh(
-                    isRefreshing = currentCategoryState.isRefreshing,
-                    onRefresh = { loadCategoryData(selectedCategory, true) },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                ) {
-                    LazyVerticalStaggeredGrid(
-                        columns = effectiveColumns,
-                        state = currentGridState,
+                when {
+                    currentCategoryState.isInitialLoading -> LoadingPlaceholder(
                         modifier = Modifier
                             .fillMaxSize()
-                            .layerBackdrop(backdrop)
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            top = 12.dp,
-                            end = 16.dp,
-                            bottom = 96.dp,
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalItemSpacing = 12.dp,
+                            .weight(1f),
+                    )
+
+                    currentCategoryState.error != null && currentCategoryState.articles.isEmpty() -> ErrorPlaceholder(
+                        error = currentCategoryState.error,
+                        onRetry = { loadCategoryData(selectedCategory, false) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                    )
+
+                    currentCategoryState.articles.isEmpty() -> EmptyPlaceholder(
+                        message = strings.noData,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                    )
+
+                    else -> PullToRefresh(
+                        isRefreshing = currentCategoryState.isRefreshing,
+                        onRefresh = { loadCategoryData(selectedCategory, true) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
                     ) {
+                        LazyVerticalStaggeredGrid(
+                            columns = effectiveColumns,
+                            state = currentGridState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 12.dp,
+                                end = 16.dp,
+                                bottom = 96.dp,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalItemSpacing = 12.dp,
+                        ) {
                         itemsIndexed(
                             items = currentCategoryState.articles,
                             key = { _, item -> "${selectedCategory.code}_${item.id}" },
@@ -351,6 +356,7 @@ fun SpotlightScreen(
             }
         }
     }
+}
 }
 
 /**

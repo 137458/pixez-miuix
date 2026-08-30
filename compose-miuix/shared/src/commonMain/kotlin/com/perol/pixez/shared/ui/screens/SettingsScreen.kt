@@ -165,7 +165,10 @@ fun SettingsScreen(
         },
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
             LazyColumn(
@@ -175,7 +178,6 @@ fun SettingsScreen(
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
-                    .layerBackdrop(backdrop)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
 
