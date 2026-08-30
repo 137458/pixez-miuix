@@ -10,6 +10,9 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -166,6 +169,8 @@ fun RelatedIllustsScreen(
             )
         },
     ) { paddingValues ->
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val pinnedHeaderHeight = statusBarTop + 56.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -191,6 +196,8 @@ fun RelatedIllustsScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = pinnedHeaderHeight + 28.dp),
+                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(
                                 modifier = Modifier

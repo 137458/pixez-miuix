@@ -42,10 +42,6 @@ import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -248,32 +244,7 @@ fun Modifier.topAppBarBlur(
     this
 }
 
-/**
- * 为滑入顶栏区域的内容提供平滑渐变溶解遮罩，
- * 使得文字在向上滑入顶栏后方时自然渐隐淡出，
- * 避免深色文字在高斯模糊下形成灰斑脏块与生硬横向切线，
- * 同时保留图片大色块透过滤镜呈现的通透环境光辉映。
- */
-fun Modifier.contentTopFade(
-    fadeHeight: Dp = 56.dp,
-): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-        val fadePx = fadeHeight.toPx()
-        if (fadePx > 0f) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    0.5f to Color.Black.copy(alpha = 0.4f),
-                    1f to Color.Black,
-                    startY = 0f,
-                    endY = fadePx,
-                ),
-                blendMode = BlendMode.DstIn,
-            )
-        }
-    }
+
 
 /**
  * 安全挂载 layerBackdrop 采样源的扩展 Modifier。

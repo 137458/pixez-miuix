@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
-import com.perol.pixez.shared.ui.components.contentTopFade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -271,12 +270,13 @@ fun CommentsScreen(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = pinnedHeaderHeight + 28.dp),
+                            topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .layerBackdrop(backdrop)
-                                    .contentTopFade(pinnedHeaderHeight),
+                                    .layerBackdrop(backdrop),
                             ) {
                                 LazyColumn(
                                     state = listState,

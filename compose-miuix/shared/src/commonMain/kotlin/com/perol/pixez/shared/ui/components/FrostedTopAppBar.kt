@@ -51,19 +51,9 @@ fun FrostedTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.85f,
+                        tintAlpha = 0.88f,
                         blurRadius = 16.dp,
-                    )
-                    .drawBehind {
-                        if (outlineAlpha > 0.01f) {
-                            drawLine(
-                                color = outlineColor.copy(alpha = outlineAlpha),
-                                start = Offset(0f, size.height),
-                                end = Offset(size.width, size.height),
-                                strokeWidth = 1f,
-                            )
-                        }
-                    }
+                    ),
             )
         }
 
@@ -106,19 +96,9 @@ fun FrostedSmallTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.85f,
+                        tintAlpha = 0.88f,
                         blurRadius = 16.dp,
-                    )
-                    .drawBehind {
-                        if (outlineAlpha > 0.01f) {
-                            drawLine(
-                                color = outlineColor.copy(alpha = outlineAlpha),
-                                start = Offset(0f, size.height),
-                                end = Offset(size.width, size.height),
-                                strokeWidth = 1f,
-                            )
-                        }
-                    }
+                    ),
             )
         }
 

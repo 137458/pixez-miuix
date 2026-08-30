@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.ui.components.contentTopFade
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -178,8 +177,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(colorScheme.surface)
-                    .layerBackdrop(backdrop)
-                    .contentTopFade(pinnedHeaderHeight),
+                    .layerBackdrop(backdrop),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 LazyColumn(
