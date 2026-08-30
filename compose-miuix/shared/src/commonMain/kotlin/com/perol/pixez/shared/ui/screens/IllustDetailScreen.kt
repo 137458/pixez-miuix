@@ -795,21 +795,19 @@ private fun IllustDetailSingleContent(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter),
         ) {
-            // 1. 底层全宽毛玻璃背景（随滚动进度平滑淡入）
-            if (collapseProgress > 0.01f) {
-                BlurredBar(
-                    backdrop = detailBackdrop,
+            // 1. 底层全宽毛玻璃背景（随滚动进度平滑淡入，往回划平滑淡出，始终驻留GPU层）
+            BlurredBar(
+                backdrop = detailBackdrop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = collapseProgress },
+            ) {
+                Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .graphicsLayer { alpha = collapseProgress },
-                ) {
-                    Spacer(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .height(56.dp),
-                    )
-                }
+                        .statusBarsPadding()
+                        .height(56.dp),
+                )
             }
 
             // 2. 顶栏主体内容行（单套恒定按钮与动态平滑标题）
@@ -828,7 +826,7 @@ private fun IllustDetailSingleContent(
                     collapseProgress,
                 )
 
-                // ── 返回按钮（物理锚点固定，微气泡背景平滑消退） ──
+                // ── 返回按钮（物理锚点固定，微气泡背景平滑消退，往回划平滑复现） ──
                 TooltipBox(text = strings.back) {
                     val backInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     val isBackPressed by backInteractionSource.collectIsPressedAsState()
@@ -849,34 +847,42 @@ private fun IllustDetailSingleContent(
                             .graphicsLayer {
                                 scaleX = backPressScale.value
                                 scaleY = backPressScale.value
-                            }
-                            .then(
-                                if (bubbleAlpha > 0.01f) {
-                                    Modifier.liquidGlass(
-                                        backdrop = detailBackdrop,
-                                        shape = CircleShape,
-                                        blurRadius = 16.dp,
-                                        tintColor = Color.Black,
-                                        tintAlpha = 0.38f * bubbleAlpha,
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = backInteractionSource,
-                                indication = null,
-                                onClick = onBack,
-                            ),
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                            tint = dynamicIconTint,
-                            modifier = Modifier.size(22.dp),
+                        // 独立圆形微气泡背景（始终驻留，仅在 graphicsLayer 驱动透明度，绝不破坏节点树）
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = bubbleAlpha }
+                                .liquidGlass(
+                                    backdrop = detailBackdrop,
+                                    shape = CircleShape,
+                                    blurRadius = 16.dp,
+                                    tintColor = Color.Black,
+                                    tintAlpha = 0.38f,
+                                ),
                         )
+
+                        // 交互与前景层
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = backInteractionSource,
+                                    indication = null,
+                                    onClick = onBack,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                contentDescription = strings.back,
+                                tint = dynamicIconTint,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
 
@@ -925,40 +931,46 @@ private fun IllustDetailSingleContent(
                                 .graphicsLayer {
                                     scaleX = favPressScale.value
                                     scaleY = favPressScale.value
-                                }
-                                .then(
-                                    if (bubbleAlpha > 0.01f) {
-                                        Modifier.liquidGlass(
-                                            backdrop = detailBackdrop,
-                                            shape = CircleShape,
-                                            blurRadius = 16.dp,
-                                            tintColor = Color.Black,
-                                            tintAlpha = 0.38f * bubbleAlpha,
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = favInteractionSource,
-                                    indication = null,
-                                    enabled = !isBookmarkLoading && illust != null,
-                                    onClick = performBookmark,
-                                ),
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                                tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
+                            Box(
                                 modifier = Modifier
-                                    .size(22.dp)
-                                    .graphicsLayer {
-                                        scaleX = bookmarkHeartScale.value
-                                        scaleY = bookmarkHeartScale.value
-                                    },
+                                    .fillMaxSize()
+                                    .graphicsLayer { alpha = bubbleAlpha }
+                                    .liquidGlass(
+                                        backdrop = detailBackdrop,
+                                        shape = CircleShape,
+                                        blurRadius = 16.dp,
+                                        tintColor = Color.Black,
+                                        tintAlpha = 0.38f,
+                                    ),
                             )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = favInteractionSource,
+                                        indication = null,
+                                        enabled = !isBookmarkLoading && illust != null,
+                                        onClick = performBookmark,
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                    contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                                    tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer {
+                                            scaleX = bookmarkHeartScale.value
+                                            scaleY = bookmarkHeartScale.value
+                                        },
+                                )
+                            }
                         }
                     }
 
@@ -983,41 +995,47 @@ private fun IllustDetailSingleContent(
                                 .graphicsLayer {
                                     scaleX = dlPressScale.value
                                     scaleY = dlPressScale.value
-                                }
-                                .then(
-                                    if (bubbleAlpha > 0.01f) {
-                                        Modifier.liquidGlass(
-                                            backdrop = detailBackdrop,
-                                            shape = CircleShape,
-                                            blurRadius = 16.dp,
-                                            tintColor = Color.Black,
-                                            tintAlpha = 0.38f * bubbleAlpha,
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = dlInteractionSource,
-                                    indication = null,
-                                    enabled = !isDownloading && illust != null,
-                                    onClick = performDownload,
-                                ),
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (isDownloading) {
-                                InfiniteProgressIndicator(
-                                    color = if (collapseProgress > 0.5f) MiuixTheme.colorScheme.primary else Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = MiuixIcons.Download,
-                                    contentDescription = strings.download,
-                                    tint = dynamicIconTint,
-                                    modifier = Modifier.size(22.dp),
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { alpha = bubbleAlpha }
+                                    .liquidGlass(
+                                        backdrop = detailBackdrop,
+                                        shape = CircleShape,
+                                        blurRadius = 16.dp,
+                                        tintColor = Color.Black,
+                                        tintAlpha = 0.38f,
+                                    ),
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = dlInteractionSource,
+                                        indication = null,
+                                        enabled = !isDownloading && illust != null,
+                                        onClick = performDownload,
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isDownloading) {
+                                    InfiniteProgressIndicator(
+                                        color = if (collapseProgress > 0.5f) MiuixTheme.colorScheme.primary else Color.White,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = MiuixIcons.Download,
+                                        contentDescription = strings.download,
+                                        tint = dynamicIconTint,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -1044,34 +1062,40 @@ private fun IllustDetailSingleContent(
                                     .graphicsLayer {
                                         scaleX = morePressScale.value
                                         scaleY = morePressScale.value
-                                    }
-                                    .then(
-                                        if (bubbleAlpha > 0.01f) {
-                                            Modifier.liquidGlass(
-                                                backdrop = detailBackdrop,
-                                                shape = CircleShape,
-                                                blurRadius = 16.dp,
-                                                tintColor = Color.Black,
-                                                tintAlpha = 0.38f * bubbleAlpha,
-                                            )
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
-                                    .clip(CircleShape)
-                                    .clickable(
-                                        interactionSource = moreInteractionSource,
-                                        indication = null,
-                                        onClick = { showMoreMenu = !showMoreMenu },
-                                    ),
+                                    },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    imageVector = MiuixIcons.More,
-                                    contentDescription = strings.menuMoreActions,
-                                    tint = dynamicIconTint,
-                                    modifier = Modifier.size(22.dp),
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer { alpha = bubbleAlpha }
+                                        .liquidGlass(
+                                            backdrop = detailBackdrop,
+                                            shape = CircleShape,
+                                            blurRadius = 16.dp,
+                                            tintColor = Color.Black,
+                                            tintAlpha = 0.38f,
+                                        ),
                                 )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                        .clickable(
+                                            interactionSource = moreInteractionSource,
+                                            indication = null,
+                                            onClick = { showMoreMenu = !showMoreMenu },
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.More,
+                                        contentDescription = strings.menuMoreActions,
+                                        tint = dynamicIconTint,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
                             }
                         }
                     }

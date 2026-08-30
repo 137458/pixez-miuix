@@ -41,6 +41,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.size
@@ -187,19 +190,26 @@ fun SearchScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
 
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val collapseThresholdPx = with(density) { 36.dp.toPx() }
-    var isSearchManuallyExpanded by remember { mutableStateOf(false) }
-    val isSearchCollapsed by remember(collapseThresholdPx) {
-        derivedStateOf {
-            !isSearchManuallyExpanded && (-scrollBehavior.state.contentOffset > collapseThresholdPx)
-        }
-    }
-    LaunchedEffect(scrollBehavior.state.contentOffset) {
-        if (-scrollBehavior.state.contentOffset <= collapseThresholdPx) {
-            isSearchManuallyExpanded = false
+    var isSearchCollapsed by rememberSaveable { mutableStateOf(false) }
+
+    val searchNestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -8f) {
+                    // 手指向上推（向下滚动内容）：折叠全宽搜索框，释放瀑布流空间
+                    if (!isSearchCollapsed) {
+                        isSearchCollapsed = true
+                    }
+                } else if (delta > 8f) {
+                    // 手指向下划（回看上方内容）：展开全宽搜索框
+                    if (isSearchCollapsed) {
+                        isSearchCollapsed = false
+                    }
+                }
+                return Offset.Zero
+            }
         }
     }
 
@@ -214,12 +224,10 @@ fun SearchScreen(
         topBar = {
             BlurredBar(
                 backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     TopAppBar(
                         title = if (isSearchCollapsed && query.isNotBlank()) query else strings.tabSearch,
-                        scrollBehavior = scrollBehavior,
                         color = if (backdrop != null) Color.Transparent else colorScheme.surface,
                         navigationIcon = {
                             if (isSearching) {
@@ -227,7 +235,7 @@ fun SearchScreen(
                                     onClick = {
                                         isSearching = false
                                         query = ""
-                                        isSearchManuallyExpanded = false
+                                        isSearchCollapsed = false
                                     },
                                 ) {
                                     Icon(
@@ -241,10 +249,7 @@ fun SearchScreen(
                             if (isSearchCollapsed) {
                                 IconButton(
                                     onClick = {
-                                        isSearchManuallyExpanded = true
-                                        coroutineScope.launch {
-                                            scrollBehavior.state.contentOffset = 0f
-                                        }
+                                        isSearchCollapsed = false
                                     },
                                 ) {
                                     Icon(
@@ -396,7 +401,8 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surface)
-                .blurBackdropSource(backdrop),
+                .blurBackdropSource(backdrop)
+                .nestedScroll(searchNestedScrollConnection),
         ) {
             val contentTopPadding = paddingValues.calculateTopPadding() + 8.dp
             val effectiveContentPadding = PaddingValues(
