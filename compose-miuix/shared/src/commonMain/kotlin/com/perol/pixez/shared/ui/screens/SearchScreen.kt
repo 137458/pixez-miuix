@@ -648,6 +648,9 @@ private fun SearchFilterBottomSheet(
         "1000+" to 1000,
         "5000+" to 5000,
         "10000+" to 10000,
+        "20000+" to 20000,
+        "50000+" to 50000,
+        "100000+" to 100000,
     )
     val ugoiraOptions: List<Pair<String, Int>> = listOf(
         strings.searchUgoiraAll to 0,
