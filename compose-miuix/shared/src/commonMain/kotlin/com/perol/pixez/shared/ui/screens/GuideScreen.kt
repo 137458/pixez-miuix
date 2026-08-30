@@ -70,6 +70,8 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
 
@@ -89,6 +91,8 @@ fun GuideScreen(
 ) {
     val strings = LocalStrings.current
     var currentStep by remember { mutableIntStateOf(0) }
+    val backdrop = rememberLayerBackdrop()
+    val colorScheme = MiuixTheme.colorScheme
 
     val finishGuide: () -> Unit = {
         settingsRepository.hasCompletedGuide = true
@@ -104,6 +108,7 @@ fun GuideScreen(
                     1 -> "2. ${strings.guideStepNetwork}"
                     else -> "3. ${strings.guideStepWelcome}"
                 },
+                backdrop = backdrop,
                 navigationIcon = {
                     if (currentStep > 0) {
                         IconButton(onClick = { currentStep-- }) {
@@ -137,29 +142,36 @@ fun GuideScreen(
             )
         },
     ) { paddingValues ->
-        AnimatedContent(
-            targetState = currentStep,
-            transitionSpec = {
-                if (targetState > initialState) {
-                    (slideInHorizontally(tween(300)) { width -> width } + fadeIn(tween(300)))
-                        .togetherWith(slideOutHorizontally(tween(300)) { width -> -width } + fadeOut(tween(300)))
-                } else {
-                    (slideInHorizontally(tween(300)) { width -> -width } + fadeIn(tween(300)))
-                        .togetherWith(slideOutHorizontally(tween(300)) { width -> width } + fadeOut(tween(300)))
-                }
-            },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-        ) { step ->
-            when (step) {
-                0 -> GuideLanguageStep(settingsRepository = settingsRepository)
-                1 -> GuideNetworkStep(settingsRepository = settingsRepository)
-                2 -> GuideWelcomeStep(
-                    accountRepository = accountRepository,
-                    onLoginClick = onLoginClick,
-                    onFinish = finishGuide,
-                )
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            AnimatedContent(
+                targetState = currentStep,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally(tween(300)) { width -> width } + fadeIn(tween(300)))
+                            .togetherWith(slideOutHorizontally(tween(300)) { width -> -width } + fadeOut(tween(300)))
+                    } else {
+                        (slideInHorizontally(tween(300)) { width -> -width } + fadeIn(tween(300)))
+                            .togetherWith(slideOutHorizontally(tween(300)) { width -> width } + fadeOut(tween(300)))
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+            ) { step ->
+                when (step) {
+                    0 -> GuideLanguageStep(settingsRepository = settingsRepository)
+                    1 -> GuideNetworkStep(settingsRepository = settingsRepository)
+                    2 -> GuideWelcomeStep(
+                        accountRepository = accountRepository,
+                        onLoginClick = onLoginClick,
+                        onFinish = finishGuide,
+                    )
+                }
             }
         }
     }

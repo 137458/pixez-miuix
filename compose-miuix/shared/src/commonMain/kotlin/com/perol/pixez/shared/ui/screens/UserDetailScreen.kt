@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +72,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -126,6 +128,7 @@ fun UserDetailScreen(
             FrostedTopAppBar(
                 title = userDetail?.user?.name ?: "",
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     TooltipBox(text = strings.back) {
                         IconButton(onClick = onBack) {
@@ -193,13 +196,16 @@ fun UserDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
         ) {
             when {
                 result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
                 result.isSuccess && userDetail != null -> {
                     Column(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = paddingValues.calculateTopPadding()),
                     ) {
                         followError?.let { error ->
                             Text(

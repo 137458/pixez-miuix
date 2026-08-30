@@ -9,6 +9,7 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +68,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -132,6 +134,7 @@ fun SpotlightDetailScreen(
             FrostedTopAppBar(
                 title = article.pureTitle.ifBlank { article.title },
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -157,44 +160,47 @@ fun SpotlightDetailScreen(
             )
         },
     ) { paddingValues ->
-        val result = state.value
-        when {
-            result == null -> LoadingPlaceholder(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            )
-
-            result.isSuccess -> {
-                val detail = result.getOrNull() ?: SpotlightDetail(
-                    title = article.title,
-                    pureTitle = article.pureTitle,
-                    coverUrl = article.thumbnail,
-                    rawUrl = article.articleUrl,
-                )
-
-                PullToRefresh(
-                    isRefreshing = isManualRefreshing,
-                    onRefresh = triggerManualRefresh,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .layerBackdrop(backdrop),
+        ) {
+            val result = state.value
+            when {
+                result == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = paddingValues.calculateTopPadding()),
-                ) {
-                    LazyVerticalStaggeredGrid(
-                        columns = effectiveColumns,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            top = 12.dp,
-                            end = 16.dp,
-                            bottom = 48.dp,
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalItemSpacing = 12.dp,
+                        .padding(paddingValues),
+                )
+
+                result.isSuccess -> {
+                    val detail = result.getOrNull() ?: SpotlightDetail(
+                        title = article.title,
+                        pureTitle = article.pureTitle,
+                        coverUrl = article.thumbnail,
+                        rawUrl = article.articleUrl,
+                    )
+
+                    PullToRefresh(
+                        isRefreshing = isManualRefreshing,
+                        onRefresh = triggerManualRefresh,
+                        modifier = Modifier.fillMaxSize(),
                     ) {
+                        LazyVerticalStaggeredGrid(
+                            columns = effectiveColumns,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = paddingValues.calculateTopPadding() + 12.dp,
+                                end = 16.dp,
+                                bottom = 48.dp,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalItemSpacing = 12.dp,
+                        ) {
                         // 顶部文章封面与标题
                         item(span = StaggeredGridItemSpan.FullLine) {
                             ArticleHeaderCard(
@@ -342,6 +348,7 @@ fun SpotlightDetailScreen(
             }
         }
     }
+}
 }
 
 /**
