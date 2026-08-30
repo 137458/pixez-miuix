@@ -6,6 +6,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
@@ -29,18 +32,23 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
  *
  * 核心特性：
  * 1. **纯平移无缩小（No Scaling）**：保持 1.0 原始页面缩放比例，不作卡片缩小与圆角变形，符合 MIUIX / iOS 经典侧滑手势。
- * 2. **100% 视口全行程位移**：顶层页面随手势从 0 平移至 containerWidthPx（100% 屏幕宽度滑出），左侧带有立体边缘阴影。
- * 3. **底层页面 30% 视差滑入与柔和遮罩**：底层页面从 -30% 屏幕宽度平滑推进至 0，同时 20% 暗色遮罩随手势平滑消退。
- * 4. **无缝生命周期终结**：手势确认完成时，顶层页面自然完全滑出屏幕右侧（translationX = 100%），出栈切换时绝对零闪现。
+ * 2. **硬件级屏幕物理圆角自适应**：顶层滑出页面在拖拽时贴合当前设备屏幕圆角 [deviceCornerRadius] 进行硬件级圆角与立体边缘阴影投射。
+ * 3. **100% 视口全行程位移**：顶层页面随手势从 0 平移至 containerWidthPx（100% 屏幕宽度滑出）。
+ * 4. **底层页面 30% 视差滑入与柔和遮罩**：底层页面从 -30% 屏幕宽度平滑推进至 0，同时 20% 暗色遮罩随手势平滑消退。
+ * 5. **无缝生命周期终结**：手势确认完成时，顶层页面自然完全滑出屏幕右侧（translationX = 100%），出栈切换时绝对零闪现。
  *
  * @param initialBackEvent 手势起始事件。
  * @param containerWidthPx 页面容器当前的物理像素宽度。
+ * @param deviceCornerRadius 设备屏幕硬件物理圆角半径，用于使滑出的顶层页面边缘自然贴合机身物理弧度。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixSlidePredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     containerWidthPx: Float,
+    deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
+    val shape = if (deviceCornerRadius > 0.dp) RoundedCornerShape(deviceCornerRadius) else null
+
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
@@ -48,6 +56,10 @@ fun miuixSlidePredictiveBackAnimatable(
             Modifier.graphicsLayer {
                 this.translationX = translationX
                 shadowElevation = 16f
+                if (shape != null) {
+                    this.shape = shape
+                    this.clip = true
+                }
             }
         },
         enterModifier = { progress, _ ->

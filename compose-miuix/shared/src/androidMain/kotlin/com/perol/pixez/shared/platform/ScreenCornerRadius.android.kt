@@ -14,18 +14,24 @@ actual fun rememberScreenCornerRadius(): Dp {
     val view = LocalView.current
     val density = LocalDensity.current
     return remember(view, density) {
+        var maxRadiusPx = 0
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val insets = view.rootWindowInsets
             val topLeft = insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius ?: 0
             val topRight = insets?.getRoundedCorner(RoundedCorner.POSITION_TOP_RIGHT)?.radius ?: 0
             val bottomLeft = insets?.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_LEFT)?.radius ?: 0
             val bottomRight = insets?.getRoundedCorner(RoundedCorner.POSITION_BOTTOM_RIGHT)?.radius ?: 0
-            val maxRadiusPx = maxOf(topLeft, topRight, bottomLeft, bottomRight)
-            if (maxRadiusPx > 0) {
-                with(density) { maxRadiusPx.toDp() }
-            } else {
-                0.dp
+            maxRadiusPx = maxOf(topLeft, topRight, bottomLeft, bottomRight)
+        }
+        if (maxRadiusPx <= 0) {
+            val res = view.context.resources
+            val resId = res.getIdentifier("rounded_corner_radius", "dimen", "android")
+            if (resId > 0) {
+                maxRadiusPx = runCatching { res.getDimensionPixelSize(resId) }.getOrDefault(0)
             }
+        }
+        if (maxRadiusPx > 0) {
+            with(density) { maxRadiusPx.toDp() }
         } else {
             0.dp
         }

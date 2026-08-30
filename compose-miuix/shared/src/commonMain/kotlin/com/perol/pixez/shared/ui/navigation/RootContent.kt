@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixSlideStackAnimation
 
@@ -214,6 +215,7 @@ fun RootContent(
                     val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
                     val activeTab by component.selectedTab.collectAsState()
                     val density = LocalDensity.current
+                    val screenCornerRadius = rememberScreenCornerRadius()
                     val containerWidthPx = with(density) {
                         val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
                         availableWidth.toPx()
@@ -250,6 +252,7 @@ fun RootContent(
                                         miuixSlidePredictiveBackAnimatable(
                                             initialBackEvent = initialBackEvent,
                                             containerWidthPx = containerWidthPx,
+                                            deviceCornerRadius = screenCornerRadius,
                                         )
                                     },
                                     onBack = { component.onBack() },
