@@ -222,33 +222,48 @@ fun SearchScreen(
         if (isCurrentListAtTop) {
             isSearchCollapsed = false
             scrollBehavior.state.heightOffset = 0f
+            scrollBehavior.state.contentOffset = 0f
         }
     }
 
     val searchNestedScrollConnection = remember(scrollBehavior) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // 手指向上推（向下浏览内容）：折叠大标题与全宽搜索框
                 val delta = available.y
-                if (delta < -8f) {
-                    val limit = scrollBehavior.state.heightOffsetLimit
-                    if (limit < 0f) {
-                        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + delta).coerceIn(limit, 0f)
+                if (delta < 0f) {
+                    // 手指向上推（向下浏览内容）：
+                    // 1. 同步累加 contentOffset，驱动 BlurredBar 渐进式毛玻璃在滑动时平滑淡入
+                    scrollBehavior.state.contentOffset += delta
+
+                    // 2. 当向上滑动超过阈值时协同折叠大标题与全宽搜索框
+                    if (delta < -8f) {
+                        val limit = scrollBehavior.state.heightOffsetLimit
+                        if (limit < 0f) {
+                            scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + delta).coerceIn(limit, 0f)
+                        }
+                        if (!isSearchCollapsed) isSearchCollapsed = true
                     }
-                    if (!isSearchCollapsed) isSearchCollapsed = true
                 }
                 // 注意：手指往下拉时不在此处盲目展开！必须等列表真正滚回最顶端时才展开，避免在列表中间浏览时误触发放大。
                 return Offset.Zero
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // 手指向下拉回：
+                if (consumed.y > 0f) {
+                    scrollBehavior.state.contentOffset = (scrollBehavior.state.contentOffset + consumed.y).coerceAtMost(0f)
+                }
+
                 // 当列表已滑动到最顶端无法再继续往下拉（available.y > 0 表示列表已触顶过冲）：
-                // 此时向下拉动，顺畅展开大标题与搜索框
-                if (available.y > 4f) {
-                    if (isSearchCollapsed) isSearchCollapsed = false
-                    val limit = scrollBehavior.state.heightOffsetLimit
-                    if (limit < 0f) {
-                        scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
+                // 顺畅展开大标题与搜索框，并归零 contentOffset
+                if (available.y > 0f) {
+                    scrollBehavior.state.contentOffset = (scrollBehavior.state.contentOffset + available.y).coerceAtMost(0f)
+                    if (available.y > 4f) {
+                        if (isSearchCollapsed) isSearchCollapsed = false
+                        val limit = scrollBehavior.state.heightOffsetLimit
+                        if (limit < 0f) {
+                            scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
+                        }
                     }
                 }
                 return Offset.Zero
@@ -285,6 +300,7 @@ fun SearchScreen(
                                         isSearchCollapsed = false
                                         coroutineScope.launch {
                                             scrollBehavior.state.heightOffset = 0f
+                                            scrollBehavior.state.contentOffset = 0f
                                         }
                                     },
                                 ) {
@@ -302,6 +318,7 @@ fun SearchScreen(
                                         isSearchCollapsed = false
                                         coroutineScope.launch {
                                             scrollBehavior.state.heightOffset = 0f
+                                            scrollBehavior.state.contentOffset = 0f
                                         }
                                     },
                                 ) {
@@ -1165,7 +1182,9 @@ private fun SearchSuggestions(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
