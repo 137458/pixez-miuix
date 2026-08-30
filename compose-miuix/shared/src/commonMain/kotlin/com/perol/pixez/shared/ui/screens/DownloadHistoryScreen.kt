@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.lazy.rememberLazyListState
 import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
@@ -144,10 +146,17 @@ fun DownloadHistoryScreen(
                                 modifier = Modifier.fillMaxSize(),
                             )
                         } else {
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
                                 LazyColumn(
                                     state = listState,
-                                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                                        .fillMaxWidth()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
                                     contentPadding = paddingValues,
                                 ) {
                                     items(
@@ -174,7 +183,8 @@ fun DownloadHistoryScreen(
                                     adapter = rememberScrollBarAdapter(listState),
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
-                                        .fillMaxHeight(),
+                                        .fillMaxHeight()
+                                        .padding(paddingValues),
                                     trackPadding = paddingValues,
                                 )
                             }

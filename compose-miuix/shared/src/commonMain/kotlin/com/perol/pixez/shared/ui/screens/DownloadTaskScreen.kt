@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -172,10 +175,13 @@ fun DownloadTaskScreen(
                 .fillMaxSize()
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
+            contentAlignment = Alignment.TopCenter,
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxHeight()
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
                     .padding(top = paddingValues.calculateTopPadding()),
             ) {
                 // 顶部筛选标签：全部 / 运行中 / 完成 / 失败。

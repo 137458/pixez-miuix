@@ -9,11 +9,14 @@ import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -177,6 +180,7 @@ fun UserFollowListScreen(
                 .fillMaxSize()
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
+            contentAlignment = Alignment.TopCenter,
         ) {
             val result = state.value
             when {
@@ -197,13 +201,19 @@ fun UserFollowListScreen(
                             contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = paddingValues,
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
                             ) {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                                        .fillMaxWidth()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = paddingValues,
+                                ) {
                                 items(
                                     items = previews,
                                     key = { it.user.id },
@@ -248,7 +258,9 @@ fun UserFollowListScreen(
                         }
                     }
                 }
-                else -> ErrorPlaceholder(
+            }
+
+            else -> ErrorPlaceholder(
                     error = result.exceptionOrNull(),
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier

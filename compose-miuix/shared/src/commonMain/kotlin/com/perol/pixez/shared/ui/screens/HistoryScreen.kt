@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -179,6 +181,7 @@ fun HistoryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = paddingValues.calculateTopPadding()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // 顶部搜索框：按作品 ID 或标题过滤本地历史。
                 TextField(
@@ -186,6 +189,7 @@ fun HistoryScreen(
                     onValueChange = { query = it },
                     label = strings.tabSearch,
                     modifier = Modifier
+                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     leadingIcon = {
@@ -209,7 +213,7 @@ fun HistoryScreen(
                 )
 
                 // 根据加载状态展示不同内容。
-                Box(modifier = Modifier.weight(1f)) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     when (val result = historyResult.value) {
                         null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
                         else -> if (result.isSuccess) {
@@ -319,7 +323,7 @@ private fun HistoryGrid(
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
+        columns = StaggeredGridCells.Adaptive(AppConstants.Layout.GRID_CARD_MIN_WIDTH_DP.dp),
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),

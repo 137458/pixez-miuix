@@ -15,6 +15,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -230,6 +231,7 @@ private fun IllustDetailSingleContent(
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     var showMoreMenu by rememberSaveable(illustId) { mutableStateOf(false) }
+    var fullScreenPageIndex by rememberSaveable(illustId) { mutableStateOf<Int?>(null) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
@@ -277,6 +279,7 @@ private fun IllustDetailSingleContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MiuixTheme.colorScheme.surface),
+        contentAlignment = Alignment.TopCenter,
     ) {
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
@@ -298,7 +301,9 @@ private fun IllustDetailSingleContent(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxHeight()
+                            .widthIn(max = 920.dp)
+                            .fillMaxWidth()
                             .blurBackdropSource(detailBackdrop)
                             .nestedScroll(detailNestedScrollConnection),
                     ) {
@@ -319,9 +324,10 @@ private fun IllustDetailSingleContent(
                                 }
                                 val pageUrl = remember(page, effectiveQuality) {
                                     when (effectiveQuality) {
-                                        1 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                        0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                        1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
                                         2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                                        else -> page.imageUrls?.large.orEmpty()
+                                        else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                                     }
                                 }
                                 val thumbnailUrl = remember(page) {
@@ -336,6 +342,7 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
+                                    .clickable { fullScreenPageIndex = pageIndex }
                                     .illustDragAndDropSource(illust, pageIndex = pageIndex)
 
                                 PixivAsyncImage(
@@ -360,9 +367,10 @@ private fun IllustDetailSingleContent(
                                 }
                                 val singleUrl = remember(illust, effectiveQuality) {
                                     when (effectiveQuality) {
-                                        1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                                        2 -> illust.imageUrls.medium
-                                        else -> illust.imageUrls.large
+                                        0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                                        1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                                        2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                                        else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                                     }
                                 }
                                 val thumbnailUrl = remember(illust) {
@@ -377,6 +385,7 @@ private fun IllustDetailSingleContent(
                                             Modifier
                                         },
                                     )
+                                    .clickable { fullScreenPageIndex = 0 }
                                     .illustDragAndDropSource(illust, pageIndex = 0)
 
                                 PixivAsyncImage(
@@ -794,6 +803,7 @@ private fun IllustDetailSingleContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter),
+            contentAlignment = Alignment.TopCenter,
         ) {
             // 1. 底层全宽毛玻璃背景（随滚动进度平滑淡入，往回划平滑淡出，始终驻留GPU层）
             BlurredBar(
@@ -813,6 +823,7 @@ private fun IllustDetailSingleContent(
             // 2. 顶栏主体内容行（单套恒定按钮与动态平滑标题）
             Row(
                 modifier = Modifier
+                    .widthIn(max = 920.dp)
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .height(56.dp)
@@ -1245,6 +1256,15 @@ private fun IllustDetailSingleContent(
             }
         }
 
+        if (fullScreenPageIndex != null && illust != null) {
+            IllustFullScreenViewer(
+                illust = illust,
+                initialPage = fullScreenPageIndex!!,
+                zoomQuality = settings?.zoomQuality ?: 0,
+                onDismiss = { fullScreenPageIndex = null },
+            )
+        }
+
         ToastMessage(
             message = toastMessage ?: bookmarkError,
             backdrop = detailBackdrop,
@@ -1253,6 +1273,145 @@ private fun IllustDetailSingleContent(
                 bookmarkError = null
             },
         )
+    }
+}
+
+/**
+ * 插画全屏/高清缩放预览组件：
+ * 支持根据 [SettingsRepository.zoomQuality] 加载对应画质大图，支持多 P 左右滑动翻页与页码指示。
+ */
+@Composable
+private fun IllustFullScreenViewer(
+    illust: Illust,
+    initialPage: Int,
+    zoomQuality: Int,
+    onDismiss: () -> Unit,
+) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
+    val pagerState = rememberPagerState(
+        initialPage = initialPage.coerceIn(0, pageCount - 1),
+        pageCount = { pageCount },
+    )
+
+    PlatformBackHandler(onBack = onDismiss)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+    ) {
+        if (pageCount > 1) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { pageIndex ->
+                val page = illust.metaPages[pageIndex]
+                val zoomUrl = remember(page, zoomQuality) {
+                    when (zoomQuality) {
+                        0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                        1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                        2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
+                        else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                    }
+                }
+                val thumbnailUrl = remember(page) {
+                    page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDismiss,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PixivAsyncImage(
+                        model = zoomUrl,
+                        thumbnailUrl = thumbnailUrl,
+                        contentDescription = "${illust.title} ($pageIndex)",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        } else {
+            val singleZoomUrl = remember(illust, zoomQuality) {
+                when (zoomQuality) {
+                    0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                    1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                    2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                    else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                }
+            }
+            val thumbnailUrl = remember(illust) {
+                illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDismiss,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                PixivAsyncImage(
+                    model = singleZoomUrl,
+                    thumbnailUrl = thumbnailUrl,
+                    contentDescription = illust.title,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        // 顶部浮层：返回/关闭按钮与页码指示器
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .align(Alignment.TopCenter),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.50f))
+                    .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Back,
+                    contentDescription = strings.back,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            if (pageCount > 1) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.50f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        text = "${pagerState.currentPage + 1} / $pageCount",
+                        style = MiuixTheme.textStyles.body2,
+                        color = Color.White,
+                    )
+                }
+            }
+        }
     }
 }
 

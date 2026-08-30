@@ -63,6 +63,9 @@ fun QualitySettingScreen(
     var mangaQuality by remember {
         mutableIntStateOf(settingsRepository.mangaQuality)
     }
+    var zoomQuality by remember {
+        mutableIntStateOf(settingsRepository.zoomQuality)
+    }
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
@@ -152,6 +155,15 @@ fun QualitySettingScreen(
                             onSelectedIndexChange = { index ->
                                 mangaQuality = index
                                 settingsRepository.mangaQuality = index
+                            },
+                        )
+                        OverlayDropdownPreference(
+                            title = strings.zoomQuality,
+                            items = detailQualityOptions,
+                            selectedIndex = zoomQuality.coerceIn(0, detailQualityOptions.lastIndex),
+                            onSelectedIndexChange = { index ->
+                                zoomQuality = index
+                                settingsRepository.zoomQuality = index
                             },
                         )
                     }

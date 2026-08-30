@@ -42,11 +42,11 @@ class SettingsRepository(
 
     var pictureQuality: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.PICTURE_QUALITY, 0)
-        set(value) { settings[SettingsKeys.PICTURE_QUALITY] = value }
+        set(value) { settings[SettingsKeys.PICTURE_QUALITY] = value; notifyChanged() }
 
     var mangaQuality: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.MANGA_QUALITY, 0)
-        set(value) { settings[SettingsKeys.MANGA_QUALITY] = value }
+        set(value) { settings[SettingsKeys.MANGA_QUALITY] = value; notifyChanged() }
 
     var pictureSource: String
         get() = settings.getStringWithLegacyFallback(

@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -250,6 +252,7 @@ fun CommentsScreen(
                 .fillMaxSize()
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
+            contentAlignment = Alignment.TopCenter,
         ) {
             val result = state.value
             when {
@@ -272,11 +275,14 @@ fun CommentsScreen(
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
                             ) {
                                 LazyColumn(
                                     state = listState,
                                     modifier = Modifier
-                                        .fillMaxSize()
+                                        .fillMaxHeight()
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                                        .fillMaxWidth()
                                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                                     contentPadding = paddingValues,
                                 ) {
@@ -368,86 +374,94 @@ private fun CommentInputBar(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var showEmojiPanel by rememberSaveable { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        error?.let {
-            Text(
-                text = it,
-                color = MiuixTheme.colorScheme.error,
-                style = MiuixTheme.textStyles.body2,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
-        replyTarget?.let { target ->
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .fillMaxWidth(),
+        ) {
+            error?.let {
+                Text(
+                    text = it,
+                    color = MiuixTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.body2,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            replyTarget?.let { target ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = strings.commentsReplyTo.format(target.user?.name.orEmpty(), target.comment.orEmpty()),
+                        style = MiuixTheme.textStyles.body2,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onCancelReply) {
+                        Text(strings.cancel)
+                    }
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = strings.commentsReplyTo.format(target.user?.name.orEmpty(), target.comment.orEmpty()),
-                    style = MiuixTheme.textStyles.body2,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onCancelReply) {
-                    Text(strings.cancel)
-                }
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = { showEmojiPanel = !showEmojiPanel },
-                enabled = !isSending && isLoggedIn != false,
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.emoji_304),
-                    contentDescription = strings.commentsEmojiPicker,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            TextField(
-                value = text,
-                onValueChange = onTextChange,
-                label = when {
-                    isLoggedIn == false -> strings.commentsLoginToComment
-                    replyTarget != null -> strings.commentsReplyPlaceholder
-                    else -> strings.commentsPublishPlaceholder
-                },
-                modifier = Modifier.weight(1f),
-                enabled = !isSending && isLoggedIn != false,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = onSend,
-                enabled = text.isNotBlank() && !isSending && isLoggedIn == true,
-            ) {
-                if (isSending) {
-                    Text(strings.commentsSending)
-                } else {
-                    Icon(
-                        imageVector = MiuixIcons.Send,
-                        contentDescription = strings.commentsSend,
+                IconButton(
+                    onClick = { showEmojiPanel = !showEmojiPanel },
+                    enabled = !isSending && isLoggedIn != false,
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.emoji_304),
+                        contentDescription = strings.commentsEmojiPicker,
+                        modifier = Modifier.size(24.dp),
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextField(
+                    value = text,
+                    onValueChange = onTextChange,
+                    label = when {
+                        isLoggedIn == false -> strings.commentsLoginToComment
+                        replyTarget != null -> strings.commentsReplyPlaceholder
+                        else -> strings.commentsPublishPlaceholder
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isSending && isLoggedIn != false,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onSend,
+                    enabled = text.isNotBlank() && !isSending && isLoggedIn == true,
+                ) {
+                    if (isSending) {
+                        Text(strings.commentsSending)
+                    } else {
+                        Icon(
+                            imageVector = MiuixIcons.Send,
+                            contentDescription = strings.commentsSend,
+                        )
+                    }
+                }
             }
-        }
 
-        if (showEmojiPanel && isLoggedIn != false) {
-            val emojiGridState = rememberLazyGridState()
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-            ) {
+            if (showEmojiPanel && isLoggedIn != false) {
+                val emojiGridState = rememberLazyGridState()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
                 LazyVerticalGrid(
                     state = emojiGridState,
                     columns = GridCells.Adaptive(minSize = 44.dp),
@@ -487,6 +501,7 @@ private fun CommentInputBar(
             }
         }
     }
+}
 }
 
 @Composable
