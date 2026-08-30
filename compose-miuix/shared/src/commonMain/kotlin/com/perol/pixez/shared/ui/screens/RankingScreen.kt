@@ -63,6 +63,7 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -169,6 +170,7 @@ fun RankingScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -179,6 +181,7 @@ fun RankingScreen(
             FrostedTopAppBar(
                 title = strings.tabRanking,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -236,7 +239,14 @@ fun RankingScreen(
                                 onIllustClick = onIllustClick,
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .layerBackdrop(backdrop)
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                contentPadding = PaddingValues(
+                                    start = 8.dp,
+                                    top = 8.dp,
+                                    end = 8.dp,
+                                    bottom = 100.dp,
+                                ),
                                 hasMore = nextUrl != null,
                                 isLoadingMore = isLoadingMore,
                                 loadMoreError = loadMoreError,

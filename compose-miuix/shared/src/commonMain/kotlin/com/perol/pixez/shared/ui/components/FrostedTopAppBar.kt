@@ -31,11 +31,19 @@ fun FrostedTopAppBar(
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
 
-    val targetAlpha = remember(collapsedFraction) {
-        if (collapsedFraction > 0.01f) {
-            0.78f + (collapsedFraction * 0.12f).coerceAtMost(0.12f)
+    val targetAlpha = remember(collapsedFraction, backdrop != null) {
+        if (backdrop != null) {
+            if (collapsedFraction > 0.01f) {
+                0.70f + (collapsedFraction * 0.08f).coerceAtMost(0.08f)
+            } else {
+                0.78f
+            }
         } else {
-            1.0f
+            if (collapsedFraction > 0.01f) {
+                0.78f + (collapsedFraction * 0.12f).coerceAtMost(0.12f)
+            } else {
+                1.0f
+            }
         }
     }
     val animatedAlpha by animateFloatAsState(targetAlpha, label = "FrostedTopBarAlpha")
@@ -97,11 +105,19 @@ fun FrostedSmallTopAppBar(
     val colorScheme = MiuixTheme.colorScheme
     val collapsedFraction = scrollBehavior?.state?.collapsedFraction ?: 0f
 
-    val targetAlpha = remember(collapsedFraction) {
-        if (collapsedFraction > 0.01f) {
-            0.82f
+    val targetAlpha = remember(collapsedFraction, backdrop != null) {
+        if (backdrop != null) {
+            if (collapsedFraction > 0.01f) {
+                0.72f + (collapsedFraction * 0.08f).coerceAtMost(0.08f)
+            } else {
+                0.80f
+            }
         } else {
-            1.0f
+            if (collapsedFraction > 0.01f) {
+                0.82f
+            } else {
+                1.0f
+            }
         }
     }
     val animatedAlpha by animateFloatAsState(targetAlpha, label = "FrostedSmallTopBarAlpha")

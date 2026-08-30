@@ -52,6 +52,7 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -223,6 +224,7 @@ fun HelloScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
@@ -231,6 +233,7 @@ fun HelloScreen(
             FrostedTopAppBar(
                 title = strings.tabRecommend,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -295,6 +298,7 @@ fun HelloScreen(
                             onIllustClick = onIllustClick,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .layerBackdrop(backdrop)
                                 .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(
                                 start = 8.dp,

@@ -204,11 +204,12 @@ fun Modifier.backdropBlur(
     shape: Shape = RoundedCornerShape(0.dp),
     blurRadius: Dp = 20.dp,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.85f,
+    tintAlpha: Float = 0.75f,
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
     effects = {
+        vibrancy()
         blur(blurRadius.toPx(), blurRadius.toPx())
     },
     highlight = null,

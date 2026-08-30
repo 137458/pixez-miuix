@@ -186,6 +186,7 @@ fun SearchScreen(
             FrostedTopAppBar(
                 title = strings.tabSearch,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
             )
         },
     ) { paddingValues ->

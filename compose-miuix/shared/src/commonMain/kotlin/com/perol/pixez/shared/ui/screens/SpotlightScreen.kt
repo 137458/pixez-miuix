@@ -70,6 +70,7 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -241,6 +242,7 @@ fun SpotlightScreen(
             FrostedTopAppBar(
                 title = strings.spotlightTitle,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
                         Icon(
@@ -302,7 +304,7 @@ fun SpotlightScreen(
                         state = currentGridState,
                         modifier = Modifier
                             .fillMaxSize()
-                            
+                            .layerBackdrop(backdrop)
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             start = 16.dp,

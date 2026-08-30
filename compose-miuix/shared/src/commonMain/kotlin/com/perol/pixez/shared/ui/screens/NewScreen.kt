@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,6 +52,7 @@ import com.perol.pixez.shared.ui.components.topAppBarBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 /**
@@ -225,6 +227,7 @@ fun NewScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberLayerBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
     Scaffold(
@@ -233,6 +236,7 @@ fun NewScreen(
             FrostedTopAppBar(
                 title = strings.tabNew,
                 scrollBehavior = scrollBehavior,
+                backdrop = backdrop,
                 actions = {
                     IconButton(
                         onClick = triggerManualRefresh,
@@ -302,7 +306,14 @@ fun NewScreen(
                                         onIllustClick = onIllustClick,
                                         modifier = Modifier
                                             .fillMaxSize()
+                                            .layerBackdrop(backdrop)
                                             .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        contentPadding = PaddingValues(
+                                            start = 8.dp,
+                                            top = 8.dp,
+                                            end = 8.dp,
+                                            bottom = 100.dp,
+                                        ),
                                         hasMore = nextUrl != null,
                                         isLoadingMore = isLoadingMore,
                                         loadMoreError = loadMoreError,
