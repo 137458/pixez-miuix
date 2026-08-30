@@ -166,8 +166,7 @@ fun UserFollowerListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             val result = state.value
             when {
@@ -186,50 +185,56 @@ fun UserFollowerListScreen(
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            LazyColumn(
-                                state = listState,
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = paddingValues,
+                                    .layerBackdrop(backdrop),
                             ) {
-                                items(
-                                    items = previews,
-                                    key = { it.user.id },
-                                    contentType = { "user_preview_item" },
-                                ) { preview ->
-                                    UserPreviewItem(
-                                        preview = preview,
-                                        onClick = { onUserClick(preview.user.id) },
-                                    )
-                                }
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = paddingValues,
+                                ) {
+                                    items(
+                                        items = previews,
+                                        key = { it.user.id },
+                                        contentType = { "user_preview_item" },
+                                    ) { preview ->
+                                        UserPreviewItem(
+                                            preview = preview,
+                                            onClick = { onUserClick(preview.user.id) },
+                                        )
+                                    }
 
-                                item(key = "follower_pagination_footer", contentType = "footer") {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        when {
-                                            isLoadingMore -> InfiniteProgressIndicator()
-                                            loadMoreError != null -> Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Text(
-                                                    text = strings.loadFailed,
-                                                    style = MiuixTheme.textStyles.body2,
-                                                    color = MiuixTheme.colorScheme.error,
-                                                )
-                                                Button(onClick = ::loadMore) {
-                                                    Text(text = strings.retry)
+                                    item(key = "follower_pagination_footer", contentType = "footer") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 16.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            when {
+                                                isLoadingMore -> InfiniteProgressIndicator()
+                                                loadMoreError != null -> Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Text(
+                                                        text = strings.loadFailed,
+                                                        style = MiuixTheme.textStyles.body2,
+                                                        color = MiuixTheme.colorScheme.error,
+                                                    )
+                                                    Button(onClick = ::loadMore) {
+                                                        Text(text = strings.retry)
+                                                    }
                                                 }
+                                                nextUrl == null -> Text(
+                                                    text = strings.noMoreData,
+                                                    style = MiuixTheme.textStyles.footnote1,
+                                                )
                                             }
-                                            nextUrl == null -> Text(
-                                                text = strings.noMoreData,
-                                                style = MiuixTheme.textStyles.footnote1,
-                                            )
                                         }
                                     }
                                 }

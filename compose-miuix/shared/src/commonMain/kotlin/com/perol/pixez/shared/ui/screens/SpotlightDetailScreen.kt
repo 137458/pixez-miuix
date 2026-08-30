@@ -163,8 +163,7 @@ fun SpotlightDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             val result = state.value
             when {
@@ -187,7 +186,12 @@ fun SpotlightDetailScreen(
                         onRefresh = triggerManualRefresh,
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        LazyVerticalStaggeredGrid(
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .layerBackdrop(backdrop),
+                        ) {
+                            LazyVerticalStaggeredGrid(
                             columns = effectiveColumns,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -320,6 +324,7 @@ fun SpotlightDetailScreen(
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }

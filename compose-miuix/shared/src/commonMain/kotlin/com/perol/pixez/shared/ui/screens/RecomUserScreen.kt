@@ -173,8 +173,7 @@ fun RecomUserScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             when (val result = initialState.value) {
                 null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
@@ -191,65 +190,70 @@ fun RecomUserScreen(
                                 onRefresh = triggerManualRefresh,
                                 modifier = Modifier.fillMaxSize(),
                             ) {
-                                LazyColumn(
-                                    state = listState,
+                                Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    contentPadding = paddingValues,
+                                        .layerBackdrop(backdrop),
                                 ) {
-                                items(
-                                    items = previews,
-                                    key = { it.user.id },
-                                    contentType = { "user_preview_item" },
-                                ) { preview ->
-                                    UserPreviewItem(
-                                        preview = preview,
-                                        onClick = { onUserClick(preview.user.id) },
-                                    )
-                                }
-
-                                item(key = "load_more_footer", contentType = "footer") {
-                                    Box(
+                                    LazyColumn(
+                                        state = listState,
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center,
+                                            .fillMaxSize()
+                                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        contentPadding = paddingValues,
                                     ) {
-                                        when {
-                                            isLoadingMore -> InfiniteProgressIndicator()
-                                            loadMoreError != null -> Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
+                                        items(
+                                            items = previews,
+                                            key = { it.user.id },
+                                            contentType = { "user_preview_item" },
+                                        ) { preview ->
+                                            UserPreviewItem(
+                                                preview = preview,
+                                                onClick = { onUserClick(preview.user.id) },
+                                            )
+                                        }
+
+                                        item(key = "load_more_footer", contentType = "footer") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 16.dp),
+                                                contentAlignment = Alignment.Center,
                                             ) {
-                                                Text(
-                                                    text = strings.loadFailed,
-                                                    style = MiuixTheme.textStyles.body2,
-                                                    color = MiuixTheme.colorScheme.error,
-                                                )
-                                                Button(onClick = ::loadMore) {
-                                                    Text(text = strings.retry)
+                                                when {
+                                                    isLoadingMore -> InfiniteProgressIndicator()
+                                                    loadMoreError != null -> Row(
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                    ) {
+                                                        Text(
+                                                            text = strings.loadFailed,
+                                                            style = MiuixTheme.textStyles.body2,
+                                                            color = MiuixTheme.colorScheme.error,
+                                                        )
+                                                        Button(onClick = ::loadMore) {
+                                                            Text(text = strings.retry)
+                                                        }
+                                                    }
+                                                    nextUrl == null -> Text(
+                                                        text = strings.noMoreData,
+                                                        style = MiuixTheme.textStyles.footnote1,
+                                                    )
                                                 }
                                             }
-                                            nextUrl == null -> Text(
-                                                text = strings.noMoreData,
-                                                style = MiuixTheme.textStyles.footnote1,
-                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                    else -> ErrorPlaceholder(
+                        error = result.exceptionOrNull(),
+                        onRetry = { triggerManualRefresh() },
+                        modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    )
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                )
             }
         }
     }
 }
-}
-

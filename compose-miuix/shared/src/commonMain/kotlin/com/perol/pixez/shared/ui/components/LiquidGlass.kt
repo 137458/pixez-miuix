@@ -42,6 +42,10 @@ import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -202,13 +206,14 @@ val LocalBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 fun Modifier.backdropBlur(
     backdrop: Backdrop,
     shape: Shape = RoundedCornerShape(0.dp),
-    blurRadius: Dp = 20.dp,
+    blurRadius: Dp = 16.dp,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.96f,
+    tintAlpha: Float = 0.85f,
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
     effects = {
+        vibrancy()
         blur(blurRadius.toPx(), blurRadius.toPx())
     },
     highlight = null,
@@ -223,13 +228,14 @@ fun Modifier.backdropBlur(
  *
  * @param backdrop 全局或页面层级的 Backdrop 采样源。若为 null 则保持原样。
  * @param tintColor 表面着色，默认取当前主题表面色。
- * @param tintAlpha 表面着色不透明度，默认 0.96f 高密度磨砂。
+ * @param tintAlpha 表面着色不透明度，默认 0.85f 通透毛玻璃磨砂。
+ * @param blurRadius 模糊半径，默认 16.dp 紧凑平滑模糊核。
  */
 fun Modifier.topAppBarBlur(
     backdrop: Backdrop?,
     tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.96f,
-    blurRadius: Dp = 20.dp,
+    tintAlpha: Float = 0.85f,
+    blurRadius: Dp = 16.dp,
 ): Modifier = if (backdrop != null) {
     this.backdropBlur(
         backdrop = backdrop,
@@ -241,6 +247,33 @@ fun Modifier.topAppBarBlur(
 } else {
     this
 }
+
+/**
+ * 为滑入顶栏区域的内容提供平滑渐变溶解遮罩，
+ * 使得文字在向上滑入顶栏后方时自然渐隐淡出，
+ * 避免深色文字在高斯模糊下形成灰斑脏块与生硬横向切线，
+ * 同时保留图片大色块透过滤镜呈现的通透环境光辉映。
+ */
+fun Modifier.contentTopFade(
+    fadeHeight: Dp = 56.dp,
+): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val fadePx = fadeHeight.toPx()
+        if (fadePx > 0f) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    0.5f to Color.Black.copy(alpha = 0.4f),
+                    1f to Color.Black,
+                    startY = 0f,
+                    endY = fadePx,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /**
  * 安全挂载 layerBackdrop 采样源的扩展 Modifier。

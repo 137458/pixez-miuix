@@ -170,8 +170,7 @@ fun UserFollowListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             val result = state.value
             when {
@@ -190,7 +189,12 @@ fun UserFollowListScreen(
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            LazyColumn(
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(backdrop),
+                            ) {
+                                LazyColumn(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -237,6 +241,7 @@ fun UserFollowListScreen(
                                         }
                                     }
                                 }
+                            }
                             }
                         }
                     }

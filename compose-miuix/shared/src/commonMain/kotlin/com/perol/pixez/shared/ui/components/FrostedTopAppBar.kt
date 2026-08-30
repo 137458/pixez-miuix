@@ -51,8 +51,8 @@ fun FrostedTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.96f,
-                        blurRadius = 20.dp,
+                        tintAlpha = 0.85f,
+                        blurRadius = 16.dp,
                     )
                     .drawBehind {
                         if (outlineAlpha > 0.01f) {
@@ -106,8 +106,8 @@ fun FrostedSmallTopAppBar(
                     .backdropBlur(
                         backdrop = backdrop,
                         tintColor = colorScheme.surface,
-                        tintAlpha = 0.96f,
-                        blurRadius = 20.dp,
+                        tintAlpha = 0.85f,
+                        blurRadius = 16.dp,
                     )
                     .drawBehind {
                         if (outlineAlpha > 0.01f) {

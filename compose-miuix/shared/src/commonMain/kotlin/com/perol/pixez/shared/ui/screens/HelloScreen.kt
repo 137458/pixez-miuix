@@ -280,8 +280,7 @@ fun HelloScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             val result = state.value
             when {
@@ -300,7 +299,12 @@ fun HelloScreen(
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            IllustStaggeredGrid(
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(backdrop),
+                            ) {
+                                IllustStaggeredGrid(
                                 illusts = illusts,
                                 state = gridState,
                                 onIllustClick = onIllustClick,
@@ -318,6 +322,7 @@ fun HelloScreen(
                                 loadMoreError = loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
+                            }
                         }
                     }
                 }

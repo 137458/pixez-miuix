@@ -169,8 +169,7 @@ fun RelatedIllustsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surface)
-                .layerBackdrop(backdrop),
+                .background(colorScheme.surface),
         ) {
             val result = state.value
             when {
@@ -193,23 +192,29 @@ fun RelatedIllustsScreen(
                             onRefresh = triggerManualRefresh,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            IllustStaggeredGrid(
-                                illusts = illusts,
-                                onIllustClick = onIllustClick,
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                contentPadding = PaddingValues(
-                                    start = 8.dp,
-                                    top = paddingValues.calculateTopPadding() + 8.dp,
-                                    end = 8.dp,
-                                    bottom = 100.dp,
-                                ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
-                                onLoadMore = ::loadMore,
-                            )
+                                    .layerBackdrop(backdrop),
+                            ) {
+                                IllustStaggeredGrid(
+                                    illusts = illusts,
+                                    onIllustClick = onIllustClick,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = PaddingValues(
+                                        start = 8.dp,
+                                        top = paddingValues.calculateTopPadding() + 8.dp,
+                                        end = 8.dp,
+                                        bottom = 100.dp,
+                                    ),
+                                    hasMore = nextUrl != null,
+                                    isLoadingMore = isLoadingMore,
+                                    loadMoreError = loadMoreError,
+                                    onLoadMore = ::loadMore,
+                                )
+                            }
                         }
                     }
                 }
