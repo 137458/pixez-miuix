@@ -62,7 +62,7 @@ jobs:
           compression-level: 9
 
   desktop:
-    name: Desktop Compile
+    name: Desktop Build & Package
     runs-on: windows-latest
     defaults:
       run:
@@ -82,8 +82,15 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
 
-      - name: 编译 Desktop
-        run: ./gradlew.bat :composeApp:compileKotlinDesktop --no-daemon --stacktrace "-Dorg.gradle.java.home=%JAVA_HOME%"
+      - name: 构建并打包 Desktop 便携版与安装包
+        run: ./gradlew.bat :composeApp:createDistributable :composeApp:packageWindowsPortableZip --no-daemon --stacktrace "-Dorg.gradle.java.home=%JAVA_HOME%"
+
+      - name: 上传 Desktop 便携绿色版 ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixez-desktop-windows-x64-portable
+          path: compose-miuix/composeApp/build/compose/binaries/main/zip/*.zip
+          compression-level: 9
 
   ios-macos:
     name: iOS/macOS Compile

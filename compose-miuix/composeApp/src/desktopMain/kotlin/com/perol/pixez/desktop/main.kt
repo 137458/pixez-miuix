@@ -53,6 +53,14 @@ private object PixEzTrayPainter : Painter() {
  * Desktop(JVM) 应用入口，集成 Windows 11 原生硬件加速 Mica 材质、全自动智能代理选择器、系统托盘与手机版同款应用图标。
  */
 fun main(args: Array<String>) {
+    // 注入 Skiko 硬件加速与高帧率渲染配置（解除固定 60fps 限制，支持 120Hz/144Hz/240Hz+ 屏幕，启用原生硬件垂直同步）
+    System.setProperty("skiko.fps", "0")
+    System.setProperty("skiko.vsync.enabled", "true")
+    System.setProperty("skiko.hardwareAcceleration", "true")
+    System.setProperty("skiko.directx.enabled", "true")
+    System.setProperty("compose.interop.blending", "true")
+    System.setProperty("sun.java2d.d3d", "true")
+
     // 启动即激活全自动系统代理探测（支持 Clash/v2rayN/Windows 设置实时同步）
     DesktopProxySelector.install()
 

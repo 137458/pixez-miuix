@@ -125,14 +125,34 @@ compose.desktop {
         mainClass = "com.perol.pixez.desktop.MainKt"
 
         nativeDistributions {
-            targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
+            targetFormats(
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
+            )
             packageName = "PixEz"
             packageVersion = "0.9.108"
+            description = "PixEz MIUIX - Pixiv Client with Xiaomi HyperOS design"
+            copyright = "© 2026 PixEz Contributors"
+            vendor = "PixEz"
 
             windows {
                 iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
                 menu = true
                 shortcut = true
+                dirChooser = true
+                perUserInstall = false
+                upgradeUuid = "8b646c21-3965-4f40-b384-0a3ffcbe0999"
+            }
+
+            macOS {
+                iconFile.set(project.file("src/desktopMain/resources/icon.png"))
+                bundleID = "com.perol.pixez"
+            }
+
+            linux {
+                iconFile.set(project.file("src/desktopMain/resources/icon.png"))
             }
 
             modules(
@@ -144,20 +164,36 @@ compose.desktop {
                 "java.net.http",
                 "java.security.jgss",
                 "java.xml",
-                "jdk.unsupported"
+                "jdk.unsupported",
             )
 
             jvmArgs += listOf(
                 "-XX:+UseG1GC",
                 "-XX:+UseStringDeduplication",
-                "-Xms64m",
+                "-Xms128m",
+                "-Xmx2048m",
                 "-Dfile.encoding=UTF-8",
-                "-Djava.net.useSystemProxies=true"
+                "-Djava.net.useSystemProxies=true",
+                "-Dskiko.fps=0",
+                "-Dskiko.vsync.enabled=true",
+                "-Dskiko.hardwareAcceleration=true",
+                "-Dskiko.directx.enabled=true",
+                "-Dcompose.interop.blending=true",
+                "-Dsun.java2d.d3d=true",
             )
         }
     }
 }
 
+tasks.register<Zip>("packageWindowsPortableZip") {
+    group = "compose desktop"
+    description = "Packs the Windows desktop distributable into a clean portable zip archive."
+    dependsOn("createDistributable")
+    from(layout.buildDirectory.dir("compose/binaries/main/app/PixEz"))
+    into("PixEz")
+    archiveFileName.set("PixEz-windows-x64-portable.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/zip"))
+}
 
 tasks.matching { it.name.contains("AarMetadata") }.configureEach {
     enabled = false
