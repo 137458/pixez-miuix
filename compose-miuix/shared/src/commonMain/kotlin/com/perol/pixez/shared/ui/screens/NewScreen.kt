@@ -134,34 +134,44 @@ fun NewScreen(
         }
     }
 
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        repository,
-        currentRestrict,
-        retryCount,
-        isLoggedIn,
-        banRepository,
-        settingsRepository.changeVersion,
-    ) {
-        val res = when (isLoggedIn) {
-            true -> {
-                val followResult = suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(currentRestrict) }
-                followResult.map { filterBanned(it.illusts) to it.nextUrl }
-            }
-            false -> Result.success(emptyList<Illust>() to null)
-            null -> null
-        }
-        isManualRefreshing = false
-        value = res
-    }
-
-    var illusts by remember(settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, settingsRepository.changeVersion) {
+        val loggedIn = isLoggedIn ?: return@LaunchedEffect
+        if (!loggedIn) {
+            illustsState = emptyList()
+            nextUrl = null
+            initialError = null
+            return@LaunchedEffect
+        }
+        val force = isManualRefreshing
+        if (illustsState == null) {
+            initialError = null
+        }
+        val followResult = suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(currentRestrict) }
+        isManualRefreshing = false
+        followResult.onSuccess { response ->
+            illustsState = filterBanned(response.illusts)
+            nextUrl = response.nextUrl
+            initialError = null
+            loadMoreError = null
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
+        }
+    }
 
     LaunchedEffect(reselectFlow) {
         reselectFlow?.collect {
@@ -169,18 +179,9 @@ fun NewScreen(
             if (gridState.firstVisibleItemIndex > 0) {
                 gridState.animateScrollToItem(0)
             } else {
-                retryCount++
                 isManualRefreshing = true
+                retryCount++
             }
-        }
-    }
-
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
         }
     }
 
@@ -193,7 +194,7 @@ fun NewScreen(
             suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(restrict = currentRestrict, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts)
-                    illusts = illusts + filtered
+                    illustsState = (illustsState.orEmpty()) + filtered
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -308,15 +309,22 @@ fun NewScreen(
                 )
 
                 true -> {
-                    val result = state.value
+                    val currentIllusts = illustsState
                     when {
-                        result == null -> LoadingPlaceholder(
+                        currentIllusts == null && initialError == null -> LoadingPlaceholder(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(paddingValues),
                         )
-                        result.isSuccess -> {
-                            if (illusts.isEmpty()) {
+                        currentIllusts == null && initialError != null -> ErrorPlaceholder(
+                            error = initialError,
+                            onRetry = { triggerManualRefresh() },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
+                        currentIllusts != null -> {
+                            if (currentIllusts.isEmpty()) {
                                 EmptyPlaceholder(
                                     message = strings.loginNewEmpty,
                                     modifier = Modifier
@@ -332,7 +340,7 @@ fun NewScreen(
                                     topAppBarScrollBehavior = scrollBehavior,
                                 ) {
                                     IllustStaggeredGrid(
-                                        illusts = illusts,
+                                        illusts = currentIllusts,
                                         state = gridState,
                                         onIllustClick = onIllustClick,
                                         modifier = Modifier
@@ -352,14 +360,6 @@ fun NewScreen(
                                 }
                             }
                         }
-
-                        else -> ErrorPlaceholder(
-                            error = result.exceptionOrNull(),
-                            onRetry = { triggerManualRefresh() },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(paddingValues),
-                        )
                     }
                 }
             }

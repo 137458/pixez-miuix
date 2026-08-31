@@ -83,30 +83,34 @@ fun RelatedIllustsScreen(
         }
     }
 
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        illustId,
-        retryCount,
-        banRepository,
-        settingsRepository.changeVersion,
-    ) {
-        val illustsResult = suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId) }
-        isManualRefreshing = false
-        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
-    }
-
-    var illusts by remember(illustId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(illustId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var illustsState by remember(illustId) { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
+    var initialError by remember(illustId) { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
+    LaunchedEffect(illustId, retryCount, settingsRepository.changeVersion) {
+        val force = isManualRefreshing
+        if (illustsState == null) {
+            initialError = null
+        }
+        val illustsResult = suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId) }
+        isManualRefreshing = false
+        illustsResult.onSuccess { response ->
+            illustsState = filterBanned(response.illusts)
+            nextUrl = response.nextUrl
+            initialError = null
             loadMoreError = null
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -119,7 +123,7 @@ fun RelatedIllustsScreen(
             suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts)
-                    illusts = illusts + filtered
+                    illustsState = (illustsState.orEmpty()) + filtered
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -177,15 +181,22 @@ fun RelatedIllustsScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val result = state.value
+            val currentIllusts = illustsState
             when {
-                result == null -> LoadingPlaceholder(
+                currentIllusts == null && initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                result.isSuccess -> {
-                    if (illusts.isEmpty()) {
+                currentIllusts == null && initialError != null -> ErrorPlaceholder(
+                    error = initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+                currentIllusts != null -> {
+                    if (currentIllusts.isEmpty()) {
                         EmptyPlaceholder(
                             message = strings.relatedIllustsEmpty,
                             modifier = Modifier
@@ -201,8 +212,9 @@ fun RelatedIllustsScreen(
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             IllustStaggeredGrid(
-                                illusts = illusts,
+                                illusts = currentIllusts,
                                 onIllustClick = onIllustClick,
+                                state = gridState,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -220,13 +232,6 @@ fun RelatedIllustsScreen(
                         }
                     }
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
             }
         }
     }

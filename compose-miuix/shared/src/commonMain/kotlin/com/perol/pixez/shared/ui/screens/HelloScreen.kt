@@ -118,38 +118,45 @@ fun HelloScreen(
         }
     }
 
-    // 页面进入时加载数据；已登录用推荐接口，未登录用 walkthrough 匿名接口。
-    // 默认读取内存缓存，仅当 isManualRefreshing == true 时触发强制网络刷新。
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        repository,
-        banRepository,
-        settingsRepository.changeVersion,
-        retryCount,
-        isLoggedIn,
-    ) {
-        val force = isManualRefreshing
-        val responseResult = when (isLoggedIn) {
-
-            true -> suspendRunCatchingNonCancel { repository.getRecommendedResponse(forceRefresh = force) }
-                .map { it.illusts to it.nextUrl }
-            false -> suspendRunCatchingNonCancel { repository.getWalkthroughResponse(forceRefresh = force) }
-                .map { it.illusts to (null as String?) }
-            null -> null
-        }
-        isManualRefreshing = false
-        value = responseResult?.map { (rawIllusts, nextUrl) ->
-            filterBanned(rawIllusts) to nextUrl
-        }
-    }
-
-    var illusts by remember(settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    // 加载或刷新推荐插画数据
+    LaunchedEffect(isLoggedIn, retryCount, settingsRepository.changeVersion) {
+        val loggedIn = isLoggedIn ?: return@LaunchedEffect
+        val force = isManualRefreshing
+        if (illustsState == null) {
+            initialError = null
+        }
+        val responseResult = when (loggedIn) {
+            true -> suspendRunCatchingNonCancel { repository.getRecommendedResponse(forceRefresh = force) }
+                .map { it.illusts to it.nextUrl }
+            false -> suspendRunCatchingNonCancel { repository.getWalkthroughResponse(forceRefresh = force) }
+                .map { it.illusts to (null as String?) }
+        }
+        isManualRefreshing = false
+        responseResult.onSuccess { (rawIllusts, initialNextUrl) ->
+            val filtered = filterBanned(rawIllusts)
+            illustsState = filtered
+            nextUrl = initialNextUrl
+            initialError = null
+            loadMoreError = null
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
+        }
+    }
 
     LaunchedEffect(reselectFlow) {
         reselectFlow?.collect {
@@ -157,18 +164,9 @@ fun HelloScreen(
             if (gridState.firstVisibleItemIndex > 0) {
                 gridState.animateScrollToItem(0)
             } else {
-                retryCount++
                 isManualRefreshing = true
+                retryCount++
             }
-        }
-    }
-
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
         }
     }
 
@@ -183,7 +181,7 @@ fun HelloScreen(
             }
             nextResult.onSuccess { response ->
                 val filtered = filterBanned(response.illusts)
-                illusts = illusts + filtered
+                illustsState = (illustsState.orEmpty()) + filtered
                 nextUrl = response.nextUrl
             }.onFailure { error ->
                 loadMoreError = error
@@ -288,11 +286,18 @@ fun HelloScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val result = state.value
+            val currentIllusts = illustsState
             when {
-                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                result.isSuccess -> {
-                    if (illusts.isEmpty()) {
+                currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentIllusts == null && initialError != null -> ErrorPlaceholder(
+                    error = initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+                currentIllusts != null -> {
+                    if (currentIllusts.isEmpty()) {
                         EmptyPlaceholder(
                             message = strings.noData,
                             modifier = Modifier
@@ -308,7 +313,7 @@ fun HelloScreen(
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             IllustStaggeredGrid(
-                                illusts = illusts,
+                                illusts = currentIllusts,
                                 state = gridState,
                                 onIllustClick = onIllustClick,
                                 modifier = Modifier
@@ -328,13 +333,6 @@ fun HelloScreen(
                         }
                     }
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
             }
         }
     }

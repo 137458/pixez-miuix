@@ -899,18 +899,27 @@ private fun SearchIllustResultGrid(
         }
     }
 
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
+    // 统一 UI 状态机（单向数据流 UDF）
+    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var initialError by remember { mutableStateOf<Throwable?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(
         searchWord,
         sort,
         searchTarget,
         searchAiType,
-        effectiveStartDate ?: "",
-        effectiveEndDate ?: "",
+        effectiveStartDate,
+        effectiveEndDate,
         retryCount,
-        banRepository,
         settingsRepository.changeVersion,
     ) {
+        if (illustsState == null) {
+            initialError = null
+        }
         val searchResult = suspendRunCatchingNonCancel {
             repository.searchIllustResponse(
                 word = searchWord,
@@ -921,25 +930,15 @@ private fun SearchIllustResultGrid(
                 endDate = effectiveEndDate,
             )
         }
-        value = searchResult.map { filterBanned(it.illusts) to it.nextUrl }
-    }
-
-    var illusts by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate, settingsRepository.changeVersion) {
-        mutableStateOf(listOf<Illust>())
-    }
-    var nextUrl by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate, settingsRepository.changeVersion) {
-        mutableStateOf<String?>(null)
-    }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
+        searchResult.onSuccess { response ->
+            illustsState = filterBanned(response.illusts)
+            nextUrl = response.nextUrl
+            initialError = null
             loadMoreError = null
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -961,7 +960,7 @@ private fun SearchIllustResultGrid(
                 )
             }.onSuccess { response ->
                 val filtered = filterBanned(response.illusts)
-                illusts = illusts + filtered
+                illustsState = (illustsState.orEmpty()) + filtered
                 nextUrl = response.nextUrl
             }.onFailure { error ->
                 loadMoreError = error
@@ -971,12 +970,17 @@ private fun SearchIllustResultGrid(
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val result = state.value
+    val currentIllusts = illustsState
     when {
-        result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-        result.isSuccess -> {
-            val filteredIllusts = remember(illusts, ugoiraFilter) {
-                applyUgoiraFilter(illusts, ugoiraFilter)
+        currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        currentIllusts == null && initialError != null -> ErrorPlaceholder(
+            error = initialError,
+            onRetry = { retryCount++ },
+            modifier = Modifier.fillMaxSize(),
+        )
+        currentIllusts != null -> {
+            val filteredIllusts = remember(currentIllusts, ugoiraFilter) {
+                applyUgoiraFilter(currentIllusts, ugoiraFilter)
             }
             if (filteredIllusts.isEmpty() && !isLoadingMore) {
                 EmptyPlaceholder(
@@ -999,11 +1003,6 @@ private fun SearchIllustResultGrid(
                 )
             }
         }
-        else -> ErrorPlaceholder(
-            error = result.exceptionOrNull(),
-            onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
-        )
     }
 }
 
@@ -1019,30 +1018,31 @@ private fun SearchUserResultList(
     contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    // 画师搜索结果重试计数，作为 produceState 的 key 触发重新加载。
+    // 画师搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 
-    val state = produceState<Result<com.perol.pixez.shared.data.model.UserPreviewsResponse>?>(
-        initialValue = null,
-        query,
-        retryCount,
-        settingsRepository.changeVersion,
-    ) {
-        value = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
-    }
-
-    var previews by remember(query, settingsRepository.changeVersion) { mutableStateOf(listOf<UserPreview>()) }
-    var nextUrl by remember(query, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var previewsState by remember { mutableStateOf<List<UserPreview>?>(null) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { response ->
-            previews = response.userPreviews
+    LaunchedEffect(query, retryCount, settingsRepository.changeVersion) {
+        if (previewsState == null) {
+            initialError = null
+        }
+        val userResult = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
+        userResult.onSuccess { response ->
+            previewsState = response.userPreviews
             nextUrl = response.nextUrl
-            isLoadingMore = false
+            initialError = null
             loadMoreError = null
+        }.onFailure { error ->
+            if (previewsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -1054,7 +1054,7 @@ private fun SearchUserResultList(
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    previews = previews + response.userPreviews
+                    previewsState = (previewsState.orEmpty()) + response.userPreviews
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -1064,9 +1064,10 @@ private fun SearchUserResultList(
         }
     }
 
-    val shouldLoadMore by remember(nextUrl, isLoadingMore, loadMoreError, previews.size) {
+    val currentPreviews = previewsState
+    val shouldLoadMore by remember(nextUrl, isLoadingMore, loadMoreError, currentPreviews?.size) {
         derivedStateOf {
-            if (nextUrl == null || isLoadingMore || loadMoreError != null || previews.isEmpty()) {
+            if (nextUrl == null || isLoadingMore || loadMoreError != null || currentPreviews.isNullOrEmpty()) {
                 false
             } else {
                 val layoutInfo = listState.layoutInfo
@@ -1083,11 +1084,15 @@ private fun SearchUserResultList(
         }
     }
 
-    val result = state.value
     when {
-        result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-        result.isSuccess -> {
-            if (previews.isEmpty()) {
+        currentPreviews == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        currentPreviews == null && initialError != null -> ErrorPlaceholder(
+            error = initialError,
+            onRetry = { retryCount++ },
+            modifier = Modifier.fillMaxSize(),
+        )
+        currentPreviews != null -> {
+            if (currentPreviews.isEmpty()) {
                 EmptyPlaceholder(
                     message = strings.searchEmptyUser,
                     modifier = Modifier.fillMaxSize(),
@@ -1102,7 +1107,7 @@ private fun SearchUserResultList(
                         contentPadding = contentPadding,
                     ) {
                         items(
-                            items = previews,
+                            items = currentPreviews,
                             key = { it.user.id },
                             contentType = { "user_preview_item" },
                         ) { preview ->
@@ -1112,7 +1117,7 @@ private fun SearchUserResultList(
                             )
                         }
 
-                        if (isLoadingMore || loadMoreError != null || (nextUrl == null && previews.isNotEmpty())) {
+                        if (isLoadingMore || loadMoreError != null || (nextUrl == null && currentPreviews.isNotEmpty())) {
                             item(key = "search_user_footer", contentType = "footer") {
                                 Box(
                                     modifier = Modifier
@@ -1173,11 +1178,6 @@ private fun SearchUserResultList(
                 }
             }
         }
-        else -> ErrorPlaceholder(
-            error = result.exceptionOrNull(),
-            onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
-        )
     }
 }
 

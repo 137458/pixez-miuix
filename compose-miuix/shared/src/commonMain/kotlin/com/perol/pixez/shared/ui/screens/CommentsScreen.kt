@@ -110,27 +110,34 @@ fun CommentsScreen(
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val state = produceState<Result<Pair<List<Comment>, String?>>?>(
-        initialValue = null,
-        illustId,
-        retryCount,
-    ) {
-        val commentResult = suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId) }
-        isManualRefreshing = false
-        value = commentResult.map { it.comments to it.nextUrl }
-    }
-
-    var comments by remember(illustId) { mutableStateOf(listOf<Comment>()) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var commentsState by remember(illustId) { mutableStateOf<List<Comment>?>(null) }
     var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
+    var initialError by remember(illustId) { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialComments, initialNextUrl) ->
-            comments = initialComments
-            nextUrl = initialNextUrl
-            isLoadingMore = false
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(illustId, retryCount) {
+        val force = isManualRefreshing
+        if (commentsState == null) {
+            initialError = null
+        }
+        val commentResult = suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId) }
+        isManualRefreshing = false
+        commentResult.onSuccess { response ->
+            commentsState = response.comments
+            nextUrl = response.nextUrl
+            initialError = null
             loadMoreError = null
+            if (force && listState.firstVisibleItemIndex > 0) {
+                listState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (commentsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -142,7 +149,7 @@ fun CommentsScreen(
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    comments = comments + response.comments
+                    commentsState = (commentsState.orEmpty()) + response.comments
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -157,12 +164,12 @@ fun CommentsScreen(
         retryCount++
     }
 
-    val listState = rememberLazyListState()
+    val currentComments = commentsState
 
     // 触底预加载：当滑到最后 4 项时自动请求下一页
-    val shouldLoadMore by remember(comments.size, nextUrl, isLoadingMore, loadMoreError) {
+    val shouldLoadMore by remember(currentComments?.size, nextUrl, isLoadingMore, loadMoreError) {
         derivedStateOf {
-            val totalCount = comments.size
+            val totalCount = currentComments?.size ?: 0
             if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
                 false
             } else {
@@ -254,11 +261,15 @@ fun CommentsScreen(
                 .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
-            val result = state.value
             when {
-                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                result.isSuccess -> {
-                    if (comments.isEmpty()) {
+                currentComments == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentComments == null && initialError != null -> ErrorPlaceholder(
+                    error = initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                )
+                currentComments != null -> {
+                    if (currentComments.isEmpty()) {
                         EmptyPlaceholder(
                             message = strings.noComments,
                             modifier = Modifier
@@ -287,7 +298,7 @@ fun CommentsScreen(
                                     contentPadding = paddingValues,
                                 ) {
                                     items(
-                                    items = comments,
+                                    items = currentComments,
                                     key = { it.id ?: it.hashCode() },
                                     contentType = { "comment_item" },
                                 ) { comment ->
@@ -341,14 +352,6 @@ fun CommentsScreen(
                     }
                 }
             }
-
-            else -> ErrorPlaceholder(
-                error = result.exceptionOrNull(),
-                onRetry = { triggerManualRefresh() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-            )
         }
     }
 }

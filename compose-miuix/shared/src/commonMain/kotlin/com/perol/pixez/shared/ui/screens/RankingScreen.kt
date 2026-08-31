@@ -112,15 +112,21 @@ fun RankingScreen(
         }
     }
 
+    // 统一 UI 状态机（单向数据流 UDF）
+    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember { mutableStateOf<String?>(null) }
+    var initialError by remember { mutableStateOf<Throwable?>(null) }
+    var isLoadingMore by remember { mutableStateOf(false) }
+    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
+
     // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        selectedMode,
-        selectedDate,
-        retryCount,
-        banRepository,
-        settingsRepository.changeVersion,
-    ) {
+    LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.changeVersion) {
+        val force = isManualRefreshing
+        if (illustsState == null) {
+            initialError = null
+        }
         val rankingResult = suspendRunCatchingNonCancel {
             repository.getRankingResponse(
                 mode = selectedMode.code,
@@ -128,21 +134,18 @@ fun RankingScreen(
             )
         }
         isManualRefreshing = false
-        value = rankingResult.map { filterBanned(it.illusts) to it.nextUrl }
-    }
-
-    var illusts by remember(selectedMode, selectedDate, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(selectedMode, selectedDate, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
+        rankingResult.onSuccess { response ->
+            illustsState = filterBanned(response.illusts)
+            nextUrl = response.nextUrl
+            initialError = null
             loadMoreError = null
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -160,7 +163,7 @@ fun RankingScreen(
                 )
             }.onSuccess { response ->
                 val filtered = filterBanned(response.illusts)
-                illusts = illusts + filtered
+                illustsState = (illustsState.orEmpty()) + filtered
                 nextUrl = response.nextUrl
             }.onFailure { error ->
                 loadMoreError = error
@@ -265,15 +268,22 @@ fun RankingScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val result = state.value
+            val currentIllusts = illustsState
             when {
-                result == null -> LoadingPlaceholder(
+                currentIllusts == null && initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                result.isSuccess -> {
-                    if (illusts.isEmpty()) {
+                currentIllusts == null && initialError != null -> ErrorPlaceholder(
+                    error = initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+                currentIllusts != null -> {
+                    if (currentIllusts.isEmpty()) {
                         EmptyPlaceholder(
                             message = strings.rankingEmpty,
                             modifier = Modifier
@@ -289,7 +299,7 @@ fun RankingScreen(
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             IllustStaggeredGrid(
-                                illusts = illusts,
+                                illusts = currentIllusts,
                                 onIllustClick = onIllustClick,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -308,13 +318,6 @@ fun RankingScreen(
                         }
                     }
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
             }
         }
     }

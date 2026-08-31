@@ -86,36 +86,36 @@ fun IllustSeriesScreen(
 
     val strings = LocalStrings.current
 
-    val state = produceState<Result<Triple<String, List<Illust>, String?>>?>(
-        initialValue = null,
-        seriesId,
-        retryCount,
-        banRepository,
-        settingsRepository.changeVersion,
-    ) {
-        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
-        isManualRefreshing = false
-        value = seriesResult.map { model ->
-            val title = model.illustSeriesDetail?.title ?: ""
-            val filtered = filterBanned(model.illusts.orEmpty())
-            Triple(title, filtered, model.nextUrl)
-        }
-    }
-
-    var seriesTitle by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf("") }
-    var illusts by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF）
+    var seriesTitle by remember(seriesId) { mutableStateOf("") }
+    var illustsState by remember(seriesId) { mutableStateOf<List<Illust>?>(null) }
+    var nextUrl by remember(seriesId) { mutableStateOf<String?>(null) }
+    var initialError by remember(seriesId) { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialTitle, initialIllusts, initialNextUrl) ->
-            seriesTitle = initialTitle
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
+    LaunchedEffect(seriesId, retryCount, settingsRepository.changeVersion) {
+        val force = isManualRefreshing
+        if (illustsState == null) {
+            initialError = null
+        }
+        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
+        isManualRefreshing = false
+        seriesResult.onSuccess { response ->
+            seriesTitle = response.illustSeriesDetail?.title ?: ""
+            illustsState = filterBanned(response.illusts.orEmpty())
+            nextUrl = response.nextUrl
+            initialError = null
             loadMoreError = null
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
+            }
+        }.onFailure { error ->
+            if (illustsState == null) {
+                initialError = error
+            }
         }
     }
 
@@ -128,7 +128,7 @@ fun IllustSeriesScreen(
             suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts.orEmpty())
-                    illusts = illusts + filtered
+                    illustsState = (illustsState.orEmpty()) + filtered
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -184,15 +184,22 @@ fun IllustSeriesScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val result = state.value
+            val currentIllusts = illustsState
             when {
-                result == null -> LoadingPlaceholder(
+                currentIllusts == null && initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                result.isSuccess -> {
-                    if (illusts.isEmpty()) {
+                currentIllusts == null && initialError != null -> ErrorPlaceholder(
+                    error = initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+                currentIllusts != null -> {
+                    if (currentIllusts.isEmpty()) {
                         EmptyPlaceholder(
                             message = strings.seriesEmpty,
                             modifier = Modifier
@@ -208,8 +215,9 @@ fun IllustSeriesScreen(
                             topAppBarScrollBehavior = scrollBehavior,
                         ) {
                             IllustStaggeredGrid(
-                                illusts = illusts,
+                                illusts = currentIllusts,
                                 onIllustClick = onIllustClick,
+                                state = gridState,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -227,13 +235,6 @@ fun IllustSeriesScreen(
                         }
                     }
                 }
-                else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
             }
         }
     }
