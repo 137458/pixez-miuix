@@ -87,3 +87,31 @@ data class IllustSeries(
     val id: Int,
     val title: String? = null,
 )
+
+/**
+ * 判断插画作品是否为 R-18 / 18+ 敏感内容。
+ *
+ * 判定依据：
+ * 1. xRestrict > 0（Pixiv 官方分级：1 = R-18, 2 = R-18G）
+ * 2. sanityLevel > 4（Pixiv 官方审查等级：6 = R-18, 18 = R-18G）
+ * 3. 标签原名或翻译包含 "R-18", "R18", "18禁", "18+", "R-18G", "R18G"（忽略大小写）
+ */
+fun Illust.isR18(): Boolean {
+    if (xRestrict > 0) return true
+    if (sanityLevel > 4) return true
+    return tags.any { tag ->
+        val name = tag.name
+        val translated = tag.translatedName
+        name.contains("R-18", ignoreCase = true) ||
+            name.contains("R18", ignoreCase = true) ||
+            name.contains("18禁") ||
+            name.contains("18+") ||
+            (translated != null && (
+                translated.contains("R-18", ignoreCase = true) ||
+                translated.contains("R18", ignoreCase = true) ||
+                translated.contains("18禁") ||
+                translated.contains("18+")
+            ))
+    }
+}
+

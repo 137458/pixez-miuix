@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -103,7 +104,7 @@ fun RankingScreen(
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.contains("R-18", ignoreCase = true) || tag.name.contains("R18", ignoreCase = true) })) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -118,7 +119,7 @@ fun RankingScreen(
         selectedDate,
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val rankingResult = suspendRunCatchingNonCancel {
             repository.getRankingResponse(
@@ -130,8 +131,8 @@ fun RankingScreen(
         value = rankingResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(selectedMode, selectedDate) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(null) }
+    var illusts by remember(selectedMode, selectedDate, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(selectedMode, selectedDate, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()

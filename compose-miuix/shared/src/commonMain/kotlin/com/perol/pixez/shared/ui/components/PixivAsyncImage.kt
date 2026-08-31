@@ -1,13 +1,7 @@
 package com.perol.pixez.shared.ui.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -18,6 +12,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import io.github.aakira.napier.Napier
 
 private val StandardHeaders = NetworkHeaders.Builder()
     .set("Referer", "https://app-api.pixiv.net/")
@@ -73,8 +68,6 @@ fun PixivAsyncImage(
         ImageRequest.Builder(context)
             .data(transformedModel)
             .httpHeaders(headers)
-            .memoryCacheKey(transformedModel?.toString())
-            .diskCacheKey(transformedModel?.toString())
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .networkCachePolicy(CachePolicy.ENABLED)
@@ -95,7 +88,9 @@ fun PixivAsyncImage(
         modifier = modifier,
         onSuccess = { onSuccess?.invoke() },
         onError = { state ->
-            io.github.aakira.napier.Napier.e("PixivAsyncImage error for $transformedModel: ${state.result.throwable}", tag = "CoilImage")
+            if (transformedModel != null) {
+                Napier.e("PixivAsyncImage error for $transformedModel: ${state.result.throwable}", tag = "CoilImage")
+            }
         },
     )
 }

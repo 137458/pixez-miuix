@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -75,7 +76,7 @@ fun IllustSeriesScreen(
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.contains("R-18", ignoreCase = true) || tag.name.contains("R18", ignoreCase = true) })) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -90,7 +91,7 @@ fun IllustSeriesScreen(
         seriesId,
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
         isManualRefreshing = false
@@ -101,9 +102,9 @@ fun IllustSeriesScreen(
         }
     }
 
-    var seriesTitle by remember(seriesId) { mutableStateOf("") }
-    var illusts by remember(seriesId) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(seriesId) { mutableStateOf<String?>(null) }
+    var seriesTitle by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf("") }
+    var illusts by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(seriesId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()

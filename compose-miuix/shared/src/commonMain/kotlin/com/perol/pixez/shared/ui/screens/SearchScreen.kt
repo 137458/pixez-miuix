@@ -68,6 +68,7 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
@@ -412,7 +413,8 @@ fun SearchScreen(
                                         else -> strings.searchSortLatest
                                     }
                                     val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
-                                        startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags"
+                                        startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
+                                        settingsRepository.hIsNotAllow
 
                                     Row(
                                         modifier = Modifier
@@ -508,6 +510,7 @@ fun SearchScreen(
                     1 -> SearchUserResultList(
                         query = query,
                         repository = repository,
+                        settingsRepository = settingsRepository,
                         onUserClick = onUserClick,
                         scrollBehavior = scrollBehavior,
                         listState = userListState,
@@ -524,13 +527,15 @@ fun SearchScreen(
                         ugoiraFilter = ugoiraFilter,
                         startDate = startDate,
                         endDate = endDate,
-                        onApply = { newTarget, newAiType, newBookmark, newUgoira, newStart, newEnd ->
+                        hIsNotAllow = settingsRepository.hIsNotAllow,
+                        onApply = { newTarget, newAiType, newBookmark, newUgoira, newStart, newEnd, newHIsNotAllow ->
                             searchTarget = newTarget
                             searchAiType = newAiType
                             bookmarkThreshold = newBookmark
                             ugoiraFilter = newUgoira
                             startDate = newStart
                             endDate = newEnd
+                            settingsRepository.hIsNotAllow = newHIsNotAllow
                         },
                     )
                 }
@@ -625,6 +630,7 @@ private fun SearchFilterBottomSheet(
     ugoiraFilter: Int,
     startDate: String,
     endDate: String,
+    hIsNotAllow: Boolean,
     onApply: (
         target: String,
         aiType: Int,
@@ -632,6 +638,7 @@ private fun SearchFilterBottomSheet(
         ugoira: Int,
         start: String,
         end: String,
+        hIsNotAllow: Boolean,
     ) -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -664,6 +671,7 @@ private fun SearchFilterBottomSheet(
     var draftUgoira by remember(ugoiraFilter) { mutableIntStateOf(ugoiraFilter) }
     var draftStartDate by remember(startDate) { mutableStateOf(startDate) }
     var draftEndDate by remember(endDate) { mutableStateOf(endDate) }
+    var draftHIsNotAllow by remember(hIsNotAllow) { mutableStateOf(hIsNotAllow) }
 
     val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftTarget }.coerceAtLeast(0)
     val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftUgoira }.coerceAtLeast(0)
@@ -692,6 +700,20 @@ private fun SearchFilterBottomSheet(
                     selectedTabIndex = selectedTargetIndex,
                     onTabSelected = { draftTarget = targetOptions[it].second },
                 )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SmallTitle(text = strings.interactionSettingHNotAllow)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    SwitchPreference(
+                        title = strings.interactionSettingHNotAllow,
+                        summary = if (draftHIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
+                        checked = draftHIsNotAllow,
+                        onCheckedChange = { draftHIsNotAllow = it },
+                    )
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -774,6 +796,7 @@ private fun SearchFilterBottomSheet(
                         draftUgoira = 0
                         draftStartDate = ""
                         draftEndDate = ""
+                        draftHIsNotAllow = false
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
@@ -792,6 +815,7 @@ private fun SearchFilterBottomSheet(
                             draftUgoira,
                             draftStartDate.trim(),
                             draftEndDate.trim(),
+                            draftHIsNotAllow,
                         )
                         onDismissRequest()
                     },
@@ -864,7 +888,7 @@ private fun SearchIllustResultGrid(
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.contains("R-18", ignoreCase = true) || tag.name.contains("R18", ignoreCase = true) })) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -890,7 +914,7 @@ private fun SearchIllustResultGrid(
         effectiveEndDate ?: "",
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val searchResult = suspendRunCatchingNonCancel {
             repository.searchIllustResponse(
@@ -905,10 +929,10 @@ private fun SearchIllustResultGrid(
         value = searchResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate) {
+    var illusts by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate, settingsRepository.changeVersion) {
         mutableStateOf(listOf<Illust>())
     }
-    var nextUrl by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate) {
+    var nextUrl by remember(searchWord, sort, searchTarget, searchAiType, effectiveStartDate, effectiveEndDate, settingsRepository.changeVersion) {
         mutableStateOf<String?>(null)
     }
     var isLoadingMore by remember { mutableStateOf(false) }
@@ -993,6 +1017,7 @@ private fun SearchIllustResultGrid(
 private fun SearchUserResultList(
     query: String,
     repository: SearchRepository,
+    settingsRepository: SettingsRepository,
     onUserClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
     listState: LazyListState = rememberLazyListState(),
@@ -1006,12 +1031,13 @@ private fun SearchUserResultList(
         initialValue = null,
         query,
         retryCount,
+        settingsRepository.changeVersion,
     ) {
         value = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
     }
 
-    var previews by remember(query) { mutableStateOf(listOf<UserPreview>()) }
-    var nextUrl by remember(query) { mutableStateOf<String?>(null) }
+    var previews by remember(query, settingsRepository.changeVersion) { mutableStateOf(listOf<UserPreview>()) }
+    var nextUrl by remember(query, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()

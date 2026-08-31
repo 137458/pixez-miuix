@@ -81,6 +81,7 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.ui.components.liquidGlass
 import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -292,6 +293,10 @@ private fun IllustDetailSingleContent(
         }
     }
 
+    val isRestricted = remember(illust, isBanned, settings?.hIsNotAllow, settings?.changeVersion) {
+        isBanned || (settings?.hIsNotAllow == true && illust?.isR18() == true)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -301,7 +306,7 @@ private fun IllustDetailSingleContent(
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
             result.isSuccess && illust != null -> when {
-                isBanned && !isTempView -> BanPage(
+                isRestricted && !isTempView -> BanPage(
                     name = illust.title,
                     onView = { isTempView = true },
                     modifier = Modifier.fillMaxSize(),
@@ -558,10 +563,11 @@ private fun IllustDetailSingleContent(
                                                     try {
                                                         isDownloading = true
                                                         val tasks = downloadRepository.downloadAllPages(
-                                                            illust,
+                                                            illust = illust,
                                                             onProgress = { completed, total ->
                                                                 toastMessage = "${strings.downloadStatusDownloading} $completed/$total"
                                                             },
+                                                            maxConcurrency = settings?.maxRunningTask ?: 3,
                                                         )
                                                         val successCount = tasks.count { it.status == DownloadStatus.Success }
                                                         val failedCount = tasks.count { it.status == DownloadStatus.Failed }

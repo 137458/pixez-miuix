@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
@@ -65,12 +66,8 @@ fun IllustCard(
     val showAIBadge = remember(isAI, settings?.feedAIBadge) { (settings?.feedAIBadge != false) && isAI }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val isNsfw = remember(illust.sanityLevel, illust.xRestrict, illust.tags, settings?.nsfwMask) {
-        (settings?.nsfwMask == true) && (
-            illust.sanityLevel > 4 ||
-                illust.xRestrict > 0 ||
-                illust.tags.any { it.name.contains("R-18", ignoreCase = true) || it.name.contains("R18", ignoreCase = true) }
-        )
+    val isNsfw = remember(illust, settings?.nsfwMask, settings?.changeVersion) {
+        (settings?.nsfwMask == true) && illust.isR18()
     }
 
     val ratio = remember(illust.width, illust.height) {
@@ -102,8 +99,16 @@ fun IllustCard(
                         val imageLoader = SingletonImageLoader.get(context)
                         val diskCache = imageLoader.diskCache
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
+                        val pictureSource = settings?.pictureSource
+                        val transformedUrls = candidateUrls.map {
+                            if (pictureSource != null && pictureSource != "i.pximg.net") {
+                                it.replace("://i.pximg.net", "://$pictureSource")
+                            } else {
+                                it
+                            }
+                        }
                         var bytes: ByteArray? = null
-                        for (candidateUrl in candidateUrls) {
+                        for (candidateUrl in transformedUrls) {
                             diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
                                 val file = snapshot.data.toFile()
                                 if (file.exists() && file.length() > 0) {

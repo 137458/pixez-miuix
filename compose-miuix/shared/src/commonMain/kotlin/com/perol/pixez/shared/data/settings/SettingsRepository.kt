@@ -213,7 +213,7 @@ class SettingsRepository(
 
     var nsfwMask: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
-        set(value) { settings[SettingsKeys.NSFW_MASK] = value }
+        set(value) { settings[SettingsKeys.NSFW_MASK] = value; notifyChanged() }
 
     /**
      * 是否本地过滤 AI 生成作品（illust_ai_type == 2）。
@@ -221,7 +221,7 @@ class SettingsRepository(
      */
     var banAIIllust: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.BAN_AI_ILLUST, false)
-        set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value }
+        set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value; notifyChanged() }
 
     var defaultPrivateLike: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
@@ -352,7 +352,10 @@ class SettingsRepository(
             SettingsKeys.H_IS_NOT_ALLOW_LEGACY,
             false,
         )
-        set(value) { settings[SettingsKeys.H_IS_NOT_ALLOW_LEGACY] = value }
+        set(value) {
+            settings[SettingsKeys.H_IS_NOT_ALLOW_LEGACY] = value
+            notifyChanged()
+        }
 
     /**
      * 再次返回退出应用。
@@ -379,7 +382,7 @@ class SettingsRepository(
      */
     var feedAIBadge: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.FEED_AI_BADGE, true)
-        set(value) { settings[SettingsKeys.FEED_AI_BADGE] = value }
+        set(value) { settings[SettingsKeys.FEED_AI_BADGE] = value; notifyChanged() }
 
     /**
      * 收藏作品后自动关注画师。

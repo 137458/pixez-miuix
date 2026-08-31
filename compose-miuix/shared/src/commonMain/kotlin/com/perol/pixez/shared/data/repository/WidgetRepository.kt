@@ -72,28 +72,32 @@ class WidgetRepository(
             tokenStorage = tokenStorage,
             languageProvider = { "zh-CN" },
         )
-        val illustRepo = IllustRepository(pixivHttpClient.apiClient)
-
         return try {
-            when (type) {
-                "day", "rank" -> illustRepo.getRanking(mode = "day")
-                "week" -> illustRepo.getRanking(mode = "week")
-                "month" -> illustRepo.getRanking(mode = "month")
-                "day_male" -> illustRepo.getRanking(mode = "day_male")
-                "day_female" -> illustRepo.getRanking(mode = "day_female")
-                "news" -> illustRepo.getRanking(mode = "day")
-                "follow" -> illustRepo.getFollowIllusts()
-                else -> {
-                    try {
-                        illustRepo.getRecommended(forceRefresh = true)
-                    } catch (_: Exception) {
-                        illustRepo.getWalkthroughIllusts(forceRefresh = true)
+            val illustRepo = IllustRepository(pixivHttpClient.apiClient)
+            try {
+                when (type) {
+                    "day", "rank" -> illustRepo.getRanking(mode = "day")
+                    "week" -> illustRepo.getRanking(mode = "week")
+                    "month" -> illustRepo.getRanking(mode = "month")
+                    "day_male" -> illustRepo.getRanking(mode = "day_male")
+                    "day_female" -> illustRepo.getRanking(mode = "day_female")
+                    "news" -> illustRepo.getRanking(mode = "day")
+                    "follow" -> illustRepo.getFollowIllusts()
+                    else -> {
+                        try {
+                            illustRepo.getRecommended(forceRefresh = true)
+                        } catch (_: Exception) {
+                            illustRepo.getWalkthroughIllusts(forceRefresh = true)
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                Napier.w("Failed to fetch widget illusts for type $type: ${e.message}", tag = "WidgetRepository")
+                emptyList()
             }
-        } catch (e: Exception) {
-            Napier.w("Failed to fetch widget illusts for type $type: ${e.message}", tag = "WidgetRepository")
-            emptyList()
+        } finally {
+            runCatching { pixivHttpClient.close() }
+            runCatching { driverFactory.closeDriver(accountDriver) }
         }
     }
 }

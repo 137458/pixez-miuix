@@ -26,7 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -121,128 +122,132 @@ fun AboutScreen(
                 .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
-            Column(
+            LazyColumn(
+                contentPadding = paddingValues,
                 modifier = Modifier
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(
-                        top = paddingValues.calculateTopPadding(),
-                        bottom = paddingValues.calculateBottomPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
-                    )
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-            Spacer(modifier = Modifier.height(20.dp))
+                item {
+                    Spacer(modifier = Modifier.height(20.dp))
 
-            // 顶部 Squircle 应用图标
-            Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MiuixTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.ic_pixez_logo),
-                    contentDescription = "PixEz Logo",
-                    modifier = Modifier.size(72.dp),
-                )
-            }
+                    // 顶部 Squircle 应用图标
+                    Box(
+                        modifier = Modifier
+                            .size(88.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MiuixTheme.colorScheme.surfaceContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.ic_pixez_logo),
+                            contentDescription = "PixEz Logo",
+                            modifier = Modifier.size(72.dp),
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-            Text(
-                text = "PixEz MIUIX",
-                style = MiuixTheme.textStyles.title2.copy(fontWeight = FontWeight.Bold),
-            )
-            Row(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .clip(RoundedCornerShape(100.dp))
-                    .background(MiuixTheme.colorScheme.surfaceContainer)
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "v${AppInfo.VERSION_NAME}",
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                )
-            }
-            Text(
-                text = strings.aboutDesc,
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp),
-            )
-
-            SmallTitle(text = strings.aboutDevelopers, modifier = Modifier.fillMaxWidth())
-            Card(modifier = Modifier.fillMaxWidth()) {
-                DeveloperRow(
-                    name = "Perol_Notsfsssf",
-                    message = "Founder & Maintainer",
-                    avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
-                    onClick = { openUrlOrToast("https://github.com/Notsfsssf", strings) { toastMessage = it } },
-                )
-                DeveloperRow(
-                    name = "137458 (Rosemary)",
-                    message = "MIUIX & Multiplatform",
-                    avatarUrl = "https://avatars.githubusercontent.com/u/138956834?v=4",
-                    onClick = { openUrlOrToast("https://github.com/137458", strings) { toastMessage = it } },
-                )
-            }
-
-            SmallTitle(text = strings.aboutContributors, modifier = Modifier.fillMaxWidth())
-            Card(modifier = Modifier.fillMaxWidth()) {
-                ContributorsRow(
-                    contributors = CONTRIBUTORS,
-                    onUrlClick = { url ->
-                        openUrlOrToast(url, strings) { toastMessage = it }
-                    },
-                )
-            }
-
-            SmallTitle(text = strings.aboutProject, modifier = Modifier.fillMaxWidth())
-            Card(modifier = Modifier.fillMaxWidth()) {
-                BasicComponent(
-                    title = strings.aboutRepo,
-                    summary = "github.com/137458/pixez-miuix",
-                    onClick = {
-                        openUrlOrToast(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
-                    },
-                )
-                BasicComponent(
-                    title = strings.aboutFeedback,
-                    summary = "PxezFeedBack@outlook.com",
-                    onClick = {
-                        openUrlOrToast("mailto:PxezFeedBack@outlook.com", strings) { toastMessage = it }
-                    },
-                )
-                BasicComponent(
-                    title = strings.settingThanks,
-                    summary = strings.aboutThanksDesc,
-                    onClick = onThanksClick,
-                )
-                BasicComponent(
-                    title = strings.aboutDisclaimer,
-                    summary = strings.aboutDisclaimerSummary,
-                    onClick = { showDisclaimerDialog = true },
-                )
-                if (onUpdateClick != null) {
-                    BasicComponent(
-                        title = strings.settingUpdate,
-                        summary = "${strings.version} v${AppInfo.VERSION_NAME}",
-                        onClick = onUpdateClick,
+                    Text(
+                        text = "PixEz MIUIX",
+                        style = MiuixTheme.textStyles.title2.copy(fontWeight = FontWeight.Bold),
+                    )
+                    Row(
+                        modifier = Modifier
+                            .padding(top = 6.dp)
+                            .clip(RoundedCornerShape(100.dp))
+                            .background(MiuixTheme.colorScheme.surfaceContainer)
+                            .padding(horizontal = 10.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "v${AppInfo.VERSION_NAME}",
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                    Text(
+                        text = strings.aboutDesc,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp),
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+                item {
+                    SmallTitle(text = strings.aboutDevelopers, modifier = Modifier.fillMaxWidth())
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        DeveloperRow(
+                            name = "Perol_Notsfsssf",
+                            message = "Founder & Maintainer",
+                            avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
+                            onClick = { openUrlOrToast("https://github.com/Notsfsssf", strings) { toastMessage = it } },
+                        )
+                        DeveloperRow(
+                            name = "137458 (Rosemary)",
+                            message = "MIUIX & Multiplatform",
+                            avatarUrl = "https://avatars.githubusercontent.com/u/138956834?v=4",
+                            onClick = { openUrlOrToast("https://github.com/137458", strings) { toastMessage = it } },
+                        )
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.aboutContributors, modifier = Modifier.fillMaxWidth())
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        ContributorsRow(
+                            contributors = CONTRIBUTORS,
+                            onUrlClick = { url ->
+                                openUrlOrToast(url, strings) { toastMessage = it }
+                            },
+                        )
+                    }
+                }
+
+                item {
+                    SmallTitle(text = strings.aboutProject, modifier = Modifier.fillMaxWidth())
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        BasicComponent(
+                            title = strings.aboutRepo,
+                            summary = "github.com/137458/pixez-miuix",
+                            onClick = {
+                                openUrlOrToast(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
+                            },
+                        )
+                        BasicComponent(
+                            title = strings.aboutFeedback,
+                            summary = "PxezFeedBack@outlook.com",
+                            onClick = {
+                                openUrlOrToast("mailto:PxezFeedBack@outlook.com", strings) { toastMessage = it }
+                            },
+                        )
+                        BasicComponent(
+                            title = strings.settingThanks,
+                            summary = strings.aboutThanksDesc,
+                            onClick = onThanksClick,
+                        )
+                        BasicComponent(
+                            title = strings.aboutDisclaimer,
+                            summary = strings.aboutDisclaimerSummary,
+                            onClick = { showDisclaimerDialog = true },
+                        )
+                        if (onUpdateClick != null) {
+                            BasicComponent(
+                                title = strings.settingUpdate,
+                                summary = "${strings.version} v${AppInfo.VERSION_NAME}",
+                                onClick = onUpdateClick,
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
     }
 
         if (showDisclaimerDialog) {

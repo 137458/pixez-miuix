@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -74,7 +75,7 @@ fun RelatedIllustsScreen(
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || (it.xRestrict == 0 && it.tags.none { tag -> tag.name.contains("R-18", ignoreCase = true) || tag.name.contains("R18", ignoreCase = true) })) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -87,15 +88,15 @@ fun RelatedIllustsScreen(
         illustId,
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val illustsResult = suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId) }
         isManualRefreshing = false
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(illustId) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
+    var illusts by remember(illustId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(illustId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()

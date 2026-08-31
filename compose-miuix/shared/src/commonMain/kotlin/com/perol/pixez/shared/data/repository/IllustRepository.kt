@@ -29,6 +29,7 @@ import io.ktor.http.Parameters
  */
 class IllustRepository(
     private val apiClient: HttpClient,
+    private val webClient: HttpClient = HttpClient(),
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
@@ -237,7 +238,6 @@ class IllustRepository(
         }
     }
 
-    private val webClient: HttpClient = HttpClient()
     private val spotlightDetailCache = mutableMapOf<String, SpotlightDetail>()
 
     /**

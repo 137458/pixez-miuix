@@ -151,6 +151,19 @@ class AppDependencies(
         createUpdateCheckClient()
     }
 
+    /**
+     * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
+     */
+    val webClient: HttpClient by lazy {
+        HttpClient {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 10_000
+            }
+        }
+    }
+
     val accountRepository: AccountRepository by lazy {
         AccountRepository(
             oAuthClient = httpClient.oAuthClient,
@@ -160,7 +173,10 @@ class AppDependencies(
     }
 
     val illustRepository: IllustRepository by lazy {
-        IllustRepository(httpClient.apiClient)
+        IllustRepository(
+            apiClient = httpClient.apiClient,
+            webClient = webClient,
+        )
     }
 
     val searchRepository: SearchRepository by lazy {
@@ -269,6 +285,7 @@ class AppDependencies(
         runCatching { httpClient.close() }
         runCatching { updateCheckClient.close() }
         runCatching { boardHttpClient.close() }
+        runCatching { webClient.close() }
         runCatching { driverFactory.closeDriver(accountDriver) }
         runCatching { driverFactory.closeDriver(taskDriver) }
         runCatching { driverFactory.closeDriver(banDriver) }

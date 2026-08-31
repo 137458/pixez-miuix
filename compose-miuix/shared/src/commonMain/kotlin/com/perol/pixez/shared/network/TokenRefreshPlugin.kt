@@ -36,11 +36,16 @@ class TokenRefreshPlugin(
     }
 
     private suspend fun refreshTokenOrThrow() {
+        val staleAccessToken = tokenStorage.getCurrentAccount()?.access_token
         mutex.withLock {
-            val account = tokenStorage.getCurrentAccount()
+            val currentAccount = tokenStorage.getCurrentAccount()
                 ?: throw IllegalStateException("没有登录账号，无法刷新 token")
+            if (currentAccount.access_token != staleAccessToken && currentAccount.access_token.isNotBlank()) {
+                Napier.i("检测到 Token 已由前置并发请求完成刷新，复用最新凭证")
+                return@withLock
+            }
             try {
-                val refreshed = oAuthClient.refreshToken(account.refresh_token)
+                val refreshed = oAuthClient.refreshToken(currentAccount.refresh_token)
                 tokenStorage.updateTokens(
                     accessToken = refreshed.response.accessToken,
                     refreshToken = refreshed.response.refreshToken,

@@ -14,7 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
 import com.perol.pixez.shared.data.model.UserPreview
+import com.perol.pixez.shared.data.model.isR18
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -28,6 +31,17 @@ internal fun UserPreviewItem(
     preview: UserPreview,
     onClick: () -> Unit,
 ) {
+    val settings = LocalSettingsRepository.current
+    val hIsNotAllow = settings?.hIsNotAllow ?: false
+    val banAIIllust = settings?.banAIIllust ?: false
+
+    val displayIllusts = remember(preview.illusts, hIsNotAllow, banAIIllust, settings?.changeVersion) {
+        preview.illusts.filter { illust ->
+            (!hIsNotAllow || !illust.isR18()) &&
+                (!banAIIllust || illust.illustAIType != 2)
+        }.take(3)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -56,7 +70,7 @@ internal fun UserPreviewItem(
                 style = MiuixTheme.textStyles.footnote1,
             )
         }
-        preview.illusts.take(3).forEach { illust ->
+        displayIllusts.forEach { illust ->
             PixivAsyncImage(
                 model = illust.imageUrls.squareMedium,
                 contentDescription = illust.title,
@@ -68,3 +82,4 @@ internal fun UserPreviewItem(
         }
     }
 }
+

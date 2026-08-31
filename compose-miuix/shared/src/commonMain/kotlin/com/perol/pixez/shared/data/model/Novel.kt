@@ -231,3 +231,29 @@ data class NovelWatchListSeriesUser(
 data class NovelWatchListSeriesProfileImageUrls(
     val medium: String? = null,
 )
+
+/**
+ * 判断小说作品是否为 R-18 / 18+ 敏感内容。
+ *
+ * 判定依据：
+ * 1. xRestrict > 0 或 isXRestricted 为 true
+ * 2. 标签原名或翻译包含 "R-18", "R18", "18禁", "18+", "R-18G", "R18G"（忽略大小写）
+ */
+fun Novel.isR18(): Boolean {
+    if (xRestrict > 0 || isXRestricted) return true
+    return tags.any { tag ->
+        val name = tag.name
+        val translated = tag.translatedName
+        name.contains("R-18", ignoreCase = true) ||
+            name.contains("R18", ignoreCase = true) ||
+            name.contains("18禁") ||
+            name.contains("18+") ||
+            (translated != null && (
+                translated.contains("R-18", ignoreCase = true) ||
+                translated.contains("R18", ignoreCase = true) ||
+                translated.contains("18禁") ||
+                translated.contains("18+")
+            ))
+    }
+}
+

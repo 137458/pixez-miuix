@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
@@ -360,10 +361,12 @@ private fun UserWorksTab(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
+        val hIsNotAllow = settingsRepository.hIsNotAllow
         return rawIllusts.filter {
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -376,14 +379,14 @@ private fun UserWorksTab(
         userId,
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId) }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(userId) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
+    var illusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -461,10 +464,12 @@ private fun UserBookmarksTab(
         val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
             .getOrDefault(emptyList())
         val banAIIllust = settingsRepository.banAIIllust
+        val hIsNotAllow = settingsRepository.hIsNotAllow
         return rawIllusts.filter {
             it.id !in bannedIds &&
                 it.user.id !in bannedUserIds &&
                 (!banAIIllust || it.illustAIType != 2) &&
+                (!hIsNotAllow || !it.isR18()) &&
                 !banRepository.isBannedByTags(
                     banTags,
                     it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
@@ -478,14 +483,14 @@ private fun UserBookmarksTab(
         restrict,
         retryCount,
         banRepository,
-        settingsRepository,
+        settingsRepository.changeVersion,
     ) {
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, restrict) }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(userId, restrict) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(userId, restrict) { mutableStateOf<String?>(null) }
+    var illusts by remember(userId, restrict, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(userId, restrict, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()

@@ -22,6 +22,13 @@ import io.ktor.client.request.header
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存，
@@ -105,31 +112,45 @@ class DownloadRepository(
     /**
      * 下载作品全部页原图并保存到本地。
      *
-     * 按页码顺序逐页下载，实时向系统状态栏发送 Android 16 动态胶囊进度通知。
+     * 按页码顺序受控并发下载（支持根据设置限制并发度），实时向系统状态栏发送 Android 16 动态胶囊进度通知。
      *
      * @param illust 目标作品
      * @param onProgress 进度回调，参数为 (已完成数量, 总页数)
-     * @return 每页对应的下载任务列表
+     * @param maxConcurrency 最大并发下载数，限制在 1..6 之间，默认 3
+     * @return 按原页码顺序排列的下载任务列表
      */
     suspend fun downloadAllPages(
         illust: Illust,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null,
-    ): List<DownloadTask> {
+        maxConcurrency: Int = 3,
+    ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
+        if (total <= 0) return@coroutineScope emptyList()
         notifier.notifyProgress(illust.id, illust.title, 0, total)
-        val results = mutableListOf<DownloadTask>()
+        val semaphore = Semaphore(maxConcurrency.coerceIn(1, 6))
+        val progressMutex = Mutex()
+        var completedCount = 0
+
         try {
-            for (pageIndex in 0 until total) {
-                val task = download(illust, pageIndex)
-                results.add(task)
-                val current = results.size
-                onProgress?.invoke(current, total)
-                notifier.notifyProgress(illust.id, illust.title, current, total)
+            val deferredTasks = (0 until total).map { pageIndex ->
+                async {
+                    val task = semaphore.withPermit {
+                        download(illust, pageIndex)
+                    }
+                    progressMutex.withLock {
+                        completedCount++
+                        val current = completedCount
+                        onProgress?.invoke(current, total)
+                        notifier.notifyProgress(illust.id, illust.title, current, total)
+                    }
+                    task
+                }
             }
+            val results = deferredTasks.awaitAll()
             val successCount = results.count { it.status == DownloadStatus.Success }
             val failedCount = results.count { it.status == DownloadStatus.Failed }
             notifier.notifyFinished(illust.id, illust.title, successCount, failedCount)
-            return results
+            results
         } catch (e: CancellationException) {
             notifier.cancel(illust.id)
             throw e

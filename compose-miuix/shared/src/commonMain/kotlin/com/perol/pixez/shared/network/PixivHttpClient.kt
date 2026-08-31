@@ -4,6 +4,7 @@ import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpResponseValidator
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.head
@@ -71,6 +72,11 @@ class PixivHttpClient(
      * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
      */
     val downloadClient: HttpClient = HttpClient {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 15_000
+        }
         install(HttpRequestRetry) {
             retryOnExceptionOrServerErrors(maxRetries = 2)
         }
@@ -141,6 +147,11 @@ class PixivHttpClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
         ): HttpClient = HttpClient {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
             defaultRequest {
                 url {
                     protocol = URLProtocol.HTTPS
@@ -209,6 +220,12 @@ class PixivHttpClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
         ): HttpClient = HttpClient {
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+
             // 统一使用 HTTPS 与固定 Host。
             defaultRequest {
                 url {
@@ -216,7 +233,7 @@ class PixivHttpClient(
                     this.host = host
                 }
                 PixivHeaders.commonHeaders(languageProvider()).forEach { (key, value) ->
-                    headers.append(key, value)
+                    headers[key] = value
                 }
             }
 
