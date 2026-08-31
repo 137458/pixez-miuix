@@ -1,9 +1,6 @@
 package com.perol.pixez.shared.data.model
 
-import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.russhwolf.settings.MapSettings
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -179,35 +176,5 @@ class R18FilterTest {
         )
         assertTrue(translatedTagNovel.isR18())
     }
-
-    @Test
-    fun testSettingsRepositoryHIsNotAllowTriggersNotifyChanged() {
-        val mapSettings = MapSettings()
-        val repo = SettingsRepository(mapSettings)
-        val initialVersion = repo.changeVersion
-
-        repo.hIsNotAllow = true
-        assertEquals(initialVersion + 1, repo.changeVersion)
-        assertTrue(repo.hIsNotAllow)
-
-        repo.hIsNotAllow = false
-        assertEquals(initialVersion + 2, repo.changeVersion)
-        assertFalse(repo.hIsNotAllow)
-    }
-
-    @Test
-    fun testSettingsRepositoryBanAIIllustAndNsfwMaskTriggerNotifyChanged() {
-        val mapSettings = MapSettings()
-        val repo = SettingsRepository(mapSettings)
-        val initialVersion = repo.changeVersion
-
-        repo.banAIIllust = true
-        assertEquals(initialVersion + 1, repo.changeVersion)
-
-        repo.nsfwMask = true
-        assertEquals(initialVersion + 2, repo.changeVersion)
-
-        repo.feedAIBadge = false
-        assertEquals(initialVersion + 3, repo.changeVersion)
-    }
 }
+

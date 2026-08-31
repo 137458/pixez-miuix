@@ -150,4 +150,44 @@ class SettingsBridgeTest {
         assertTrue(repo.overSanityLevelFolder)
         assertTrue(node.getBoolean("is_over_sanity_level_folder", false))
     }
+
+    @Test
+    fun `hIsNotAllow triggers notifyChanged and persists legacy key`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/h_is_not_allow")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+        val initialVersion = repo.changeVersion
+
+        assertFalse(repo.hIsNotAllow)
+        repo.hIsNotAllow = true
+        assertEquals(initialVersion + 1, repo.changeVersion)
+        assertTrue(repo.hIsNotAllow)
+        assertTrue(node.getBoolean("h_is_not_allow", false))
+
+        repo.hIsNotAllow = false
+        assertEquals(initialVersion + 2, repo.changeVersion)
+        assertFalse(repo.hIsNotAllow)
+        assertFalse(node.getBoolean("h_is_not_allow", true))
+    }
+
+    @Test
+    fun `banAIIllust nsfwMask feedAIBadge trigger notifyChanged`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/filter_settings")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+        val initialVersion = repo.changeVersion
+
+        repo.banAIIllust = true
+        assertEquals(initialVersion + 1, repo.changeVersion)
+        assertTrue(repo.banAIIllust)
+
+        repo.nsfwMask = true
+        assertEquals(initialVersion + 2, repo.changeVersion)
+        assertTrue(repo.nsfwMask)
+
+        repo.feedAIBadge = false
+        assertEquals(initialVersion + 3, repo.changeVersion)
+        assertFalse(repo.feedAIBadge)
+    }
 }
+
