@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -344,10 +345,10 @@ private fun IllustDetailSingleContent(
                                 }
                                 val pageUrl = remember(page, effectiveQuality) {
                                     when (effectiveQuality) {
-                                        0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                                        1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                                        0 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                                        1 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                                         2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                                        else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                        else -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
                                     }
                                 }
                                 val thumbnailUrl = remember(page) {
@@ -390,10 +391,10 @@ private fun IllustDetailSingleContent(
                                 }
                                 val singleUrl = remember(illust, effectiveQuality) {
                                     when (effectiveQuality) {
-                                        0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                                        1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                                        0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                                        1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                                         2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                                        else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                                        else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
                                     }
                                 }
                                 val thumbnailUrl = remember(illust) {
@@ -1524,8 +1525,12 @@ private fun ZoomableImage(
     onTap: () -> Unit = {},
     onScaleChanged: ((Float) -> Unit)? = null,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var isLoading by remember(model) { mutableStateOf(true) }
+    var isError by remember(model) { mutableStateOf(false) }
+    var reloadTrigger by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = modifier
@@ -1605,11 +1610,33 @@ private fun ZoomableImage(
             .pointerHoverIcon(if (scale > 1.05f) PointerIcon.Hand else PointerIcon.Default),
         contentAlignment = Alignment.Center,
     ) {
+        val effectiveModel = remember(model, reloadTrigger) {
+            if (reloadTrigger > 0 && model is String) {
+                if (model.contains("?")) "$model&_t=$reloadTrigger" else "$model?_t=$reloadTrigger"
+            } else {
+                model
+            }
+        }
+
         PixivAsyncImage(
-            model = model,
+            model = effectiveModel,
             thumbnailUrl = thumbnailUrl,
             contentDescription = contentDescription,
             contentScale = ContentScale.Fit,
+            loadOriginalSize = true,
+            filterQuality = FilterQuality.High,
+            onLoading = {
+                isLoading = true
+                isError = false
+            },
+            onSuccess = {
+                isLoading = false
+                isError = false
+            },
+            onError = {
+                isLoading = false
+                isError = true
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -1619,6 +1646,79 @@ private fun ZoomableImage(
                     translationY = offset.y
                 },
         )
+
+        // 高清原图加载中指示器（轻量悬浮暗色胶囊）
+        AnimatedVisibility(
+            visible = isLoading,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    InfiniteProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = strings.loading,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = Color.White,
+                    )
+                }
+            }
+        }
+
+        // 加载失败重试按钮
+        AnimatedVisibility(
+            visible = isError,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .clickable {
+                        isError = false
+                        isLoading = true
+                        reloadTrigger++
+                    }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Refresh,
+                        contentDescription = strings.retry,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = strings.retry,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = Color.White,
+                    )
+                }
+            }
+        }
     }
 }
 

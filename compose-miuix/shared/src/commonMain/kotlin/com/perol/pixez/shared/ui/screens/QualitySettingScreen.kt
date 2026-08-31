@@ -74,13 +74,21 @@ fun QualitySettingScreen(
 
     val feedPreviewQualityOptions = remember(strings) {
         listOf(
-            strings.qualityLarge,
             strings.qualityMedium,
+            strings.qualityLarge,
             strings.qualityLow,
         )
     }
 
     val detailQualityOptions = remember(strings) {
+        listOf(
+            strings.qualityLarge,
+            strings.qualityOriginal,
+            strings.qualityMedium,
+        )
+    }
+
+    val zoomQualityOptions = remember(strings) {
         listOf(
             strings.qualityOriginal,
             strings.qualityLarge,
@@ -159,8 +167,8 @@ fun QualitySettingScreen(
                         )
                         OverlayDropdownPreference(
                             title = strings.zoomQuality,
-                            items = detailQualityOptions,
-                            selectedIndex = zoomQuality.coerceIn(0, detailQualityOptions.lastIndex),
+                            items = zoomQualityOptions,
+                            selectedIndex = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex),
                             onSelectedIndexChange = { index ->
                                 zoomQuality = index
                                 settingsRepository.zoomQuality = index

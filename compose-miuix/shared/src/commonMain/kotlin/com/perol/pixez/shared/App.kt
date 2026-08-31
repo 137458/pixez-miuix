@@ -51,7 +51,7 @@ fun App(
             .diskCache {
                 coil3.disk.DiskCache.Builder()
                     .directory(com.perol.pixez.shared.platform.getAppCacheDirectory() / "pixez_image_cache")
-                    .maxSizeBytes(512L * 1024 * 1024)
+                    .maxSizeBytes(1024L * 1024 * 1024)
                     .build()
             }
             .crossfade(true)

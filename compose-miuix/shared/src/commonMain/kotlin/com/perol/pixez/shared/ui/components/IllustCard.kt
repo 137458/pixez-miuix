@@ -55,10 +55,10 @@ fun IllustCard(
     val settings = LocalSettingsRepository.current
     val previewUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
         when (settings?.feedPreviewQuality ?: 0) {
-            0 -> illust.imageUrls.large
-            1 -> illust.imageUrls.medium
+            0 -> illust.imageUrls.medium
+            1 -> illust.imageUrls.large
             2 -> illust.imageUrls.squareMedium
-            else -> illust.imageUrls.large
+            else -> illust.imageUrls.medium
         }
     }
 

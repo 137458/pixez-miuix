@@ -71,7 +71,7 @@ class PixivHttpClient(
      * 不使用 TokenRefreshPlugin，避免图片 401 时触发 OAuth 刷新逻辑；
      * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
      */
-    val downloadClient: HttpClient = HttpClient {
+    val downloadClient: HttpClient = createPlatformHttpClient {
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000
             connectTimeoutMillis = 10_000
@@ -146,7 +146,7 @@ class PixivHttpClient(
         private fun createBaseOAuthClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
-        ): HttpClient = HttpClient {
+        ): HttpClient = createPlatformHttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 10_000
@@ -219,7 +219,7 @@ class PixivHttpClient(
             oAuthClient: OAuthClient,
             languageProvider: () -> String,
             enableLogging: Boolean,
-        ): HttpClient = HttpClient {
+        ): HttpClient = createPlatformHttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 10_000

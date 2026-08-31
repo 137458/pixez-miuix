@@ -14,6 +14,11 @@ import coil3.request.crossfade
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import io.github.aakira.napier.Napier
 
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import coil3.size.Precision
+import coil3.size.Size
+
 private val StandardHeaders = NetworkHeaders.Builder()
     .set("Referer", "https://app-api.pixiv.net/")
     .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -31,6 +36,7 @@ private val PixivisionHeaders = NetworkHeaders.Builder()
  * 同时根据用户设置的图片源（如 i.pixiv.re）自动进行 Host 替换。
  *
  * 支持通过 [thumbnailUrl] 提供渐进式缩略图占位：在高清/原图尚未下载完成时，优先展示已缓存的缩略图，避免白屏/黑屏等待。
+ * 支持通过 [loadOriginalSize] 强制按图片真实原始分辨率解码，防止大图查看器在缩放时因下采样模糊失真。
  */
 @Composable
 fun PixivAsyncImage(
@@ -39,7 +45,11 @@ fun PixivAsyncImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
     thumbnailUrl: Any? = null,
+    loadOriginalSize: Boolean = false,
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    onLoading: (() -> Unit)? = null,
     onSuccess: (() -> Unit)? = null,
+    onError: ((Throwable?) -> Unit)? = null,
 ) {
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
@@ -62,7 +72,7 @@ fun PixivAsyncImage(
         }
     }
 
-    val request = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context) {
+    val request = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context, loadOriginalSize) {
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
@@ -72,6 +82,10 @@ fun PixivAsyncImage(
             .diskCachePolicy(CachePolicy.ENABLED)
             .networkCachePolicy(CachePolicy.ENABLED)
             .apply {
+                if (loadOriginalSize) {
+                    size(Size.ORIGINAL)
+                    precision(Precision.EXACT)
+                }
                 val thumbKey = transformedThumbnailCacheKey?.toString()
                 if (!thumbKey.isNullOrBlank() && thumbKey != transformedModel?.toString()) {
                     placeholderMemoryCacheKey(thumbKey)
@@ -85,12 +99,16 @@ fun PixivAsyncImage(
         model = request,
         contentDescription = contentDescription,
         contentScale = contentScale,
+        filterQuality = filterQuality,
         modifier = modifier,
+        onLoading = { onLoading?.invoke() },
         onSuccess = { onSuccess?.invoke() },
         onError = { state ->
+            val throwable = state.result.throwable
             if (transformedModel != null) {
-                Napier.e("PixivAsyncImage error for $transformedModel: ${state.result.throwable}", tag = "CoilImage")
+                Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
             }
+            onError?.invoke(throwable)
         },
     )
 }
