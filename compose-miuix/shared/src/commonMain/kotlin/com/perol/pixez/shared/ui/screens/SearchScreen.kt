@@ -412,9 +412,16 @@ fun SearchScreen(
                                         "popular_desc" -> strings.searchSortPopular
                                         else -> strings.searchSortLatest
                                     }
-                                    val hasActiveFilters = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
-                                        startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
-                                        settingsRepository.hIsNotAllow
+                                    val currentFilterState = SearchFilterState(
+                                        searchTarget = searchTarget,
+                                        searchAiType = searchAiType,
+                                        bookmarkThreshold = bookmarkThreshold,
+                                        ugoiraFilter = ugoiraFilter,
+                                        startDate = startDate,
+                                        endDate = endDate,
+                                        hIsNotAllow = settingsRepository.hIsNotAllow,
+                                    )
+                                    val hasActiveFilters = currentFilterState.hasActiveFilters
 
                                     Row(
                                         modifier = Modifier
@@ -473,6 +480,16 @@ fun SearchScreen(
             }
         },
     ) { paddingValues ->
+        val contentTopPadding = paddingValues.calculateTopPadding() + 8.dp
+        val effectiveContentPadding = remember(paddingValues) {
+            PaddingValues(
+                start = 8.dp,
+                top = contentTopPadding,
+                end = 8.dp,
+                bottom = 100.dp,
+            )
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -480,15 +497,16 @@ fun SearchScreen(
                 .blurBackdropSource(backdrop)
                 .nestedScroll(searchNestedScrollConnection),
         ) {
-            val contentTopPadding = paddingValues.calculateTopPadding() + 8.dp
-            val effectiveContentPadding = PaddingValues(
-                start = 8.dp,
-                top = contentTopPadding,
-                end = 8.dp,
-                bottom = 100.dp,
-            )
-
             if (isSearching && query.isNotBlank()) {
+                val currentFilterState = SearchFilterState(
+                    searchTarget = searchTarget,
+                    searchAiType = searchAiType,
+                    bookmarkThreshold = bookmarkThreshold,
+                    ugoiraFilter = ugoiraFilter,
+                    startDate = startDate,
+                    endDate = endDate,
+                    hIsNotAllow = settingsRepository.hIsNotAllow,
+                )
                 when (searchTypeIndex) {
                     0 -> SearchIllustResultGrid(
                         query = query,
@@ -521,21 +539,15 @@ fun SearchScreen(
                 if (showFilterSheet) {
                     SearchFilterBottomSheet(
                         onDismissRequest = { showFilterSheet = false },
-                        searchTarget = searchTarget,
-                        searchAiType = searchAiType,
-                        bookmarkThreshold = bookmarkThreshold,
-                        ugoiraFilter = ugoiraFilter,
-                        startDate = startDate,
-                        endDate = endDate,
-                        hIsNotAllow = settingsRepository.hIsNotAllow,
-                        onApply = { newTarget, newAiType, newBookmark, newUgoira, newStart, newEnd, newHIsNotAllow ->
-                            searchTarget = newTarget
-                            searchAiType = newAiType
-                            bookmarkThreshold = newBookmark
-                            ugoiraFilter = newUgoira
-                            startDate = newStart
-                            endDate = newEnd
-                            settingsRepository.hIsNotAllow = newHIsNotAllow
+                        filterState = currentFilterState,
+                        onApply = { newState ->
+                            searchTarget = newState.searchTarget
+                            searchAiType = newState.searchAiType
+                            bookmarkThreshold = newState.bookmarkThreshold
+                            ugoiraFilter = newState.ugoiraFilter
+                            startDate = newState.startDate
+                            endDate = newState.endDate
+                            settingsRepository.hIsNotAllow = newState.hIsNotAllow
                         },
                     )
                 }
@@ -616,6 +628,24 @@ private fun FilterChipButton(
 }
 
 /**
+ * 搜索筛选条件状态封装，消除 Data Clump 代码坏味道。
+ */
+data class SearchFilterState(
+    val searchTarget: String = "partial_match_for_tags",
+    val searchAiType: Int = 0,
+    val bookmarkThreshold: Int = 0,
+    val ugoiraFilter: Int = 0,
+    val startDate: String = "",
+    val endDate: String = "",
+    val hIsNotAllow: Boolean = false,
+) {
+    val hasActiveFilters: Boolean
+        get() = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
+            startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
+            hIsNotAllow
+}
+
+/**
  * 搜索筛选底部抽屉：匹配目标、AI 作品、收藏数门槛、动图过滤与时间范围。
  *
  * 采用本地草稿状态，仅在用户点击「确定」时统一提交生效，避免频繁触发网络请求。
@@ -624,22 +654,8 @@ private fun FilterChipButton(
 @Composable
 private fun SearchFilterBottomSheet(
     onDismissRequest: () -> Unit,
-    searchTarget: String,
-    searchAiType: Int,
-    bookmarkThreshold: Int,
-    ugoiraFilter: Int,
-    startDate: String,
-    endDate: String,
-    hIsNotAllow: Boolean,
-    onApply: (
-        target: String,
-        aiType: Int,
-        bookmark: Int,
-        ugoira: Int,
-        start: String,
-        end: String,
-        hIsNotAllow: Boolean,
-    ) -> Unit,
+    filterState: SearchFilterState,
+    onApply: (SearchFilterState) -> Unit,
 ) {
     val strings = LocalStrings.current
     val targetOptions: List<Pair<String, String>> = listOf(
@@ -659,16 +675,10 @@ private fun SearchFilterBottomSheet(
         strings.searchUgoiraExclude to 2,
     )
 
-    var draftTarget by remember(searchTarget) { mutableStateOf(searchTarget) }
-    var draftAiType by remember(searchAiType) { mutableIntStateOf(searchAiType) }
-    var draftBookmark by remember(bookmarkThreshold) { mutableIntStateOf(bookmarkThreshold) }
-    var draftUgoira by remember(ugoiraFilter) { mutableIntStateOf(ugoiraFilter) }
-    var draftStartDate by remember(startDate) { mutableStateOf(startDate) }
-    var draftEndDate by remember(endDate) { mutableStateOf(endDate) }
-    var draftHIsNotAllow by remember(hIsNotAllow) { mutableStateOf(hIsNotAllow) }
+    var draftState by remember(filterState) { mutableStateOf(filterState) }
 
-    val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftTarget }.coerceAtLeast(0)
-    val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftUgoira }.coerceAtLeast(0)
+    val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftState.searchTarget }.coerceAtLeast(0)
+    val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftState.ugoiraFilter }.coerceAtLeast(0)
 
     OverlayBottomSheet(
         show = true,
@@ -692,7 +702,7 @@ private fun SearchFilterBottomSheet(
                 TabRow(
                     tabs = targetOptions.map { it.first },
                     selectedTabIndex = selectedTargetIndex,
-                    onTabSelected = { draftTarget = targetOptions[it].second },
+                    onTabSelected = { draftState = draftState.copy(searchTarget = targetOptions[it].second) },
                 )
             }
 
@@ -703,9 +713,9 @@ private fun SearchFilterBottomSheet(
                 ) {
                     SwitchPreference(
                         title = strings.interactionSettingHNotAllow,
-                        summary = if (draftHIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
-                        checked = draftHIsNotAllow,
-                        onCheckedChange = { draftHIsNotAllow = it },
+                        summary = if (draftState.hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
+                        checked = draftState.hIsNotAllow,
+                        onCheckedChange = { draftState = draftState.copy(hIsNotAllow = it) },
                     )
                 }
             }
@@ -717,8 +727,8 @@ private fun SearchFilterBottomSheet(
                 ) {
                     SwitchPreference(
                         title = strings.searchAiIncludeWorks,
-                        checked = draftAiType == 0,
-                        onCheckedChange = { draftAiType = if (it) 0 else 1 },
+                        checked = draftState.searchAiType == 0,
+                        onCheckedChange = { draftState = draftState.copy(searchAiType = if (it) 0 else 1) },
                     )
                 }
             }
@@ -733,8 +743,8 @@ private fun SearchFilterBottomSheet(
                     bookmarkOptions.forEach { (label, value) ->
                         FilterChipButton(
                             text = label,
-                            isSelected = draftBookmark == value,
-                            onClick = { draftBookmark = value },
+                            isSelected = draftState.bookmarkThreshold == value,
+                            onClick = { draftState = draftState.copy(bookmarkThreshold = value) },
                         )
                     }
                 }
@@ -745,7 +755,7 @@ private fun SearchFilterBottomSheet(
                 TabRow(
                     tabs = ugoiraOptions.map { it.first },
                     selectedTabIndex = selectedUgoiraIndex,
-                    onTabSelected = { draftUgoira = ugoiraOptions[it].second },
+                    onTabSelected = { draftState = draftState.copy(ugoiraFilter = ugoiraOptions[it].second) },
                 )
             }
 
@@ -757,8 +767,8 @@ private fun SearchFilterBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextField(
-                        value = draftStartDate,
-                        onValueChange = { draftStartDate = it },
+                        value = draftState.startDate,
+                        onValueChange = { draftState = draftState.copy(startDate = it) },
                         label = strings.searchDateRangeStart,
                         modifier = Modifier.weight(1f),
                     )
@@ -768,8 +778,8 @@ private fun SearchFilterBottomSheet(
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                     TextField(
-                        value = draftEndDate,
-                        onValueChange = { draftEndDate = it },
+                        value = draftState.endDate,
+                        onValueChange = { draftState = draftState.copy(endDate = it) },
                         label = strings.searchDateRangeEnd,
                         modifier = Modifier.weight(1f),
                     )
@@ -784,13 +794,7 @@ private fun SearchFilterBottomSheet(
             ) {
                 Button(
                     onClick = {
-                        draftTarget = "partial_match_for_tags"
-                        draftAiType = 0
-                        draftBookmark = 0
-                        draftUgoira = 0
-                        draftStartDate = ""
-                        draftEndDate = ""
-                        draftHIsNotAllow = false
+                        draftState = SearchFilterState()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
@@ -803,13 +807,10 @@ private fun SearchFilterBottomSheet(
                 Button(
                     onClick = {
                         onApply(
-                            draftTarget,
-                            draftAiType,
-                            draftBookmark,
-                            draftUgoira,
-                            draftStartDate.trim(),
-                            draftEndDate.trim(),
-                            draftHIsNotAllow,
+                            draftState.copy(
+                                startDate = draftState.startDate.trim(),
+                                endDate = draftState.endDate.trim(),
+                            )
                         )
                         onDismissRequest()
                     },

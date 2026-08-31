@@ -20,6 +20,15 @@ object AppConstants {
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
         const val SAUCE_NAO = "https://saucenao.com"
+        const val AUTHOR_NOTSFSSSF = "https://github.com/Notsfsssf"
+        const val AUTHOR_ROSEMARY = "https://github.com/137458"
+        const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
+        const val FEEDBACK_MAILTO = "mailto:PxezFeedBack@outlook.com"
+        val BOARD_URLS = listOf(
+            "https://raw.githubusercontent.com/Notsfsssf/pixez-flutter/refs/heads/master/.github/board/android.json",
+            "https://fastly.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
+            "https://cdn.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
+        )
     }
 
     /**

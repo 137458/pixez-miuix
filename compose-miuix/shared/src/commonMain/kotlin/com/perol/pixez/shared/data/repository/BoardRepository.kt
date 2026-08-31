@@ -33,7 +33,7 @@ class BoardRepository(
     suspend fun loadBoardList(): List<BoardInfo> = networkCall("加载公告板失败") {
         val cached = memoryCache
         var lastError: Throwable? = null
-        for (url in BOARD_URLS) {
+        for (url in com.perol.pixez.shared.ui.AppConstants.Urls.BOARD_URLS) {
             try {
                 val text = client.get(url).bodyAsText()
                 val list = json.decodeFromString<List<BoardInfo>>(text)
@@ -51,17 +51,5 @@ class BoardRepository(
             return@networkCall cached
         }
         throw (lastError ?: RuntimeException("加载公告板失败"))
-    }
-
-    companion object {
-        /**
-         * 公告 JSON 多数据源地址（包含 GitHub Raw 与 jsdelivr CDN 镜像），
-         * 提高在不同网络环境下的可用性，避免因单一源连接超时导致入口丢失。
-         */
-        private val BOARD_URLS = listOf(
-            "https://raw.githubusercontent.com/Notsfsssf/pixez-flutter/refs/heads/master/.github/board/android.json",
-            "https://fastly.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
-            "https://cdn.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
-        )
     }
 }

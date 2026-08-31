@@ -42,7 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.CONTRIBUTORS
 import com.perol.pixez.shared.data.model.Contributor
-import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -144,7 +144,7 @@ fun AboutScreen(
                     ) {
                         Image(
                             painter = painterResource(Res.drawable.ic_pixez_logo),
-                            contentDescription = "PixEz Logo",
+                            contentDescription = strings.logoContentDescription,
                             modifier = Modifier.size(72.dp),
                         )
                     }
@@ -182,15 +182,15 @@ fun AboutScreen(
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         DeveloperRow(
                             name = "Perol_Notsfsssf",
-                            message = "Founder & Maintainer",
+                            message = strings.roleFounderMaintainer,
                             avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
-                            onClick = { openUrlOrToast("https://github.com/Notsfsssf", strings) { toastMessage = it } },
+                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_NOTSFSSSF, strings) { toastMessage = it } },
                         )
                         DeveloperRow(
                             name = "137458 (Rosemary)",
-                            message = "MIUIX & Multiplatform",
+                            message = strings.roleMiuixMaintainer,
                             avatarUrl = "https://avatars.githubusercontent.com/u/138956834?v=4",
-                            onClick = { openUrlOrToast("https://github.com/137458", strings) { toastMessage = it } },
+                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_ROSEMARY, strings) { toastMessage = it } },
                         )
                     }
                 }
@@ -201,7 +201,7 @@ fun AboutScreen(
                         ContributorsRow(
                             contributors = CONTRIBUTORS,
                             onUrlClick = { url ->
-                                openUrlOrToast(url, strings) { toastMessage = it }
+                                openSafeUrl(url, strings) { toastMessage = it }
                             },
                         )
                     }
@@ -214,14 +214,14 @@ fun AboutScreen(
                             title = strings.aboutRepo,
                             summary = "github.com/137458/pixez-miuix",
                             onClick = {
-                                openUrlOrToast(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
+                                openSafeUrl(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
                             },
                         )
                         BasicComponent(
                             title = strings.aboutFeedback,
-                            summary = "PxezFeedBack@outlook.com",
+                            summary = AppConstants.Urls.FEEDBACK_EMAIL,
                             onClick = {
-                                openUrlOrToast("mailto:PxezFeedBack@outlook.com", strings) { toastMessage = it }
+                                openSafeUrl(AppConstants.Urls.FEEDBACK_MAILTO, strings) { toastMessage = it }
                             },
                         )
                         BasicComponent(
@@ -417,16 +417,4 @@ private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed
         indication = null,
         onClick = onClick,
     )
-}
-
-/**
- * 安全打开外部链接或展示 Toast 错误提示。
- */
-private fun openUrlOrToast(url: String, strings: AppStrings, onError: (String) -> Unit) {
-    try {
-        openBrowser(url)
-    } catch (e: Exception) {
-        Napier.w(tag = "AboutScreen", throwable = e) { "Failed to open url: $url" }
-        onError("${strings.loadFailed}: ${e.message ?: strings.loadFailed}")
-    }
 }

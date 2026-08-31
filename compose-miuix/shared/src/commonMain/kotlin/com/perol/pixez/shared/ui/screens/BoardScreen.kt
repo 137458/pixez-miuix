@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.BoardRepository
-import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -185,7 +185,7 @@ fun BoardScreen(
                         ) { board ->
                             BoardItem(
                                 board = board,
-                                onLinkClick = { url -> openUrlOrToast(url, strings) { toastMessage = it } },
+                                onLinkClick = { url -> openSafeUrl(url, strings, setOf("http", "https")) { toastMessage = it } },
                             )
                         }
                     }
@@ -403,24 +403,5 @@ private fun String.decodeNumericEntities(): String {
         }
     }
 }
-
-/**
- * 打开 URL，失败时通过回调返回提示信息。
- *
- * 仅允许 `http` 与 `https` scheme，防止公告 HTML 中的恶意链接触发
- * `javascript:`、`file://`、`intent://` 等危险协议。
- */
-private fun openUrlOrToast(url: String, strings: com.perol.pixez.shared.ui.i18n.AppStrings, onError: (String) -> Unit) {
-    try {
-        val scheme = url.substringBefore(":", "").lowercase()
-        require(scheme in ALLOWED_URL_SCHEMES) { "Invalid scheme: $scheme" }
-        openBrowser(url)
-    } catch (e: Exception) {
-        Napier.e("打开链接失败 url=$url", e)
-        onError("${strings.loadFailed}: ${e.message ?: strings.loadFailed}")
-    }
-}
-
-private val ALLOWED_URL_SCHEMES = setOf("http", "https")
 
 private const val URL_ANNOTATION_TAG = "URL"
