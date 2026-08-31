@@ -89,6 +89,29 @@ data class IllustSeries(
 )
 
 /**
+ * 判断标签名称或翻译是否包含敏感 R-18 标识。
+ */
+fun isSensitiveTag(name: String, translatedName: String? = null): Boolean {
+    if (name.contains("R-18", ignoreCase = true) ||
+        name.contains("R18", ignoreCase = true) ||
+        name.contains("18禁") ||
+        name.contains("18+")
+    ) {
+        return true
+    }
+    if (translatedName != null && (
+            translatedName.contains("R-18", ignoreCase = true) ||
+            translatedName.contains("R18", ignoreCase = true) ||
+            translatedName.contains("18禁") ||
+            translatedName.contains("18+")
+        )
+    ) {
+        return true
+    }
+    return false
+}
+
+/**
  * 判断插画作品是否为 R-18 / 18+ 敏感内容。
  *
  * 判定依据：
@@ -99,19 +122,7 @@ data class IllustSeries(
 fun Illust.isR18(): Boolean {
     if (xRestrict > 0) return true
     if (sanityLevel > 4) return true
-    return tags.any { tag ->
-        val name = tag.name
-        val translated = tag.translatedName
-        name.contains("R-18", ignoreCase = true) ||
-            name.contains("R18", ignoreCase = true) ||
-            name.contains("18禁") ||
-            name.contains("18+") ||
-            (translated != null && (
-                translated.contains("R-18", ignoreCase = true) ||
-                translated.contains("R18", ignoreCase = true) ||
-                translated.contains("18禁") ||
-                translated.contains("18+")
-            ))
-    }
+    return tags.any { isSensitiveTag(it.name, it.translatedName) }
 }
+
 

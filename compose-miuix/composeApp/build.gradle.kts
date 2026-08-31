@@ -56,6 +56,7 @@ kotlin {
         }
 
         desktopMain.dependencies {
+            implementation(projects.shared)
             implementation(compose.desktop.currentOs)
             implementation("net.java.dev.jna:jna:5.14.0")
             implementation("net.java.dev.jna:jna-platform:5.14.0")

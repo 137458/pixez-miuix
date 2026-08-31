@@ -23,6 +23,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 插画作品仓库：推荐、排行榜、作品详情等业务接口。
@@ -33,29 +35,41 @@ class IllustRepository(
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
+    private val cacheMutex = Mutex()
     private val illustsMemoryCache = mutableMapOf<Int, Illust>()
     private val illustsCacheOrder = mutableListOf<Int>()
 
     /**
      * 将单个插画作品存入内存缓存（LRU 策略，最大 500 条）。
      */
-    fun cacheIllust(illust: Illust) {
-        val id = illust.id
-        illustsMemoryCache[id] = illust
-        illustsCacheOrder.remove(id)
-        illustsCacheOrder.add(id)
-        if (illustsCacheOrder.size > 500) {
-            val oldest = illustsCacheOrder.removeAt(0)
-            illustsMemoryCache.remove(oldest)
+    suspend fun cacheIllust(illust: Illust) {
+        cacheMutex.withLock {
+            val id = illust.id
+            illustsMemoryCache[id] = illust
+            illustsCacheOrder.remove(id)
+            illustsCacheOrder.add(id)
+            if (illustsCacheOrder.size > 500) {
+                val oldest = illustsCacheOrder.removeAt(0)
+                illustsMemoryCache.remove(oldest)
+            }
         }
     }
 
     /**
      * 将批量插画作品存入内存缓存。
      */
-    fun cacheIllusts(illusts: Iterable<Illust>) {
-        for (illust in illusts) {
-            cacheIllust(illust)
+    suspend fun cacheIllusts(illusts: Iterable<Illust>) {
+        cacheMutex.withLock {
+            for (illust in illusts) {
+                val id = illust.id
+                illustsMemoryCache[id] = illust
+                illustsCacheOrder.remove(id)
+                illustsCacheOrder.add(id)
+                if (illustsCacheOrder.size > 500) {
+                    val oldest = illustsCacheOrder.removeAt(0)
+                    illustsMemoryCache.remove(oldest)
+                }
+            }
         }
     }
 

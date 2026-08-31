@@ -66,9 +66,12 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
                 val settings = SettingsRepository(settingsFactory.createSettings())
                 val driverFactory = DriverFactory(context)
                 val widgetRepository = WidgetRepository(driverFactory, settings)
-
                 val targetType = settings.widgetIllustType.ifBlank { "recom" }
-                val cached = widgetRepository.getOrFetchWidgetIllust(targetType)
+                val cached = try {
+                    widgetRepository.getOrFetchWidgetIllust(targetType)
+                } finally {
+                    widgetRepository.close()
+                }
 
                 val illustId = cached?.illust_id?.toInt() ?: 0
                 val title = cached?.title ?: "PixEz"

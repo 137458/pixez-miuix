@@ -4,14 +4,6 @@ import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.IllustProfileImageUrls
-import com.perol.pixez.shared.data.model.IllustSeries
-import com.perol.pixez.shared.data.model.IllustTag
-import com.perol.pixez.shared.data.model.IllustUser
-import com.perol.pixez.shared.data.model.ImageUrls
-import com.perol.pixez.shared.data.model.MetaPage
-import com.perol.pixez.shared.data.model.MetaPageImageUrls
-import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -180,7 +172,7 @@ class DownloadRepository(
         )
 
         // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
-        suspendRunCatchingNonCancel { historyRepository.saveTask(pendingTask, history.toMinimalIllust(), history.id) }
+        suspendRunCatchingNonCancel { historyRepository.saveTask(history.copy(status = DownloadStatus.Downloading)) }
             .onFailure { Napier.e("重试时回写下载历史失败 historyId=${history.id}", it) }
 
         return try {
@@ -189,7 +181,7 @@ class DownloadRepository(
             val savedPath = saver.save(history.fileName, bytes)
             Napier.d("重试下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            historyRepository.saveTask(successTask, history.toMinimalIllust(), history.id)
+            historyRepository.saveTask(history.copy(status = DownloadStatus.Success))
             successTask
         } catch (e: CancellationException) {
             throw e
@@ -200,7 +192,7 @@ class DownloadRepository(
                 error = e.message ?: "下载失败",
             )
             // 历史记录已存在时尽力回写失败状态；回写失败则记录日志并将异常附加到原始异常，避免状态不一致被静默吞掉。
-            suspendRunCatchingNonCancel { historyRepository.saveTask(failedTask, history.toMinimalIllust(), history.id) }
+            suspendRunCatchingNonCancel { historyRepository.saveTask(history.copy(status = DownloadStatus.Failed)) }
                 .onFailure { saveError ->
                     Napier.e("重试失败时回写下载历史失败 historyId=${history.id}", saveError)
                     e.addSuppressed(saveError)
@@ -270,68 +262,6 @@ class DownloadRepository(
      */
     private fun sanitizeFileName(name: String): String {
         return name.replace(INVALID_FILE_NAME_CHARS, "_")
-    }
-
-    /**
-     * 将下载历史记录转换为可供 [saveTask] 使用的最小化 [Illust] 对象。
-     *
-     * 重试时仅需要作品元信息（标题、画师、页码、原图 URL），其余字段使用默认值填充。
-     */
-    private fun DownloadTaskHistory.toMinimalIllust(): Illust {
-        // 根据页码构造单页或多页结构，确保 resolveOriginalUrl 能正确取到 remoteUrl。
-        val singlePage = if (pageIndex == 0) MetaSinglePage(originalImageUrl = remoteUrl) else null
-        val metaPages = if (pageIndex > 0) {
-            listOf(
-                MetaPage(
-                    imageUrls = MetaPageImageUrls(
-                        squareMedium = medium ?: "",
-                        medium = medium ?: "",
-                        large = "",
-                        original = remoteUrl,
-                    ),
-                ),
-            )
-        } else {
-            emptyList()
-        }
-
-        return Illust(
-            id = illustId,
-            title = title,
-            type = "illust",
-            imageUrls = ImageUrls(
-                squareMedium = medium ?: "",
-                medium = medium ?: "",
-                large = "",
-            ),
-            caption = "",
-            restrict = 0,
-            user = IllustUser(
-                id = userId,
-                name = userName,
-                account = "",
-                profileImageUrls = IllustProfileImageUrls(medium = ""),
-                comment = "",
-                isFollowed = false,
-            ),
-            tags = emptyList(),
-            tools = emptyList(),
-            createDate = "",
-            pageCount = maxOf(pageIndex + 1, 1),
-            width = 0,
-            height = 0,
-            sanityLevel = sanityLevel ?: 0,
-            xRestrict = 0,
-            metaSinglePage = singlePage,
-            metaPages = metaPages,
-            totalView = 0,
-            totalBookmarks = 0,
-            isBookmarked = false,
-            visible = false,
-            isMuted = false,
-            illustAIType = 1,
-            series = null,
-        )
     }
 
     companion object {

@@ -100,4 +100,11 @@ class WidgetRepository(
             runCatching { driverFactory.closeDriver(accountDriver) }
         }
     }
+
+    /**
+     * 显式释放小组件数据库驱动与底层资源。
+     */
+    fun close() {
+        runCatching { driverFactory.closeDriver(glanceDriver) }
+    }
 }

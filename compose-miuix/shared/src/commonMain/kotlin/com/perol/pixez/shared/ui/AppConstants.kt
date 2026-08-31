@@ -9,6 +9,9 @@ object AppConstants {
      * 外部链接与社群地址
      */
     object Urls {
+        const val PIXIV_APP_API = "https://app-api.pixiv.net/"
+        const val PIXIV_OAUTH = "https://oauth.secure.pixiv.net/"
+        const val PIXIV_FAVICON = "https://i.pximg.net/favicon.ico"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
         const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
         const val GITHUB_ISSUES = "https://github.com/137458/pixez-miuix/issues"
@@ -64,8 +67,9 @@ object AppConstants {
      * 搜索筛选预设
      */
     object Search {
-        val BOOKMARK_THRESHOLDS = listOf(0, 100, 500, 1000, 5000, 10000, 20000, 50000)
+        val BOOKMARK_THRESHOLDS = listOf(0, 100, 250, 500, 1000, 5000, 10000, 20000, 50000, 100000)
     }
+
 
     /**
      * 跨适配网格预设

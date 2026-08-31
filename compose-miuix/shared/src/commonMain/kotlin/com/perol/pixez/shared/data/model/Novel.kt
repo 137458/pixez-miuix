@@ -241,19 +241,7 @@ data class NovelWatchListSeriesProfileImageUrls(
  */
 fun Novel.isR18(): Boolean {
     if (xRestrict > 0 || isXRestricted) return true
-    return tags.any { tag ->
-        val name = tag.name
-        val translated = tag.translatedName
-        name.contains("R-18", ignoreCase = true) ||
-            name.contains("R18", ignoreCase = true) ||
-            name.contains("18禁") ||
-            name.contains("18+") ||
-            (translated != null && (
-                translated.contains("R-18", ignoreCase = true) ||
-                translated.contains("R18", ignoreCase = true) ||
-                translated.contains("18禁") ||
-                translated.contains("18+")
-            ))
-    }
+    return tags.any { isSensitiveTag(it.name, it.translatedName) }
 }
+
 

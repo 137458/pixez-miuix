@@ -647,18 +647,12 @@ private fun SearchFilterBottomSheet(
         strings.searchTargetExactTag to "exact_match_for_tags",
         strings.searchTargetTitleCaption to "title_and_caption",
     )
-    val bookmarkOptions: List<Pair<String, Int>> = listOf(
-        strings.searchUgoiraAll to 0,
-        "100+" to 100,
-        "250+" to 250,
-        "500+" to 500,
-        "1000+" to 1000,
-        "5000+" to 5000,
-        "10000+" to 10000,
-        "20000+" to 20000,
-        "50000+" to 50000,
-        "100000+" to 100000,
-    )
+    val bookmarkOptions: List<Pair<String, Int>> = remember(strings) {
+        com.perol.pixez.shared.ui.AppConstants.Search.BOOKMARK_THRESHOLDS.map { threshold ->
+            if (threshold == 0) strings.searchUgoiraAll to 0
+            else "${threshold}+" to threshold
+        }
+    }
     val ugoiraOptions: List<Pair<String, Int>> = listOf(
         strings.searchUgoiraAll to 0,
         strings.searchUgoiraOnly to 1,
@@ -694,7 +688,7 @@ private fun SearchFilterBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.searchTargetExactTag)
+                SmallTitle(text = strings.searchTargetPartialTag)
                 TabRow(
                     tabs = targetOptions.map { it.first },
                     selectedTabIndex = selectedTargetIndex,
@@ -756,7 +750,7 @@ private fun SearchFilterBottomSheet(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.rankingDateLabel.substringBefore(" "))
+                SmallTitle(text = strings.publishDate)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
