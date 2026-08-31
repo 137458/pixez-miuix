@@ -10,11 +10,13 @@ import java.io.File
  */
 actual class IllustSaver {
     actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
         val userHome = System.getProperty("user.home")
             ?: throw IllegalStateException("无法获取用户主目录")
         val picturesDir = File(userHome, "Pictures").apply { mkdirs() }
         val pixezDir = File(picturesDir, "PixEz").apply { mkdirs() }
-        val file = File(pixezDir, fileName)
+        val file = File(pixezDir, safeFileName).canonicalFile
+        require(file.toPath().startsWith(pixezDir.canonicalFile.toPath())) { "保存路径越界" }
 
         try {
             file.writeBytes(bytes)

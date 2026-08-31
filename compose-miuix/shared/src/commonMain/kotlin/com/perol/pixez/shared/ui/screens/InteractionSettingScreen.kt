@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -52,6 +53,7 @@ fun InteractionSettingScreen(
     // 页面状态：从 SettingsRepository 读取当前交互相关设置，用于驱动 Switch 的显示与回写。
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
+    var closeToTray by remember { mutableStateOf(settingsRepository.closeToTray) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -116,6 +118,17 @@ fun InteractionSettingScreen(
                                 settingsRepository.isReturnAgainToExit = checked
                             },
                         )
+                        if (isDesktopPlatform()) {
+                            SwitchPreference(
+                                title = strings.interactionSettingCloseToTray,
+                                summary = if (closeToTray) strings.interactionSettingCloseToTraySummaryOn else strings.interactionSettingCloseToTraySummaryOff,
+                                checked = closeToTray,
+                                onCheckedChange = { checked ->
+                                    closeToTray = checked
+                                    settingsRepository.closeToTray = checked
+                                },
+                            )
+                        }
                     }
                 }
             }

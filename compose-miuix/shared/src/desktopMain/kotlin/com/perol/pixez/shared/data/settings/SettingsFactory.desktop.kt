@@ -67,7 +67,7 @@ actual class SettingsFactory {
             }
             target.putBoolean(MIGRATION_FLAG_KEY, true)
             target.flush()
-            Napier.i("Desktop 旧 Flutter 设置迁移完成：${legacyFile.absolutePath}")
+            Napier.i("Desktop 旧 Flutter 设置迁移完成")
         } catch (e: Exception) {
             // 迁移失败不应阻塞应用启动，记录后继续。
             Napier.e("Desktop 旧 Flutter 设置迁移失败", e)

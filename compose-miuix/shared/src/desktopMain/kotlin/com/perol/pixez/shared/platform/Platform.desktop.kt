@@ -5,6 +5,8 @@ package com.perol.pixez.shared.platform
  */
 actual fun isAndroidPlatform(): Boolean = false
 
+actual fun isDesktopPlatform(): Boolean = true
+
 /**
  * Desktop 平台无需打开 Android 系统设置页，空实现。
  */

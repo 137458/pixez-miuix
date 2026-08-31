@@ -15,6 +15,7 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import kotlinx.coroutines.launch
+import okio.FileSystem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -110,9 +111,9 @@ fun IllustCard(
                         var bytes: ByteArray? = null
                         for (candidateUrl in transformedUrls) {
                             diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
-                                val file = snapshot.data.toFile()
-                                if (file.exists() && file.length() > 0) {
-                                    bytes = file.readBytes()
+                                val fileSystem = FileSystem.SYSTEM
+                                if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
+                                    bytes = fileSystem.read(snapshot.data) { readByteArray() }
                                 }
                             }
                             if (bytes != null) break

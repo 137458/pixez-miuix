@@ -64,8 +64,12 @@ fun UpdateDialog(
     var downloadError by remember { mutableStateOf<String?>(null) }
 
     fun startDownload() {
-        val downloadUrl = releaseInfo.downloadUrl ?: releaseInfo.releaseUrl
-        val fileName = releaseInfo.fileName ?: "PixEz-MIUIX-${releaseInfo.versionName}.apk"
+        val downloadUrl = releaseInfo.downloadUrl
+        val fileName = releaseInfo.fileName
+        if (downloadUrl == null || fileName == null) {
+            downloadError = strings.updateDownloadFailed
+            return
+        }
 
         isDownloading = true
         downloadError = null

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.ui.AppInfo
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
@@ -94,11 +95,14 @@ suspend fun fetchLatestReleaseInfo(
         val tag = release.tag_name ?: ""
         val versionName = tag.removePrefix("v").ifBlank { "unknown" }
 
-        val apkAsset = release.assets?.firstOrNull { it.name?.endsWith(".apk", ignoreCase = true) == true }
-            ?: release.assets?.firstOrNull()
-        val downloadUrl = apkAsset?.browser_download_url
-            ?: "https://github.com/137458/pixez-miuix/releases/download/$tag/PixEz-MIUIX-$tag.apk"
-        val fileName = apkAsset?.name ?: "PixEz-MIUIX-$tag.apk"
+        val apkAsset = release.assets?.firstOrNull {
+            it.name?.endsWith(".apk", ignoreCase = true) == true &&
+                !it.browser_download_url.isNullOrBlank()
+        }
+        val downloadUrl = apkAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
+        val fileName = apkAsset?.name?.let {
+            com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
+        }
         val fileSize = apkAsset?.size
 
         val releaseInfo = ReleaseInfo(

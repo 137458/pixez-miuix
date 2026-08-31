@@ -1,10 +1,10 @@
-<img src="../android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" alt="logo" width="144" height="144" align="right" />
+<img src="../compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="logo" width="144" height="144" align="right" />
 
 # PixEz MIUIX ![](https://camo.githubusercontent.com/f2b4fa6779c8a4825e0e7347076746a2047ed100/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d47504c2d2d332e302d6f72616e67652e737667)
 
-> 🚧 **Sedang dimigrasikan**: Proyek ini sedang dimigrasikan dari Flutter ke **Compose Multiplatform + MIUIX** (bahasa desain Xiaomi HyperOS). Kode baru berada di [`compose-miuix/`](../compose-miuix). Versi Flutter yang ada masih dapat diunduh hingga rilis MIUIX pertama.
+> **Compose adalah jalur utama**: PixEz MIUIX dikembangkan dan dirilis dari [`compose-miuix/`](../compose-miuix). Flutter v1 telah dibekukan di [`archive/flutter-v1/`](../archive/flutter-v1/) untuk referensi historis dan perbaikan keamanan terbatas.
 
-Klien pihak ketiga Pixiv yang dibuat dengan Compose Multiplatform, dengan target Android / iOS / Desktop(JVM) / macOS.
+Klien pihak ketiga Pixiv yang dibuat dengan Compose Multiplatform. Rilis aktif tersedia untuk Android dan Windows Desktop.
 
 Dapat mengakses Pixiv secara langsung dari Tiongkok Daratan.
 
@@ -13,8 +13,8 @@ Dapat mengakses Pixiv secara langsung dari Tiongkok Daratan.
 |OS|Market|GitHub Releases|
 |:---:|:---:|:---:|
 |Android|[Google Play](https://play.google.com/store/apps/details?id=com.perol.play.pixez)|[Release APK](https://github.com/137458/pixez-miuix/releases)|
-|Desktop (Win/Mac/Linux)|/|[Executable JAR / Windows Release](https://github.com/137458/pixez-miuix/releases)|
-|iOS|[App Store](https://apps.apple.com/app/pixez/id1494435126)|[Action CI / Release](https://github.com/137458/pixez-miuix/actions)|
+|Windows Desktop|/|[Standalone EXE / Portable ZIP / MSI](https://github.com/137458/pixez-miuix/releases)|
+|macOS / Linux|/|Target sumber Compose, belum ada rilis resmi|
 
 # Preview
 

@@ -273,7 +273,7 @@ class AppDependencies(
      * 应用启动预热：在后台异步预热常用网络连接与 TLS 握手。
      */
     fun warmupAsync(scope: kotlinx.coroutines.CoroutineScope) {
-        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch(kotlinx.coroutines.Dispatchers.Default) {
             httpClient.warmup()
         }
     }

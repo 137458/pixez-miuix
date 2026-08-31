@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.network.TrustedUrlPolicy
+
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.Search
 import com.perol.pixez.shared.data.model.TrendTag
@@ -41,7 +43,7 @@ class SearchRepository(
         nextUrl: String? = null,
     ): Search = networkCall("搜索插画失败 word=$word") {
         val response: Search = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/search/illust") {
                 parameter("filter", "for_android")
@@ -85,7 +87,7 @@ class SearchRepository(
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("搜索画师失败 word=$word") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/search/user") {
                 parameter("filter", "for_android")

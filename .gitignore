@@ -1,128 +1,49 @@
-# Miscellaneous
+# General editor and operating-system artifacts
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
-.atom/
-.buildlog/
-.history
-# Antigravity & Agents
-.agents/
-release/
-
-# IntelliJ related
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
-.i18nconfig.json
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-# Flutter/Dart/Pub related
-**/doc/api/
-.dart_tool/
-**/.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-/build/
-**/build/
-**/*.g.dart
-**/*.freezed.dart
-/lib/generated/
-
-# Android related
-**/android/**/gradle-wrapper.jar
-**/android/.gradle
-**/android/captures/
-**/android/gradlew
-**/android/gradlew.bat
-**/android/local.properties
-**/android/key.properties
-**/android/**/GeneratedPluginRegistrant.java
-local.properties
-
-# iOS/XCode related
-**/ios/**/*.mode1v3
-**/ios/**/*.mode2v3
-**/ios/**/*.moved-aside
-**/ios/**/*.pbxuser
-**/ios/**/*.perspectivev3
-**/ios/**/*sync/
-**/ios/**/.sconsign.dblite
-**/ios/**/.tags*
-**/ios/**/.vagrant/
-**/ios/**/DerivedData/
-**/ios/**/Icon?
-**/ios/**/Pods/
-**/ios/**/.symlinks/
-**/ios/**/profile
-**/ios/**/xcuserdata
-**/ios/.generated/
-**/ios/Flutter/App.framework
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/app.flx
-**/ios/Flutter/app.zip
-**/ios/Flutter/flutter_assets/
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/ServiceDefinitions.json
-**/ios/Runner/GeneratedPluginRegistrant.*
-**/ios/Flutter/ephemeral/
-**/ios/Flutter/flutter_native_integration.env
-
-# macOS/XCode related
-**/macos/**/*.mode1v3
-**/macos/**/*.mode2v3
-**/macos/**/*.moved-aside
-**/macos/**/*.pbxuser
-**/macos/**/*.perspectivev3
-**/macos/**/*sync/
-**/macos/**/.sconsign.dblite
-**/macos/**/.tags*
-**/macos/**/.vagrant/
-**/macos/**/DerivedData/
-**/macos/**/Icon?
-**/macos/**/Pods/
-**/macos/**/.symlinks/
-**/macos/**/profile
-**/macos/**/xcuserdata
-**/macos/Flutter/ephemeral/
-**/macos/Flutter/GeneratedPluginRegistrant.swift
-**/macos/Flutter/Flutter-Debug.xcconfig
-**/macos/Flutter/Flutter-Release.xcconfig
-
-# Windows related
-**/windows/flutter/ephemeral/
-**/windows/flutter/generated_plugin_registrant.*
-**/windows/flutter/generated_plugins.cmake
-
-# Rust (rhttp plugin) related
-**/rust/target/
-**/rust/.cargo/
-
-# Exceptions to above rules.
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-/.vscode/
-.gradle/
+.vscode/
+.agents/
+.trae/
+.zcode/
+release/
 misc/
 msic
-
-# Ignore Certificate
 *.pfx
 
-# FVM Version Cache
-.fvm/
-/lib/src/generated/
+# Compose / Gradle mainline
+.gradle/
+**/.gradle/
+**/build/
+.kotlin/
+local.properties
+**/local.properties
 
-# Trae agent workspace documents
-.trae/
+# Frozen Flutter v1 archive build outputs
+archive/flutter-v1/.dart_tool/
+archive/flutter-v1/.flutter-plugins
+archive/flutter-v1/.flutter-plugins-dependencies
+archive/flutter-v1/.packages
+archive/flutter-v1/.pub/
+archive/flutter-v1/.pub-cache/
+archive/flutter-v1/build/
+archive/flutter-v1/**/GeneratedPluginRegistrant.*
+archive/flutter-v1/**/flutter/ephemeral/
+archive/flutter-v1/**/Flutter/ephemeral/
+archive/flutter-v1/**/Pods/
+archive/flutter-v1/**/DerivedData/
+archive/flutter-v1/**/xcuserdata/
+archive/flutter-v1/**/captures/
+archive/flutter-v1/**/rust/target/
+archive/flutter-v1/**/rust/.cargo/
+archive/flutter-v1/android/local.properties
+archive/flutter-v1/android/key.properties
+
+# Local Flutter SDK cache, if an archive maintainer uses FVM
+archive/flutter-v1/.fvm/

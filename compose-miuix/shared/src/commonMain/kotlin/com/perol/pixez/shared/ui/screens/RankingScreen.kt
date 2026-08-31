@@ -118,15 +118,19 @@ fun RankingScreen(
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.changeVersion) {
+        val generation = ++requestGeneration
         val force = isManualRefreshing
-        if (illustsState == null) {
-            initialError = null
-        }
+        illustsState = null
+        nextUrl = null
+        initialError = null
+        loadMoreError = null
+        isLoadingMore = false
         val rankingResult = suspendRunCatchingNonCancel {
             repository.getRankingResponse(
                 mode = selectedMode.code,
@@ -135,15 +139,17 @@ fun RankingScreen(
         }
         isManualRefreshing = false
         rankingResult.onSuccess { response ->
-            illustsState = filterBanned(response.illusts)
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
-            if (force && gridState.firstVisibleItemIndex > 0) {
-                gridState.scrollToItem(0)
+            if (generation == requestGeneration) {
+                illustsState = filterBanned(response.illusts)
+                nextUrl = response.nextUrl
+                initialError = null
+                loadMoreError = null
+                if (force && gridState.firstVisibleItemIndex > 0) {
+                    gridState.scrollToItem(0)
+                }
             }
         }.onFailure { error ->
-            if (illustsState == null) {
+            if (generation == requestGeneration) {
                 initialError = error
             }
         }
@@ -151,6 +157,7 @@ fun RankingScreen(
 
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
+        val generation = requestGeneration
         if (isLoadingMore) return
         coroutineScope.launch {
             isLoadingMore = true
@@ -162,13 +169,19 @@ fun RankingScreen(
                     nextUrl = currentNextUrl,
                 )
             }.onSuccess { response ->
-                val filtered = filterBanned(response.illusts)
-                illustsState = (illustsState.orEmpty()) + filtered
-                nextUrl = response.nextUrl
+                if (generation == requestGeneration) {
+                    val filtered = filterBanned(response.illusts)
+                    illustsState = (illustsState.orEmpty()) + filtered
+                    nextUrl = response.nextUrl
+                }
             }.onFailure { error ->
-                loadMoreError = error
+                if (generation == requestGeneration) {
+                    loadMoreError = error
+                }
             }
-            isLoadingMore = false
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
         }
     }
 

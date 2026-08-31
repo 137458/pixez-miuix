@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.platform.DownloadNotifier
+import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -178,7 +179,7 @@ class DownloadRepository(
         return try {
             // 复用已有 HTTP 下载与平台保存逻辑。
             val bytes = downloadBytes(history.remoteUrl)
-            val savedPath = saver.save(history.fileName, bytes)
+            val savedPath = saver.save(FileNamePolicy.requireSafeBaseName(history.fileName), bytes)
             Napier.d("重试下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepository.saveTask(history.copy(status = DownloadStatus.Success))
@@ -242,7 +243,8 @@ class DownloadRepository(
      * 显式附加 Referer，满足 Pixiv 图片防盗链要求（客户端 defaultRequest 已配置，此处作为防御性补充）。
      */
     private suspend fun downloadBytes(url: String): ByteArray {
-        val response = httpClient.get(url) {
+        val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(url)
+        val response = httpClient.get(trustedUrl) {
             header("Referer", "https://app-api.pixiv.net/")
         }
         return response.readRawBytes()

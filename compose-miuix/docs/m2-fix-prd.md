@@ -41,8 +41,8 @@ M2 里程碑已完成核心数据模型（Kotlin `@Serializable`）、SQLDelight
 - **SQLDelight 迁移文件**：为 `TaskDatabase` 与 `GlanceIllustPersistDatabase` 添加 `1.sqm`，分别补齐 `medium` 列与 `original_url`/`large_url` 列，使 schema 版本与旧 Flutter 的 v2 对齐，避免 Android/iOS/macOS 打开旧库时触发降级错误。
 - **verifyMigrations**：移除全局 `VerifyMigrationTask.enabled = false`；改为非 Windows 平台默认启用，Windows 可通过 `-PskipVerifyMigrations=true` 显式跳过。
 - **数据库命名**：将 `IllustPersistDatabase` 重命名为 `GlanceIllustPersistDatabase`，与实际表名 `glanceillustpersist` 及旧 `.db` 文件名一致，避免与未来真正的 `illustpersist.db` 混淆。
-- **compileSdk**：MIUIX 0.9.x 要求 `compileSdk = 37`（Android 17 预览版），稳定版 CI 无法自动安装；已降级至 MIUIX 0.8.8（要求 `compileSdk = 36`）。
-- **lint 配置**：`abortOnError = false` 保留（AGP 8.13 内嵌 Kotlin 编译器不兼容项目 Kotlin 2.4.0 元数据，暂无具体 issue id 可禁用）。
+- **compileSdk**：当前 MIUIX 0.9.4-rc01 使用 `compileSdk = 36`，与 CI 安装的 Android 36 平台一致。
+- **lint 配置**：`abortOnError = false` 保留（AGP 8.13 内嵌 Kotlin 编译器不兼容项目 Kotlin 2.4.10 元数据，暂无具体 issue id 可禁用）。
 - **模型可空性**：按旧版 Dart 模型逐个核对，将 API 中可能缺失的字段改为可空（优先覆盖 `Illust`、`Novel`、`UserDetail` 核心路径）。
 - **novelAIType 命名统一**：将 `NovelSeriesNovel.novelAiType` 重命名为 `novelAIType`，保持与 `illustAIType` 风格一致。
 

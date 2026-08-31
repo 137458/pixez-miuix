@@ -103,6 +103,7 @@ import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
+import okio.FileSystem
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -1237,9 +1238,9 @@ private fun IllustDetailSingleContent(
                                         var bytes: ByteArray? = null
                                         for (candidateUrl in candidateUrls) {
                                             diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
-                                                val file = snapshot.data.toFile()
-                                                if (file.exists() && file.length() > 0) {
-                                                    bytes = file.readBytes()
+                                                val fileSystem = FileSystem.SYSTEM
+                                                if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
+                                                    bytes = fileSystem.read(snapshot.data) { readByteArray() }
                                                 }
                                             }
                                             if (bytes != null) break

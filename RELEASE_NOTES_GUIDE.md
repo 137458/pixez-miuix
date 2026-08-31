@@ -43,9 +43,10 @@ GitHub Release 更新日志应基于 `CHANGELOG.md` 提炼编写，不应直接�
 
 ## 系统要求
 
+- **构建工具链**: Kotlin 2.4.10、Compose Multiplatform 1.12.0、MIUIX 0.9.4-rc01、Coil 3.6.0、Gradle 8.14.4。
 - **Android**: Android 7.0 (API 24) 及以上版本。
 - **Windows**: Windows 10 / 11 64 位系统（已内嵌专属优化 JRE 运行环境，开箱即用零依赖）。
-- **macOS / Linux**: macOS 12+ / Ubuntu 20.04+。
+- **macOS / Linux**: 当前保留 Compose 源码目标，尚未提供正式发行安装包。
 
 ## 致谢
 
@@ -127,7 +128,7 @@ GitHub Release 更新日志应基于 `CHANGELOG.md` 提炼编写，不应直接�
 ### 步骤 3：本地编译与打包验证
 在提交前运行本地多平台验证指令：
 ```bash
-./gradlew :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
+./gradlew :shared:compileKotlinDesktop :shared:desktopTest :composeApp:compileKotlinDesktop :composeApp:desktopTest :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
 ```
 
 ### 步骤 4：Git 提交与打标签

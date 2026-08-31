@@ -4,12 +4,24 @@ on:
   push:
     paths:
       - 'compose-miuix/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'RELEASE_NOTES_GUIDE.md'
+      - '.github/FAQ.md'
+      - '.github/README_en.md'
+      - '.github/README_id.md'
       - '.github/workflows/build_compose_miuix.yml'
     tags:
       - 'v*'
   pull_request:
     paths:
       - 'compose-miuix/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'RELEASE_NOTES_GUIDE.md'
+      - '.github/FAQ.md'
+      - '.github/README_en.md'
+      - '.github/README_id.md'
       - '.github/workflows/build_compose_miuix.yml'
   workflow_dispatch:
 
@@ -84,8 +96,8 @@ jobs:
         with:
           gradle-home-cache-cleanup: true
 
-      - name: 构建并打包 Desktop 单文件 EXE、便携 ZIP 与 MSI 安装包
-        run: ./gradlew.bat :composeApp:packageMsi :composeApp:packageWindowsPortableZip :composeApp:packageWindowsSingleFileExe --no-daemon --stacktrace "-Dorg.gradle.java.home=%JAVA_HOME%"
+      - name: 运行 Desktop 回归测试并打包单文件 EXE、便携 ZIP 与 MSI 安装包
+        run: ./gradlew.bat :composeApp:desktopTest :composeApp:packageMsi :composeApp:packageWindowsPortableZip :composeApp:packageWindowsSingleFileExe --no-daemon --stacktrace "-Dorg.gradle.java.home=%JAVA_HOME%"
 
       - name: 上传 Desktop 单文件自包含 EXE
         uses: actions/upload-artifact@v4

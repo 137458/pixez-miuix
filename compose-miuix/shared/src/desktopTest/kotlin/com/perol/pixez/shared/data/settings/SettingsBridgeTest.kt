@@ -171,6 +171,21 @@ class SettingsBridgeTest {
     }
 
     @Test
+    fun `closeToTray persists as a Desktop preference and notifies observers`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/close_to_tray")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+        val initialVersion = repo.changeVersion
+
+        assertFalse(repo.closeToTray)
+        repo.closeToTray = true
+
+        assertTrue(repo.closeToTray)
+        assertTrue(node.getBoolean("desktop_close_to_tray", false))
+        assertEquals(initialVersion + 1, repo.changeVersion)
+    }
+
+    @Test
     fun `banAIIllust nsfwMask feedAIBadge trigger notifyChanged`() {
         val node = Preferences.userRoot().node("com/perol/pixez/test/filter_settings")
         node.clear()

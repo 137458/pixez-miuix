@@ -36,7 +36,7 @@ kotlin {
         val desktopMain by getting
 
         commonMain.dependencies {
-            // 当前 Compose 1.11.1 仍使用 compose.* DSL；后续升级至 1.12+ 后迁移到 compose.dependencies.*
+            // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.ui)
@@ -117,7 +117,7 @@ kotlin {
 
 android {
     namespace = "com.perol.pixez.shared"
-    // MIUIX 0.9.3 要求 compileSdk >= 36
+    // MIUIX 0.9.4-rc01 要求 compileSdk >= 36
     compileSdk = 36
 
     defaultConfig {
@@ -130,9 +130,9 @@ android {
     }
 
     lint {
-        // AGP 8.13 lint 内嵌的 Kotlin 编译器为 2.2.0，无法读取项目/MIUIX 使用的 Kotlin 2.4.0 元数据，
+        // AGP 8.13 lint 内嵌的 Kotlin 编译器为 2.2.0，无法读取项目/MIUIX 使用的 Kotlin 2.4.10 元数据，
         // 会在 lintAnalyze 阶段抛出 "incompatible version of Kotlin" 错误（非 lint issue，无 issue id 可禁用）。
-        // 在 AGP 升级到支持 Kotlin 2.4.0 元数据之前，暂时关闭 abortOnError 和 checkReleaseBuilds，避免阻塞构建。
+        // 在 AGP 升级到支持 Kotlin 2.4.10 元数据之前，暂时关闭 abortOnError 和 checkReleaseBuilds，避免阻塞构建。
         abortOnError = false
         checkReleaseBuilds = false
     }

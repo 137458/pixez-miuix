@@ -7,9 +7,9 @@
 **基于 Compose Multiplatform 与 Xiaomi HyperOS (MIUIX) 设计规范打造的高颜值、现代跨平台 Pixiv 客户端**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Desktop%20%7C%20iOS%20%7C%20macOS-blue.svg?style=flat-square)](#下载与安装)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.0-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.11.1-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
+[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#下载与安装)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
 
 [English](./.github/README_en.md) · [Bahasa Indonesia](./.github/README_id.md) · [使用指南 & FAQ](.github/FAQ.md) · [发布版本](https://github.com/137458/pixez-miuix/releases)
@@ -36,7 +36,7 @@
 
 ## 项目简介
 
-**PixEz MIUIX** 是原知名开源 Pixiv 第三方客户端 PixEz 的全新世代重构版本。本项目全面拥抱 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 技术栈，并深度结合 **Xiaomi HyperOS (MIUIX)** 设计语言与交互规范，为各平台用户提供原生流畅、通透轻盈、富有动感的美学体验。
+**PixEz MIUIX** 是原知名开源 Pixiv 第三方客户端 PixEz 的全新世代重构版本。本项目全面拥抱 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 技术栈，并深度结合 **Xiaomi HyperOS (MIUIX)** 设计语言与交互规范，当前主线面向 Android 与 Windows Desktop 交付原生流畅、通透轻盈、富有动感的美学体验。
 
 无论是在移动设备还是桌面设备上，PixEz MIUIX 均支持中国大陆地区免代理直连，让优质艺术作品触手可及。
 
@@ -90,8 +90,8 @@
 - **免安装绿色便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
 - **MSI 安装向导包**：下载 `PixEz-*.msi` 安装包，双击按提示安装至系统，自动创建桌面与开始菜单快捷方式。
 
-### macOS / Linux
-- 支持通过源码或跨平台发行包运行。
+### 其他桌面目标
+- macOS 与 Linux 保留 Compose 源码目标，尚未纳入正式发行与自动化安装包验证。
 
 ---
 
@@ -107,6 +107,12 @@
    - 进入“设置 -> 屏蔽管理”，可配置屏蔽标签、画师黑名单、作品黑名单及是否过滤 AI 生成内容。
 
 ---
+
+## Flutter v1 归档
+
+Flutter v1 已从主线归档至 [`archive/flutter-v1/`](archive/flutter-v1/)，不再参与日常 CI、功能开发或桌面发布。该目录保留完整历史源码、平台工程与私有插件，供历史追溯、数据迁移研究及必要的安全修复使用；所有新功能请提交至 [`compose-miuix/`](compose-miuix/)。
+
+Android Flutter v1 与 Compose 版使用不同应用 ID，不能直接覆盖升级；Compose Desktop 会尽可能复用历史桌面数据目录。详细迁移说明见 [archive README](archive/flutter-v1/README.md)。
 
 ## 工程架构
 

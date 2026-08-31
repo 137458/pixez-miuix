@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.platform.FileLocator
+import com.perol.pixez.shared.platform.getDefaultPictureDirectory
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
@@ -543,12 +544,9 @@ private fun DownloadTaskItem(
                     onClick = {
                         val settings = settingsRepository
                         val storePath = settings?.storePath
-                        val filePath = if (!storePath.isNullOrBlank()) {
-                            "$storePath/${task.fileName}"
-                        } else {
-                            val userHome = System.getProperty("user.home") ?: ""
-                            "$userHome/Pictures/PixEz/${task.fileName}"
-                        }
+                        val basePath = storePath?.takeIf { it.isNotBlank() }
+                            ?: getDefaultPictureDirectory()
+                        val filePath = "$basePath/${task.fileName}"
                         FileLocator().showInFileManager(filePath)
                     },
                 ) {

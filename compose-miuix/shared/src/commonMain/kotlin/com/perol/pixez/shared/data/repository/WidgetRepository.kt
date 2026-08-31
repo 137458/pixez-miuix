@@ -9,6 +9,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import io.github.aakira.napier.Napier
+import kotlinx.datetime.Clock
 
 /**
  * 桌面小组件专用的数据加载与持久化仓库。
@@ -38,7 +39,7 @@ class WidgetRepository(
 
         val fetchedList = fetchFromRemote(type)
         if (fetchedList.isNotEmpty()) {
-            val now = System.currentTimeMillis()
+            val now = Clock.System.now().toEpochMilliseconds()
             try {
                 glanceDatabase.glanceIllustPersistQueries.transaction {
                     fetchedList.forEach { illust ->

@@ -33,9 +33,10 @@ kotlin {
 
     sourceSets {
         val desktopMain by getting
+        val desktopTest by getting
 
         commonMain.dependencies {
-            // 当前 Compose 1.11.1 仍使用 compose.* DSL；后续升级至 1.12+ 后迁移到 compose.dependencies.*
+            // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.ui)
@@ -62,12 +63,17 @@ kotlin {
             implementation("net.java.dev.jna:jna-platform:5.14.0")
             implementation("com.mayakapps.compose:window-styler:0.3.2")
         }
+
+        desktopTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.junit)
+        }
     }
 }
 
 android {
     namespace = "com.perol.pixez"
-    // MIUIX 0.9.3 要求 compileSdk >= 36
+    // MIUIX 0.9.4-rc01 要求 compileSdk >= 36
     compileSdk = 36
 
     defaultConfig {

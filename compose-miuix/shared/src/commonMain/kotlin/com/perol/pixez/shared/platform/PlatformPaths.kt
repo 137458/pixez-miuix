@@ -10,3 +10,6 @@ import okio.Path
  * - iOS / macOS: 优先使用沙盒缓存目录
  */
 expect fun getAppCacheDirectory(): Path
+
+/** Default platform directory used for saved pictures when no custom path is configured. */
+expect fun getDefaultPictureDirectory(): String

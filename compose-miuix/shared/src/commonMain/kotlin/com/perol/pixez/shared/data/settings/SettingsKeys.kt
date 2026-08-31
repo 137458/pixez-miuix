@@ -37,6 +37,7 @@ internal object SettingsKeys {
     const val SAVE_MODE = "save_mode"
     const val NOVEL_FONT_SIZE = "novel_font_size"
     const val IS_RETURN_AGAIN_TO_EXIT = "return_again_to_exit"
+    const val CLOSE_TO_TRAY = "desktop_close_to_tray"
     const val IS_CLEAR_OLD_FORMAT_FILE = "is_clear_old_format_file"
     const val IS_FOLLOW_AFTER_STAR = "is_follow_after_star"
     const val IS_OVER_SANITY_LEVEL_FOLDER = "is_over_sanity_level_folder"

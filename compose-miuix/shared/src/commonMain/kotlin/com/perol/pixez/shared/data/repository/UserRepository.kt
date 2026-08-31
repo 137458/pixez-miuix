@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.network.TrustedUrlPolicy
+
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.ShowAIResponse
 import com.perol.pixez.shared.data.model.UserDetail
@@ -47,7 +49,7 @@ class UserRepository(
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户作品失败 userId=$userId type=$type") {
         val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/user/illusts") {
                 parameter("filter", "for_android")
@@ -80,7 +82,7 @@ class UserRepository(
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
         val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/user/bookmarks/illust") {
                 parameter("filter", "for_android")
@@ -114,7 +116,7 @@ class UserRepository(
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户关注列表失败 userId=$userId restrict=$restrict") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/user/following") {
                 parameter("filter", "for_android")
@@ -145,7 +147,7 @@ class UserRepository(
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户粉丝列表失败 userId=$userId restrict=$restrict") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/user/follower") {
                 parameter("filter", "for_android")
@@ -179,7 +181,7 @@ class UserRepository(
      * @param nextUrl 上一页响应中的 `next_url`。
      */
     suspend fun getRecommendedUsers(nextUrl: String): UserPreviewsResponse = networkCall("加载更多推荐用户失败") {
-        apiClient.get(nextUrl).body()
+        apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
     }
 
     /**

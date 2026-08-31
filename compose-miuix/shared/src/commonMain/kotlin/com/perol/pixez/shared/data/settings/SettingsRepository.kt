@@ -53,21 +53,21 @@ class SettingsRepository(
             SettingsKeys.PICTURE_SOURCE,
             DEFAULT_PICTURE_SOURCE,
         )
-        set(value) { settings[SettingsKeys.PICTURE_SOURCE] = value }
+        set(value) { settings[SettingsKeys.PICTURE_SOURCE] = value; notifyChanged() }
 
     var apiNetworkMode: String
         get() = settings.getStringWithLegacyFallback(
             SettingsKeys.API_NETWORK_MODE,
             DEFAULT_NETWORK_MODE,
         )
-        set(value) { settings[SettingsKeys.API_NETWORK_MODE] = value }
+        set(value) { settings[SettingsKeys.API_NETWORK_MODE] = value; notifyChanged() }
 
     var oauthNetworkMode: String
         get() = settings.getStringWithLegacyFallback(
             SettingsKeys.OAUTH_NETWORK_MODE,
             DEFAULT_NETWORK_MODE,
         )
-        set(value) { settings[SettingsKeys.OAUTH_NETWORK_MODE] = value }
+        set(value) { settings[SettingsKeys.OAUTH_NETWORK_MODE] = value; notifyChanged() }
 
     // region 主题与显示
     var themeMode: Int
@@ -122,19 +122,20 @@ class SettingsRepository(
             // 对连续写入已做事务或延迟提交，先删旧键再写新键，避免异常路径下旧键残留导致读取歧义。
             settings.remove(SettingsKeys.IS_HELPLESS_WAY)
             settings[SettingsKeys.SAVE_MODE] = value
+            notifyChanged()
         }
 
     var storePath: String?
         get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.STORE_PATH)
-        set(value) { settings[SettingsKeys.STORE_PATH] = value }
+        set(value) { settings[SettingsKeys.STORE_PATH] = value; notifyChanged() }
 
     var singleFolder: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.SINGLE_FOLDER, false)
-        set(value) { settings[SettingsKeys.SINGLE_FOLDER] = value }
+        set(value) { settings[SettingsKeys.SINGLE_FOLDER] = value; notifyChanged() }
 
     var maxRunningTask: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.MAX_RUNNING_TASK, 2)
-        set(value) { settings[SettingsKeys.MAX_RUNNING_TASK] = value }
+        set(value) { settings[SettingsKeys.MAX_RUNNING_TASK] = value; notifyChanged() }
 
     /**
      * 保存格式模板，用于非脚本文件名模式。
@@ -145,7 +146,7 @@ class SettingsRepository(
             SettingsKeys.SAVE_FORMAT,
             DEFAULT_SAVE_FORMAT,
         )
-        set(value) { settings[SettingsKeys.SAVE_FORMAT] = value.trim() }
+        set(value) { settings[SettingsKeys.SAVE_FORMAT] = value.trim() ; notifyChanged() }
 
     /**
      * 是否使用脚本文件名（file_name_eval）。
@@ -156,14 +157,14 @@ class SettingsRepository(
             SettingsKeys.FILE_NAME_EVAL_LEGACY,
             false,
         )
-        set(value) { settings[SettingsKeys.FILE_NAME_EVAL_LEGACY] = value }
+        set(value) { settings[SettingsKeys.FILE_NAME_EVAL_LEGACY] = value; notifyChanged() }
 
     /**
      * 脚本文件名代码（name_eval）。开启 fileNameEval 后由该脚本计算文件名。
      */
     var nameEval: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.NAME_EVAL, "")
-        set(value) { settings[SettingsKeys.NAME_EVAL] = value }
+        set(value) { settings[SettingsKeys.NAME_EVAL] = value; notifyChanged() }
 
     /**
      * R18 作品是否保存到独立文件夹。
@@ -173,7 +174,7 @@ class SettingsRepository(
             SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER,
             false,
         )
-        set(value) { settings[SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER] = value }
+        set(value) { settings[SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER] = value; notifyChanged() }
 
     // region 通用
     var languageNum: Int
@@ -209,7 +210,7 @@ class SettingsRepository(
             SettingsKeys.WELCOME_PAGE_TYPE,
             DEFAULT_WELCOME_PAGE_TYPE,
         )
-        set(value) { settings[SettingsKeys.WELCOME_PAGE_TYPE] = value }
+        set(value) { settings[SettingsKeys.WELCOME_PAGE_TYPE] = value; notifyChanged() }
 
     var nsfwMask: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
@@ -225,57 +226,57 @@ class SettingsRepository(
 
     var defaultPrivateLike: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
-        set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value }
+        set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value; notifyChanged() }
 
     /**
      * 收藏后自动保存作品。
      */
     var saveAfterStar: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.SAVE_AFTER_STAR, false)
-        set(value) { settings[SettingsKeys.SAVE_AFTER_STAR] = value }
+        set(value) { settings[SettingsKeys.SAVE_AFTER_STAR] = value; notifyChanged() }
 
     /**
      * 保存后自动收藏作品。
      */
     var starAfterSave: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.STAR_AFTER_SAVE, false)
-        set(value) { settings[SettingsKeys.STAR_AFTER_SAVE] = value }
+        set(value) { settings[SettingsKeys.STAR_AFTER_SAVE] = value; notifyChanged() }
 
     /**
      * 长按保存时显示确认。
      */
     var longPressSaveConfirm: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.LONG_PRESS_SAVE_CONFIRM, false)
-        set(value) { settings[SettingsKeys.LONG_PRESS_SAVE_CONFIRM] = value }
+        set(value) { settings[SettingsKeys.LONG_PRESS_SAVE_CONFIRM] = value; notifyChanged() }
 
     // region 搜索设置
     var searchSort: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_SORT, "date_desc")
-        set(value) { settings[SettingsKeys.SEARCH_SORT] = value }
+        set(value) { settings[SettingsKeys.SEARCH_SORT] = value; notifyChanged() }
 
     var searchTarget: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_TARGET, "partial_match_for_tags")
-        set(value) { settings[SettingsKeys.SEARCH_TARGET] = value }
+        set(value) { settings[SettingsKeys.SEARCH_TARGET] = value; notifyChanged() }
 
     var searchAiType: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_AI_TYPE, 0)
-        set(value) { settings[SettingsKeys.SEARCH_AI_TYPE] = value }
+        set(value) { settings[SettingsKeys.SEARCH_AI_TYPE] = value; notifyChanged() }
 
     var searchBookmarkThreshold: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0)
-        set(value) { settings[SettingsKeys.SEARCH_BOOKMARK_THRESHOLD] = value }
+        set(value) { settings[SettingsKeys.SEARCH_BOOKMARK_THRESHOLD] = value; notifyChanged() }
 
     var searchUgoiraFilter: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_UGOIRA_FILTER, 0)
-        set(value) { settings[SettingsKeys.SEARCH_UGOIRA_FILTER] = value }
+        set(value) { settings[SettingsKeys.SEARCH_UGOIRA_FILTER] = value; notifyChanged() }
 
     var searchStartDate: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_START_DATE, "")
-        set(value) { settings[SettingsKeys.SEARCH_START_DATE] = value }
+        set(value) { settings[SettingsKeys.SEARCH_START_DATE] = value; notifyChanged() }
 
     var searchEndDate: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_END_DATE, "")
-        set(value) { settings[SettingsKeys.SEARCH_END_DATE] = value }
+        set(value) { settings[SettingsKeys.SEARCH_END_DATE] = value; notifyChanged() }
 
     var searchHistory: List<String>
         get() {
@@ -301,14 +302,14 @@ class SettingsRepository(
             SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS,
             false,
         )
-        set(value) { settings[SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS] = value }
+        set(value) { settings[SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS] = value; notifyChanged() }
 
     /**
      * 收藏作品时自动使用收藏标签。
      */
     var autoTagWhenStar: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_TAG_WHEN_STAR, false)
-        set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value }
+        set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value; notifyChanged() }
 
     /**
      * 桌面小部件推荐类型：recom / day / week / month / day_male / day_female / news / follow。
@@ -341,7 +342,7 @@ class SettingsRepository(
      */
     var isBangs: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_BANGS, false)
-        set(value) { settings[SettingsKeys.IS_BANGS] = value }
+        set(value) { settings[SettingsKeys.IS_BANGS] = value; notifyChanged() }
 
     /**
      * 是否限制 R18 内容展示（H 是不行的）。
@@ -365,7 +366,18 @@ class SettingsRepository(
             SettingsKeys.IS_RETURN_AGAIN_TO_EXIT,
             false,
         )
-        set(value) { settings[SettingsKeys.IS_RETURN_AGAIN_TO_EXIT] = value }
+        set(value) { settings[SettingsKeys.IS_RETURN_AGAIN_TO_EXIT] = value; notifyChanged() }
+
+    /**
+     * Desktop 关闭主窗口时是否最小化到系统托盘。
+     * 默认关闭，避免用户误以为应用已经完全退出。
+     */
+    var closeToTray: Boolean
+        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CLOSE_TO_TRAY, false)
+        set(value) {
+            settings[SettingsKeys.CLOSE_TO_TRAY] = value
+            notifyChanged()
+        }
 
     /**
      * 插画详情页左右滑动切换作品。
@@ -375,7 +387,7 @@ class SettingsRepository(
             SettingsKeys.SWIPE_CHANGE_ARTWORK,
             true,
         )
-        set(value) { settings[SettingsKeys.SWIPE_CHANGE_ARTWORK] = value }
+        set(value) { settings[SettingsKeys.SWIPE_CHANGE_ARTWORK] = value; notifyChanged() }
 
     /**
      * 是否在 Feed 中显示 AI 生成标识。
@@ -392,7 +404,7 @@ class SettingsRepository(
             SettingsKeys.IS_FOLLOW_AFTER_STAR,
             false,
         )
-        set(value) { settings[SettingsKeys.IS_FOLLOW_AFTER_STAR] = value }
+        set(value) { settings[SettingsKeys.IS_FOLLOW_AFTER_STAR] = value; notifyChanged() }
 
     /**
      * 使用 WebView 打开 SauceNAO 搜索结果。
@@ -402,7 +414,7 @@ class SettingsRepository(
             SettingsKeys.USE_SAUNCE_NAO_WEBVIEW,
             false,
         )
-        set(value) { settings[SettingsKeys.USE_SAUNCE_NAO_WEBVIEW] = value }
+        set(value) { settings[SettingsKeys.USE_SAUNCE_NAO_WEBVIEW] = value; notifyChanged() }
 
     /**
      * 竖屏是否启用按宽度自适应网格列数（默认开启，以实现全尺寸设备开箱自适应）。
@@ -518,14 +530,14 @@ class SettingsRepository(
             SettingsKeys.COPY_INFO_TEXT,
             "title:{title}\npainter:{user_name}\nillust id:{illust_id}",
         )
-        set(value) { settings[SettingsKeys.COPY_INFO_TEXT] = value }
+        set(value) { settings[SettingsKeys.COPY_INFO_TEXT] = value; notifyChanged() }
 
     /**
      * 已忽略的版本号；当存在新版本且版本号与此值相同时跳过更新提醒。
      */
     var ignoreUpdateVersion: String?
         get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.IGNORE_UPDATE_VERSION)
-        set(value) { settings[SettingsKeys.IGNORE_UPDATE_VERSION] = value }
+        set(value) { settings[SettingsKeys.IGNORE_UPDATE_VERSION] = value; notifyChanged() }
 
     /**
      * 是否在应用启动时自动检查新版本。
@@ -533,7 +545,7 @@ class SettingsRepository(
      */
     var autoCheckUpdate: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_CHECK_UPDATE, true)
-        set(value) { settings[SettingsKeys.AUTO_CHECK_UPDATE] = value }
+        set(value) { settings[SettingsKeys.AUTO_CHECK_UPDATE] = value; notifyChanged() }
 
     // region Android 平台专属
     /**
@@ -542,7 +554,7 @@ class SettingsRepository(
      */
     var displayMode: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.DISPLAY_MODE, 0)
-        set(value) { settings[SettingsKeys.DISPLAY_MODE] = value }
+        set(value) { settings[SettingsKeys.DISPLAY_MODE] = value; notifyChanged() }
 
     /**
      * 图片选择器类型。
@@ -554,7 +566,7 @@ class SettingsRepository(
             SettingsKeys.IMAGE_PICKER_TYPE,
             "",
         )
-        set(value) { settings[SettingsKeys.IMAGE_PICKER_TYPE] = value }
+        set(value) { settings[SettingsKeys.IMAGE_PICKER_TYPE] = value; notifyChanged() }
 
     /**
      * 是否已开启「默认打开链接」（Android 12+）。
@@ -563,7 +575,7 @@ class SettingsRepository(
      */
     var openByDefault: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.OPEN_BY_DEFAULT, false)
-        set(value) { settings[SettingsKeys.OPEN_BY_DEFAULT] = value }
+        set(value) { settings[SettingsKeys.OPEN_BY_DEFAULT] = value; notifyChanged() }
 
     // endregion
 

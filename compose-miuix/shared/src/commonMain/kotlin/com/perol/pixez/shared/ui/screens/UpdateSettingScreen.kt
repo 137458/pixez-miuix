@@ -377,8 +377,12 @@ fun UpdateSettingScreen(
                                         text = if (hasNew) strings.updateDownloadNow else strings.updateOpenInBrowser,
                                         onClick = {
                                             if (hasNew) {
-                                                val downloadUrl = releaseInfo?.downloadUrl ?: releaseInfo?.releaseUrl.orEmpty()
-                                                val fileName = releaseInfo?.fileName ?: "PixEz-MIUIX-${releaseInfo?.versionName}.apk"
+                                                val downloadUrl = releaseInfo?.downloadUrl
+                                                val fileName = releaseInfo?.fileName
+                                                if (downloadUrl == null || fileName == null) {
+                                                    toastMessage = strings.updateDownloadFailed
+                                                    return@TextButton
+                                                }
                                                 isDownloading = true
                                                 downloadProgress = 0f
                                                 coroutineScope.launch {

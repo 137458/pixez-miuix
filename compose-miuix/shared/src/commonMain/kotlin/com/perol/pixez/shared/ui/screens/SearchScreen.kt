@@ -905,6 +905,7 @@ private fun SearchIllustResultGrid(
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(
@@ -917,9 +918,13 @@ private fun SearchIllustResultGrid(
         retryCount,
         settingsRepository.changeVersion,
     ) {
-        if (illustsState == null) {
-            initialError = null
-        }
+        requestGeneration++
+        val generation = requestGeneration
+        illustsState = null
+        nextUrl = null
+        initialError = null
+        loadMoreError = null
+        isLoadingMore = false
         val searchResult = suspendRunCatchingNonCancel {
             repository.searchIllustResponse(
                 word = searchWord,
@@ -931,12 +936,14 @@ private fun SearchIllustResultGrid(
             )
         }
         searchResult.onSuccess { response ->
-            illustsState = filterBanned(response.illusts)
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
+            if (generation == requestGeneration) {
+                illustsState = filterBanned(response.illusts)
+                nextUrl = response.nextUrl
+                initialError = null
+                loadMoreError = null
+            }
         }.onFailure { error ->
-            if (illustsState == null) {
+            if (generation == requestGeneration) {
                 initialError = error
             }
         }
@@ -944,6 +951,7 @@ private fun SearchIllustResultGrid(
 
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
+        val generation = requestGeneration
         if (isLoadingMore) return
         coroutineScope.launch {
             isLoadingMore = true
@@ -959,13 +967,19 @@ private fun SearchIllustResultGrid(
                     nextUrl = currentNextUrl,
                 )
             }.onSuccess { response ->
-                val filtered = filterBanned(response.illusts)
-                illustsState = (illustsState.orEmpty()) + filtered
-                nextUrl = response.nextUrl
+                if (generation == requestGeneration) {
+                    val filtered = filterBanned(response.illusts)
+                    illustsState = (illustsState.orEmpty()) + filtered
+                    nextUrl = response.nextUrl
+                }
             }.onFailure { error ->
-                loadMoreError = error
+                if (generation == requestGeneration) {
+                    loadMoreError = error
+                }
             }
-            isLoadingMore = false
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
         }
     }
 
@@ -1027,20 +1041,27 @@ private fun SearchUserResultList(
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(query, retryCount, settingsRepository.changeVersion) {
-        if (previewsState == null) {
-            initialError = null
-        }
+        requestGeneration++
+        val generation = requestGeneration
+        previewsState = null
+        nextUrl = null
+        initialError = null
+        loadMoreError = null
+        isLoadingMore = false
         val userResult = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
         userResult.onSuccess { response ->
-            previewsState = response.userPreviews
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
+            if (generation == requestGeneration) {
+                previewsState = response.userPreviews
+                nextUrl = response.nextUrl
+                initialError = null
+                loadMoreError = null
+            }
         }.onFailure { error ->
-            if (previewsState == null) {
+            if (generation == requestGeneration) {
                 initialError = error
             }
         }
@@ -1048,19 +1069,26 @@ private fun SearchUserResultList(
 
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
+        val generation = requestGeneration
         if (isLoadingMore) return
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    previewsState = (previewsState.orEmpty()) + response.userPreviews
-                    nextUrl = response.nextUrl
+                    if (generation == requestGeneration) {
+                        previewsState = (previewsState.orEmpty()) + response.userPreviews
+                        nextUrl = response.nextUrl
+                    }
                 }
                 .onFailure { error ->
-                    loadMoreError = error
+                    if (generation == requestGeneration) {
+                        loadMoreError = error
+                    }
                 }
-            isLoadingMore = false
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
         }
     }
 

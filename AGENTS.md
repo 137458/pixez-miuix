@@ -6,6 +6,8 @@
   - `./gradlew :shared:compileKotlinDesktop`
   - `./gradlew :composeApp:compileKotlinDesktop`
   - `./gradlew :composeApp:compileDebugKotlinAndroid`
+  - `./gradlew :shared:desktopTest :composeApp:desktopTest`
+- Compose 工具链基线：Kotlin 2.4.10、Compose Multiplatform 1.12.0、Coil 3.6.0、Gradle 8.14.4。
 - 确保 Desktop 与 Android 双端无编译错误和破坏性回归。
 
 ## 🎨 MIUIX / HyperOS 规范约束

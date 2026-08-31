@@ -25,9 +25,9 @@ object AppConstants {
         const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
         const val FEEDBACK_MAILTO = "mailto:PxezFeedBack@outlook.com"
         val BOARD_URLS = listOf(
-            "https://raw.githubusercontent.com/Notsfsssf/pixez-flutter/refs/heads/master/.github/board/android.json",
-            "https://fastly.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
-            "https://cdn.jsdelivr.net/gh/Notsfsssf/pixez-flutter@master/.github/board/android.json",
+            "https://raw.githubusercontent.com/137458/pixez-miuix/refs/heads/master/.github/board/android.json",
+            "https://fastly.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
+            "https://cdn.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
         )
     }
 

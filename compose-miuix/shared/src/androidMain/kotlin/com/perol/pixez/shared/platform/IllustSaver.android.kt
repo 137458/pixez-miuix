@@ -18,6 +18,7 @@ import java.io.OutputStream
  */
 actual class IllustSaver {
     actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 applicationContext")
 
@@ -26,7 +27,7 @@ actual class IllustSaver {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val contentValues = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Images.Media.DISPLAY_NAME, safeFileName)
                 put(MediaStore.Images.Media.MIME_TYPE, mimeType)
                 put(MediaStore.Images.Media.RELATIVE_PATH, relativePath)
                 put(MediaStore.Images.Media.IS_PENDING, 1)
@@ -53,14 +54,15 @@ actual class IllustSaver {
         } else {
             val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             val pixezDir = File(picturesDir, "PixEz").apply { mkdirs() }
-            val file = File(pixezDir, fileName)
+            val file = File(pixezDir, safeFileName).canonicalFile
+            require(file.toPath().startsWith(pixezDir.canonicalFile.toPath())) { "保存路径越界" }
             FileOutputStream(file).use { outputStream ->
                 outputStream.write(bytes)
             }
 
             // 刷新图库，使文件立即在相册应用中可见。
             val contentValues = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Images.Media.DISPLAY_NAME, safeFileName)
                 put(MediaStore.Images.Media.MIME_TYPE, mimeType)
                 put(MediaStore.Images.Media.DATA, file.absolutePath)
             }

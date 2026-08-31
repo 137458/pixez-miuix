@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.network.TrustedUrlPolicy
+
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.FollowIllusts
@@ -86,7 +88,7 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Recommend = networkCall("获取推荐插画失败") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            val response: Recommend = apiClient.get(nextUrl).body()
+            val response: Recommend = apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
             cacheIllusts(response.illusts)
             response
         } else {
@@ -118,7 +120,7 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Walkthrough = networkCall("获取匿名推荐插画失败") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            val response: Walkthrough = apiClient.get(nextUrl).body()
+            val response: Walkthrough = apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
             cacheIllusts(response.illusts)
             response
         } else {
@@ -152,7 +154,7 @@ class IllustRepository(
         nextUrl: String? = null,
     ): Ranking = networkCall("获取排行榜失败 mode=$mode") {
         val response: Ranking = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/illust/ranking") {
                 parameter("filter", "for_android")
@@ -183,7 +185,7 @@ class IllustRepository(
         nextUrl: String? = null,
     ): FollowIllusts = networkCall("获取关注插画失败 restrict=$restrict") {
         val response: FollowIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v2/illust/follow") {
                 parameter("restrict", restrict)
@@ -227,7 +229,7 @@ class IllustRepository(
         }
         return networkCall("获取 Spotlight 失败 category=$category") {
             val response: SpotlightResponse = if (nextUrl != null && nextUrl.isNotBlank()) {
-                apiClient.get(nextUrl).body()
+                apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
             } else {
                 apiClient.get("/v1/spotlight/articles") {
                     parameter("filter", "for_android")
@@ -276,7 +278,7 @@ class IllustRepository(
             }
         }
         return networkCall("获取 Spotlight 特辑详情失败 url=$articleUrl") {
-            val response: String = webClient.get(articleUrl) {
+            val response: String = webClient.get(TrustedUrlPolicy.spotlightUrl(articleUrl)) {
                 headers {
                     append("Referer", "https://www.pixivision.net/zh/")
                     append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/85.0.564.13")
@@ -310,7 +312,7 @@ class IllustRepository(
         nextUrl: String? = null,
     ): CommentResponse = networkCall("获取作品评论失败 illustId=$illustId") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v3/illust/comments") {
                 parameter("illust_id", illustId)
@@ -360,7 +362,7 @@ class IllustRepository(
         nextUrl: String? = null,
     ): Recommend = networkCall("获取相关作品失败 illustId=$illustId") {
         val response: Recommend = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v2/illust/related") {
                 parameter("filter", "for_android")
@@ -386,7 +388,7 @@ class IllustRepository(
         nextUrl: String? = null,
     ): IllustSeriesWithIdModel = networkCall("获取系列详情失败 seriesId=$seriesId") {
         val response: IllustSeriesWithIdModel = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(nextUrl).body()
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
         } else {
             apiClient.get("/v1/illust/series") {
                 parameter("illust_series_id", seriesId)

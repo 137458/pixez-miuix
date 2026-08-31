@@ -21,6 +21,8 @@ import platform.posix.fwrite
 @OptIn(ExperimentalForeignApi::class)
 actual class IllustSaver {
     actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.Default) {
+        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
+        require(bytes.isNotEmpty()) { "图片内容不能为空" }
         val documentsDir = (NSHomeDirectory() as NSString).stringByAppendingPathComponent("Documents")
         val pixezDir = (documentsDir as NSString).stringByAppendingPathComponent("PixEz")
 
@@ -32,7 +34,7 @@ actual class IllustSaver {
             error = null,
         )
 
-        val filePath = (pixezDir as NSString).stringByAppendingPathComponent(fileName)
+        val filePath = (pixezDir as NSString).stringByAppendingPathComponent(safeFileName)
         val file = fopen(filePath, "wb")
             ?: throw IllegalStateException("无法打开文件写入: $filePath")
 

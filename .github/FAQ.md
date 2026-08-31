@@ -27,8 +27,8 @@
 
 ## 一、项目声明与版本说明
 
-- **PixEz MIUIX**：基于 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 全新打造，深度融合 **Xiaomi HyperOS (MIUIX)** 现代设计语言与交互动效，全面覆盖 Android、桌面端（Windows / macOS / Linux）与 iOS。
-- **原版 PixEz**：原版基于 Flutter 构建（[Notsfsssf/pixez-flutter](https://github.com/Notsfsssf/pixez-flutter)），由社区持续维护。
+- **PixEz MIUIX**：基于 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 构建，深度融合 Xiaomi HyperOS (MIUIX) 设计语言；当前正式发布 Android 与 Windows Desktop。
+- **Flutter v1 归档**：本仓库的旧 Flutter 代码已冻结在 [`archive/flutter-v1/`](../archive/flutter-v1/)，不再参与主线开发或 CI。
 - **关于本 FAQ**：本指南主要面向 **PixEz MIUIX** 版本的各项功能特性、设置项与常见问题解答。
 - **免责声明与版权提示**：
   - 本项目为个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无任何关联或商业合作。
@@ -44,9 +44,8 @@
 | 平台 | 文件格式 / 产物 | 说明与运行方式 |
 | :--- | :--- | :--- |
 | **Android** | `PixEz-MIUIX-v*.apk` | 推荐 Android 7.0 (API 24) 及以上系统，已全面适配手机、折叠屏与平板 |
-| **跨平台桌面端 (Windows / macOS / Linux)** | `PixEz-MIUIX-v*-windows-x64.jar` / 可执行 JAR | 本地具备 JRE/JDK 17 或 21 环境，在终端执行 `java -jar <包名>.jar` 或直接双击即可流畅运行 |
-| **Windows 原生安装包** | `.msi` / 便携版 | 通过 Release 或 GitHub Actions CI 构建产物直接安装运行 |
-| **iOS / macOS 原生编译** | `ComposeApp.framework` / `.ipa` | 共享模块已完全通过 Kotlin/Native 编译验证，支持通过 Xcode 侧载或流水线打包 |
+| **Windows Desktop** | `PixEz-Standalone.exe` / `PixEz-windows-x64-portable.zip` / `.msi` | 无需预装 Java，可直接运行单文件版、便携版或安装 MSI |
+| **macOS / Linux** | 源码目标 | 保留 Compose 源码编译能力，尚未提供正式发布安装包 |
 
 ---
 

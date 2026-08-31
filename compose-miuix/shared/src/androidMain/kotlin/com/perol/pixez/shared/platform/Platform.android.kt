@@ -11,6 +11,8 @@ import io.github.aakira.napier.Napier
  */
 actual fun isAndroidPlatform(): Boolean = true
 
+actual fun isDesktopPlatform(): Boolean = false
+
 /**
  * Android 12+ 跳转系统「默认打开方式」设置页。
  *
