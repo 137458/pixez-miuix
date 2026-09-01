@@ -8,15 +8,15 @@
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
 [![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#下载与安装)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square\&logo=kotlin)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square\&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
 
 [English](./.github/README_en.md) · [Bahasa Indonesia](./.github/README_id.md) · [使用指南 & FAQ](.github/FAQ.md) · [发布版本](https://github.com/137458/pixez-miuix/releases)
 
 </div>
 
----
+***
 
 ## 目录
 
@@ -32,7 +32,7 @@
 - [免责声明](#免责声明)
 - [开源协议](#开源协议)
 
----
+***
 
 ## 项目简介
 
@@ -40,7 +40,7 @@
 
 无论是在移动设备还是桌面设备上，PixEz MIUIX 均支持中国大陆地区免代理直连，让优质艺术作品触手可及。
 
----
+***
 
 ## 核心特性
 
@@ -66,7 +66,7 @@
   - OAuth2 PKCE 认证流程与 Token 自动无感刷新。
   - 内置免代理 SNI 混淆直连与防盗链图片管线。
 
----
+***
 
 ## 文档中心
 
@@ -76,24 +76,27 @@
 - [MIUIX Spec (UI 架构与设计规范)](MIUIX_Spec.md)：详细规定 MIUIX 组件选型、Liquid Glass 渲染、响应式断点与大屏适配准则。
 - [Global TODO (全局待办与路线图)](Global_TODO.md)：统一汇总各模块演进清单、优先级与交付状态。
 
----
+***
 
 ## 下载与安装
 
 请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的最新安装包或运行包：
 
 ### Android
+
 - 下载 `PixEz-MIUIX-v*.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统，已适配手机、折叠屏与平板）。
 
 ### Windows 桌面端 (无需预装 Java 环境)
+
 - **单文件独立版 (推荐)**：下载 `PixEz-Standalone.exe`，内嵌完整裁剪 JRE 运行时与硬件加速渲染库，双击即可直接运行，无需解压。
 - **免安装绿色便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
 - **MSI 安装向导包**：下载 `PixEz-*.msi` 安装包，双击按提示安装至系统，自动创建桌面与开始菜单快捷方式。
 
 ### 其他桌面目标
+
 - macOS 与 Linux 保留 Compose 源码目标，尚未纳入正式发行与自动化安装包验证。
 
----
+***
 
 ## 使用说明
 
@@ -106,7 +109,7 @@
 4. **屏蔽设置**：
    - 进入“设置 -> 屏蔽管理”，可配置屏蔽标签、画师黑名单、作品黑名单及是否过滤 AI 生成内容。
 
----
+***
 
 ## Flutter v1 归档
 
@@ -136,11 +139,12 @@ pixez-flutter-MIUIX/
 └── Global_TODO.md                     # 全局待办与路线图
 ```
 
----
+***
 
 ## 源码构建
 
 如需从源码编译开发，请确保本地具备以下开发环境：
+
 - **JDK**: Java Development Kit 17 或 21
 - **Android SDK**: `compileSdk = 36`, `minSdk = 24`
 
@@ -164,7 +168,7 @@ cd compose-miuix
 ./gradlew :composeApp:packageDistributionForCurrentOS
 ```
 
----
+***
 
 ## 贡献者与鸣谢
 
@@ -185,27 +189,31 @@ cd compose-miuix
 
 如果你愿意为本项目贡献代码、优化设计或完善多语言翻译，欢迎随时提交 Pull Request！
 
+特别鸣谢 [pixez-flutter](https://github.com/Notsfsssf/pixez-flutter) 社区提供的优秀 Flutter 跨平台客户端。
 特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) 社区提供的优秀 Compose MIUIX 跨平台组件库。
 
----
+
+。
+
+***
 
 ## 社区与反馈
 
 - 使用指南 & 常见问题：[点此查看 FAQ 文档](.github/FAQ.md)
-- 邮件反馈：PxezFeedback@outlook.com
-- Telegram 官方频道：[@PixEzChannel](https://t.me/PixEzChannel)
-- Discord 社区：[@PixEz](https://discord.gg/Em9AeJbg)
-- QQ 交流群：815791942
+- 邮件反馈：[gaaf14738@gmail.com](mailto:gaaf14738@gmail.com)
 
----
+***
 
 ## 免责声明
 
-1. **非官方客户端声明**：PixEz MIUIX 为开源社区与个人开发者基于学习、研究和技术探索目的打造的第三方 Pixiv 客户端，与 pixiv Inc. 无任何商业关联或官方合作。
-2. **知识产权与版权归属**：本应用内展示的所有插画、漫画、小说、动图、特辑及相关元数据版权均归原作者及 pixiv Inc. 所有。用户通过本应用获取或下载的内容仅供个人学习、鉴赏与交流，严禁将相关资源用于任何形式的商业用途或未经授权的二次分发。
-3. **网络与安全合规**：应用内置的直连通道与技术方案仅用于网络通信研究与连通性优化，使用者应自觉遵守所在国家及地区的法律法规与平台服务条款。因用户个人不当使用造成的任何纠纷、损失或法律责任，由使用者自行承担，本项目开发者及贡献者不承担任何直接或连带责任。
+1. **非官方客户端声明**：PixEz MIUIX 是由开源社区与个人开发者基于学习、研究与技术探索目的独立打造的第三方 Pixiv 客户端，与 pixiv Inc. 及其关联公司无任何商业关联、投资关系或官方合作。本项目的名称、标识及内容均不代表 pixiv Inc. 的官方立场。
+2. **知识产权与版权归属**：本应用内展示的所有插画、漫画、小说、动图（Ugoira）、Pixivision 特辑及相关元数据的版权均归原作者及 pixiv Inc. 所有。用户通过本应用获取或下载的内容仅供个人非商业性学习、鉴赏与交流使用，严禁将任何相关资源用于商业用途、未经授权的二次分发或其他侵犯版权的行为。
+3. **网络与安全合规**：为提升用户体验，应用内置了直连通道等网络优化技术方案，该等方案仅用于网络通信研究与连通性改善目的。使用者应自觉遵守所在国家及地区的法律法规，以及 pixiv 平台的服务条款（Terms of Service）。因用户个人不当使用本应用或其中内容所造成的任何纠纷、损失或法律责任，由使用者自行承担，本项目开发者及贡献者不承担任何直接或连带责任。
+4. **服务可用性与稳定性**：本项目以开源形式免费提供，不保证应用及其内置服务的持续可用性、稳定性或安全性。开发者保留在不另行通知的情况下调整、中断或终止部分或全部功能的权利。
+5. **第三方链接与内容**：本应用可能包含指向 pixiv 官方平台或其他第三方网站的链接及引用，该等外部资源由其各自所有者独立运营与负责。本项目对任何第三方内容、服务的准确性、合法性或安全性不作任何保证。
 
----
+
+***
 
 ## 开源协议
 
