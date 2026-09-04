@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.ui.AppConstants
 
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
@@ -426,7 +427,7 @@ class IllustRepository(
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
             downloadClient.get(zipUrl) {
-                header("Referer", "https://app-api.pixiv.net/")
+                header("Referer", AppConstants.Urls.PIXIV_APP_API)
             }.body()
         }
 }

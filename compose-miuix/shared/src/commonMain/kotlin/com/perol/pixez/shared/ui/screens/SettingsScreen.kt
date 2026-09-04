@@ -99,6 +99,7 @@ fun SettingsScreen(
     onUpdateSettingClick: () -> Unit,
     onAccountEditClick: () -> Unit,
     onAccountManageClick: () -> Unit = {},
+    onNovelBrowseClick: () -> Unit = {},
     onHistoryClick: () -> Unit,
     onDownloadTaskClick: () -> Unit,
     onDataExportClick: () -> Unit,
@@ -313,6 +314,11 @@ fun SettingsScreen(
                         title = strings.settingHistory,
                         summary = strings.settingHistorySummary,
                         onClick = onHistoryClick,
+                    )
+                    ArrowPreference(
+                        title = strings.novelBrowseTitle,
+                        summary = "${strings.novelRecommend} / ${strings.novelRanking}",
+                        onClick = onNovelBrowseClick,
                     )
                     ArrowPreference(
                         title = strings.settingBookTags,

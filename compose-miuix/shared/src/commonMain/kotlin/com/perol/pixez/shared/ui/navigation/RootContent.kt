@@ -88,6 +88,7 @@ import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
+import com.perol.pixez.shared.ui.screens.NovelScreen
 import com.perol.pixez.shared.ui.screens.NovelViewerScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
 import androidx.compose.runtime.CompositionLocalProvider
@@ -378,6 +379,7 @@ fun RootContent(
                         onUpdateSettingClick = component::onUpdateSettingClicked,
                         onAccountEditClick = component::onAccountEditClicked,
                         onAccountManageClick = component::onAccountManageClicked,
+                        onNovelBrowseClick = component::onNovelBrowseClicked,
                         onHistoryClick = component::onHistoryClicked,
                         onDownloadTaskClick = component::onDownloadTaskClicked,
                         onDataExportClick = component::onDataExportClicked,
@@ -541,6 +543,16 @@ fun RootContent(
                         onBack = component::onBack,
                         onAddAccount = component::onLoginClicked,
                     )
+
+                    Child.Novel -> {
+                        novelRepository?.let { repo ->
+                            NovelScreen(
+                                novelRepository = repo,
+                                onBack = component::onBack,
+                                onNovelClick = component::onNovelClicked,
+                            )
+                        }
+                    }
 
                     is Child.NovelViewer -> {
                         novelRepository?.let { repo ->

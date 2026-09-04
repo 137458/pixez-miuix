@@ -20,6 +20,7 @@ object AppConstants {
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
         const val SAUCE_NAO = "https://saucenao.com"
+        const val SAUCE_NAO_SEARCH = "https://saucenao.com/search.php"
         const val AUTHOR_NOTSFSSSF = "https://github.com/Notsfsssf"
         const val AUTHOR_ROSEMARY = "https://github.com/137458"
         const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
@@ -98,6 +99,15 @@ object AppConstants {
         const val FLOATING_BAR_MIN_WIDTH_DP = 320
         const val TABLET_CONTENT_MAX_WIDTH_DP = 760
         const val GRID_CARD_MIN_WIDTH_DP = 180
+    }
+
+    /**
+     * 小说阅读器常量预设
+     */
+    object Novel {
+        const val DEFAULT_FONT_SIZE_SP = 16f
+        const val MIN_FONT_SIZE_SP = 12f
+        const val MAX_FONT_SIZE_SP = 28f
     }
 }
 

@@ -187,9 +187,13 @@ class DownloadRepository(
             // 复用已有 HTTP 下载与平台保存逻辑。
             val bytes = downloadBytes(history.remoteUrl)
             val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+            val subDir = if (settingsRepository?.singleFolder == false && history.userName.isNotBlank() && history.userId > 0) {
+                "${FileNamePolicy.sanitizeSegment(history.userName)}_${history.userId}"
+            } else null
             val savedPath = saver.save(
                 FileNamePolicy.requireSafeBaseName(history.fileName),
                 bytes,
+                subDir = subDir,
                 customBasePath = customBasePath,
             )
             Napier.d("重试下载完成 path=$savedPath")
@@ -261,6 +265,51 @@ class DownloadRepository(
     }
 
     /**
+     * 保存动图原始 ZIP 压缩包，写入下载历史并发送系统通知。
+     */
+    suspend fun saveUgoiraZip(illust: Illust, bytes: ByteArray, zipUrl: String): String {
+        val fileName = "${illust.id}_ugoira.zip"
+        val pendingTask = DownloadTask(
+            illustId = illust.id,
+            pageIndex = 0,
+            remoteUrl = zipUrl,
+            fileName = fileName,
+            status = DownloadStatus.Downloading,
+        )
+
+        val subDir = if (settingsRepository?.singleFolder == false) {
+            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
+        } else null
+        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+
+        var historyId = 0L
+        notifier.notifyProgress(illust.id, illust.title, 0, 1)
+        return try {
+            historyId = historyRepository.saveTask(pendingTask, illust).id
+            val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
+            Napier.d("动图 Zip 保存完成 path=$savedPath")
+            val successTask = pendingTask.copy(status = DownloadStatus.Success)
+            historyRepository.saveTask(successTask, illust, historyId)
+            notifier.notifyFinished(illust.id, illust.title, 1, 0)
+            savedPath
+        } catch (e: CancellationException) {
+            notifier.cancel(illust.id)
+            throw e
+        } catch (e: Exception) {
+            Napier.e("动图 Zip 保存失败 illustId=${illust.id}", e)
+            val failedTask = pendingTask.copy(
+                status = DownloadStatus.Failed,
+                error = e.message ?: "动图保存失败",
+            )
+            notifier.notifyFinished(illust.id, illust.title, 0, 1)
+            if (historyId > 0) {
+                runCatching { historyRepository.saveTask(failedTask, illust, historyId) }
+            }
+            throw e
+        }
+    }
+
+    /**
      * 下载图片字节。
      *
      * 显式附加 Referer，满足 Pixiv 图片防盗链要求（客户端 defaultRequest 已配置，此处作为防御性补充）。
@@ -268,7 +317,7 @@ class DownloadRepository(
     private suspend fun downloadBytes(url: String): ByteArray {
         val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(url)
         val response = httpClient.get(trustedUrl) {
-            header("Referer", "https://app-api.pixiv.net/")
+            header("Referer", com.perol.pixez.shared.ui.AppConstants.Urls.PIXIV_APP_API)
         }
         return response.readRawBytes()
     }
@@ -282,15 +331,7 @@ class DownloadRepository(
         return if (ext in SUPPORTED_EXTENSIONS) ext else "jpg"
     }
 
-    /**
-     * 清理文件名中的非法字符，避免跨平台保存失败。
-     */
-    private fun sanitizeFileName(name: String): String {
-        return name.replace(INVALID_FILE_NAME_CHARS, "_")
-    }
-
     companion object {
         private val SUPPORTED_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp")
-        private val INVALID_FILE_NAME_CHARS = Regex("[\\\\/:*?\"<>|]")
     }
 }

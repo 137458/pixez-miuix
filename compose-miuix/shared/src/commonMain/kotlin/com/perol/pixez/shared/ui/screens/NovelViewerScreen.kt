@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -74,9 +75,14 @@ fun NovelViewerScreen(
     val scope = rememberCoroutineScope()
     var state by remember(novelId) { mutableStateOf<NovelViewState>(NovelViewState.Loading) }
 
-    // 字号持久化与微调（基准 16sp，范围 12sp ~ 28sp）
+    // 字号持久化与微调（基准 AppConstants.Novel.DEFAULT_FONT_SIZE_SP，范围 MIN_FONT_SIZE_SP ~ MAX_FONT_SIZE_SP）
     var fontSizeSp by remember(settings?.novelFontSize) {
-        mutableFloatStateOf(settings?.novelFontSize?.coerceIn(12f, 28f) ?: 16f)
+        mutableFloatStateOf(
+            settings?.novelFontSize?.coerceIn(
+                AppConstants.Novel.MIN_FONT_SIZE_SP,
+                AppConstants.Novel.MAX_FONT_SIZE_SP,
+            ) ?: AppConstants.Novel.DEFAULT_FONT_SIZE_SP
+        )
     }
 
     fun loadNovel() {
@@ -117,7 +123,7 @@ fun NovelViewerScreen(
                         // 缩小字号
                         IconButton(
                             onClick = {
-                                if (fontSizeSp > 12f) {
+                                if (fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP) {
                                     fontSizeSp -= 1f
                                     settings?.novelFontSize = fontSizeSp
                                 }
@@ -133,7 +139,7 @@ fun NovelViewerScreen(
                         // 放大字号
                         IconButton(
                             onClick = {
-                                if (fontSizeSp < 28f) {
+                                if (fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP) {
                                     fontSizeSp += 1f
                                     settings?.novelFontSize = fontSizeSp
                                 }

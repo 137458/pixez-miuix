@@ -80,6 +80,14 @@ fun AccountManageScreen(
         }
     }
 
+    fun performSwitchAccount(userId: String) {
+        scope.launch {
+            accountRepository.switchAccount(userId)
+            refreshAccounts()
+            toastMessage = strings.accountSwitchSuccess
+        }
+    }
+
     LaunchedEffect(Unit) {
         refreshAccounts()
     }
@@ -157,11 +165,7 @@ fun AccountManageScreen(
                                             .fillMaxWidth()
                                             .clickable {
                                                 if (!isActive) {
-                                                    scope.launch {
-                                                        accountRepository.switchAccount(account.userId)
-                                                        refreshAccounts()
-                                                        toastMessage = strings.accountSwitchSuccess
-                                                    }
+                                                    performSwitchAccount(account.userId)
                                                 }
                                             }
                                             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -225,11 +229,7 @@ fun AccountManageScreen(
                                         } else {
                                             Button(
                                                 onClick = {
-                                                    scope.launch {
-                                                        accountRepository.switchAccount(account.userId)
-                                                        refreshAccounts()
-                                                        toastMessage = strings.accountSwitchSuccess
-                                                    }
+                                                    performSwitchAccount(account.userId)
                                                 },
                                                 modifier = Modifier.height(32.dp),
                                             ) {

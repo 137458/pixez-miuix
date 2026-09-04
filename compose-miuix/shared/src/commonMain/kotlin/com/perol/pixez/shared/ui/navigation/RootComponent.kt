@@ -232,6 +232,13 @@ class RootComponent(
     }
 
     /**
+     * 打开小说浏览页（推荐与排行榜）。
+     */
+    fun onNovelBrowseClicked() {
+        navigation.pushToFront(Config.Novel)
+    }
+
+    /**
      * 打开小说阅读页。
      */
     fun onNovelClicked(novelId: Int) {
@@ -426,6 +433,7 @@ class RootComponent(
         Config.Thanks -> Child.Thanks
         Config.Login -> Child.Login
         Config.AccountManage -> Child.AccountManage
+        Config.Novel -> Child.Novel
         is Config.NovelViewer -> Child.NovelViewer(config.novelId)
     }
 
@@ -557,6 +565,9 @@ class RootComponent(
         data object AccountManage : Config()
 
         @Serializable
+        data object Novel : Config()
+
+        @Serializable
         data class NovelViewer(val novelId: Int) : Config()
     }
 
@@ -598,6 +609,7 @@ class RootComponent(
         data object CopyTextSetting : Child()
         data object WelcomePageSetting : Child()
         data object AccountManage : Child()
+        data object Novel : Child()
         data class NovelViewer(val novelId: Int) : Child()
     }
 

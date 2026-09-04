@@ -57,10 +57,12 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import com.perol.pixez.shared.data.repository.DownloadRepository
+
 private sealed interface UgoiraState {
     data object Idle : UgoiraState
     data class Loading(val stageText: String) : UgoiraState
-    data class Ready(val frames: List<Pair<UgoiraFrame, ImageBitmap>>, val rawZipBytes: ByteArray) : UgoiraState
+    data class Ready(val frames: List<Pair<UgoiraFrame, ImageBitmap>>, val rawZipBytes: ByteArray, val zipUrl: String) : UgoiraState
     data class Error(val message: String) : UgoiraState
 }
 
@@ -74,6 +76,7 @@ fun UgoiraPlayer(
     illust: Illust,
     illustRepository: IllustRepository,
     modifier: Modifier = Modifier,
+    downloadRepository: DownloadRepository? = null,
     illustSaver: IllustSaver = remember { IllustSaver() },
     autoPlay: Boolean = false,
     onSavedZip: ((String) -> Unit)? = null,
@@ -112,11 +115,11 @@ fun UgoiraPlayer(
                 }
 
                 if (decodedFrames.isEmpty()) {
-                    state = UgoiraState.Error("未能解码出动图帧")
+                    state = UgoiraState.Error(strings.ugoiraDecodeFailed)
                 } else {
                     currentFrameIndex = 0
                     isPlaying = true
-                    state = UgoiraState.Ready(decodedFrames, zipBytes)
+                    state = UgoiraState.Ready(decodedFrames, zipBytes, zipUrl)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -166,6 +169,15 @@ fun UgoiraPlayer(
             },
         contentAlignment = Alignment.Center,
     ) {
+        if (state !is UgoiraState.Ready) {
+            PixivAsyncImage(
+                model = illust.imageUrls.large,
+                contentDescription = illust.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
+
         when (val st = state) {
             is UgoiraState.Ready -> {
                 val currentBitmap = st.frames.getOrNull(currentFrameIndex)?.second
@@ -225,10 +237,18 @@ fun UgoiraPlayer(
                                 isSavingZip = true
                                 scope.launch {
                                     try {
-                                        val path = illustSaver.save(
-                                            fileName = "${illust.id}_ugoira.zip",
-                                            bytes = st.rawZipBytes,
-                                        )
+                                        val path = if (downloadRepository != null) {
+                                            downloadRepository.saveUgoiraZip(
+                                                illust = illust,
+                                                bytes = st.rawZipBytes,
+                                                zipUrl = st.zipUrl,
+                                            )
+                                        } else {
+                                            illustSaver.save(
+                                                fileName = "${illust.id}_ugoira.zip",
+                                                bytes = st.rawZipBytes,
+                                            )
+                                        }
                                         onSavedZip?.invoke(path)
                                     } catch (e: Throwable) {
                                         Napier.e("保存动图 Zip 失败", e, tag = "UgoiraPlayer")
@@ -248,13 +268,6 @@ fun UgoiraPlayer(
                 }
             }
             is UgoiraState.Loading -> {
-                // 加载中展示静态缩略图 + 居中进度指示卡片
-                PixivAsyncImage(
-                    model = illust.imageUrls.large,
-                    contentDescription = illust.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -284,12 +297,6 @@ fun UgoiraPlayer(
                 }
             }
             is UgoiraState.Error -> {
-                PixivAsyncImage(
-                    model = illust.imageUrls.large,
-                    contentDescription = illust.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -317,12 +324,6 @@ fun UgoiraPlayer(
                 }
             }
             is UgoiraState.Idle -> {
-                PixivAsyncImage(
-                    model = illust.imageUrls.large,
-                    contentDescription = illust.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
                 // 播放引导悬浮按钮
                 Box(
                     modifier = Modifier

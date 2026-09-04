@@ -10,6 +10,28 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 
 /**
+ * 小说排行榜榜单模式。
+ */
+enum class NovelRankingMode(val value: String) {
+    Day("day"),
+    DayMale("day_male"),
+    DayFemale("day_female"),
+    WeekRookie("week_rookie"),
+    Week("week"),
+    Month("month"),
+    DayR18("day_r18"),
+    DayMaleR18("day_male_r18"),
+    DayFemaleR18("day_female_r18"),
+    WeekR18("week_r18"),
+    WeekR18G("week_r18g");
+
+    companion object {
+        fun fromValue(value: String): NovelRankingMode =
+            entries.firstOrNull { it.value.equals(value, ignoreCase = true) } ?: Day
+    }
+}
+
+/**
  * 小说作品仓库：提供小说推荐、排行榜、系列与正文文本拉取业务接口。
  */
 class NovelRepository(
@@ -58,10 +80,18 @@ class NovelRepository(
     }
 
     /**
+     * 获取小说排行榜（通过强类型榜单枚举）。
+     */
+    suspend fun getNovelRanking(
+        mode: NovelRankingMode = NovelRankingMode.Day,
+        nextUrl: String? = null,
+    ): NovelRecomResponse = getNovelRanking(mode = mode.value, nextUrl = nextUrl)
+
+    /**
      * 获取小说排行榜（支持日榜、周榜、月榜等与分页）。
      */
     suspend fun getNovelRanking(
-        mode: String = "day",
+        mode: String = NovelRankingMode.Day.value,
         nextUrl: String? = null,
     ): NovelRecomResponse = networkCall("获取小说排行榜失败 mode=$mode") {
         if (!nextUrl.isNullOrBlank()) {
