@@ -47,3 +47,14 @@ archive/flutter-v1/android/key.properties
 
 # Local Flutter SDK cache, if an archive maintainer uses FVM
 archive/flutter-v1/.fvm/
+
+# Internal documentation, PRDs, research notes and planning (Rule: strictly keep out of git)
+compose-miuix/docs/
+docs/
+research/
+*TODO.md
+*Spec.md
+CONTEXT.md
+Code_Wiki.md
+RELEASE_NOTES_GUIDE.md
+

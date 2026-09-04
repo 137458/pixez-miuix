@@ -150,7 +150,6 @@
 
 - 首页推荐 (Hello)、关注动态 (New)、插画与画师搜索 (Search)、排行榜 (Ranking)、相关推荐 (Related)、插画/漫画系列详情 (Series)、画师主页作品与收藏 (UserDetail)、作品评论区 (Comments) 以及好P友/粉丝列表全量支持触底自动流式预加载。
 - 全部列表页面接入 MIUIX 官方下拉刷新与顶部手动刷新按钮。
-- 新增项目架构全景百科文档（`Code_Wiki.md`）、UI 设计与组件规范（`MIUIX_Spec.md`）及全局待办清单（`Global_TODO.md`）。
 
 ### 优化
 
