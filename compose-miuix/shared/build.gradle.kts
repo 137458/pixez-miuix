@@ -64,9 +64,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
 
-            // DI / Navigation / Logging
-            implementation(libs.koin.core)
-            implementation(libs.koin.compose)
+            // Navigation / Logging
             api(libs.decompose)
             api(libs.decompose.compose)
             implementation(libs.navigationevent.compose)

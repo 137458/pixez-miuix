@@ -225,6 +225,20 @@ class RootComponent(
     }
 
     /**
+     * 打开多账号管理页。
+     */
+    fun onAccountManageClicked() {
+        navigation.pushToFront(Config.AccountManage)
+    }
+
+    /**
+     * 打开小说阅读页。
+     */
+    fun onNovelClicked(novelId: Int) {
+        navigation.pushToFront(Config.NovelViewer(novelId))
+    }
+
+    /**
      * 打开浏览历史页。
      */
     fun onHistoryClicked() {
@@ -411,6 +425,8 @@ class RootComponent(
         Config.BookTag -> Child.BookTag
         Config.Thanks -> Child.Thanks
         Config.Login -> Child.Login
+        Config.AccountManage -> Child.AccountManage
+        is Config.NovelViewer -> Child.NovelViewer(config.novelId)
     }
 
     /**
@@ -536,6 +552,12 @@ class RootComponent(
 
         @Serializable
         data object WelcomePageSetting : Config()
+
+        @Serializable
+        data object AccountManage : Config()
+
+        @Serializable
+        data class NovelViewer(val novelId: Int) : Config()
     }
 
     sealed class Child {
@@ -575,6 +597,8 @@ class RootComponent(
         data object QualitySetting : Child()
         data object CopyTextSetting : Child()
         data object WelcomePageSetting : Child()
+        data object AccountManage : Child()
+        data class NovelViewer(val novelId: Int) : Child()
     }
 
     companion object {

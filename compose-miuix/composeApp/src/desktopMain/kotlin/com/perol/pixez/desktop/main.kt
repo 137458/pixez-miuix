@@ -255,6 +255,25 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                             rootComponent.onDownloadTaskClicked()
                             true
                         }
+                        (isModifier && keyEvent.key == Key.R) || keyEvent.key == Key.F5 -> {
+                            dependencies.settingsRepository.notifyChanged()
+                            true
+                        }
+                        isModifier && keyEvent.key == Key.Comma -> {
+                            rootComponent.onSettingsClicked()
+                            true
+                        }
+                        isModifier && keyEvent.key == Key.W -> {
+                            if (!rootComponent.onBack()) {
+                                if (trayAvailable && dependencies.settingsRepository.closeToTray) {
+                                    saveWindowPlacement()
+                                    isWindowVisible = false
+                                } else {
+                                    shutdownAndExit()
+                                }
+                            }
+                            true
+                        }
                         else -> false
                     }
                 } else {

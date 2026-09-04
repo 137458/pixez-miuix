@@ -353,26 +353,12 @@ private fun UserWorksTab(
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
-        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-            .getOrDefault(emptySet())
-        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-            .getOrDefault(emptySet())
-        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-            .getOrDefault(emptyList())
-        val banAIIllust = settingsRepository.banAIIllust
-        val hIsNotAllow = settingsRepository.hIsNotAllow
-        return rawIllusts.filter {
-            it.id !in bannedIds &&
-                it.user.id !in bannedUserIds &&
-                (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || !it.isR18()) &&
-                !banRepository.isBannedByTags(
-                    banTags,
-                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                )
-        }
-    }
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
+        banRepository.filterIllusts(
+            rawIllusts = rawIllusts,
+            banAIIllust = settingsRepository.banAIIllust,
+            hideR18 = settingsRepository.hIsNotAllow,
+        )
 
     val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
@@ -456,26 +442,12 @@ private fun UserBookmarksTab(
     // 切换用户、可见性选项或重试时重新加载；加载完成后过滤掉被屏蔽作品。
     var retryCount by rememberSaveable(userId, restrict) { mutableIntStateOf(0) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
-        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-            .getOrDefault(emptySet())
-        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-            .getOrDefault(emptySet())
-        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-            .getOrDefault(emptyList())
-        val banAIIllust = settingsRepository.banAIIllust
-        val hIsNotAllow = settingsRepository.hIsNotAllow
-        return rawIllusts.filter {
-            it.id !in bannedIds &&
-                it.user.id !in bannedUserIds &&
-                (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || !it.isR18()) &&
-                !banRepository.isBannedByTags(
-                    banTags,
-                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                )
-        }
-    }
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
+        banRepository.filterIllusts(
+            rawIllusts = rawIllusts,
+            banAIIllust = settingsRepository.banAIIllust,
+            hideR18 = settingsRepository.hIsNotAllow,
+        )
 
     val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,

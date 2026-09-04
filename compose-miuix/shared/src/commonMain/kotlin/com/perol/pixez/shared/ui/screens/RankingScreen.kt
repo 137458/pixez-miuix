@@ -91,26 +91,12 @@ fun RankingScreen(
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> {
-        val bannedIds = suspendRunCatchingNonCancel { banRepository.getBannedIllustIds() }
-            .getOrDefault(emptySet())
-        val bannedUserIds = suspendRunCatchingNonCancel { banRepository.getBannedUserIds() }
-            .getOrDefault(emptySet())
-        val banTags = suspendRunCatchingNonCancel { banRepository.getAllBanTags() }
-            .getOrDefault(emptyList())
-        val banAIIllust = settingsRepository.banAIIllust
-        val hIsNotAllow = settingsRepository.hIsNotAllow
-        return rawIllusts.filter {
-            it.id !in bannedIds &&
-                it.user.id !in bannedUserIds &&
-                (!banAIIllust || it.illustAIType != 2) &&
-                (!hIsNotAllow || !it.isR18()) &&
-                !banRepository.isBannedByTags(
-                    banTags,
-                    it.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
-                )
-        }
-    }
+    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
+        banRepository.filterIllusts(
+            rawIllusts = rawIllusts,
+            banAIIllust = settingsRepository.banAIIllust,
+            hideR18 = settingsRepository.hIsNotAllow,
+        )
 
     // 统一 UI 状态机（单向数据流 UDF）
     var illustsState by remember { mutableStateOf<List<Illust>?>(null) }

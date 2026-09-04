@@ -98,10 +98,13 @@ import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import io.ktor.http.URLBuilder
 import kotlinx.coroutines.launch
 import okio.FileSystem
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -141,6 +144,7 @@ fun IllustDetailScreen(
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
     onIllustClick: ((Int) -> Unit)? = null,
+    onNovelClick: ((Int) -> Unit)? = null,
 ) {
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
@@ -175,6 +179,7 @@ fun IllustDetailScreen(
                 banRepository = banRepository,
                 historyRepository = historyRepository,
                 onIllustClick = onIllustClick,
+                onNovelClick = onNovelClick,
             )
         }
     } else {
@@ -192,6 +197,7 @@ fun IllustDetailScreen(
             banRepository = banRepository,
             historyRepository = historyRepository,
             onIllustClick = onIllustClick,
+            onNovelClick = onNovelClick,
         )
     }
 }
@@ -212,6 +218,7 @@ private fun IllustDetailSingleContent(
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
     onIllustClick: ((Int) -> Unit)? = null,
+    onNovelClick: ((Int) -> Unit)? = null,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val settings = LocalSettingsRepository.current
@@ -370,59 +377,99 @@ private fun IllustDetailSingleContent(
                                         indication = null,
                                     ) { fullScreenPageIndex = pageIndex }
 
-                                PixivAsyncImage(
-                                    model = pageUrl,
-                                    thumbnailUrl = thumbnailUrl,
-                                    contentDescription = "${illust.title} ($pageIndex)",
-                                    contentScale = ContentScale.FillWidth,
-                                    modifier = pageModifier,
-                                )
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    PixivAsyncImage(
+                                        model = pageUrl,
+                                        thumbnailUrl = thumbnailUrl,
+                                        contentDescription = "${illust.title} ($pageIndex)",
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = pageModifier,
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(10.dp)
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.55f))
+                                            .clickable {
+                                                coroutineScope.launch {
+                                                    toastMessage = "${strings.downloadStatusDownloading} P$pageIndex…"
+                                                    val task = downloadRepository.download(illust, pageIndex = pageIndex)
+                                                    toastMessage = when (task.status) {
+                                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageIndex)"
+                                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                                        else -> null
+                                                    }
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = MiuixIcons.Download,
+                                            contentDescription = "${strings.download} P$pageIndex",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                }
                                 if (pageIndex < illust.metaPages.lastIndex) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                 }
                             }
                         } else {
                             item(key = "single_page", contentType = "single_page") {
-                                val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
-                                    if (illust.type == "manga") {
-                                        settings?.mangaQuality ?: settings?.pictureQuality ?: 0
-                                    } else {
-                                        settings?.pictureQuality ?: 0
-                                    }
-                                }
-                                val singleUrl = remember(illust, effectiveQuality) {
-                                    when (effectiveQuality) {
-                                        0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                                        1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                                        2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                                        else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                                    }
-                                }
-                                val thumbnailUrl = remember(illust) {
-                                    illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
-                                }
-                                val singleModifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(
-                                        if (illustAspectRatio != null) {
-                                            Modifier.aspectRatio(illustAspectRatio)
-                                        } else {
-                                            Modifier
+                                if (illust.type == "ugoira") {
+                                    UgoiraPlayer(
+                                        illust = illust,
+                                        illustRepository = repository,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onSavedZip = { path ->
+                                            toastMessage = "${strings.ugoiraSaveZipSuccess}: $path"
                                         },
                                     )
-                                    .illustDragAndDropSource(illust, pageIndex = 0)
-                                    .clickable(
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                        indication = null,
-                                    ) { fullScreenPageIndex = 0 }
+                                } else {
+                                    val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
+                                        if (illust.type == "manga") {
+                                            settings?.mangaQuality ?: settings?.pictureQuality ?: 0
+                                        } else {
+                                            settings?.pictureQuality ?: 0
+                                        }
+                                    }
+                                    val singleUrl = remember(illust, effectiveQuality) {
+                                        when (effectiveQuality) {
+                                            0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                                            1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                                            2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                                            else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                                        }
+                                    }
+                                    val thumbnailUrl = remember(illust) {
+                                        illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
+                                    }
+                                    val singleModifier = Modifier
+                                        .fillMaxWidth()
+                                        .then(
+                                            if (illustAspectRatio != null) {
+                                                Modifier.aspectRatio(illustAspectRatio)
+                                            } else {
+                                                Modifier
+                                            },
+                                        )
+                                        .illustDragAndDropSource(illust, pageIndex = 0)
+                                        .clickable(
+                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                            indication = null,
+                                        ) { fullScreenPageIndex = 0 }
 
-                                PixivAsyncImage(
-                                    model = singleUrl,
-                                    thumbnailUrl = thumbnailUrl,
-                                    contentDescription = illust.title,
-                                    contentScale = ContentScale.FillWidth,
-                                    modifier = singleModifier,
-                                )
+                                    PixivAsyncImage(
+                                        model = singleUrl,
+                                        thumbnailUrl = thumbnailUrl,
+                                        contentDescription = illust.title,
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = singleModifier,
+                                    )
+                                }
                             }
                         }
 
@@ -637,6 +684,7 @@ private fun IllustDetailSingleContent(
                                             onUserClick = onUserClick,
                                             onIllustClick = onIllustClick,
                                             onIllustSeriesClick = onIllustSeriesClick,
+                                            onNovelClick = onNovelClick,
                                             onTagClick = onTagClick,
                                             style = MiuixTheme.textStyles.body2,
                                         )
@@ -1291,6 +1339,23 @@ private fun IllustDetailSingleContent(
                                 )
                             },
                         )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .height(0.5.dp)
+                                .background(Color.White.copy(alpha = 0.10f)),
+                        )
+                        LiquidMenuItem(
+                            icon = MiuixIcons.Search,
+                            text = strings.menuSauceNao,
+                            onClick = {
+                                showMoreMenu = false
+                                val imgUrl = currentIllust.imageUrls.medium.ifEmpty { currentIllust.imageUrls.large }
+                                val sauceUrl = buildSauceNaoUrl(imgUrl)
+                                openSafeUrl(sauceUrl, strings, onError = { toastMessage = it })
+                            },
+                        )
                         if (!isBanned) {
                             Box(
                                 modifier = Modifier
@@ -1328,6 +1393,8 @@ private fun IllustDetailSingleContent(
                 illust = illust,
                 initialPage = fullScreenPageIndex!!,
                 zoomQuality = settings?.zoomQuality ?: 0,
+                downloadRepository = downloadRepository,
+                onToast = { toastMessage = it },
                 onDismiss = { fullScreenPageIndex = null },
             )
         }
@@ -1354,6 +1421,8 @@ private fun IllustFullScreenViewer(
     illust: Illust,
     initialPage: Int,
     zoomQuality: Int,
+    downloadRepository: DownloadRepository,
+    onToast: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
@@ -1479,6 +1548,7 @@ private fun IllustFullScreenViewer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
+                // 左侧：返回按钮
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -1495,6 +1565,7 @@ private fun IllustFullScreenViewer(
                     )
                 }
 
+                // 中间：页码指示器
                 if (pageCount > 1) {
                     Box(
                         modifier = Modifier
@@ -1506,6 +1577,119 @@ private fun IllustFullScreenViewer(
                             text = "${pagerState.currentPage + 1} / $pageCount",
                             style = MiuixTheme.textStyles.body2,
                             color = Color.White,
+                        )
+                    }
+                }
+
+                // 右侧：快捷操作组（单页下载、复制链接、分享、SauceNAO 搜图）
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 下载当前展示页
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable {
+                                val currentPage = pagerState.currentPage
+                                coroutineScope.launch {
+                                    onToast("${strings.downloadStatusDownloading} P$currentPage…")
+                                    val task = downloadRepository.download(illust, pageIndex = currentPage)
+                                    val msg = when (task.status) {
+                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$currentPage)"
+                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                        else -> null
+                                    }
+                                    if (msg != null) onToast(msg)
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Download,
+                            contentDescription = strings.download,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    // 复制作品链接
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable {
+                                val link = buildIllustShareLink(illust)
+                                runCatching {
+                                    IllustClipboard().copy(link)
+                                    onToast(strings.copiedToClipboard)
+                                }.onFailure {
+                                    onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Link,
+                            contentDescription = strings.menuCopyLink,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    // 分享
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable {
+                                val link = buildIllustShareLink(illust)
+                                runCatching {
+                                    IllustShare().share(link, illust.title)
+                                    onToast(strings.share)
+                                }.onFailure {
+                                    onToast("${strings.share}: ${it.message}")
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Share,
+                            contentDescription = strings.share,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    // SauceNAO 搜图
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable {
+                                val currentPage = pagerState.currentPage
+                                val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
+                                    illust.metaPages[currentPage].imageUrls?.medium
+                                        ?: illust.metaPages[currentPage].imageUrls?.squareMedium
+                                        ?: illust.imageUrls.medium
+                                } else {
+                                    illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                                }
+                                val sauceUrl = buildSauceNaoUrl(imgUrl)
+                                openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Search,
+                            contentDescription = strings.menuSauceNao,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -1819,5 +2003,12 @@ private fun LiquidMenuItem(
             color = Color.White,
         )
     }
+}
+
+private fun buildSauceNaoUrl(imageUrl: String): String {
+    return URLBuilder("https://saucenao.com/search.php").apply {
+        parameters.append("db", "999")
+        parameters.append("url", imageUrl)
+    }.buildString()
 }
 

@@ -43,6 +43,7 @@ import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
+import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -50,6 +51,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import io.ktor.client.HttpClient
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
+import com.perol.pixez.shared.ui.screens.AccountManageScreen
 import com.perol.pixez.shared.ui.screens.BoardScreen
 import com.perol.pixez.shared.ui.screens.CommentsScreen
 import com.perol.pixez.shared.ui.screens.DataExportScreen
@@ -86,6 +88,7 @@ import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
+import com.perol.pixez.shared.ui.screens.NovelViewerScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
@@ -124,6 +127,7 @@ fun RootContent(
     novelHistoryRepository: NovelHistoryRepository,
     muteRepository: MuteRepository,
     updateCheckClient: HttpClient,
+    novelRepository: NovelRepository? = null,
     modifier: Modifier = Modifier,
 ) {
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
@@ -285,6 +289,7 @@ fun RootContent(
                         banRepository = banRepository,
                         historyRepository = historyRepository,
                         onIllustClick = component::onIllustClicked,
+                        onNovelClick = component::onNovelClicked,
                     )
 
                     is Child.UserDetail -> UserDetailScreen(
@@ -372,6 +377,7 @@ fun RootContent(
                         onBookTagClick = component::onBookTagClicked,
                         onUpdateSettingClick = component::onUpdateSettingClicked,
                         onAccountEditClick = component::onAccountEditClicked,
+                        onAccountManageClick = component::onAccountManageClicked,
                         onHistoryClick = component::onHistoryClicked,
                         onDownloadTaskClick = component::onDownloadTaskClicked,
                         onDataExportClick = component::onDataExportClicked,
@@ -529,6 +535,23 @@ fun RootContent(
                         onLoginClick = component::onLoginClicked,
                         onFinish = component::onGuideFinished,
                     )
+
+                    Child.AccountManage -> AccountManageScreen(
+                        accountRepository = accountRepository,
+                        onBack = component::onBack,
+                        onAddAccount = component::onLoginClicked,
+                    )
+
+                    is Child.NovelViewer -> {
+                        novelRepository?.let { repo ->
+                            NovelViewerScreen(
+                                novelId = instance.novelId,
+                                novelRepository = repo,
+                                onBack = component::onBack,
+                                onNovelClick = component::onNovelClicked,
+                            )
+                        }
+                    }
                 }
             }
 

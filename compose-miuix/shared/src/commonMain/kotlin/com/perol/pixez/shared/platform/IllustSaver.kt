@@ -14,7 +14,14 @@ expect class IllustSaver() {
      *
      * @param fileName 文件名，含扩展名，如 "title_p0.jpg"。
      * @param bytes 图片二进制数据。
+     * @param subDir 可选的相对子目录（如画师专属文件夹）。
+     * @param customBasePath 可选的自定义绝对基准路径（如桌面端自定义存储路径）。
      * @return 保存后的可读路径或标识，失败时抛出异常。
      */
-    suspend fun save(fileName: String, bytes: ByteArray): String
+    suspend fun save(
+        fileName: String,
+        bytes: ByteArray,
+        subDir: String? = null,
+        customBasePath: String? = null,
+    ): String
 }

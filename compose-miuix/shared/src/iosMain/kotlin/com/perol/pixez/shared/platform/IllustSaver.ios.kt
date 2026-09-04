@@ -20,21 +20,31 @@ import platform.posix.fwrite
  */
 @OptIn(ExperimentalForeignApi::class)
 actual class IllustSaver {
-    actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.Default) {
+    actual suspend fun save(
+        fileName: String,
+        bytes: ByteArray,
+        subDir: String?,
+        customBasePath: String?,
+    ): String = withContext(Dispatchers.Default) {
         val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
         require(bytes.isNotEmpty()) { "图片内容不能为空" }
         val documentsDir = (NSHomeDirectory() as NSString).stringByAppendingPathComponent("Documents")
-        val pixezDir = (documentsDir as NSString).stringByAppendingPathComponent("PixEz")
+        val baseDir = customBasePath ?: (documentsDir as NSString).stringByAppendingPathComponent("PixEz")
+        val targetDir = if (!subDir.isNullOrBlank()) {
+            val safeSubDir = FileNamePolicy.sanitizeSegment(subDir)
+            (baseDir as NSString).stringByAppendingPathComponent(safeSubDir)
+        } else {
+            baseDir
+        }
 
         // 创建目标目录，允许中间目录不存在时自动创建。
         NSFileManager.defaultManager.createDirectoryAtPath(
-            pixezDir,
+            targetDir,
             withIntermediateDirectories = true,
             attributes = null,
             error = null,
         )
-
-        val filePath = (pixezDir as NSString).stringByAppendingPathComponent(safeFileName)
+        val filePath = (targetDir as NSString).stringByAppendingPathComponent(safeFileName)
         val file = fopen(filePath, "wb")
             ?: throw IllegalStateException("无法打开文件写入: $filePath")
 

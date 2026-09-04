@@ -263,6 +263,7 @@ interface AppStrings {
     val menuCopyLink: String
     val menuShareLink: String
     val menuBanWork: String
+    val menuSauceNao: String get() = "SauceNAO"
     val imageCopySuccess: String
     val downloadTaskShowInFolder: String
     val dialogAddTag: String
@@ -600,6 +601,36 @@ interface AppStrings {
     val noMoreData: String
     val loadingMore: String
     val loadMoreFailedRetry: String
+
+    val ugoiraLoadingMetadata: String get() = "正在获取动图元数据..."
+    val ugoiraDownloading: String get() = "正在下载动图帧资源..."
+    val ugoiraExtracting: String get() = "正在解压动图数据..."
+    val ugoiraPlay: String get() = "播放"
+    val ugoiraPause: String get() = "暂停"
+    val ugoiraSaveZip: String get() = "保存动图 Zip"
+    val ugoiraSaveZipSuccess: String get() = "动图 Zip 保存成功"
+    val ugoiraLoadFailed: String get() = "动图加载失败，点击重试"
+    val ugoiraClickToPlay: String get() = "点击加载动图"
+
+    val accountManageTitle: String get() = "多账号管理"
+    val accountCurrentActive: String get() = "当前账号"
+    val accountSwitch: String get() = "切换至该账号"
+    val accountDelete: String get() = "移除账号"
+    val accountDeleteConfirmTitle: String get() = "确认移除账号"
+    val accountDeleteConfirmMsg: String get() = "确定要从本地移除该账号吗？"
+    val accountAdd: String get() = "添加新账号"
+    val accountEmpty: String get() = "暂无登录账号"
+    val accountSwitchSuccess: String get() = "已切换账号"
+
+    val novelReaderTitle: String get() = "小说阅读"
+    val novelSeries: String get() = "系列"
+    val novelWordsCount: String get() = "字数"
+    val novelTextEmpty: String get() = "小说正文为空"
+    val novelPrevChapter: String get() = "上一章"
+    val novelNextChapter: String get() = "下一章"
+    val novelFontSize: String get() = "字号"
+
+
 
     companion object {
         fun fromLanguageNum(num: Int): AppStrings = when (num) {
@@ -1151,6 +1182,7 @@ object ZhCnStrings : AppStrings {
     override val menuCopyLink = "复制链接"
     override val menuShareLink = "分享链接"
     override val menuBanWork = "屏蔽作品"
+    override val menuSauceNao = "SauceNAO 以图搜图"
     override val imageCopySuccess = "图片已复制到剪贴板"
     override val downloadTaskShowInFolder = "在文件夹中定位"
     override val dialogAddTag = "添加收藏标签"
@@ -1491,6 +1523,32 @@ object ZhTwStrings : AppStrings {
     override val loadingMore = "正在載入更多..."
     override val loadMoreFailedRetry = "載入失敗，請重試"
 
+    override val ugoiraLoadingMetadata = "正在獲取動圖元數據..."
+    override val ugoiraDownloading = "正在下載動圖影格資源..."
+    override val ugoiraExtracting = "正在解壓縮動圖資料..."
+    override val ugoiraPlay = "播放"
+    override val ugoiraPause = "暫停"
+    override val ugoiraSaveZip = "儲存動圖 Zip"
+    override val ugoiraSaveZipSuccess = "動圖 Zip 儲存成功"
+    override val ugoiraLoadFailed = "動圖載入失敗，點擊重試"
+    override val ugoiraClickToPlay = "點擊載入動圖"
+
+    override val accountManageTitle = "多帳號管理"
+    override val accountCurrentActive = "目前帳號"
+    override val accountSwitch = "切換至該帳號"
+    override val accountDelete = "移除帳號"
+    override val accountDeleteConfirmTitle = "確認移除帳號"
+    override val accountDeleteConfirmMsg = "確定要從本機移除該帳號嗎？"
+    override val accountAdd = "新增帳號"
+    override val accountEmpty = "暫無登入帳號"
+    override val accountSwitchSuccess = "已切換帳號"
+
+    override val novelReaderTitle = "小說閱讀"
+    override val novelSeries = "系列"
+    override val novelWordsCount = "字數"
+    override val novelTextEmpty = "小說內文為空"
+
+
     override val tabRecommend = "推薦"
     override val tabRanking = "排行"
     override val tabNew = "動態"
@@ -1729,6 +1787,7 @@ object ZhTwStrings : AppStrings {
     override val menuCopyLink = "複製連結"
     override val menuShareLink = "分享連結"
     override val menuBanWork = "封鎖作品"
+    override val menuSauceNao = "SauceNAO 以圖搜圖"
     override val imageCopySuccess = "圖片已複製到剪貼簿"
     override val downloadTaskShowInFolder = "在資料夾中定位"
     override val dialogAddTag = "新增收藏標籤"
@@ -2068,6 +2127,32 @@ object EnStrings : AppStrings {
     override val noMoreData = "No more data"
     override val loadingMore = "Loading more…"
     override val loadMoreFailedRetry = "Load failed, please retry"
+
+    override val ugoiraLoadingMetadata = "Fetching Ugoira metadata…"
+    override val ugoiraDownloading = "Downloading animation frames…"
+    override val ugoiraExtracting = "Extracting animation data…"
+    override val ugoiraPlay = "Play"
+    override val ugoiraPause = "Pause"
+    override val ugoiraSaveZip = "Save Ugoira Zip"
+    override val ugoiraSaveZipSuccess = "Ugoira Zip saved successfully"
+    override val ugoiraLoadFailed = "Failed to load Ugoira, tap to retry"
+    override val ugoiraClickToPlay = "Tap to load Ugoira"
+
+    override val accountManageTitle = "Manage Accounts"
+    override val accountCurrentActive = "Active Account"
+    override val accountSwitch = "Switch to this account"
+    override val accountDelete = "Remove Account"
+    override val accountDeleteConfirmTitle = "Remove Account"
+    override val accountDeleteConfirmMsg = "Are you sure you want to remove this account locally?"
+    override val accountAdd = "Add Account"
+    override val accountEmpty = "No logged-in accounts"
+    override val accountSwitchSuccess = "Switched account"
+
+    override val novelReaderTitle = "Novel Reader"
+    override val novelSeries = "Series"
+    override val novelWordsCount = "Words"
+    override val novelTextEmpty = "Novel text is empty"
+
 
     override val tabRecommend = "Recommend"
     override val tabRanking = "Ranking"

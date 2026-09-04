@@ -13,6 +13,7 @@ import com.perol.pixez.shared.data.model.Recommend
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.data.model.SpotlightResponse
+import com.perol.pixez.shared.data.model.UgoiraMetadataResponse
 import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -34,6 +35,7 @@ import kotlinx.coroutines.sync.withLock
 class IllustRepository(
     private val apiClient: HttpClient,
     private val webClient: HttpClient = HttpClient(),
+    private val downloadClient: HttpClient = webClient,
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
@@ -305,6 +307,16 @@ class IllustRepository(
         }
 
     /**
+     * 获取动图 (Ugoira) 元数据（含 zip 包地址与各帧延迟时间）。
+     */
+    suspend fun getUgoiraMetadata(illustId: Int): UgoiraMetadataResponse =
+        networkCall("获取动图元数据失败 illustId=$illustId") {
+            apiClient.get("/v1/ugoira/metadata") {
+                parameter("illust_id", illustId)
+            }.body()
+        }
+
+    /**
      * 获取作品评论响应（含 nextUrl）。
      */
     suspend fun getIllustCommentsResponse(
@@ -408,4 +420,15 @@ class IllustRepository(
             title to (response.illusts.orEmpty())
         }
 
+    /**
+     * 下载动图 Zip 包字节流。
+     */
+    suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
+        networkCall("下载动图 Zip 失败 url=$zipUrl") {
+            downloadClient.get(zipUrl) {
+                header("Referer", "https://app-api.pixiv.net/")
+            }.body()
+        }
 }
+
+

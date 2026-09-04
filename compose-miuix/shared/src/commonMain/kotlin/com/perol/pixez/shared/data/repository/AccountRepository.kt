@@ -115,7 +115,29 @@ class AccountRepository(
 
 
     /**
-     * 登出：清空本地账号数据。
+     * 获取本地所有已登录账号列表。
+     */
+    suspend fun getAllAccounts(): List<AccountPersist> =
+        tokenStorage.getAllAccounts().map { it.toPersist() }
+
+    /**
+     * 切换当前活跃账号。
+     */
+    suspend fun switchAccount(userId: String) {
+        tokenStorage.switchAccount(userId)
+        _loginEventFlow.tryEmit(Unit)
+    }
+
+    /**
+     * 移除指定账号。
+     */
+    suspend fun deleteAccount(userId: String) {
+        tokenStorage.deleteAccount(userId)
+        _loginEventFlow.tryEmit(Unit)
+    }
+
+    /**
+     * 登出：清空本地所有账号数据。
      */
     suspend fun logout() {
         tokenStorage.clear()

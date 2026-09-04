@@ -31,6 +31,7 @@ fun IllustActionMenu(
     onCopyImage: (() -> Unit)? = null,
     onCopyLink: () -> Unit,
     onShareLink: () -> Unit,
+    onSauceNao: (() -> Unit)? = null,
     onBan: () -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -59,6 +60,12 @@ fun IllustActionMenu(
                 title = strings.menuShareLink,
                 onClick = onShareLink,
             )
+            if (onSauceNao != null) {
+                BasicComponent(
+                    title = strings.menuSauceNao,
+                    onClick = onSauceNao,
+                )
+            }
             if (showBan) {
                 BasicComponent(
                     title = strings.menuBanWork,

@@ -81,6 +81,8 @@ internal object SettingsKeys {
     const val LIQUID_REFRACTION_LEVEL = "liquid_refraction_level"
     const val AUTO_CHECK_UPDATE = "auto_check_update"
     const val HAS_UNREAD_FEED_BADGE = "has_unread_feed_badge"
+    const val ACTIVE_USER_ID = "account_active_user_id"
+
 
     // Android 平台专属设置键
     const val DISPLAY_MODE = "display_mode"

@@ -30,8 +30,6 @@ coil = "3.6.0"
 # DI / 导航 / 工具 / 特效
 decompose = "3.3.0"
 navigationevent = "1.1.0"
-koin = "4.0.4"
-koin-compose = "4.0.4"
 napier = "2.7.1"
 kotlinx-datetime = "0.6.2"
 backdrop = "2.0.0"
@@ -94,10 +92,6 @@ decompose-compose = { module = "com.arkivanov.decompose:extensions-compose", ver
 # Navigation Event
 navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 
-# Koin
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
-koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin-compose" }
-koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 
 # Logging
 napier = { module = "io.github.aakira:napier", version.ref = "napier" }

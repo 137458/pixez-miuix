@@ -15,6 +15,7 @@ import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
+import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
@@ -126,7 +127,11 @@ class AppDependencies(
      * Token 与账号本地存储。
      */
     val tokenStorage: AuthTokenStorage by lazy {
-        AuthTokenStorage(accountDriver)
+        AuthTokenStorage(
+            driver = accountDriver,
+            getActiveUserId = { settingsRepository.activeUserId },
+            setActiveUserId = { settingsRepository.activeUserId = it },
+        )
     }
 
     /**
@@ -176,11 +181,16 @@ class AppDependencies(
         IllustRepository(
             apiClient = httpClient.apiClient,
             webClient = webClient,
+            downloadClient = httpClient.downloadClient,
         )
     }
 
     val searchRepository: SearchRepository by lazy {
         SearchRepository(httpClient.apiClient, illustRepository)
+    }
+
+    val novelRepository: NovelRepository by lazy {
+        NovelRepository(httpClient.apiClient)
     }
 
     /**
@@ -259,6 +269,7 @@ class AppDependencies(
             httpClient = httpClient.downloadClient,
             saver = IllustSaver(),
             historyRepository = downloadHistoryRepository,
+            settingsRepository = settingsRepository,
         )
     }
 

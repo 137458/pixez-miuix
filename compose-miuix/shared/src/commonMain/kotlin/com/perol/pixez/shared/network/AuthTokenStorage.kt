@@ -19,6 +19,8 @@ import kotlinx.coroutines.withContext
  */
 class AuthTokenStorage(
     driver: SqlDriver,
+    private val getActiveUserId: (() -> String?)? = null,
+    private val setActiveUserId: ((String?) -> Unit)? = null,
 ) {
     private val database = AccountDatabase(driver)
     private val queries = database.accountQueries
@@ -35,8 +37,9 @@ class AuthTokenStorage(
     fun getCachedAccountFast(): Account? = if (isCacheInitialized) cachedAccount else null
 
     /**
-     * 读取当前最新账号（按数据库主键降序，取第一条）。
+     * 读取当前活跃账号。
      *
+     * 优先匹配当前保存的 activeUserId，若不存在则回退至第一条已登录账号。
      * 内部使用内存缓存，优先从缓存返回，避免首屏频繁查询 SQLite 阻塞。
      * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏。
      */
@@ -45,7 +48,16 @@ class AuthTokenStorage(
         mutex.withLock {
             if (isCacheInitialized) return@withLock cachedAccount
             try {
-                val acc = queries.selectAll().executeAsList().firstOrNull()
+                val activeUid = getActiveUserId?.invoke()
+                val acc = if (!activeUid.isNullOrBlank()) {
+                    queries.selectByUserId(activeUid).executeAsList().firstOrNull()
+                        ?: queries.selectAll().executeAsList().firstOrNull()
+                } else {
+                    queries.selectAll().executeAsList().firstOrNull()
+                }
+                if (acc != null && activeUid != acc.user_id) {
+                    setActiveUserId?.invoke(acc.user_id)
+                }
                 cachedAccount = acc
                 isCacheInitialized = true
                 acc
@@ -88,7 +100,8 @@ class AuthTokenStorage(
                 x_restrict = user.xRestrict.toLong(),
                 is_mail_authorized = boolToLong(user.isMailAuthorized),
             )
-            cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+            setActiveUserId?.invoke(user.id)
+            cachedAccount = queries.selectByUserId(user.id).executeAsList().firstOrNull()
             isCacheInitialized = true
         }
     }
@@ -113,8 +126,48 @@ class AuthTokenStorage(
                 x_restrict = account.x_restrict,
                 is_mail_authorized = account.is_mail_authorized,
             )
+            setActiveUserId?.invoke(account.user_id)
             cachedAccount = account
             isCacheInitialized = true
+        }
+    }
+
+    /**
+     * 获取本地所有已保存的账号列表。
+     */
+    suspend fun getAllAccounts(): List<Account> = withContext(Dispatchers.Default) {
+        mutex.withLock {
+            queries.selectAll().executeAsList()
+        }
+    }
+
+    /**
+     * 切换当前活跃账号。
+     */
+    suspend fun switchAccount(userId: String): Account = withContext(Dispatchers.Default) {
+        mutex.withLock {
+            val acc = queries.selectByUserId(userId).executeAsList().firstOrNull()
+                ?: throw IllegalArgumentException("未找到该账号: $userId")
+            setActiveUserId?.invoke(userId)
+            cachedAccount = acc
+            isCacheInitialized = true
+            acc
+        }
+    }
+
+    /**
+     * 移除指定账号。如果移除的是当前活跃账号，则自动切换到下一个可用账号。
+     */
+    suspend fun deleteAccount(userId: String) = withContext(Dispatchers.Default) {
+        mutex.withLock {
+            queries.deleteByUserId(userId)
+            val current = cachedAccount
+            if (current?.user_id == userId) {
+                val next = queries.selectAll().executeAsList().firstOrNull()
+                setActiveUserId?.invoke(next?.user_id)
+                cachedAccount = next
+                isCacheInitialized = true
+            }
         }
     }
 
@@ -125,8 +178,12 @@ class AuthTokenStorage(
      */
     suspend fun updateTokens(accessToken: String, refreshToken: String) = withContext(Dispatchers.Default) {
         mutex.withLock {
-            val current = queries.selectAll().executeAsList().firstOrNull()
-                ?: throw IllegalStateException("没有登录账号，无法更新 token")
+            val activeUid = getActiveUserId?.invoke()
+            val current = if (!activeUid.isNullOrBlank()) {
+                queries.selectByUserId(activeUid).executeAsList().firstOrNull()
+            } else {
+                queries.selectAll().executeAsList().firstOrNull()
+            } ?: throw IllegalStateException("没有登录账号，无法更新 token")
             queries.insertOrReplace(
                 id = current.id,
                 access_token = accessToken,
@@ -142,7 +199,7 @@ class AuthTokenStorage(
                 x_restrict = current.x_restrict,
                 is_mail_authorized = current.is_mail_authorized,
             )
-            cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+            cachedAccount = queries.selectByUserId(current.user_id).executeAsList().firstOrNull()
             isCacheInitialized = true
         }
     }
@@ -158,7 +215,12 @@ class AuthTokenStorage(
      */
     suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.Default) {
         mutex.withLock {
-            val current = queries.selectAll().executeAsList().firstOrNull()
+            val activeUid = getActiveUserId?.invoke()
+            val current = if (!activeUid.isNullOrBlank()) {
+                queries.selectByUserId(activeUid).executeAsList().firstOrNull()
+            } else {
+                queries.selectAll().executeAsList().firstOrNull()
+            }
             val updated = transform(current)
             if (updated != null) {
                 queries.insertOrReplace(
@@ -176,7 +238,7 @@ class AuthTokenStorage(
                     x_restrict = updated.x_restrict,
                     is_mail_authorized = updated.is_mail_authorized,
                 )
-                cachedAccount = queries.selectAll().executeAsList().firstOrNull()
+                cachedAccount = queries.selectByUserId(updated.user_id).executeAsList().firstOrNull()
                 isCacheInitialized = true
             }
         }
@@ -188,6 +250,7 @@ class AuthTokenStorage(
     suspend fun clear() = withContext(Dispatchers.Default) {
         mutex.withLock {
             queries.deleteAll()
+            setActiveUserId?.invoke(null)
             cachedAccount = null
             isCacheInitialized = true
         }

@@ -270,6 +270,18 @@ class SettingsRepository(
         get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_UGOIRA_FILTER, 0)
         set(value) { settings[SettingsKeys.SEARCH_UGOIRA_FILTER] = value; notifyChanged() }
 
+    var activeUserId: String?
+        get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.ACTIVE_USER_ID)
+        set(value) {
+            if (value != null) {
+                settings[SettingsKeys.ACTIVE_USER_ID] = value
+            } else {
+                settings.remove(SettingsKeys.ACTIVE_USER_ID)
+            }
+            notifyChanged()
+        }
+
+
     var searchStartDate: String
         get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_START_DATE, "")
         set(value) { settings[SettingsKeys.SEARCH_START_DATE] = value; notifyChanged() }
@@ -517,6 +529,15 @@ class SettingsRepository(
             notifyChanged()
         }
 
+    /**
+     * 小说正文字体大小（sp），基准 16sp，范围 12sp ~ 28sp。
+     */
+    var novelFontSize: Float
+        get() = settings.getFloatWithLegacyFallback(SettingsKeys.NOVEL_FONT_SIZE, 16f)
+        set(value) {
+            settings[SettingsKeys.NOVEL_FONT_SIZE] = value
+            notifyChanged()
+        }
 
     /**
      * 收藏标签列表，用于作品收藏或搜索时快速选择标签。
@@ -734,6 +755,25 @@ private fun Settings.getStringOrIntLegacyFallback(key: String, default: String):
     if (legacyString != null) return legacyString
     val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
     if (legacyInt != null) return legacyInt.toString()
+    return default
+}
+
+private fun Settings.getFloatWithLegacyFallback(key: String, default: Float): Float {
+    val floatVal: Float? = try { this[key] } catch (_: Exception) { null }
+    if (floatVal != null) return floatVal
+    val doubleVal: Double? = try { this[key] } catch (_: Exception) { null }
+    if (doubleVal != null) return doubleVal.toFloat()
+    val intVal: Int? = try { this[key] } catch (_: Exception) { null }
+    if (intVal != null) return intVal.toFloat()
+
+    val legacyKey = SettingsRepository_LegacyPrefix + key
+    val legacyFloat: Float? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyFloat != null) return legacyFloat
+    val legacyDouble: Double? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyDouble != null) return legacyDouble.toFloat()
+    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
+    if (legacyInt != null) return legacyInt.toFloat()
+
     return default
 }
 

@@ -4,7 +4,11 @@ import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.banillustid.BanIllustIdDatabase
 import com.perol.pixez.shared.data.local.bantag.BanTagDatabase
 import com.perol.pixez.shared.data.local.banuserid.BanUserIdDatabase
+import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.isR18
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -26,6 +30,17 @@ class BanRepository(
     private val userQueries = BanUserIdDatabase(banUserIdDriver).banUserIdQueries
     private val tagQueries = BanTagDatabase(banTagDriver).banTagQueries
 
+    private val cacheMutex = Mutex()
+    private var cachedBannedIllustIds: Set<Int>? = null
+    private var cachedBannedUserIds: Set<Int>? = null
+    private var cachedBanTags: List<BanTag>? = null
+
+    private fun invalidateCache() {
+        cachedBannedIllustIds = null
+        cachedBannedUserIds = null
+        cachedBanTags = null
+    }
+
     // region 屏蔽作品
 
     /**
@@ -45,16 +60,20 @@ class BanRepository(
      * 查询指定作品是否已被屏蔽。
      */
     suspend fun isBanIllust(illustId: Int): Boolean = withContext(Dispatchers.Default) {
+        val cached = cachedBannedIllustIds
+        if (cached != null) return@withContext illustId in cached
         illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull() != null
     }
 
     /**
-     * 查询全部被屏蔽的作品 ID 集合，用于列表页快速过滤。
+     * 查询全部被屏蔽的作品 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
     suspend fun getBannedIllustIds(): Set<Int> = withContext(Dispatchers.Default) {
-        illustQueries.selectAll().executeAsList().mapNotNull {
-            it.illust_id.toIntOrNull()
-        }.toSet()
+        cachedBannedIllustIds ?: cacheMutex.withLock {
+            cachedBannedIllustIds ?: illustQueries.selectAll().executeAsList().mapNotNull {
+                it.illust_id.toIntOrNull()
+            }.toSet().also { cachedBannedIllustIds = it }
+        }
     }
 
     /**
@@ -69,6 +88,7 @@ class BanRepository(
             illustQueries.delete(existing.id)
         }
         illustQueries.insert(illustId.toString(), name)
+        invalidateCache()
     }
 
     /**
@@ -76,6 +96,7 @@ class BanRepository(
      */
     suspend fun deleteBanIllust(id: Long) = withContext(Dispatchers.Default) {
         illustQueries.delete(id)
+        invalidateCache()
     }
 
     /**
@@ -83,6 +104,7 @@ class BanRepository(
      */
     suspend fun clearAllBanIllusts() = withContext(Dispatchers.Default) {
         illustQueries.deleteAll()
+        invalidateCache()
     }
 
     /**
@@ -94,6 +116,7 @@ class BanRepository(
                 illustQueries.insert(item.illustId, item.name)
             }
         }
+        invalidateCache()
     }
 
     /**
@@ -107,6 +130,7 @@ class BanRepository(
                 illustQueries.insert(item.illustId, item.name)
             }
         }
+        invalidateCache()
     }
 
     // endregion
@@ -129,17 +153,24 @@ class BanRepository(
     /**
      * 查询指定画师是否已被屏蔽。
      */
+    /**
+     * 查询指定画师是否已被屏蔽。
+     */
     suspend fun isBanUser(userId: Int): Boolean = withContext(Dispatchers.Default) {
+        val cached = cachedBannedUserIds
+        if (cached != null) return@withContext userId in cached
         userQueries.selectByUserId(userId.toString()).executeAsOneOrNull() != null
     }
 
     /**
-     * 查询全部被屏蔽的画师 ID 集合，用于列表页快速过滤。
+     * 查询全部被屏蔽的画师 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
     suspend fun getBannedUserIds(): Set<Int> = withContext(Dispatchers.Default) {
-        userQueries.selectAll().executeAsList().mapNotNull {
-            it.user_id.toIntOrNull()
-        }.toSet()
+        cachedBannedUserIds ?: cacheMutex.withLock {
+            cachedBannedUserIds ?: userQueries.selectAll().executeAsList().mapNotNull {
+                it.user_id.toIntOrNull()
+            }.toSet().also { cachedBannedUserIds = it }
+        }
     }
 
     /**
@@ -154,6 +185,7 @@ class BanRepository(
             userQueries.delete(existing.id)
         }
         userQueries.insert(userId.toString(), name)
+        invalidateCache()
     }
 
     /**
@@ -161,6 +193,7 @@ class BanRepository(
      */
     suspend fun deleteBanUser(id: Long) = withContext(Dispatchers.Default) {
         userQueries.delete(id)
+        invalidateCache()
     }
 
     /**
@@ -168,6 +201,7 @@ class BanRepository(
      */
     suspend fun clearAllBanUsers() = withContext(Dispatchers.Default) {
         userQueries.deleteAll()
+        invalidateCache()
     }
 
     /**
@@ -179,6 +213,7 @@ class BanRepository(
                 userQueries.insert(item.userId, item.name)
             }
         }
+        invalidateCache()
     }
 
     /**
@@ -192,6 +227,7 @@ class BanRepository(
                 userQueries.insert(item.userId, item.name)
             }
         }
+        invalidateCache()
     }
 
     // endregion
@@ -199,15 +235,17 @@ class BanRepository(
     // region 屏蔽标签
 
     /**
-     * 查询全部被屏蔽的标签。
+     * 查询全部被屏蔽的标签（带内存缓存）。
      */
     suspend fun getAllBanTags(): List<BanTag> = withContext(Dispatchers.Default) {
-        tagQueries.selectAll().executeAsList().map {
-            BanTag(
-                id = it.id,
-                name = it.name,
-                translateName = it.translate_name,
-            )
+        cachedBanTags ?: cacheMutex.withLock {
+            cachedBanTags ?: tagQueries.selectAll().executeAsList().map {
+                BanTag(
+                    id = it.id,
+                    name = it.name,
+                    translateName = it.translate_name,
+                )
+            }.also { cachedBanTags = it }
         }
     }
 
@@ -249,6 +287,7 @@ class BanRepository(
             tagQueries.delete(existing.id)
         }
         tagQueries.insert(translateName, name)
+        invalidateCache()
     }
 
     /**
@@ -256,6 +295,7 @@ class BanRepository(
      */
     suspend fun deleteBanTag(id: Long) = withContext(Dispatchers.Default) {
         tagQueries.delete(id)
+        invalidateCache()
     }
 
     /**
@@ -263,6 +303,7 @@ class BanRepository(
      */
     suspend fun clearAllBanTags() = withContext(Dispatchers.Default) {
         tagQueries.deleteAll()
+        invalidateCache()
     }
 
     /**
@@ -274,6 +315,7 @@ class BanRepository(
                 tagQueries.insert(item.translateName, item.name)
             }
         }
+        invalidateCache()
     }
 
     /**
@@ -286,6 +328,33 @@ class BanRepository(
             items.forEach { item ->
                 tagQueries.insert(item.translateName, item.name)
             }
+        }
+        invalidateCache()
+    }
+
+    /**
+     * 统一插画作品屏蔽过滤：
+     * 结合被屏蔽作品 ID、画师 ID、屏蔽标签及偏好（AI 生成过滤、R-18 过滤）执行一站式高效过滤。
+     * 利用内存缓存避免触底翻页与下拉刷新时重复触发多次 SQLite 磁盘读取。
+     */
+    suspend fun filterIllusts(
+        rawIllusts: List<Illust>,
+        banAIIllust: Boolean = false,
+        hideR18: Boolean = false,
+    ): List<Illust> {
+        if (rawIllusts.isEmpty()) return emptyList()
+        val bannedIds = getBannedIllustIds()
+        val bannedUserIds = getBannedUserIds()
+        val banTags = getAllBanTags()
+        return rawIllusts.filter { illust ->
+            illust.id !in bannedIds &&
+                illust.user.id !in bannedUserIds &&
+                (!banAIIllust || illust.illustAIType != 2) &&
+                (!hideR18 || !illust.isR18()) &&
+                !isBannedByTags(
+                    banTags,
+                    illust.tags.flatMap { tag -> listOfNotNull(tag.name, tag.translatedName) }
+                )
         }
     }
 
@@ -325,10 +394,11 @@ class BanRepository(
 
         /**
          * 当 [isRegexMatcher] 为 true 时返回编译后的正则，否则返回 null。
+         * 使用 lazy 缓存避免在遍历作品列表时重复编译相同正则表达式。
          * 正则编译失败时返回 null，避免非法正则导致崩溃。
          */
-        val regex: Regex?
-            get() = if (!isRegexMatcher) {
+        val regex: Regex? by lazy {
+            if (!isRegexMatcher) {
                 null
             } else {
                 runCatching {
@@ -340,6 +410,7 @@ class BanRepository(
                     )
                 }.getOrNull()
             }
+        }
 
         private companion object {
             private const val REGEX_PREFIX = "r'"

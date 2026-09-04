@@ -26,6 +26,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -97,6 +98,7 @@ fun SettingsScreen(
     onBookTagClick: () -> Unit,
     onUpdateSettingClick: () -> Unit,
     onAccountEditClick: () -> Unit,
+    onAccountManageClick: () -> Unit = {},
     onHistoryClick: () -> Unit,
     onDownloadTaskClick: () -> Unit,
     onDataExportClick: () -> Unit,
@@ -114,7 +116,15 @@ fun SettingsScreen(
 
     // 清除缓存的加载态与提示信息。
     var isClearingCache by remember { mutableStateOf(false) }
+    var cacheSizeBytes by remember { mutableLongStateOf(0L) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(isClearingCache) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val imageLoader = SingletonImageLoader.get(context)
+            cacheSizeBytes = imageLoader.diskCache?.size ?: 0L
+        }
+    }
 
     // 页面进入时加载一次账号信息。
     LaunchedEffect(accountRepository) {
@@ -207,6 +217,11 @@ fun SettingsScreen(
                         strings = strings,
                     )
                     if (account != null) {
+                        ArrowPreference(
+                            title = strings.accountManageTitle,
+                            summary = strings.accountSwitch,
+                            onClick = onAccountManageClick,
+                        )
                         ArrowPreference(
                             title = strings.settingAccountInfo,
                             summary = strings.settingAccountInfoSummary,
@@ -337,7 +352,12 @@ fun SettingsScreen(
                     )
                     BasicComponent(
                         title = strings.settingClearCache,
-                        summary = if (isClearingCache) strings.clearingCache else strings.settingClearCacheSummary,
+                        summary = if (isClearingCache) {
+                            strings.clearingCache
+                        } else {
+                            val sizeStr = formatCacheSize(cacheSizeBytes)
+                            "${strings.settingClearCacheSummary} ($sizeStr)"
+                        },
                         onClick = {
                             if (isClearingCache) return@BasicComponent
                             coroutineScope.launch {
@@ -346,6 +366,7 @@ fun SettingsScreen(
                                     val imageLoader = SingletonImageLoader.get(context)
                                     imageLoader.memoryCache?.clear()
                                     imageLoader.diskCache?.clear()
+                                    cacheSizeBytes = 0L
                                     Result.success(Unit)
                                 } catch (e: CancellationException) {
                                     throw e
@@ -489,6 +510,16 @@ private fun AccountSection(
             }
         }
     }
+}
+
+private fun formatCacheSize(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "${((kb * 10).toInt() / 10.0)} KB"
+    val mb = kb / 1024.0
+    if (mb < 1024) return "${((mb * 10).toInt() / 10.0)} MB"
+    val gb = mb / 1024.0
+    return "${((gb * 100).toInt() / 100.0)} GB"
 }
 
 

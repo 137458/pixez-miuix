@@ -4,6 +4,7 @@ import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
@@ -34,6 +35,7 @@ class DownloadRepository(
     private val saver: IllustSaver,
     private val historyRepository: DownloadHistoryRepository,
     private val notifier: DownloadNotifier = DownloadNotifier(),
+    private val settingsRepository: SettingsRepository? = null,
 ) {
 
     /**
@@ -57,6 +59,11 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
+        val subDir = if (settingsRepository?.singleFolder == false) {
+            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
+        } else null
+        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+
         // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
         var historyId = 0L
         if (illust.pageCount <= 1) {
@@ -66,7 +73,7 @@ class DownloadRepository(
             // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
             historyId = historyRepository.saveTask(pendingTask, illust).id
             val bytes = downloadBytes(remoteUrl)
-            val savedPath = saver.save(fileName, bytes)
+            val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
             Napier.d("下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepository.saveTask(successTask, illust, historyId)
@@ -179,7 +186,12 @@ class DownloadRepository(
         return try {
             // 复用已有 HTTP 下载与平台保存逻辑。
             val bytes = downloadBytes(history.remoteUrl)
-            val savedPath = saver.save(FileNamePolicy.requireSafeBaseName(history.fileName), bytes)
+            val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+            val savedPath = saver.save(
+                FileNamePolicy.requireSafeBaseName(history.fileName),
+                bytes,
+                customBasePath = customBasePath,
+            )
             Napier.d("重试下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepository.saveTask(history.copy(status = DownloadStatus.Success))
@@ -226,15 +238,26 @@ class DownloadRepository(
     }
 
     /**
-     * 构建保存文件名：`{title}_p{index}.{ext}`。
-     *
-     * 扩展名优先从原图 URL 路径中提取；无法提取时默认 jpg。
-     * 标题中的文件系统非法字符会被替换为下划线，避免保存失败。
+     * 构建保存文件名：支持用户自定义模板。
+     * 默认格式：`{illust_id}_p{part}.{ext}`。
+     * 支持占位符：`{illust_id}`, `{title}`, `{user_id}`, `{user_name}`, `{part}`。
      */
-    private fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
-        val safeTitle = sanitizeFileName(illust.title)
+    fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
-        return "${safeTitle}_p${pageIndex}.${ext}"
+        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: "{illust_id}_p{part}"
+        var name = template
+            .replace("{illust_id}", illust.id.toString())
+            .replace("{title}", FileNamePolicy.sanitizeSegment(illust.title))
+            .replace("{user_id}", illust.user.id.toString())
+            .replace("{user_name}", FileNamePolicy.sanitizeSegment(illust.user.name))
+            .replace("{part}", pageIndex.toString())
+
+        // 如果多页作品且用户自定义格式未包含 {part}，智能追加 _p{index} 避免多图同名相互覆盖
+        if (illust.pageCount > 1 && !template.contains("{part}")) {
+            name = "${name}_p$pageIndex"
+        }
+        val safeName = FileNamePolicy.sanitizeSegment(name)
+        return "${safeName}.${ext}"
     }
 
     /**

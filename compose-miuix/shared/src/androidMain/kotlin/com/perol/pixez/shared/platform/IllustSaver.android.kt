@@ -17,13 +17,21 @@ import java.io.OutputStream
  * Android 平台实现：将图片保存到公共 Pictures/PixEz 目录，并刷新 MediaStore。
  */
 actual class IllustSaver {
-    actual suspend fun save(fileName: String, bytes: ByteArray): String = withContext(Dispatchers.IO) {
+    actual suspend fun save(
+        fileName: String,
+        bytes: ByteArray,
+        subDir: String?,
+        customBasePath: String?,
+    ): String = withContext(Dispatchers.IO) {
         val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 applicationContext")
 
         val mimeType = getMimeType(fileName)
-        val relativePath = Environment.DIRECTORY_PICTURES + File.separator + "PixEz"
+        val relativeSubDir = if (!subDir.isNullOrBlank()) {
+            File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
+        } else ""
+        val relativePath = Environment.DIRECTORY_PICTURES + File.separator + "PixEz" + relativeSubDir
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val contentValues = ContentValues().apply {

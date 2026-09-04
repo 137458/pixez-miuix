@@ -78,6 +78,7 @@ fun App(
             boardRepository = dependencies.boardRepository,
             historyRepository = dependencies.historyRepository,
             novelHistoryRepository = dependencies.novelHistoryRepository,
+            novelRepository = dependencies.novelRepository,
             muteRepository = dependencies.muteRepository,
             updateCheckClient = dependencies.updateCheckClient,
         )
