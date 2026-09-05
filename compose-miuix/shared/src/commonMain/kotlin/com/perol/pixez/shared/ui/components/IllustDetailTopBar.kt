@@ -145,61 +145,18 @@ fun IllustDetailTopBar(
             )
 
             // 返回按钮
-            TooltipBox(text = strings.back) {
-                val backInteractionSource = remember { MutableInteractionSource() }
-                val isBackPressed by backInteractionSource.collectIsPressedAsState()
-                val backPressScale = remember { Animatable(1f) }
-                LaunchedEffect(isBackPressed) {
-                    backPressScale.animateTo(
-                        targetValue = if (isBackPressed) 0.92f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = 0.7f,
-                            stiffness = 500f,
-                        ),
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .graphicsLayer {
-                            scaleX = backPressScale.value
-                            scaleY = backPressScale.value
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer { alpha = bubbleAlpha }
-                            .liquidGlass(
-                                backdrop = detailBackdrop,
-                                shape = CircleShape,
-                                blurRadius = 16.dp,
-                                tintColor = Color.Black,
-                                tintAlpha = 0.38f,
-                            ),
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = backInteractionSource,
-                                indication = null,
-                                onClick = onBack,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                            tint = dynamicIconTint,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                }
+            LiquidCircleActionButton(
+                tooltip = strings.back,
+                onClick = onBack,
+                bubbleAlpha = bubbleAlpha,
+                detailBackdrop = detailBackdrop,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Back,
+                    contentDescription = strings.back,
+                    tint = dynamicIconTint,
+                    modifier = Modifier.size(22.dp),
+                )
             }
 
             // 中间标题区（随上滑折叠平滑淡入）
@@ -227,192 +184,63 @@ fun IllustDetailTopBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 1. 收藏按钮
-                TooltipBox(text = if (isBookmarked) strings.bookmarked else strings.bookmark) {
-                    val favInteractionSource = remember { MutableInteractionSource() }
-                    val isFavPressed by favInteractionSource.collectIsPressedAsState()
-                    val favPressScale = remember { Animatable(1f) }
-                    LaunchedEffect(isFavPressed) {
-                        favPressScale.animateTo(
-                            targetValue = if (isFavPressed) 0.90f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = 0.7f,
-                                stiffness = 500f,
-                            ),
-                        )
-                    }
-
-                    Box(
+                LiquidCircleActionButton(
+                    tooltip = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                    onClick = onBookmarkClick,
+                    bubbleAlpha = bubbleAlpha,
+                    detailBackdrop = detailBackdrop,
+                    enabled = !isBookmarkLoading && illust != null,
+                ) {
+                    Icon(
+                        imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                        contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+                        tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(22.dp)
                             .graphicsLayer {
-                                scaleX = favPressScale.value
-                                scaleY = favPressScale.value
+                                scaleX = bookmarkHeartScale.value
+                                scaleY = bookmarkHeartScale.value
                             },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { alpha = bubbleAlpha }
-                                .liquidGlass(
-                                    backdrop = detailBackdrop,
-                                    shape = CircleShape,
-                                    blurRadius = 16.dp,
-                                    tintColor = Color.Black,
-                                    tintAlpha = 0.38f,
-                                ),
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = favInteractionSource,
-                                    indication = null,
-                                    enabled = !isBookmarkLoading && illust != null,
-                                    onClick = onBookmarkClick,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                                tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .graphicsLayer {
-                                        scaleX = bookmarkHeartScale.value
-                                        scaleY = bookmarkHeartScale.value
-                                    },
-                            )
-                        }
-                    }
+                    )
                 }
 
                 // 2. 下载按钮
-                TooltipBox(text = strings.download) {
-                    val dlInteractionSource = remember { MutableInteractionSource() }
-                    val isDlPressed by dlInteractionSource.collectIsPressedAsState()
-                    val dlPressScale = remember { Animatable(1f) }
-                    LaunchedEffect(isDlPressed) {
-                        dlPressScale.animateTo(
-                            targetValue = if (isDlPressed) 0.90f else 1f,
-                            animationSpec = spring(
-                                dampingRatio = 0.7f,
-                                stiffness = 500f,
-                            ),
+                LiquidCircleActionButton(
+                    tooltip = strings.download,
+                    onClick = onDownloadClick,
+                    bubbleAlpha = bubbleAlpha,
+                    detailBackdrop = detailBackdrop,
+                    enabled = !isDownloading && illust != null,
+                ) {
+                    if (isDownloading) {
+                        InfiniteProgressIndicator(
+                            color = if (collapseProgress > 0.5f) MiuixTheme.colorScheme.primary else Color.White,
+                            modifier = Modifier.size(20.dp),
                         )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .graphicsLayer {
-                                scaleX = dlPressScale.value
-                                scaleY = dlPressScale.value
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { alpha = bubbleAlpha }
-                                .liquidGlass(
-                                    backdrop = detailBackdrop,
-                                    shape = CircleShape,
-                                    blurRadius = 16.dp,
-                                    tintColor = Color.Black,
-                                    tintAlpha = 0.38f,
-                                ),
+                    } else {
+                        Icon(
+                            imageVector = MiuixIcons.Download,
+                            contentDescription = strings.download,
+                            tint = dynamicIconTint,
+                            modifier = Modifier.size(22.dp),
                         )
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = dlInteractionSource,
-                                    indication = null,
-                                    enabled = !isDownloading && illust != null,
-                                    onClick = onDownloadClick,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isDownloading) {
-                                InfiniteProgressIndicator(
-                                    color = if (collapseProgress > 0.5f) MiuixTheme.colorScheme.primary else Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = MiuixIcons.Download,
-                                    contentDescription = strings.download,
-                                    tint = dynamicIconTint,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
                     }
                 }
 
                 // 3. 更多菜单按钮
                 if (illust != null) {
-                    TooltipBox(text = strings.menuMoreActions) {
-                        val moreInteractionSource = remember { MutableInteractionSource() }
-                        val isMorePressed by moreInteractionSource.collectIsPressedAsState()
-                        val morePressScale = remember { Animatable(1f) }
-                        LaunchedEffect(isMorePressed) {
-                            morePressScale.animateTo(
-                                targetValue = if (isMorePressed) 0.90f else 1f,
-                                animationSpec = spring(
-                                    dampingRatio = 0.7f,
-                                    stiffness = 500f,
-                                ),
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .graphicsLayer {
-                                    scaleX = morePressScale.value
-                                    scaleY = morePressScale.value
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer { alpha = bubbleAlpha }
-                                    .liquidGlass(
-                                        backdrop = detailBackdrop,
-                                        shape = CircleShape,
-                                        blurRadius = 16.dp,
-                                        tintColor = Color.Black,
-                                        tintAlpha = 0.38f,
-                                    ),
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .clickable(
-                                        interactionSource = moreInteractionSource,
-                                        indication = null,
-                                        onClick = { showMoreMenu = !showMoreMenu },
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.More,
-                                    contentDescription = strings.menuMoreActions,
-                                    tint = dynamicIconTint,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
+                    LiquidCircleActionButton(
+                        tooltip = strings.menuMoreActions,
+                        onClick = { showMoreMenu = !showMoreMenu },
+                        bubbleAlpha = bubbleAlpha,
+                        detailBackdrop = detailBackdrop,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.More,
+                            contentDescription = strings.menuMoreActions,
+                            tint = dynamicIconTint,
+                            modifier = Modifier.size(22.dp),
+                        )
                     }
                 }
             }
@@ -658,9 +486,66 @@ fun LiquidMenuItem(
     }
 }
 
-private fun buildSauceNaoUrl(imageUrl: String): String {
-    return URLBuilder(AppConstants.Urls.SAUCE_NAO_SEARCH).apply {
-        parameters.append("db", "999")
-        parameters.append("url", imageUrl)
-    }.buildString()
+@Composable
+private fun LiquidCircleActionButton(
+    tooltip: String,
+    onClick: () -> Unit,
+    bubbleAlpha: Float,
+    detailBackdrop: Backdrop?,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale = remember { Animatable(1f) }
+    LaunchedEffect(isPressed) {
+        pressScale.animateTo(
+            targetValue = if (isPressed) 0.90f else 1f,
+            animationSpec = spring(
+                dampingRatio = 0.7f,
+                stiffness = 500f,
+            ),
+        )
+    }
+
+    TooltipBox(text = tooltip, modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .graphicsLayer {
+                    scaleX = pressScale.value
+                    scaleY = pressScale.value
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = bubbleAlpha }
+                    .liquidGlass(
+                        backdrop = detailBackdrop,
+                        shape = CircleShape,
+                        blurRadius = 16.dp,
+                        tintColor = Color.Black,
+                        tintAlpha = 0.38f,
+                    ),
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        enabled = enabled,
+                        onClick = onClick,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                content()
+            }
+        }
+    }
 }

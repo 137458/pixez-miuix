@@ -217,17 +217,17 @@ fun NovelScreen(
                         // 排行榜模式快速切换
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             NovelSubModeChip(
-                                title = "日榜",
+                                title = strings.rankingDay,
                                 selected = rankingMode == NovelRankingMode.Day,
                                 onClick = { rankingMode = NovelRankingMode.Day },
                             )
                             NovelSubModeChip(
-                                title = "周榜",
+                                title = strings.rankingWeek,
                                 selected = rankingMode == NovelRankingMode.Week,
                                 onClick = { rankingMode = NovelRankingMode.Week },
                             )
                             NovelSubModeChip(
-                                title = "月榜",
+                                title = strings.rankingMonth,
                                 selected = rankingMode == NovelRankingMode.Month,
                                 onClick = { rankingMode = NovelRankingMode.Month },
                             )

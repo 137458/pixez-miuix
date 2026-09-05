@@ -157,7 +157,7 @@ fun NovelCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            text = "${novel.textLength} 字",
+                            text = strings.formatNovelWordCount(novel.textLength),
                             fontSize = 11.sp,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )

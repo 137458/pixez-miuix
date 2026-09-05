@@ -257,11 +257,12 @@ fun IllustFullScreenViewer(
                             .background(Color.Black.copy(alpha = 0.55f))
                             .clickable {
                                 val currentPage = pagerState.currentPage
+                                val pageNumber = currentPage + 1
                                 coroutineScope.launch {
-                                    onToast("${strings.downloadStatusDownloading} P$currentPage…")
+                                    onToast("${strings.downloadStatusDownloading} P$pageNumber…")
                                     val task = downloadRepository.download(illust, pageIndex = currentPage)
                                     val msg = when (task.status) {
-                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$currentPage)"
+                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
                                         DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
                                         else -> null
                                     }
@@ -573,11 +574,4 @@ private fun ZoomableImage(
             }
         }
     }
-}
-
-private fun buildSauceNaoUrl(imageUrl: String): String {
-    return URLBuilder(AppConstants.Urls.SAUCE_NAO_SEARCH).apply {
-        parameters.append("db", "999")
-        parameters.append("url", imageUrl)
-    }.buildString()
 }

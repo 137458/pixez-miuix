@@ -19,6 +19,7 @@ object AppConstants {
         const val AFDIAN = "https://afdian.com/a/perol"
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
+        const val PIXIV_LEAVE_ACCOUNT = "https://www.pixiv.net/leave_pixiv.php"
         const val SAUCE_NAO = "https://saucenao.com"
         const val SAUCE_NAO_SEARCH = "https://saucenao.com/search.php"
         const val AUTHOR_NOTSFSSSF = "https://github.com/Notsfsssf"

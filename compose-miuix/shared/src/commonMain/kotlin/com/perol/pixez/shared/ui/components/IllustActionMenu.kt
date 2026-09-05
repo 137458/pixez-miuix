@@ -96,3 +96,13 @@ fun buildIllustCopyInfo(illust: Illust): String {
 fun buildIllustShareLink(illust: Illust): String {
     return "https://www.pixiv.net/artworks/${illust.id}"
 }
+
+/**
+ * 构造 SauceNAO 以图搜图链接。
+ */
+fun buildSauceNaoUrl(imageUrl: String): String {
+    return io.ktor.http.URLBuilder(com.perol.pixez.shared.ui.AppConstants.Urls.SAUCE_NAO_SEARCH).apply {
+        parameters.append("db", "999")
+        parameters.append("url", imageUrl)
+    }.buildString()
+}

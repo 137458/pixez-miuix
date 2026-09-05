@@ -322,7 +322,7 @@ fun AccountEditScreen(
                     onConfirm = {
                         showDeletionConfirm = false
                         try {
-                            openBrowser("https://www.pixiv.net/leave_pixiv.php")
+                            openBrowser(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT)
                         } catch (e: Exception) {
                             toastMessage = "${strings.loadFailed}：${e.message}"
                             Napier.e("打开账号注销页面失败", e)
@@ -349,6 +349,7 @@ private fun AccountInfoSection(
     account: AccountPersist?,
     modifier: Modifier = Modifier,
 ) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -360,7 +361,7 @@ private fun AccountInfoSection(
         TextField(
             value = account?.account ?: "",
             onValueChange = { },
-            label = "Pixiv ID",
+            label = strings.pixivId,
             modifier = Modifier.fillMaxWidth(),
             enabled = false,
             readOnly = true,

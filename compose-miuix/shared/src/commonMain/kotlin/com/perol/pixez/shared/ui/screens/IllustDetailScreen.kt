@@ -394,10 +394,11 @@ private fun IllustDetailSingleContent(
                                             .background(Color.Black.copy(alpha = 0.55f))
                                             .clickable {
                                                 coroutineScope.launch {
-                                                    toastMessage = "${strings.downloadStatusDownloading} P$pageIndex…"
+                                                    val pageNumber = pageIndex + 1
+                                                    toastMessage = "${strings.downloadStatusDownloading} P$pageNumber…"
                                                     val task = downloadRepository.download(illust, pageIndex = pageIndex)
                                                     toastMessage = when (task.status) {
-                                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageIndex)"
+                                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
                                                         DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
                                                         else -> null
                                                     }
@@ -407,7 +408,7 @@ private fun IllustDetailSingleContent(
                                     ) {
                                         Icon(
                                             imageVector = MiuixIcons.Download,
-                                            contentDescription = "${strings.download} P$pageIndex",
+                                            contentDescription = "${strings.download} P${pageIndex + 1}",
                                             tint = Color.White,
                                             modifier = Modifier.size(18.dp),
                                         )
@@ -423,6 +424,7 @@ private fun IllustDetailSingleContent(
                                     UgoiraPlayer(
                                         illust = illust,
                                         illustRepository = repository,
+                                        downloadRepository = downloadRepository,
                                         modifier = Modifier.fillMaxWidth(),
                                         onSavedZip = { path ->
                                             toastMessage = "${strings.ugoiraSaveZipSuccess}: $path"

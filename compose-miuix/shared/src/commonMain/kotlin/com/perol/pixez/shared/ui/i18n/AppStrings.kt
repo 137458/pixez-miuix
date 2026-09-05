@@ -633,6 +633,8 @@ interface AppStrings {
     val novelPrevChapter: String get() = "上一章"
     val novelNextChapter: String get() = "下一章"
     val novelFontSize: String get() = "字号"
+    val pixivId: String get() = "Pixiv ID"
+    fun formatNovelWordCount(count: Int): String = "$count 字"
 
 
 
