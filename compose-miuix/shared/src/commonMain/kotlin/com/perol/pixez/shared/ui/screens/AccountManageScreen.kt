@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -92,7 +91,7 @@ fun AccountManageScreen(
         refreshAccounts()
     }
 
-    val backdrop = LocalBackdrop.current ?: rememberBlurBackdrop()
+    val backdrop = rememberBlurBackdrop()
 
     Scaffold(
         topBar = {

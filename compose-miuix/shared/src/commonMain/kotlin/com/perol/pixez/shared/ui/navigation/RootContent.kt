@@ -164,7 +164,7 @@ fun RootContent(
     val stack by component.stack.subscribeAsState()
     val active = stack.active.instance
 
-    val backdrop = rememberBlurBackdrop()
+    val floatingBackdrop = rememberBlurBackdrop()
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
@@ -190,7 +190,6 @@ fun RootContent(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
-            com.perol.pixez.shared.ui.components.LocalBackdrop provides backdrop,
         ) {
             if (showAppUpdateDialog && appReleaseInfo != null) {
                 UpdateDialog(
@@ -247,7 +246,9 @@ fun RootContent(
                         ) {
                             Children(
                                 stack = component.stack,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blurBackdropSource(floatingBackdrop),
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = miuixSlideStackAnimation(),
@@ -572,7 +573,7 @@ fun RootContent(
                                     activeTab = activeTab,
                                     onTabSelected = component::onMainTabSelected,
                                     isFloating = useFloatingBottomBar,
-                                    backdrop = backdrop,
+                                    backdrop = floatingBackdrop,
                                     modifier = Modifier.align(Alignment.BottomCenter),
                                 )
                             }

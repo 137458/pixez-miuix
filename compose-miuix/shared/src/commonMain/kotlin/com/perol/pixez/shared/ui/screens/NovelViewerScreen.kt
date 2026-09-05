@@ -33,7 +33,6 @@ import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -104,7 +103,7 @@ fun NovelViewerScreen(
         loadNovel()
     }
 
-    val backdrop = LocalBackdrop.current ?: rememberBlurBackdrop()
+    val backdrop = rememberBlurBackdrop()
 
     Scaffold(
         topBar = {

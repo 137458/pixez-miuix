@@ -122,7 +122,6 @@ fun IllustStaggeredGrid(
             }
         }
 
-        val backdrop = LocalBackdrop.current
         LazyVerticalStaggeredGrid(
             columns = effectiveColumns,
             state = state,

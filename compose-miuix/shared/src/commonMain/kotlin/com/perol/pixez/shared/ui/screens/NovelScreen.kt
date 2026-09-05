@@ -42,7 +42,6 @@ import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.NovelCard
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -78,7 +77,7 @@ fun NovelScreen(
 ) {
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
-    val backdrop = LocalBackdrop.current ?: rememberBlurBackdrop()
+    val backdrop = rememberBlurBackdrop()
 
     var currentTab by rememberSaveable { mutableStateOf(NovelBrowseTab.Recommend) }
     var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
