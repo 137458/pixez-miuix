@@ -247,9 +247,7 @@ fun RootContent(
                         ) {
                             Children(
                                 stack = component.stack,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blurBackdropSource(backdrop),
+                                modifier = Modifier.fillMaxSize(),
                                 animation = predictiveBackAnimation(
                                     backHandler = component.backHandler,
                                     fallbackAnimation = miuixSlideStackAnimation(),
