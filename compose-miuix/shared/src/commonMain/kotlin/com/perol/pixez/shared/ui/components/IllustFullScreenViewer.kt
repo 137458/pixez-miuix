@@ -212,13 +212,9 @@ fun IllustFullScreenViewer(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 // 左侧：返回按钮
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.55f))
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center,
+                LiquidCircleActionButton(
+                    tooltip = strings.back,
+                    onClick = onDismiss,
                 ) {
                     Icon(
                         imageVector = MiuixIcons.Back,
@@ -250,26 +246,22 @@ fun IllustFullScreenViewer(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // 下载当前展示页
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable {
-                                val currentPage = pagerState.currentPage
-                                val pageNumber = currentPage + 1
-                                coroutineScope.launch {
-                                    onToast("${strings.downloadStatusDownloading} P$pageNumber…")
-                                    val task = downloadRepository.download(illust, pageIndex = currentPage)
-                                    val msg = when (task.status) {
-                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                        else -> null
-                                    }
-                                    if (msg != null) onToast(msg)
+                    LiquidCircleActionButton(
+                        tooltip = strings.download,
+                        onClick = {
+                            val currentPage = pagerState.currentPage
+                            val pageNumber = currentPage + 1
+                            coroutineScope.launch {
+                                onToast("${strings.downloadStatusDownloading} P$pageNumber…")
+                                val task = downloadRepository.download(illust, pageIndex = currentPage)
+                                val msg = when (task.status) {
+                                    DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
+                                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                    else -> null
                                 }
-                            },
-                        contentAlignment = Alignment.Center,
+                                if (msg != null) onToast(msg)
+                            }
+                        },
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Download,
@@ -280,23 +272,19 @@ fun IllustFullScreenViewer(
                     }
 
                     // 复制单页作品链接
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable {
-                                val currentPage = pagerState.currentPage
-                                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
-                                val link = "${buildIllustShareLink(illust)}$pageAnchor"
-                                runCatching {
-                                    IllustClipboard().copy(link)
-                                    onToast(strings.copiedToClipboard)
-                                }.onFailure {
-                                    onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
+                    LiquidCircleActionButton(
+                        tooltip = strings.menuCopyLink,
+                        onClick = {
+                            val currentPage = pagerState.currentPage
+                            val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
+                            val link = "${buildIllustShareLink(illust)}$pageAnchor"
+                            runCatching {
+                                IllustClipboard().copy(link)
+                                onToast(strings.copiedToClipboard)
+                            }.onFailure {
+                                onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
+                            }
+                        },
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Link,
@@ -307,24 +295,20 @@ fun IllustFullScreenViewer(
                     }
 
                     // 分享单页作品
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable {
-                                val currentPage = pagerState.currentPage
-                                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
-                                val link = "${buildIllustShareLink(illust)}$pageAnchor"
-                                val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
-                                runCatching {
-                                    IllustShare().share(link, shareTitle)
-                                    onToast(strings.share)
-                                }.onFailure {
-                                    onToast("${strings.share}: ${it.message}")
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
+                    LiquidCircleActionButton(
+                        tooltip = strings.share,
+                        onClick = {
+                            val currentPage = pagerState.currentPage
+                            val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
+                            val link = "${buildIllustShareLink(illust)}$pageAnchor"
+                            val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
+                            runCatching {
+                                IllustShare().share(link, shareTitle)
+                                onToast(strings.share)
+                            }.onFailure {
+                                onToast("${strings.share}: ${it.message}")
+                            }
+                        },
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Share,
@@ -335,24 +319,20 @@ fun IllustFullScreenViewer(
                     }
 
                     // SauceNAO 搜图
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable {
-                                val currentPage = pagerState.currentPage
-                                val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
-                                    illust.metaPages[currentPage].imageUrls?.medium
-                                        ?: illust.metaPages[currentPage].imageUrls?.squareMedium
-                                        ?: illust.imageUrls.medium
-                                } else {
-                                    illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                                }
-                                val sauceUrl = buildSauceNaoUrl(imgUrl)
-                                openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
-                            },
-                        contentAlignment = Alignment.Center,
+                    LiquidCircleActionButton(
+                        tooltip = strings.menuSauceNao,
+                        onClick = {
+                            val currentPage = pagerState.currentPage
+                            val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
+                                illust.metaPages[currentPage].imageUrls?.medium
+                                    ?: illust.metaPages[currentPage].imageUrls?.squareMedium
+                                    ?: illust.imageUrls.medium
+                            } else {
+                                illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                            }
+                            val sauceUrl = buildSauceNaoUrl(imgUrl)
+                            openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
+                        },
                     ) {
                         Icon(
                             imageVector = MiuixIcons.Search,

@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
@@ -59,10 +60,7 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
-        val subDir = if (settingsRepository?.singleFolder == false) {
-            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
-        } else null
-        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
 
         // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
         var historyId = 0L
@@ -248,7 +246,7 @@ class DownloadRepository(
      */
     fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
-        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: "{illust_id}_p{part}"
+        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: AppConstants.Download.DEFAULT_NAME_FORMAT
         var name = template
             .replace("{illust_id}", illust.id.toString())
             .replace("{title}", FileNamePolicy.sanitizeSegment(illust.title))
@@ -264,6 +262,14 @@ class DownloadRepository(
         return "${safeName}.${ext}"
     }
 
+    private fun resolveSubDirAndBasePath(illust: Illust): Pair<String?, String?> {
+        val subDir = if (settingsRepository?.singleFolder == false) {
+            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
+        } else null
+        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+        return subDir to customBasePath
+    }
+
     /**
      * 保存动图原始 ZIP 压缩包，写入下载历史并发送系统通知。
      */
@@ -277,10 +283,7 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
-        val subDir = if (settingsRepository?.singleFolder == false) {
-            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
-        } else null
-        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
 
         var historyId = 0L
         notifier.notifyProgress(illust.id, illust.title, 0, 1)

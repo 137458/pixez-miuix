@@ -983,10 +983,30 @@ private fun SearchIllustResultGrid(
                 applyUgoiraFilter(currentIllusts, ugoiraFilter)
             }
             if (filteredIllusts.isEmpty() && !isLoadingMore) {
-                EmptyPlaceholder(
-                    message = strings.searchEmptyIllust,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                if (nextUrl != null) {
+                    LaunchedEffect(filteredIllusts.isEmpty(), nextUrl) {
+                        loadMore()
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            InfiniteProgressIndicator()
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = strings.loading,
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                        }
+                    }
+                } else {
+                    EmptyPlaceholder(
+                        message = strings.searchEmptyIllust,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             } else {
                 IllustStaggeredGrid(
                     illusts = filteredIllusts,

@@ -12,6 +12,9 @@ object AppConstants {
         const val PIXIV_APP_API = "https://app-api.pixiv.net/"
         const val PIXIV_OAUTH = "https://oauth.secure.pixiv.net/"
         const val PIXIV_FAVICON = "https://i.pximg.net/favicon.ico"
+        const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
+        fun pixivArtworkUrl(id: Long): String = "$PIXIV_ARTWORK_PREFIX$id"
+        fun pixivArtworkUrl(id: Int): String = "$PIXIV_ARTWORK_PREFIX$id"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
         const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
         const val GITHUB_ISSUES = "https://github.com/137458/pixez-miuix/issues"
@@ -37,6 +40,8 @@ object AppConstants {
      * 下载相关预设与占位符
      */
     object Download {
+        const val DEFAULT_NAME_FORMAT = "{illust_id}_p{part}"
+
         val FORMAT_PLACEHOLDERS = listOf(
             "{illust_id}",
             "{user_id}",

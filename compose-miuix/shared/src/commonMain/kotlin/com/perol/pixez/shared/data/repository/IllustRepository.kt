@@ -426,7 +426,8 @@ class IllustRepository(
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            downloadClient.get(zipUrl) {
+            val verifiedUrl = TrustedUrlPolicy.imageUrl(zipUrl)
+            downloadClient.get(verifiedUrl) {
                 header("Referer", AppConstants.Urls.PIXIV_APP_API)
             }.body()
         }

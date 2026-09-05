@@ -140,8 +140,8 @@ fun NovelScreen(
             }.fold(
                 onSuccess = { response ->
                     val currentList = novels.orEmpty()
-                    val newIds = response.novels.map { it.id }.toSet()
-                    novels = currentList + response.novels.filter { it.id !in currentList.map { c -> c.id }.toSet() }
+                    val existingIds = currentList.map { it.id }.toSet()
+                    novels = currentList + response.novels.filter { it.id !in existingIds }
                     nextUrl = response.nextUrl
                     isLoadingMore = false
                 },

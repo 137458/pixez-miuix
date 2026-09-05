@@ -50,6 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -144,9 +145,12 @@ fun UgoiraPlayer(
         if (frames.isEmpty()) return@LaunchedEffect
 
         while (isActive && isPlaying) {
+            val frameStartTime = Clock.System.now().toEpochMilliseconds()
             val currentPair = frames.getOrNull(currentFrameIndex) ?: frames.first()
-            val delayMillis = currentPair.first.delay.toLong().coerceAtLeast(10L)
-            delay(delayMillis)
+            val expectedDelay = currentPair.first.delay.toLong().coerceAtLeast(10L)
+            val elapsed = Clock.System.now().toEpochMilliseconds() - frameStartTime
+            val actualDelay = (expectedDelay - elapsed).coerceAtLeast(1L)
+            delay(actualDelay)
             currentFrameIndex = (currentFrameIndex + 1) % frames.size
         }
     }

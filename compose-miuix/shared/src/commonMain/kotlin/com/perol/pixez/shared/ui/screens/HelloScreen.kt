@@ -17,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.AccountRepository
@@ -78,14 +79,19 @@ fun HelloScreen(
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        user = accountRepository.currentAccount()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = accountRepository.currentAccount()
+            isLoggedIn = user != null
+        }
     }
 
     // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。

@@ -112,7 +112,7 @@ fun SettingsScreen(
     val context = LocalPlatformContext.current
 
     // 当前账号信息，登出后手动置 null。
-    var account by remember { mutableStateOf<AccountPersist?>(null) }
+    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
 
     // 清除缓存的加载态与提示信息。
@@ -127,10 +127,11 @@ fun SettingsScreen(
         }
     }
 
-    // 页面进入时加载一次账号信息。
-    LaunchedEffect(accountRepository) {
-        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        account = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+    LaunchedEffect(Unit) {
+        currentAccount = accountRepository.currentAccount()
+        accountRepository.loginEventFlow.collect {
+            currentAccount = accountRepository.currentAccount()
+        }
     }
 
     // 公告板入口动态状态：仅在公告列表非空时显示。
@@ -200,7 +201,7 @@ fun SettingsScreen(
                 SmallTitle(text = strings.settingSectionAccount)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     AccountSection(
-                        account = account,
+                        account = currentAccount,
                         isLoggingOut = isLoggingOut,
                         onLoginClick = onLoginClick,
                         onLogoutClick = {
@@ -209,7 +210,7 @@ fun SettingsScreen(
                                 try {
                                     isLoggingOut = true
                                     suspendRunCatchingNonCancel { accountRepository.logout() }
-                                        .onSuccess { account = null }
+                                        .onSuccess { currentAccount = null }
                                 } finally {
                                     isLoggingOut = false
                                 }
@@ -217,7 +218,7 @@ fun SettingsScreen(
                         },
                         strings = strings,
                     )
-                    if (account != null) {
+                    if (currentAccount != null) {
                         ArrowPreference(
                             title = strings.accountManageTitle,
                             summary = strings.accountSwitch,

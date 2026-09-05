@@ -106,6 +106,7 @@ import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -850,26 +851,53 @@ private fun IllustDetailSingleContent(
                     try {
                         isDownloading = true
                         toastMessage = "${strings.downloadStatusDownloading}…"
-                        val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                        toastMessage = when (task.status) {
-                            DownloadStatus.Success -> {
-                                if (settings?.starAfterSave == true && !isBookmarked) {
-                                    coroutineScope.launch {
-                                        suspendRunCatchingNonCancel {
-                                            bookmarkRepository.addBookmark(
-                                                illustId = targetIllust.id,
-                                                isPrivate = settings.defaultPrivateLike,
-                                            )
-                                        }.onSuccess {
-                                            isBookmarked = true
-                                        }
+                        if (targetIllust.type == "ugoira") {
+                            val meta = repository.getUgoiraMetadata(targetIllust.id)
+                            val zipBytes = repository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
+                            val savedPath = downloadRepository.saveUgoiraZip(
+                                illust = targetIllust,
+                                bytes = zipBytes,
+                                zipUrl = meta.ugoiraMetadata.zipUrls.medium,
+                            )
+                            if (settings?.starAfterSave == true && !isBookmarked) {
+                                coroutineScope.launch {
+                                    suspendRunCatchingNonCancel {
+                                        bookmarkRepository.addBookmark(
+                                            illustId = targetIllust.id,
+                                            isPrivate = settings.defaultPrivateLike,
+                                        )
+                                    }.onSuccess {
+                                        isBookmarked = true
                                     }
                                 }
-                                strings.downloadStatusSuccess
                             }
-                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                            else -> null
+                            toastMessage = strings.downloadStatusSuccess
+                        } else {
+                            val task = downloadRepository.download(targetIllust, pageIndex = 0)
+                            toastMessage = when (task.status) {
+                                DownloadStatus.Success -> {
+                                    if (settings?.starAfterSave == true && !isBookmarked) {
+                                        coroutineScope.launch {
+                                            suspendRunCatchingNonCancel {
+                                                bookmarkRepository.addBookmark(
+                                                    illustId = targetIllust.id,
+                                                    isPrivate = settings.defaultPrivateLike,
+                                                )
+                                            }.onSuccess {
+                                                isBookmarked = true
+                                            }
+                                        }
+                                    }
+                                    strings.downloadStatusSuccess
+                                }
+                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                else -> null
+                            }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        toastMessage = "${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}"
                     } finally {
                         isDownloading = false
                     }

@@ -34,6 +34,7 @@ interface AppStrings {
     val followed: String
     val copy: String
     val copiedToClipboard: String
+    val imageNoCacheFound: String get() = "Image not found in cache"
     val openInBrowser: String
     val loading: String
     val loadFailed: String
@@ -650,6 +651,7 @@ interface AppStrings {
             8 -> IdStrings
             9 -> FilStrings
             10 -> DeStrings
+            11 -> ViStrings
             else -> EnStrings // 0 或默认 -> en-US
         }
     }
@@ -970,6 +972,7 @@ object ZhCnStrings : AppStrings {
     override val followed = "已关注"
     override val copy = "复制"
     override val copiedToClipboard = "已复制到剪切板"
+    override val imageNoCacheFound = "未找到图片缓存"
     override val openInBrowser = "在浏览器中打开"
     override val loading = "加载中…"
     override val loadFailed = "加载失败"
@@ -1580,6 +1583,7 @@ object ZhTwStrings : AppStrings {
     override val followed = "已關注"
     override val copy = "複製"
     override val copiedToClipboard = "已複製到剪貼簿"
+    override val imageNoCacheFound = "未找到圖片快取"
     override val openInBrowser = "在瀏覽器中開啟"
     override val loading = "載入中…"
     override val loadFailed = "載入失敗"
@@ -2189,6 +2193,7 @@ object EnStrings : AppStrings {
     override val followed = "Following"
     override val copy = "Copy"
     override val copiedToClipboard = "Copied to clipboard"
+    override val imageNoCacheFound = "Image not found in cache"
     override val openInBrowser = "Open in Browser"
     override val loading = "Loading…"
     override val loadFailed = "Failed to load"
@@ -2768,6 +2773,7 @@ object JaStrings : AppStrings {
     override val followed = "フォロー中"
     override val copy = "コピー"
     override val copiedToClipboard = "クリップボードにコピーしました"
+    override val imageNoCacheFound = "画像キャッシュが見つかりません"
     override val openInBrowser = "ブラウザで開く"
     override val loading = "読み込み中…"
     override val loadFailed = "読み込み失敗"
@@ -3894,6 +3900,7 @@ object RuStrings : AppStrings {
     override val followed = "Вы подписаны"
     override val copy = "Копировать"
     override val copiedToClipboard = "Скопировано в буфер обмена"
+    override val imageNoCacheFound = "Кэш изображения не найден"
     override val openInBrowser = "Открыть в браузере"
     override val loading = "Загрузка…"
     override val loadFailed = "Ошибка загрузки"
@@ -5020,6 +5027,7 @@ object TrStrings : AppStrings {
     override val followed = "Takip Ediliyor"
     override val copy = "Kopyala"
     override val copiedToClipboard = "Panoya kopyalandı"
+    override val imageNoCacheFound = "Resim önbellekte bulunamadı"
     override val openInBrowser = "Tarayıcıda Aç"
     override val loading = "Yükleniyor…"
     override val loadFailed = "Yükleme Başarısız"
@@ -6972,3 +6980,11 @@ object DeStrings : AppStrings {
     override val relatedIllusts = "Ähnliche Werke"
     override val noComments = "Noch keine Kommentare"
 }
+
+/**
+ * 越南语 (vi-VN)
+ */
+object ViStrings : AppStrings by EnStrings {
+    override val imageNoCacheFound = "Không tìm thấy bộ nhớ đệm hình ảnh"
+}
+

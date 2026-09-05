@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
@@ -333,24 +334,13 @@ fun IllustDetailTopBar(
                             showMoreMenu = false
                             coroutineScope.launch {
                                 suspendRunCatchingNonCancel {
-                                    val imageLoader = SingletonImageLoader.get(context)
-                                    val diskCache = imageLoader.diskCache
                                     val candidateUrls = listOf(
                                         currentIllust.imageUrls.large,
                                         currentIllust.imageUrls.medium,
                                         currentIllust.imageUrls.squareMedium,
                                     )
-                                    var bytes: ByteArray? = null
-                                    for (candidateUrl in candidateUrls) {
-                                        diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
-                                            val fileSystem = FileSystem.SYSTEM
-                                            if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
-                                                bytes = fileSystem.read(snapshot.data) { readByteArray() }
-                                            }
-                                        }
-                                        if (bytes != null) break
-                                    }
-                                    bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException("未找到图片缓存")
+                                    val bytes = extractCachedImageBytes(context, candidateUrls)
+                                    bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
                                 }.fold(
                                     onSuccess = { onToast(strings.imageCopySuccess) },
                                     onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
@@ -486,12 +476,29 @@ fun LiquidMenuItem(
     }
 }
 
+/**
+ * 从 Coil 磁盘缓存中尝试提取已有图片数据。
+ */
+fun extractCachedImageBytes(context: PlatformContext, urls: List<String>): ByteArray? {
+    val imageLoader = SingletonImageLoader.get(context)
+    val diskCache = imageLoader.diskCache ?: return null
+    for (candidateUrl in urls) {
+        diskCache.openSnapshot(candidateUrl)?.use { snapshot ->
+            val fileSystem = FileSystem.SYSTEM
+            if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
+                return fileSystem.read(snapshot.data) { readByteArray() }
+            }
+        }
+    }
+    return null
+}
+
 @Composable
-private fun LiquidCircleActionButton(
+fun LiquidCircleActionButton(
     tooltip: String,
     onClick: () -> Unit,
-    bubbleAlpha: Float,
-    detailBackdrop: Backdrop?,
+    bubbleAlpha: Float = 1f,
+    detailBackdrop: Backdrop? = null,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
