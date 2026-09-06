@@ -30,6 +30,7 @@ fun IllustActionMenu(
     onDismissRequest: () -> Unit,
     onCopyInfo: () -> Unit,
     onCopyImage: (() -> Unit)? = null,
+    onDownload: (() -> Unit)? = null,
     onCopyLink: () -> Unit,
     onShareLink: () -> Unit,
     onSauceNao: (() -> Unit)? = null,
@@ -43,6 +44,12 @@ fun IllustActionMenu(
         onDismissRequest = onDismissRequest,
     ) {
         Column {
+            if (onDownload != null) {
+                BasicComponent(
+                    title = strings.download,
+                    onClick = onDownload,
+                )
+            }
             BasicComponent(
                 title = strings.menuCopyInfo,
                 onClick = onCopyInfo,

@@ -144,14 +144,21 @@ fun UgoiraPlayer(
         val frames = currentState.frames
         if (frames.isEmpty()) return@LaunchedEffect
 
+        var nextFrameTargetTime = Clock.System.now().toEpochMilliseconds()
         while (isActive && isPlaying) {
-            val frameStartTime = Clock.System.now().toEpochMilliseconds()
             val currentPair = frames.getOrNull(currentFrameIndex) ?: frames.first()
             val expectedDelay = currentPair.first.delay.toLong().coerceAtLeast(10L)
-            val elapsed = Clock.System.now().toEpochMilliseconds() - frameStartTime
-            val actualDelay = (expectedDelay - elapsed).coerceAtLeast(1L)
-            delay(actualDelay)
+            nextFrameTargetTime += expectedDelay
             currentFrameIndex = (currentFrameIndex + 1) % frames.size
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val waitTime = nextFrameTargetTime - now
+            if (waitTime > 0L) {
+                delay(waitTime)
+            } else if (now - nextFrameTargetTime > expectedDelay * 2) {
+                // System stutter or window sleep, resync target time
+                nextFrameTargetTime = now
+            }
         }
     }
 

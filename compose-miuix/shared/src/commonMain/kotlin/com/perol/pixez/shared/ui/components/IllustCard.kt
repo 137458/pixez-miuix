@@ -11,9 +11,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
+import com.perol.pixez.shared.LocalDownloadRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import okio.FileSystem
 import androidx.compose.foundation.layout.Box
@@ -83,12 +85,23 @@ fun IllustCard(
     var showActionMenu by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
+    val downloadRepository = LocalDownloadRepository.current
 
     if (showActionMenu) {
         IllustActionMenu(
             show = showActionMenu,
             showBan = true,
             onDismissRequest = { showActionMenu = false },
+            onDownload = if (downloadRepository != null) {
+                {
+                    showActionMenu = false
+                    coroutineScope.launch {
+                        suspendRunCatchingNonCancel {
+                            downloadRepository.download(illust, pageIndex = 0)
+                        }
+                    }
+                }
+            } else null,
             onCopyInfo = {
                 showActionMenu = false
                 runCatching { IllustClipboard().copy(buildIllustCopyInfo(illust)) }

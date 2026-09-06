@@ -34,6 +34,7 @@ kotlin {
 
     sourceSets {
         val desktopMain by getting
+        val desktopTest by getting
 
         commonMain.dependencies {
             // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
@@ -99,6 +100,11 @@ kotlin {
         desktopMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.sqlite.driver)
+        }
+
+        desktopTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.junit)
         }
 
         iosMain.dependencies {

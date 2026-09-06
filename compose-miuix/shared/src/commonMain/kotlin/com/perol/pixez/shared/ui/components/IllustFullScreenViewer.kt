@@ -50,6 +50,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -59,6 +60,7 @@ import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
@@ -66,6 +68,7 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -89,6 +92,7 @@ fun IllustFullScreenViewer(
     onDismiss: () -> Unit,
 ) {
     val strings = LocalStrings.current
+    val context = LocalPlatformContext.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
     val pagerState = rememberPagerState(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
@@ -266,6 +270,43 @@ fun IllustFullScreenViewer(
                         Icon(
                             imageVector = MiuixIcons.Download,
                             contentDescription = strings.download,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    // 复制单页位图到系统剪贴板
+                    LiquidCircleActionButton(
+                        tooltip = strings.menuCopyImage,
+                        onClick = {
+                            val currentPage = pagerState.currentPage
+                            val targetUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
+                                illust.metaPages[currentPage].imageUrls?.large
+                                    ?: illust.metaPages[currentPage].imageUrls?.medium
+                                    ?: illust.imageUrls.large
+                            } else {
+                                illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                            }
+                            coroutineScope.launch {
+                                suspendRunCatchingNonCancel {
+                                    val candidateUrls = listOfNotNull(
+                                        targetUrl,
+                                        illust.imageUrls.large,
+                                        illust.imageUrls.medium,
+                                    )
+                                    val bytes = extractCachedImageBytes(context, candidateUrls)
+                                    bytes?.let { IllustClipboard().copyImage(it) }
+                                        ?: throw IllegalStateException(strings.imageNoCacheFound)
+                                }.fold(
+                                    onSuccess = { onToast(strings.imageCopySuccess) },
+                                    onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
+                                )
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Copy,
+                            contentDescription = strings.menuCopyImage,
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
                         )
