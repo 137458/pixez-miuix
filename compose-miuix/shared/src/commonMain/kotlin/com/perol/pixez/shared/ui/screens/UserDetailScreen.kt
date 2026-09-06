@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
@@ -67,7 +70,9 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
@@ -118,6 +123,7 @@ fun UserDetailScreen(
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
+    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
@@ -125,10 +131,19 @@ fun UserDetailScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
+    LaunchedEffect(result) {
+        if (result != null) {
+            isManualRefreshing = false
+        }
+    }
+
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             BlurredBar(
                 backdrop = backdrop,
@@ -149,6 +164,12 @@ fun UserDetailScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = triggerManualRefresh) {
+                            Icon(
+                                imageVector = MiuixIcons.Refresh,
+                                contentDescription = strings.refresh,
+                            )
+                        }
                         if (userDetail != null) {
                             val currentDetail = userDetail
                             val entry = remember(currentDetail) {
@@ -228,62 +249,62 @@ fun UserDetailScreen(
                 .blurBackdropSource(backdrop),
         ) {
             when {
-                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                result == null -> LoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
                 result.isSuccess && userDetail != null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = paddingValues.calculateTopPadding()),
-                    ) {
-                        followError?.let { error ->
-                            Text(
-                                text = error,
-                                color = MiuixTheme.colorScheme.error,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            )
-                        }
-                        UserDetailTabContent(
-                            userId = userId,
-                            userDetail = userDetail,
-                            isFollowed = isFollowed,
-                            isFollowLoading = isFollowLoading,
-                            onFollowClick = {
-                                if (!isFollowLoading) {
-                                    coroutineScope.launch {
-                                        try {
-                                            isFollowLoading = true
-                                            followError = null
-                                            suspendRunCatchingNonCancel {
-                                                if (isFollowed) {
-                                                    bookmarkRepository.unfollowUser(userDetail.user.id)
-                                                } else {
-                                                    bookmarkRepository.followUser(userDetail.user.id)
-                                                }
-                                            }.onSuccess {
-                                                isFollowed = !isFollowed
-                                            }.onFailure { e ->
-                                                followError = e.message ?: "${strings.follow}${strings.loadFailed}"
+                    UserDetailTabContent(
+                        userId = userId,
+                        userDetail = userDetail,
+                        isFollowed = isFollowed,
+                        isFollowLoading = isFollowLoading,
+                        onFollowClick = {
+                            if (!isFollowLoading) {
+                                coroutineScope.launch {
+                                    try {
+                                        isFollowLoading = true
+                                        followError = null
+                                        suspendRunCatchingNonCancel {
+                                            if (isFollowed) {
+                                                bookmarkRepository.unfollowUser(userDetail.user.id)
+                                            } else {
+                                                bookmarkRepository.followUser(userDetail.user.id)
                                             }
-                                        } finally {
-                                            isFollowLoading = false
+                                        }.onSuccess {
+                                            isFollowed = !isFollowed
+                                        }.onFailure { e ->
+                                            val err = e.message ?: "${strings.follow}${strings.loadFailed}"
+                                            followError = err
+                                            toastMessage = err
+                                            toastType = ToastType.Error
                                         }
+                                    } finally {
+                                        isFollowLoading = false
                                     }
                                 }
-                            },
-                            onFollowListClick = { onFollowListClick(userDetail.user.id) },
-                            onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
-                            onIllustClick = onIllustClick,
-                            repository = repository,
-                            banRepository = banRepository,
-                            settingsRepository = settingsRepository,
-                            initialTab = initialTab,
-                        )
-                    }
+                            }
+                        },
+                        onFollowListClick = { onFollowListClick(userDetail.user.id) },
+                        onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
+                        onIllustClick = onIllustClick,
+                        repository = repository,
+                        banRepository = banRepository,
+                        settingsRepository = settingsRepository,
+                        initialTab = initialTab,
+                        topPadding = paddingValues.calculateTopPadding(),
+                        scrollBehavior = scrollBehavior,
+                        isRefreshing = isManualRefreshing,
+                        onRefresh = triggerManualRefresh,
+                    )
                 }
                 else -> ErrorPlaceholder(
                     error = result.exceptionOrNull(),
-                    onRetry = { retryCount++ },
-                    modifier = Modifier.fillMaxSize(),
+                    onRetry = triggerManualRefresh,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                 )
             }
             ToastMessage(
@@ -312,6 +333,10 @@ private fun UserDetailTabContent(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
     initialTab: Int = 0,
+    topPadding: Dp = 0.dp,
+    scrollBehavior: ScrollBehavior,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     val strings = LocalStrings.current
     var selectedTabIndex by rememberSaveable(userId, initialTab) { mutableIntStateOf(initialTab) }
@@ -350,6 +375,10 @@ private fun UserDetailTabContent(
                 repository = repository,
                 banRepository = banRepository,
                 settingsRepository = settingsRepository,
+                topPadding = topPadding,
+                scrollBehavior = scrollBehavior,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
             )
             1 -> UserBookmarksTab(
                 userId = userId,
@@ -358,6 +387,10 @@ private fun UserDetailTabContent(
                 repository = repository,
                 banRepository = banRepository,
                 settingsRepository = settingsRepository,
+                topPadding = topPadding,
+                scrollBehavior = scrollBehavior,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
             )
         }
     }
@@ -374,6 +407,10 @@ private fun UserWorksTab(
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    topPadding: Dp = 0.dp,
+    scrollBehavior: ScrollBehavior,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
 
@@ -440,8 +477,18 @@ private fun UserWorksTab(
         header = header,
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
-        onRetry = { retryCount++ },
+        onRetry = {
+            retryCount++
+            onRefresh()
+        },
         emptyText = strings.userNoWorks,
+        topPadding = topPadding,
+        scrollBehavior = scrollBehavior,
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            retryCount++
+            onRefresh()
+        },
     )
 }
 
@@ -456,6 +503,10 @@ private fun UserBookmarksTab(
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    topPadding: Dp = 0.dp,
+    scrollBehavior: ScrollBehavior,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     val strings = LocalStrings.current
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
@@ -540,11 +591,21 @@ private fun UserBookmarksTab(
         header = bookmarkHeader,
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
-        onRetry = { retryCount++ },
+        onRetry = {
+            retryCount++
+            onRefresh()
+        },
         emptyText = if (restrict == "public") {
             strings.userNoBookmarks.format(strings.userPublicRestrict)
         } else {
             strings.userNoBookmarks.format(strings.userPrivateRestrict)
+        },
+        topPadding = topPadding,
+        scrollBehavior = scrollBehavior,
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            retryCount++
+            onRefresh()
         },
     )
 }
@@ -564,37 +625,93 @@ private fun IllustTabBody(
     onIllustClick: (Int) -> Unit,
     onRetry: () -> Unit,
     emptyText: String,
+    topPadding: Dp = 0.dp,
+    scrollBehavior: ScrollBehavior,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     when {
-        state == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        state == null -> LoadingPlaceholder(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = topPadding),
+        )
         state.isSuccess -> {
             if (illusts.isEmpty() && !isLoadingMore) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (header != null) header()
-                    EmptyPlaceholder(
-                        message = emptyText,
+                PullToRefresh(
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = topPadding),
+                    topAppBarScrollBehavior = scrollBehavior,
+                ) {
+                    LazyColumn(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                    )
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            top = topPadding + 8.dp,
+                            end = 8.dp,
+                            bottom = 100.dp,
+                        ),
+                    ) {
+                        if (header != null) {
+                            item(
+                                key = "empty_tab_header",
+                                contentType = "grid_custom_header",
+                            ) {
+                                header()
+                            }
+                        }
+                        item(
+                            key = "empty_placeholder_item",
+                            contentType = "empty_placeholder",
+                        ) {
+                            EmptyPlaceholder(
+                                message = emptyText,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                            )
+                        }
+                    }
                 }
             } else {
-                IllustStaggeredGrid(
-                    illusts = illusts,
-                    onIllustClick = onIllustClick,
-                    header = header,
+                PullToRefresh(
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
                     modifier = Modifier.fillMaxSize(),
-                    hasMore = hasMore,
-                    isLoadingMore = isLoadingMore,
-                    loadMoreError = loadMoreError,
-                    onLoadMore = onLoadMore,
-                )
+                    contentPadding = PaddingValues(top = topPadding),
+                    topAppBarScrollBehavior = scrollBehavior,
+                ) {
+                    IllustStaggeredGrid(
+                        illusts = illusts,
+                        onIllustClick = onIllustClick,
+                        header = header,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            top = topPadding + 8.dp,
+                            end = 8.dp,
+                            bottom = 100.dp,
+                        ),
+                        hasMore = hasMore,
+                        isLoadingMore = isLoadingMore,
+                        loadMoreError = loadMoreError,
+                        onLoadMore = onLoadMore,
+                    )
+                }
             }
         }
         else -> ErrorPlaceholder(
             error = state.exceptionOrNull(),
             onRetry = onRetry,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = topPadding),
         )
     }
 }
