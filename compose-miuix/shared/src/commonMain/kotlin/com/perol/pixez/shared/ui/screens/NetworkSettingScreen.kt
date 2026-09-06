@@ -286,14 +286,14 @@ private fun NetworkModeOption(
 }
 
 /**
- * 默认图片 Host：对齐 Flutter 版 ImageHost。
+ * 默认图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-private const val DEFAULT_IMAGE_HOST = "i.pximg.net"
+private const val DEFAULT_IMAGE_HOST = AppConstants.Network.HOST_PXIMG
 
 /**
  * 镜像图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
+private const val MIRROR_IMAGE_HOST = AppConstants.Network.HOST_PIXIV_RE
 
 /**
  * standard 网络模式 code：该模式下不显示图片源选择。

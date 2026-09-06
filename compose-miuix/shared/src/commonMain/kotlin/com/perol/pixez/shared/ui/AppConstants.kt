@@ -5,12 +5,23 @@ package com.perol.pixez.shared.ui
  */
 object AppConstants {
 
-    const val PIXIV_USER_PREFIX = Urls.PIXIV_USER_PREFIX
-    fun pixivUserUrl(userId: Long): String = Urls.pixivUserUrl(userId)
-    fun pixivUserUrl(userId: Int): String = Urls.pixivUserUrl(userId)
-    fun pixivUserUrl(userId: String): String = Urls.pixivUserUrl(userId)
-    fun pixivArtworkUrl(id: Long): String = Urls.pixivArtworkUrl(id)
-    fun pixivArtworkUrl(id: Int): String = Urls.pixivArtworkUrl(id)
+    /**
+     * 网络与图片源域名
+     */
+    object Network {
+        const val HOST_PXIMG = "i.pximg.net"
+        const val HOST_PIXIV_RE = "i.pixiv.re"
+        const val URL_PXIMG_FAVICON = "https://$HOST_PXIMG/favicon.ico"
+    }
+
+    /**
+     * 分享与复制信息模板
+     */
+    object Share {
+        const val DEFAULT_COPY_TEXT_FORMAT = "title:{title}\npainter:{user_name}\nillust id:{illust_id}"
+        const val ARTWORK_URL_PLACEHOLDER = "https://www.pixiv.net/artworks/{illust_id}"
+        const val USER_URL_PLACEHOLDER = "https://www.pixiv.net/users/{user_id}"
+    }
 
     /**
      * 外部链接与社群地址
@@ -18,7 +29,7 @@ object AppConstants {
     object Urls {
         const val PIXIV_APP_API = "https://app-api.pixiv.net/"
         const val PIXIV_OAUTH = "https://oauth.secure.pixiv.net/"
-        const val PIXIV_FAVICON = "https://i.pximg.net/favicon.ico"
+        const val PIXIV_FAVICON = Network.URL_PXIMG_FAVICON
         const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
         fun pixivArtworkUrl(id: Long): String = "$PIXIV_ARTWORK_PREFIX$id"
         fun pixivArtworkUrl(id: Int): String = "$PIXIV_ARTWORK_PREFIX$id"

@@ -76,11 +76,11 @@ fun CopyTextSettingScreen(
             PlaceholderChip(label = strings.copyTextChipTags, text = "{tags}"),
             PlaceholderChip(
                 label = strings.copyTextChipArtworkUrl,
-                text = "https://www.pixiv.net/artworks/{illust_id}",
+                text = AppConstants.Share.ARTWORK_URL_PLACEHOLDER,
             ),
             PlaceholderChip(
                 label = strings.copyTextChipUserUrl,
-                text = "https://www.pixiv.net/users/{user_id}",
+                text = AppConstants.Share.USER_URL_PLACEHOLDER,
             ),
         )
     }
@@ -252,5 +252,5 @@ private fun insertTextAtSelection(
 /**
  * 默认分享格式模板，与原 Flutter 版保持一致。
  */
-private const val DEFAULT_COPY_TEXT_FORMAT = "title:{title}\npainter:{user_name}\nillust id:{illust_id}"
+private const val DEFAULT_COPY_TEXT_FORMAT = AppConstants.Share.DEFAULT_COPY_TEXT_FORMAT
 

@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -34,7 +35,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -72,8 +72,8 @@ fun WidgetRecommendSettingScreen(
     val widgetPictureSourceOptions = remember(strings) {
         listOf(
             WidgetPictureSourceOption(source = "", label = strings.settingWidgetPictureSourceFollowGlobal),
-            WidgetPictureSourceOption(source = "i.pximg.net", label = strings.settingWidgetPictureSourceOfficial),
-            WidgetPictureSourceOption(source = "i.pixiv.re", label = strings.settingWidgetPictureSourceMirror),
+            WidgetPictureSourceOption(source = AppConstants.Network.HOST_PXIMG, label = strings.settingWidgetPictureSourceOfficial),
+            WidgetPictureSourceOption(source = AppConstants.Network.HOST_PIXIV_RE, label = strings.settingWidgetPictureSourceMirror),
         )
     }
 

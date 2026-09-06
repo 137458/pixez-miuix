@@ -96,16 +96,7 @@ enum class ToastType {
     Normal,
     Success,
     Error,
-    Warning,
 }
-
-/**
- * 结构化 Toast 数据载荷。
- */
-data class ToastData(
-    val message: String,
-    val type: ToastType = ToastType.Normal,
-)
 
 /**
  * 智能推断消息状态（向下兼容未显式声明 ToastType 的传统调用）。
@@ -115,7 +106,6 @@ private fun inferToastType(message: String): ToastType {
     return when {
         lower.contains("成功") || lower.contains("success") || lower.contains("已保存") || lower.contains("已复制") || lower.contains("saved") || lower.contains("copied") -> ToastType.Success
         lower.contains("失败") || lower.contains("failed") || lower.contains("错误") || lower.contains("error") -> ToastType.Error
-        lower.contains("警告") || lower.contains("warning") || lower.contains("注意") -> ToastType.Warning
         else -> ToastType.Normal
     }
 }
@@ -127,7 +117,7 @@ private fun inferToastType(message: String): ToastType {
  *
  * @param message 提示文本，为 null 或空字符串时不显示
  * @param modifier 外部修饰符
- * @param type 提示类型（成功、错误、警告、普通），若不传则根据文本关键词智能降级推断
+ * @param type 提示类型（成功、错误、普通），若不传则智能推断
  * @param durationMillis 显示时长，默认 2 秒
  * @param backdrop 可选的背景采样 Backdrop，若提供则渲染物理透镜折射
  * @param onDismiss 提示消失后的回调，用于清空外部状态
@@ -156,7 +146,7 @@ fun ToastMessage(
 
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     val cornerRadius = 24.dp
-    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+    val shape = remember(cornerRadius) { SquircleShape(cornerRadius) }
     val effectiveType = remember(message, type) {
         type ?: if (message != null) inferToastType(message) else ToastType.Normal
     }
@@ -273,15 +263,6 @@ fun ToastMessage(
                             )
                             Spacer(modifier = Modifier.width(7.dp))
                         }
-                        ToastType.Warning -> {
-                            Icon(
-                                imageVector = MiuixIcons.Report,
-                                contentDescription = null,
-                                tint = if (isDark) Color(0xFFFF9F0A) else Color(0xFFFF9500),
-                                modifier = Modifier.size(17.dp),
-                            )
-                            Spacer(modifier = Modifier.width(7.dp))
-                        }
                         ToastType.Normal -> {}
                     }
 
@@ -297,25 +278,4 @@ fun ToastMessage(
             }
         }
     }
-}
-
-/**
- * 结构化 [ToastData] 驱动的重载组件。
- */
-@Composable
-fun ToastMessage(
-    toast: ToastData?,
-    modifier: Modifier = Modifier,
-    durationMillis: Long = 2000L,
-    backdrop: Backdrop? = null,
-    onDismiss: () -> Unit = {},
-) {
-    ToastMessage(
-        message = toast?.message,
-        modifier = modifier,
-        type = toast?.type,
-        durationMillis = durationMillis,
-        backdrop = backdrop,
-        onDismiss = onDismiss,
-    )
 }

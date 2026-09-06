@@ -69,9 +69,9 @@ fun buildUserCopyInfo(userDetail: UserDetail): String {
  * 构造用户主页链接。
  */
 fun buildUserShareLink(userId: Int): String {
-    return AppConstants.pixivUserUrl(userId)
+    return AppConstants.Urls.pixivUserUrl(userId)
 }
 
 fun buildUserShareLink(userId: Long): String {
-    return AppConstants.pixivUserUrl(userId)
+    return AppConstants.Urls.pixivUserUrl(userId)
 }

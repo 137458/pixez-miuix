@@ -24,12 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
 import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -78,10 +81,19 @@ fun DataExportScreen(
 
     // 轻量提示文本；页面重建后恢复，避免用户错过结果。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
 
     // 当前弹出的导出/导入对话框；切换后重置，避免旧状态残留。
     var pendingOperation by remember { mutableStateOf<PendingOperation?>(null) }
     var showPathDialog by remember { mutableStateOf(false) }
+
+    // 弹窗关闭后延迟清理引用，确保退场动画平滑且不造成内存泄漏
+    LaunchedEffect(showPathDialog) {
+        if (!showPathDialog && pendingOperation != null) {
+            delay(300)
+            pendingOperation = null
+        }
+    }
 
     // 用于强制路径输入对话框每次打开都重置输入内容，避免相同 type/action 时 data class 相等导致 remember 不重置。
     var dialogKey by remember { mutableIntStateOf(0) }
@@ -195,11 +207,13 @@ fun DataExportScreen(
                         }
                         val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
                         val typeStr = operation.type.title(strings)
-                        toastMessage = if (result.isSuccess) {
-                            strings.dataExportSuccess.format(typeStr, actionStr)
+                        if (result.isSuccess) {
+                            toastMessage = strings.dataExportSuccess.format(typeStr, actionStr)
+                            toastType = ToastType.Success
                         } else {
                             val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
-                            strings.dataExportFailed.format(typeStr, actionStr, cause)
+                            toastMessage = strings.dataExportFailed.format(typeStr, actionStr, cause)
+                            toastType = ToastType.Error
                         }
                     } finally {
                         // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
@@ -211,6 +225,7 @@ fun DataExportScreen(
 
         ToastMessage(
             message = toastMessage,
+            type = toastType,
             onDismiss = { toastMessage = null },
         )
     }

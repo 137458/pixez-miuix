@@ -199,7 +199,7 @@ fun LiquidFilterChip(
             .squircleClip(cornerRadius)
             .liquidGlass(
                 backdrop = backdrop,
-                shape = RoundedCornerShape(cornerRadius),
+                shape = SquircleShape(cornerRadius),
                 blurRadius = 16.dp,
                 tintColor = itemBackground,
                 tintAlpha = tintAlpha,

@@ -75,8 +75,6 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
-private const val MIRROR_IMAGE_HOST = "i.pixiv.re"
-
 /**
  * 首次启动引导向导页（Onboarding Guide）：
  * Step 1: 语言与界面偏好（品牌 Hero 欢迎区、即时语言切换、贡献者感谢）
@@ -286,7 +284,7 @@ private fun GuideNetworkStep(
 ) {
     val strings = LocalStrings.current
     var isMirrorEnabled by remember {
-        mutableStateOf(settingsRepository.pictureSource == MIRROR_IMAGE_HOST)
+        mutableStateOf(settingsRepository.pictureSource == AppConstants.Network.HOST_PIXIV_RE)
     }
     var currentNetworkMode by remember {
         mutableStateOf(settingsRepository.apiNetworkMode)
@@ -338,7 +336,7 @@ private fun GuideNetworkStep(
                         summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
                         onClick = {
                             isMirrorEnabled = true
-                            settingsRepository.pictureSource = MIRROR_IMAGE_HOST
+                            settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
                         },
                         endActions = {
                             CheckIndicator(selected = isMirrorEnabled)
@@ -349,7 +347,7 @@ private fun GuideNetworkStep(
                         summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
                         onClick = {
                             isMirrorEnabled = false
-                            settingsRepository.pictureSource = "i.pximg.net"
+                            settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
                         },
                         endActions = {
                             CheckIndicator(selected = !isMirrorEnabled)

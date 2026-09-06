@@ -34,8 +34,10 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -106,8 +108,17 @@ fun ShieldScreen(
     var deleteTarget by remember { mutableStateOf<DeleteTarget?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // 统一的 Toast 提示文本。
+    // 弹窗关闭后延迟清理引用，保证退场动画期间数据完整并不泄漏引用
+    LaunchedEffect(showDeleteDialog) {
+        if (!showDeleteDialog && deleteTarget != null) {
+            delay(300)
+            deleteTarget = null
+        }
+    }
+
+    // 统一的 Toast 提示文本与类型。
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastType by remember { mutableStateOf(ToastType.Normal) }
 
     val strings = LocalStrings.current
 
@@ -383,6 +394,7 @@ fun ShieldScreen(
                     }.onFailure { e ->
                         Napier.e("删除屏蔽项失败", e)
                         toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
+                        toastType = ToastType.Error
                     }
                     isDeleting = false
                 }
@@ -391,6 +403,7 @@ fun ShieldScreen(
 
         ToastMessage(
             message = toastMessage,
+            type = toastType,
             onDismiss = { toastMessage = null },
         )
     }

@@ -58,7 +58,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.buildUserCopyInfo
-import com.perol.pixez.shared.ui.components.buildUserShareLink
+import com.perol.pixez.shared.ui.AppConstants
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -164,7 +164,7 @@ fun UserDetailScreen(
                                         DropdownItem(
                                             text = strings.menuCopyLink,
                                             onClick = {
-                                                val link = buildUserShareLink(currentDetail.user.id)
+                                                val link = AppConstants.Urls.pixivUserUrl(currentDetail.user.id)
                                                 runCatching { clipboard.copy(link) }.fold(
                                                     onSuccess = { toastMessage = strings.copiedToClipboard },
                                                     onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
@@ -174,7 +174,7 @@ fun UserDetailScreen(
                                         DropdownItem(
                                             text = strings.menuShareLink,
                                             onClick = {
-                                                val link = buildUserShareLink(currentDetail.user.id)
+                                                val link = AppConstants.Urls.pixivUserUrl(currentDetail.user.id)
                                                 runCatching { share.share(link, currentDetail.user.name) }.fold(
                                                     onSuccess = { toastMessage = strings.share },
                                                     onFailure = { e -> toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}" },

@@ -7,7 +7,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Ok
@@ -25,10 +24,9 @@ fun CheckIndicator(
     contentDescription: String? = null,
 ) {
     if (selected) {
-        val strings = LocalStrings.current
         Icon(
             imageVector = MiuixIcons.Ok,
-            contentDescription = contentDescription ?: strings.confirm,
+            contentDescription = contentDescription,
             tint = MiuixTheme.colorScheme.primary,
             modifier = modifier
                 .size(20.dp)
