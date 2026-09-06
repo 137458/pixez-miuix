@@ -42,9 +42,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.model.UserDetail
+import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
@@ -102,11 +104,25 @@ fun UserDetailScreen(
     bookmarkRepository: BookmarkRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    accountRepository: AccountRepository? = null,
     initialTab: Int = 0,
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     val strings = LocalStrings.current
+
+    val currentAccountState = produceState<AccountPersist?>(initialValue = null, accountRepository) {
+        accountRepository?.let { repo ->
+            value = suspendRunCatchingNonCancel { repo.currentAccount() }.getOrNull()
+            repo.loginEventFlow.collect {
+                value = suspendRunCatchingNonCancel { repo.currentAccount() }.getOrNull()
+            }
+        }
+    }
+    val isCurrentUser = remember(currentAccountState.value, userId) {
+        val currentId = currentAccountState.value?.userId?.toIntOrNull()
+        currentId != null && currentId == userId
+    }
 
     // 用户资料加载失败时整页进入错误态；成功后再展示 Tab 内容。
     val detailState = produceState<Result<UserDetail>?>(
@@ -263,6 +279,7 @@ fun UserDetailScreen(
                     UserDetailTabContent(
                         userId = userId,
                         userDetail = userDetail,
+                        isCurrentUser = isCurrentUser,
                         isFollowed = isFollowed,
                         isFollowLoading = isFollowLoading,
                         onFollowClick = {
@@ -328,6 +345,7 @@ fun UserDetailScreen(
 private fun UserDetailTabContent(
     userId: Int,
     userDetail: UserDetail,
+    isCurrentUser: Boolean,
     isFollowed: Boolean,
     isFollowLoading: Boolean,
     onFollowClick: () -> Unit,
@@ -381,6 +399,7 @@ private fun UserDetailTabContent(
         ) {
             UserProfileHeader(
                 userDetail = userDetail,
+                isCurrentUser = isCurrentUser,
                 isFollowed = isFollowed,
                 isLoading = isFollowLoading,
                 onFollowClick = onFollowClick,
@@ -921,6 +940,7 @@ private fun IllustTabBody(
 @Composable
 private fun UserProfileHeader(
     userDetail: UserDetail,
+    isCurrentUser: Boolean,
     isFollowed: Boolean,
     isLoading: Boolean,
     onFollowClick: () -> Unit,
@@ -972,15 +992,17 @@ private fun UserProfileHeader(
                 )
             }
 
-            Button(
-                onClick = onFollowClick,
-                enabled = !isLoading,
-                colors = if (isFollowed) ButtonDefaults.buttonColors() else ButtonDefaults.buttonColorsPrimary(),
-            ) {
-                Text(
-                    text = if (isFollowed) strings.followed else strings.follow,
-                    style = MiuixTheme.textStyles.footnote1,
-                )
+            if (!isCurrentUser) {
+                Button(
+                    onClick = onFollowClick,
+                    enabled = !isLoading,
+                    colors = if (isFollowed) ButtonDefaults.buttonColors() else ButtonDefaults.buttonColorsPrimary(),
+                ) {
+                    Text(
+                        text = if (isFollowed) strings.followed else strings.follow,
+                        style = MiuixTheme.textStyles.footnote1,
+                    )
+                }
             }
         }
 

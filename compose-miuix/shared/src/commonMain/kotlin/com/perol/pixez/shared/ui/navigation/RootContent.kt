@@ -302,6 +302,7 @@ fun RootContent(
                         bookmarkRepository = bookmarkRepository,
                         banRepository = banRepository,
                         settingsRepository = settingsRepository,
+                        accountRepository = accountRepository,
                         initialTab = instance.initialTab,
                     )
 
