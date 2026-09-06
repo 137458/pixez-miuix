@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -18,12 +19,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +74,7 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
@@ -342,6 +347,34 @@ private fun UserDetailTabContent(
     var selectedTabIndex by rememberSaveable(userId, initialTab) { mutableIntStateOf(initialTab) }
     val tabs = listOf(strings.userWorkTab, strings.userBookmarkTab)
 
+    val worksGridState = rememberLazyStaggeredGridState()
+    val bookmarksGridState = rememberLazyStaggeredGridState()
+
+    var worksLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedTabIndex == 0) }
+    var bookmarksLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedTabIndex == 1) }
+
+    LaunchedEffect(selectedTabIndex) {
+        if (selectedTabIndex == 0) worksLoadedOnce = true
+        if (selectedTabIndex == 1) bookmarksLoadedOnce = true
+    }
+
+    val isCurrentListAtTop by remember(selectedTabIndex) {
+        derivedStateOf {
+            if (selectedTabIndex == 0) {
+                worksGridState.firstVisibleItemIndex == 0 && worksGridState.firstVisibleItemScrollOffset == 0
+            } else {
+                bookmarksGridState.firstVisibleItemIndex == 0 && bookmarksGridState.firstVisibleItemScrollOffset == 0
+            }
+        }
+    }
+
+    LaunchedEffect(selectedTabIndex, isCurrentListAtTop) {
+        if (isCurrentListAtTop) {
+            scrollBehavior.state.heightOffset = 0f
+            scrollBehavior.state.contentOffset = 0f
+        }
+    }
+
     val headerContent: @Composable () -> Unit = {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -367,31 +400,58 @@ private fun UserDetailTabContent(
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        when (selectedTabIndex) {
-            0 -> UserWorksTab(
-                userId = userId,
-                header = headerContent,
-                onIllustClick = onIllustClick,
-                repository = repository,
-                banRepository = banRepository,
-                settingsRepository = settingsRepository,
-                topPadding = topPadding,
-                scrollBehavior = scrollBehavior,
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-            )
-            1 -> UserBookmarksTab(
-                userId = userId,
-                header = headerContent,
-                onIllustClick = onIllustClick,
-                repository = repository,
-                banRepository = banRepository,
-                settingsRepository = settingsRepository,
-                topPadding = topPadding,
-                scrollBehavior = scrollBehavior,
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-            )
+        // 作品 Tab（保持组合生命周期，切换不销毁、不重新加载）
+        val isWorksActive = selectedTabIndex == 0
+        if (isWorksActive || worksLoadedOnce) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = if (isWorksActive) 1f else 0f
+                        translationX = if (isWorksActive) 0f else 100000f
+                    },
+            ) {
+                UserWorksTab(
+                    userId = userId,
+                    header = headerContent,
+                    gridState = worksGridState,
+                    onIllustClick = onIllustClick,
+                    repository = repository,
+                    banRepository = banRepository,
+                    settingsRepository = settingsRepository,
+                    topPadding = topPadding,
+                    scrollBehavior = scrollBehavior,
+                    isRefreshing = isRefreshing && isWorksActive,
+                    onRefresh = onRefresh,
+                )
+            }
+        }
+
+        // 收藏 Tab（保持组合生命周期，切换不销毁、不重新加载）
+        val isBookmarksActive = selectedTabIndex == 1
+        if (isBookmarksActive || bookmarksLoadedOnce) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = if (isBookmarksActive) 1f else 0f
+                        translationX = if (isBookmarksActive) 0f else 100000f
+                    },
+            ) {
+                UserBookmarksTab(
+                    userId = userId,
+                    header = headerContent,
+                    gridState = bookmarksGridState,
+                    onIllustClick = onIllustClick,
+                    repository = repository,
+                    banRepository = banRepository,
+                    settingsRepository = settingsRepository,
+                    topPadding = topPadding,
+                    scrollBehavior = scrollBehavior,
+                    isRefreshing = isRefreshing && isBookmarksActive,
+                    onRefresh = onRefresh,
+                )
+            }
         }
     }
 }
@@ -403,6 +463,7 @@ private fun UserDetailTabContent(
 private fun UserWorksTab(
     userId: Int,
     header: (@Composable () -> Unit)? = null,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
@@ -475,6 +536,7 @@ private fun UserWorksTab(
         isLoadingMore = isLoadingMore,
         loadMoreError = loadMoreError,
         header = header,
+        gridState = gridState,
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
         onRetry = {
@@ -499,6 +561,7 @@ private fun UserWorksTab(
 private fun UserBookmarksTab(
     userId: Int,
     header: (@Composable () -> Unit)? = null,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onIllustClick: (Int) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
@@ -510,12 +573,8 @@ private fun UserBookmarksTab(
 ) {
     val strings = LocalStrings.current
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
-    var selectedRestrictIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedRestrictIndex by rememberSaveable(userId) { mutableIntStateOf(0) }
     val restrictTabs = listOf(strings.userPublicRestrict, strings.userPrivateRestrict)
-    val restrict = if (selectedRestrictIndex == 0) "public" else "private"
-
-    // 切换用户、可见性选项或重试时重新加载；加载完成后过滤掉被屏蔽作品。
-    var retryCount by rememberSaveable(userId, restrict) { mutableIntStateOf(0) }
 
     suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
         banRepository.filterIllusts(
@@ -524,49 +583,107 @@ private fun UserBookmarksTab(
             hideR18 = settingsRepository.hIsNotAllow,
         )
 
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
+    val coroutineScope = rememberCoroutineScope()
+
+    // 公开收藏状态缓存
+    var publicRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    var publicLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedRestrictIndex == 0) }
+    LaunchedEffect(selectedRestrictIndex) {
+        if (selectedRestrictIndex == 0) publicLoadedOnce = true
+    }
+    val publicState = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
         userId,
-        restrict,
-        retryCount,
+        publicRetryCount,
+        publicLoadedOnce,
         banRepository,
         settingsRepository.changeVersion,
     ) {
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, restrict) }
+        if (!publicLoadedOnce) return@produceState
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public") }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
+    var publicIllusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var publicNextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    var publicIsLoadingMore by remember { mutableStateOf(false) }
+    var publicLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
 
-    var illusts by remember(userId, restrict, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(userId, restrict, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(publicState.value) {
+        publicState.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            publicIllusts = initialIllusts
+            publicNextUrl = initialNextUrl
+            publicIsLoadingMore = false
+            publicLoadMoreError = null
+        }
+    }
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
+    // 私密收藏状态缓存
+    var privateRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    var privateLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedRestrictIndex == 1) }
+    LaunchedEffect(selectedRestrictIndex) {
+        if (selectedRestrictIndex == 1) privateLoadedOnce = true
+    }
+    val privateState = produceState<Result<Pair<List<Illust>, String?>>?>(
+        initialValue = null,
+        userId,
+        privateRetryCount,
+        privateLoadedOnce,
+        banRepository,
+        settingsRepository.changeVersion,
+    ) {
+        if (!privateLoadedOnce) return@produceState
+        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private") }
+        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+    }
+    var privateIllusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
+    var privateNextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    var privateIsLoadingMore by remember { mutableStateOf(false) }
+    var privateLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
+
+    LaunchedEffect(privateState.value) {
+        privateState.value?.onSuccess { (initialIllusts, initialNextUrl) ->
+            privateIllusts = initialIllusts
+            privateNextUrl = initialNextUrl
+            privateIsLoadingMore = false
+            privateLoadMoreError = null
         }
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, restrict, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    val filtered = filterBanned(response.illusts)
-                    illusts = illusts + filtered
-                    nextUrl = response.nextUrl
-                }
-                .onFailure { error ->
-                    loadMoreError = error
-                }
-            isLoadingMore = false
+        if (selectedRestrictIndex == 0) {
+            val currentNextUrl = publicNextUrl ?: return
+            if (publicIsLoadingMore) return
+            coroutineScope.launch {
+                publicIsLoadingMore = true
+                publicLoadMoreError = null
+                suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public", nextUrl = currentNextUrl) }
+                    .onSuccess { response ->
+                        val filtered = filterBanned(response.illusts)
+                        publicIllusts = publicIllusts + filtered
+                        publicNextUrl = response.nextUrl
+                    }
+                    .onFailure { error ->
+                        publicLoadMoreError = error
+                    }
+                publicIsLoadingMore = false
+            }
+        } else {
+            val currentNextUrl = privateNextUrl ?: return
+            if (privateIsLoadingMore) return
+            coroutineScope.launch {
+                privateIsLoadingMore = true
+                privateLoadMoreError = null
+                suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private", nextUrl = currentNextUrl) }
+                    .onSuccess { response ->
+                        val filtered = filterBanned(response.illusts)
+                        privateIllusts = privateIllusts + filtered
+                        privateNextUrl = response.nextUrl
+                    }
+                    .onFailure { error ->
+                        privateLoadMoreError = error
+                    }
+                privateIsLoadingMore = false
+            }
         }
     }
 
@@ -582,20 +699,28 @@ private fun UserBookmarksTab(
         }
     }
 
+    val isPublic = selectedRestrictIndex == 0
+    val currentState = if (isPublic) publicState.value else privateState.value
+    val currentIllusts = if (isPublic) publicIllusts else privateIllusts
+    val currentHasMore = if (isPublic) publicNextUrl != null else privateNextUrl != null
+    val currentIsLoadingMore = if (isPublic) publicIsLoadingMore else privateIsLoadingMore
+    val currentLoadMoreError = if (isPublic) publicLoadMoreError else privateLoadMoreError
+
     IllustTabBody(
-        state = state.value,
-        illusts = illusts,
-        hasMore = nextUrl != null,
-        isLoadingMore = isLoadingMore,
-        loadMoreError = loadMoreError,
+        state = currentState,
+        illusts = currentIllusts,
+        hasMore = currentHasMore,
+        isLoadingMore = currentIsLoadingMore,
+        loadMoreError = currentLoadMoreError,
         header = bookmarkHeader,
+        gridState = gridState,
         onLoadMore = ::loadMore,
         onIllustClick = onIllustClick,
         onRetry = {
-            retryCount++
+            if (isPublic) publicRetryCount++ else privateRetryCount++
             onRefresh()
         },
-        emptyText = if (restrict == "public") {
+        emptyText = if (isPublic) {
             strings.userNoBookmarks.format(strings.userPublicRestrict)
         } else {
             strings.userNoBookmarks.format(strings.userPrivateRestrict)
@@ -604,7 +729,7 @@ private fun UserBookmarksTab(
         scrollBehavior = scrollBehavior,
         isRefreshing = isRefreshing,
         onRefresh = {
-            retryCount++
+            if (isPublic) publicRetryCount++ else privateRetryCount++
             onRefresh()
         },
     )
@@ -612,6 +737,7 @@ private fun UserBookmarksTab(
 
 /**
  * Tab 内容通用容器：处理加载 / 空态 / 错误 / 列表展示。
+ * 即使处于加载态或错误态，头部信息（UserProfileHeader + TabRow）始终保持常驻展示，避免全屏闪烁。
  */
 @Composable
 private fun IllustTabBody(
@@ -621,6 +747,7 @@ private fun IllustTabBody(
     isLoadingMore: Boolean,
     loadMoreError: Throwable?,
     header: (@Composable () -> Unit)? = null,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onLoadMore: () -> Unit,
     onIllustClick: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -631,11 +758,49 @@ private fun IllustTabBody(
     onRefresh: () -> Unit = {},
 ) {
     when {
-        state == null -> LoadingPlaceholder(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = topPadding),
-        )
+        state == null -> {
+            PullToRefresh(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = topPadding),
+                topAppBarScrollBehavior = scrollBehavior,
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = topPadding + 8.dp,
+                        end = 8.dp,
+                        bottom = 100.dp,
+                    ),
+                ) {
+                    if (header != null) {
+                        item(
+                            key = "loading_tab_header",
+                            contentType = "grid_custom_header",
+                        ) {
+                            header()
+                        }
+                    }
+                    item(
+                        key = "loading_tab_indicator",
+                        contentType = "loading_indicator",
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(240.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            InfiniteProgressIndicator()
+                        }
+                    }
+                }
+            }
+        }
         state.isSuccess -> {
             if (illusts.isEmpty() && !isLoadingMore) {
                 PullToRefresh(
@@ -688,6 +853,7 @@ private fun IllustTabBody(
                     IllustStaggeredGrid(
                         illusts = illusts,
                         onIllustClick = onIllustClick,
+                        state = gridState,
                         header = header,
                         modifier = Modifier
                             .fillMaxSize()
@@ -706,13 +872,48 @@ private fun IllustTabBody(
                 }
             }
         }
-        else -> ErrorPlaceholder(
-            error = state.exceptionOrNull(),
-            onRetry = onRetry,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = topPadding),
-        )
+        else -> {
+            PullToRefresh(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = topPadding),
+                topAppBarScrollBehavior = scrollBehavior,
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = topPadding + 8.dp,
+                        end = 8.dp,
+                        bottom = 100.dp,
+                    ),
+                ) {
+                    if (header != null) {
+                        item(
+                            key = "error_tab_header",
+                            contentType = "grid_custom_header",
+                        ) {
+                            header()
+                        }
+                    }
+                    item(
+                        key = "error_placeholder_item",
+                        contentType = "error_placeholder",
+                    ) {
+                        ErrorPlaceholder(
+                            error = state.exceptionOrNull(),
+                            onRetry = onRetry,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
