@@ -55,6 +55,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
@@ -99,8 +100,9 @@ fun DownloadTaskScreen(
     var showBatchMenu by rememberSaveable { mutableStateOf(false) }
     // 是否显示清空已完成确认栏。
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
-    // Toast 提示文本。
+    // Toast 提示文本与类型。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
     // 正在处理中的任务 ID 集合，用于禁用单条操作按钮防止重复提交。
     // 使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免标志位永久锁定。
     var processingTaskIds by remember { mutableStateOf(setOf<Long>()) }
@@ -236,9 +238,11 @@ fun DownloadTaskScreen(
                                                             downloadRepository.retry(task)
                                                         }.onSuccess {
                                                             toastMessage = strings.downloadTaskRetrySuccess
+                                                            toastType = ToastType.Success
                                                             refreshToken++
                                                         }.onFailure {
                                                             toastMessage = strings.downloadTaskRetryFailed.format(it.message ?: "")
+                                                            toastType = ToastType.Error
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -259,6 +263,7 @@ fun DownloadTaskScreen(
                                                             refreshToken++
                                                         }.onFailure {
                                                             toastMessage = "${strings.btnDelete}${strings.loadFailed}: ${it.message}"
+                                                            toastType = ToastType.Error
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -310,15 +315,25 @@ fun DownloadTaskScreen(
                                         .onFailure { failureCount++ }
                                 }
                                 toastMessage = when {
-                                    failureCount == 0 -> strings.downloadTaskRetrySuccess
-                                    successCount == 0 -> strings.downloadTaskRetryFailed
-                                    else -> "${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)"
+                                    failureCount == 0 -> {
+                                        toastType = ToastType.Success
+                                        strings.downloadTaskRetrySuccess
+                                    }
+                                    successCount == 0 -> {
+                                        toastType = ToastType.Error
+                                        strings.downloadTaskRetryFailed
+                                    }
+                                    else -> {
+                                        toastType = ToastType.Normal
+                                        "${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)"
+                                    }
                                 }
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
                                 toastMessage = "${strings.downloadTaskRetryFailed}: ${e.message}"
+                                toastType = ToastType.Error
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -366,6 +381,7 @@ fun DownloadTaskScreen(
                                 throw e
                             } catch (e: Exception) {
                                 toastMessage = "${strings.btnDelete}: ${e.message}"
+                                toastType = ToastType.Error
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -379,6 +395,7 @@ fun DownloadTaskScreen(
             // Toast 提示层，覆盖在其他内容之上。
             ToastMessage(
                 message = toastMessage,
+                type = toastType,
                 onDismiss = { toastMessage = null },
             )
         }

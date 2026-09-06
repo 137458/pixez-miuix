@@ -29,10 +29,10 @@ import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -88,11 +88,8 @@ fun DataExportScreen(
     var showPathDialog by remember { mutableStateOf(false) }
 
     // 弹窗关闭后延迟清理引用，确保退场动画平滑且不造成内存泄漏
-    LaunchedEffect(showPathDialog) {
-        if (!showPathDialog && pendingOperation != null) {
-            delay(300)
-            pendingOperation = null
-        }
+    DelayedClearEffect(showPathDialog, pendingOperation) {
+        pendingOperation = null
     }
 
     // 用于强制路径输入对话框每次打开都重置输入内容，避免相同 type/action 时 data class 相等导致 remember 不重置。

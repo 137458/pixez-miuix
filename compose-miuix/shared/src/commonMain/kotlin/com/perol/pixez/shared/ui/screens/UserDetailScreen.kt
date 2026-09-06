@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.buildUserCopyInfo
 import com.perol.pixez.shared.ui.AppConstants
 import kotlinx.coroutines.launch
@@ -115,6 +116,7 @@ fun UserDetailScreen(
     var isFollowLoading by rememberSaveable { mutableStateOf(false) }
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
@@ -156,8 +158,14 @@ fun UserDetailScreen(
                                             onClick = {
                                                 val text = buildUserCopyInfo(currentDetail)
                                                 runCatching { clipboard.copy(text) }.fold(
-                                                    onSuccess = { toastMessage = strings.copiedToClipboard },
-                                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                                    onSuccess = {
+                                                        toastMessage = strings.copiedToClipboard
+                                                        toastType = ToastType.Success
+                                                    },
+                                                    onFailure = { e ->
+                                                        toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}"
+                                                        toastType = ToastType.Error
+                                                    },
                                                 )
                                             }
                                         ),
@@ -166,8 +174,14 @@ fun UserDetailScreen(
                                             onClick = {
                                                 val link = AppConstants.Urls.pixivUserUrl(currentDetail.user.id)
                                                 runCatching { clipboard.copy(link) }.fold(
-                                                    onSuccess = { toastMessage = strings.copiedToClipboard },
-                                                    onFailure = { e -> toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}" },
+                                                    onSuccess = {
+                                                        toastMessage = strings.copiedToClipboard
+                                                        toastType = ToastType.Success
+                                                    },
+                                                    onFailure = { e ->
+                                                        toastMessage = "${strings.copy}${strings.loadFailed}: ${e.message}"
+                                                        toastType = ToastType.Error
+                                                    },
                                                 )
                                             }
                                         ),
@@ -176,8 +190,14 @@ fun UserDetailScreen(
                                             onClick = {
                                                 val link = AppConstants.Urls.pixivUserUrl(currentDetail.user.id)
                                                 runCatching { share.share(link, currentDetail.user.name) }.fold(
-                                                    onSuccess = { toastMessage = strings.share },
-                                                    onFailure = { e -> toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}" },
+                                                    onSuccess = {
+                                                        toastMessage = strings.share
+                                                        toastType = ToastType.Success
+                                                    },
+                                                    onFailure = { e ->
+                                                        toastMessage = "${strings.share}${strings.loadFailed}: ${e.message}"
+                                                        toastType = ToastType.Error
+                                                    },
                                                 )
                                             }
                                         ),
@@ -266,6 +286,7 @@ fun UserDetailScreen(
             }
             ToastMessage(
                 message = toastMessage,
+                type = toastType,
                 onDismiss = { toastMessage = null },
             )
         }

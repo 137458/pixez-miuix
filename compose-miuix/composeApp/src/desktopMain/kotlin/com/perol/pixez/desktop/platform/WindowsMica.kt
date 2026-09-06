@@ -3,7 +3,6 @@ package com.perol.pixez.desktop.platform
 import androidx.compose.ui.awt.ComposeWindow
 import com.sun.jna.Native
 import com.sun.jna.Pointer
-import com.sun.jna.Structure
 import com.sun.jna.platform.win32.W32Errors
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinNT
@@ -22,25 +21,12 @@ import com.sun.jna.win32.W32APIOptions
  */
 object WindowsMica {
 
-    @Structure.FieldOrder("cxLeftWidth", "cxRightWidth", "cyTopHeight", "cyBottomHeight")
-    class Margins(
-        @JvmField var cxLeftWidth: Int = -1,
-        @JvmField var cxRightWidth: Int = -1,
-        @JvmField var cyTopHeight: Int = -1,
-        @JvmField var cyBottomHeight: Int = -1,
-    ) : Structure()
-
     internal interface DwmApi : StdCallLibrary {
         fun DwmSetWindowAttribute(
             hwnd: WinDef.HWND,
             dwAttribute: Int,
             pvAttribute: IntByReference,
             cbAttribute: Int,
-        ): WinNT.HRESULT
-
-        fun DwmExtendFrameIntoClientArea(
-            hwnd: WinDef.HWND,
-            pMarInset: Margins,
         ): WinNT.HRESULT
 
         companion object {
@@ -69,12 +55,8 @@ object WindowsMica {
     const val DWMWA_SYSTEMBACKDROP_TYPE = 38
     const val DWMWA_MICA_EFFECT = 1029
 
-    // DWM_SYSTEMBACKDROP_TYPE 枚举值
-    const val DWMSBT_AUTO = 0
-    const val DWMSBT_NONE = 1
-    const val DWMSBT_MAINWINDOW = 2 // Mica
-    const val DWMSBT_TRANSIENTWINDOW = 3 // Acrylic
-    const val DWMSBT_TABBEDWINDOW = 4 // Mica Alt
+    // DWM_SYSTEMBACKDROP_TYPE (DWMSBT_MAINWINDOW = 2 为 Mica 材质)
+    const val DWMSBT_MAINWINDOW = 2
 
     val windowsBuildNumber: Int by lazy {
         val os = System.getProperty("os.name").orEmpty()

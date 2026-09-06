@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-import kotlinx.coroutines.delay
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
@@ -77,11 +77,8 @@ fun AccountManageScreen(
     var toastType by remember { mutableStateOf(ToastType.Normal) }
 
     // 弹窗关闭后延迟清理引用，保证退场动画期间数据完整并不泄漏引用
-    LaunchedEffect(showDeleteDialog) {
-        if (!showDeleteDialog && accountToDelete != null) {
-            delay(300)
-            accountToDelete = null
-        }
+    DelayedClearEffect(showDeleteDialog, accountToDelete) {
+        accountToDelete = null
     }
 
     fun refreshAccounts() {

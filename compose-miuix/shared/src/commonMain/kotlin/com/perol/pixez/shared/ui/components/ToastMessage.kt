@@ -43,6 +43,8 @@ import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -99,13 +101,43 @@ enum class ToastType {
 }
 
 /**
- * 智能推断消息状态（向下兼容未显式声明 ToastType 的传统调用）。
+ * 结构化 Toast 数据载荷。
  */
-private fun inferToastType(message: String): ToastType {
+data class ToastData(
+    val message: String,
+    val type: ToastType = ToastType.Normal,
+)
+
+/**
+ * 智能推断消息状态（向下兼容未显式声明 ToastType 的传统调用）。
+ * 结合当前环境语言字典动态匹配，同时兜底多语言常见关键词，杜绝非中英语言下的图标退化。
+ */
+fun inferToastType(message: String, strings: AppStrings? = null): ToastType {
     val lower = message.lowercase()
+    if (strings != null) {
+        val successKeywords = listOf(
+            strings.complete,
+            strings.copiedToClipboard,
+            strings.share,
+        )
+        if (successKeywords.any { it.isNotBlank() && (lower.contains(it.lowercase()) || message.contains(it)) }) {
+            return ToastType.Success
+        }
+        val errorKeywords = listOf(
+            strings.loadFailed,
+            strings.retry,
+        )
+        if (errorKeywords.any { it.isNotBlank() && (lower.contains(it.lowercase()) || message.contains(it)) }) {
+            return ToastType.Error
+        }
+    }
     return when {
-        lower.contains("成功") || lower.contains("success") || lower.contains("已保存") || lower.contains("已复制") || lower.contains("saved") || lower.contains("copied") -> ToastType.Success
-        lower.contains("失败") || lower.contains("failed") || lower.contains("错误") || lower.contains("error") -> ToastType.Error
+        lower.contains("成功") || lower.contains("success") || lower.contains("已保存") || lower.contains("已复制") ||
+            lower.contains("saved") || lower.contains("copied") || lower.contains("erfolgreich") ||
+            lower.contains("完了") || lower.contains("成功") || lower.contains("성공") || lower.contains("успешно") -> ToastType.Success
+        lower.contains("失败") || lower.contains("failed") || lower.contains("错误") || lower.contains("error") ||
+            lower.contains("fehler") || lower.contains("失敗") || lower.contains("エラー") ||
+            lower.contains("실패") || lower.contains("오류") || lower.contains("ошибка") -> ToastType.Error
         else -> ToastType.Normal
     }
 }
@@ -117,7 +149,7 @@ private fun inferToastType(message: String): ToastType {
  *
  * @param message 提示文本，为 null 或空字符串时不显示
  * @param modifier 外部修饰符
- * @param type 提示类型（成功、错误、普通），若不传则智能推断
+ * @param type 提示类型（成功、错误、普通），若不传则结合 LocalStrings 智能推断
  * @param durationMillis 显示时长，默认 2 秒
  * @param backdrop 可选的背景采样 Backdrop，若提供则渲染物理透镜折射
  * @param onDismiss 提示消失后的回调，用于清空外部状态
@@ -144,11 +176,12 @@ fun ToastMessage(
         }
     }
 
+    val strings = LocalStrings.current
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     val cornerRadius = 24.dp
     val shape = remember(cornerRadius) { SquircleShape(cornerRadius) }
-    val effectiveType = remember(message, type) {
-        type ?: if (message != null) inferToastType(message) else ToastType.Normal
+    val effectiveType = remember(message, type, strings) {
+        type ?: if (message != null) inferToastType(message, strings) else ToastType.Normal
     }
 
     Box(
@@ -279,3 +312,25 @@ fun ToastMessage(
         }
     }
 }
+
+/**
+ * 结构化 [ToastData] 驱动的重载组件。
+ */
+@Composable
+fun ToastMessage(
+    toast: ToastData?,
+    modifier: Modifier = Modifier,
+    durationMillis: Long = 2000L,
+    backdrop: Backdrop? = null,
+    onDismiss: () -> Unit = {},
+) {
+    ToastMessage(
+        message = toast?.message,
+        modifier = modifier,
+        type = toast?.type,
+        durationMillis = durationMillis,
+        backdrop = backdrop,
+        onDismiss = onDismiss,
+    )
+}
+

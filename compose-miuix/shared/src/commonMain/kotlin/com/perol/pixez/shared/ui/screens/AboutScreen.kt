@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.github.aakira.napier.Napier
@@ -87,6 +88,11 @@ fun AboutScreen(
     val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastType by remember { mutableStateOf(ToastType.Error) }
+    val showErrorToast: (String) -> Unit = {
+        toastMessage = it
+        toastType = ToastType.Error
+    }
     var showDisclaimerDialog by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -184,13 +190,13 @@ fun AboutScreen(
                             name = "Perol_Notsfsssf",
                             message = strings.roleFounderMaintainer,
                             avatarUrl = "https://avatars.githubusercontent.com/u/31962397?v=4",
-                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_NOTSFSSSF, strings) { toastMessage = it } },
+                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_NOTSFSSSF, strings, onError = showErrorToast) },
                         )
                         DeveloperRow(
                             name = "137458 (Rosemary)",
                             message = strings.roleMiuixMaintainer,
                             avatarUrl = "https://avatars.githubusercontent.com/u/138956834?v=4",
-                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_ROSEMARY, strings) { toastMessage = it } },
+                            onClick = { openSafeUrl(AppConstants.Urls.AUTHOR_ROSEMARY, strings, onError = showErrorToast) },
                         )
                     }
                 }
@@ -201,7 +207,7 @@ fun AboutScreen(
                         ContributorsRow(
                             contributors = CONTRIBUTORS,
                             onUrlClick = { url ->
-                                openSafeUrl(url, strings) { toastMessage = it }
+                                openSafeUrl(url, strings, onError = showErrorToast)
                             },
                         )
                     }
@@ -214,14 +220,14 @@ fun AboutScreen(
                             title = strings.aboutRepo,
                             summary = "github.com/137458/pixez-miuix",
                             onClick = {
-                                openSafeUrl(AppConstants.Urls.GITHUB_REPO, strings) { toastMessage = it }
+                                openSafeUrl(AppConstants.Urls.GITHUB_REPO, strings, onError = showErrorToast)
                             },
                         )
                         BasicComponent(
                             title = strings.aboutFeedback,
                             summary = AppConstants.Urls.FEEDBACK_EMAIL,
                             onClick = {
-                                openSafeUrl(AppConstants.Urls.FEEDBACK_MAILTO, strings) { toastMessage = it }
+                                openSafeUrl(AppConstants.Urls.FEEDBACK_MAILTO, strings, onError = showErrorToast)
                             },
                         )
                         BasicComponent(
@@ -266,6 +272,7 @@ fun AboutScreen(
 
         ToastMessage(
             message = toastMessage,
+            type = toastType,
             onDismiss = { toastMessage = null },
         )
     }

@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import kotlinx.coroutines.delay
+import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -75,11 +75,8 @@ fun BookTagScreen(
     var isDeleting by remember { mutableStateOf(false) }
 
     // 弹窗关闭后延迟清理引用，保证退场动画期间数据完整并不泄漏引用
-    LaunchedEffect(showDeleteDialog) {
-        if (!showDeleteDialog && tagToDelete != null) {
-            delay(300)
-            tagToDelete = null
-        }
+    DelayedClearEffect(showDeleteDialog, tagToDelete) {
+        tagToDelete = null
     }
 
     // 排序操作期间禁用按钮。

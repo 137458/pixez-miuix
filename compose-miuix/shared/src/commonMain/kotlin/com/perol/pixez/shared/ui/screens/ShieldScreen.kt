@@ -33,11 +33,11 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -109,11 +109,8 @@ fun ShieldScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     // 弹窗关闭后延迟清理引用，保证退场动画期间数据完整并不泄漏引用
-    LaunchedEffect(showDeleteDialog) {
-        if (!showDeleteDialog && deleteTarget != null) {
-            delay(300)
-            deleteTarget = null
-        }
+    DelayedClearEffect(showDeleteDialog, deleteTarget) {
+        deleteTarget = null
     }
 
     // 统一的 Toast 提示文本与类型。

@@ -100,6 +100,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
 import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
 import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
@@ -937,6 +938,7 @@ private fun IllustDetailSingleContent(
 
         ToastMessage(
             message = toastMessage ?: bookmarkError,
+            type = if (bookmarkError != null) ToastType.Error else null,
             backdrop = detailBackdrop,
             onDismiss = {
                 toastMessage = null
