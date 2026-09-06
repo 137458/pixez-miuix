@@ -933,6 +933,7 @@ private fun IllustDetailSingleContent(
                 downloadRepository = downloadRepository,
                 onToast = { toastMessage = it },
                 onDismiss = { fullScreenPageIndex = null },
+                detailBackdrop = detailBackdrop,
             )
         }
 

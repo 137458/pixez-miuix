@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -498,7 +499,7 @@ fun LiquidCircleActionButton(
     tooltip: String,
     onClick: () -> Unit,
     bubbleAlpha: Float = 1f,
-    detailBackdrop: Backdrop? = null,
+    detailBackdrop: Backdrop? = LocalBackdrop.current,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -536,6 +537,13 @@ fun LiquidCircleActionButton(
                         blurRadius = 16.dp,
                         tintColor = Color.Black,
                         tintAlpha = 0.38f,
+                    )
+                    .then(
+                        if (detailBackdrop == null) {
+                            Modifier.border(0.5.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                        } else {
+                            Modifier
+                        }
                     ),
             )
 
