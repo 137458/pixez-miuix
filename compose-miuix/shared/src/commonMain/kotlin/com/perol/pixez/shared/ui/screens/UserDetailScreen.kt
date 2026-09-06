@@ -92,6 +92,7 @@ fun UserDetailScreen(
     bookmarkRepository: BookmarkRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    initialTab: Int = 0,
 ) {
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -275,6 +276,7 @@ fun UserDetailScreen(
                             repository = repository,
                             banRepository = banRepository,
                             settingsRepository = settingsRepository,
+                            initialTab = initialTab,
                         )
                     }
                 }
@@ -309,9 +311,10 @@ private fun UserDetailTabContent(
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    initialTab: Int = 0,
 ) {
     val strings = LocalStrings.current
-    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedTabIndex by rememberSaveable(userId, initialTab) { mutableIntStateOf(initialTab) }
     val tabs = listOf(strings.userWorkTab, strings.userBookmarkTab)
 
     val headerContent: @Composable () -> Unit = {

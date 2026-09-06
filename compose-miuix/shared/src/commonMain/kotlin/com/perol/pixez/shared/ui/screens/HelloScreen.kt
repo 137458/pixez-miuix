@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,6 +69,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun HelloScreen(
     onIllustClick: (Int) -> Unit,
+    onUserClick: (Int) -> Unit = {},
     onSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
     onRecomUserClick: () -> Unit,
@@ -257,6 +263,22 @@ fun HelloScreen(
                                     imageVector = MiuixIcons.AddCircle,
                                     contentDescription = strings.recomUserTitle,
                                 )
+                            }
+                            val currentUser = user
+                            val targetUserId = currentUser?.userId?.toIntOrNull()
+                            if (currentUser != null && targetUserId != null) {
+                                IconButton(
+                                    onClick = { onUserClick(targetUserId) },
+                                ) {
+                                    PixivAsyncImage(
+                                        model = currentUser.userImage,
+                                        contentDescription = strings.myProfile,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape),
+                                    )
+                                }
                             }
                         }
                         IconButton(

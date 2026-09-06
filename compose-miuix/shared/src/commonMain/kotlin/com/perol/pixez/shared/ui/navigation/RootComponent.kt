@@ -112,9 +112,15 @@ class RootComponent(
 
     /**
      * 打开用户详情页。
+     *
+     * @param initialTab 初始选中的标签页：0 = 作品，1 = 收藏。
      */
+    fun onUserClicked(userId: Int, initialTab: Int = 0) {
+        navigation.pushToFront(Config.UserDetail(userId, initialTab))
+    }
+
     fun onUserClicked(userId: Int) {
-        navigation.pushToFront(Config.UserDetail(userId))
+        onUserClicked(userId, 0)
     }
 
     /**
@@ -398,7 +404,7 @@ class RootComponent(
     ): Child = when (config) {
         is Config.Main -> Child.Main(config.tab)
         is Config.IllustDetail -> Child.IllustDetail(config.illustId)
-        is Config.UserDetail -> Child.UserDetail(config.userId)
+        is Config.UserDetail -> Child.UserDetail(config.userId, config.initialTab)
         is Config.SpotlightDetail -> Child.SpotlightDetail(config.article)
         Config.Guide -> Child.Guide
         is Config.Comments -> Child.Comments(config.illustId)
@@ -460,7 +466,7 @@ class RootComponent(
         data class IllustDetail(val illustId: Int) : Config()
 
         @Serializable
-        data class UserDetail(val userId: Int) : Config()
+        data class UserDetail(val userId: Int, val initialTab: Int = 0) : Config()
 
         @Serializable
         data class SpotlightDetail(val article: SpotlightArticle) : Config()
@@ -574,7 +580,7 @@ class RootComponent(
     sealed class Child {
         data class Main(val tab: MainTab) : Child()
         data class IllustDetail(val illustId: Int) : Child()
-        data class UserDetail(val userId: Int) : Child()
+        data class UserDetail(val userId: Int, val initialTab: Int = 0) : Child()
         data class SpotlightDetail(val article: SpotlightArticle) : Child()
         data object Guide : Child()
         data object Settings : Child()

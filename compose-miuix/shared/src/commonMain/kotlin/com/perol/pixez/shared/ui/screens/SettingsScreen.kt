@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -69,6 +70,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.lazy.rememberLazyListState
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
@@ -81,6 +83,8 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onUserClick: (Int) -> Unit = {},
+    onUserBookmarksClick: (Int) -> Unit = {},
     onAboutClick: () -> Unit,
     onShieldClick: () -> Unit,
     onLoginClick: () -> Unit,
@@ -204,6 +208,7 @@ fun SettingsScreen(
                         account = currentAccount,
                         isLoggingOut = isLoggingOut,
                         onLoginClick = onLoginClick,
+                        onUserClick = onUserClick,
                         onLogoutClick = {
                             if (isLoggingOut) return@AccountSection
                             coroutineScope.launch {
@@ -219,6 +224,14 @@ fun SettingsScreen(
                         strings = strings,
                     )
                     if (currentAccount != null) {
+                        val currentUserId = currentAccount?.userId?.toIntOrNull()
+                        if (currentUserId != null) {
+                            ArrowPreference(
+                                title = strings.settingMyProfileAndBookmarks,
+                                summary = strings.settingMyProfileAndBookmarksSummary,
+                                onClick = { onUserBookmarksClick(currentUserId) },
+                            )
+                        }
                         ArrowPreference(
                             title = strings.accountManageTitle,
                             summary = strings.accountSwitch,
@@ -456,6 +469,7 @@ private fun AccountSection(
     isLoggingOut: Boolean,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onUserClick: (Int) -> Unit,
     strings: com.perol.pixez.shared.ui.i18n.AppStrings,
     modifier: Modifier = Modifier,
 ) {
@@ -466,8 +480,15 @@ private fun AccountSection(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (account != null) {
+            val targetUserId = account.userId.toIntOrNull()
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .squircleClip(12.dp)
+                    .then(
+                        if (targetUserId != null) Modifier.clickable { onUserClick(targetUserId) } else Modifier
+                    )
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {

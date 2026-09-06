@@ -90,6 +90,9 @@ interface AppStrings {
 
     // 设置项标题与副标题
     val settingsTitle: String
+    val settingMyProfileAndBookmarks: String
+    val settingMyProfileAndBookmarksSummary: String
+    val myProfile: String
     val settingAccountInfo: String
     val settingAccountInfoSummary: String
     val logout: String
@@ -1034,6 +1037,9 @@ object ZhCnStrings : AppStrings {
     override val settingSectionAbout = "关于"
 
     override val settingsTitle = "设置"
+    override val settingMyProfileAndBookmarks = "我的主页与收藏"
+    override val settingMyProfileAndBookmarksSummary = "查看个人作品、公开与私密收藏"
+    override val myProfile = "个人主页"
     override val settingAccountInfo = "账号信息"
     override val settingAccountInfoSummary = "修改密码、邮箱、Token 与账号注销"
     override val logout = "退出登录"
@@ -1657,6 +1663,9 @@ object ZhTwStrings : AppStrings {
     override val settingSectionAbout = "關於"
 
     override val settingsTitle = "設定"
+    override val settingMyProfileAndBookmarks = "我的主頁與收藏"
+    override val settingMyProfileAndBookmarksSummary = "查看個人作品、公開與私密收藏"
+    override val myProfile = "個人主頁"
     override val settingAccountInfo = "帳號資訊"
     override val settingAccountInfoSummary = "修改密碼、電子郵件、Token 與帳號刪除"
     override val logout = "登出帳號"
@@ -2279,6 +2288,9 @@ object EnStrings : AppStrings {
     override val settingSectionAbout = "About"
 
     override val settingsTitle = "Settings"
+    override val settingMyProfileAndBookmarks = "My Profile & Bookmarks"
+    override val settingMyProfileAndBookmarksSummary = "View personal works, public and private bookmarks"
+    override val myProfile = "My Profile"
     override val settingAccountInfo = "Account Info"
     override val settingAccountInfoSummary = "Change password, email, token and account deletion"
     override val logout = "Log Out"
@@ -2871,6 +2883,9 @@ object JaStrings : AppStrings {
     override val settingSectionAbout = "情報"
 
     override val settingsTitle = "設定"
+    override val settingMyProfileAndBookmarks = "プロフィールとブックマーク"
+    override val settingMyProfileAndBookmarksSummary = "作品、公開および非公開ブックマークを確認"
+    override val myProfile = "プロフィール"
     override val settingAccountInfo = "アカウント情報"
     override val settingAccountInfoSummary = "パスワード、メール、Token、アカウント削除"
     override val logout = "ログアウト"
@@ -3446,6 +3461,9 @@ object KoStrings : AppStrings {
     override val settingSectionAbout = "정보"
 
     override val settingsTitle = "설정"
+    override val settingMyProfileAndBookmarks = "프로필 및 북마크"
+    override val settingMyProfileAndBookmarksSummary = "작품, 공개 및 비공개 북마크 확인"
+    override val myProfile = "프로필"
     override val settingAccountInfo = "계정 정보"
     override val settingAccountInfoSummary = "비밀번호, 이메일, 토큰 및 계정 탈퇴"
     override val logout = "로그아웃"
@@ -4022,6 +4040,9 @@ object RuStrings : AppStrings {
     override val settingSectionAbout = "О приложении"
 
     override val settingsTitle = "Настройки"
+    override val settingMyProfileAndBookmarks = "Мой профиль и закладки"
+    override val settingMyProfileAndBookmarksSummary = "Просмотр работ, публичных и приватных закладок"
+    override val myProfile = "Мой профиль"
     override val settingAccountInfo = "Данные аккаунта"
     override val settingAccountInfoSummary = "Пароль, почта, токен и удаление аккаунта"
     override val logout = "Выйти из аккаунта"
@@ -4597,6 +4618,9 @@ object EsStrings : AppStrings {
     override val settingSectionAbout = "Acerca de"
 
     override val settingsTitle = "Ajustes"
+    override val settingMyProfileAndBookmarks = "Mi perfil y favoritos"
+    override val settingMyProfileAndBookmarksSummary = "Ver obras, favoritos públicos y privados"
+    override val myProfile = "Mi perfil"
     override val settingAccountInfo = "Información de la cuenta"
     override val settingAccountInfoSummary = "Contraseña, correo, token y eliminar cuenta"
     override val logout = "Cerrar sesión"
@@ -5173,6 +5197,9 @@ object TrStrings : AppStrings {
     override val settingSectionAbout = "Hakkında"
 
     override val settingsTitle = "Ayarlar"
+    override val settingMyProfileAndBookmarks = "Profilim ve Yer İşaretlerim"
+    override val settingMyProfileAndBookmarksSummary = "Çalışmaları, herkese açık ve gizli yer işaretlerini görüntüle"
+    override val myProfile = "Profilim"
     override val settingAccountInfo = "Hesap Bilgileri"
     override val settingAccountInfoSummary = "Şifre, e-posta, token ve hesap silme"
     override val logout = "Çıkış Yap"
@@ -5748,6 +5775,9 @@ object IdStrings : AppStrings {
     override val settingSectionAbout = "Tentang"
 
     override val settingsTitle = "Pengaturan"
+    override val settingMyProfileAndBookmarks = "Profil & Markah Saya"
+    override val settingMyProfileAndBookmarksSummary = "Lihat karya, markah awam dan peribadi"
+    override val myProfile = "Profil Saya"
     override val settingAccountInfo = "Info Akun"
     override val settingAccountInfoSummary = "Kata sandi, email, token, dan hapus akun"
     override val logout = "Keluar Akun"
@@ -6323,6 +6353,9 @@ object FilStrings : AppStrings {
     override val settingSectionAbout = "Tungkol sa"
 
     override val settingsTitle = "Mga Setting"
+    override val settingMyProfileAndBookmarks = "Aking Profile at Mga Bookmark"
+    override val settingMyProfileAndBookmarksSummary = "Tingnan ang mga likha, pampubliko at pribadong bookmark"
+    override val myProfile = "Aking Profile"
     override val settingAccountInfo = "Impormasyon ng Account"
     override val settingAccountInfoSummary = "Password, email, token, at pagbura ng account"
     override val logout = "Mag-logout"
@@ -6898,6 +6931,9 @@ object DeStrings : AppStrings {
     override val settingSectionAbout = "Über"
 
     override val settingsTitle = "Einstellungen"
+    override val settingMyProfileAndBookmarks = "Mein Profil & Lesezeichen"
+    override val settingMyProfileAndBookmarksSummary = "Werke, öffentliche und private Lesezeichen ansehen"
+    override val myProfile = "Mein Profil"
     override val settingAccountInfo = "Kontoinformationen"
     override val settingAccountInfoSummary = "Passwort, E-Mail, Token und Konto löschen"
     override val logout = "Abmelden"

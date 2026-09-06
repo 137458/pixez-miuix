@@ -302,6 +302,7 @@ fun RootContent(
                         bookmarkRepository = bookmarkRepository,
                         banRepository = banRepository,
                         settingsRepository = settingsRepository,
+                        initialTab = instance.initialTab,
                     )
 
                     Child.Login -> LoginScreen(
@@ -360,6 +361,8 @@ fun RootContent(
 
                     Child.Settings -> SettingsScreen(
                         onBack = component::onBack,
+                        onUserClick = { userId -> component.onUserClicked(userId, 0) },
+                        onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
                         onAboutClick = component::onAboutClicked,
                         onShieldClick = component::onShieldClicked,
                         onLoginClick = component::onLoginClicked,
@@ -640,6 +643,7 @@ private fun MainContent(
         when (RootComponent.MAIN_TAB_ORDER[page]) {
             RootComponent.MainTab.Hello -> HelloScreen(
                 onIllustClick = component::onIllustClicked,
+                onUserClick = component::onUserClicked,
                 onSettingsClick = component::onSettingsClicked,
                 onLoginClick = component::onLoginClicked,
                 onRecomUserClick = component::onRecomUserListClicked,
@@ -673,6 +677,7 @@ private fun MainContent(
 
             RootComponent.MainTab.New -> NewScreen(
                 onIllustClick = component::onIllustClicked,
+                onUserClick = component::onUserClicked,
                 onLoginClick = component::onLoginClicked,
                 repository = illustRepository,
                 accountRepository = accountRepository,

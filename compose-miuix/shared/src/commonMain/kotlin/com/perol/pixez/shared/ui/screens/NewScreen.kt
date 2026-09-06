@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,6 +72,7 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 @Composable
 fun NewScreen(
     onIllustClick: (Int) -> Unit,
+    onUserClick: (Int) -> Unit = {},
     onLoginClick: () -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
@@ -75,6 +82,7 @@ fun NewScreen(
 ) {
     val strings = LocalStrings.current
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
+    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
@@ -82,8 +90,12 @@ fun NewScreen(
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         settingsRepository.hasUnreadFeedBadge = false
-        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = currentAccount != null
+        accountRepository.loginEventFlow.collect {
+            currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = currentAccount != null
+        }
     }
 
     LaunchedEffect(isLoggedIn) {
@@ -248,6 +260,24 @@ fun NewScreen(
                                     modifier = Modifier.padding(end = 12.dp),
                                 ) {
                                     Text(strings.btnGoLogin)
+                                }
+                            }
+                            if (isLoggedIn == true) {
+                                val account = currentAccount
+                                val targetUserId = account?.userId?.toIntOrNull()
+                                if (account != null && targetUserId != null) {
+                                    IconButton(
+                                        onClick = { onUserClick(targetUserId) },
+                                    ) {
+                                        PixivAsyncImage(
+                                            model = account.userImage,
+                                            contentDescription = strings.myProfile,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape),
+                                        )
+                                    }
                                 }
                             }
                         },
