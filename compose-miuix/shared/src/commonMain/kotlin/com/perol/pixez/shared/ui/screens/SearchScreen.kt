@@ -2,7 +2,6 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,9 +56,8 @@ import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.ui.components.liquidGlass
+import com.perol.pixez.shared.ui.components.LiquidFilterChip
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.squircle.squircleBorder
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
@@ -430,10 +428,12 @@ fun SearchScreen(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        FilterChipButton(
+                                        LiquidFilterChip(
                                             text = strings.searchSortLabel.format(sortLabel),
-                                            isSelected = sort != "date_desc",
+                                            selected = sort != "date_desc",
                                             backdrop = backdrop,
+                                            textStyle = MiuixTheme.textStyles.footnote1,
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
                                             onClick = {
                                                 sort = when (sort) {
                                                     "date_desc" -> "popular_desc"
@@ -443,20 +443,24 @@ fun SearchScreen(
                                             },
                                         )
 
-                                        FilterChipButton(
+                                        LiquidFilterChip(
                                             text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
-                                            isSelected = searchAiType != 0,
+                                            selected = searchAiType != 0,
                                             backdrop = backdrop,
+                                            textStyle = MiuixTheme.textStyles.footnote1,
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
                                             onClick = {
                                                 searchAiType = if (searchAiType == 0) 1 else 0
                                             },
                                         )
 
                                         if (bookmarkThreshold > 0) {
-                                            FilterChipButton(
+                                            LiquidFilterChip(
                                                 text = "${bookmarkThreshold}+ ✕",
-                                                isSelected = true,
+                                                selected = true,
                                                 backdrop = backdrop,
+                                                textStyle = MiuixTheme.textStyles.footnote1,
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
                                                 onClick = {
                                                     bookmarkThreshold = 0
                                                 },
@@ -465,10 +469,12 @@ fun SearchScreen(
 
                                         Spacer(modifier = Modifier.weight(1f))
 
-                                        FilterChipButton(
+                                        LiquidFilterChip(
                                             text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
-                                            isSelected = hasActiveFilters,
+                                            selected = hasActiveFilters,
                                             backdrop = backdrop,
+                                            textStyle = MiuixTheme.textStyles.footnote1,
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
                                             onClick = { showFilterSheet = true },
                                         )
                                     }
@@ -581,51 +587,6 @@ fun SearchScreen(
     }
 }
 
-/**
- * 搜索结果页统一的快捷筛选/排序芯片按钮（液态玻璃/晶体材质）。
- */
-@Composable
-private fun FilterChipButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    backdrop: Backdrop? = null,
-    modifier: Modifier = Modifier,
-) {
-    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
-    val pillShape = remember { RoundedCornerShape(16.dp) }
-    val tintColor = if (isSelected) MiuixTheme.colorScheme.primary else (if (isDark) Color(0xFF2A2A2E) else Color.White)
-    val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
-    val itemBorderColor = if (isSelected) Color.White.copy(alpha = 0.35f) else (if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f))
-
-    Box(
-        modifier = modifier
-            .liquidGlass(
-                backdrop = backdrop,
-                shape = pillShape,
-                blurRadius = 14.dp,
-                tintColor = tintColor,
-                tintAlpha = tintAlpha,
-            )
-            .squircleBorder(
-                width = 0.5.dp,
-                color = itemBorderColor,
-                cornerRadius = 16.dp,
-            )
-            .clip(pillShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MiuixTheme.textStyles.footnote1,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
-            maxLines = 1,
-        )
-    }
-}
 
 /**
  * 搜索筛选条件状态封装，消除 Data Clump 代码坏味道。
@@ -741,9 +702,11 @@ private fun SearchFilterBottomSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     bookmarkOptions.forEach { (label, value) ->
-                        FilterChipButton(
+                        LiquidFilterChip(
                             text = label,
-                            isSelected = draftState.bookmarkThreshold == value,
+                            selected = draftState.bookmarkThreshold == value,
+                            textStyle = MiuixTheme.textStyles.footnote1,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
                             onClick = { draftState = draftState.copy(bookmarkThreshold = value) },
                         )
                     }

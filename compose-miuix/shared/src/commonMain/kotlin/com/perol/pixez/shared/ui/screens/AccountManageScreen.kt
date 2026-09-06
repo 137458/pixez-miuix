@@ -70,6 +70,7 @@ fun AccountManageScreen(
     var accounts by remember { mutableStateOf<List<AccountPersist>>(emptyList()) }
     var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var accountToDelete by remember { mutableStateOf<AccountPersist?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshAccounts() {
@@ -243,7 +244,10 @@ fun AccountManageScreen(
 
                                         // 移除账号按钮
                                         IconButton(
-                                            onClick = { accountToDelete = account },
+                                            onClick = {
+                                                accountToDelete = account
+                                                showDeleteDialog = true
+                                            },
                                             modifier = Modifier.size(32.dp),
                                         ) {
                                             Icon(
@@ -291,35 +295,36 @@ fun AccountManageScreen(
 
             // 移除账号确认弹窗
             val deleteTarget = accountToDelete
-            if (deleteTarget != null) {
-                OverlayDialog(
-                    title = strings.accountDeleteConfirmTitle,
-                    summary = "${strings.accountDeleteConfirmMsg}\n(${deleteTarget.name} - @${deleteTarget.account})",
-                    show = true,
-                    onDismissRequest = { accountToDelete = null },
+            OverlayDialog(
+                title = strings.accountDeleteConfirmTitle,
+                summary = deleteTarget?.let { "${strings.accountDeleteConfirmMsg}\n(${it.name} - @${it.account})" }
+                    ?: strings.accountDeleteConfirmMsg,
+                show = showDeleteDialog && deleteTarget != null,
+                onDismissRequest = { showDeleteDialog = false },
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        TextButton(
-                            text = strings.cancel,
-                            onClick = { accountToDelete = null },
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(
-                            text = strings.confirm,
-                            onClick = {
-                                val targetId = deleteTarget.userId
-                                accountToDelete = null
+                    TextButton(
+                        text = strings.cancel,
+                        onClick = { showDeleteDialog = false },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        text = strings.confirm,
+                        onClick = {
+                            val targetId = deleteTarget?.userId
+                            showDeleteDialog = false
+                            if (targetId != null) {
                                 scope.launch {
                                     accountRepository.deleteAccount(targetId)
                                     refreshAccounts()
                                 }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 

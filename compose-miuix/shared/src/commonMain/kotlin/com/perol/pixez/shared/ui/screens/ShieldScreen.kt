@@ -104,6 +104,7 @@ fun ShieldScreen(
     // 添加 / 删除对话框状态。
     var showAddDialog by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<DeleteTarget?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // 统一的 Toast 提示文本。
     var toastMessage by remember { mutableStateOf<String?>(null) }
@@ -276,7 +277,10 @@ fun ShieldScreen(
                     ChipFlowRow(
                         items = banTags,
                         label = { it.name },
-                        onClick = { deleteTarget = DeleteTarget.Tag(it) },
+                        onClick = {
+                            deleteTarget = DeleteTarget.Tag(it)
+                            showDeleteDialog = true
+                        },
                     )
                 }
             }
@@ -295,7 +299,10 @@ fun ShieldScreen(
                     ChipFlowRow(
                         items = banUsers,
                         label = { it.name },
-                        onClick = { deleteTarget = DeleteTarget.User(it) },
+                        onClick = {
+                            deleteTarget = DeleteTarget.User(it)
+                            showDeleteDialog = true
+                        },
                     )
                 }
             }
@@ -314,7 +321,10 @@ fun ShieldScreen(
                     ChipFlowRow(
                         items = banIllusts,
                         label = { it.name },
-                        onClick = { deleteTarget = DeleteTarget.Illust(it) },
+                        onClick = {
+                            deleteTarget = DeleteTarget.Illust(it)
+                            showDeleteDialog = true
+                        },
                     )
                 }
             }
@@ -344,40 +354,40 @@ fun ShieldScreen(
         )
 
         // 通用删除确认对话框。
-        val pendingDelete = deleteTarget
-        if (pendingDelete != null) {
-            val (title, summary) = when (pendingDelete) {
-                is DeleteTarget.Tag -> strings.shieldDeleteTagTitle to strings.shieldDeleteTagConfirm.format(pendingDelete.tag.name)
-                is DeleteTarget.User -> strings.shieldDeleteUserTitle to strings.shieldDeleteUserConfirm.format(pendingDelete.user.name)
-                is DeleteTarget.Illust -> strings.shieldDeleteIllustTitle to strings.shieldDeleteIllustConfirm.format(pendingDelete.illust.name)
-            }
-            DeleteConfirmationDialog(
-                title = title,
-                summary = summary,
-                isLoading = isDeleting,
-                onDismiss = { deleteTarget = null },
-                onConfirm = {
-                    coroutineScope.launch {
-                        isDeleting = true
-                        val result = suspendRunCatchingNonCancel {
-                            when (pendingDelete) {
-                                is DeleteTarget.Tag -> banRepository.deleteBanTag(pendingDelete.tag.id)
-                                is DeleteTarget.User -> banRepository.deleteBanUser(pendingDelete.user.id)
-                                is DeleteTarget.Illust -> banRepository.deleteBanIllust(pendingDelete.illust.id)
-                            }
-                        }
-                        result.onSuccess {
-                            deleteTarget = null
-                            loadAll()
-                        }.onFailure { e ->
-                            Napier.e("删除屏蔽项失败", e)
-                            toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
-                        }
-                        isDeleting = false
-                    }
-                },
-            )
+        val (title, summary) = when (val pendingDelete = deleteTarget) {
+            is DeleteTarget.Tag -> strings.shieldDeleteTagTitle to strings.shieldDeleteTagConfirm.format(pendingDelete.tag.name)
+            is DeleteTarget.User -> strings.shieldDeleteUserTitle to strings.shieldDeleteUserConfirm.format(pendingDelete.user.name)
+            is DeleteTarget.Illust -> strings.shieldDeleteIllustTitle to strings.shieldDeleteIllustConfirm.format(pendingDelete.illust.name)
+            null -> "" to ""
         }
+        DeleteConfirmationDialog(
+            show = showDeleteDialog && deleteTarget != null,
+            title = title,
+            summary = summary,
+            isLoading = isDeleting,
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                val target = deleteTarget ?: return@DeleteConfirmationDialog
+                showDeleteDialog = false
+                coroutineScope.launch {
+                    isDeleting = true
+                    val result = suspendRunCatchingNonCancel {
+                        when (target) {
+                            is DeleteTarget.Tag -> banRepository.deleteBanTag(target.tag.id)
+                            is DeleteTarget.User -> banRepository.deleteBanUser(target.user.id)
+                            is DeleteTarget.Illust -> banRepository.deleteBanIllust(target.illust.id)
+                        }
+                    }
+                    result.onSuccess {
+                        loadAll()
+                    }.onFailure { e ->
+                        Napier.e("删除屏蔽项失败", e)
+                        toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
+                    }
+                    isDeleting = false
+                }
+            },
+        )
 
         ToastMessage(
             message = toastMessage,
@@ -489,6 +499,7 @@ private fun AddTagDialog(
  */
 @Composable
 private fun DeleteConfirmationDialog(
+    show: Boolean,
     title: String,
     summary: String,
     isLoading: Boolean,
@@ -500,7 +511,7 @@ private fun DeleteConfirmationDialog(
     OverlayDialog(
         title = title,
         summary = summary,
-        show = true,
+        show = show,
         onDismissRequest = onDismiss,
     ) {
         Row(

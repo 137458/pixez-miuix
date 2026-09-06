@@ -637,7 +637,17 @@ interface AppStrings {
     val pixivId: String get() = "Pixiv ID"
     fun formatNovelWordCount(count: Int): String = "$count 字"
 
-
+    val refreshRate60Hz: String get() = "60Hz / Default"
+    val refreshRateHigh: String get() = "Follow System High Refresh (120Hz / 144Hz)"
+    val widgetSource: String get() = "Widget Source"
+    val doubleBackToExit: String get() = "Press again to exit PixEz"
+    val guideMirrorRecommendDirect: String get() = "Direct connection recommended for mainland China"
+    val guideOfficialNeedProxy: String get() = "Requires network proxy"
+    val guideSniRecommendCn: String get() = "Recommended for mainland China networks"
+    val guidePixEzFeatures: String get() = "PixEz Features"
+    val commentsPostFailed: String get() = "Failed to post comment"
+    val settingWidgetPictureSourceOfficial: String get() = "i.pximg.net (Pixiv Official)"
+    val settingWidgetPictureSourceMirror: String get() = "i.pixiv.re (Proxy-free Mirror)"
 
     companion object {
         fun fromLanguageNum(num: Int): AppStrings = when (num) {
@@ -1236,6 +1246,18 @@ object ZhCnStrings : AppStrings {
     override val comments = "查看评论"
     override val relatedIllusts = "相关作品"
     override val noComments = "暂无评论"
+
+    override val refreshRate60Hz = "60Hz / 默认"
+    override val refreshRateHigh = "跟随系统高刷 (120Hz / 144Hz)"
+    override val widgetSource = "组件源"
+    override val doubleBackToExit = "再按一次退出 PixEz"
+    override val guideMirrorRecommendDirect = "推荐国内直连"
+    override val guideOfficialNeedProxy = "需配置网络代理"
+    override val guideSniRecommendCn = "推荐国内网络开启"
+    override val guidePixEzFeatures = "PixEz 特性"
+    override val commentsPostFailed = "发表评论失败"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 官方原站)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (免代理镜像)"
 }
 
 /**
@@ -1846,6 +1868,18 @@ object ZhTwStrings : AppStrings {
     override val comments = "檢視評論"
     override val relatedIllusts = "相關作品"
     override val noComments = "暫無評論"
+
+    override val refreshRate60Hz = "60Hz / 預設"
+    override val refreshRateHigh = "跟隨系統高刷 (120Hz / 144Hz)"
+    override val widgetSource = "組件來源"
+    override val doubleBackToExit = "再按一次退出 PixEz"
+    override val guideMirrorRecommendDirect = "推薦國內直連"
+    override val guideOfficialNeedProxy = "需配置網路代理"
+    override val guideSniRecommendCn = "推薦國內網路開啟"
+    override val guidePixEzFeatures = "PixEz 特性"
+    override val commentsPostFailed = "發表評論失敗"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 官方原站)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (免代理鏡像)"
 }
 
 /**
@@ -2456,6 +2490,18 @@ object EnStrings : AppStrings {
     override val comments = "Comments"
     override val relatedIllusts = "Related Works"
     override val noComments = "No comments yet"
+
+    override val refreshRate60Hz = "60Hz / Default"
+    override val refreshRateHigh = "Follow System High Refresh (120Hz / 144Hz)"
+    override val widgetSource = "Widget Source"
+    override val doubleBackToExit = "Press again to exit PixEz"
+    override val guideMirrorRecommendDirect = "Direct connection recommended for mainland China"
+    override val guideOfficialNeedProxy = "Requires network proxy"
+    override val guideSniRecommendCn = "Recommended for mainland China networks"
+    override val guidePixEzFeatures = "PixEz Features"
+    override val commentsPostFailed = "Failed to post comment"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Official)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy-free Mirror)"
 }
 
 /**
@@ -3036,6 +3082,18 @@ object JaStrings : AppStrings {
     override val comments = "コメントを見る"
     override val relatedIllusts = "関連作品"
     override val noComments = "コメントはありません"
+
+    override val refreshRate60Hz = "60Hz / デフォルト"
+    override val refreshRateHigh = "システム高リフレッシュレートに追従 (120Hz / 144Hz)"
+    override val widgetSource = "ウィジェットソース"
+    override val doubleBackToExit = "もう一度押して PixEz を終了"
+    override val guideMirrorRecommendDirect = "国内直接接続を推奨"
+    override val guideOfficialNeedProxy = "プロキシ設定が必要"
+    override val guideSniRecommendCn = "国内ネットワークでの有効化を推奨"
+    override val guidePixEzFeatures = "PixEz の特徴"
+    override val commentsPostFailed = "コメントの投稿に失敗しました"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 公式)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (プロキシ不要ミラー)"
 }
 
 /**
@@ -3599,6 +3657,18 @@ object KoStrings : AppStrings {
     override val comments = "댓글 보기"
     override val relatedIllusts = "관련 작품"
     override val noComments = "댓글이 없습니다"
+
+    override val refreshRate60Hz = "60Hz / 기본값"
+    override val refreshRateHigh = "시스템 고주사율 따름 (120Hz / 144Hz)"
+    override val widgetSource = "위젯 소스"
+    override val doubleBackToExit = "한 번 더 누르면 PixEz가 종료됩니다"
+    override val guideMirrorRecommendDirect = "국내 직접 연결 권장"
+    override val guideOfficialNeedProxy = "네트워크 프록시 필요"
+    override val guideSniRecommendCn = "국내 네트워크에서 활성화 권장"
+    override val guidePixEzFeatures = "PixEz 기능"
+    override val commentsPostFailed = "댓글 작성에 실패했습니다"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 공식)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (프록시 없는 미러)"
 }
 
 /**
@@ -4163,6 +4233,18 @@ object RuStrings : AppStrings {
     override val comments = "Комментарии"
     override val relatedIllusts = "Похожие работы"
     override val noComments = "Комментариев пока нет"
+
+    override val refreshRate60Hz = "60 Гц / По умолчанию"
+    override val refreshRateHigh = "Высокая частота обновления системы (120 Гц / 144 Гц)"
+    override val widgetSource = "Источник виджета"
+    override val doubleBackToExit = "Нажмите еще раз, чтобы выйти из PixEz"
+    override val guideMirrorRecommendDirect = "Рекомендуется прямое подключение"
+    override val guideOfficialNeedProxy = "Требуется сетевой прокси"
+    override val guideSniRecommendCn = "Рекомендуется для местных сетей"
+    override val guidePixEzFeatures = "Возможности PixEz"
+    override val commentsPostFailed = "Не удалось опубликовать комментарий"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Официальный Pixiv)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Зеркало без прокси)"
 }
 
 /**
@@ -4726,6 +4808,18 @@ object EsStrings : AppStrings {
     override val comments = "Ver comentarios"
     override val relatedIllusts = "Obras relacionadas"
     override val noComments = "Aún no hay comentarios"
+
+    override val refreshRate60Hz = "60 Hz / Predeterminado"
+    override val refreshRateHigh = "Seguir alta frecuencia del sistema (120 Hz / 144 Hz)"
+    override val widgetSource = "Fuente del widget"
+    override val doubleBackToExit = "Presiona de nuevo para salir de PixEz"
+    override val guideMirrorRecommendDirect = "Conexión directa recomendada"
+    override val guideOfficialNeedProxy = "Requiere proxy de red"
+    override val guideSniRecommendCn = "Recomendado para redes locales"
+    override val guidePixEzFeatures = "Características de PixEz"
+    override val commentsPostFailed = "Error al publicar el comentario"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv oficial)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Espejo sin proxy)"
 }
 
 /**
@@ -5290,6 +5384,18 @@ object TrStrings : AppStrings {
     override val comments = "Yorumları Gör"
     override val relatedIllusts = "İlgili Çalışmalar"
     override val noComments = "Henüz yorum yok"
+
+    override val refreshRate60Hz = "60 Hz / Varsayılan"
+    override val refreshRateHigh = "Sistem Yüksek Yenileme Hızını Takip Et (120 Hz / 144 Hz)"
+    override val widgetSource = "Araç Takımı Kaynağı"
+    override val doubleBackToExit = "PixEz'den çıkmak için tekrar basın"
+    override val guideMirrorRecommendDirect = "Doğrudan bağlantı önerilir"
+    override val guideOfficialNeedProxy = "Ağ proxy'si gerektirir"
+    override val guideSniRecommendCn = "Yerel ağlar için önerilir"
+    override val guidePixEzFeatures = "PixEz Özellikleri"
+    override val commentsPostFailed = "Yorum gönderilemedi"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Resmi)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy'siz Ayna)"
 }
 
 /**
@@ -5853,6 +5959,18 @@ object IdStrings : AppStrings {
     override val comments = "Lihat Komentar"
     override val relatedIllusts = "Karya Terkait"
     override val noComments = "Belum ada komentar"
+
+    override val refreshRate60Hz = "60 Hz / Default"
+    override val refreshRateHigh = "Ikuti Refresh Rate Tinggi Sistem (120Hz / 144Hz)"
+    override val widgetSource = "Sumber Widget"
+    override val doubleBackToExit = "Tekan sekali lagi untuk keluar dari PixEz"
+    override val guideMirrorRecommendDirect = "Disarankan koneksi langsung"
+    override val guideOfficialNeedProxy = "Memerlukan proxy jaringan"
+    override val guideSniRecommendCn = "Disarankan untuk jaringan lokal"
+    override val guidePixEzFeatures = "Fitur PixEz"
+    override val commentsPostFailed = "Gagal mengirim komentar"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Resmi)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Mirror Tanpa Proxy)"
 }
 
 /**
@@ -6416,6 +6534,18 @@ object FilStrings : AppStrings {
     override val comments = "Tingnan ang Komento"
     override val relatedIllusts = "Mga Kaugnay na Likha"
     override val noComments = "Wala pang komento"
+
+    override val refreshRate60Hz = "60Hz / Default"
+    override val refreshRateHigh = "Sundin ang Mataas na Refresh Rate ng Sistema (120Hz / 144Hz)"
+    override val widgetSource = "Pinagmulan ng Widget"
+    override val doubleBackToExit = "Pindutin muli upang lumabas sa PixEz"
+    override val guideMirrorRecommendDirect = "Inirerekomenda ang direktang koneksyon"
+    override val guideOfficialNeedProxy = "Kailangan ng network proxy"
+    override val guideSniRecommendCn = "Inirerekomenda para sa mga lokal na network"
+    override val guidePixEzFeatures = "Mga Tampok ng PixEz"
+    override val commentsPostFailed = "Nabigong mag-post ng komento"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Opisyal na Pixiv)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Walang Proxy na Mirror)"
 }
 
 /**
@@ -6979,6 +7109,18 @@ object DeStrings : AppStrings {
     override val comments = "Kommentare ansehen"
     override val relatedIllusts = "Ähnliche Werke"
     override val noComments = "Noch keine Kommentare"
+
+    override val refreshRate60Hz = "60 Hz / Standard"
+    override val refreshRateHigh = "Hohe Bildwiederholfrequenz des Systems folgen (120 Hz / 144 Hz)"
+    override val widgetSource = "Widget-Quelle"
+    override val doubleBackToExit = "Erneut drücken, um PixEz zu beenden"
+    override val guideMirrorRecommendDirect = "Direkte Verbindung empfohlen"
+    override val guideOfficialNeedProxy = "Netzwerk-Proxy erforderlich"
+    override val guideSniRecommendCn = "Empfohlen für lokale Netzwerke"
+    override val guidePixEzFeatures = "PixEz-Funktionen"
+    override val commentsPostFailed = "Fehler beim Veröffentlichen des Kommentars"
+    override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Offiziell)"
+    override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy-freier Spiegel)"
 }
 
 /**

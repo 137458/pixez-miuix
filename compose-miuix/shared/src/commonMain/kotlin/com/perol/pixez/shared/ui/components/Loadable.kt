@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -23,13 +25,19 @@ internal fun LoadingPlaceholder(
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "${strings.loading}…",
-            style = MiuixTheme.textStyles.body1,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            InfiniteProgressIndicator()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "${strings.loading}…",
+                style = MiuixTheme.textStyles.body1,
+            )
+        }
     }
 }
 

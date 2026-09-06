@@ -224,31 +224,31 @@ fun LayoutSettingScreen(
             }
         }
 
-        if (showDisplayModeDialog) {
-            val options = listOf(
+        val displayModeOptions = remember(strings) {
+            listOf(
                 0 to strings.platformDisplayModeFollowSystem,
-                1 to "标准 60Hz",
-                2 to "高刷新率 (90Hz / 120Hz+)",
+                1 to strings.refreshRate60Hz,
+                2 to strings.refreshRateHigh,
             )
-            OverlayDialog(
-                title = strings.dialogDisplayMode,
-                show = true,
-                onDismissRequest = { showDisplayModeDialog = false },
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    options.forEach { (value, label) ->
-                        BasicComponent(
-                            title = label,
-                            onClick = {
-                                displayMode = value
-                                settingsRepository.displayMode = value
-                                showDisplayModeDialog = false
-                            },
-                            endActions = {
-                                CheckIndicator(selected = displayMode == value)
-                            },
-                        )
-                    }
+        }
+        OverlayDialog(
+            title = strings.dialogDisplayMode,
+            show = showDisplayModeDialog,
+            onDismissRequest = { showDisplayModeDialog = false },
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                displayModeOptions.forEach { (value, label) ->
+                    BasicComponent(
+                        title = label,
+                        onClick = {
+                            displayMode = value
+                            settingsRepository.displayMode = value
+                            showDisplayModeDialog = false
+                        },
+                        endActions = {
+                            CheckIndicator(selected = displayMode == value)
+                        },
+                    )
                 }
             }
         }
@@ -262,8 +262,8 @@ fun LayoutSettingScreen(
 private fun Int.toDisplayModeLabel(): String {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     return when (this) {
-        1 -> "标准 60Hz"
-        2 -> "高刷新率 (90Hz / 120Hz+)"
+        1 -> strings.refreshRate60Hz
+        2 -> strings.refreshRateHigh
         else -> strings.platformDisplayModeFollowSystem
     }
 }

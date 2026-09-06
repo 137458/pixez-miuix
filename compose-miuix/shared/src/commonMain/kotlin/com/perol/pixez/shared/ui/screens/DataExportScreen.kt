@@ -81,6 +81,7 @@ fun DataExportScreen(
 
     // 当前弹出的导出/导入对话框；切换后重置，避免旧状态残留。
     var pendingOperation by remember { mutableStateOf<PendingOperation?>(null) }
+    var showPathDialog by remember { mutableStateOf(false) }
 
     // 用于强制路径输入对话框每次打开都重置输入内容，避免相同 type/action 时 data class 相等导致 remember 不重置。
     var dialogKey by remember { mutableIntStateOf(0) }
@@ -140,10 +141,12 @@ fun DataExportScreen(
                                 onExportClick = {
                                     dialogKey++
                                     pendingOperation = PendingOperation(type, Action.Export)
+                                    showPathDialog = true
                                 },
                                 onImportClick = {
                                     dialogKey++
                                     pendingOperation = PendingOperation(type, Action.Import)
+                                    showPathDialog = true
                                 },
                             )
                         }
@@ -153,58 +156,58 @@ fun DataExportScreen(
         }
 
         // 路径输入对话框：平台文件选择器未就绪时，先以文本路径作为兜底方案。
-        pendingOperation?.let { operation ->
-            PathInputDialog(
-                operation = operation,
-                dialogKey = dialogKey,
-                isProcessing = isProcessing,
-                onDismiss = { pendingOperation = null },
-                onConfirm = { path ->
-                    coroutineScope.launch {
-                        isProcessing = true
-                        try {
-                            // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
-                            // 结果回到主线程更新 UI 状态。
-                            val result = withContext(Dispatchers.Default) {
-                                if (operation.action == Action.Export) {
-                                    performExport(
-                                        operation.type,
-                                        path,
-                                        settingsRepository,
-                                        historyRepository,
-                                        novelHistoryRepository,
-                                        muteRepository,
-                                        json,
-                                    )
-                                } else {
-                                    performImport(
-                                        operation.type,
-                                        path,
-                                        settingsRepository,
-                                        historyRepository,
-                                        novelHistoryRepository,
-                                        muteRepository,
-                                        json,
-                                    )
-                                }
-                            }
-                            val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
-                            val typeStr = operation.type.title(strings)
-                            toastMessage = if (result.isSuccess) {
-                                strings.dataExportSuccess.format(typeStr, actionStr)
+        PathInputDialog(
+            show = showPathDialog && pendingOperation != null,
+            operation = pendingOperation,
+            dialogKey = dialogKey,
+            isProcessing = isProcessing,
+            onDismiss = { showPathDialog = false },
+            onConfirm = { path ->
+                val operation = pendingOperation ?: return@PathInputDialog
+                showPathDialog = false
+                coroutineScope.launch {
+                    isProcessing = true
+                    try {
+                        // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
+                        // 结果回到主线程更新 UI 状态。
+                        val result = withContext(Dispatchers.Default) {
+                            if (operation.action == Action.Export) {
+                                performExport(
+                                    operation.type,
+                                    path,
+                                    settingsRepository,
+                                    historyRepository,
+                                    novelHistoryRepository,
+                                    muteRepository,
+                                    json,
+                                )
                             } else {
-                                val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
-                                strings.dataExportFailed.format(typeStr, actionStr, cause)
+                                performImport(
+                                    operation.type,
+                                    path,
+                                    settingsRepository,
+                                    historyRepository,
+                                    novelHistoryRepository,
+                                    muteRepository,
+                                    json,
+                                )
                             }
-                        } finally {
-                            // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
-                            isProcessing = false
-                            pendingOperation = null
                         }
+                        val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+                        val typeStr = operation.type.title(strings)
+                        toastMessage = if (result.isSuccess) {
+                            strings.dataExportSuccess.format(typeStr, actionStr)
+                        } else {
+                            val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
+                            strings.dataExportFailed.format(typeStr, actionStr, cause)
+                        }
+                    } finally {
+                        // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
+                        isProcessing = false
                     }
-                },
-            )
-        }
+                }
+            },
+        )
 
         ToastMessage(
             message = toastMessage,
@@ -249,23 +252,24 @@ private fun DataExportRow(
  */
 @Composable
 private fun PathInputDialog(
-    operation: PendingOperation,
+    show: Boolean,
+    operation: PendingOperation?,
     dialogKey: Int,
     isProcessing: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
-    val typeStr = operation.type.title(strings)
+    val actionStr = if (operation?.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+    val typeStr = operation?.type?.title(strings) ?: ""
 
     // 对话框重新打开时重置输入内容，避免上一次的路径干扰新操作。
-    var path by remember(dialogKey, operation.type, operation.action) { mutableStateOf("") }
+    var path by remember(dialogKey, operation?.type, operation?.action) { mutableStateOf("") }
 
     OverlayDialog(
-        title = "$typeStr - $actionStr",
+        title = if (operation != null) "$typeStr - $actionStr" else "",
         summary = strings.dataExportPathDialogSummary.format(actionStr),
-        show = true,
+        show = show,
         onDismissRequest = onDismiss,
     ) {
         TextField(

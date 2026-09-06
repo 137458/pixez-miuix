@@ -30,10 +30,8 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-import com.perol.pixez.shared.ui.components.liquidGlass
+import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import top.yukonga.miuix.kmp.blur.Backdrop
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -52,11 +50,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Icon
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.luminance
-import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -260,11 +253,13 @@ fun NewScreen(
                         },
                     )
                     if (isLoggedIn == true) {
-                        RestrictSelector(
-                            options = restrictOptions.map { it.first },
-                            selectedIndex = selectedRestrictIndex,
-                            onSelect = { selectedRestrictIndex = it },
+                        LiquidFilterBar(
+                            items = restrictOptions,
+                            selectedItem = restrictOptions[selectedRestrictIndex],
+                            onItemSelected = { selectedRestrictIndex = restrictOptions.indexOf(it) },
+                            labelProvider = { it.first },
                             backdrop = backdrop,
+                            isScrollable = false,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -353,94 +348,4 @@ fun NewScreen(
     }
 }
 
-@Composable
-private fun RestrictSelector(
-    options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    backdrop: Backdrop? = null,
-    modifier: Modifier = Modifier,
-) {
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        options.forEachIndexed { index, label ->
-            val isSelected = index == selectedIndex
-            val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val pressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-
-            LaunchedEffect(isPressed) {
-                pressScale.animateTo(
-                    targetValue = if (isPressed) 0.93f else 1f,
-                    animationSpec = androidx.compose.animation.core.spring(
-                        dampingRatio = 0.7f,
-                        stiffness = 500f,
-                    ),
-                )
-            }
-
-            val pillShape = remember { RoundedCornerShape(16.dp) }
-            val itemBackground = if (isSelected) {
-                MiuixTheme.colorScheme.primary
-            } else {
-                if (isDark) Color(0xFF2A2A2E) else Color.White
-            }
-            val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
-
-            val itemBorderColor = if (isSelected) {
-                Color.White.copy(alpha = 0.35f)
-            } else {
-                if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f)
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .graphicsLayer {
-                        scaleX = pressScale.value
-                        scaleY = pressScale.value
-                    }
-                    .liquidGlass(
-                        backdrop = backdrop,
-                        shape = pillShape,
-                        blurRadius = 16.dp,
-                        tintColor = itemBackground,
-                        tintAlpha = tintAlpha,
-                    )
-                    .squircleBorder(
-                        width = 0.5.dp,
-                        color = itemBorderColor,
-                        cornerRadius = 16.dp,
-                    )
-                    .clip(pillShape)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                    ) {
-                        if (!isSelected) {
-                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            onSelect(index)
-                        }
-                    }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
-                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
-                )
-            }
-        }
-    }
-}
 

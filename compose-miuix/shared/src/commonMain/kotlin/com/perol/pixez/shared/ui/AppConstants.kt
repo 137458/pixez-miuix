@@ -5,6 +5,13 @@ package com.perol.pixez.shared.ui
  */
 object AppConstants {
 
+    const val PIXIV_USER_PREFIX = Urls.PIXIV_USER_PREFIX
+    fun pixivUserUrl(userId: Long): String = Urls.pixivUserUrl(userId)
+    fun pixivUserUrl(userId: Int): String = Urls.pixivUserUrl(userId)
+    fun pixivUserUrl(userId: String): String = Urls.pixivUserUrl(userId)
+    fun pixivArtworkUrl(id: Long): String = Urls.pixivArtworkUrl(id)
+    fun pixivArtworkUrl(id: Int): String = Urls.pixivArtworkUrl(id)
+
     /**
      * 外部链接与社群地址
      */
@@ -15,6 +22,13 @@ object AppConstants {
         const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
         fun pixivArtworkUrl(id: Long): String = "$PIXIV_ARTWORK_PREFIX$id"
         fun pixivArtworkUrl(id: Int): String = "$PIXIV_ARTWORK_PREFIX$id"
+        const val PIXIV_USER_PREFIX = "https://www.pixiv.net/users/"
+        fun pixivUserUrl(userId: Long): String = "$PIXIV_USER_PREFIX$userId"
+        fun pixivUserUrl(userId: Int): String = "$PIXIV_USER_PREFIX$userId"
+        fun pixivUserUrl(userId: String): String = "$PIXIV_USER_PREFIX$userId"
+        const val PIXIV_NOVEL_PREFIX = "https://www.pixiv.net/novel/show.php?id="
+        fun pixivNovelUrl(id: Long): String = "$PIXIV_NOVEL_PREFIX$id"
+        fun pixivNovelUrl(id: Int): String = "$PIXIV_NOVEL_PREFIX$id"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
         const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
         const val GITHUB_ISSUES = "https://github.com/137458/pixez-miuix/issues"

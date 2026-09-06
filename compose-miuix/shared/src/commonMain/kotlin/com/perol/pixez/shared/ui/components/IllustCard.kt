@@ -25,18 +25,17 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.squircle.squircleBorder
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
@@ -183,9 +182,9 @@ fun IllustCard(
                         ) {
                             Box(
                                 modifier = Modifier
+                                    .squircleClip(8.dp)
                                     .background(
                                         color = MiuixTheme.colorScheme.error.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(8.dp),
                                     )
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 contentAlignment = Alignment.Center,
@@ -264,7 +263,7 @@ private fun MicroGlassBadge(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .squircleClip(6.dp)
             .background(Color.Black.copy(alpha = 0.50f))
             .squircleBorder(
                 width = 0.5.dp,

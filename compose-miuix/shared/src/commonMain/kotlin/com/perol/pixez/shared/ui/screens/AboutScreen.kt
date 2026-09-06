@@ -250,20 +250,18 @@ fun AboutScreen(
             }
     }
 
-        if (showDisclaimerDialog) {
-            OverlayDialog(
-                title = strings.aboutDisclaimer,
-                summary = strings.aboutDisclaimerContent,
-                show = true,
-                onDismissRequest = { showDisclaimerDialog = false },
-            ) {
-                TextButton(
-                    text = strings.confirm,
-                    onClick = { showDisclaimerDialog = false },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
+        OverlayDialog(
+            title = strings.aboutDisclaimer,
+            summary = strings.aboutDisclaimerContent,
+            show = showDisclaimerDialog,
+            onDismissRequest = { showDisclaimerDialog = false },
+        ) {
+            TextButton(
+                text = strings.confirm,
+                onClick = { showDisclaimerDialog = false },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
         }
 
         ToastMessage(

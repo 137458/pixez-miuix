@@ -90,12 +90,44 @@ private val ToastHighlightDark = Highlight(
 )
 
 /**
+ * Toast 提示消息类型。
+ */
+enum class ToastType {
+    Normal,
+    Success,
+    Error,
+    Warning,
+}
+
+/**
+ * 结构化 Toast 数据载荷。
+ */
+data class ToastData(
+    val message: String,
+    val type: ToastType = ToastType.Normal,
+)
+
+/**
+ * 智能推断消息状态（向下兼容未显式声明 ToastType 的传统调用）。
+ */
+private fun inferToastType(message: String): ToastType {
+    val lower = message.lowercase()
+    return when {
+        lower.contains("成功") || lower.contains("success") || lower.contains("已保存") || lower.contains("已复制") || lower.contains("saved") || lower.contains("copied") -> ToastType.Success
+        lower.contains("失败") || lower.contains("failed") || lower.contains("错误") || lower.contains("error") -> ToastType.Error
+        lower.contains("警告") || lower.contains("warning") || lower.contains("注意") -> ToastType.Warning
+        else -> ToastType.Normal
+    }
+}
+
+/**
  * 现代液态玻璃灵动胶囊 Toast 提示。
  *
  * 采用弹性物理动效与液态玻璃材质（SDF 折射、高光与平滑降级），提供通透灵动的瞬时状态反馈。
  *
  * @param message 提示文本，为 null 或空字符串时不显示
  * @param modifier 外部修饰符
+ * @param type 提示类型（成功、错误、警告、普通），若不传则根据文本关键词智能降级推断
  * @param durationMillis 显示时长，默认 2 秒
  * @param backdrop 可选的背景采样 Backdrop，若提供则渲染物理透镜折射
  * @param onDismiss 提示消失后的回调，用于清空外部状态
@@ -104,6 +136,7 @@ private val ToastHighlightDark = Highlight(
 fun ToastMessage(
     message: String?,
     modifier: Modifier = Modifier,
+    type: ToastType? = null,
     durationMillis: Long = 2000L,
     backdrop: Backdrop? = null,
     onDismiss: () -> Unit = {},
@@ -124,15 +157,8 @@ fun ToastMessage(
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     val cornerRadius = 24.dp
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
-    val isSuccess = remember(message) {
-        message?.let {
-            it.contains("成功") || it.contains("Success") || it.contains("已保存") || it.contains("已复制")
-        } == true
-    }
-    val isFailed = remember(message) {
-        message?.let {
-            it.contains("失败") || it.contains("Failed") || it.contains("错误") || it.contains("Error")
-        } == true
+    val effectiveType = remember(message, type) {
+        type ?: if (message != null) inferToastType(message) else ToastType.Normal
     }
 
     Box(
@@ -228,31 +254,68 @@ fun ToastMessage(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (isSuccess) {
-                        Icon(
-                            imageVector = MiuixIcons.Ok,
-                            contentDescription = null,
-                            tint = if (isDark) Color(0xFF4CD964) else Color(0xFF34C759),
-                            modifier = Modifier.size(17.dp),
-                        )
-                        Spacer(modifier = Modifier.width(7.dp))
-                    } else if (isFailed) {
-                        Icon(
-                            imageVector = MiuixIcons.Report,
-                            contentDescription = null,
-                            tint = if (isDark) Color(0xFFFF453A) else Color(0xFFFF3B30),
-                            modifier = Modifier.size(17.dp),
-                        )
-                        Spacer(modifier = Modifier.width(7.dp))
+                    when (effectiveType) {
+                        ToastType.Success -> {
+                            Icon(
+                                imageVector = MiuixIcons.Ok,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.primary,
+                                modifier = Modifier.size(17.dp),
+                            )
+                            Spacer(modifier = Modifier.width(7.dp))
+                        }
+                        ToastType.Error -> {
+                            Icon(
+                                imageVector = MiuixIcons.Report,
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.error,
+                                modifier = Modifier.size(17.dp),
+                            )
+                            Spacer(modifier = Modifier.width(7.dp))
+                        }
+                        ToastType.Warning -> {
+                            Icon(
+                                imageVector = MiuixIcons.Report,
+                                contentDescription = null,
+                                tint = if (isDark) Color(0xFFFF9F0A) else Color(0xFFFF9500),
+                                modifier = Modifier.size(17.dp),
+                            )
+                            Spacer(modifier = Modifier.width(7.dp))
+                        }
+                        ToastType.Normal -> {}
                     }
 
                     Text(
                         text = message ?: "",
                         style = MiuixTheme.textStyles.body2,
-                        color = if (isDark) Color.White else Color(0xFF1C1C1E),
+                        color = when (effectiveType) {
+                            ToastType.Error -> if (isDark) Color(0xFFFF6961) else MiuixTheme.colorScheme.error
+                            else -> if (isDark) Color.White else Color(0xFF1C1C1E)
+                        },
                     )
                 }
             }
         }
     }
+}
+
+/**
+ * 结构化 [ToastData] 驱动的重载组件。
+ */
+@Composable
+fun ToastMessage(
+    toast: ToastData?,
+    modifier: Modifier = Modifier,
+    durationMillis: Long = 2000L,
+    backdrop: Backdrop? = null,
+    onDismiss: () -> Unit = {},
+) {
+    ToastMessage(
+        message = toast?.message,
+        modifier = modifier,
+        type = toast?.type,
+        durationMillis = durationMillis,
+        backdrop = backdrop,
+        onDismiss = onDismiss,
+    )
 }

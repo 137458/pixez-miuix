@@ -72,8 +72,8 @@ fun WidgetRecommendSettingScreen(
     val widgetPictureSourceOptions = remember(strings) {
         listOf(
             WidgetPictureSourceOption(source = "", label = strings.settingWidgetPictureSourceFollowGlobal),
-            WidgetPictureSourceOption(source = "i.pximg.net", label = "i.pximg.net (Pixiv 官方原站)"),
-            WidgetPictureSourceOption(source = "i.pixiv.re", label = "i.pixiv.re (免代理镜像)"),
+            WidgetPictureSourceOption(source = "i.pximg.net", label = strings.settingWidgetPictureSourceOfficial),
+            WidgetPictureSourceOption(source = "i.pixiv.re", label = strings.settingWidgetPictureSourceMirror),
         )
     }
 

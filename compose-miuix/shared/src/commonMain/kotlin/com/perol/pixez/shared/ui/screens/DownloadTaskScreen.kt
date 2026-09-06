@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.perol.pixez.shared.ui.AppConstants
-import androidx.compose.foundation.shape.RoundedCornerShape
+import top.yukonga.miuix.kmp.basic.TabRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -188,10 +188,18 @@ fun DownloadTaskScreen(
                     .padding(top = paddingValues.calculateTopPadding()),
             ) {
                 // 顶部筛选标签：全部 / 运行中 / 完成 / 失败。
-                FilterTabRow(
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
-                    modifier = Modifier.fillMaxWidth(),
+                val filterTabs = remember(strings) {
+                    TaskFilter.entries.map { it.label(strings) }
+                }
+                TabRow(
+                    tabs = filterTabs,
+                    selectedTabIndex = selectedFilter.ordinal,
+                    onTabSelected = { index ->
+                        selectedFilter = TaskFilter.entries.getOrElse(index) { TaskFilter.All }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
 
                 when (val result = state.value) {
@@ -387,15 +395,11 @@ private enum class TaskFilter {
     Failed,
 }
 
-@Composable
-private fun TaskFilter.label(): String {
-    val strings = LocalStrings.current
-    return when (this) {
-        TaskFilter.All -> strings.downloadTaskFilterAll
-        TaskFilter.Running -> strings.downloadTaskFilterRunning
-        TaskFilter.Completed -> strings.downloadTaskFilterCompleted
-        TaskFilter.Failed -> strings.downloadTaskFilterFailed
-    }
+private fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String = when (this) {
+    TaskFilter.All -> strings.downloadTaskFilterAll
+    TaskFilter.Running -> strings.downloadTaskFilterRunning
+    TaskFilter.Completed -> strings.downloadTaskFilterCompleted
+    TaskFilter.Failed -> strings.downloadTaskFilterFailed
 }
 
 /**
@@ -430,67 +434,6 @@ private fun TaskFilter.matches(task: DownloadTaskHistory): Boolean = when (this)
     TaskFilter.Running -> task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Pending
     TaskFilter.Completed -> task.status == DownloadStatus.Success
     TaskFilter.Failed -> task.status == DownloadStatus.Failed
-}
-
-/**
- * 顶部筛选标签行：全部 / 运行中 / 完成 / 失败。
- */
-@Composable
-private fun FilterTabRow(
-    selectedFilter: TaskFilter,
-    onFilterSelected: (TaskFilter) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TaskFilter.entries.forEach { filter ->
-            FilterTab(
-                label = filter.label(),
-                selected = filter == selectedFilter,
-                onClick = { onFilterSelected(filter) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-/**
- * 单个筛选标签：选中时高亮显示。
- */
-@Composable
-private fun FilterTab(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val backgroundColor = if (selected) {
-        MiuixTheme.colorScheme.primary
-    } else {
-        MiuixTheme.colorScheme.surfaceContainer
-    }
-    val textColor = if (selected) {
-        MiuixTheme.colorScheme.onPrimary
-    } else {
-        MiuixTheme.colorScheme.onSurface
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = textColor,
-            style = MiuixTheme.textStyles.body2,
-        )
-    }
 }
 
 /**

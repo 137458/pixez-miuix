@@ -69,6 +69,7 @@ fun BookTagScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var isAdding by remember { mutableStateOf(false) }
     var tagToDelete by remember { mutableStateOf<String?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
 
     // 排序操作期间禁用按钮。
@@ -190,7 +191,10 @@ fun BookTagScreen(
                                             )
                                         }
                                         IconButton(
-                                            onClick = { tagToDelete = tag },
+                                            onClick = {
+                                                tagToDelete = tag
+                                                showDeleteDialog = true
+                                            },
                                             enabled = !isReordering,
                                         ) {
                                             Icon(
@@ -223,21 +227,22 @@ fun BookTagScreen(
             },
         )
 
-        val pendingDelete = tagToDelete
-        if (pendingDelete != null) {
-            DeleteConfirmationDialog(
-                title = strings.dialogDeleteConfirm,
-                summary = strings.bookTagsDeleteConfirm.format(pendingDelete),
-                isLoading = isDeleting,
-                onDismiss = { tagToDelete = null },
-                onConfirm = {
+        DeleteConfirmationDialog(
+            show = showDeleteDialog && tagToDelete != null,
+            title = strings.dialogDeleteConfirm,
+            summary = tagToDelete?.let { strings.bookTagsDeleteConfirm.format(it) } ?: "",
+            isLoading = isDeleting,
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                val targetTag = tagToDelete
+                if (targetTag != null) {
                     isDeleting = true
-                    updateTags(bookTags.filter { it != pendingDelete })
+                    updateTags(bookTags.filter { it != targetTag })
                     isDeleting = false
-                    tagToDelete = null
-                },
-            )
-        }
+                }
+                showDeleteDialog = false
+            },
+        )
     }
 }
 
@@ -298,6 +303,7 @@ private fun AddTagDialog(
  */
 @Composable
 private fun DeleteConfirmationDialog(
+    show: Boolean,
     title: String,
     summary: String,
     isLoading: Boolean,
@@ -309,7 +315,7 @@ private fun DeleteConfirmationDialog(
     OverlayDialog(
         title = title,
         summary = summary,
-        show = true,
+        show = show,
         onDismissRequest = onDismiss,
     ) {
         Row(

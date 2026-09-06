@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import com.perol.pixez.shared.data.model.UserDetail
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
@@ -68,5 +69,9 @@ fun buildUserCopyInfo(userDetail: UserDetail): String {
  * 构造用户主页链接。
  */
 fun buildUserShareLink(userId: Int): String {
-    return "https://www.pixiv.net/users/${userId}"
+    return AppConstants.pixivUserUrl(userId)
+}
+
+fun buildUserShareLink(userId: Long): String {
+    return AppConstants.pixivUserUrl(userId)
 }

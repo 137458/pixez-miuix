@@ -245,7 +245,7 @@ fun CommentsScreen(
                             // 重新刷新评论列表以显示最新评论
                             triggerManualRefresh()
                         }.onFailure { e ->
-                            sendError = e.message ?: "发表评论失败"
+                            sendError = e.message ?: strings.commentsPostFailed
                         }
                         isSending = false
                     }

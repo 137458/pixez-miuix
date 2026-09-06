@@ -45,14 +45,10 @@ import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-import com.perol.pixez.shared.ui.components.liquidGlass
+import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import top.yukonga.miuix.kmp.blur.Backdrop
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
-import top.yukonga.miuix.kmp.squircle.squircleBorder
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -263,15 +259,17 @@ fun SpotlightScreen(
                         },
                     )
                     // 分类选择横条
-                    SpotlightCategorySelector(
-                        selectedCategory = selectedCategory,
-                        strings = strings,
-                        onCategorySelected = { category ->
+                    LiquidFilterBar(
+                        items = SpotlightCategory.entries,
+                        selectedItem = selectedCategory,
+                        onItemSelected = { category ->
                             if (selectedCategory != category) {
                                 selectedCategory = category
                             }
                         },
+                        labelProvider = { it.labelFor(strings) },
                         backdrop = backdrop,
+                        isScrollable = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -366,100 +364,6 @@ fun SpotlightScreen(
     }
 }
 
-/**
- * 分类选择横条，采用 MIUIX 胶囊按钮风格。
- */
-@Composable
-private fun SpotlightCategorySelector(
-    selectedCategory: SpotlightCategory,
-    strings: AppStrings,
-    onCategorySelected: (SpotlightCategory) -> Unit,
-    backdrop: Backdrop? = null,
-    modifier: Modifier = Modifier,
-) {
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
-
-    LazyRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(
-            items = SpotlightCategory.entries,
-            contentType = { "category_tab" },
-        ) { category ->
-            val isSelected = category == selectedCategory
-            val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val pressScale = remember { androidx.compose.animation.core.Animatable(1f) }
-
-            LaunchedEffect(isPressed) {
-                pressScale.animateTo(
-                    targetValue = if (isPressed) 0.93f else 1f,
-                    animationSpec = androidx.compose.animation.core.spring(
-                        dampingRatio = 0.7f,
-                        stiffness = 500f,
-                    ),
-                )
-            }
-
-            val pillShape = remember { RoundedCornerShape(16.dp) }
-            val itemBackground = if (isSelected) {
-                MiuixTheme.colorScheme.primary
-            } else {
-                if (isDark) Color(0xFF2A2A2E) else Color.White
-            }
-            val tintAlpha = if (isSelected) 0.88f else (if (isDark) 0.45f else 0.60f)
-
-            val itemBorderColor = if (isSelected) {
-                Color.White.copy(alpha = 0.35f)
-            } else {
-                if (isDark) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.65f)
-            }
-
-            Box(
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = pressScale.value
-                        scaleY = pressScale.value
-                    }
-                    .liquidGlass(
-                        backdrop = backdrop,
-                        shape = pillShape,
-                        blurRadius = 16.dp,
-                        tintColor = itemBackground,
-                        tintAlpha = tintAlpha,
-                    )
-                    .squircleBorder(
-                        width = 0.5.dp,
-                        color = itemBorderColor,
-                        cornerRadius = 16.dp,
-                    )
-                    .clip(pillShape)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                    ) {
-                        if (!isSelected) {
-                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            onCategorySelected(category)
-                        }
-                    }
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = category.labelFor(strings),
-                    style = MiuixTheme.textStyles.body2,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) Color.White else MiuixTheme.colorScheme.onSurface,
-                )
-            }
-        }
-    }
-}
 
 /**
  * 单张 Spotlight 文章卡片：封面图 + 标题 + 副标题。

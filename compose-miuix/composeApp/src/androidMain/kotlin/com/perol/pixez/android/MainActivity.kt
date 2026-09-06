@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import com.perol.pixez.shared.ui.i18n.AppStrings
 
 /**
  * Android 应用入口。
@@ -72,7 +73,8 @@ class MainActivity : ComponentActivity() {
                     onBackPressedDispatcher.onBackPressed()
                 } else {
                     lastBackPressTime = now
-                    Toast.makeText(this@MainActivity, "再次点击返回退出应用", Toast.LENGTH_SHORT).show()
+                    val strings = AppStrings.fromLanguageNum(dependencies.settingsRepository.languageNum)
+                    Toast.makeText(this@MainActivity, strings.doubleBackToExit, Toast.LENGTH_SHORT).show()
                 }
             }
         }

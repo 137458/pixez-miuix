@@ -335,7 +335,7 @@ private fun GuideNetworkStep(
                 ) {
                     BasicComponent(
                         title = strings.guideImageMirror,
-                        summary = "${strings.guideImageMirrorDesc} • 推荐国内直连",
+                        summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
                         onClick = {
                             isMirrorEnabled = true
                             settingsRepository.pictureSource = MIRROR_IMAGE_HOST
@@ -346,7 +346,7 @@ private fun GuideNetworkStep(
                     )
                     BasicComponent(
                         title = strings.guideImageOfficial,
-                        summary = "${strings.guideImageOfficialDesc} • 需配置网络代理",
+                        summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
                         onClick = {
                             isMirrorEnabled = false
                             settingsRepository.pictureSource = "i.pximg.net"
@@ -378,7 +378,7 @@ private fun GuideNetworkStep(
                     )
                     BasicComponent(
                         title = strings.guideNetworkSni,
-                        summary = "${strings.guideNetworkSniDesc} • 推荐国内网络开启",
+                        summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
                         onClick = {
                             currentNetworkMode = "sni"
                             settingsRepository.apiNetworkMode = "sni"
@@ -480,7 +480,7 @@ private fun GuideWelcomeStep(
 
             // 核心特性高光卡片
             item {
-                SmallTitle(text = "PixEz 特性")
+                SmallTitle(text = strings.guidePixEzFeatures)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
