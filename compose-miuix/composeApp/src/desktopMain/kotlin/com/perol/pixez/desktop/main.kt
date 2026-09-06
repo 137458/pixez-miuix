@@ -34,9 +34,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
-import com.mayakapps.compose.windowstyler.WindowBackdrop
-import com.mayakapps.compose.windowstyler.WindowStyle
 import com.perol.pixez.PixEzApp
+import com.perol.pixez.desktop.platform.WindowsMica
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
@@ -60,14 +59,6 @@ private object PixEzTrayPainter : Painter() {
         drawCircle(color = Color(0xFF2196F3))
         drawCircle(color = Color.White, radius = size.minDimension / 4.5f)
     }
-}
-
-/**
- * window-styler 0.3.2 relies on ComposeWindow's former `delegate` field. Compose 1.11 removed it,
- * so Mica must be skipped rather than failing later on the AWT event thread.
- */
-private val supportsWindowStylerMica: Boolean by lazy {
-    runCatching { ComposeWindow::class.java.getDeclaredField("delegate") }.isSuccess
 }
 
 /**
@@ -293,11 +284,9 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                 else -> isSystemDark
             }
 
-            if (supportsWindowStylerMica) {
-                WindowStyle(
-                    isDarkTheme = isDark,
-                    backdropType = WindowBackdrop.Mica,
-                )
+            DisposableEffect(window, isDark) {
+                WindowsMica.apply(window, isDark = isDark)
+                onDispose {}
             }
 
             DisposableEffect(window) {
