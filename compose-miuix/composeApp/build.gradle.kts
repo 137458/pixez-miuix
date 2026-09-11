@@ -79,8 +79,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010054
-        versionName = "0.9.108.4-miuix"
+        versionCode = 10010090
+        versionName = "0.9.109.0-miuix"
     }
 
     buildTypes {
@@ -138,7 +138,7 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
             )
             packageName = "PixEz"
-            packageVersion = "0.9.108"
+            packageVersion = "0.9.109"
             description = "PixEz MIUIX - Pixiv Client with Xiaomi HyperOS design"
             copyright = "© 2026 PixEz Contributors"
             vendor = "PixEz"
