@@ -1,115 +1,172 @@
 import 'dart:io';
 
+import 'package:bot_toast/bot_toast.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pixez/i18n.dart';
+import 'package:pixez/main.dart';
 import 'package:pixez/models/glance_illust_persist.dart';
+import 'package:pixez/page/history/history_store.dart';
 
-class DataExportPage extends StatefulWidget {
+class DataExportPage extends HookConsumerWidget {
   const DataExportPage({super.key});
 
   @override
-  State<DataExportPage> createState() => _DataExportPageState();
-}
-
-class _DataExportPageState extends State<DataExportPage> {
-  @override
-  Widget build(BuildContext context) {
-    return ScaffoldPage(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final errorColor = Colors.red;
+    return ScaffoldPage.scrollable(
       header: PageHeader(
         title: Text(I18n.of(context).app_data),
       ),
-      content: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ListTile(
-              //   title: Text(I18n.of(context).export_title),
-              //   subtitle: Text(I18n.of(context).export_tag_history),
-              //   onPressed: () async {
-              //     try {
-              //       await tagHistoryStore.exportData();
-              //     } catch (e) {
-              //       print(e);
-              //     }
-              //   },
-              // ),
-              // ListTile(
-              //   title: Text(I18n.of(context).import_title),
-              //   subtitle: Text(I18n.of(context).import_tag_history),
-              //   onPressed: () async {
-              //     try {
-              //       await tagHistoryStore.importData();
-              //     } catch (e) {
-              //       print(e);
-              //       BotToast.showText(text: e.toString());
-              //     }
-              //   },
-              // ),
-              // Divider(),
-              // ListTile(
-              //   title: Text(I18n.of(context).export_title),
-              //   subtitle: Text(I18n.of(context).export_bookmark_tag),
-              //   onPressed: () async {
-              //     try {
-              //       await bookTagStore.exportData();
-              //     } catch (e) {
-              //       print(e);
-              //     }
-              //   },
-              // ),
-              // ListTile(
-              //   title: Text(I18n.of(context).import_title),
-              //   subtitle: Text(I18n.of(context).import_bookmark_tag),
-              //   onPressed: () async {
-              //     try {
-              //       await bookTagStore.importData();
-              //     } catch (e) {
-              //       print(e);
-              //       BotToast.showText(text: e.toString());
-              //     }
-              //   },
-              // ),
-              // Divider(),
-              ListTile(
-                title: Text(I18n.of(context).clear_all_cache),
-                onPressed: () async {
-                  try {
-                    await _showClearCacheDialog(context);
-                  } catch (e) {}
-                },
-              ),
-            ],
-          ),
+      children: [
+        _buildAppDataListTile(
+          context,
+          I18n.of(context).search_history,
+          FluentIcons.search,
+          () async {
+            try {
+              await tagHistoryStore.exportData(context);
+            } catch (e) {
+              print(e);
+            }
+          },
+          () async {
+            try {
+              await tagHistoryStore.importData();
+            } catch (e) {
+              print(e);
+              BotToast.showText(text: e.toString());
+            }
+          },
         ),
-      ),
+        _buildAppDataListTile(
+          context,
+          I18n.of(context).bookmark_tag,
+          FluentIcons.favorite_star,
+          () async {
+            try {
+              await bookTagStore.exportData(context);
+            } catch (e) {
+              print(e);
+            }
+          },
+          () async {
+            try {
+              await bookTagStore.importData();
+            } catch (e) {
+              print(e);
+              BotToast.showText(text: e.toString());
+            }
+          },
+        ),
+        _buildAppDataListTile(
+          context,
+          I18n.of(context).illust_history,
+          FluentIcons.photo_collection,
+          () async {
+            try {
+              await ref.read(historyProvider.notifier).fetch();
+              await ref.read(historyProvider.notifier).exportData(context);
+            } catch (e) {
+              print(e);
+            }
+          },
+          () async {
+            try {
+              await ref.read(historyProvider.notifier).fetch();
+              await ref.read(historyProvider.notifier).importData();
+            } catch (e) {
+              print(e);
+              BotToast.showText(text: e.toString());
+            }
+          },
+        ),
+        _buildAppDataListTile(
+          context,
+          I18n.of(context).novel_history,
+          FluentIcons.book_answers,
+          () async {
+            try {
+              await novelHistoryStore.fetch();
+              await novelHistoryStore.exportData(context);
+            } catch (e) {
+              print(e);
+            }
+          },
+          () async {
+            try {
+              await novelHistoryStore.fetch();
+              await novelHistoryStore.importData();
+            } catch (e) {
+              print(e);
+              BotToast.showText(text: e.toString());
+            }
+          },
+        ),
+        _buildAppDataListTile(
+          context,
+          I18n.of(context).mute_data,
+          FluentIcons.blocked,
+          () async {
+            try {
+              await muteStore.export(context);
+            } catch (e) {
+              print(e);
+            }
+          },
+          () async {
+            try {
+              await muteStore.importFile();
+            } catch (e) {
+              print(e);
+              BotToast.showText(text: e.toString());
+            }
+          },
+        ),
+        const Divider(),
+        ListTile(
+          leading: Icon(
+            FluentIcons.clear,
+            color: errorColor,
+          ),
+          title: Text(
+            I18n.of(context).clear_all_cache,
+            style: TextStyle(color: errorColor),
+          ),
+          onPressed: () async {
+            try {
+              await _showClearCacheDialog(context);
+            } catch (e) {}
+          },
+        ),
+      ],
     );
   }
 
   Future _showClearCacheDialog(BuildContext context) async {
     final result = await showDialog(
-        builder: (BuildContext context) {
-          return ContentDialog(
-            title: Text(I18n.of(context).clear_all_cache),
-            actions: <Widget>[
-              Button(
-                child: Text(I18n.of(context).cancel),
-                onPressed: () {
-                  Navigator.of(context).pop("CANCEL");
-                },
-              ),
-              Button(
-                child: Text(I18n.of(context).ok),
-                onPressed: () {
-                  Navigator.of(context).pop("OK");
-                },
-              ),
-            ],
-          );
-        },
-        context: context);
+      builder: (BuildContext context) {
+        return ContentDialog(
+          title: Text(I18n.of(context).clear_all_cache),
+          actions: <Widget>[
+            Button(
+              child: Text(I18n.of(context).cancel),
+              onPressed: () {
+                Navigator.of(context).pop("CANCEL");
+              },
+            ),
+            FilledButton(
+              child: Text(I18n.of(context).ok),
+              onPressed: () {
+                Navigator.of(context).pop("OK");
+              },
+            ),
+          ],
+        );
+      },
+      context: context,
+    );
     switch (result) {
       case "OK":
         {
@@ -129,5 +186,31 @@ class _DataExportPageState extends State<DataExportPage> {
     await glanceIllustPersistProvider.open();
     await glanceIllustPersistProvider.deleteAll();
     await glanceIllustPersistProvider.close();
+  }
+
+  Widget _buildAppDataListTile(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Function() onExport,
+    Function() onImport,
+  ) {
+    return ListTile(
+      title: Text(title),
+      leading: Icon(icon),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          HyperlinkButton(
+            child: Text(I18n.of(context).import_title),
+            onPressed: onImport,
+          ),
+          HyperlinkButton(
+            child: Text(I18n.of(context).export),
+            onPressed: onExport,
+          ),
+        ],
+      ),
+    );
   }
 }

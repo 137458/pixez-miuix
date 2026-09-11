@@ -1,0 +1,11 @@
+
+**/target/
+**/*.rs.bk
+
+.idea
+.DS_Store
+.vscode
+.zed
+
+cargo-test-*
+tarpaulin-report.html

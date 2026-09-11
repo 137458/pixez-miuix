@@ -1,0 +1,5 @@
+[book]
+authors = ["Timon Post"]
+language = "en"
+src = "src"
+title = "Quinn"

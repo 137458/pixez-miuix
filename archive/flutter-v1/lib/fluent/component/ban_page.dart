@@ -15,6 +15,7 @@
  */
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:pixez/er/leader.dart';
 import 'package:pixez/fluent/page/shield/shield_page.dart';
 import 'package:pixez/i18n.dart';
 
@@ -54,9 +55,11 @@ class _BanPageState extends State<BanPage> {
               child: FilledButton(
                 child: Text(I18n.of(context).shielding_settings),
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ShieldPage(),
+                  Leader.push(
+                    context,
+                    ShieldPage(),
+                    icon: Icon(FluentIcons.blocked),
+                    title: Text(I18n.of(context).shielding_settings),
                   );
                 },
               ),

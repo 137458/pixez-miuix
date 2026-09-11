@@ -117,6 +117,7 @@ class _PictureListPageState extends State<PictureListPage> {
   }
 
   _onDrag(DragEndDetails details) {
+    if (!userSetting.swipeChangeArtwork) return;
     final pixelsPerSecond = details.velocity.pixelsPerSecond;
     if (pixelsPerSecond.dy.abs() > pixelsPerSecond.dx.abs()) return;
     if (pixelsPerSecond.dx.abs() > screenWidth) {

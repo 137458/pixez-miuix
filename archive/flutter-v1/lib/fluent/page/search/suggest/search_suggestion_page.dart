@@ -14,17 +14,18 @@
  *
  */
 
-import 'package:bot_toast/bot_toast.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:pixez/er/leader.dart';
+import 'package:pixez/fluent/page/picture/illust_lighting_page.dart';
+import 'package:pixez/fluent/page/saucenao/sauce_nao_modal.dart';
+import 'package:pixez/fluent/page/search/result_page.dart';
+import 'package:pixez/fluent/page/soup/soup_page.dart';
+import 'package:pixez/fluent/page/user/users_page.dart';
 import 'package:pixez/i18n.dart';
-import 'package:pixez/page/picture/illust_lighting_page.dart';
-import 'package:pixez/page/saucenao/sauce_store.dart';
-import 'package:pixez/page/search/result_page.dart';
+import 'package:pixez/main.dart';
 import 'package:pixez/page/search/suggest/suggestion_store.dart';
-import 'package:pixez/page/soup/soup_page.dart';
-import 'package:pixez/page/user/users_page.dart';
+import 'package:pixez/page/webview/saucenao_webview_page.dart';
 
 class SearchSuggestionPage extends StatefulWidget {
   final String? preword;
@@ -38,7 +39,6 @@ class SearchSuggestionPage extends StatefulWidget {
 class _SearchSuggestionPageState extends State<SearchSuggestionPage> {
   late TextEditingController _filter;
   late SuggestionStore _suggestionStore;
-  late SauceStore _sauceStore;
   FocusNode focusNode = FocusNode();
   final tagGroup = [];
   bool idV = false;
@@ -46,23 +46,6 @@ class _SearchSuggestionPageState extends State<SearchSuggestionPage> {
   @override
   void initState() {
     _suggestionStore = SuggestionStore();
-    _sauceStore = SauceStore();
-    _sauceStore.observableStream.listen((event) {
-      if (event != null && _sauceStore.results.isNotEmpty) {
-        Leader.push(
-          context,
-          PageView(
-            children: _sauceStore.results
-                .map((element) => IllustLightingPage(id: element))
-                .toList(),
-          ),
-          icon: const Icon(FluentIcons.picture_library),
-          title: Text(I18n.of(context).search),
-        );
-      } else {
-        BotToast.showText(text: I18n.ofContext().no_result);
-      }
-    });
     var query = widget.preword ?? '';
     _filter = TextEditingController(text: query);
     var tags = query
@@ -76,8 +59,20 @@ class _SearchSuggestionPageState extends State<SearchSuggestionPage> {
   @override
   void dispose() {
     _filter.dispose();
-    _sauceStore.dispose();
     super.dispose();
+  }
+
+  void _openSauceNao() {
+    if (userSetting.useSaunceNaoWebview) {
+      Leader.push(
+        context,
+        SauncenaoWebview(),
+        icon: const Icon(FluentIcons.image_search),
+        title: const Text('SauceNao'),
+      );
+    } else {
+      SauceNaoModal.show(context);
+    }
   }
 
   @override
@@ -222,10 +217,8 @@ class _SearchSuggestionPageState extends State<SearchSuggestionPage> {
       commandBar: CommandBar(
         primaryItems: [
           CommandBarButton(
-            onPressed: () {
-              _sauceStore.findImage();
-            },
-            icon: Icon(FluentIcons.add_field),
+            onPressed: _openSauceNao,
+            icon: Icon(FluentIcons.image_search),
           ),
           CommandBarButton(
             icon: Icon(FluentIcons.chrome_close,

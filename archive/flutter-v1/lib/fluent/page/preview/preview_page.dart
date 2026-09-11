@@ -149,7 +149,9 @@ class _PreviewPageState extends State<PreviewPage>
     super.build(context);
     final orientation = MediaQuery.of(context).orientation;
     var count = 0;
-    if (userSetting.crossAdapt) {
+    if (orientation == Orientation.portrait
+        ? userSetting.crossAdapt
+        : userSetting.hCrossAdapt) {
       count = _buildSliderValue(context, orientation);
     } else {
       count = (orientation == Orientation.portrait)

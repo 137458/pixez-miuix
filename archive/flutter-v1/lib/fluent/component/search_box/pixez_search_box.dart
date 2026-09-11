@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bot_toast/bot_toast.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:pixez/fluent/component/pixez_button.dart';
@@ -14,9 +13,10 @@ import 'package:pixez/fluent/page/picture/illust_lighting_page.dart';
 import 'package:pixez/fluent/page/search/result_page.dart';
 import 'package:pixez/fluent/page/soup/soup_page.dart';
 import 'package:pixez/fluent/page/user/users_page.dart';
-import 'package:pixez/page/saucenao/sauce_store.dart';
+import 'package:pixez/fluent/page/saucenao/sauce_nao_modal.dart';
 import 'package:pixez/page/search/suggest/suggestion_store.dart';
 import 'package:pixez/page/search/trend_tags_store.dart';
+import 'package:pixez/page/webview/saucenao_webview_page.dart';
 
 part 'item.dart';
 
@@ -27,7 +27,6 @@ class PixEzSearchBox extends StatefulWidget {
 
 class _PixEzSearchBoxState extends State<StatefulWidget> {
   final SuggestionStore _suggestionStore = SuggestionStore();
-  final SauceStore _sauceStore = SauceStore();
   final TrendTagsStore _trendTagsStore = TrendTagsStore();
 
   final _key = GlobalKey<AutoSuggestBoxState<_NextPixEzSearchBoxItem>>();
@@ -39,7 +38,6 @@ class _PixEzSearchBoxState extends State<StatefulWidget> {
 
   @override
   void initState() {
-    _sauceStore.observableStream.listen(_searchByImage);
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
         if (_key.currentState?.isOverlayVisible == true)
@@ -59,8 +57,20 @@ class _PixEzSearchBoxState extends State<StatefulWidget> {
   void dispose() {
     _focusNode.dispose();
     _controller.dispose();
-    _sauceStore.dispose();
     super.dispose();
+  }
+
+  void _openSauceNao() {
+    if (userSetting.useSaunceNaoWebview) {
+      Leader.push(
+        context,
+        SauncenaoWebview(),
+        icon: const Icon(FluentIcons.image_search),
+        title: const Text('SauceNao'),
+      );
+    } else {
+      SauceNaoModal.show(context);
+    }
   }
 
   @override
@@ -111,7 +121,7 @@ class _PixEzSearchBoxState extends State<StatefulWidget> {
         message: '以图搜源',
         child: IconButton(
           icon: const Icon(FluentIcons.image_search),
-          onPressed: _sauceStore.findImage,
+          onPressed: _openSauceNao,
         ),
       );
 
@@ -433,24 +443,6 @@ class _PixEzSearchBoxState extends State<StatefulWidget> {
       ResultPage(word: text),
       icon: const Icon(FluentIcons.search),
       title: Text('搜索 ${text}'),
-    );
-  }
-
-  void _searchByImage(event) {
-    if (event == null || !_sauceStore.results.isNotEmpty) {
-      BotToast.showText(text: I18n.ofContext().no_result);
-      return;
-    }
-
-    Leader.push(
-      context,
-      PageView(
-        children: _sauceStore.results
-            .map((element) => IllustLightingPage(id: element))
-            .toList(),
-      ),
-      icon: Icon(FluentIcons.search),
-      title: Text(I18n.of(context).search),
     );
   }
 

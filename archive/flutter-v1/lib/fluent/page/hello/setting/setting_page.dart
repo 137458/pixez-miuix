@@ -151,10 +151,11 @@ class _SettingPageState extends State<SettingPage> {
                     leading: Icon(FluentIcons.account_management),
                     title: Text(I18n.of(context).account_message),
                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AccountEditPage(),
-                        useRootNavigator: false,
+                      Leader.push(
+                        context,
+                        AccountEditPage(),
+                        icon: Icon(FluentIcons.account_management),
+                        title: Text(I18n.of(context).account_message),
                       );
                     },
                   ),
@@ -206,10 +207,12 @@ class _SettingPageState extends State<SettingPage> {
             ListTile(
               leading: Icon(FluentIcons.blocked),
               title: Text(I18n.of(context).shielding_settings),
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => ShieldPage(),
-                useRootNavigator: false,
+              trailing: Icon(FluentIcons.chevron_right),
+              onPressed: () => Leader.push(
+                context,
+                ShieldPage(),
+                icon: Icon(FluentIcons.blocked),
+                title: Text(I18n.of(context).shielding_settings),
               ),
             ),
             ListTile(

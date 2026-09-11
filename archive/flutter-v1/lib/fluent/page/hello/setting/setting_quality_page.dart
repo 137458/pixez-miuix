@@ -345,6 +345,7 @@ class _SettingQualityPageState extends State<SettingQualityPage>
                             );
                             return;
                           }
+                          await userSetting.setHCrossAdapt(false);
                           userSetting.setHCrossCount(index! + 2);
                           BotToast.showText(
                             text: I18n.of(context).need_to_restart_app,

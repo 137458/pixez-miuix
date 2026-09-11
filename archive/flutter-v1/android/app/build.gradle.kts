@@ -67,6 +67,8 @@ android {
     compileSdk = 37
     ndkVersion = "28.2.13676358"
 
+    val isBuildingBundle = gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -80,8 +82,8 @@ android {
         applicationId = packageName
         minSdk = flutter.minSdkVersion
         targetSdk = 37
-        versionCode = 10010080
-        versionName = "0.9.108 strip"
+        versionCode = 10010090
+        versionName = "0.9.109 repeat"
         buildConfigField("boolean", "IS_GOOGLEPLAY", isGooglePlay.toString())
         ndk {
             abiFilters.addAll(arrayOf("armeabi-v7a", "arm64-v8a", "x86_64"))
@@ -92,7 +94,6 @@ android {
 
     splits {
         abi {
-            val isBuildingBundle = gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
             isEnable = !isBuildingBundle
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86_64")
@@ -127,6 +128,14 @@ android {
         sourceSets {
             getByName("release") {
                 manifest.srcFile("src/googlePlayRelease/AndroidManifest.xml")
+            }
+        }
+    }
+
+    if (!isBuildingBundle) {
+        packaging {
+            jniLibs {
+                useLegacyPackaging = true
             }
         }
     }

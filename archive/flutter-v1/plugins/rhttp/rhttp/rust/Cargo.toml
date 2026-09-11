@@ -24,6 +24,7 @@ jni = "0.22"
 ndk-context = "0.1"
 
 [dependencies.reqwest]
+path = "third_party/reqwest"
 version = "0.13.4"
 default-features = false
 features = [

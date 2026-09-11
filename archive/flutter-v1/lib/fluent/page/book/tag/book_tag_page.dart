@@ -34,14 +34,25 @@ class _BookTagPageState extends State<BookTagPage>
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
+      final tags = bookTagStore.bookTagList;
+      if (tags.isEmpty) {
+        return ScaffoldPage(
+          content: Center(
+            child: Text(I18n.of(context).no_result),
+          ),
+        );
+      }
+
+      final selected = _index.clamp(0, tags.length - 1);
+
       return NavigationView(
         pane: NavigationPane(
-          selected: _index,
+          selected: selected,
           onChanged: (value) => setState(() {
             _index = value;
           }),
           items: [
-            for (var i in bookTagStore.bookTagList)
+            for (var i in tags)
               PaneItem(
                 icon: Icon(FluentIcons.tag),
                 body: ResultIllustList(word: i),
