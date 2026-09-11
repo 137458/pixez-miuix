@@ -56,7 +56,7 @@ fun PixivAsyncImage(
 
     val transformedModel = remember(model, settings?.pictureSource, settings?.changeVersion) {
         val pictureSource = settings?.pictureSource
-        if (model is String && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
+        if (model is String && !model.startsWith("file:") && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
             model.replace("://i.pximg.net", "://$pictureSource")
         } else {
             model
@@ -65,7 +65,7 @@ fun PixivAsyncImage(
 
     val transformedThumbnailCacheKey = remember(thumbnailUrl, settings?.pictureSource, settings?.changeVersion) {
         val pictureSource = settings?.pictureSource
-        if (thumbnailUrl is String && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
+        if (thumbnailUrl is String && !thumbnailUrl.startsWith("file:") && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
             thumbnailUrl.replace("://i.pximg.net", "://$pictureSource")
         } else {
             thumbnailUrl
@@ -73,11 +73,21 @@ fun PixivAsyncImage(
     }
 
     val request = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context, loadOriginalSize) {
+        val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
             .data(transformedModel)
-            .httpHeaders(headers)
+            .apply {
+                if (!isLocalFile) {
+                    httpHeaders(headers)
+                    val modelStr = transformedModel?.toString()
+                    if (!modelStr.isNullOrBlank()) {
+                        memoryCacheKey(modelStr)
+                        diskCacheKey(modelStr)
+                    }
+                }
+            }
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .networkCachePolicy(CachePolicy.ENABLED)

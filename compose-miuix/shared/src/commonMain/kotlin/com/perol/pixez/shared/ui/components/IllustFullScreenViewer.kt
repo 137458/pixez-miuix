@@ -51,18 +51,25 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.size.Precision
+import coil3.size.Size
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -97,9 +104,11 @@ fun IllustFullScreenViewer(
     onToast: (String) -> Unit,
     onDismiss: () -> Unit,
     detailBackdrop: Backdrop? = null,
+    previewUrl: String? = null,
 ) {
     val strings = LocalStrings.current
     val context = LocalPlatformContext.current
+    val settings = LocalSettingsRepository.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
     val pagerState = rememberPagerState(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
@@ -167,13 +176,51 @@ fun IllustFullScreenViewer(
                 .blurBackdropSource(internalBackdrop),
         ) {
             if (pageCount > 1) {
+                // 多 P 相邻页静默预加载（前后各 1 页）
+                LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings?.pictureSource) {
+                    val imageLoader = SingletonImageLoader.get(context)
+                    val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
+                        .filter { it in 0 until pageCount }
+                    for (pIndex in adjacentPages) {
+                        val p = illust.metaPages.getOrNull(pIndex) ?: continue
+                        val rawTarget = when (zoomQuality) {
+                            0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                            1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
+                            2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
+                            else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                        }
+                        val optModel = resolveOptimizedImageModel(
+                            context = context,
+                            illust = illust,
+                            pageIndex = pIndex,
+                            targetUrl = rawTarget,
+                            originalUrl = p.imageUrls?.original,
+                            customBasePath = settings?.storePath,
+                            pictureSource = settings?.pictureSource,
+                        )
+                        if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
+                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != "i.pximg.net") {
+                                optModel.replace("://i.pximg.net", "://${settings.pictureSource}")
+                            } else optModel
+                            val req = ImageRequest.Builder(context)
+                                .data(transformed)
+                                .memoryCacheKey(transformed)
+                                .diskCacheKey(transformed)
+                                .size(Size.ORIGINAL)
+                                .precision(Precision.EXACT)
+                                .build()
+                            imageLoader.enqueue(req)
+                        }
+                    }
+                }
+
                 HorizontalPager(
                     state = pagerState,
                     userScrollEnabled = currentPageScale <= 1.05f,
                     modifier = Modifier.fillMaxSize(),
                 ) { pageIndex ->
                     val page = illust.metaPages[pageIndex]
-                    val zoomUrl = remember(page, zoomQuality) {
+                    val rawZoomUrl = remember(page, zoomQuality) {
                         when (zoomQuality) {
                             0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                             1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
@@ -181,8 +228,24 @@ fun IllustFullScreenViewer(
                             else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                         }
                     }
-                    val thumbnailUrl = remember(page) {
-                        page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
+                    val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
+                        resolveOptimizedImageModel(
+                            context = context,
+                            illust = illust,
+                            pageIndex = pageIndex,
+                            targetUrl = rawZoomUrl,
+                            originalUrl = page.imageUrls?.original,
+                            customBasePath = settings?.storePath,
+                            pictureSource = settings?.pictureSource,
+                        )
+                    }
+                    val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
+                        if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
+                            previewUrl
+                        } else {
+                            page.imageUrls?.let { it.large.ifEmpty { it.medium } }
+                                ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                        }
                     }
 
                     ZoomableImage(
@@ -199,7 +262,7 @@ fun IllustFullScreenViewer(
                     )
                 }
             } else {
-                val singleZoomUrl = remember(illust, zoomQuality) {
+                val rawSingleZoomUrl = remember(illust, zoomQuality) {
                     when (zoomQuality) {
                         0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                         1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
@@ -207,8 +270,20 @@ fun IllustFullScreenViewer(
                         else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                     }
                 }
-                val thumbnailUrl = remember(illust) {
-                    illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
+                val singleZoomUrl = remember(illust, rawSingleZoomUrl, settings?.pictureSource, settings?.changeVersion) {
+                    resolveOptimizedImageModel(
+                        context = context,
+                        illust = illust,
+                        pageIndex = 0,
+                        targetUrl = rawSingleZoomUrl,
+                        originalUrl = illust.metaSinglePage?.originalImageUrl,
+                        customBasePath = settings?.storePath,
+                        pictureSource = settings?.pictureSource,
+                    )
+                }
+                val thumbnailUrl = remember(illust, previewUrl) {
+                    previewUrl?.takeIf { it.isNotBlank() }
+                        ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
                 }
 
                 ZoomableImage(
@@ -448,6 +523,16 @@ private fun ZoomableImage(
     var isLoading by remember(model) { mutableStateOf(true) }
     var isError by remember(model) { mutableStateOf(false) }
     var reloadTrigger by remember { mutableIntStateOf(0) }
+    var showLoadingIndicator by remember(model) { mutableStateOf(false) }
+
+    LaunchedEffect(isLoading, model) {
+        if (isLoading) {
+            delay(200)
+            showLoadingIndicator = true
+        } else {
+            showLoadingIndicator = false
+        }
+    }
 
     Box(
         modifier = modifier
@@ -564,9 +649,9 @@ private fun ZoomableImage(
                 },
         )
 
-        // 高清原图加载中指示器（轻量悬浮暗色胶囊）
+        // 高清原图加载中指示器（轻量悬浮暗色胶囊，防抖避免闪烁）
         AnimatedVisibility(
-            visible = isLoading,
+            visible = showLoadingIndicator,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier

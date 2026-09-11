@@ -99,42 +99,9 @@ private fun extractExtension(url: String): String {
 }
 
 private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int, ext: String): File? {
+    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex) ?: return null
     return runCatching {
-        val userHome = System.getProperty("user.home") ?: return@runCatching null
-        val pixezDir = File(File(userHome, "Pictures"), "PixEz")
-        if (!pixezDir.exists() || !pixezDir.isDirectory) return@runCatching null
-
-        val candidateNames = mutableListOf(
-            "${illust.id}_p${pageIndex}.${ext}",
-            "${illust.id}_p${pageIndex}.png",
-            "${illust.id}_p${pageIndex}.jpg",
-            "${illust.id}_p${pageIndex}.gif",
-            "${illust.id}_p${pageIndex}.webp",
-        )
-        if (pageIndex == 0) {
-            candidateNames.add("${illust.id}.${ext}")
-            candidateNames.add("${illust.id}.png")
-            candidateNames.add("${illust.id}.jpg")
-        }
-
-        for (name in candidateNames) {
-            val file = File(pixezDir, name)
-            if (file.exists() && file.length() > 0) return@runCatching file
-        }
-
-        val files = pixezDir.listFiles() ?: return@runCatching null
-        val idStr = illust.id.toString()
-        val pageSuffix = "_p${pageIndex}."
-
-        for (file in files) {
-            val name = file.name
-            if (file.length() > 0 && name.contains(idStr)) {
-                if (pageIndex == 0 || name.contains(pageSuffix)) {
-                    return@runCatching file
-                }
-            }
-        }
-        null
+        if (uri.startsWith("file:")) File(java.net.URI(uri)) else File(uri)
     }.getOrNull()
 }
 

@@ -139,48 +139,9 @@ private fun extractExtension(url: String): String {
  * 检索公共存储 Pictures/PixEz 目录中是否已下载该插画原图。
  */
 private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int, ext: String): File? {
+    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex) ?: return null
     return runCatching {
-        val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val pixezDir = File(picturesDir, "PixEz")
-        if (!pixezDir.exists() || !pixezDir.isDirectory) return@runCatching null
-
-        // 1. 精确名称匹配
-        val candidateNames = mutableListOf(
-            "${illust.id}_p${pageIndex}.${ext}",
-            "${illust.id}_p${pageIndex}.png",
-            "${illust.id}_p${pageIndex}.jpg",
-            "${illust.id}_p${pageIndex}.gif",
-            "${illust.id}_p${pageIndex}.webp",
-        )
-        if (pageIndex == 0) {
-            candidateNames.add("${illust.id}.${ext}")
-            candidateNames.add("${illust.id}.png")
-            candidateNames.add("${illust.id}.jpg")
-            candidateNames.add("${illust.id}.gif")
-            candidateNames.add("${illust.id}.webp")
-        }
-
-        for (name in candidateNames) {
-            val file = File(pixezDir, name)
-            if (file.exists() && file.length() > 0) {
-                return@runCatching file
-            }
-        }
-
-        // 2. 标题包含格式匹配（处理 `{title}_p{index}.{ext}` 命名模式）
-        val files = pixezDir.listFiles() ?: return@runCatching null
-        val idStr = illust.id.toString()
-        val pageSuffix = "_p${pageIndex}."
-
-        for (file in files) {
-            val name = file.name
-            if (file.length() > 0 && name.contains(idStr)) {
-                if (pageIndex == 0 || name.contains(pageSuffix)) {
-                    return@runCatching file
-                }
-            }
-        }
-        null
+        if (uri.startsWith("file:")) File(java.net.URI(uri)) else File(uri)
     }.getOrNull()
 }
 

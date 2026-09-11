@@ -93,6 +93,7 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.platform.illustDragAndDropSource
+import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.IllustActionMenu
@@ -353,13 +354,24 @@ private fun IllustDetailSingleContent(
                                         settings?.pictureQuality ?: 0
                                     }
                                 }
-                                val pageUrl = remember(page, effectiveQuality) {
+                                val rawPageUrl = remember(page, effectiveQuality) {
                                     when (effectiveQuality) {
                                         0 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
                                         1 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
                                         2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
                                         else -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
                                     }
+                                }
+                                val pageUrl = remember(page, pageIndex, rawPageUrl, settings?.pictureSource, settings?.changeVersion) {
+                                    resolveOptimizedImageModel(
+                                        context = context,
+                                        illust = illust,
+                                        pageIndex = pageIndex,
+                                        targetUrl = rawPageUrl,
+                                        originalUrl = page.imageUrls?.original,
+                                        customBasePath = settings?.storePath,
+                                        pictureSource = settings?.pictureSource,
+                                    )
                                 }
                                 val thumbnailUrl = remember(page) {
                                     page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
@@ -440,13 +452,24 @@ private fun IllustDetailSingleContent(
                                             settings?.pictureQuality ?: 0
                                         }
                                     }
-                                    val singleUrl = remember(illust, effectiveQuality) {
+                                    val rawSingleUrl = remember(illust, effectiveQuality) {
                                         when (effectiveQuality) {
                                             0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
                                             1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
                                             2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
                                             else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
                                         }
+                                    }
+                                    val singleUrl = remember(illust, rawSingleUrl, settings?.pictureSource, settings?.changeVersion) {
+                                        resolveOptimizedImageModel(
+                                            context = context,
+                                            illust = illust,
+                                            pageIndex = 0,
+                                            targetUrl = rawSingleUrl,
+                                            originalUrl = illust.metaSinglePage?.originalImageUrl,
+                                            customBasePath = settings?.storePath,
+                                            pictureSource = settings?.pictureSource,
+                                        )
                                     }
                                     val thumbnailUrl = remember(illust) {
                                         illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
@@ -926,11 +949,38 @@ private fun IllustDetailSingleContent(
         )
 
         if (fullScreenPageIndex != null && illust != null) {
+            val pageIdx = fullScreenPageIndex!!.coerceAtLeast(0)
+            val currentPreviewUrl = if (illust.metaPages.isNotEmpty()) {
+                val p = illust.metaPages.getOrNull(pageIdx)
+                val target = p?.imageUrls?.let { it.large.ifEmpty { it.medium } } ?: illust.imageUrls.large
+                resolveOptimizedImageModel(
+                    context = context,
+                    illust = illust,
+                    pageIndex = pageIdx,
+                    targetUrl = target,
+                    originalUrl = p?.imageUrls?.original,
+                    customBasePath = settings?.storePath,
+                    pictureSource = settings?.pictureSource,
+                )
+            } else {
+                val target = illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                resolveOptimizedImageModel(
+                    context = context,
+                    illust = illust,
+                    pageIndex = 0,
+                    targetUrl = target,
+                    originalUrl = illust.metaSinglePage?.originalImageUrl,
+                    customBasePath = settings?.storePath,
+                    pictureSource = settings?.pictureSource,
+                )
+            }
+
             IllustFullScreenViewer(
                 illust = illust,
-                initialPage = fullScreenPageIndex!!,
+                initialPage = pageIdx,
                 zoomQuality = settings?.zoomQuality ?: 0,
                 downloadRepository = downloadRepository,
+                previewUrl = currentPreviewUrl,
                 onToast = { toastMessage = it },
                 onDismiss = { fullScreenPageIndex = null },
                 detailBackdrop = detailBackdrop,
