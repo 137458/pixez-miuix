@@ -54,6 +54,7 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -321,7 +322,7 @@ fun SpotlightScreen(
                             start = 16.dp,
                             top = paddingValues.calculateTopPadding() + 12.dp,
                             end = 16.dp,
-                            bottom = 96.dp,
+                            bottom = LocalBottomBarContentPadding.current,
                         ),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalItemSpacing = 12.dp,

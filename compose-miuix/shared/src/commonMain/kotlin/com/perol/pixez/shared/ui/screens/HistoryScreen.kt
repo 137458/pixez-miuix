@@ -50,6 +50,7 @@ import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -334,7 +335,12 @@ private fun HistoryGrid(
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(AppConstants.Layout.GRID_CARD_MIN_WIDTH_DP.dp),
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(8.dp),
+        contentPadding = PaddingValues(
+            start = 8.dp,
+            top = 8.dp,
+            end = 8.dp,
+            bottom = LocalBottomBarContentPadding.current,
+        ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp,
     ) {

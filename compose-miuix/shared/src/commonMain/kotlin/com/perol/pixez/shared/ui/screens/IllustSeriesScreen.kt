@@ -29,6 +29,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
@@ -211,7 +212,7 @@ fun IllustSeriesScreen(
                                     start = 8.dp,
                                     top = paddingValues.calculateTopPadding() + 8.dp,
                                     end = 8.dp,
-                                    bottom = 100.dp,
+                                    bottom = LocalBottomBarContentPadding.current,
                                 ),
                                 hasMore = nextUrl != null,
                                 isLoadingMore = isLoadingMore,

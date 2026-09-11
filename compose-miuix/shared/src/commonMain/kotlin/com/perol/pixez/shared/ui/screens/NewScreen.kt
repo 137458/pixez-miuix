@@ -40,6 +40,7 @@ import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import top.yukonga.miuix.kmp.blur.Backdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import androidx.compose.runtime.remember
@@ -361,7 +362,7 @@ fun NewScreen(
                                             start = 8.dp,
                                             top = paddingValues.calculateTopPadding() + 8.dp,
                                             end = 8.dp,
-                                            bottom = 100.dp,
+                                            bottom = LocalBottomBarContentPadding.current,
                                         ),
                                         hasMore = nextUrl != null,
                                         isLoadingMore = isLoadingMore,

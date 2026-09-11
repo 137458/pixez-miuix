@@ -64,6 +64,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 
 /**
  * 排行榜页：支持日/周/月等模式切换，展示真实排行榜数据。
@@ -304,7 +305,7 @@ fun RankingScreen(
                                     start = 8.dp,
                                     top = paddingValues.calculateTopPadding() + 8.dp,
                                     end = 8.dp,
-                                    bottom = 100.dp,
+                                    bottom = LocalBottomBarContentPadding.current,
                                 ),
                                 hasMore = nextUrl != null,
                                 isLoadingMore = isLoadingMore,
