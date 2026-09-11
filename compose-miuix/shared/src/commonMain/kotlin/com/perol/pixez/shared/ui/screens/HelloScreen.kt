@@ -36,6 +36,7 @@ import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.remember
@@ -80,6 +81,7 @@ fun HelloScreen(
     reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
     val strings = LocalStrings.current
+    val bottomBarPadding = LocalBottomBarContentPadding.current
     // retryCount 作为 produceState 的 key，手动刷新或点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
@@ -337,7 +339,7 @@ fun HelloScreen(
                                     start = 8.dp,
                                     top = paddingValues.calculateTopPadding() + 8.dp,
                                     end = 8.dp,
-                                    bottom = 100.dp,
+                                    bottom = bottomBarPadding,
                                 ),
                                 hasMore = nextUrl != null,
                                 isLoadingMore = isLoadingMore,

@@ -52,9 +52,8 @@ internal object SettingsKeys {
     const val NAME_EVAL = "name_eval"
     const val CROSS_ADAPT = "cross_adapt"
     const val CROSS_ADAPT_WIDTH = "cross_adapt_width"
-    // 旧版横屏与竖屏共用同一组键，使用显式别名避免维护时误改。
-    const val H_CROSS_ADAPT = CROSS_ADAPT
-    const val H_CROSS_ADAPT_WIDTH = CROSS_ADAPT_WIDTH
+    const val H_CROSS_ADAPT = "h_cross_adapt"
+    const val H_CROSS_ADAPT_WIDTH = "h_cross_adapt_width"
     const val DEFAULT_PRIVATE_LIKE = "default_private_like"
     const val IMAGE_PICKER_TYPE = "image_picker_type_renew"
     const val LONG_PRESS_SAVE_CONFIRM = "long_press_save_confirm"

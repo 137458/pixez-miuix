@@ -75,6 +75,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
@@ -119,6 +120,7 @@ fun SearchScreen(
     initialQuery: String = "",
 ) {
     val strings = LocalStrings.current
+    val bottomBarPadding = LocalBottomBarContentPadding.current
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     // 存在初始查询词或点击标签后进入搜索结果模式。
     var isSearching by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
@@ -492,7 +494,7 @@ fun SearchScreen(
                 start = 8.dp,
                 top = contentTopPadding,
                 end = 8.dp,
-                bottom = 100.dp,
+                bottom = bottomBarPadding,
             )
         }
 
@@ -570,7 +572,7 @@ fun SearchScreen(
                         start = 0.dp,
                         top = contentTopPadding,
                         end = 0.dp,
-                        bottom = 100.dp,
+                        bottom = LocalBottomBarContentPadding.current,
                     ),
                     onTagClick = { tag ->
                         query = tag
@@ -806,13 +808,14 @@ private fun SearchIllustResultGrid(
     onIllustClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    contentPadding: PaddingValues = PaddingValues(
+    contentPadding: PaddingValues? = null,
+) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(
         start = 8.dp,
         top = 8.dp,
         end = 8.dp,
-        bottom = 100.dp,
-    ),
-) {
+        bottom = LocalBottomBarContentPadding.current,
+    )
     // 根据收藏数阈值构建实际搜索词：先清除原有 \d+users入り，再按需追加 " ${value}users入り"。
     val searchWord = remember(query, bookmarkThreshold) {
         val cleanQuery = query.replace(Regex("""\s*\d+users入り"""), "").trim()
@@ -978,7 +981,7 @@ private fun SearchIllustResultGrid(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = contentPadding,
+                    contentPadding = effectiveContentPadding,
                     hasMore = nextUrl != null,
                     isLoadingMore = isLoadingMore,
                     loadMoreError = loadMoreError,
@@ -998,8 +1001,9 @@ private fun SearchUserResultList(
     onUserClick: (Int) -> Unit,
     scrollBehavior: ScrollBehavior,
     listState: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(bottom = 100.dp),
+    contentPadding: PaddingValues? = null,
 ) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(bottom = LocalBottomBarContentPadding.current)
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     // 画师搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
@@ -1101,7 +1105,7 @@ private fun SearchUserResultList(
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = contentPadding,
+                        contentPadding = effectiveContentPadding,
                     ) {
                         items(
                             items = currentPreviews,
@@ -1170,7 +1174,7 @@ private fun SearchUserResultList(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .fillMaxHeight(),
-                        trackPadding = PaddingValues(bottom = 100.dp),
+                        trackPadding = effectiveContentPadding,
                     )
                 }
             }
@@ -1192,13 +1196,14 @@ private fun SearchSuggestions(
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(
+    contentPadding: PaddingValues? = null,
+) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(
         start = 0.dp,
         top = 0.dp,
         end = 0.dp,
-        bottom = 100.dp,
-    ),
-) {
+        bottom = LocalBottomBarContentPadding.current,
+    )
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -1206,7 +1211,7 @@ private fun SearchSuggestions(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = contentPadding,
+            contentPadding = effectiveContentPadding,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
         item {
@@ -1313,7 +1318,7 @@ private fun SearchSuggestions(
         modifier = Modifier
             .align(Alignment.CenterEnd)
             .fillMaxHeight(),
-        trackPadding = PaddingValues(bottom = 100.dp),
+        trackPadding = effectiveContentPadding,
     )
 }
 }

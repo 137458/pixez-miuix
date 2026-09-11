@@ -95,6 +95,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.UpdateDialog
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.screens.fetchLatestReleaseInfo
 import com.perol.pixez.shared.ui.screens.BookTagScreen
@@ -166,6 +167,7 @@ fun RootContent(
 
     val floatingBackdrop = rememberBlurBackdrop()
     val bottomBarVisible = remember { mutableStateOf(true) }
+    val mainContentBottomPadding = if (active is Child.Main && bottomBarVisible.value) 100.dp else 16.dp
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
@@ -189,6 +191,7 @@ fun RootContent(
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
+            LocalBottomBarContentPadding provides mainContentBottomPadding,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
         ) {
             if (showAppUpdateDialog && appReleaseInfo != null) {

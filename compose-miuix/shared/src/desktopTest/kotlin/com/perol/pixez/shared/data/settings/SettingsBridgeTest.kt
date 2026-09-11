@@ -204,5 +204,29 @@ class SettingsBridgeTest {
         assertEquals(initialVersion + 3, repo.changeVersion)
         assertFalse(repo.feedAIBadge)
     }
+
+    @Test
+    fun `hCrossAdapt and hCrossAdapterWidth fall back to legacy keys and persist to new keys`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/h_cross_adapt")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        // 当 h_cross_adapt / h_cross_adapt_width 不存在时，回退至 cross_adapt / cross_adapt_width
+        node.putBoolean("cross_adapt", false)
+        node.putInt("cross_adapt_width", 240)
+
+        assertFalse(repo.hCrossAdapt)
+        assertEquals(240, repo.hCrossAdapterWidth)
+
+        // 写入独立横屏设置后，优先使用独立设置并持久化至 h_cross_adapt / h_cross_adapt_width
+        repo.hCrossAdapt = true
+        repo.hCrossAdapterWidth = 60
+
+        assertTrue(repo.hCrossAdapt)
+        assertEquals(60, repo.hCrossAdapterWidth)
+        assertTrue(node.getBoolean("h_cross_adapt", false))
+        assertEquals(60, node.getInt("h_cross_adapt_width", -1))
+    }
 }
+
 

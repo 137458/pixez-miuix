@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.perol.pixez.shared.ui.AppConstants
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -436,7 +437,7 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.CROSS_ADAPT] = value; notifyChanged() }
 
     /**
-     * 竖屏自适应宽度阈值（100-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
+     * 竖屏自适应宽度阈值（50-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
      */
     var crossAdapterWidth: Int
         get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
@@ -451,17 +452,26 @@ class SettingsRepository(
 
     /**
      * 横屏是否启用按宽度自适应网格列数（默认开启，以实现横屏/桌面自适应）。
+     * 若未独立设置则回退读取竖屏/共用设置 CROSS_ADAPT。
      */
     var hCrossAdapt: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT, true)
+        get() = settings.getBooleanWithKeyAndLegacyFallback(
+            SettingsKeys.H_CROSS_ADAPT,
+            SettingsKeys.CROSS_ADAPT,
+            true,
+        )
         set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value; notifyChanged() }
 
     /**
-     * 横屏自适应宽度阈值（100-2160，默认 180dp）。
+     * 横屏自适应宽度阈值（50-2160，默认 180dp）。
+     * 若未独立设置则回退读取竖屏/共用设置 CROSS_ADAPT_WIDTH。
      */
     var hCrossAdapterWidth: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
-            .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
+        get() = settings.getIntWithKeyAndLegacyFallback(
+            SettingsKeys.H_CROSS_ADAPT_WIDTH,
+            SettingsKeys.CROSS_ADAPT_WIDTH,
+            DEFAULT_CROSS_ADAPTER_WIDTH,
+        ).coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
         set(value) {
             settings[SettingsKeys.H_CROSS_ADAPT_WIDTH] = value.coerceIn(
                 MIN_CROSS_ADAPTER_WIDTH,
@@ -665,8 +675,8 @@ class SettingsRepository(
 
         // 跨适配宽度阈值范围与默认自适应基准宽度（180dp：手机竖屏 2 列，平板/横屏 3~6 列）
         private const val DEFAULT_CROSS_ADAPTER_WIDTH = 180
-        private const val MIN_CROSS_ADAPTER_WIDTH = 100
-        private const val MAX_CROSS_ADAPTER_WIDTH = 2160
+        private const val MIN_CROSS_ADAPTER_WIDTH = AppConstants.CrossAdapter.WIDTH_MIN
+        private const val MAX_CROSS_ADAPTER_WIDTH = AppConstants.CrossAdapter.WIDTH_MAX
 
         // 平板模式取值范围：0=V:H, 1=V:V, 2=H:H
         private const val PAD_MODE_MIN = 0
@@ -706,10 +716,22 @@ private fun Settings.getIntWithLegacyFallbackOrNull(key: String): Int? {
     return this[SettingsRepository_LegacyPrefix + key]
 }
 
+private fun Settings.getIntWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Int): Int {
+    val value: Int? = this.getIntWithLegacyFallbackOrNull(key)
+    if (value != null) return value
+    return this.getIntWithLegacyFallback(fallbackKey, default)
+}
+
 private fun Settings.getBooleanWithLegacyFallback(key: String, default: Boolean): Boolean {
     val value: Boolean? = this[key]
     if (value != null) return value
     return this[SettingsRepository_LegacyPrefix + key, default]
+}
+
+private fun Settings.getBooleanWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Boolean): Boolean {
+    val value: Boolean? = this.getBooleanWithLegacyFallbackOrNull(key)
+    if (value != null) return value
+    return this.getBooleanWithLegacyFallback(fallbackKey, default)
 }
 
 /**

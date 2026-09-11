@@ -51,6 +51,7 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.openBrowser
@@ -793,7 +794,7 @@ private fun IllustTabBody(
                         start = 8.dp,
                         top = topPadding + 8.dp,
                         end = 8.dp,
-                        bottom = 100.dp,
+                        bottom = LocalBottomBarContentPadding.current,
                     ),
                 ) {
                     if (header != null) {
@@ -837,7 +838,7 @@ private fun IllustTabBody(
                             start = 8.dp,
                             top = topPadding + 8.dp,
                             end = 8.dp,
-                            bottom = 100.dp,
+                            bottom = LocalBottomBarContentPadding.current,
                         ),
                     ) {
                         if (header != null) {
@@ -881,7 +882,7 @@ private fun IllustTabBody(
                             start = 8.dp,
                             top = topPadding + 8.dp,
                             end = 8.dp,
-                            bottom = 100.dp,
+                            bottom = LocalBottomBarContentPadding.current,
                         ),
                         hasMore = hasMore,
                         isLoadingMore = isLoadingMore,
@@ -907,7 +908,7 @@ private fun IllustTabBody(
                         start = 8.dp,
                         top = topPadding + 8.dp,
                         end = 8.dp,
-                        bottom = 100.dp,
+                        bottom = LocalBottomBarContentPadding.current,
                     ),
                 ) {
                     if (header != null) {

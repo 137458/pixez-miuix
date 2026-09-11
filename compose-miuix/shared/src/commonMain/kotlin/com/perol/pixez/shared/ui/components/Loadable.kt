@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,9 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -47,13 +52,24 @@ internal fun EmptyPlaceholder(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = message,
-            style = MiuixTheme.textStyles.body1,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Search,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+            Text(
+                text = message,
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
     }
 }
 
@@ -65,17 +81,23 @@ internal fun ErrorPlaceholder(
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     Box(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = "${strings.loadFailed}: ${error?.message ?: strings.loadFailed}",
-                style = MiuixTheme.textStyles.body1,
+            Icon(
+                imageVector = MiuixIcons.Refresh,
+                contentDescription = strings.retry,
+                tint = MiuixTheme.colorScheme.error,
             )
-            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            Text(
+                text = strings.loadFailed,
+                style = MiuixTheme.textStyles.body1,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
             TextButton(
                 text = strings.retry,
                 onClick = onRetry,
