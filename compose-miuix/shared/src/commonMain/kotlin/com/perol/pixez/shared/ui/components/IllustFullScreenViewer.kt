@@ -200,8 +200,8 @@ fun IllustFullScreenViewer(
                             pictureSource = settings?.pictureSource,
                         )
                         if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
-                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != "i.pximg.net") {
-                                optModel.replace("://i.pximg.net", "://${settings.pictureSource}")
+                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
+                                optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
                             } else optModel
                             // 相邻页静默预加载降级为纯磁盘缓存命中，禁用内存缓存解码，防止多张高清大图并发驻留 JVM 堆引发 OOM
                             val req = ImageRequest.Builder(context)

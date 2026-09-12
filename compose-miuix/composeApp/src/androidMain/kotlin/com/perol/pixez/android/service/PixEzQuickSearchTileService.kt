@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.android.service
+package com.perol.pixez.android.service
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -7,6 +7,7 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.perol.pixez.android.MainActivity
+import com.perol.pixez.shared.ui.AppConstants
 
 /**
  * Android 原生快捷设置瓷贴服务（Quick Settings Tile）。
@@ -28,7 +29,7 @@ class PixEzQuickSearchTileService : TileService() {
         super.onClick()
         val intent = Intent(this, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = Uri.parse("pixez://search")
+            data = Uri.parse(AppConstants.Scheme.URI_QUICK_SEARCH)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 

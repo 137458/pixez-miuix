@@ -12,6 +12,21 @@ object AppConstants {
         const val HOST_PXIMG = "i.pximg.net"
         const val HOST_PIXIV_RE = "i.pixiv.re"
         const val URL_PXIMG_FAVICON = "https://$HOST_PXIMG/favicon.ico"
+
+        const val HTTP_POOL_MAX_IDLE_CONNECTIONS = 32
+        const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = 5L
+        const val HTTP_DISPATCHER_MAX_REQUESTS = 128
+        const val HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST = 32
+
+        const val IMAGE_MAX_DECODE_DIMENSION = 4096
+    }
+
+    /**
+     * 深度链接与快捷跳转协议
+     */
+    object Scheme {
+        const val SCHEME_PIXEZ = "pixez"
+        const val URI_QUICK_SEARCH = "pixez://search"
     }
 
     /**

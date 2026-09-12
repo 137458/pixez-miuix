@@ -55,6 +55,7 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
@@ -517,7 +518,10 @@ fun LiquidCircleActionButton(
         )
     }
 
-    TooltipBox(text = tooltip, modifier = modifier) {
+    TooltipBox(
+        text = tooltip,
+        modifier = modifier.accessibleTouchTarget(48.dp),
+    ) {
         Box(
             modifier = Modifier
                 .size(40.dp)

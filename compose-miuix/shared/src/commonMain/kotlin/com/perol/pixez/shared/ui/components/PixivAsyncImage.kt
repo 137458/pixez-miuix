@@ -16,8 +16,10 @@ import io.github.aakira.napier.Napier
 
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import coil3.size.Dimension
 import coil3.size.Precision
 import coil3.size.Size
+import com.perol.pixez.shared.ui.AppConstants
 
 private val StandardHeaders = NetworkHeaders.Builder()
     .set("Referer", "https://app-api.pixiv.net/")
@@ -93,8 +95,9 @@ fun PixivAsyncImage(
             .networkCachePolicy(CachePolicy.ENABLED)
             .apply {
                 if (loadOriginalSize) {
-                    size(Size.ORIGINAL)
-                    precision(Precision.EXACT)
+                    // 约束最大解码边长不超过 4096px，既保证 4K 高清画质体验，又防止极端长条/巨幅画作瞬间撑爆堆内存导致 OOM
+                    size(Dimension(AppConstants.Network.IMAGE_MAX_DECODE_DIMENSION), Dimension(AppConstants.Network.IMAGE_MAX_DECODE_DIMENSION))
+                    precision(Precision.INEXACT)
                 }
                 val thumbKey = transformedThumbnailCacheKey?.toString()
                 if (!thumbKey.isNullOrBlank() && thumbKey != transformedModel?.toString()) {

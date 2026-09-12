@@ -106,6 +106,7 @@ import com.perol.pixez.shared.ui.components.IllustDetailTopBar
 import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
 import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
 import com.perol.pixez.shared.ui.components.buildIllustShareLink
+import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
@@ -382,8 +383,6 @@ private fun IllustDetailSingleContent(
                                     .then(
                                         if (!pageLoaded && illustAspectRatio != null) {
                                             Modifier.aspectRatio(illustAspectRatio)
-                                        } else if (pageIndex == 0 && illustAspectRatio != null) {
-                                            Modifier.aspectRatio(illustAspectRatio)
                                         } else {
                                             Modifier
                                         },
@@ -406,7 +405,8 @@ private fun IllustDetailSingleContent(
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.BottomEnd)
-                                            .padding(10.dp)
+                                            .padding(6.dp)
+                                            .accessibleTouchTarget(48.dp)
                                             .size(36.dp)
                                             .clip(CircleShape)
                                             .background(Color.Black.copy(alpha = 0.55f))

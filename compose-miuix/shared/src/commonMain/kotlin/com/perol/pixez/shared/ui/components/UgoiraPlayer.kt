@@ -72,7 +72,7 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
  */
 private class UgoiraFrameProvider(
     val frames: List<UgoiraFrame>,
-    private val frameBytesMap: Map<String, ByteArray>,
+    private val framesDir: Path,
 ) {
     private val cache = mutableMapOf<Int, ImageBitmap>()
 
@@ -80,7 +80,12 @@ private class UgoiraFrameProvider(
         val cached = cache[index]
         if (cached != null) return cached
         val frame = frames.getOrNull(index) ?: return null
-        val bytes = frameBytesMap[frame.file] ?: return null
+        val framePath = framesDir / frame.file
+        val bytes = runCatching {
+            if (FileSystem.SYSTEM.exists(framePath)) {
+                FileSystem.SYSTEM.read(framePath) { readByteArray() }
+            } else null
+        }.getOrNull() ?: return null
         val bitmap = runCatching { bytes.decodeToImageBitmap() }.getOrNull() ?: return null
         cache[index] = bitmap
         // 维持最多 8 帧已解码位图窗口，及时回收远离当前播放点的位图
@@ -99,7 +104,12 @@ private class UgoiraFrameProvider(
         val nextIdx = (index + 1) % frames.size
         if (!cache.containsKey(nextIdx)) {
             val nextFrame = frames.getOrNull(nextIdx) ?: return
-            val bytes = frameBytesMap[nextFrame.file] ?: return
+            val framePath = framesDir / nextFrame.file
+            val bytes = runCatching {
+                if (FileSystem.SYSTEM.exists(framePath)) {
+                    FileSystem.SYSTEM.read(framePath) { readByteArray() }
+                } else null
+            }.getOrNull() ?: return
             runCatching {
                 val bitmap = bytes.decodeToImageBitmap()
                 cache[nextIdx] = bitmap
@@ -114,6 +124,7 @@ private sealed interface UgoiraState {
     data class Ready(
         val provider: UgoiraFrameProvider,
         val tempZipPath: Path?,
+        val framesDir: Path?,
         val zipUrl: String,
     ) : UgoiraState
     data class Error(val message: String) : UgoiraState
@@ -166,16 +177,24 @@ fun UgoiraPlayer(
                 }
 
                 state = UgoiraState.Loading(strings.ugoiraExtracting)
-                val frameMap = withContext(Dispatchers.Default) {
-                    UgoiraZipExtractor().extractFrames(zipBytes)
+                val (framesDir, validFrames) = withContext(Dispatchers.IO) {
+                    val cacheDir = getAppCacheDirectory()
+                    val dir = cacheDir / "ugoira_frames_${illust.id}"
+                    FileSystem.SYSTEM.createDirectories(dir)
+                    val frameMap = UgoiraZipExtractor().extractFrames(zipBytes)
+                    for ((fileName, bytes) in frameMap) {
+                        FileSystem.SYSTEM.write(dir / fileName) {
+                            write(bytes)
+                        }
+                    }
+                    val valid = metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
+                    dir to valid
                 }
-
-                val validFrames = metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
 
                 if (validFrames.isEmpty()) {
                     state = UgoiraState.Error(strings.ugoiraDecodeFailed)
                 } else {
-                    val provider = UgoiraFrameProvider(validFrames, frameMap)
+                    val provider = UgoiraFrameProvider(validFrames, framesDir)
                     // 预解码首帧与后续帧
                     withContext(Dispatchers.Default) {
                         provider.getFrameBitmap(0)
@@ -183,7 +202,7 @@ fun UgoiraPlayer(
                     }
                     currentFrameIndex = 0
                     isPlaying = true
-                    state = UgoiraState.Ready(provider, tempZipPath, zipUrl)
+                    state = UgoiraState.Ready(provider, tempZipPath, framesDir, zipUrl)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -200,6 +219,10 @@ fun UgoiraPlayer(
             val tempPath = ready?.tempZipPath
             if (tempPath != null) {
                 runCatching { FileSystem.SYSTEM.delete(tempPath) }
+            }
+            val framesDir = ready?.framesDir
+            if (framesDir != null) {
+                runCatching { FileSystem.SYSTEM.deleteRecursively(framesDir) }
             }
         }
     }

@@ -98,6 +98,11 @@
             </intent-filter>
         </service>
 
+        <activity
+            android:name="com.perol.pixez.shared.platform.PhotoPickerActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.perol.pixez.miuix.fileprovider"

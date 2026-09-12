@@ -37,7 +37,7 @@ HSPLcoil3/disk/DiskCache;->get(Ljava/lang/String;)Lcoil3/disk/DiskCache$Snapshot
 HSPLcoil3/memory/MemoryCache;->get(Lcoil3/memory/MemoryCache$Key;)Lcoil3/memory/MemoryCache$Value;
 
 # Network Dispatch & Connection Reuse
-HSPLcom/perol/pixez/shared/network/RepositoryExtensionsKt;->networkCall(Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+HSPLcom/perol/pixez/shared/data/repository/RepositoryExtensionsKt;->networkCall(Ljava/lang/String;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 
 # Application & Quick Settings Tile
 HSPLcom/perol/pixez/android/PixEzApplication;->onCreate()V
@@ -62,5 +62,6 @@ Lcom/perol/pixez/shared/ui/components/FloatingBottomBarKt;
 Lcom/perol/pixez/shared/ui/components/IllustFullScreenViewerKt;
 Lcom/perol/pixez/shared/ui/components/UgoiraPlayerKt;
 Lcom/perol/pixez/shared/network/PlatformHttpClient_androidKt;
+Lcom/perol/pixez/shared/data/repository/RepositoryExtensionsKt;
 Ltop/yukonga/miuix/kmp/basic/CardKt;
 Ltop/yukonga/miuix/kmp/theme/MiuixThemeKt;
