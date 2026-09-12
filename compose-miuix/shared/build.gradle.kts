@@ -92,9 +92,12 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.okhttp.dnsoverhttps)
             implementation(libs.sqldelight.android.driver)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.security.crypto)
+            implementation(libs.coil.gif)
         }
 
         desktopMain.dependencies {

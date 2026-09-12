@@ -12,6 +12,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import io.github.aakira.napier.Napier
 
 import androidx.compose.ui.graphics.FilterQuality
@@ -104,6 +105,7 @@ fun PixivAsyncImage(
                     placeholderMemoryCacheKey(thumbKey)
                 }
             }
+            .configurePlatformOptimizations()
             .crossfade(200)
             .build()
     }

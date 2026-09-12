@@ -574,6 +574,7 @@ private fun ZoomableImage(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { tapOffset ->
+                        com.perol.pixez.shared.platform.performHapticFeedback(com.perol.pixez.shared.platform.HapticType.Tick)
                         if (scale > 1.05f) {
                             scale = 1f
                             offset = Offset.Zero

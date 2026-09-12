@@ -48,6 +48,7 @@ fun App(
         ImageLoader.Builder(context)
             .components {
                 add(KtorNetworkFetcherFactory(httpClient = { dependencies.httpClient.downloadClient }))
+                com.perol.pixez.shared.platform.getPlatformGifDecoderFactories().forEach { add(it) }
             }
             .memoryCache {
                 MemoryCache.Builder()

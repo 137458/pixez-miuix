@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.model.AccountResponse
+import com.perol.pixez.shared.platform.PlatformTokenCipher
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ import kotlinx.coroutines.withContext
  *
  * 直接复用旧 Flutter 的 account.db，字段与 SQLDelight 生成的 [Account] 保持一致。
  * 所有读写操作通过 [Mutex] 串行化，避免并发刷新 token 导致的数据竞争。
+ * 并在底层接入 [PlatformTokenCipher]，对持久化到 SQLite 的 Token 与密码实施硬件级加密保护。
  */
 class AuthTokenStorage(
     driver: SqlDriver,
@@ -49,12 +51,13 @@ class AuthTokenStorage(
             if (isCacheInitialized) return@withLock cachedAccount
             try {
                 val activeUid = getActiveUserId?.invoke()
-                val acc = if (!activeUid.isNullOrBlank()) {
+                val rawAcc = if (!activeUid.isNullOrBlank()) {
                     queries.selectByUserId(activeUid).executeAsList().firstOrNull()
                         ?: queries.selectAll().executeAsList().firstOrNull()
                 } else {
                     queries.selectAll().executeAsList().firstOrNull()
                 }
+                val acc = rawAcc?.decrypted()
                 if (acc != null && activeUid != acc.user_id) {
                     setActiveUserId?.invoke(acc.user_id)
                 }
@@ -87,13 +90,13 @@ class AuthTokenStorage(
             val existing = queries.selectByUserId(user.id).executeAsList().firstOrNull()
             queries.insertOrReplace(
                 id = existing?.id,
-                access_token = account.accessToken,
-                refresh_token = account.refreshToken,
+                access_token = PlatformTokenCipher.encrypt(account.accessToken),
+                refresh_token = PlatformTokenCipher.encrypt(account.refreshToken),
                 device_token = deviceToken,
                 user_id = user.id,
                 user_image = user.profileImageUrls.px170x170,
                 name = user.name,
-                password = password,
+                password = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.encrypt(password) else password,
                 account = user.account,
                 mail_address = user.mailAddress,
                 is_premium = boolToLong(user.isPremium),
@@ -101,7 +104,7 @@ class AuthTokenStorage(
                 is_mail_authorized = boolToLong(user.isMailAuthorized),
             )
             setActiveUserId?.invoke(user.id)
-            cachedAccount = queries.selectByUserId(user.id).executeAsList().firstOrNull()
+            cachedAccount = queries.selectByUserId(user.id).executeAsList().firstOrNull()?.decrypted()
             isCacheInitialized = true
         }
     }
@@ -111,23 +114,24 @@ class AuthTokenStorage(
      */
     suspend fun saveAccount(account: Account) = withContext(Dispatchers.Default) {
         mutex.withLock {
+            val enc = account.encrypted()
             queries.insertOrReplace(
-                id = account.id,
-                access_token = account.access_token,
-                refresh_token = account.refresh_token,
-                device_token = account.device_token,
-                user_id = account.user_id,
-                user_image = account.user_image,
-                name = account.name,
-                password = account.password,
-                account = account.account,
-                mail_address = account.mail_address,
-                is_premium = account.is_premium,
-                x_restrict = account.x_restrict,
-                is_mail_authorized = account.is_mail_authorized,
+                id = enc.id,
+                access_token = enc.access_token,
+                refresh_token = enc.refresh_token,
+                device_token = enc.device_token,
+                user_id = enc.user_id,
+                user_image = enc.user_image,
+                name = enc.name,
+                password = enc.password,
+                account = enc.account,
+                mail_address = enc.mail_address,
+                is_premium = enc.is_premium,
+                x_restrict = enc.x_restrict,
+                is_mail_authorized = enc.is_mail_authorized,
             )
             setActiveUserId?.invoke(account.user_id)
-            cachedAccount = account
+            cachedAccount = account.decrypted()
             isCacheInitialized = true
         }
     }
@@ -137,7 +141,7 @@ class AuthTokenStorage(
      */
     suspend fun getAllAccounts(): List<Account> = withContext(Dispatchers.Default) {
         mutex.withLock {
-            queries.selectAll().executeAsList()
+            queries.selectAll().executeAsList().map { it.decrypted() }
         }
     }
 
@@ -146,7 +150,7 @@ class AuthTokenStorage(
      */
     suspend fun switchAccount(userId: String): Account = withContext(Dispatchers.Default) {
         mutex.withLock {
-            val acc = queries.selectByUserId(userId).executeAsList().firstOrNull()
+            val acc = queries.selectByUserId(userId).executeAsList().firstOrNull()?.decrypted()
                 ?: throw IllegalArgumentException("未找到该账号: $userId")
             setActiveUserId?.invoke(userId)
             cachedAccount = acc
@@ -163,7 +167,7 @@ class AuthTokenStorage(
             queries.deleteByUserId(userId)
             val current = cachedAccount
             if (current?.user_id == userId) {
-                val next = queries.selectAll().executeAsList().firstOrNull()
+                val next = queries.selectAll().executeAsList().firstOrNull()?.decrypted()
                 setActiveUserId?.invoke(next?.user_id)
                 cachedAccount = next
                 isCacheInitialized = true
@@ -184,10 +188,12 @@ class AuthTokenStorage(
             } else {
                 queries.selectAll().executeAsList().firstOrNull()
             } ?: throw IllegalStateException("没有登录账号，无法更新 token")
+            val encAccess = PlatformTokenCipher.encrypt(accessToken)
+            val encRefresh = PlatformTokenCipher.encrypt(refreshToken)
             queries.insertOrReplace(
                 id = current.id,
-                access_token = accessToken,
-                refresh_token = refreshToken,
+                access_token = encAccess,
+                refresh_token = encRefresh,
                 device_token = current.device_token,
                 user_id = current.user_id,
                 user_image = current.user_image,
@@ -199,7 +205,7 @@ class AuthTokenStorage(
                 x_restrict = current.x_restrict,
                 is_mail_authorized = current.is_mail_authorized,
             )
-            cachedAccount = queries.selectByUserId(current.user_id).executeAsList().firstOrNull()
+            cachedAccount = queries.selectByUserId(current.user_id).executeAsList().firstOrNull()?.decrypted()
             isCacheInitialized = true
         }
     }
@@ -216,29 +222,31 @@ class AuthTokenStorage(
     suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.Default) {
         mutex.withLock {
             val activeUid = getActiveUserId?.invoke()
-            val current = if (!activeUid.isNullOrBlank()) {
+            val rawCurrent = if (!activeUid.isNullOrBlank()) {
                 queries.selectByUserId(activeUid).executeAsList().firstOrNull()
             } else {
                 queries.selectAll().executeAsList().firstOrNull()
             }
+            val current = rawCurrent?.decrypted()
             val updated = transform(current)
             if (updated != null) {
+                val enc = updated.encrypted()
                 queries.insertOrReplace(
-                    id = updated.id,
-                    access_token = updated.access_token,
-                    refresh_token = updated.refresh_token,
-                    device_token = updated.device_token,
-                    user_id = updated.user_id,
-                    user_image = updated.user_image,
-                    name = updated.name,
-                    password = updated.password,
-                    account = updated.account,
-                    mail_address = updated.mail_address,
-                    is_premium = updated.is_premium,
-                    x_restrict = updated.x_restrict,
-                    is_mail_authorized = updated.is_mail_authorized,
+                    id = enc.id,
+                    access_token = enc.access_token,
+                    refresh_token = enc.refresh_token,
+                    device_token = enc.device_token,
+                    user_id = enc.user_id,
+                    user_image = enc.user_image,
+                    name = enc.name,
+                    password = enc.password,
+                    account = enc.account,
+                    mail_address = enc.mail_address,
+                    is_premium = enc.is_premium,
+                    x_restrict = enc.x_restrict,
+                    is_mail_authorized = enc.is_mail_authorized,
                 )
-                cachedAccount = queries.selectByUserId(updated.user_id).executeAsList().firstOrNull()
+                cachedAccount = updated.decrypted()
                 isCacheInitialized = true
             }
         }
@@ -257,4 +265,32 @@ class AuthTokenStorage(
     }
 
     private fun boolToLong(value: Boolean): Long = if (value) 1L else 0L
+
+    private fun Account.decrypted(): Account {
+        val decAccess = PlatformTokenCipher.decrypt(access_token)
+        val decRefresh = PlatformTokenCipher.decrypt(refresh_token)
+        val decPass = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.decrypt(password) else password
+        if (decAccess == access_token && decRefresh == refresh_token && decPass == password) {
+            return this
+        }
+        return this.copy(
+            access_token = decAccess,
+            refresh_token = decRefresh,
+            password = decPass,
+        )
+    }
+
+    private fun Account.encrypted(): Account {
+        val encAccess = PlatformTokenCipher.encrypt(access_token)
+        val encRefresh = PlatformTokenCipher.encrypt(refresh_token)
+        val encPass = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.encrypt(password) else password
+        if (encAccess == access_token && encRefresh == refresh_token && encPass == password) {
+            return this
+        }
+        return this.copy(
+            access_token = encAccess,
+            refresh_token = encRefresh,
+            password = encPass,
+        )
+    }
 }

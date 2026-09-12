@@ -8,10 +8,17 @@
 
 ### 新增
 
+- 接入 Coil 3 动图解码器（AnimatedImageDecoder 与 GifDecoder），支持常规 GIF 与动图作品的动态播放。
+- 接入 Android Keystore 硬件级 AES-256-GCM 凭据加密存储，全面保护本地持久化 Token 与敏感数据。
+- 接入 OkHttp DNS-over-HTTPS (DoH) 安全解析与自动回退调度，增强直连抗 DNS 污染能力。
+- 接入系统级前台数据同步保活与唤醒守护，防止大批量多页下载与动图包在锁屏或切后台时中断。
+- 接入物理级系统触觉反馈（Rich Haptics），提升大图双击缩放等手势的交互质感。
 - 新增 Android 原生快捷设置磁贴（Quick Settings Tile），支持系统控制中心一键唤起并直达插画/漫画搜索。
 - 新增 Android 原生零权限照片选择器（Photo Picker）接入，兼容 Android 13+ 模块化系统照片选择协议与低版本安全沙盒。
 
 ### 优化
+
+- 优化 Android 端图片加载管线，启用 GPU 显存硬件位图（Hardware Bitmap），大幅降低长列表与大图浏览的 JVM 堆内存峰值开销。
 
 - 统一收敛网络连接池阈值、图片最大解码尺寸与深层快捷跳转 URI 至 AppConstants 常量系统。
 - 优化 HTTP 客户端底层连接调度，Android 与桌面双端单例级复用 OkHttp 连接池与请求分发器，提升 HTTP/2 多路复用率。
