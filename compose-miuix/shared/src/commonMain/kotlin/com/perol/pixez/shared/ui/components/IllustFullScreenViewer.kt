@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.size.Precision
 import coil3.size.Size
@@ -202,12 +203,12 @@ fun IllustFullScreenViewer(
                             val transformed = if (settings?.pictureSource != null && settings.pictureSource != "i.pximg.net") {
                                 optModel.replace("://i.pximg.net", "://${settings.pictureSource}")
                             } else optModel
+                            // 相邻页静默预加载降级为纯磁盘缓存命中，禁用内存缓存解码，防止多张高清大图并发驻留 JVM 堆引发 OOM
                             val req = ImageRequest.Builder(context)
                                 .data(transformed)
-                                .memoryCacheKey(transformed)
                                 .diskCacheKey(transformed)
-                                .size(Size.ORIGINAL)
-                                .precision(Precision.EXACT)
+                                .memoryCachePolicy(CachePolicy.DISABLED)
+                                .diskCachePolicy(CachePolicy.ENABLED)
                                 .build()
                             imageLoader.enqueue(req)
                         }

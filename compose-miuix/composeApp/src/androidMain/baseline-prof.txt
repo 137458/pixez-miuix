@@ -36,15 +36,31 @@ HSPLcoil3/ImageLoader;->enqueue(Lcoil3/request/ImageRequest;)Lcoil3/request/Disp
 HSPLcoil3/disk/DiskCache;->get(Ljava/lang/String;)Lcoil3/disk/DiskCache$Snapshot;
 HSPLcoil3/memory/MemoryCache;->get(Lcoil3/memory/MemoryCache$Key;)Lcoil3/memory/MemoryCache$Value;
 
+# Network Dispatch & Connection Reuse
+HSPLcom/perol/pixez/shared/network/RepositoryExtensionsKt;->networkCall(Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+# Application & Quick Settings Tile
+HSPLcom/perol/pixez/android/PixEzApplication;->onCreate()V
+HSPLcom/perol/pixez/android/service/PixEzQuickSearchTileService;->onClick()V
+
+# Core Components & Screens
+HSPLcom/perol/pixez/shared/ui/components/NovelCardKt;->NovelCard(Lcom/perol/pixez/shared/data/model/Novel;Lkotlin/jvm/functions/Function0;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+
 # Core Classes
 Lcom/perol/pixez/android/MainActivity;
+Lcom/perol/pixez/android/PixEzApplication;
+Lcom/perol/pixez/android/service/PixEzQuickSearchTileService;
 Lcom/perol/pixez/PixEzAppKt;
 Lcom/perol/pixez/shared/AppDependencies;
 Lcom/perol/pixez/shared/ui/navigation/RootComponent;
 Lcom/perol/pixez/shared/ui/navigation/RootContentKt;
 Lcom/perol/pixez/shared/ui/screens/HelloScreenKt;
 Lcom/perol/pixez/shared/ui/components/IllustCardKt;
+Lcom/perol/pixez/shared/ui/components/NovelCardKt;
 Lcom/perol/pixez/shared/ui/components/IllustStaggeredGridKt;
 Lcom/perol/pixez/shared/ui/components/FloatingBottomBarKt;
+Lcom/perol/pixez/shared/ui/components/IllustFullScreenViewerKt;
+Lcom/perol/pixez/shared/ui/components/UgoiraPlayerKt;
+Lcom/perol/pixez/shared/network/PlatformHttpClient_androidKt;
 Ltop/yukonga/miuix/kmp/basic/CardKt;
 Ltop/yukonga/miuix/kmp/theme/MiuixThemeKt;

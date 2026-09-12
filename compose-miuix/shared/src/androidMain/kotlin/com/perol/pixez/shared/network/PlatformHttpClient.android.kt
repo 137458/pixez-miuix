@@ -7,20 +7,22 @@ import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
 import java.util.concurrent.TimeUnit
 
+private val sharedConnectionPool = ConnectionPool(32, 5, TimeUnit.MINUTES)
+private val sharedDispatcher = Dispatcher().apply {
+    maxRequests = 128
+    maxRequestsPerHost = 32
+}
+
 actual fun createPlatformHttpClient(block: HttpClientConfig<*>.() -> Unit): HttpClient =
     HttpClient(OkHttp) {
         engine {
             config {
-                val pool = ConnectionPool(32, 5, TimeUnit.MINUTES)
-                val okHttpDispatcher = Dispatcher().apply {
-                    maxRequests = 128
-                    maxRequestsPerHost = 32
-                }
-                connectionPool(pool)
-                dispatcher(okHttpDispatcher)
+                connectionPool(sharedConnectionPool)
+                dispatcher(sharedDispatcher)
                 followRedirects(true)
                 retryOnConnectionFailure(true)
             }
         }
         block()
     }
+

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,10 +53,44 @@ fun NovelCard(
 ) {
     val strings = LocalStrings.current
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
+    val novelA11yDescription = remember(novel.title, novel.user.name, novel.series?.title, isAI, novel.textLength, novel.totalBookmarks) {
+        buildString {
+            append(strings.categoryNovel)
+            append(": ")
+            append(novel.title)
+            novel.series?.title?.let {
+                if (it.isNotBlank()) {
+                    append(", ")
+                    append(it)
+                }
+            }
+            append(", ")
+            append(strings.author)
+            append(": ")
+            append(novel.user.name)
+            if (isAI) {
+                append(", ")
+                append(strings.filterAi)
+            }
+            append(", ")
+            append(strings.formatNovelWordCount(novel.textLength))
+            append(", ")
+            append("${novel.totalBookmarks} ")
+            append(strings.bookmark)
+        }
+    }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = novelA11yDescription
+                onClick(label = strings.viewArtworkDetail) {
+                    onClick()
+                    true
+                }
+            }
             .clickable(onClick = onClick),
     ) {
         Row(
@@ -97,7 +137,7 @@ fun NovelCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .height(112.dp),
+                    .heightIn(min = 112.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {

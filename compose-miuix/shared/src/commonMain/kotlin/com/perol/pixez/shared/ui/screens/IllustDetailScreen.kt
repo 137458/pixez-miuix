@@ -376,10 +376,13 @@ private fun IllustDetailSingleContent(
                                 val thumbnailUrl = remember(page) {
                                     page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
                                 }
+                                var pageLoaded by remember(pageIndex) { mutableStateOf(false) }
                                 val pageModifier = Modifier
                                     .fillMaxWidth()
                                     .then(
-                                        if (pageIndex == 0 && illustAspectRatio != null) {
+                                        if (!pageLoaded && illustAspectRatio != null) {
+                                            Modifier.aspectRatio(illustAspectRatio)
+                                        } else if (pageIndex == 0 && illustAspectRatio != null) {
                                             Modifier.aspectRatio(illustAspectRatio)
                                         } else {
                                             Modifier
@@ -398,6 +401,7 @@ private fun IllustDetailSingleContent(
                                         contentDescription = "${illust.title} ($pageIndex)",
                                         contentScale = ContentScale.FillWidth,
                                         modifier = pageModifier,
+                                        onSuccess = { pageLoaded = true },
                                     )
                                     Box(
                                         modifier = Modifier

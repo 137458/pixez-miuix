@@ -38,8 +38,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         BrowserLauncherContext.applicationContext = applicationContext
         dependencies = AppDependencies(
-            driverFactory = DriverFactory(this),
-            settingsFactory = SettingsFactory(this),
+            driverFactory = DriverFactory(applicationContext),
+            settingsFactory = SettingsFactory(applicationContext),
         )
         dependencies.warmupAsync(lifecycleScope)
         rootComponent = RootComponent(
