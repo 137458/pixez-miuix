@@ -13,6 +13,9 @@
 # 2. Android 核心组件与小部件
 # ------------------------------------------------------------------------------
 -keep class com.perol.pixez.android.MainActivity { *; }
+-keep class com.perol.pixez.android.PixEzApplication { *; }
+-keep class com.perol.pixez.android.service.PixEzQuickSearchTileService { *; }
+-keep class com.perol.pixez.shared.platform.PhotoPickerActivity { *; }
 -keep class com.perol.pixez.android.widget.PixEzAppWidgetProvider { *; }
 -keep class com.perol.pixez.shared.platform.ShareActionReceiver { *; }
 -keep class androidx.core.content.FileProvider { *; }
