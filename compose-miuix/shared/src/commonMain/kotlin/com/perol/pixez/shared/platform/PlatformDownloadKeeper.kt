@@ -6,6 +6,6 @@ package com.perol.pixez.shared.platform
  * 防止锁屏或退到后台时被系统休眠策略冻结 CPU 与网络套接字。
  */
 expect object PlatformDownloadKeeper {
-    fun acquire(taskId: Int, title: String)
+    fun acquire(taskId: Int)
     fun release(taskId: Int)
 }

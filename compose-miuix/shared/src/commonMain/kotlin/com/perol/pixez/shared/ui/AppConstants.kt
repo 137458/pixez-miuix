@@ -19,6 +19,19 @@ object AppConstants {
         const val HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST = 32
 
         const val IMAGE_MAX_DECODE_DIMENSION = 4096
+
+        const val DOH_URL = "https://cloudflare-dns.com/dns-query"
+        const val DOH_TIMEOUT_SECONDS = 5L
+        val DOH_BOOTSTRAP_HOSTS = listOf("1.1.1.1", "1.0.0.1")
+    }
+
+    /**
+     * 账号与凭据安全常量
+     */
+    object Auth {
+        const val DEFAULT_PASSWORD_PLACEHOLDER = "no more"
+        const val TOKEN_ENCRYPTION_PREFIX = "enc_v1:"
+        const val KEYSTORE_ALIAS = "PixEzTokenMasterKey"
     }
 
     /**
@@ -117,6 +130,9 @@ object AppConstants {
         const val EXTRA_OPLUS_CAPSULE_TITLE = "oplus.capsule.title"
         const val EXTRA_OPLUS_CAPSULE_TEXT = "oplus.capsule.text"
         const val EXTRA_OPLUS_CAPSULE_PROGRESS = "oplus.capsule.progress"
+
+        const val WAKELOCK_TAG = "PixEz:DownloadWakeLock"
+        const val WAKELOCK_TIMEOUT_MS = 15 * 60 * 1000L
     }
 
     /**

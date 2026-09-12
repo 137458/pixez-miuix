@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.platform.PlatformTokenCipher
+import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,7 @@ class AuthTokenStorage(
      */
     suspend fun saveAccount(
         account: AccountResponse,
-        password: String = "no more",
+        password: String = AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER,
         deviceToken: String = "",
     ) = withContext(Dispatchers.Default) {
         mutex.withLock {
@@ -96,7 +97,7 @@ class AuthTokenStorage(
                 user_id = user.id,
                 user_image = user.profileImageUrls.px170x170,
                 name = user.name,
-                password = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.encrypt(password) else password,
+                password = encryptPassword(password),
                 account = user.account,
                 mail_address = user.mailAddress,
                 is_premium = boolToLong(user.isPremium),
@@ -266,10 +267,24 @@ class AuthTokenStorage(
 
     private fun boolToLong(value: Boolean): Long = if (value) 1L else 0L
 
+    private fun encryptPassword(password: String): String =
+        if (password.isNotBlank() && password != AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER) {
+            PlatformTokenCipher.encrypt(password)
+        } else {
+            password
+        }
+
+    private fun decryptPassword(password: String): String =
+        if (password.isNotBlank() && password != AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER) {
+            PlatformTokenCipher.decrypt(password)
+        } else {
+            password
+        }
+
     private fun Account.decrypted(): Account {
         val decAccess = PlatformTokenCipher.decrypt(access_token)
         val decRefresh = PlatformTokenCipher.decrypt(refresh_token)
-        val decPass = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.decrypt(password) else password
+        val decPass = decryptPassword(password)
         if (decAccess == access_token && decRefresh == refresh_token && decPass == password) {
             return this
         }
@@ -283,7 +298,7 @@ class AuthTokenStorage(
     private fun Account.encrypted(): Account {
         val encAccess = PlatformTokenCipher.encrypt(access_token)
         val encRefresh = PlatformTokenCipher.encrypt(refresh_token)
-        val encPass = if (password.isNotBlank() && password != "no more") PlatformTokenCipher.encrypt(password) else password
+        val encPass = encryptPassword(password)
         if (encAccess == access_token && encRefresh == refresh_token && encPass == password) {
             return this
         }

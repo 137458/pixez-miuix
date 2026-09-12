@@ -65,7 +65,7 @@ class DownloadRepository(
         // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
         var historyId = 0L
         if (illust.pageCount <= 1) {
-            com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id, illust.title)
+            com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
             notifier.notifyProgress(illust.id, illust.title, 0, 1)
         }
         return try {
@@ -129,7 +129,7 @@ class DownloadRepository(
     ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
         if (total <= 0) return@coroutineScope emptyList()
-        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id, illust.title)
+        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
         notifier.notifyProgress(illust.id, illust.title, 0, total)
         val semaphore = Semaphore(maxConcurrency.coerceIn(1, 6))
         val progressMutex = Mutex()
@@ -294,7 +294,7 @@ class DownloadRepository(
         val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
 
         var historyId = 0L
-        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id, illust.title)
+        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
         notifier.notifyProgress(illust.id, illust.title, 0, 1)
         return try {
             historyId = historyRepository.saveTask(pendingTask, illust).id

@@ -96,7 +96,6 @@ kotlin {
             implementation(libs.sqldelight.android.driver)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation(libs.androidx.security.crypto)
             implementation(libs.coil.gif)
         }
 

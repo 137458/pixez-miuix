@@ -89,9 +89,11 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -840,7 +842,7 @@ private fun IllustDetailSingleContent(
                                 )
                             }
                         }.onSuccess {
-                            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            performHapticFeedback(HapticType.Confirm)
                             isBookmarked = !wasBookmarked
                             if (!wasBookmarked) {
                                 if (settings?.saveAfterStar == true) {
@@ -863,6 +865,7 @@ private fun IllustDetailSingleContent(
                                 }
                             }
                         }.onFailure { e ->
+                            performHapticFeedback(HapticType.Reject)
                             bookmarkError = e.message ?: strings.loadFailed
                         }
                     } finally {
@@ -878,6 +881,7 @@ private fun IllustDetailSingleContent(
                 coroutineScope.launch {
                     try {
                         isDownloading = true
+                        performHapticFeedback(HapticType.GestureStart)
                         toastMessage = "${strings.downloadStatusDownloading}…"
                         if (targetIllust.type == "ugoira") {
                             val meta = repository.getUgoiraMetadata(targetIllust.id)
@@ -899,11 +903,13 @@ private fun IllustDetailSingleContent(
                                     }
                                 }
                             }
+                            performHapticFeedback(HapticType.Confirm)
                             toastMessage = strings.downloadStatusSuccess
                         } else {
                             val task = downloadRepository.download(targetIllust, pageIndex = 0)
                             toastMessage = when (task.status) {
                                 DownloadStatus.Success -> {
+                                    performHapticFeedback(HapticType.Confirm)
                                     if (settings?.starAfterSave == true && !isBookmarked) {
                                         coroutineScope.launch {
                                             suspendRunCatchingNonCancel {
@@ -918,13 +924,17 @@ private fun IllustDetailSingleContent(
                                     }
                                     strings.downloadStatusSuccess
                                 }
-                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                DownloadStatus.Failed -> {
+                                    performHapticFeedback(HapticType.Reject)
+                                    "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                }
                                 else -> null
                             }
                         }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        performHapticFeedback(HapticType.Reject)
                         toastMessage = "${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}"
                     } finally {
                         isDownloading = false

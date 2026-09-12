@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import io.github.aakira.napier.Napier
 
 actual fun performHapticFeedback(type: HapticType) {
     val context = BrowserLauncherContext.applicationContext ?: return
@@ -21,5 +22,7 @@ actual fun performHapticFeedback(type: HapticType) {
                 vibrator.vibrate(effect)
             }
         }
-    } catch (_: Throwable) {}
+    } catch (e: Throwable) {
+        Napier.w("Haptic vibration failed", e)
+    }
 }

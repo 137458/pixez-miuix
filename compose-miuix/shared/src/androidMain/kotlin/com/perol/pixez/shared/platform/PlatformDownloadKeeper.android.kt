@@ -5,30 +5,32 @@ import android.os.PowerManager
 import io.github.aakira.napier.Napier
 import java.util.concurrent.ConcurrentHashMap
 
+import com.perol.pixez.shared.ui.AppConstants
+
 actual object PlatformDownloadKeeper {
     private val activeTasks = ConcurrentHashMap.newKeySet<Int>()
     private var wakeLock: PowerManager.WakeLock? = null
     private val lock = Any()
 
-    actual fun acquire(taskId: Int, title: String) {
+    actual fun acquire(taskId: Int) {
         val context = BrowserLauncherContext.applicationContext ?: return
         synchronized(lock) {
             activeTasks.add(taskId)
-            if (wakeLock == null) {
-                try {
+            try {
+                if (wakeLock == null) {
                     val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
                     wakeLock = powerManager?.newWakeLock(
                         PowerManager.PARTIAL_WAKE_LOCK,
-                        "PixEz:DownloadWakeLock",
+                        AppConstants.Download.WAKELOCK_TAG,
                     )?.apply {
                         setReferenceCounted(false)
-                        // 单次最长保持 15 分钟唤醒守护，避免极端情况下永久耗电
-                        acquire(15 * 60 * 1000L)
                     }
-                    Napier.d("下载保活守护器已激活 (任务数: ${activeTasks.size})", tag = "DownloadKeeper")
-                } catch (e: Throwable) {
-                    Napier.w("申请系统下载 WakeLock 失败", e)
                 }
+                // 每次有新任务注册或执行时动态刷新唤醒锁守护期，防止超长批量下载中途被系统休眠切断
+                wakeLock?.acquire(AppConstants.Download.WAKELOCK_TIMEOUT_MS)
+                Napier.d("下载保活守护器已激活/续期 (活跃任务数: ${activeTasks.size})", tag = "DownloadKeeper")
+            } catch (e: Throwable) {
+                Napier.w("申请或续期系统下载 WakeLock 失败", e, tag = "DownloadKeeper")
             }
         }
     }
