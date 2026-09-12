@@ -151,9 +151,10 @@ fun IllustStaggeredGrid(
                 key = { it.id },
                 contentType = { "illust_card" },
             ) { illust ->
+                val onCardClick = remember(illust.id) { { onIllustClick(illust.id) } }
                 IllustCard(
                     illust = illust,
-                    onClick = { onIllustClick(illust.id) },
+                    onClick = onCardClick,
                 )
             }
 

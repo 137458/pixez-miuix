@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,6 +10,7 @@ data class NovelRecomResponse(
     @SerialName("next_url") val nextUrl: String? = null,
 )
 
+@Immutable
 @Serializable
 data class Novel(
     val id: Int,
@@ -36,6 +38,7 @@ data class Novel(
     @SerialName("novel_ai_type") val novelAIType: Int,
 )
 
+@Immutable
 @Serializable
 data class NovelImageUrls(
     @SerialName("square_medium") val squareMedium: String,
@@ -43,12 +46,14 @@ data class NovelImageUrls(
     val large: String,
 )
 
+@Immutable
 @Serializable
 data class NovelSeries(
     val id: Int? = null,
     val title: String? = null,
 )
 
+@Immutable
 @Serializable
 data class NovelTag(
     val name: String,
@@ -56,6 +61,7 @@ data class NovelTag(
     @SerialName("added_by_uploaded_user") val addedByUploadedUser: Boolean,
 )
 
+@Immutable
 @Serializable
 data class NovelUser(
     val id: Int,

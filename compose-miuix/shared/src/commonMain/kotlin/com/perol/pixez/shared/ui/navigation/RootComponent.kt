@@ -12,6 +12,7 @@ import com.arkivanov.decompose.value.Value
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
 
 /**
  * 应用根组件，使用 Decompose 管理页面栈。
@@ -38,13 +39,24 @@ class RootComponent(
         childFactory = ::createChild,
     )
 
-    private val initialTab = when (val init = resolveWelcomePageConfig(settingsRepository)) {
-        is Config.Main -> init.tab
-        else -> MainTab.Hello
+    private val KEY_SELECTED_TAB = "key_root_selected_tab"
+
+    private val restoredTab: MainTab = stateKeeper.consume(KEY_SELECTED_TAB, String.serializer())
+        ?.let { runCatching { MainTab.valueOf(it) }.getOrNull() }
+        ?: when (val init = resolveWelcomePageConfig(settingsRepository)) {
+            is Config.Main -> init.tab
+            else -> MainTab.Hello
+        }
+
+    private val _selectedTab = kotlinx.coroutines.flow.MutableStateFlow(restoredTab)
+    val selectedTab: kotlinx.coroutines.flow.StateFlow<MainTab> = _selectedTab
+
+    init {
+        stateKeeper.register(KEY_SELECTED_TAB, String.serializer()) {
+            _selectedTab.value.name
+        }
     }
 
-    private val _selectedTab = kotlinx.coroutines.flow.MutableStateFlow(initialTab)
-    val selectedTab: kotlinx.coroutines.flow.StateFlow<MainTab> = _selectedTab
 
     private val _tabReselectEvents = kotlinx.coroutines.flow.MutableSharedFlow<MainTab>(extraBufferCapacity = 1)
     val tabReselectEvents: kotlinx.coroutines.flow.SharedFlow<MainTab> = _tabReselectEvents

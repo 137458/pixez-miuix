@@ -3,6 +3,14 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -148,11 +156,39 @@ fun IllustCard(
         )
     }
 
+    val illustA11yDescription = remember(illust.title, illust.user.name, illust.pageCount, showAIBadge, isNsfw) {
+        buildString {
+            append(illust.title)
+            append(", ")
+            append(strings.author)
+            append(": ")
+            append(illust.user.name)
+            if (illust.pageCount > 1) append(", ${illust.pageCount}P")
+            if (showAIBadge) append(", ${strings.filterAi}")
+            if (isNsfw) append(", R-18")
+        }
+    }
+
     @OptIn(ExperimentalFoundationApi::class)
     Card(
         modifier = modifier
             .fillMaxWidth()
             .illustDragAndDropSource(illust, 0)
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = illustA11yDescription
+                onClick(label = strings.viewArtworkDetail) {
+                    onClick()
+                    true
+                }
+                customActions = listOf(
+                    CustomAccessibilityAction(label = strings.menuMoreActions) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        showActionMenu = true
+                        true
+                    }
+                )
+            }
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = {
@@ -205,7 +241,7 @@ fun IllustCard(
                 } else {
                     PixivAsyncImage(
                         model = previewUrl,
-                        contentDescription = illust.title,
+                        contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -216,7 +252,8 @@ fun IllustCard(
                         text = "${illust.pageCount}P",
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(6.dp),
+                            .padding(6.dp)
+                            .clearAndSetSemantics {},
                     )
                 }
 
@@ -225,7 +262,8 @@ fun IllustCard(
                         text = "AI",
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(6.dp),
+                            .padding(6.dp)
+                            .clearAndSetSemantics {},
                     )
                 }
             }

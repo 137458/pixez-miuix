@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,6 +43,7 @@ import com.perol.pixez.shared.data.model.UgoiraFrame
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.platform.UgoiraZipExtractor
+import com.perol.pixez.shared.platform.getAppCacheDirectory
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -51,6 +53,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import okio.FileSystem
+import okio.Path
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -60,12 +64,61 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 import com.perol.pixez.shared.data.repository.DownloadRepository
 
+/**
+ * Ugoira 动图轻量级双缓冲滑动窗口帧解码器。
+ *
+ * 避免一次性将 100+ 帧全部解码为 ImageBitmap 驻留 JVM 堆引发 OOM；
+ * 仅在内存中维护当前播放窗口附近的 ImageBitmap，并在后台预解码下一帧。
+ */
+private class UgoiraFrameProvider(
+    val frames: List<UgoiraFrame>,
+    private val frameBytesMap: Map<String, ByteArray>,
+) {
+    private val cache = mutableMapOf<Int, ImageBitmap>()
+
+    fun getFrameBitmap(index: Int): ImageBitmap? {
+        val cached = cache[index]
+        if (cached != null) return cached
+        val frame = frames.getOrNull(index) ?: return null
+        val bytes = frameBytesMap[frame.file] ?: return null
+        val bitmap = runCatching { bytes.decodeToImageBitmap() }.getOrNull() ?: return null
+        cache[index] = bitmap
+        // 维持最多 8 帧已解码位图窗口，及时回收远离当前播放点的位图
+        if (cache.size > 8) {
+            val keysToRemove = cache.keys.filter { key ->
+                val diff = kotlin.math.abs(key - index)
+                val cyclicDiff = frames.size - diff
+                minOf(diff, cyclicDiff) > 3
+            }
+            keysToRemove.forEach { cache.remove(it) }
+        }
+        return bitmap
+    }
+
+    fun preloadNext(index: Int) {
+        val nextIdx = (index + 1) % frames.size
+        if (!cache.containsKey(nextIdx)) {
+            val nextFrame = frames.getOrNull(nextIdx) ?: return
+            val bytes = frameBytesMap[nextFrame.file] ?: return
+            runCatching {
+                val bitmap = bytes.decodeToImageBitmap()
+                cache[nextIdx] = bitmap
+            }
+        }
+    }
+}
+
 private sealed interface UgoiraState {
     data object Idle : UgoiraState
     data class Loading(val stageText: String) : UgoiraState
-    data class Ready(val frames: List<Pair<UgoiraFrame, ImageBitmap>>, val rawZipBytes: ByteArray, val zipUrl: String) : UgoiraState
+    data class Ready(
+        val provider: UgoiraFrameProvider,
+        val tempZipPath: Path?,
+        val zipUrl: String,
+    ) : UgoiraState
     data class Error(val message: String) : UgoiraState
 }
+
 
 /**
  * Pixiv Ugoira 动图多端播放器与解压渲染组件。
@@ -100,33 +153,53 @@ fun UgoiraPlayer(
                 state = UgoiraState.Loading(strings.ugoiraDownloading)
                 val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)
 
+                // 将 Zip 流式持久化至应用缓存目录，避免在 JVM 堆内存中长期持有数十兆未压缩原始字节
+                val tempZipPath = withContext(Dispatchers.IO) {
+                    val cacheDir = getAppCacheDirectory()
+                    val path = cacheDir / "ugoira_temp_${illust.id}.zip"
+                    runCatching {
+                        FileSystem.SYSTEM.write(path) {
+                            write(zipBytes)
+                        }
+                        path
+                    }.getOrNull()
+                }
+
                 state = UgoiraState.Loading(strings.ugoiraExtracting)
                 val frameMap = withContext(Dispatchers.Default) {
                     UgoiraZipExtractor().extractFrames(zipBytes)
                 }
 
-                val decodedFrames = withContext(Dispatchers.Default) {
-                    metadataResponse.ugoiraMetadata.frames.mapNotNull { frame ->
-                        val bytes = frameMap[frame.file] ?: return@mapNotNull null
-                        runCatching {
-                            val bitmap = bytes.decodeToImageBitmap()
-                            frame to bitmap
-                        }.getOrNull()
-                    }
-                }
+                val validFrames = metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
 
-                if (decodedFrames.isEmpty()) {
+                if (validFrames.isEmpty()) {
                     state = UgoiraState.Error(strings.ugoiraDecodeFailed)
                 } else {
+                    val provider = UgoiraFrameProvider(validFrames, frameMap)
+                    // 预解码首帧与后续帧
+                    withContext(Dispatchers.Default) {
+                        provider.getFrameBitmap(0)
+                        provider.preloadNext(0)
+                    }
                     currentFrameIndex = 0
                     isPlaying = true
-                    state = UgoiraState.Ready(decodedFrames, zipBytes, zipUrl)
+                    state = UgoiraState.Ready(provider, tempZipPath, zipUrl)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Napier.e("加载动图失败 illustId=${illust.id}", e, tag = "UgoiraPlayer")
                 state = UgoiraState.Error(e.message ?: strings.ugoiraLoadFailed)
+            }
+        }
+    }
+
+    DisposableEffect(illust.id) {
+        onDispose {
+            val ready = state as? UgoiraState.Ready
+            val tempPath = ready?.tempZipPath
+            if (tempPath != null) {
+                runCatching { FileSystem.SYSTEM.delete(tempPath) }
             }
         }
     }
@@ -141,14 +214,18 @@ fun UgoiraPlayer(
     val currentState = state
     LaunchedEffect(currentState, isPlaying) {
         if (currentState !is UgoiraState.Ready || !isPlaying) return@LaunchedEffect
-        val frames = currentState.frames
+        val frames = currentState.provider.frames
         if (frames.isEmpty()) return@LaunchedEffect
 
         var nextFrameTargetTime = Clock.System.now().toEpochMilliseconds()
         while (isActive && isPlaying) {
-            val currentPair = frames.getOrNull(currentFrameIndex) ?: frames.first()
-            val expectedDelay = currentPair.first.delay.toLong().coerceAtLeast(10L)
+            val currentFrame = frames.getOrNull(currentFrameIndex) ?: frames.first()
+            val expectedDelay = currentFrame.delay.toLong().coerceAtLeast(10L)
             nextFrameTargetTime += expectedDelay
+
+            // 预解码下一帧，平滑帧率
+            currentState.provider.preloadNext(currentFrameIndex)
+
             currentFrameIndex = (currentFrameIndex + 1) % frames.size
 
             val now = Clock.System.now().toEpochMilliseconds()
@@ -191,7 +268,7 @@ fun UgoiraPlayer(
 
         when (val st = state) {
             is UgoiraState.Ready -> {
-                val currentBitmap = st.frames.getOrNull(currentFrameIndex)?.second
+                val currentBitmap = st.provider.getFrameBitmap(currentFrameIndex)
                 if (currentBitmap != null) {
                     Image(
                         bitmap = currentBitmap,
@@ -235,7 +312,7 @@ fun UgoiraPlayer(
                             }
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                text = "${currentFrameIndex + 1} / ${st.frames.size}",
+                                text = "${currentFrameIndex + 1} / ${st.provider.frames.size}",
                                 color = Color.White.copy(alpha = 0.9f),
                                 fontSize = 12.sp,
                             )
@@ -248,16 +325,24 @@ fun UgoiraPlayer(
                                 isSavingZip = true
                                 scope.launch {
                                     try {
+                                        val bytes = withContext(Dispatchers.IO) {
+                                            val path = st.tempZipPath
+                                            if (path != null && FileSystem.SYSTEM.exists(path)) {
+                                                FileSystem.SYSTEM.read(path) { readByteArray() }
+                                            } else {
+                                                illustRepository.downloadUgoiraZip(st.zipUrl)
+                                            }
+                                        }
                                         val path = if (downloadRepository != null) {
                                             downloadRepository.saveUgoiraZip(
                                                 illust = illust,
-                                                bytes = st.rawZipBytes,
+                                                bytes = bytes,
                                                 zipUrl = st.zipUrl,
                                             )
                                         } else {
                                             illustSaver.save(
                                                 fileName = "${illust.id}_ugoira.zip",
-                                                bytes = st.rawZipBytes,
+                                                bytes = bytes,
                                             )
                                         }
                                         onSavedZip?.invoke(path)

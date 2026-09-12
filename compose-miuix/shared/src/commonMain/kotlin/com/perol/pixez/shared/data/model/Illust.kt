@@ -1,11 +1,13 @@
 package com.perol.pixez.shared.data.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
  * 插画作品详情（对应旧版 illust.dart 中的 Illusts）。
  */
+@Immutable
 @Serializable
 data class Illust(
     val id: Int,
@@ -36,6 +38,7 @@ data class Illust(
     @SerialName("total_comments") val totalComments: Int? = null,
 )
 
+@Immutable
 @Serializable
 data class ImageUrls(
     @SerialName("square_medium") val squareMedium: String,
@@ -43,6 +46,7 @@ data class ImageUrls(
     val large: String,
 )
 
+@Immutable
 @Serializable
 data class IllustUser(
     val id: Int,
@@ -53,11 +57,13 @@ data class IllustUser(
     @SerialName("is_followed") val isFollowed: Boolean? = null,
 )
 
+@Immutable
 @Serializable
 data class IllustProfileImageUrls(
     val medium: String,
 )
 
+@Immutable
 @Serializable
 data class IllustTag(
     val name: String,
