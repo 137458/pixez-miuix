@@ -22,3 +22,19 @@ fun String.format(vararg args: Any?): String {
     }
     return result
 }
+
+/**
+ * 跨平台文件字节大小格式化工具（支持 B / KB / MB / GB）。
+ */
+fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        gb >= 1.0 -> "${(gb * 10).toInt() / 10.0} GB"
+        mb >= 1.0 -> "${(mb * 10).toInt() / 10.0} MB"
+        kb >= 1.0 -> "${(kb * 10).toInt() / 10.0} KB"
+        else -> "$bytes B"
+    }
+}

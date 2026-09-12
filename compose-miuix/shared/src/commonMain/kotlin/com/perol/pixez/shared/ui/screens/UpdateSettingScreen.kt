@@ -338,9 +338,9 @@ fun UpdateSettingScreen(
                                         )
                                         val percent = if (downloadProgress >= 0f) "${(downloadProgress * 100).toInt()}%" else ""
                                         val sizeText = if (totalBytes > 0) {
-                                            "${formatSize(downloadedBytes)} / ${formatSize(totalBytes)}"
+                                            "${formatFileSize(downloadedBytes)} / ${formatFileSize(totalBytes)}"
                                         } else {
-                                            formatSize(downloadedBytes)
+                                            formatFileSize(downloadedBytes)
                                         }
                                         Text(
                                             text = if (percent.isNotEmpty()) "$sizeText ($percent)" else sizeText,
@@ -545,19 +545,6 @@ fun UpdateSettingScreen(
             message = toastMessage,
             onDismiss = { toastMessage = null },
         )
-    }
-}
-
-private fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> "${(gb * 10).toInt() / 10.0} GB"
-        mb >= 1.0 -> "${(mb * 10).toInt() / 10.0} MB"
-        kb >= 1.0 -> "${(kb * 10).toInt() / 10.0} KB"
-        else -> "$bytes B"
     }
 }
 

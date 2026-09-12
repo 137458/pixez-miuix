@@ -36,6 +36,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
+import com.perol.pixez.shared.ui.screens.formatFileSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -47,6 +48,19 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
+
+/**
+ * 更新下载流式状态结构体，收敛零散可变状态。
+ */
+private data class DownloadUiState(
+    val isDownloading: Boolean = false,
+    val progress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = 0L,
+    val speedText: String = "",
+    val filePath: String? = null,
+    val error: String? = null,
+)
 
 /**
  * 官方 Miuix / HyperOS 规范版本更新弹窗：
@@ -63,37 +77,25 @@ fun UpdateDialog(
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
 
-    var isDownloading by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableFloatStateOf(0f) }
-    var downloadedBytes by remember { mutableLongStateOf(0L) }
-    var totalBytes by remember { mutableLongStateOf(0L) }
-    var downloadSpeedText by remember { mutableStateOf("") }
-    var downloadedFilePath by remember { mutableStateOf<String?>(null) }
-    var downloadError by remember { mutableStateOf<String?>(null) }
+    var downloadState by remember { mutableStateOf(DownloadUiState()) }
     var downloadJob by remember { mutableStateOf<Job?>(null) }
 
     fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
-        isDownloading = false
-        downloadProgress = 0f
-        downloadSpeedText = ""
+        downloadState = DownloadUiState()
     }
 
     fun startDownload() {
         val downloadUrl = releaseInfo.downloadUrl
         val fileName = releaseInfo.fileName
-        if (downloadUrl == null || fileName == null) {
+        if (downloadUrl.isNullOrBlank() || fileName.isNullOrBlank()) {
             onUpdate(releaseInfo.releaseUrl)
             onDismiss()
             return
         }
 
-        isDownloading = true
-        downloadError = null
-        downloadProgress = 0f
-        downloadSpeedText = ""
-        downloadedFilePath = null
+        downloadState = DownloadUiState(isDownloading = true)
 
         downloadJob = coroutineScope.launch {
             var lastTime = Clock.System.now().toEpochMilliseconds()
@@ -103,35 +105,43 @@ fun UpdateDialog(
                 downloadUrl = downloadUrl,
                 fileName = fileName,
                 onProgress = { progress, downloaded, total ->
-                    downloadProgress = progress
-                    downloadedBytes = downloaded
-                    totalBytes = total
-
                     val currentTime = Clock.System.now().toEpochMilliseconds()
                     val timeDiff = currentTime - lastTime
+                    var speed = downloadState.speedText
                     if (timeDiff >= AppConstants.Update.SPEED_CALCULATION_INTERVAL_MS) {
                         val bytesDiff = downloaded - lastBytes
                         if (bytesDiff >= 0 && timeDiff > 0) {
-                            val speed = (bytesDiff * 1000L) / timeDiff
-                            downloadSpeedText = "${formatSize(speed)}/s"
+                            val rate = (bytesDiff * 1000L) / timeDiff
+                            speed = "${formatFileSize(rate)}/s"
                         }
                         lastTime = currentTime
                         lastBytes = downloaded
                     }
+                    downloadState = downloadState.copy(
+                        progress = progress,
+                        downloadedBytes = downloaded,
+                        totalBytes = total,
+                        speedText = speed,
+                    )
                 },
             )
 
-            isDownloading = false
             downloadJob = null
 
             result
                 .onSuccess { path ->
-                    downloadedFilePath = path
+                    downloadState = downloadState.copy(
+                        isDownloading = false,
+                        filePath = path,
+                    )
                     AppInstaller().install(path)
                 }
                 .onFailure { error ->
                     if (error !is CancellationException) {
-                        downloadError = error.message ?: strings.updateDownloadFailed
+                        downloadState = downloadState.copy(
+                            isDownloading = false,
+                            error = error.message ?: strings.updateDownloadFailed,
+                        )
                     }
                 }
         }
@@ -141,7 +151,7 @@ fun UpdateDialog(
         show = show,
         title = strings.dialogNewVersionFound,
         onDismissRequest = {
-            if (isDownloading) {
+            if (downloadState.isDownloading) {
                 cancelDownload()
             }
             onDismiss()
@@ -192,9 +202,9 @@ fun UpdateDialog(
 
                     // 元数据标签（更新包大小与发布日期）
                     val metadataParts = buildList {
-                        val size = releaseInfo.fileSize ?: totalBytes.takeIf { it > 0 }
+                        val size = releaseInfo.fileSize ?: downloadState.totalBytes.takeIf { it > 0 }
                         if (size != null && size > 0) {
-                            add(formatSize(size))
+                            add(formatFileSize(size))
                         }
                         val published = releaseInfo.publishedAt?.take(10)
                         if (!published.isNullOrBlank()) {
@@ -251,7 +261,7 @@ fun UpdateDialog(
 
             // 3. 下载进度状态与即时测速
             AnimatedVisibility(
-                visible = isDownloading,
+                visible = downloadState.isDownloading,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
@@ -274,24 +284,24 @@ fun UpdateDialog(
                             color = MiuixTheme.colorScheme.primary,
                         )
 
-                        val percentText = if (downloadProgress >= 0f) "${(downloadProgress * 100).toInt()}%" else ""
+                        val percentText = if (downloadState.progress >= 0f) "${(downloadState.progress * 100).toInt()}%" else ""
                         val speedAndPercent = buildList {
                             if (percentText.isNotEmpty()) add(percentText)
-                            if (downloadSpeedText.isNotEmpty()) add(downloadSpeedText)
+                            if (downloadState.speedText.isNotEmpty()) add(downloadState.speedText)
                         }.joinToString("  •  ")
 
                         Text(
                             text = speedAndPercent,
                             style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                            )
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    if (downloadProgress >= 0f) {
+                    if (downloadState.progress >= 0f) {
                         LinearProgressIndicator(
-                            progress = downloadProgress,
+                            progress = downloadState.progress,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
@@ -302,10 +312,10 @@ fun UpdateDialog(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    val sizeText = if (totalBytes > 0) {
-                        "${formatSize(downloadedBytes)} / ${formatSize(totalBytes)}"
+                    val sizeText = if (downloadState.totalBytes > 0) {
+                        "${formatFileSize(downloadState.downloadedBytes)} / ${formatFileSize(downloadState.totalBytes)}"
                     } else {
-                        formatSize(downloadedBytes)
+                        formatFileSize(downloadState.downloadedBytes)
                     }
 
                     Text(
@@ -318,7 +328,7 @@ fun UpdateDialog(
             }
 
             // 4. 下载成功状态提示
-            if (downloadedFilePath != null && !isDownloading) {
+            if (downloadState.filePath != null && !downloadState.isDownloading) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
@@ -339,7 +349,7 @@ fun UpdateDialog(
             }
 
             // 5. 错误提示
-            if (downloadError != null) {
+            if (downloadState.error != null) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
@@ -349,7 +359,7 @@ fun UpdateDialog(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = downloadError ?: "",
+                        text = downloadState.error ?: "",
                         style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                         color = MiuixTheme.colorScheme.error,
                     )
@@ -364,15 +374,15 @@ fun UpdateDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (isDownloading) {
+                if (downloadState.isDownloading) {
                     // 下载中状态：提供取消下载操作
                     TextButton(
                         text = strings.updateCancelDownload,
                         onClick = { cancelDownload() },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                } else if (downloadedFilePath != null) {
-                    // 下载完成：取消 / 立即安装
+                } else if (downloadState.filePath != null) {
+                    // 下载完成：取消 / 立即安装（安全解包避免 !!）
                     TextButton(
                         text = strings.cancel,
                         onClick = onDismiss,
@@ -381,12 +391,12 @@ fun UpdateDialog(
                     TextButton(
                         text = strings.updateInstallNow,
                         onClick = {
-                            AppInstaller().install(downloadedFilePath!!)
+                            downloadState.filePath?.let { AppInstaller().install(it) }
                         },
                         modifier = Modifier.weight(1.2f),
                         colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
-                } else if (downloadError != null) {
+                } else if (downloadState.error != null) {
                     // 下载失败：取消 / 浏览器下载 / 重试
                     TextButton(
                         text = strings.cancel,
@@ -495,18 +505,5 @@ private fun VersionBadge(
                 color = textColor,
             )
         }
-    }
-}
-
-private fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    val gb = mb / 1024.0
-    return when {
-        gb >= 1.0 -> "${(gb * 10).toInt() / 10.0} GB"
-        mb >= 1.0 -> "${(mb * 10).toInt() / 10.0} MB"
-        kb >= 1.0 -> "${(kb * 10).toInt() / 10.0} KB"
-        else -> "$bytes B"
     }
 }
