@@ -171,5 +171,16 @@ object AppConstants {
         const val MIN_FONT_SIZE_SP = 12f
         const val MAX_FONT_SIZE_SP = 28f
     }
+
+    /**
+     * 应用更新与弹窗常量预设（单位：dp / ms）
+     */
+    object Update {
+        const val CHANGELOG_MAX_HEIGHT_DP = 220
+        const val CHANGELOG_MIN_HEIGHT_DP = 80
+        const val SPEED_CALCULATION_INTERVAL_MS = 500L
+        const val CARD_CORNER_RADIUS_DP = 16
+        const val BADGE_CORNER_RADIUS_DP = 8
+    }
 }
 

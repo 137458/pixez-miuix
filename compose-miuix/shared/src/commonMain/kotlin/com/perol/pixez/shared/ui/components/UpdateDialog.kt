@@ -1,5 +1,8 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,22 +30,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import top.yukonga.miuix.kmp.squircle.squircleClip
 import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.AppUpdateDownloader
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppInfo
-import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.screens.ReleaseInfo
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 /**
- * 官方 Miuix / HyperOS 规范版本更新弹窗：支持应用内流式下载安装包与一键自动调起安装。
+ * 官方 Miuix / HyperOS 规范版本更新弹窗：
+ * 支持版本跃迁胶囊卡片、元数据展示、应用内流式测速下载、任务中断取消与无缝回退浏览器。
  */
 @Composable
 fun UpdateDialog(
@@ -59,22 +67,38 @@ fun UpdateDialog(
     var downloadProgress by remember { mutableFloatStateOf(0f) }
     var downloadedBytes by remember { mutableLongStateOf(0L) }
     var totalBytes by remember { mutableLongStateOf(0L) }
+    var downloadSpeedText by remember { mutableStateOf("") }
     var downloadedFilePath by remember { mutableStateOf<String?>(null) }
     var downloadError by remember { mutableStateOf<String?>(null) }
+    var downloadJob by remember { mutableStateOf<Job?>(null) }
+
+    fun cancelDownload() {
+        downloadJob?.cancel()
+        downloadJob = null
+        isDownloading = false
+        downloadProgress = 0f
+        downloadSpeedText = ""
+    }
 
     fun startDownload() {
         val downloadUrl = releaseInfo.downloadUrl
         val fileName = releaseInfo.fileName
         if (downloadUrl == null || fileName == null) {
-            downloadError = strings.updateDownloadFailed
+            onUpdate(releaseInfo.releaseUrl)
+            onDismiss()
             return
         }
 
         isDownloading = true
         downloadError = null
         downloadProgress = 0f
+        downloadSpeedText = ""
+        downloadedFilePath = null
 
-        coroutineScope.launch {
+        downloadJob = coroutineScope.launch {
+            var lastTime = Clock.System.now().toEpochMilliseconds()
+            var lastBytes = 0L
+
             val result = AppUpdateDownloader().download(
                 downloadUrl = downloadUrl,
                 fileName = fileName,
@@ -82,16 +106,33 @@ fun UpdateDialog(
                     downloadProgress = progress
                     downloadedBytes = downloaded
                     totalBytes = total
+
+                    val currentTime = Clock.System.now().toEpochMilliseconds()
+                    val timeDiff = currentTime - lastTime
+                    if (timeDiff >= AppConstants.Update.SPEED_CALCULATION_INTERVAL_MS) {
+                        val bytesDiff = downloaded - lastBytes
+                        if (bytesDiff >= 0 && timeDiff > 0) {
+                            val speed = (bytesDiff * 1000L) / timeDiff
+                            downloadSpeedText = "${formatSize(speed)}/s"
+                        }
+                        lastTime = currentTime
+                        lastBytes = downloaded
+                    }
                 },
             )
+
             isDownloading = false
+            downloadJob = null
+
             result
                 .onSuccess { path ->
                     downloadedFilePath = path
                     AppInstaller().install(path)
                 }
                 .onFailure { error ->
-                    downloadError = error.message ?: strings.updateDownloadFailed
+                    if (error !is CancellationException) {
+                        downloadError = error.message ?: strings.updateDownloadFailed
+                    }
                 }
         }
     }
@@ -99,24 +140,91 @@ fun UpdateDialog(
     WindowDialog(
         show = show,
         title = strings.dialogNewVersionFound,
-        summary = "v${AppInfo.VERSION_NAME} → v${releaseInfo.versionName}",
         onDismissRequest = {
-            if (!isDownloading) {
-                onDismiss()
+            if (isDownloading) {
+                cancelDownload()
             }
+            onDismiss()
         },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            // 更新日志卡片
+            // 1. HyperOS 规范版本跃迁与元数据胶囊卡片
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp)
-                    .squircleClip(12.dp)
+                    .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
                     .background(MiuixTheme.colorScheme.surfaceContainer)
-                    .padding(12.dp)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // 版本流动指示行
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        VersionBadge(
+                            label = strings.updateCurrentVersion,
+                            version = "v${AppInfo.VERSION_NAME}",
+                            isHighlight = false,
+                        )
+
+                        Text(
+                            text = "→",
+                            style = MiuixTheme.textStyles.title4.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                            ),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+
+                        VersionBadge(
+                            label = strings.updateLatestVersion,
+                            version = "v${releaseInfo.versionName}",
+                            isHighlight = true,
+                        )
+                    }
+
+                    // 元数据标签（更新包大小与发布日期）
+                    val metadataParts = buildList {
+                        val size = releaseInfo.fileSize ?: totalBytes.takeIf { it > 0 }
+                        if (size != null && size > 0) {
+                            add(formatSize(size))
+                        }
+                        val published = releaseInfo.publishedAt?.take(10)
+                        if (!published.isNullOrBlank()) {
+                            add(published)
+                        }
+                    }
+                    if (metadataParts.isNotEmpty()) {
+                        Text(
+                            text = metadataParts.joinToString("  •  "),
+                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 2. 更新日志卡片
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(
+                        min = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
+                        max = AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp,
+                    )
+                    .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
+                    .background(MiuixTheme.colorScheme.surfaceContainer)
+                    .padding(14.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
                 if (releaseInfo.changelog.isNotBlank()) {
@@ -126,40 +234,61 @@ fun UpdateDialog(
                         baseFontSize = 13,
                     )
                 } else {
-                    Text(
-                        text = strings.updateChangelogTitle,
-                        style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = strings.updateChangelogEmpty,
+                            style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
                 }
             }
 
-            // 下载进度状态条
-            if (isDownloading) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Column(modifier = Modifier.fillMaxWidth()) {
+            // 3. 下载进度状态与即时测速
+            AnimatedVisibility(
+                visible = isDownloading,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = strings.updateDownloading,
-                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                            style = MiuixTheme.textStyles.body2.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                            ),
                             color = MiuixTheme.colorScheme.primary,
                         )
-                        val percent = if (downloadProgress >= 0f) "${(downloadProgress * 100).toInt()}%" else ""
-                        val sizeText = if (totalBytes > 0) {
-                            "${formatSize(downloadedBytes)} / ${formatSize(totalBytes)}"
-                        } else {
-                            formatSize(downloadedBytes)
-                        }
+
+                        val percentText = if (downloadProgress >= 0f) "${(downloadProgress * 100).toInt()}%" else ""
+                        val speedAndPercent = buildList {
+                            if (percentText.isNotEmpty()) add(percentText)
+                            if (downloadSpeedText.isNotEmpty()) add(downloadSpeedText)
+                        }.joinToString("  •  ")
+
                         Text(
-                            text = if (percent.isNotEmpty()) "$sizeText ($percent)" else sizeText,
+                            text = speedAndPercent,
                             style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
+
                     Spacer(modifier = Modifier.height(6.dp))
+
                     if (downloadProgress >= 0f) {
                         LinearProgressIndicator(
                             progress = downloadProgress,
@@ -170,46 +299,85 @@ fun UpdateDialog(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val sizeText = if (totalBytes > 0) {
+                        "${formatSize(downloadedBytes)} / ${formatSize(totalBytes)}"
+                    } else {
+                        formatSize(downloadedBytes)
+                    }
+
+                    Text(
+                        text = sizeText,
+                        style = MiuixTheme.textStyles.body2.copy(fontSize = 11.sp),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.align(Alignment.End),
+                    )
                 }
             }
 
-            // 错误提示
+            // 4. 下载成功状态提示
+            if (downloadedFilePath != null && !isDownloading) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .squircleClip(AppConstants.Update.BADGE_CORNER_RADIUS_DP.dp)
+                        .background(MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = strings.updateDownloadSuccess,
+                        style = MiuixTheme.textStyles.body2.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        color = MiuixTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+
+            // 5. 错误提示
             if (downloadError != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = downloadError ?: "",
-                    style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                    color = MiuixTheme.colorScheme.error,
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .squircleClip(AppConstants.Update.BADGE_CORNER_RADIUS_DP.dp)
+                        .background(MiuixTheme.colorScheme.error.copy(alpha = 0.12f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = downloadError ?: "",
+                        style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                        color = MiuixTheme.colorScheme.error,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 底部操作按钮
+            // 6. 底部操作按钮栏
             Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (onIgnore != null && !isDownloading && downloadedFilePath == null) {
+                if (isDownloading) {
+                    // 下载中状态：提供取消下载操作
                     TextButton(
-                        text = strings.btnIgnore,
-                        onClick = { onIgnore(releaseInfo.versionName) },
-                        modifier = Modifier.weight(1f),
+                        text = strings.updateCancelDownload,
+                        onClick = { cancelDownload() },
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.width(8.dp))
-                }
-
-                if (!isDownloading) {
+                } else if (downloadedFilePath != null) {
+                    // 下载完成：取消 / 立即安装
                     TextButton(
                         text = strings.cancel,
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.width(8.dp))
-                }
-
-                if (downloadedFilePath != null) {
-                    // 已下载完成，提供重新安装 / 打开安装包
                     TextButton(
                         text = strings.updateInstallNow,
                         onClick = {
@@ -218,17 +386,114 @@ fun UpdateDialog(
                         modifier = Modifier.weight(1.2f),
                         colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
-                } else if (!isDownloading) {
+                } else if (downloadError != null) {
+                    // 下载失败：取消 / 浏览器下载 / 重试
                     TextButton(
-                        text = if (downloadError != null) strings.retry else strings.btnUpdate,
+                        text = strings.cancel,
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(0.9f),
+                    )
+                    TextButton(
+                        text = strings.updateOpenInBrowser,
                         onClick = {
-                            startDownload()
+                            onDismiss()
+                            onUpdate(releaseInfo.releaseUrl)
                         },
                         modifier = Modifier.weight(1.2f),
+                    )
+                    TextButton(
+                        text = strings.retry,
+                        onClick = { startDownload() },
+                        modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
+                } else {
+                    // 常规待更新状态
+                    val hasDirectDownload = !releaseInfo.downloadUrl.isNullOrBlank() && !releaseInfo.fileName.isNullOrBlank()
+
+                    if (onIgnore != null) {
+                        TextButton(
+                            text = strings.btnIgnore,
+                            onClick = { onIgnore(releaseInfo.versionName) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    TextButton(
+                        text = strings.cancel,
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    if (hasDirectDownload) {
+                        TextButton(
+                            text = strings.btnUpdate,
+                            onClick = { startDownload() },
+                            modifier = Modifier.weight(1.2f),
+                            colors = ButtonDefaults.textButtonColorsPrimary(),
+                        )
+                    } else {
+                        // 无直链场景（如桌面端或其他架构），平滑提供浏览器下载
+                        TextButton(
+                            text = strings.updateOpenInBrowser,
+                            onClick = {
+                                onDismiss()
+                                onUpdate(releaseInfo.releaseUrl)
+                            },
+                            modifier = Modifier.weight(1.4f),
+                            colors = ButtonDefaults.textButtonColorsPrimary(),
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+/**
+ * HyperOS 风格版本徽标胶囊。
+ */
+@Composable
+private fun VersionBadge(
+    label: String,
+    version: String,
+    isHighlight: Boolean,
+) {
+    val bgColor = if (isHighlight) {
+        MiuixTheme.colorScheme.primaryContainer
+    } else {
+        MiuixTheme.colorScheme.surfaceContainerHigh
+    }
+    val textColor = if (isHighlight) {
+        MiuixTheme.colorScheme.onPrimaryContainer
+    } else {
+        MiuixTheme.colorScheme.onSurface
+    }
+
+    Box(
+        modifier = Modifier
+            .squircleClip(AppConstants.Update.BADGE_CORNER_RADIUS_DP.dp)
+            .background(bgColor)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = label,
+                style = MiuixTheme.textStyles.body2.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal,
+                ),
+                color = textColor.copy(alpha = 0.75f),
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = version,
+                style = MiuixTheme.textStyles.title4.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = textColor,
+            )
         }
     }
 }
