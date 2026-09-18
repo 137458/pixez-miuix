@@ -40,9 +40,9 @@ import kotlinx.coroutines.sync.withPermit
  * 提供单页 [download] 与多页 [downloadAllPages] 下载入口，支持 Android 16 实时动态胶囊通知。
  */
 class DownloadRepository(
-    private val httpClient: HttpClient,
-    private val saver: IllustSaver,
-    private val historyRepository: DownloadHistoryRepository,
+    private val httpClient: HttpClient = HttpClient(),
+    private val saver: IllustSaver = IllustSaver(),
+    private val historyRepository: DownloadHistoryRepository? = null,
     private val notifier: DownloadNotifier = DownloadNotifier(),
     private val settingsRepository: SettingsRepository? = null,
 ) {
@@ -78,13 +78,15 @@ class DownloadRepository(
         }
         return try {
             // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
-            historyId = historyRepository.saveTask(pendingTask, illust).id
+            historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
             val tempFileName = "dl_temp_${illust.id}_${pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
             val tempPath = downloadToTempFile(remoteUrl, tempFileName)
             val savedPath = saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
             Napier.d("下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            historyRepository.saveTask(successTask, illust, historyId)
+            if (historyId > 0 && historyRepository != null) {
+                historyRepository.saveTask(successTask, illust, historyId)
+            }
             if (illust.pageCount <= 1) {
                 notifier.notifyFinished(illust.id, illust.title, 1, 0)
             }
@@ -104,7 +106,7 @@ class DownloadRepository(
             if (illust.pageCount <= 1) {
                 notifier.notifyFinished(illust.id, illust.title, 0, 1)
             }
-            if (historyId > 0) {
+            if (historyId > 0 && historyRepository != null) {
                 // 历史记录已创建时尽力回写失败状态；不因为回写失败而覆盖原始错误。
                 // 回写失败至少记录日志，便于排查 DB 状态与真实结果不一致的问题。
                 suspendRunCatchingNonCancel { historyRepository.saveTask(failedTask, illust, historyId) }
@@ -194,8 +196,10 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
+        val historyRepo = historyRepository ?: throw IllegalStateException("重试功能需要数据库依赖")
+
         // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
-        suspendRunCatchingNonCancel { historyRepository.saveTask(history.copy(status = DownloadStatus.Downloading)) }
+        suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Downloading)) }
             .onFailure { Napier.e("重试时回写下载历史失败 historyId=${history.id}", it) }
 
         return try {
@@ -214,7 +218,7 @@ class DownloadRepository(
             )
             Napier.d("重试下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            historyRepository.saveTask(history.copy(status = DownloadStatus.Success))
+            historyRepo.saveTask(history.copy(status = DownloadStatus.Success))
             successTask
         } catch (e: CancellationException) {
             throw e
@@ -225,7 +229,7 @@ class DownloadRepository(
                 error = e.message ?: "下载失败",
             )
             // 历史记录已存在时尽力回写失败状态；回写失败则记录日志并将异常附加到原始异常，避免状态不一致被静默吞掉。
-            suspendRunCatchingNonCancel { historyRepository.saveTask(history.copy(status = DownloadStatus.Failed)) }
+            suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Failed)) }
                 .onFailure { saveError ->
                     Napier.e("重试失败时回写下载历史失败 historyId=${history.id}", saveError)
                     e.addSuppressed(saveError)
@@ -284,7 +288,7 @@ class DownloadRepository(
     /**
      * 构建保存文件名：支持用户自定义模板。
      * 默认格式：`{illust_id}_p{part}.{ext}`。
-     * 支持占位符：`{illust_id}`, `{title}`, `{user_id}`, `{user_name}`, `{part}`, `{create_date}`, `{width}x{height}`。
+     * 支持占位符：`{illust_id}`, `{title}`, `{user_id}`, `{user_name}`, `{author}`, `{part}`, `{create_date}`, `{width}x{height}`, `{width}`, `{height}`。
      */
     fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
@@ -294,9 +298,12 @@ class DownloadRepository(
             .replace("{title}", FileNamePolicy.sanitizeSegment(illust.title))
             .replace("{user_id}", illust.user.id.toString())
             .replace("{user_name}", FileNamePolicy.sanitizeSegment(illust.user.name))
+            .replace("{author}", FileNamePolicy.sanitizeSegment(illust.user.name))
             .replace("{part}", pageIndex.toString())
             .replace("{create_date}", FileNamePolicy.sanitizeSegment(illust.createDate.take(10)))
             .replace("{width}x{height}", "${illust.width}x${illust.height}")
+            .replace("{width}", illust.width.toString())
+            .replace("{height}", illust.height.toString())
 
         // 如果多页作品且用户自定义格式未包含 {part}，智能追加 _p{index} 避免多图同名相互覆盖
         if (illust.pageCount > 1 && !template.contains("{part}")) {
@@ -333,11 +340,13 @@ class DownloadRepository(
         com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
         notifier.notifyProgress(illust.id, illust.title, 0, 1)
         return try {
-            historyId = historyRepository.saveTask(pendingTask, illust).id
+            historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
             val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
             Napier.d("动图 Zip 保存完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            historyRepository.saveTask(successTask, illust, historyId)
+            if (historyId > 0 && historyRepository != null) {
+                historyRepository.saveTask(successTask, illust, historyId)
+            }
             notifier.notifyFinished(illust.id, illust.title, 1, 0)
             savedPath
         } catch (e: CancellationException) {
@@ -350,8 +359,8 @@ class DownloadRepository(
                 error = e.message ?: "动图保存失败",
             )
             notifier.notifyFinished(illust.id, illust.title, 0, 1)
-            if (historyId > 0) {
-                runCatching { historyRepository.saveTask(failedTask, illust, historyId) }
+            if (historyId > 0 && historyRepository != null) {
+                runCatching { historyRepository?.saveTask(failedTask, illust, historyId) }
             }
             throw e
         } finally {

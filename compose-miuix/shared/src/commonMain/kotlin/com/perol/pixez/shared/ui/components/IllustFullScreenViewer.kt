@@ -49,11 +49,15 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isCtrlPressed as pointerIsCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed as pointerIsMetaPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -160,25 +164,55 @@ fun IllustFullScreenViewer(
             .focusable()
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyEvent.key) {
+                    if ((keyEvent.isCtrlPressed || keyEvent.isMetaPressed) && keyEvent.key == Key.S) {
+                        val currentPage = currentDisplayPage
+                        val pageNumber = currentPage + 1
+                        coroutineScope.launch {
+                            onToast("${strings.downloadStatusDownloading} P$pageNumber…")
+                            val task = downloadRepository.download(illust, pageIndex = currentPage)
+                            val msg = when (task.status) {
+                                DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
+                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                else -> null
+                            }
+                            if (msg != null) onToast(msg)
+                        }
+                        true
+                    } else when (keyEvent.key) {
                         Key.Escape -> {
                             onDismiss()
                             true
                         }
                         Key.DirectionLeft, Key.PageUp, Key.A -> {
-                            if (pageCount > 1 && pagerState.currentPage > 0) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                                }
-                                true
+                            if (pageCount > 1) {
+                                if (isVerticalScrollMode) {
+                                    val target = (verticalListState.firstVisibleItemIndex - 1).coerceAtLeast(0)
+                                    coroutineScope.launch {
+                                        verticalListState.animateScrollToItem(target)
+                                    }
+                                    true
+                                } else if (pagerState.currentPage > 0) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                    true
+                                } else false
                             } else false
                         }
                         Key.DirectionRight, Key.PageDown, Key.D, Key.Spacebar -> {
-                            if (pageCount > 1 && pagerState.currentPage < pageCount - 1) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                }
-                                true
+                            if (pageCount > 1) {
+                                if (isVerticalScrollMode) {
+                                    val target = (verticalListState.firstVisibleItemIndex + 1).coerceAtMost(pageCount - 1)
+                                    coroutineScope.launch {
+                                        verticalListState.animateScrollToItem(target)
+                                    }
+                                    true
+                                } else if (pagerState.currentPage < pageCount - 1) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                    true
+                                } else false
                             } else false
                         }
                         else -> false
@@ -237,39 +271,13 @@ fun IllustFullScreenViewer(
                         contentPadding = PaddingValues(top = 64.dp, bottom = 32.dp),
                     ) {
                         items(pageCount, key = { it }) { pageIndex ->
-                            val page = illust.metaPages[pageIndex]
-                            val rawZoomUrl = remember(page, zoomQuality) {
-                                when (zoomQuality) {
-                                    0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                                    1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                                    2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                                    else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                                }
-                            }
-                            val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
-                                resolveOptimizedImageModel(
-                                    context = context,
-                                    illust = illust,
-                                    pageIndex = pageIndex,
-                                    targetUrl = rawZoomUrl,
-                                    originalUrl = page.imageUrls?.original,
-                                    customBasePath = settings?.storePath,
-                                    pictureSource = settings?.pictureSource,
-                                )
-                            }
-                            val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
-                                if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
-                                    previewUrl
-                                } else {
-                                    page.imageUrls?.let { it.large.ifEmpty { it.medium } }
-                                        ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
-                                }
-                            }
-
-                            ZoomableImage(
-                                model = zoomUrl,
-                                thumbnailUrl = thumbnailUrl,
-                                contentDescription = "${illust.title} ($pageIndex)",
+                            ViewerPageItem(
+                                illust = illust,
+                                pageIndex = pageIndex,
+                                initialPage = initialPage,
+                                zoomQuality = zoomQuality,
+                                previewUrl = previewUrl,
+                                isVerticalMode = true,
                                 onTap = { showControls = !showControls },
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -284,39 +292,13 @@ fun IllustFullScreenViewer(
                         userScrollEnabled = currentPageScale <= 1.05f,
                         modifier = Modifier.fillMaxSize(),
                     ) { pageIndex ->
-                        val page = illust.metaPages[pageIndex]
-                        val rawZoomUrl = remember(page, zoomQuality) {
-                            when (zoomQuality) {
-                                0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                                1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                                2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                                else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                            }
-                        }
-                        val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
-                            resolveOptimizedImageModel(
-                                context = context,
-                                illust = illust,
-                                pageIndex = pageIndex,
-                                targetUrl = rawZoomUrl,
-                                originalUrl = page.imageUrls?.original,
-                                customBasePath = settings?.storePath,
-                                pictureSource = settings?.pictureSource,
-                            )
-                        }
-                        val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
-                            if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
-                                previewUrl
-                            } else {
-                                page.imageUrls?.let { it.large.ifEmpty { it.medium } }
-                                    ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
-                            }
-                        }
-
-                        ZoomableImage(
-                            model = zoomUrl,
-                            thumbnailUrl = thumbnailUrl,
-                            contentDescription = "${illust.title} ($pageIndex)",
+                        ViewerPageItem(
+                            illust = illust,
+                            pageIndex = pageIndex,
+                            initialPage = initialPage,
+                            zoomQuality = zoomQuality,
+                            previewUrl = previewUrl,
+                            isVerticalMode = false,
                             onTap = { showControls = !showControls },
                             onScaleChanged = { scale ->
                                 if (pagerState.currentPage == pageIndex) {
@@ -328,34 +310,13 @@ fun IllustFullScreenViewer(
                     }
                 }
             } else {
-                val rawSingleZoomUrl = remember(illust, zoomQuality) {
-                    when (zoomQuality) {
-                        0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                        1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                        2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                        else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                    }
-                }
-                val singleZoomUrl = remember(illust, rawSingleZoomUrl, settings?.pictureSource, settings?.changeVersion) {
-                    resolveOptimizedImageModel(
-                        context = context,
-                        illust = illust,
-                        pageIndex = 0,
-                        targetUrl = rawSingleZoomUrl,
-                        originalUrl = illust.metaSinglePage?.originalImageUrl,
-                        customBasePath = settings?.storePath,
-                        pictureSource = settings?.pictureSource,
-                    )
-                }
-                val thumbnailUrl = remember(illust, previewUrl) {
-                    previewUrl?.takeIf { it.isNotBlank() }
-                        ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
-                }
-
-                ZoomableImage(
-                    model = singleZoomUrl,
-                    thumbnailUrl = thumbnailUrl,
-                    contentDescription = illust.title,
+                ViewerPageItem(
+                    illust = illust,
+                    pageIndex = 0,
+                    initialPage = 0,
+                    zoomQuality = zoomQuality,
+                    previewUrl = previewUrl,
+                    isVerticalMode = false,
                     onTap = { showControls = !showControls },
                     onScaleChanged = { scale -> currentPageScale = scale },
                     modifier = Modifier.fillMaxSize(),
@@ -574,7 +535,7 @@ fun IllustFullScreenViewer(
                         LiquidCircleActionButton(
                             tooltip = strings.menuSauceNao,
                             onClick = {
-                                val currentPage = pagerState.currentPage
+                                val currentPage = currentDisplayPage
                                 val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
                                     illust.metaPages[currentPage].imageUrls?.medium
                                         ?: illust.metaPages[currentPage].imageUrls?.squareMedium
@@ -602,6 +563,75 @@ fun IllustFullScreenViewer(
 }
 
 /**
+ * 提取全屏查看器单页图片统一渲染逻辑，消除分页与垂直卷轴模式的重复代码。
+ */
+@Composable
+private fun ViewerPageItem(
+    illust: Illust,
+    pageIndex: Int,
+    initialPage: Int,
+    zoomQuality: Int,
+    previewUrl: String?,
+    isVerticalMode: Boolean,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+    onScaleChanged: ((Float) -> Unit)? = null,
+) {
+    val context = LocalPlatformContext.current
+    val settings = LocalSettingsRepository.current
+    val page = illust.metaPages.getOrNull(pageIndex)
+
+    val rawZoomUrl = remember(page, zoomQuality) {
+        if (page != null) {
+            when (zoomQuality) {
+                0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
+                else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+            }
+        } else {
+            when (zoomQuality) {
+                0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+            }
+        }
+    }
+    val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
+        resolveOptimizedImageModel(
+            context = context,
+            illust = illust,
+            pageIndex = pageIndex,
+            targetUrl = rawZoomUrl,
+            originalUrl = page?.imageUrls?.original ?: illust.metaSinglePage?.originalImageUrl,
+            customBasePath = settings?.storePath,
+            pictureSource = settings?.pictureSource,
+        )
+    }
+    val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
+        if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
+            previewUrl
+        } else if (page != null) {
+            page.imageUrls?.let { it.large.ifEmpty { it.medium } }
+                ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+        } else {
+            illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
+        }
+    }
+
+    ZoomableImage(
+        model = zoomUrl,
+        thumbnailUrl = thumbnailUrl,
+        contentDescription = if (page != null) "${illust.title} ($pageIndex)" else illust.title,
+        onTap = onTap,
+        onScaleChanged = onScaleChanged,
+        isVerticalMode = isVerticalMode,
+        modifier = modifier,
+    )
+}
+
+/**
  * 支持双指手势平滑缩放、鼠标滚轮定点缩放、双击放大/重置与边界限制拖拽平移的图片组件。
  */
 @Composable
@@ -610,6 +640,7 @@ private fun ZoomableImage(
     thumbnailUrl: Any?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    isVerticalMode: Boolean = false,
     onTap: () -> Unit = {},
     onScaleChanged: ((Float) -> Unit)? = null,
 ) {
@@ -633,7 +664,7 @@ private fun ZoomableImage(
     Box(
         modifier = modifier
             .clipToBounds()
-            .pointerInput(Unit) {
+            .pointerInput(isVerticalMode) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -641,6 +672,10 @@ private fun ZoomableImage(
                             val change = event.changes.firstOrNull() ?: continue
                             val scrollDelta = change.scrollDelta.y
                             if (scrollDelta != 0f) {
+                                val isCtrlDown = event.keyboardModifiers.pointerIsCtrlPressed || event.keyboardModifiers.pointerIsMetaPressed
+                                if (isVerticalMode && scale <= 1.05f && !isCtrlDown) {
+                                    continue
+                                }
                                 val zoomFactor = if (scrollDelta < 0f) 1.15f else 0.8695f
                                 val newScale = (scale * zoomFactor).coerceIn(1f, 8f)
                                 val mousePos = change.position

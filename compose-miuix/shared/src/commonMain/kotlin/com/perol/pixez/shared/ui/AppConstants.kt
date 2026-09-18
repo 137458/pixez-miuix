@@ -101,6 +101,10 @@ object AppConstants {
             "{title}",
             "{author}",
             "{part}",
+            "{create_date}",
+            "{width}",
+            "{height}",
+            "{width}x{height}",
         )
 
         val MAX_TASK_OPTIONS = listOf(1, 2, 3, 5, 8, 10)
@@ -181,6 +185,10 @@ object AppConstants {
         const val SPEED_CALCULATION_INTERVAL_MS = 500L
         const val CARD_CORNER_RADIUS_DP = 16
         const val BADGE_CORNER_RADIUS_DP = 8
+    }
+
+    object Ugoira {
+        val PLAY_SPEEDS = listOf(0.5f, 1.0f, 1.5f, 2.0f)
     }
 }
 

@@ -57,11 +57,24 @@ import kotlinx.datetime.Clock
 import okio.FileSystem
 import okio.Path
 import org.jetbrains.compose.resources.decodeToImageBitmap
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
@@ -158,6 +171,7 @@ fun UgoiraPlayer(
     var isSavingZip by remember { mutableStateOf(false) }
     var playSpeed by remember(illust.id) { mutableFloatStateOf(1f) }
     var isDraggingFrame by remember(illust.id) { mutableStateOf(false) }
+    var isFullScreen by remember(illust.id) { mutableStateOf(false) }
 
     fun loadUgoira() {
         scope.launch {
@@ -369,13 +383,10 @@ fun UgoiraPlayer(
                                     fontSize = 12.sp,
                                 )
                                 Spacer(Modifier.width(10.dp))
-                                // 倍速切换胶囊（0.5x -> 1.0x -> 1.5x -> 2.0x）
-                                val nextSpeed = when (playSpeed) {
-                                    0.5f -> 1.0f
-                                    1.0f -> 1.5f
-                                    1.5f -> 2.0f
-                                    else -> 0.5f
-                                }
+                                // 倍速切换胶囊（基于 AppConstants.Ugoira.PLAY_SPEEDS 循环切换）
+                                val speeds = AppConstants.Ugoira.PLAY_SPEEDS
+                                val currentIdx = speeds.indexOf(playSpeed)
+                                val nextSpeed = if (currentIdx >= 0) speeds[(currentIdx + 1) % speeds.size] else speeds[0]
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
@@ -388,6 +399,22 @@ fun UgoiraPlayer(
                                         text = "${playSpeed}x",
                                         color = Color.White,
                                         fontSize = 11.sp,
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                // 全屏沉浸播放按钮
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .clickable { isFullScreen = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "⛶",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
                                     )
                                 }
                             }
@@ -509,6 +536,192 @@ fun UgoiraPlayer(
                         color = Color.White,
                         fontSize = 22.sp,
                     )
+                }
+            }
+        }
+    }
+
+    if (isFullScreen && state is UgoiraState.Ready) {
+        val readyState = state as UgoiraState.Ready
+        Popup(
+            onDismissRequest = { isFullScreen = false },
+            properties = PopupProperties(focusable = true),
+        ) {
+            PlatformBackHandler(onBack = { isFullScreen = false })
+
+            var fullScale by remember { mutableFloatStateOf(1f) }
+            var fullOffset by remember { mutableStateOf(Offset.Zero) }
+            var showFullControls by remember { mutableStateOf(true) }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                showFullControls = !showFullControls
+                            },
+                            onDoubleTap = {
+                                if (fullScale > 1.05f) {
+                                    fullScale = 1f
+                                    fullOffset = Offset.Zero
+                                } else {
+                                    fullScale = 2.5f
+                                }
+                            },
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val newScale = (fullScale * zoom).coerceIn(0.8f, 5f)
+                            fullScale = newScale
+                            if (newScale > 1.05f) {
+                                fullOffset += pan
+                            } else {
+                                fullOffset = Offset.Zero
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                val currentBitmap = readyState.provider.getFrameBitmap(currentFrameIndex)
+                if (currentBitmap != null) {
+                    Image(
+                        bitmap = currentBitmap,
+                        contentDescription = illust.title,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = fullScale
+                                scaleY = fullScale
+                                translationX = fullOffset.x
+                                translationY = fullOffset.y
+                            },
+                    )
+                }
+
+                // 顶部返回/退出全屏按钮
+                AnimatedVisibility(
+                    visible = showFullControls,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(16.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .clickable { isFullScreen = false }
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Back,
+                            contentDescription = strings.ugoiraExitFullScreen,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+
+                // 底部悬浮全屏控制面板
+                AnimatedVisibility(
+                    visible = showFullControls,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.75f))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        // 帧拖拽进度条
+                        if (readyState.provider.frames.size > 1) {
+                            val maxFrame = (readyState.provider.frames.size - 1).toFloat()
+                            Slider(
+                                value = currentFrameIndex.toFloat().coerceIn(0f, maxFrame),
+                                onValueChange = {
+                                    isDraggingFrame = true
+                                    currentFrameIndex = it.roundToInt().coerceIn(0, readyState.provider.frames.size - 1)
+                                },
+                                onValueChangeFinished = {
+                                    isDraggingFrame = false
+                                },
+                                valueRange = 0f..maxFrame,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(26.dp),
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .clickable { isPlaying = !isPlaying },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = if (isPlaying) "❚❚" else "▶",
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = "${currentFrameIndex + 1} / ${readyState.provider.frames.size}",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 13.sp,
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                val speeds = AppConstants.Ugoira.PLAY_SPEEDS
+                                val currentIdx = speeds.indexOf(playSpeed)
+                                val nextSpeed = if (currentIdx >= 0) speeds[(currentIdx + 1) % speeds.size] else speeds[0]
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .clickable { playSpeed = nextSpeed }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "${playSpeed}x",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { isFullScreen = false },
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                Text(
+                                    text = strings.ugoiraExitFullScreen,
+                                    fontSize = 12.sp,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

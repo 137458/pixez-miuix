@@ -47,6 +47,7 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.effect.BgEffectBackground
 import com.perol.pixez.shared.ui.effect.isRuntimeShaderSupported
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.i18n.formatFileSize
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

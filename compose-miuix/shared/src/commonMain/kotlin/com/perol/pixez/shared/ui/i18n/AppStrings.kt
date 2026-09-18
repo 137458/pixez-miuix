@@ -573,13 +573,6 @@ interface AppStrings {
     val searchDateRangeTo: String
     val searchDateRangeEnd: String
     val searchResetAll: String
-    val searchRatioTitle: String get() = "画面比例"
-    val searchRatioAll: String get() = "全部"
-    val searchRatioHorizontal: String get() = "横图"
-    val searchRatioVertical: String get() = "竖图"
-    val searchRatioSquare: String get() = "方图"
-    val viewerModeVertical: String get() = "垂直卷轴模式"
-    val viewerModeHorizontal: String get() = "水平切页模式"
     val searchHotTags: String
     val searchHotTagsEmpty: String
     val searchHistory: String
@@ -663,6 +656,16 @@ interface AppStrings {
     val commentsPostFailed: String get() = "Failed to post comment"
     val settingWidgetPictureSourceOfficial: String get() = "i.pximg.net (Pixiv Official)"
     val settingWidgetPictureSourceMirror: String get() = "i.pixiv.re (Proxy-free Mirror)"
+
+    val searchRatioTitle: String
+    val searchRatioAll: String
+    val searchRatioHorizontal: String
+    val searchRatioVertical: String
+    val searchRatioSquare: String
+    val viewerModeVertical: String
+    val viewerModeHorizontal: String
+    val ugoiraFullScreen: String
+    val ugoiraExitFullScreen: String
 
     companion object {
         fun fromLanguageNum(num: Int): AppStrings = when (num) {
@@ -1281,6 +1284,16 @@ object ZhCnStrings : AppStrings {
     override val commentsPostFailed = "发表评论失败"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 官方原站)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (免代理镜像)"
+
+    override val searchRatioTitle = "画面比例"
+    override val searchRatioAll = "全部"
+    override val searchRatioHorizontal = "横图"
+    override val searchRatioVertical = "竖图"
+    override val searchRatioSquare = "方图"
+    override val viewerModeVertical = "垂直卷轴模式"
+    override val viewerModeHorizontal = "水平切页模式"
+    override val ugoiraFullScreen = "全屏沉浸播放"
+    override val ugoiraExitFullScreen = "退出全屏"
 }
 
 /**
@@ -1911,6 +1924,16 @@ object ZhTwStrings : AppStrings {
     override val commentsPostFailed = "發表評論失敗"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 官方原站)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (免代理鏡像)"
+
+    override val searchRatioTitle = "畫面比例"
+    override val searchRatioAll = "全部"
+    override val searchRatioHorizontal = "橫圖"
+    override val searchRatioVertical = "豎圖"
+    override val searchRatioSquare = "方圖"
+    override val viewerModeVertical = "垂直卷軸模式"
+    override val viewerModeHorizontal = "水平切頁模式"
+    override val ugoiraFullScreen = "全螢幕沉浸播放"
+    override val ugoiraExitFullScreen = "結束全螢幕"
 }
 
 /**
@@ -2548,6 +2571,9 @@ object EnStrings : AppStrings {
     override val commentsPostFailed = "Failed to post comment"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Official)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy-free Mirror)"
+
+    override val ugoiraFullScreen = "Immersive Fullscreen"
+    override val ugoiraExitFullScreen = "Exit Fullscreen"
 }
 
 /**
@@ -3148,6 +3174,16 @@ object JaStrings : AppStrings {
     override val commentsPostFailed = "コメントの投稿に失敗しました"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 公式)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (プロキシ不要ミラー)"
+
+    override val searchRatioTitle = "アスペクト比"
+    override val searchRatioAll = "すべて"
+    override val searchRatioHorizontal = "横長"
+    override val searchRatioVertical = "縦長"
+    override val searchRatioSquare = "正方形"
+    override val viewerModeVertical = "垂直スクロールモード"
+    override val viewerModeHorizontal = "ページめくりモード"
+    override val ugoiraFullScreen = "全画面再生"
+    override val ugoiraExitFullScreen = "全画面終了"
 }
 
 /**
@@ -3731,6 +3767,16 @@ object KoStrings : AppStrings {
     override val commentsPostFailed = "댓글 작성에 실패했습니다"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv 공식)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (프록시 없는 미러)"
+
+    override val searchRatioTitle = "화면 비율"
+    override val searchRatioAll = "전체"
+    override val searchRatioHorizontal = "가로"
+    override val searchRatioVertical = "세로"
+    override val searchRatioSquare = "정사각형"
+    override val viewerModeVertical = "세로 스크롤 모드"
+    override val viewerModeHorizontal = "가로 페이지 모드"
+    override val ugoiraFullScreen = "전체 화면 재생"
+    override val ugoiraExitFullScreen = "전체 화면 종료"
 }
 
 /**
@@ -4315,6 +4361,16 @@ object RuStrings : AppStrings {
     override val commentsPostFailed = "Не удалось опубликовать комментарий"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Официальный Pixiv)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Зеркало без прокси)"
+
+    override val searchRatioTitle = "Соотношение сторон"
+    override val searchRatioAll = "Все"
+    override val searchRatioHorizontal = "Горизонтальные"
+    override val searchRatioVertical = "Вертикальные"
+    override val searchRatioSquare = "Квадратные"
+    override val viewerModeVertical = "Вертикальная прокрутка"
+    override val viewerModeHorizontal = "Постраничный режим"
+    override val ugoiraFullScreen = "Полноэкранный режим"
+    override val ugoiraExitFullScreen = "Выйти из полноэкранного"
 }
 
 /**
@@ -4898,6 +4954,16 @@ object EsStrings : AppStrings {
     override val commentsPostFailed = "Error al publicar el comentario"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv oficial)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Espejo sin proxy)"
+
+    override val searchRatioTitle = "Relación de aspecto"
+    override val searchRatioAll = "Todo"
+    override val searchRatioHorizontal = "Horizontal"
+    override val searchRatioVertical = "Vertical"
+    override val searchRatioSquare = "Cuadrado"
+    override val viewerModeVertical = "Modo desplazamiento vertical"
+    override val viewerModeHorizontal = "Modo cambio horizontal"
+    override val ugoiraFullScreen = "Pantalla completa inmersiva"
+    override val ugoiraExitFullScreen = "Salir de pantalla completa"
 }
 
 /**
@@ -5482,6 +5548,16 @@ object TrStrings : AppStrings {
     override val commentsPostFailed = "Yorum gönderilemedi"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Resmi)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy'siz Ayna)"
+
+    override val searchRatioTitle = "En-Boy Oranı"
+    override val searchRatioAll = "Tümü"
+    override val searchRatioHorizontal = "Yatay"
+    override val searchRatioVertical = "Dikey"
+    override val searchRatioSquare = "Kare"
+    override val viewerModeVertical = "Dikey Kaydırma Modu"
+    override val viewerModeHorizontal = "Yatay Sayfalama Modu"
+    override val ugoiraFullScreen = "Tam Ekran Oynatma"
+    override val ugoiraExitFullScreen = "Tam Ekrandan Çık"
 }
 
 /**
@@ -6065,6 +6141,16 @@ object IdStrings : AppStrings {
     override val commentsPostFailed = "Gagal mengirim komentar"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Resmi)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Mirror Tanpa Proxy)"
+
+    override val searchRatioTitle = "Rasio Aspek"
+    override val searchRatioAll = "Semua"
+    override val searchRatioHorizontal = "Lanskap"
+    override val searchRatioVertical = "Potret"
+    override val searchRatioSquare = "Persegi"
+    override val viewerModeVertical = "Mode Gulir Vertikal"
+    override val viewerModeHorizontal = "Mode Balik Halaman Horizontal"
+    override val ugoiraFullScreen = "Layar Penuh Imersif"
+    override val ugoiraExitFullScreen = "Keluar dari Layar Penuh"
 }
 
 /**
@@ -6648,6 +6734,16 @@ object FilStrings : AppStrings {
     override val commentsPostFailed = "Nabigong mag-post ng komento"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Opisyal na Pixiv)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Walang Proxy na Mirror)"
+
+    override val searchRatioTitle = "Aspect Ratio"
+    override val searchRatioAll = "Lahat"
+    override val searchRatioHorizontal = "Landscape"
+    override val searchRatioVertical = "Portrait"
+    override val searchRatioSquare = "Square"
+    override val viewerModeVertical = "Vertical Scroll Mode"
+    override val viewerModeHorizontal = "Horizontal Pager Mode"
+    override val ugoiraFullScreen = "Immersive Fullscreen"
+    override val ugoiraExitFullScreen = "Lumabas sa Fullscreen"
 }
 
 /**
@@ -7231,6 +7327,16 @@ object DeStrings : AppStrings {
     override val commentsPostFailed = "Fehler beim Veröffentlichen des Kommentars"
     override val settingWidgetPictureSourceOfficial = "i.pximg.net (Pixiv Offiziell)"
     override val settingWidgetPictureSourceMirror = "i.pixiv.re (Proxy-freier Spiegel)"
+
+    override val searchRatioTitle = "Seitenverhältnis"
+    override val searchRatioAll = "Alle"
+    override val searchRatioHorizontal = "Querformat"
+    override val searchRatioVertical = "Hochformat"
+    override val searchRatioSquare = "Quadratisch"
+    override val viewerModeVertical = "Vertikaler Scroll-Modus"
+    override val viewerModeHorizontal = "Horizontaler Seiten-Modus"
+    override val ugoiraFullScreen = "Vollbildmodus"
+    override val ugoiraExitFullScreen = "Vollbild beenden"
 }
 
 /**

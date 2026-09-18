@@ -525,13 +525,7 @@ fun SearchScreen(
                     0 -> SearchIllustResultGrid(
                         query = query,
                         sort = sort,
-                        searchTarget = searchTarget,
-                        searchAiType = searchAiType,
-                        bookmarkThreshold = bookmarkThreshold,
-                        ugoiraFilter = ugoiraFilter,
-                        ratioFilter = ratioFilter,
-                        startDate = startDate.takeIf { it.isNotBlank() },
-                        endDate = endDate.takeIf { it.isNotBlank() },
+                        filterState = currentFilterState,
                         repository = repository,
                         banRepository = banRepository,
                         settingsRepository = settingsRepository,
@@ -822,13 +816,7 @@ private fun SearchFilterBottomSheet(
 private fun SearchIllustResultGrid(
     query: String,
     sort: String,
-    searchTarget: String,
-    searchAiType: Int,
-    bookmarkThreshold: Int,
-    ugoiraFilter: Int,
-    ratioFilter: Int = 0,
-    startDate: String?,
-    endDate: String?,
+    filterState: SearchFilterState,
     repository: SearchRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
@@ -837,6 +825,13 @@ private fun SearchIllustResultGrid(
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues? = null,
 ) {
+    val searchTarget = filterState.searchTarget
+    val searchAiType = filterState.searchAiType
+    val bookmarkThreshold = filterState.bookmarkThreshold
+    val ugoiraFilter = filterState.ugoiraFilter
+    val ratioFilter = filterState.ratioFilter
+    val startDate = filterState.startDate.takeIf { it.isNotBlank() }
+    val endDate = filterState.endDate.takeIf { it.isNotBlank() }
     val effectiveContentPadding = contentPadding ?: PaddingValues(
         start = 8.dp,
         top = 8.dp,
