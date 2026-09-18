@@ -173,6 +173,7 @@ fun IllustDetailScreen(
         ) { page ->
             IllustDetailSingleContent(
                 illustId = idList[page],
+                isCurrentPage = (pagerState.currentPage == page),
                 onBack = onBack,
                 onUserClick = onUserClick,
                 onCommentsClick = onCommentsClick,
@@ -191,6 +192,7 @@ fun IllustDetailScreen(
     } else {
         IllustDetailSingleContent(
             illustId = illustId,
+            isCurrentPage = true,
             onBack = onBack,
             onUserClick = onUserClick,
             onCommentsClick = onCommentsClick,
@@ -212,6 +214,7 @@ fun IllustDetailScreen(
 @Composable
 private fun IllustDetailSingleContent(
     illustId: Int,
+    isCurrentPage: Boolean = true,
     onBack: () -> Unit,
     onUserClick: (Int) -> Unit,
     onCommentsClick: (Int) -> Unit,
@@ -246,9 +249,9 @@ private fun IllustDetailSingleContent(
     val result = state.value
     val illust = result?.getOrNull()
 
-    // 成功加载插画详情时，自动异步写入本地浏览历史
-    LaunchedEffect(illust) {
-        if (illust != null && historyRepository != null) {
+    // 成功加载插画详情时，自动异步写入本地浏览历史（仅当前展示页写入，避免预加载污染历史）
+    LaunchedEffect(illust, isCurrentPage) {
+        if (illust != null && isCurrentPage && historyRepository != null) {
             suspendRunCatchingNonCancel {
                 historyRepository.insert(illust)
             }
@@ -298,7 +301,7 @@ private fun IllustDetailSingleContent(
         }
     }
 
-    val collapseProgress by remember(scrollThresholdPx) {
+    val collapseProgressState = remember(scrollThresholdPx) {
         derivedStateOf {
             if (listState.firstVisibleItemIndex > 0) {
                 1f
@@ -946,7 +949,7 @@ private fun IllustDetailSingleContent(
         // ── 统一锚点单层顶栏与液态玻璃操作菜单 ──
         IllustDetailTopBar(
             illust = illust,
-            collapseProgress = collapseProgress,
+            collapseProgressProvider = { collapseProgressState.value },
             detailBackdrop = detailBackdrop,
             isBookmarked = isBookmarked,
             isBookmarkLoading = isBookmarkLoading,

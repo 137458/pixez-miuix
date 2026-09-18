@@ -525,8 +525,8 @@ fun FloatingBottomBar(
                             onDrawSurface = { drawRect(containerColor) },
                         )
                         .then(interactiveHighlight?.modifier ?: Modifier)
-                        .height(56.dp)
-                        .padding(horizontal = 4.dp),
+                        .height(64.dp)
+                        .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     content = content,
                 )

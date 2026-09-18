@@ -14,8 +14,16 @@ import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.Url
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
+import okio.FileSystem
+import okio.Path
+import com.perol.pixez.shared.platform.getAppCacheDirectory
+import kotlinx.datetime.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -71,8 +79,9 @@ class DownloadRepository(
         return try {
             // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
             historyId = historyRepository.saveTask(pendingTask, illust).id
-            val bytes = downloadBytes(remoteUrl)
-            val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
+            val tempFileName = "dl_temp_${illust.id}_${pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
+            val tempPath = downloadToTempFile(remoteUrl, tempFileName)
+            val savedPath = saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
             Napier.d("下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepository.saveTask(successTask, illust, historyId)
@@ -191,14 +200,15 @@ class DownloadRepository(
 
         return try {
             // 复用已有 HTTP 下载与平台保存逻辑。
-            val bytes = downloadBytes(history.remoteUrl)
+            val tempFileName = "dl_retry_${history.illustId}_${history.pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
+            val tempPath = downloadToTempFile(history.remoteUrl, tempFileName)
             val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
             val subDir = if (settingsRepository?.singleFolder == false && history.userName.isNotBlank() && history.userId > 0) {
                 "${FileNamePolicy.sanitizeSegment(history.userName)}_${history.userId}"
             } else null
-            val savedPath = saver.save(
+            val savedPath = saver.saveFromTempFile(
                 FileNamePolicy.requireSafeBaseName(history.fileName),
-                bytes,
+                tempPath,
                 subDir = subDir,
                 customBasePath = customBasePath,
             )
@@ -226,6 +236,30 @@ class DownloadRepository(
     }
 
     /**
+     * 流式下载图片至应用缓存临时文件，配合 64KB 缓冲区边拉取边落盘，避免大图或动图占用 JVM 堆内存。
+     */
+    private suspend fun downloadToTempFile(url: String, tempFileName: String): Path {
+        val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(url)
+        val cacheDir = getAppCacheDirectory()
+        val tempPath = cacheDir / tempFileName
+
+        httpClient.prepareGet(trustedUrl) {
+            header("Referer", AppConstants.Urls.PIXIV_APP_API)
+        }.execute { response ->
+            val channel: ByteReadChannel = response.bodyAsChannel()
+            FileSystem.SYSTEM.write(tempPath) {
+                val buffer = ByteArray(64 * 1024)
+                while (!channel.isClosedForRead) {
+                    val read = channel.readAvailable(buffer, 0, buffer.size)
+                    if (read <= 0) break
+                    write(buffer, 0, read)
+                }
+            }
+        }
+        return tempPath
+    }
+
+    /**
      * 解析作品指定页的原图 URL。
      *
      * 单页作品优先使用 [Illust.metaSinglePage]；多页作品使用 [Illust.metaPages]。
@@ -250,7 +284,7 @@ class DownloadRepository(
     /**
      * 构建保存文件名：支持用户自定义模板。
      * 默认格式：`{illust_id}_p{part}.{ext}`。
-     * 支持占位符：`{illust_id}`, `{title}`, `{user_id}`, `{user_name}`, `{part}`。
+     * 支持占位符：`{illust_id}`, `{title}`, `{user_id}`, `{user_name}`, `{part}`, `{create_date}`, `{width}x{height}`。
      */
     fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
@@ -261,6 +295,8 @@ class DownloadRepository(
             .replace("{user_id}", illust.user.id.toString())
             .replace("{user_name}", FileNamePolicy.sanitizeSegment(illust.user.name))
             .replace("{part}", pageIndex.toString())
+            .replace("{create_date}", FileNamePolicy.sanitizeSegment(illust.createDate.take(10)))
+            .replace("{width}x{height}", "${illust.width}x${illust.height}")
 
         // 如果多页作品且用户自定义格式未包含 {part}，智能追加 _p{index} 避免多图同名相互覆盖
         if (illust.pageCount > 1 && !template.contains("{part}")) {

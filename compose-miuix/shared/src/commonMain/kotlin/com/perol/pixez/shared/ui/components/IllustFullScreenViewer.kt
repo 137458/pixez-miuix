@@ -15,7 +15,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -80,13 +87,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Copy
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Link
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -115,6 +116,20 @@ fun IllustFullScreenViewer(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
         pageCount = { pageCount },
     )
+    val verticalListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = initialPage.coerceIn(0, pageCount - 1),
+    )
+    var isVerticalScrollMode by rememberSaveable(illust.id) { mutableStateOf(false) }
+    val currentDisplayPage by remember(isVerticalScrollMode, pageCount) {
+        derivedStateOf {
+            if (pageCount <= 1) 0
+            else if (isVerticalScrollMode) {
+                verticalListState.firstVisibleItemIndex.coerceIn(0, pageCount - 1)
+            } else {
+                pagerState.currentPage
+            }
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var currentPageScale by remember { mutableFloatStateOf(1f) }
@@ -215,52 +230,102 @@ fun IllustFullScreenViewer(
                     }
                 }
 
-                HorizontalPager(
-                    state = pagerState,
-                    userScrollEnabled = currentPageScale <= 1.05f,
-                    modifier = Modifier.fillMaxSize(),
-                ) { pageIndex ->
-                    val page = illust.metaPages[pageIndex]
-                    val rawZoomUrl = remember(page, zoomQuality) {
-                        when (zoomQuality) {
-                            0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                            1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                            2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                            else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                if (isVerticalScrollMode) {
+                    LazyColumn(
+                        state = verticalListState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 64.dp, bottom = 32.dp),
+                    ) {
+                        items(pageCount, key = { it }) { pageIndex ->
+                            val page = illust.metaPages[pageIndex]
+                            val rawZoomUrl = remember(page, zoomQuality) {
+                                when (zoomQuality) {
+                                    0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                    1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                                    2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
+                                    else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                }
+                            }
+                            val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
+                                resolveOptimizedImageModel(
+                                    context = context,
+                                    illust = illust,
+                                    pageIndex = pageIndex,
+                                    targetUrl = rawZoomUrl,
+                                    originalUrl = page.imageUrls?.original,
+                                    customBasePath = settings?.storePath,
+                                    pictureSource = settings?.pictureSource,
+                                )
+                            }
+                            val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
+                                if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
+                                    previewUrl
+                                } else {
+                                    page.imageUrls?.let { it.large.ifEmpty { it.medium } }
+                                        ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                                }
+                            }
+
+                            ZoomableImage(
+                                model = zoomUrl,
+                                thumbnailUrl = thumbnailUrl,
+                                contentDescription = "${illust.title} ($pageIndex)",
+                                onTap = { showControls = !showControls },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            if (pageIndex < pageCount - 1) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
                         }
                     }
-                    val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
-                        resolveOptimizedImageModel(
-                            context = context,
-                            illust = illust,
-                            pageIndex = pageIndex,
-                            targetUrl = rawZoomUrl,
-                            originalUrl = page.imageUrls?.original,
-                            customBasePath = settings?.storePath,
-                            pictureSource = settings?.pictureSource,
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = currentPageScale <= 1.05f,
+                        modifier = Modifier.fillMaxSize(),
+                    ) { pageIndex ->
+                        val page = illust.metaPages[pageIndex]
+                        val rawZoomUrl = remember(page, zoomQuality) {
+                            when (zoomQuality) {
+                                0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                                1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
+                                2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
+                                else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
+                            }
+                        }
+                        val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
+                            resolveOptimizedImageModel(
+                                context = context,
+                                illust = illust,
+                                pageIndex = pageIndex,
+                                targetUrl = rawZoomUrl,
+                                originalUrl = page.imageUrls?.original,
+                                customBasePath = settings?.storePath,
+                                pictureSource = settings?.pictureSource,
+                            )
+                        }
+                        val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
+                            if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
+                                previewUrl
+                            } else {
+                                page.imageUrls?.let { it.large.ifEmpty { it.medium } }
+                                    ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                            }
+                        }
+
+                        ZoomableImage(
+                            model = zoomUrl,
+                            thumbnailUrl = thumbnailUrl,
+                            contentDescription = "${illust.title} ($pageIndex)",
+                            onTap = { showControls = !showControls },
+                            onScaleChanged = { scale ->
+                                if (pagerState.currentPage == pageIndex) {
+                                    currentPageScale = scale
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
-                        if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
-                            previewUrl
-                        } else {
-                            page.imageUrls?.let { it.large.ifEmpty { it.medium } }
-                                ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
-                        }
-                    }
-
-                    ZoomableImage(
-                        model = zoomUrl,
-                        thumbnailUrl = thumbnailUrl,
-                        contentDescription = "${illust.title} ($pageIndex)",
-                        onTap = { showControls = !showControls },
-                        onScaleChanged = { scale ->
-                            if (pagerState.currentPage == pageIndex) {
-                                currentPageScale = scale
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
                 }
             } else {
                 val rawSingleZoomUrl = remember(illust, zoomQuality) {
@@ -349,23 +414,53 @@ fun IllustFullScreenViewer(
                                 .padding(horizontal = 14.dp, vertical = 6.dp),
                         ) {
                             Text(
-                                text = "${pagerState.currentPage + 1} / $pageCount",
+                                text = "${currentDisplayPage + 1} / $pageCount",
                                 style = MiuixTheme.textStyles.body2,
                                 color = Color.White,
                             )
                         }
                     }
 
-                    // 右侧：快捷操作组（单页下载、复制链接、分享、SauceNAO 搜图）
+                    // 右侧：快捷操作组（阅读模式切换、单页下载、复制链接、分享、SauceNAO 搜图）
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // 切换阅读模式（垂直连续卷轴 vs 水平分页）
+                        if (pageCount > 1) {
+                            LiquidCircleActionButton(
+                                tooltip = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
+                                onClick = {
+                                    if (isVerticalScrollMode) {
+                                        val cur = verticalListState.firstVisibleItemIndex
+                                        coroutineScope.launch {
+                                            pagerState.scrollToPage(cur.coerceIn(0, pageCount - 1))
+                                        }
+                                        isVerticalScrollMode = false
+                                    } else {
+                                        val cur = pagerState.currentPage
+                                        coroutineScope.launch {
+                                            verticalListState.scrollToItem(cur.coerceIn(0, pageCount - 1))
+                                        }
+                                        isVerticalScrollMode = true
+                                    }
+                                },
+                                detailBackdrop = effectiveBackdrop,
+                            ) {
+                                Icon(
+                                    imageVector = if (isVerticalScrollMode) MiuixIcons.ExpandMore else MiuixIcons.More,
+                                    contentDescription = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+
                         // 下载当前展示页
                         LiquidCircleActionButton(
                             tooltip = strings.download,
                             onClick = {
-                                val currentPage = pagerState.currentPage
+                                val currentPage = currentDisplayPage
                                 val pageNumber = currentPage + 1
                                 coroutineScope.launch {
                                     onToast("${strings.downloadStatusDownloading} P$pageNumber…")
@@ -392,7 +487,7 @@ fun IllustFullScreenViewer(
                         LiquidCircleActionButton(
                             tooltip = strings.menuCopyImage,
                             onClick = {
-                                val currentPage = pagerState.currentPage
+                                val currentPage = currentDisplayPage
                                 val targetUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
                                     illust.metaPages[currentPage].imageUrls?.large
                                         ?: illust.metaPages[currentPage].imageUrls?.medium
@@ -430,7 +525,7 @@ fun IllustFullScreenViewer(
                         LiquidCircleActionButton(
                             tooltip = strings.menuCopyLink,
                             onClick = {
-                                val currentPage = pagerState.currentPage
+                                val currentPage = currentDisplayPage
                                 val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
                                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
                                 runCatching {
@@ -454,7 +549,7 @@ fun IllustFullScreenViewer(
                         LiquidCircleActionButton(
                             tooltip = strings.share,
                             onClick = {
-                                val currentPage = pagerState.currentPage
+                                val currentPage = currentDisplayPage
                                 val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
                                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
                                 val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title

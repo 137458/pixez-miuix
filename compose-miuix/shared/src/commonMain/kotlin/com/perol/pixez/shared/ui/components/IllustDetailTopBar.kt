@@ -88,6 +88,44 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun IllustDetailTopBar(
     illust: Illust?,
+    collapseProgressProvider: () -> Float,
+    detailBackdrop: Backdrop? = null,
+    isBookmarked: Boolean,
+    isBookmarkLoading: Boolean,
+    bookmarkHeartScale: Animatable<Float, AnimationVector1D>,
+    onBookmarkClick: () -> Unit,
+    isDownloading: Boolean,
+    onDownloadClick: () -> Unit,
+    onBack: () -> Unit,
+    isBanned: Boolean,
+    banRepository: BanRepository,
+    onBanSuccess: () -> Unit,
+    onToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val progress = collapseProgressProvider()
+    IllustDetailTopBar(
+        illust = illust,
+        collapseProgress = progress,
+        detailBackdrop = detailBackdrop,
+        isBookmarked = isBookmarked,
+        isBookmarkLoading = isBookmarkLoading,
+        bookmarkHeartScale = bookmarkHeartScale,
+        onBookmarkClick = onBookmarkClick,
+        isDownloading = isDownloading,
+        onDownloadClick = onDownloadClick,
+        onBack = onBack,
+        isBanned = isBanned,
+        banRepository = banRepository,
+        onBanSuccess = onBanSuccess,
+        onToast = onToast,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun IllustDetailTopBar(
+    illust: Illust?,
     collapseProgress: Float,
     detailBackdrop: Backdrop? = null,
     isBookmarked: Boolean,

@@ -41,8 +41,10 @@ class IllustRepository(
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
     private val cacheMutex = Mutex()
-    private val illustsMemoryCache = mutableMapOf<Int, Illust>()
+    private val illustsMutableCache = mutableMapOf<Int, Illust>()
     private val illustsCacheOrder = mutableListOf<Int>()
+    @kotlin.concurrent.Volatile
+    private var illustsSnapshot: Map<Int, Illust> = emptyMap()
 
     /**
      * 将单个插画作品存入内存缓存（LRU 策略，最大 500 条）。
@@ -50,13 +52,14 @@ class IllustRepository(
     suspend fun cacheIllust(illust: Illust) {
         cacheMutex.withLock {
             val id = illust.id
-            illustsMemoryCache[id] = illust
+            illustsMutableCache[id] = illust
             illustsCacheOrder.remove(id)
             illustsCacheOrder.add(id)
             if (illustsCacheOrder.size > 500) {
                 val oldest = illustsCacheOrder.removeAt(0)
-                illustsMemoryCache.remove(oldest)
+                illustsMutableCache.remove(oldest)
             }
+            illustsSnapshot = illustsMutableCache.toMap()
         }
     }
 
@@ -67,21 +70,23 @@ class IllustRepository(
         cacheMutex.withLock {
             for (illust in illusts) {
                 val id = illust.id
-                illustsMemoryCache[id] = illust
+                illustsMutableCache[id] = illust
                 illustsCacheOrder.remove(id)
                 illustsCacheOrder.add(id)
                 if (illustsCacheOrder.size > 500) {
                     val oldest = illustsCacheOrder.removeAt(0)
-                    illustsMemoryCache.remove(oldest)
+                    illustsMutableCache.remove(oldest)
                 }
             }
+            illustsSnapshot = illustsMutableCache.toMap()
         }
     }
 
     /**
      * 根据 ID 获取已在内存缓存中的插画作品，若未缓存则返回 null。
+     * 读取不可变快照，保障高并发安全且无锁开销。
      */
-    fun getCachedIllust(illustId: Int): Illust? = illustsMemoryCache[illustId]
+    fun getCachedIllust(illustId: Int): Illust? = illustsSnapshot[illustId]
 
     /**
      * 获取首页推荐插画响应（含 nextUrl），默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
@@ -205,12 +210,16 @@ class IllustRepository(
         getFollowIllustsResponse(restrict = restrict).illusts
 
 
-    private val spotlightArticlesCache = mutableMapOf<String, SpotlightResponse>()
+    private val spotlightMutex = Mutex()
+    private val spotlightArticlesMutableCache = mutableMapOf<String, SpotlightResponse>()
+    private val spotlightArticlesOrder = mutableListOf<String>()
+    @kotlin.concurrent.Volatile
+    private var spotlightArticlesSnapshot: Map<String, SpotlightResponse> = emptyMap()
 
     /**
      * 获取指定分类已缓存的 Spotlight 列表，若无缓存返回 null。
      */
-    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesCache[category]
+    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesSnapshot[category]
 
     /**
      * 获取 Spotlight 精选文章列表，支持按分类与分页加载，内置内存级缓存。
@@ -225,7 +234,7 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): SpotlightResponse {
         if (nextUrl == null && !forceRefresh) {
-            val cached = spotlightArticlesCache[category]
+            val cached = spotlightArticlesSnapshot[category]
             if (cached != null) {
                 return cached
             }
@@ -240,29 +249,41 @@ class IllustRepository(
                 }.body()
             }
 
-            if (nextUrl == null) {
-                spotlightArticlesCache[category] = response
-            } else {
-                val cached = spotlightArticlesCache[category]
-                if (cached != null) {
-                    val existingIds = cached.spotlightArticles.map { it.id }.toSet()
-                    val merged = cached.spotlightArticles + response.spotlightArticles.filter { it.id !in existingIds }
-                    spotlightArticlesCache[category] = SpotlightResponse(
-                        spotlightArticles = merged,
-                        nextUrl = response.nextUrl,
-                    )
+            spotlightMutex.withLock {
+                if (nextUrl == null) {
+                    spotlightArticlesMutableCache[category] = response
+                    spotlightArticlesOrder.remove(category)
+                    spotlightArticlesOrder.add(category)
+                } else {
+                    val cached = spotlightArticlesMutableCache[category]
+                    if (cached != null) {
+                        val existingIds = cached.spotlightArticles.map { it.id }.toSet()
+                        val merged = cached.spotlightArticles + response.spotlightArticles.filter { it.id !in existingIds }
+                        spotlightArticlesMutableCache[category] = SpotlightResponse(
+                            spotlightArticles = merged,
+                            nextUrl = response.nextUrl,
+                        )
+                    }
                 }
+                while (spotlightArticlesOrder.size > 20) {
+                    val oldest = spotlightArticlesOrder.removeAt(0)
+                    spotlightArticlesMutableCache.remove(oldest)
+                }
+                spotlightArticlesSnapshot = spotlightArticlesMutableCache.toMap()
             }
             response
         }
     }
 
-    private val spotlightDetailCache = mutableMapOf<String, SpotlightDetail>()
+    private val spotlightDetailMutableCache = mutableMapOf<String, SpotlightDetail>()
+    private val spotlightDetailOrder = mutableListOf<String>()
+    @kotlin.concurrent.Volatile
+    private var spotlightDetailSnapshot: Map<String, SpotlightDetail> = emptyMap()
 
     /**
      * 获取缓存的 Spotlight 特辑详情，若无缓存返回 null。
      */
-    fun getCachedSpotlightDetail(articleUrl: String): SpotlightDetail? = spotlightDetailCache[articleUrl]
+    fun getCachedSpotlightDetail(articleUrl: String): SpotlightDetail? = spotlightDetailSnapshot[articleUrl]
 
     /**
      * 请求并解析 Pixivision 特辑文章详情（包含正文导语与画作列表，支持内存缓存与强制刷新）。
@@ -275,7 +296,7 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): SpotlightDetail {
         if (!forceRefresh) {
-            val cached = spotlightDetailCache[articleUrl]
+            val cached = spotlightDetailSnapshot[articleUrl]
             if (cached != null) {
                 return cached
             }
@@ -289,7 +310,16 @@ class IllustRepository(
                 }
             }.bodyAsText()
             val detail = PixivisionParser.parse(response, articleUrl)
-            spotlightDetailCache[articleUrl] = detail
+            spotlightMutex.withLock {
+                spotlightDetailMutableCache[articleUrl] = detail
+                spotlightDetailOrder.remove(articleUrl)
+                spotlightDetailOrder.add(articleUrl)
+                while (spotlightDetailOrder.size > 50) {
+                    val oldest = spotlightDetailOrder.removeAt(0)
+                    spotlightDetailMutableCache.remove(oldest)
+                }
+                spotlightDetailSnapshot = spotlightDetailMutableCache.toMap()
+            }
             detail
         }
     }

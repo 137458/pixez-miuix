@@ -28,8 +28,16 @@ class SettingsRepository(
     var changeVersion by mutableIntStateOf(0)
         private set
 
+    var filterChangeVersion by mutableIntStateOf(0)
+        private set
+
     fun notifyChanged() {
         changeVersion++
+    }
+
+    fun notifyFilterChanged() {
+        filterChangeVersion++
+        notifyChanged()
     }
 
     // region 画质与网络
@@ -215,7 +223,7 @@ class SettingsRepository(
 
     var nsfwMask: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
-        set(value) { settings[SettingsKeys.NSFW_MASK] = value; notifyChanged() }
+        set(value) { settings[SettingsKeys.NSFW_MASK] = value; notifyFilterChanged() }
 
     /**
      * 是否本地过滤 AI 生成作品（illust_ai_type == 2）。
@@ -223,7 +231,7 @@ class SettingsRepository(
      */
     var banAIIllust: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.BAN_AI_ILLUST, false)
-        set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value; notifyChanged() }
+        set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value; notifyFilterChanged() }
 
     var defaultPrivateLike: Boolean
         get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
@@ -368,7 +376,7 @@ class SettingsRepository(
         )
         set(value) {
             settings[SettingsKeys.H_IS_NOT_ALLOW_LEGACY] = value
-            notifyChanged()
+            notifyFilterChanged()
         }
 
     /**

@@ -64,6 +64,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.isR18
@@ -144,6 +145,9 @@ fun SearchScreen(
     }
     var ugoiraFilter by rememberSaveable {
         mutableIntStateOf(settingsRepository.searchUgoiraFilter)
+    }
+    var ratioFilter by rememberSaveable {
+        mutableIntStateOf(0)
     }
     var startDate by rememberSaveable {
         mutableStateOf(settingsRepository.searchStartDate)
@@ -417,6 +421,7 @@ fun SearchScreen(
                                         searchAiType = searchAiType,
                                         bookmarkThreshold = bookmarkThreshold,
                                         ugoiraFilter = ugoiraFilter,
+                                        ratioFilter = ratioFilter,
                                         startDate = startDate,
                                         endDate = endDate,
                                         hIsNotAllow = settingsRepository.hIsNotAllow,
@@ -511,6 +516,7 @@ fun SearchScreen(
                     searchAiType = searchAiType,
                     bookmarkThreshold = bookmarkThreshold,
                     ugoiraFilter = ugoiraFilter,
+                    ratioFilter = ratioFilter,
                     startDate = startDate,
                     endDate = endDate,
                     hIsNotAllow = settingsRepository.hIsNotAllow,
@@ -523,6 +529,7 @@ fun SearchScreen(
                         searchAiType = searchAiType,
                         bookmarkThreshold = bookmarkThreshold,
                         ugoiraFilter = ugoiraFilter,
+                        ratioFilter = ratioFilter,
                         startDate = startDate.takeIf { it.isNotBlank() },
                         endDate = endDate.takeIf { it.isNotBlank() },
                         repository = repository,
@@ -553,6 +560,7 @@ fun SearchScreen(
                             searchAiType = newState.searchAiType
                             bookmarkThreshold = newState.bookmarkThreshold
                             ugoiraFilter = newState.ugoiraFilter
+                            ratioFilter = newState.ratioFilter
                             startDate = newState.startDate
                             endDate = newState.endDate
                             settingsRepository.hIsNotAllow = newState.hIsNotAllow
@@ -598,12 +606,13 @@ data class SearchFilterState(
     val searchAiType: Int = 0,
     val bookmarkThreshold: Int = 0,
     val ugoiraFilter: Int = 0,
+    val ratioFilter: Int = 0,
     val startDate: String = "",
     val endDate: String = "",
     val hIsNotAllow: Boolean = false,
 ) {
     val hasActiveFilters: Boolean
-        get() = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 ||
+        get() = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 || ratioFilter != 0 ||
             startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
             hIsNotAllow
 }
@@ -724,6 +733,23 @@ private fun SearchFilterBottomSheet(
                 )
             }
 
+            val ratioOptions: List<Pair<String, Int>> = listOf(
+                strings.searchRatioAll to 0,
+                strings.searchRatioHorizontal to 1,
+                strings.searchRatioVertical to 2,
+                strings.searchRatioSquare to 3,
+            )
+            val selectedRatioIndex = ratioOptions.indexOfFirst { it.second == draftState.ratioFilter }.coerceAtLeast(0)
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SmallTitle(text = strings.searchRatioTitle)
+                TabRow(
+                    tabs = ratioOptions.map { it.first },
+                    selectedTabIndex = selectedRatioIndex,
+                    onTabSelected = { draftState = draftState.copy(ratioFilter = ratioOptions[it].second) },
+                )
+            }
+
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SmallTitle(text = strings.publishDate)
                 Row(
@@ -800,6 +826,7 @@ private fun SearchIllustResultGrid(
     searchAiType: Int,
     bookmarkThreshold: Int,
     ugoiraFilter: Int,
+    ratioFilter: Int = 0,
     startDate: String?,
     endDate: String?,
     repository: SearchRepository,
@@ -843,12 +870,19 @@ private fun SearchIllustResultGrid(
             hideR18 = settingsRepository.hIsNotAllow,
         )
 
-    fun applyUgoiraFilter(list: List<Illust>, filter: Int): List<Illust> {
-        return when (filter) {
+    fun applyClientFilters(list: List<Illust>, ugoira: Int, ratio: Int): List<Illust> {
+        var res = when (ugoira) {
             1 -> list.filter { it.type == "ugoira" }
             2 -> list.filter { it.type != "ugoira" }
             else -> list
         }
+        res = when (ratio) {
+            1 -> res.filter { it.width > it.height }
+            2 -> res.filter { it.height > it.width }
+            3 -> res.filter { it.width == it.height }
+            else -> res
+        }
+        return res
     }
 
     // 统一 UI 状态机（单向数据流 UDF）
@@ -868,7 +902,7 @@ private fun SearchIllustResultGrid(
         effectiveStartDate,
         effectiveEndDate,
         retryCount,
-        settingsRepository.changeVersion,
+        settingsRepository.filterChangeVersion,
     ) {
         requestGeneration++
         val generation = requestGeneration
@@ -921,7 +955,7 @@ private fun SearchIllustResultGrid(
             }.onSuccess { response ->
                 if (generation == requestGeneration) {
                     val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()) + filtered
+                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
             }.onFailure { error ->
@@ -945,8 +979,8 @@ private fun SearchIllustResultGrid(
             modifier = Modifier.fillMaxSize(),
         )
         currentIllusts != null -> {
-            val filteredIllusts = remember(currentIllusts, ugoiraFilter) {
-                applyUgoiraFilter(currentIllusts, ugoiraFilter)
+            val filteredIllusts = remember(currentIllusts, ugoiraFilter, ratioFilter) {
+                applyClientFilters(currentIllusts, ugoiraFilter, ratioFilter)
             }
             if (filteredIllusts.isEmpty() && !isLoadingMore) {
                 if (nextUrl != null) {
@@ -1017,7 +1051,7 @@ private fun SearchUserResultList(
     var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(query, retryCount, settingsRepository.changeVersion) {
+    LaunchedEffect(query, retryCount, settingsRepository.filterChangeVersion) {
         requestGeneration++
         val generation = requestGeneration
         previewsState = null

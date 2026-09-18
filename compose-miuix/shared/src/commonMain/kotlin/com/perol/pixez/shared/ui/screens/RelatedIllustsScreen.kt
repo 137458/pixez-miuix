@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
@@ -78,8 +79,8 @@ fun RelatedIllustsScreen(
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
-
-    LaunchedEffect(illustId, retryCount, settingsRepository.changeVersion) {
+    // 作品 ID 变更、重试或手动刷新时重新加载关联作品
+    LaunchedEffect(illustId, retryCount, settingsRepository.filterChangeVersion) {
         val force = isManualRefreshing
         if (illustsState == null) {
             initialError = null
@@ -110,7 +111,7 @@ fun RelatedIllustsScreen(
             suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()) + filtered
+                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->

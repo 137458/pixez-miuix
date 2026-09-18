@@ -131,4 +131,16 @@ fun Illust.isR18(): Boolean {
     return tags.any { isSensitiveTag(it.name, it.translatedName) }
 }
 
+/**
+ * 基于作品 ID 幂等合并列表，过滤掉重叠或重复项，避免 Compose LazyLayout 因重复 key 闪退。
+ */
+fun List<Illust>.appendDistinct(newItems: List<Illust>): List<Illust> {
+    if (newItems.isEmpty()) return this
+    if (this.isEmpty()) return newItems
+    val existingIds = this.mapTo(HashSet(this.size + newItems.size)) { it.id }
+    val uniqueNew = newItems.filter { existingIds.add(it.id) }
+    return this + uniqueNew
+}
+
+
 

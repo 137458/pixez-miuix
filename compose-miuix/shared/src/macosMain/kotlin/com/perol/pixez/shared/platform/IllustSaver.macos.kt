@@ -62,4 +62,43 @@ actual class IllustSaver {
 
         filePath
     }
+
+    actual suspend fun saveFromTempFile(
+        fileName: String,
+        tempFilePath: okio.Path,
+        subDir: String?,
+        customBasePath: String?,
+    ): String = withContext(Dispatchers.Default) {
+        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
+        val documentsDir = (NSHomeDirectory() as NSString).stringByAppendingPathComponent("Documents")
+        val baseDir = customBasePath ?: (documentsDir as NSString).stringByAppendingPathComponent("PixEz")
+        val targetDir = if (!subDir.isNullOrBlank()) {
+            val safeSubDir = FileNamePolicy.sanitizeSegment(subDir)
+            (baseDir as NSString).stringByAppendingPathComponent(safeSubDir)
+        } else {
+            baseDir
+        }
+
+        NSFileManager.defaultManager.createDirectoryAtPath(
+            targetDir,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = null,
+        )
+
+        val filePath = (targetDir as NSString).stringByAppendingPathComponent(safeFileName)
+        val fileManager = NSFileManager.defaultManager
+        if (fileManager.fileExistsAtPath(filePath)) {
+            fileManager.removeItemAtPath(filePath, error = null)
+        }
+        val moved = fileManager.moveItemAtPath(tempFilePath.toString(), toPath = filePath, error = null)
+        if (!moved) {
+            val copied = fileManager.copyItemAtPath(tempFilePath.toString(), toPath = filePath, error = null)
+            fileManager.removeItemAtPath(tempFilePath.toString(), error = null)
+            if (!copied) {
+                throw IllegalStateException("保存临时文件失败: $filePath")
+            }
+        }
+        filePath
+    }
 }

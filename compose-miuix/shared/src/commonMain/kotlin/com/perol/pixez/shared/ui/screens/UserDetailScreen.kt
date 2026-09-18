@@ -42,8 +42,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.AccountRepository
@@ -429,7 +431,8 @@ private fun UserDetailTabContent(
                     .graphicsLayer {
                         alpha = if (isWorksActive) 1f else 0f
                         translationX = if (isWorksActive) 0f else 100000f
-                    },
+                    }
+                    .then(if (!isWorksActive) Modifier.clearAndSetSemantics { } else Modifier),
             ) {
                 UserWorksTab(
                     userId = userId,
@@ -456,7 +459,8 @@ private fun UserDetailTabContent(
                     .graphicsLayer {
                         alpha = if (isBookmarksActive) 1f else 0f
                         translationX = if (isBookmarksActive) 0f else 100000f
-                    },
+                    }
+                    .then(if (!isBookmarksActive) Modifier.clearAndSetSemantics { } else Modifier),
             ) {
                 UserBookmarksTab(
                     userId = userId,
@@ -507,14 +511,14 @@ private fun UserWorksTab(
         userId,
         retryCount,
         banRepository,
-        settingsRepository.changeVersion,
+        settingsRepository.filterChangeVersion,
     ) {
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId) }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
 
-    var illusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    var illusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
+    var nextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -537,7 +541,7 @@ private fun UserWorksTab(
             suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts)
-                    illusts = illusts + filtered
+                    illusts = illusts.appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->
@@ -617,14 +621,14 @@ private fun UserBookmarksTab(
         publicRetryCount,
         publicLoadedOnce,
         banRepository,
-        settingsRepository.changeVersion,
+        settingsRepository.filterChangeVersion,
     ) {
         if (!publicLoadedOnce) return@produceState
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public") }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
-    var publicIllusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var publicNextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    var publicIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
+    var publicNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
     var publicIsLoadingMore by remember { mutableStateOf(false) }
     var publicLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
 
@@ -649,14 +653,14 @@ private fun UserBookmarksTab(
         privateRetryCount,
         privateLoadedOnce,
         banRepository,
-        settingsRepository.changeVersion,
+        settingsRepository.filterChangeVersion,
     ) {
         if (!privateLoadedOnce) return@produceState
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private") }
         value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
     }
-    var privateIllusts by remember(userId, settingsRepository.changeVersion) { mutableStateOf(listOf<Illust>()) }
-    var privateNextUrl by remember(userId, settingsRepository.changeVersion) { mutableStateOf<String?>(null) }
+    var privateIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
+    var privateNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
     var privateIsLoadingMore by remember { mutableStateOf(false) }
     var privateLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
 
@@ -679,7 +683,7 @@ private fun UserBookmarksTab(
                 suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public", nextUrl = currentNextUrl) }
                     .onSuccess { response ->
                         val filtered = filterBanned(response.illusts)
-                        publicIllusts = publicIllusts + filtered
+                        publicIllusts = publicIllusts.appendDistinct(filtered)
                         publicNextUrl = response.nextUrl
                     }
                     .onFailure { error ->
@@ -696,7 +700,7 @@ private fun UserBookmarksTab(
                 suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private", nextUrl = currentNextUrl) }
                     .onSuccess { response ->
                         val filtered = filterBanned(response.illusts)
-                        privateIllusts = privateIllusts + filtered
+                        privateIllusts = privateIllusts.appendDistinct(filtered)
                         privateNextUrl = response.nextUrl
                     }
                     .onFailure { error ->

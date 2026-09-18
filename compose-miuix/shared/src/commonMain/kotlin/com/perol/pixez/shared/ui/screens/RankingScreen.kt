@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
@@ -104,7 +105,7 @@ fun RankingScreen(
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
-    LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.changeVersion) {
+    LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
         val generation = ++requestGeneration
         val force = isManualRefreshing
         illustsState = null
@@ -152,7 +153,7 @@ fun RankingScreen(
             }.onSuccess { response ->
                 if (generation == requestGeneration) {
                     val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()) + filtered
+                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
             }.onFailure { error ->

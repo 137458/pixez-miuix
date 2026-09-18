@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -129,7 +130,7 @@ fun HelloScreen(
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 加载或刷新推荐插画数据
-    LaunchedEffect(isLoggedIn, retryCount, settingsRepository.changeVersion) {
+    LaunchedEffect(isLoggedIn, retryCount, settingsRepository.filterChangeVersion) {
         val loggedIn = isLoggedIn ?: return@LaunchedEffect
         val force = isManualRefreshing
         if (illustsState == null) {
@@ -181,7 +182,7 @@ fun HelloScreen(
             }
             nextResult.onSuccess { response ->
                 val filtered = filterBanned(response.illusts)
-                illustsState = (illustsState.orEmpty()) + filtered
+                illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                 nextUrl = response.nextUrl
             }.onFailure { error ->
                 loadMoreError = error

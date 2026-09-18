@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -136,7 +137,7 @@ fun NewScreen(
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, settingsRepository.changeVersion) {
+    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, settingsRepository.filterChangeVersion) {
         val loggedIn = isLoggedIn ?: return@LaunchedEffect
         if (!loggedIn) {
             illustsState = emptyList()
@@ -186,7 +187,7 @@ fun NewScreen(
             suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(restrict = currentRestrict, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()) + filtered
+                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
                 .onFailure { error ->

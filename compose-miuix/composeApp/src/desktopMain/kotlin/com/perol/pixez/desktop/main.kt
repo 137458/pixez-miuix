@@ -246,6 +246,18 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                             rootComponent.onDownloadTaskClicked()
                             true
                         }
+                        isModifier && keyEvent.key == Key.H -> {
+                            rootComponent.onHistoryClicked()
+                            true
+                        }
+                        isModifier && keyEvent.key == Key.B -> {
+                            rootComponent.onBookTagClicked()
+                            true
+                        }
+                        isModifier && keyEvent.key == Key.N -> {
+                            rootComponent.onNovelBrowseClicked()
+                            true
+                        }
                         (isModifier && keyEvent.key == Key.R) || keyEvent.key == Key.F5 -> {
                             dependencies.settingsRepository.notifyChanged()
                             true

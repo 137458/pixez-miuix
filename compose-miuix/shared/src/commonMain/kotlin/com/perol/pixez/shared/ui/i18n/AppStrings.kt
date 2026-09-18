@@ -573,6 +573,13 @@ interface AppStrings {
     val searchDateRangeTo: String
     val searchDateRangeEnd: String
     val searchResetAll: String
+    val searchRatioTitle: String get() = "画面比例"
+    val searchRatioAll: String get() = "全部"
+    val searchRatioHorizontal: String get() = "横图"
+    val searchRatioVertical: String get() = "竖图"
+    val searchRatioSquare: String get() = "方图"
+    val viewerModeVertical: String get() = "垂直卷轴模式"
+    val viewerModeHorizontal: String get() = "水平切页模式"
     val searchHotTags: String
     val searchHotTagsEmpty: String
     val searchHistory: String
@@ -2167,6 +2174,13 @@ object EnStrings : AppStrings {
     override val searchDateRangeTo = "to"
     override val searchDateRangeEnd = "End (YYYY-MM-DD)"
     override val searchResetAll = "Reset All"
+    override val searchRatioTitle = "Aspect Ratio"
+    override val searchRatioAll = "All"
+    override val searchRatioHorizontal = "Landscape"
+    override val searchRatioVertical = "Portrait"
+    override val searchRatioSquare = "Square"
+    override val viewerModeVertical = "Vertical Scroll Mode"
+    override val viewerModeHorizontal = "Horizontal Pager Mode"
     override val searchHotTags = "Trending Tags"
     override val searchHotTagsEmpty = "No trending tags"
     override val searchHistory = "Search History"

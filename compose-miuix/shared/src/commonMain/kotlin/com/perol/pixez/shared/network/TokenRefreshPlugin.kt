@@ -2,6 +2,7 @@ package com.perol.pixez.shared.network
 
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import io.ktor.client.call.save
 import io.ktor.client.plugins.HttpClientPlugin
 import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.plugin
@@ -91,6 +92,7 @@ class TokenRefreshPlugin(
                 var call = execute(request)
                 val status = call.response.status
                 if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.BadRequest) {
+                    call = call.save()
                     val bodyText = try {
                         call.response.bodyAsText()
                     } catch (e: CancellationException) {
@@ -112,6 +114,15 @@ class TokenRefreshPlugin(
                             request.headers.append("Authorization", it)
                         }
                         call = execute(request)
+                        val retryStatus = call.response.status
+                        if (retryStatus == HttpStatusCode.Unauthorized) {
+                            call = call.save()
+                            val retryBody = runCatching { call.response.bodyAsText() }.getOrDefault("")
+                            throw PixivApiException(
+                                statusCode = retryStatus.value,
+                                message = "刷新 Token 后重试仍未授权: $retryStatus, body=$retryBody",
+                            )
+                        }
                     } else if (status == HttpStatusCode.Unauthorized) {
                         // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
                         throw PixivApiException(

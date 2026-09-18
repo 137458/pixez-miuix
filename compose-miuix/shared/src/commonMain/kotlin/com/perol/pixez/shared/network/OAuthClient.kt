@@ -24,11 +24,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class OAuthClient(
     private val httpClient: HttpClient,
 ) {
-    // 维护最近生成的 verifier 列表（保留最近 10 个），避免用户重复点击生成或多页面跳转导致 verifier 丢失
-    private val verifierHistory = ArrayDeque<String>(10)
+    // 维护最近生成的 verifier 列表（保留最近 10 个），采用 Volatile 不可变快照保障跨端原子性
+    @kotlin.concurrent.Volatile
+    private var verifiers: List<String> = emptyList()
 
     val lastCodeVerifier: String?
-        get() = verifierHistory.lastOrNull()
+        get() = verifiers.lastOrNull()
 
     /**
      * 生成新的 PKCE code_verifier 并计算对应的 code_challenge。
@@ -38,10 +39,7 @@ class OAuthClient(
     @OptIn(ExperimentalEncodingApi::class)
     fun generatePkcePair(): PkcePair {
         val verifier = generateCodeVerifier()
-        if (verifierHistory.size >= 10) {
-            verifierHistory.removeFirst()
-        }
-        verifierHistory.addLast(verifier)
+        verifiers = (verifiers + verifier).takeLast(10)
         val challenge = sha256(verifier.encodeToByteArray())
         val challengeBase64 = Base64.UrlSafe.encode(challenge).trimEnd { it == '=' }
         return PkcePair(verifier, challengeBase64)
@@ -67,7 +65,7 @@ class OAuthClient(
      *
      * @param code 从授权回调中提取的 code。
      * @param codeVerifier 与登录 URL 中 challenge 对应的 verifier；
-     *                     若为空则优先使用最近记录的 verifier，并支持历史记录回退。
+     *                     若为空则优先使用最近记录的 verifier。
      */
     suspend fun exchangeCodeForToken(
         code: String,
@@ -76,23 +74,15 @@ class OAuthClient(
         val cleanCode = code.trim()
         require(cleanCode.isNotBlank()) { "授权码 code 不能为空。" }
 
-        val candidateVerifiers = if (!codeVerifier.isNullOrBlank()) {
-            listOf(codeVerifier.trim())
+        val targetVerifier = if (!codeVerifier.isNullOrBlank()) {
+            codeVerifier.trim()
         } else {
-            verifierHistory.toList().reversed().ifEmpty {
-                throw IllegalArgumentException("缺少 code_verifier，无法交换 token。请重新在应用内点击“使用浏览器登录”。")
-            }
+            verifiers.lastOrNull()
+                ?: throw IllegalArgumentException("缺少 code_verifier，无法交换 token。请重新在应用内点击“使用浏览器登录”。")
         }
 
-        var lastException: Exception? = null
-        for (verifier in candidateVerifiers) {
-            try {
-                return requestTokenWithCode(cleanCode, verifier)
-            } catch (e: Exception) {
-                lastException = e
-            }
-        }
-        throw lastException ?: IllegalStateException("授权码换取 Token 失败")
+        // Pixiv 授权码 code 为单次消费凭据，一次性使用正确的 verifier 交换，避免重试作废凭据
+        return requestTokenWithCode(cleanCode, targetVerifier)
     }
 
     private suspend fun requestTokenWithCode(code: String, verifier: String): Account {

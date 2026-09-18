@@ -24,4 +24,14 @@ expect class IllustSaver() {
         subDir: String? = null,
         customBasePath: String? = null,
     ): String
+
+    /**
+     * 将临时文件流式保存到目标存储中，避免大图片/动图将完整字节读入 JVM 堆内存。
+     */
+    suspend fun saveFromTempFile(
+        fileName: String,
+        tempFilePath: okio.Path,
+        subDir: String? = null,
+        customBasePath: String? = null,
+    ): String
 }

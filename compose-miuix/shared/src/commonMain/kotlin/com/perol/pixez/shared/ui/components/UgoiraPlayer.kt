@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,8 +60,10 @@ import org.jetbrains.compose.resources.decodeToImageBitmap
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.roundToInt
 
 import com.perol.pixez.shared.data.repository.DownloadRepository
 
@@ -153,6 +156,8 @@ fun UgoiraPlayer(
     var currentFrameIndex by remember(illust.id) { mutableIntStateOf(0) }
     var showControls by remember { mutableStateOf(true) }
     var isSavingZip by remember { mutableStateOf(false) }
+    var playSpeed by remember(illust.id) { mutableFloatStateOf(1f) }
+    var isDraggingFrame by remember(illust.id) { mutableStateOf(false) }
 
     fun loadUgoira() {
         scope.launch {
@@ -235,15 +240,16 @@ fun UgoiraPlayer(
 
     // 动图逐帧动画驱动协程
     val currentState = state
-    LaunchedEffect(currentState, isPlaying) {
-        if (currentState !is UgoiraState.Ready || !isPlaying) return@LaunchedEffect
+    LaunchedEffect(currentState, isPlaying, playSpeed, isDraggingFrame) {
+        if (currentState !is UgoiraState.Ready || !isPlaying || isDraggingFrame) return@LaunchedEffect
         val frames = currentState.provider.frames
         if (frames.isEmpty()) return@LaunchedEffect
 
         var nextFrameTargetTime = Clock.System.now().toEpochMilliseconds()
-        while (isActive && isPlaying) {
+        while (isActive && isPlaying && !isDraggingFrame) {
             val currentFrame = frames.getOrNull(currentFrameIndex) ?: frames.first()
-            val expectedDelay = currentFrame.delay.toLong().coerceAtLeast(10L)
+            val baseDelay = currentFrame.delay.toLong().coerceAtLeast(10L)
+            val expectedDelay = (baseDelay / playSpeed).toLong().coerceAtLeast(10L)
             nextFrameTargetTime += expectedDelay
 
             // 预解码下一帧，平滑帧率
@@ -308,80 +314,126 @@ fun UgoiraPlayer(
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter),
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(12.dp)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.Black.copy(alpha = 0.65f))
+                            .background(Color.Black.copy(alpha = 0.7f))
                             .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
+                        // 帧拖拽进度条（仅在多帧时显示）
+                        if (st.provider.frames.size > 1) {
+                            val maxFrame = (st.provider.frames.size - 1).toFloat()
+                            Slider(
+                                value = currentFrameIndex.toFloat().coerceIn(0f, maxFrame),
+                                onValueChange = {
+                                    isDraggingFrame = true
+                                    currentFrameIndex = it.roundToInt().coerceIn(0, st.provider.frames.size - 1)
+                                },
+                                onValueChangeFinished = {
+                                    isDraggingFrame = false
+                                },
+                                valueRange = 0f..maxFrame,
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.2f))
-                                    .clickable { isPlaying = !isPlaying },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = if (isPlaying) "❚❚" else "▶",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                )
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = "${currentFrameIndex + 1} / ${st.provider.frames.size}",
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 12.sp,
+                                    .fillMaxWidth()
+                                    .height(26.dp),
                             )
+                            Spacer(Modifier.height(4.dp))
                         }
 
-                        // 保存 Zip 按钮
-                        Button(
-                            onClick = {
-                                if (isSavingZip) return@Button
-                                isSavingZip = true
-                                scope.launch {
-                                    try {
-                                        val bytes = withContext(Dispatchers.IO) {
-                                            val path = st.tempZipPath
-                                            if (path != null && FileSystem.SYSTEM.exists(path)) {
-                                                FileSystem.SYSTEM.read(path) { readByteArray() }
-                                            } else {
-                                                illustRepository.downloadUgoiraZip(st.zipUrl)
-                                            }
-                                        }
-                                        val path = if (downloadRepository != null) {
-                                            downloadRepository.saveUgoiraZip(
-                                                illust = illust,
-                                                bytes = bytes,
-                                                zipUrl = st.zipUrl,
-                                            )
-                                        } else {
-                                            illustSaver.save(
-                                                fileName = "${illust.id}_ugoira.zip",
-                                                bytes = bytes,
-                                            )
-                                        }
-                                        onSavedZip?.invoke(path)
-                                    } catch (e: Throwable) {
-                                        Napier.e("保存动图 Zip 失败", e, tag = "UgoiraPlayer")
-                                    } finally {
-                                        isSavingZip = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.height(30.dp),
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text(
-                                text = if (isSavingZip) "..." else strings.ugoiraSaveZip,
-                                fontSize = 11.sp,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .clickable { isPlaying = !isPlaying },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = if (isPlaying) "❚❚" else "▶",
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = "${currentFrameIndex + 1} / ${st.provider.frames.size}",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                // 倍速切换胶囊（0.5x -> 1.0x -> 1.5x -> 2.0x）
+                                val nextSpeed = when (playSpeed) {
+                                    0.5f -> 1.0f
+                                    1.0f -> 1.5f
+                                    1.5f -> 2.0f
+                                    else -> 0.5f
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .clickable { playSpeed = nextSpeed }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = "${playSpeed}x",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                    )
+                                }
+                            }
+
+                            // 保存 Zip 按钮
+                            Button(
+                                onClick = {
+                                    if (isSavingZip) return@Button
+                                    isSavingZip = true
+                                    scope.launch {
+                                        try {
+                                            val bytes = withContext(Dispatchers.IO) {
+                                                val path = st.tempZipPath
+                                                if (path != null && FileSystem.SYSTEM.exists(path)) {
+                                                    FileSystem.SYSTEM.read(path) { readByteArray() }
+                                                } else {
+                                                    illustRepository.downloadUgoiraZip(st.zipUrl)
+                                                }
+                                            }
+                                            val path = if (downloadRepository != null) {
+                                                downloadRepository.saveUgoiraZip(
+                                                    illust = illust,
+                                                    bytes = bytes,
+                                                    zipUrl = st.zipUrl,
+                                                )
+                                            } else {
+                                                illustSaver.save(
+                                                    fileName = "${illust.id}_ugoira.zip",
+                                                    bytes = bytes,
+                                                )
+                                            }
+                                            onSavedZip?.invoke(path)
+                                        } catch (e: Throwable) {
+                                            Napier.e("保存动图 Zip 失败", e, tag = "UgoiraPlayer")
+                                        } finally {
+                                            isSavingZip = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.height(30.dp),
+                            ) {
+                                Text(
+                                    text = if (isSavingZip) "..." else strings.ugoiraSaveZip,
+                                    fontSize = 11.sp,
+                                )
+                            }
                         }
                     }
                 }
