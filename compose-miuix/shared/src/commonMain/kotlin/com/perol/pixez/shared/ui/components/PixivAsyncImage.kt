@@ -1,7 +1,11 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -14,6 +18,7 @@ import coil3.request.crossfade
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CancellationException
 
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -38,7 +43,9 @@ private val PixivisionHeaders = NetworkHeaders.Builder()
  * i.pximg.net 要求请求头 `Referer: https://app-api.pixiv.net/`，否则返回 403。
  * 同时根据用户设置的图片源（如 i.pixiv.re）自动进行 Host 替换。
  *
- * 支持通过 [thumbnailUrl] 提供渐进式缩略图占位：在高清/原图尚未下载完成时，优先展示已缓存的缩略图，避免白屏/黑屏等待。
+ * 支持通过 [thumbnailUrl] 提供真正的两阶段渐进式缩略图占位：
+ * 在高清/原图尚未下载完成时，优先并发拉取/显示缩略图，避免白屏/黑屏等待；
+ * 当高清原图加载成功后，平滑覆盖缩略图；即便高清图加载失败，缩略图仍稳定可见。
  * 支持通过 [loadOriginalSize] 强制按图片真实原始分辨率解码，防止大图查看器在缩放时因下采样模糊失真。
  */
 @Composable
@@ -75,7 +82,13 @@ fun PixivAsyncImage(
         }
     }
 
-    val request = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context, loadOriginalSize) {
+    val hasThumbnail = transformedThumbnailCacheKey != null &&
+        transformedThumbnailCacheKey != transformedModel &&
+        transformedThumbnailCacheKey.toString().isNotBlank()
+
+    var isTargetSuccess by remember(transformedModel) { mutableStateOf(false) }
+
+    val mainRequest = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context, loadOriginalSize) {
         val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
@@ -110,20 +123,88 @@ fun PixivAsyncImage(
             .build()
     }
 
-    AsyncImage(
-        model = request,
-        contentDescription = contentDescription,
-        contentScale = contentScale,
-        filterQuality = filterQuality,
-        modifier = modifier,
-        onLoading = { onLoading?.invoke() },
-        onSuccess = { onSuccess?.invoke() },
-        onError = { state ->
-            val throwable = state.result.throwable
-            if (transformedModel != null) {
-                Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
-            }
-            onError?.invoke(throwable)
-        },
-    )
+    val thumbnailRequest = remember(transformedThumbnailCacheKey, context, hasThumbnail) {
+        if (!hasThumbnail) null
+        else {
+            val isLocalFile = transformedThumbnailCacheKey is String && transformedThumbnailCacheKey.startsWith("file:")
+            val isPixivision = transformedThumbnailCacheKey is String && (transformedThumbnailCacheKey.contains("pixivision") || transformedThumbnailCacheKey.contains("embed.pixiv.net"))
+            val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
+            ImageRequest.Builder(context)
+                .data(transformedThumbnailCacheKey)
+                .apply {
+                    if (!isLocalFile) {
+                        httpHeaders(headers)
+                        val thumbStr = transformedThumbnailCacheKey.toString()
+                        if (thumbStr.isNotBlank()) {
+                            memoryCacheKey(thumbStr)
+                            diskCacheKey(thumbStr)
+                        }
+                    }
+                }
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .networkCachePolicy(CachePolicy.ENABLED)
+                .configurePlatformOptimizations()
+                .crossfade(150)
+                .build()
+        }
+    }
+
+    if (!hasThumbnail || thumbnailRequest == null) {
+        AsyncImage(
+            model = mainRequest,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            filterQuality = filterQuality,
+            modifier = modifier,
+            onLoading = { onLoading?.invoke() },
+            onSuccess = {
+                isTargetSuccess = true
+                onSuccess?.invoke()
+            },
+            onError = { state ->
+                val throwable = state.result.throwable
+                if (throwable !is CancellationException) {
+                    if (transformedModel != null) {
+                        Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
+                    }
+                    onError?.invoke(throwable)
+                }
+            },
+        )
+    } else {
+        Box(modifier = modifier) {
+            // 底层：缩略图渐进式占位图层（快速异步加载显示，目标图成功后保持静止或由上层覆盖）
+            AsyncImage(
+                model = thumbnailRequest,
+                contentDescription = null,
+                contentScale = contentScale,
+                filterQuality = filterQuality,
+                modifier = Modifier.matchParentSize(),
+            )
+
+            // 顶层：目标高清/原图图层
+            AsyncImage(
+                model = mainRequest,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                filterQuality = filterQuality,
+                modifier = Modifier.matchParentSize(),
+                onLoading = { onLoading?.invoke() },
+                onSuccess = {
+                    isTargetSuccess = true
+                    onSuccess?.invoke()
+                },
+                onError = { state ->
+                    val throwable = state.result.throwable
+                    if (throwable !is CancellationException) {
+                        if (transformedModel != null) {
+                            Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
+                        }
+                        onError?.invoke(throwable)
+                    }
+                },
+            )
+        }
+    }
 }

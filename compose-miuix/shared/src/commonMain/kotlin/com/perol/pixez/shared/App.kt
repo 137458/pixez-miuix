@@ -39,6 +39,7 @@ val LocalDownloadRepository = staticCompositionLocalOf<DownloadRepository?> { nu
  *
  * M3 阶段接入 Decompose 导航与 MIUIX 页面，替换 M1 的占位页面。
  */
+@OptIn(coil3.annotation.ExperimentalCoilApi::class)
 @Composable
 fun App(
     dependencies: AppDependencies,
@@ -47,7 +48,12 @@ fun App(
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)
             .components {
-                add(KtorNetworkFetcherFactory(httpClient = { dependencies.httpClient.downloadClient }))
+                add(
+                    KtorNetworkFetcherFactory(
+                        httpClient = { dependencies.httpClient.downloadClient },
+                        concurrentRequestStrategy = { coil3.network.DeDupeConcurrentRequestStrategy() },
+                    )
+                )
                 com.perol.pixez.shared.platform.getPlatformGifDecoderFactories().forEach { add(it) }
             }
             .memoryCache {

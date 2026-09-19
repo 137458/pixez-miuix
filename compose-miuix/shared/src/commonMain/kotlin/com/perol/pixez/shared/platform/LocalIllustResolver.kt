@@ -52,9 +52,45 @@ fun isUrlInCoilDiskCache(
 }
 
 /**
+ * 检查指定 URL 是否已存在于 Coil 内存缓存中。
+ * 同时检测原始 URL 以及经过图源替换（如 i.pixiv.re）后的变体 URL。
+ */
+fun isUrlInCoilMemoryCache(
+    context: PlatformContext,
+    url: String?,
+    pictureSource: String? = null,
+): Boolean {
+    if (url.isNullOrBlank()) return false
+    val memoryCache = SingletonImageLoader.get(context).memoryCache ?: return false
+    val candidateKeys = buildList {
+        add(url)
+        if (!pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
+            add(url.replace("://i.pximg.net", "://$pictureSource"))
+        }
+    }
+    for (key in candidateKeys) {
+        if (memoryCache[coil3.memory.MemoryCache.Key(key)] != null) {
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * 检查指定 URL 是否已存在于 Coil 内存或磁盘缓存中。
+ */
+fun isUrlInCoilCache(
+    context: PlatformContext,
+    url: String?,
+    pictureSource: String? = null,
+): Boolean {
+    return isUrlInCoilMemoryCache(context, url, pictureSource) || isUrlInCoilDiskCache(context, url, pictureSource)
+}
+
+/**
  * 智能解析插画页面的最优显示图片模型：
  * 1. 优先使用本地相册已下载原图文件（file: URI，0 网络开销，完整原图分辨率）；
- * 2. 检查 Coil 磁盘缓存中是否已有 original 原图缓存，若已有则优先复用原图（无需重新下载 Large 图）；
+ * 2. 检查 Coil 内存或磁盘缓存中是否已有 original 原图缓存，若已有则优先复用原图（无需重新下载 Large 图）；
  * 3. 降级使用目标画质 URL。
  */
 fun resolveOptimizedImageModel(
@@ -72,8 +108,8 @@ fun resolveOptimizedImageModel(
         return localUri
     }
 
-    // 2. Coil 磁盘缓存中的原图优先（最高清就地复用）
-    if (!originalUrl.isNullOrBlank() && isUrlInCoilDiskCache(context, originalUrl, pictureSource)) {
+    // 2. Coil 内存或磁盘缓存中的原图优先（最高清就地复用）
+    if (!originalUrl.isNullOrBlank() && isUrlInCoilCache(context, originalUrl, pictureSource)) {
         return originalUrl
     }
 

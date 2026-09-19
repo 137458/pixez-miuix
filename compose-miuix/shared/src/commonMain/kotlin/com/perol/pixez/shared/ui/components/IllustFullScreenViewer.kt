@@ -645,11 +645,15 @@ private fun ZoomableImage(
     onScaleChanged: ((Float) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
+    val context = LocalPlatformContext.current
+    val settings = LocalSettingsRepository.current
+    val coroutineScope = rememberCoroutineScope()
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var isLoading by remember(model) { mutableStateOf(true) }
     var isError by remember(model) { mutableStateOf(false) }
     var reloadTrigger by remember { mutableIntStateOf(0) }
+    var autoRetryCount by remember(model) { mutableIntStateOf(0) }
     var showLoadingIndicator by remember(model) { mutableStateOf(false) }
 
     LaunchedEffect(isLoading, model) {
@@ -768,8 +772,28 @@ private fun ZoomableImage(
                 isError = false
             },
             onError = {
-                isLoading = false
-                isError = true
+                val modelStr = model?.toString()
+                if (autoRetryCount < 2) {
+                    autoRetryCount++
+                    coroutineScope.launch {
+                        delay(350)
+                        if (modelStr != null && com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings?.pictureSource)) {
+                            reloadTrigger++
+                            isLoading = true
+                            isError = false
+                        } else if (autoRetryCount == 1) {
+                            reloadTrigger++
+                            isLoading = true
+                            isError = false
+                        } else {
+                            isLoading = false
+                            isError = true
+                        }
+                    }
+                } else {
+                    isLoading = false
+                    isError = true
+                }
             },
             modifier = Modifier
                 .fillMaxSize()
@@ -830,6 +854,7 @@ private fun ZoomableImage(
                     .clickable {
                         isError = false
                         isLoading = true
+                        autoRetryCount = 0
                         reloadTrigger++
                     }
                     .padding(horizontal = 16.dp, vertical = 8.dp),

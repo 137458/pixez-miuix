@@ -967,25 +967,42 @@ private fun IllustDetailSingleContent(
 
         if (fullScreenPageIndex != null && illust != null) {
             val pageIdx = fullScreenPageIndex!!.coerceAtLeast(0)
+            val effectiveQuality = if (illust.type == "manga") {
+                settings?.mangaQuality ?: settings?.pictureQuality ?: 0
+            } else {
+                settings?.pictureQuality ?: 0
+            }
             val currentPreviewUrl = if (illust.metaPages.isNotEmpty()) {
                 val p = illust.metaPages.getOrNull(pageIdx)
-                val target = p?.imageUrls?.let { it.large.ifEmpty { it.medium } } ?: illust.imageUrls.large
+                val rawTarget = if (p != null) {
+                    when (effectiveQuality) {
+                        0 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
+                        1 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                        2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
+                        else -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
+                    }
+                } else illust.imageUrls.large
                 resolveOptimizedImageModel(
                     context = context,
                     illust = illust,
                     pageIndex = pageIdx,
-                    targetUrl = target,
+                    targetUrl = rawTarget,
                     originalUrl = p?.imageUrls?.original,
                     customBasePath = settings?.storePath,
                     pictureSource = settings?.pictureSource,
                 )
             } else {
-                val target = illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+                val rawTarget = when (effectiveQuality) {
+                    0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                    1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
+                    2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                    else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+                }
                 resolveOptimizedImageModel(
                     context = context,
                     illust = illust,
                     pageIndex = 0,
-                    targetUrl = target,
+                    targetUrl = rawTarget,
                     originalUrl = illust.metaSinglePage?.originalImageUrl,
                     customBasePath = settings?.storePath,
                     pictureSource = settings?.pictureSource,
