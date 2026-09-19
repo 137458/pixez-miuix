@@ -22,6 +22,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Text
@@ -38,6 +40,7 @@ fun MarkdownText(
     baseFontSize: Int = 13,
 ) {
     val blocks = remember(markdown) { parseMarkdownBlocks(markdown) }
+    val linkColor = MiuixTheme.colorScheme.primary
 
     Column(
         modifier = modifier,
@@ -48,7 +51,8 @@ fun MarkdownText(
                 is MarkdownBlock.Heading -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = buildAnnotatedContent(block.text),
+                        text = buildAnnotatedContent(block.text, linkColor),
+                        modifier = Modifier.fillMaxWidth(),
                         style = when (block.level) {
                             1 -> MiuixTheme.textStyles.title3.copy(
                                 fontWeight = FontWeight.Bold,
@@ -82,7 +86,8 @@ fun MarkdownText(
                                 .background(MiuixTheme.colorScheme.primary),
                         )
                         Text(
-                            text = buildAnnotatedContent(block.text),
+                            text = buildAnnotatedContent(block.text, linkColor),
+                            modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
                                 lineHeight = (baseFontSize + 6).sp,
@@ -109,7 +114,8 @@ fun MarkdownText(
                             color = MiuixTheme.colorScheme.primary,
                         )
                         Text(
-                            text = buildAnnotatedContent(block.text),
+                            text = buildAnnotatedContent(block.text, linkColor),
+                            modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
                                 lineHeight = (baseFontSize + 6).sp,
@@ -121,7 +127,8 @@ fun MarkdownText(
 
                 is MarkdownBlock.Paragraph -> {
                     Text(
-                        text = buildAnnotatedContent(block.text),
+                        text = buildAnnotatedContent(block.text, linkColor),
+                        modifier = Modifier.fillMaxWidth(),
                         style = MiuixTheme.textStyles.body2.copy(
                             fontSize = baseFontSize.sp,
                             lineHeight = (baseFontSize + 6).sp,
@@ -144,7 +151,7 @@ fun MarkdownText(
     }
 }
 
-private sealed interface MarkdownBlock {
+internal sealed interface MarkdownBlock {
     data class Heading(val level: Int, val text: String) : MarkdownBlock
     data class BulletItem(val text: String) : MarkdownBlock
     data class NumberedItem(val number: String, val text: String) : MarkdownBlock
@@ -152,7 +159,7 @@ private sealed interface MarkdownBlock {
     object Divider : MarkdownBlock
 }
 
-private fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
+internal fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
     val lines = markdown.lines()
     val blocks = mutableListOf<MarkdownBlock>()
 
@@ -193,7 +200,7 @@ private fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
     return blocks
 }
 
-private fun buildAnnotatedContent(rawText: String): AnnotatedString {
+internal fun buildAnnotatedContent(rawText: String, linkColor: Color = Color.Unspecified): AnnotatedString {
     return buildAnnotatedString {
         var i = 0
         val len = rawText.length
@@ -225,6 +232,28 @@ private fun buildAnnotatedContent(rawText: String): AnnotatedString {
                     }
                     i = end + 1
                     continue
+                }
+            }
+
+            // [链接文字](url)
+            if (rawText[i] == '[') {
+                val linkTextEnd = rawText.indexOf("](", i + 1)
+                if (linkTextEnd != -1) {
+                    val urlEnd = rawText.indexOf(")", linkTextEnd + 2)
+                    if (urlEnd != -1) {
+                        val label = rawText.substring(i + 1, linkTextEnd)
+                        withStyle(
+                            SpanStyle(
+                                color = if (linkColor != Color.Unspecified) linkColor else Color(0xFF2979FF),
+                                textDecoration = TextDecoration.Underline,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        ) {
+                            append(label)
+                        }
+                        i = urlEnd + 1
+                        continue
+                    }
                 }
             }
 

@@ -9,6 +9,7 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
@@ -74,6 +75,22 @@ internal fun createUpdateCheckClient(): HttpClient = HttpClient {
 }
 
 /**
+ * 获取当前已安装版本的本地结构化信息，提供秒开体验与离线兜底。
+ */
+fun getLocalReleaseInfo(): ReleaseInfo = ReleaseInfo(
+    tagName = "v${AppInfo.VERSION_NAME}",
+    versionName = AppInfo.VERSION_NAME,
+    title = "PixEz MIUIX v${AppInfo.VERSION_NAME}",
+    changelog = AppInfo.CURRENT_CHANGELOG,
+    releaseUrl = com.perol.pixez.shared.ui.AppConstants.Urls.GITHUB_RELEASES,
+    publishedAt = null,
+    isNew = false,
+    downloadUrl = null,
+    fileName = null,
+    fileSize = null,
+)
+
+/**
  * 复用的 GitHub API HttpClient。
  */
 internal val defaultUpdateCheckClient: HttpClient by lazy {
@@ -87,13 +104,20 @@ suspend fun fetchLatestReleaseInfo(
     client: HttpClient = defaultUpdateCheckClient,
 ): Result<ReleaseInfo> {
     return try {
-        val release: GitHubRelease = client
+        val response = client
             .get("https://api.github.com/repos/137458/pixez-miuix/releases/latest") {
                 header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
             }
-            .body()
-        val tag = release.tag_name ?: ""
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("GitHub Release 请求异常: HTTP ${response.status.value}")
+        }
+        val release: GitHubRelease = response.body()
+        val tag = release.tag_name
+        if (tag.isNullOrBlank()) {
+            throw IllegalStateException("GitHub Release 响应缺少有效 tag_name，可能触发未认证速率限制")
+        }
         val versionName = tag.removePrefix("v").ifBlank { "unknown" }
+        val isNew = hasNewVersion(versionName)
 
         val apkAsset = release.assets?.firstOrNull {
             it.name?.endsWith(".apk", ignoreCase = true) == true &&
@@ -105,14 +129,18 @@ suspend fun fetchLatestReleaseInfo(
         }
         val fileSize = apkAsset?.size
 
+        // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
+        val changelog = release.body?.takeIf { it.isNotBlank() }
+            ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
+
         val releaseInfo = ReleaseInfo(
             tagName = tag,
             versionName = versionName,
             title = release.name ?: "PixEz MIUIX $tag",
-            changelog = release.body.orEmpty(),
+            changelog = changelog,
             releaseUrl = release.html_url ?: "https://github.com/137458/pixez-miuix/releases",
             publishedAt = release.published_at,
-            isNew = hasNewVersion(versionName),
+            isNew = isNew,
             downloadUrl = downloadUrl,
             fileName = fileName,
             fileSize = fileSize,

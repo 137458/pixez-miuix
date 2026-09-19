@@ -86,7 +86,7 @@ fun UpdateSettingScreen(
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val lazyListState = rememberLazyListState()
 
-    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
     var isChecking by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showDialog by remember { mutableStateOf(false) }
@@ -118,8 +118,10 @@ fun UpdateSettingScreen(
                     }
                 }
                 .onFailure { error ->
-                    val message = error.message ?: strings.loadFailed
-                    toastMessage = "${strings.loadFailed}: $message"
+                    if (userInitiated) {
+                        val message = error.message ?: strings.loadFailed
+                        toastMessage = "${strings.loadFailed}: $message"
+                    }
                 }
         } finally {
             isChecking = false
@@ -315,13 +317,18 @@ fun UpdateSettingScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = releaseInfo?.title ?: strings.updateNewRelease,
+                                    text = releaseInfo?.title?.takeIf { it.isNotBlank() } ?: strings.updateNewRelease,
                                     style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
                                     color = MiuixTheme.colorScheme.onSurface,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
+                                val displayChangelog = when {
+                                    !releaseInfo?.changelog.isNullOrBlank() -> releaseInfo?.changelog.orEmpty()
+                                    !hasNew && AppInfo.CURRENT_CHANGELOG.isNotBlank() -> AppInfo.CURRENT_CHANGELOG
+                                    else -> strings.updateChangelogEmpty
+                                }
                                 com.perol.pixez.shared.ui.components.MarkdownText(
-                                    markdown = releaseInfo?.changelog ?: "",
+                                    markdown = displayChangelog,
                                     modifier = Modifier.fillMaxWidth(),
                                     baseFontSize = 14,
                                 )
