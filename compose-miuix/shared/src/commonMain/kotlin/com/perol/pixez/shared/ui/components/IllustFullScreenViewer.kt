@@ -66,8 +66,8 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.size.Dimension
 import coil3.size.Precision
-import coil3.size.Size
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -75,14 +75,17 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
@@ -231,35 +234,44 @@ fun IllustFullScreenViewer(
                     val imageLoader = SingletonImageLoader.get(context)
                     val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
                         .filter { it in 0 until pageCount }
-                    for (pIndex in adjacentPages) {
-                        val p = illust.metaPages.getOrNull(pIndex) ?: continue
-                        val rawTarget = when (zoomQuality) {
-                            0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                            1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
-                            2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
-                            else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                        }
-                        val optModel = resolveOptimizedImageModel(
-                            context = context,
-                            illust = illust,
-                            pageIndex = pIndex,
-                            targetUrl = rawTarget,
-                            originalUrl = p.imageUrls?.original,
-                            customBasePath = settings?.storePath,
-                            pictureSource = settings?.pictureSource,
-                        )
-                        if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
-                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
-                                optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
-                            } else optModel
-                            // 相邻页静默预加载降级为纯磁盘缓存命中，禁用内存缓存解码，防止多张高清大图并发驻留 JVM 堆引发 OOM
-                            val req = ImageRequest.Builder(context)
-                                .data(transformed)
-                                .diskCacheKey(transformed)
-                                .memoryCachePolicy(CachePolicy.DISABLED)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .build()
-                            imageLoader.enqueue(req)
+                    // 解析过程涉及目录遍历与磁盘缓存查询，统一切到 IO 线程，避免阻塞主线程
+                    withContext(Dispatchers.IO) {
+                        for (pIndex in adjacentPages) {
+                            val p = illust.metaPages.getOrNull(pIndex) ?: continue
+                            val rawTarget = when (zoomQuality) {
+                                0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                                1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
+                                2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
+                                else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                            }
+                            val optModel = resolveOptimizedImageModel(
+                                context = context,
+                                illust = illust,
+                                pageIndex = pIndex,
+                                targetUrl = rawTarget,
+                                originalUrl = p.imageUrls?.original,
+                                customBasePath = settings?.storePath,
+                                pictureSource = settings?.pictureSource,
+                            )
+                            if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
+                                val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
+                                    optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
+                                } else optModel
+                                // 预加载只用于写入磁盘缓存（Coil 在解码前落盘），解码结果随即丢弃，
+                                // 因此禁用内存缓存并把解码尺寸压到最小，避免原图全尺寸位图短暂驻留堆内存引发 OOM
+                                val req = ImageRequest.Builder(context)
+                                    .data(transformed)
+                                    .diskCacheKey(transformed)
+                                    .size(
+                                        Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
+                                        Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
+                                    )
+                                    .precision(Precision.INEXACT)
+                                    .memoryCachePolicy(CachePolicy.DISABLED)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .build()
+                                imageLoader.enqueue(req)
+                            }
                         }
                     }
                 }
@@ -577,7 +589,6 @@ private fun ViewerPageItem(
     modifier: Modifier = Modifier,
     onScaleChanged: ((Float) -> Unit)? = null,
 ) {
-    val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
     val page = illust.metaPages.getOrNull(pageIndex)
 
@@ -598,17 +609,14 @@ private fun ViewerPageItem(
             }
         }
     }
-    val zoomUrl = remember(page, pageIndex, rawZoomUrl, settings?.pictureSource, settings?.changeVersion) {
-        resolveOptimizedImageModel(
-            context = context,
-            illust = illust,
-            pageIndex = pageIndex,
-            targetUrl = rawZoomUrl,
-            originalUrl = page?.imageUrls?.original ?: illust.metaSinglePage?.originalImageUrl,
-            customBasePath = settings?.storePath,
-            pictureSource = settings?.pictureSource,
-        )
-    }
+    val zoomUrl = rememberOptimizedImageModel(
+        illust = illust,
+        pageIndex = pageIndex,
+        targetUrl = rawZoomUrl,
+        originalUrl = page?.imageUrls?.original ?: illust.metaSinglePage?.originalImageUrl,
+        customBasePath = settings?.storePath,
+        pictureSource = settings?.pictureSource,
+    )
     val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
         if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
             previewUrl
@@ -777,7 +785,11 @@ private fun ZoomableImage(
                     autoRetryCount++
                     coroutineScope.launch {
                         delay(350)
-                        if (modelStr != null && com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings?.pictureSource)) {
+                        // 磁盘缓存探测属于阻塞 IO，切到 IO 线程执行
+                        val cached = modelStr != null && withContext(Dispatchers.IO) {
+                            com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings?.pictureSource)
+                        }
+                        if (cached) {
                             reloadTrigger++
                             isLoading = true
                             isError = false

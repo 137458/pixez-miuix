@@ -2,10 +2,7 @@ package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -28,13 +25,13 @@ import coil3.size.Size
 import com.perol.pixez.shared.ui.AppConstants
 
 private val StandardHeaders = NetworkHeaders.Builder()
-    .set("Referer", "https://app-api.pixiv.net/")
-    .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    .set("Referer", AppConstants.Urls.PIXIV_APP_API)
+    .set("User-Agent", AppConstants.Network.IMAGE_REQUEST_USER_AGENT)
     .build()
 
 private val PixivisionHeaders = NetworkHeaders.Builder()
-    .set("Referer", "https://www.pixivision.net/")
-    .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    .set("Referer", AppConstants.Network.REFERER_PIXIVISION)
+    .set("User-Agent", AppConstants.Network.IMAGE_REQUEST_USER_AGENT)
     .build()
 
 /**
@@ -85,8 +82,6 @@ fun PixivAsyncImage(
     val hasThumbnail = transformedThumbnailCacheKey != null &&
         transformedThumbnailCacheKey != transformedModel &&
         transformedThumbnailCacheKey.toString().isNotBlank()
-
-    var isTargetSuccess by remember(transformedModel) { mutableStateOf(false) }
 
     val mainRequest = remember<ImageRequest>(transformedModel, transformedThumbnailCacheKey, context, loadOriginalSize) {
         val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
@@ -158,10 +153,7 @@ fun PixivAsyncImage(
             filterQuality = filterQuality,
             modifier = modifier,
             onLoading = { onLoading?.invoke() },
-            onSuccess = {
-                isTargetSuccess = true
-                onSuccess?.invoke()
-            },
+            onSuccess = { onSuccess?.invoke() },
             onError = { state ->
                 val throwable = state.result.throwable
                 if (throwable !is CancellationException) {
@@ -191,10 +183,7 @@ fun PixivAsyncImage(
                 filterQuality = filterQuality,
                 modifier = Modifier.matchParentSize(),
                 onLoading = { onLoading?.invoke() },
-                onSuccess = {
-                    isTargetSuccess = true
-                    onSuccess?.invoke()
-                },
+                onSuccess = { onSuccess?.invoke() },
                 onError = { state ->
                     val throwable = state.result.throwable
                     if (throwable !is CancellationException) {

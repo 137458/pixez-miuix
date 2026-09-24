@@ -11,27 +11,22 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.libs.liquid.lens
 import com.perol.pixez.shared.ui.libs.liquid.vibrancy
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
@@ -43,7 +38,6 @@ import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.graphics.RectangleShape
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -225,34 +219,6 @@ fun Modifier.backdropBlur(
 }
 
 /**
- * 顶栏专用背景毛玻璃模糊 Modifier。
- *
- * @param backdrop 全局或页面层级的 Backdrop 采样源。若为 null 则保持原样。
- * @param tintColor 表面着色，默认取当前主题表面色。
- * @param tintAlpha 表面着色不透明度，默认 0.96f 高密度磨砂。
- */
-@Deprecated(
-    message = "Use BlurredBar wrapper instead.",
-    replaceWith = ReplaceWith("this"),
-)
-fun Modifier.topAppBarBlur(
-    backdrop: Backdrop?,
-    tintColor: Color = Color.Unspecified,
-    tintAlpha: Float = 0.96f,
-    blurRadius: Dp = 20.dp,
-): Modifier = if (backdrop != null) {
-    this.backdropBlur(
-        backdrop = backdrop,
-        shape = RectangleShape,
-        blurRadius = blurRadius,
-        tintColor = tintColor,
-        tintAlpha = tintAlpha,
-    )
-} else {
-    this
-}
-
-/**
  * 安全挂载 layerBackdrop 采样源的扩展 Modifier。
  * 当 backdrop 为非 null 时注册为 Backdrop 图层采样源，为 null 时保持原样。
  */
@@ -288,43 +254,4 @@ fun Modifier.liquidGlass(
 } else {
     val color = if (tintColor != Color.Unspecified) tintColor else Color.White
     this.background(color.copy(alpha = tintAlpha), shape)
-}
-
-/**
- * Liquid Glass Icon Button with real backdrop blur.
- */
-@Composable
-fun LiquidGlassIconButton(
-    backdrop: Backdrop?,
-    imageVector: ImageVector,
-    contentDescription: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: Dp = 44.dp,
-    shape: Shape = CircleShape,
-    tint: Color = MiuixTheme.colorScheme.onSurface,
-) {
-    val surfaceColor = MiuixTheme.colorScheme.surface
-    Box(
-        modifier = modifier
-            .size(size)
-            .liquidGlass(
-                backdrop = backdrop,
-                shape = shape,
-                tintColor = surfaceColor,
-                tintAlpha = 0.50f,
-            )
-            .clip(shape)
-            .clickable(
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
-    }
 }

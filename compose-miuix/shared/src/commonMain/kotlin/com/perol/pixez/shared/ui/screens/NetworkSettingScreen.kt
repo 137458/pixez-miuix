@@ -213,7 +213,7 @@ fun NetworkSettingScreen(
                         top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                             BasicComponent(
                                 title = DEFAULT_IMAGE_HOST,
-                                summary = "i.pximg.net",
+                                summary = DEFAULT_IMAGE_HOST,
                                 onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
                                 endActions = {
                                     CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
@@ -221,7 +221,7 @@ fun NetworkSettingScreen(
                             )
                             BasicComponent(
                                 title = MIRROR_IMAGE_HOST,
-                                summary = "pixiv.re",
+                                summary = MIRROR_IMAGE_HOST,
                                 onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
                                 endActions = {
                                     CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)

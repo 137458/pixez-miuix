@@ -143,7 +143,8 @@ fun UserDetailScreen(
     var isFollowed by rememberSaveable(userDetail) {
         mutableStateOf(userDetail?.user?.isFollowed ?: false)
     }
-    var isFollowLoading by rememberSaveable { mutableStateOf(false) }
+    // 进行中标志使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免关注按钮被永久禁用。
+    var isFollowLoading by remember { mutableStateOf(false) }
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }

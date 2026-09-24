@@ -394,21 +394,25 @@ fun UpdateSettingScreen(
                                                 isDownloading = true
                                                 downloadProgress = 0f
                                                 coroutineScope.launch {
-                                                    val result = com.perol.pixez.shared.platform.AppUpdateDownloader().download(
-                                                        downloadUrl = downloadUrl,
-                                                        fileName = fileName,
-                                                        onProgress = { progress, downloaded, total ->
-                                                            downloadProgress = progress
-                                                            downloadedBytes = downloaded
-                                                            totalBytes = total
-                                                        },
-                                                    )
-                                                    isDownloading = false
-                                                    result.onSuccess { path ->
-                                                        downloadedFilePath = path
-                                                        com.perol.pixez.shared.platform.AppInstaller().install(path)
-                                                    }.onFailure { error ->
-                                                        toastMessage = error.message ?: strings.updateDownloadFailed
+                                                    try {
+                                                        val result = com.perol.pixez.shared.platform.AppUpdateDownloader().download(
+                                                            downloadUrl = downloadUrl,
+                                                            fileName = fileName,
+                                                            onProgress = { progress, downloaded, total ->
+                                                                downloadProgress = progress
+                                                                downloadedBytes = downloaded
+                                                                totalBytes = total
+                                                            },
+                                                        )
+                                                        result.onSuccess { path ->
+                                                            downloadedFilePath = path
+                                                            com.perol.pixez.shared.platform.AppInstaller().install(path)
+                                                        }.onFailure { error ->
+                                                            toastMessage = error.message ?: strings.updateDownloadFailed
+                                                        }
+                                                    } finally {
+                                                        // 取消或异常时同样复位，避免下载按钮被永久禁用。
+                                                        isDownloading = false
                                                     }
                                                 }
                                             } else {

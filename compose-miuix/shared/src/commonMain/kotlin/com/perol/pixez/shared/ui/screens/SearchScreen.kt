@@ -157,26 +157,31 @@ fun SearchScreen(
     }
 
     // 筛选条件变化时持久化回写设置。
+    // 首帧的值本身就来自设置，比较后再写入，避免重复持久化与 changeVersion 无谓自增。
     LaunchedEffect(sort) {
-        settingsRepository.searchSort = sort
+        if (settingsRepository.searchSort != sort) settingsRepository.searchSort = sort
     }
     LaunchedEffect(searchTarget) {
-        settingsRepository.searchTarget = searchTarget
+        if (settingsRepository.searchTarget != searchTarget) settingsRepository.searchTarget = searchTarget
     }
     LaunchedEffect(searchAiType) {
-        settingsRepository.searchAiType = searchAiType
+        if (settingsRepository.searchAiType != searchAiType) settingsRepository.searchAiType = searchAiType
     }
     LaunchedEffect(bookmarkThreshold) {
-        settingsRepository.searchBookmarkThreshold = bookmarkThreshold
+        if (settingsRepository.searchBookmarkThreshold != bookmarkThreshold) {
+            settingsRepository.searchBookmarkThreshold = bookmarkThreshold
+        }
     }
     LaunchedEffect(ugoiraFilter) {
-        settingsRepository.searchUgoiraFilter = ugoiraFilter
+        if (settingsRepository.searchUgoiraFilter != ugoiraFilter) {
+            settingsRepository.searchUgoiraFilter = ugoiraFilter
+        }
     }
     LaunchedEffect(startDate) {
-        settingsRepository.searchStartDate = startDate
+        if (settingsRepository.searchStartDate != startDate) settingsRepository.searchStartDate = startDate
     }
     LaunchedEffect(endDate) {
-        settingsRepository.searchEndDate = endDate
+        if (settingsRepository.searchEndDate != endDate) settingsRepository.searchEndDate = endDate
     }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。

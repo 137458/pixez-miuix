@@ -152,15 +152,19 @@ fun CommentsScreen(
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    commentsState = (commentsState.orEmpty()) + response.comments
-                    nextUrl = response.nextUrl
-                }
-                .onFailure { error ->
-                    loadMoreError = error
-                }
-            isLoadingMore = false
+            try {
+                suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
+                    .onSuccess { response ->
+                        commentsState = (commentsState.orEmpty()) + response.comments
+                        nextUrl = response.nextUrl
+                    }
+                    .onFailure { error ->
+                        loadMoreError = error
+                    }
+            } finally {
+                // 取消或异常时同样复位，避免分页加载被永久阻塞。
+                isLoadingMore = false
+            }
         }
     }
 

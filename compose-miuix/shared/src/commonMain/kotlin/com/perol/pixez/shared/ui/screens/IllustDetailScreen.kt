@@ -95,7 +95,7 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.illustDragAndDropSource
-import com.perol.pixez.shared.platform.resolveOptimizedImageModel
+import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.IllustActionMenu
@@ -259,9 +259,10 @@ private fun IllustDetailSingleContent(
     }
 
     var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
-    var isBookmarkLoading by rememberSaveable { mutableStateOf(false) }
+    // 进行中标志使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免按钮被永久禁用。
+    var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
-    var isDownloading by rememberSaveable { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
@@ -270,7 +271,6 @@ private fun IllustDetailSingleContent(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
-    val context = coil3.compose.LocalPlatformContext.current
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
@@ -368,17 +368,14 @@ private fun IllustDetailSingleContent(
                                         else -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
                                     }
                                 }
-                                val pageUrl = remember(page, pageIndex, rawPageUrl, settings?.pictureSource, settings?.changeVersion) {
-                                    resolveOptimizedImageModel(
-                                        context = context,
-                                        illust = illust,
-                                        pageIndex = pageIndex,
-                                        targetUrl = rawPageUrl,
-                                        originalUrl = page.imageUrls?.original,
-                                        customBasePath = settings?.storePath,
-                                        pictureSource = settings?.pictureSource,
-                                    )
-                                }
+                                val pageUrl = rememberOptimizedImageModel(
+                                    illust = illust,
+                                    pageIndex = pageIndex,
+                                    targetUrl = rawPageUrl,
+                                    originalUrl = page.imageUrls?.original,
+                                    customBasePath = settings?.storePath,
+                                    pictureSource = settings?.pictureSource,
+                                )
                                 val thumbnailUrl = remember(page) {
                                     page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
                                 }
@@ -469,17 +466,14 @@ private fun IllustDetailSingleContent(
                                             else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
                                         }
                                     }
-                                    val singleUrl = remember(illust, rawSingleUrl, settings?.pictureSource, settings?.changeVersion) {
-                                        resolveOptimizedImageModel(
-                                            context = context,
-                                            illust = illust,
-                                            pageIndex = 0,
-                                            targetUrl = rawSingleUrl,
-                                            originalUrl = illust.metaSinglePage?.originalImageUrl,
-                                            customBasePath = settings?.storePath,
-                                            pictureSource = settings?.pictureSource,
-                                        )
-                                    }
+                                    val singleUrl = rememberOptimizedImageModel(
+                                        illust = illust,
+                                        pageIndex = 0,
+                                        targetUrl = rawSingleUrl,
+                                        originalUrl = illust.metaSinglePage?.originalImageUrl,
+                                        customBasePath = settings?.storePath,
+                                        pictureSource = settings?.pictureSource,
+                                    )
                                     val thumbnailUrl = remember(illust) {
                                         illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
                                     }
@@ -982,8 +976,7 @@ private fun IllustDetailSingleContent(
                         else -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
                     }
                 } else illust.imageUrls.large
-                resolveOptimizedImageModel(
-                    context = context,
+                rememberOptimizedImageModel(
                     illust = illust,
                     pageIndex = pageIdx,
                     targetUrl = rawTarget,
@@ -998,8 +991,7 @@ private fun IllustDetailSingleContent(
                     2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
                     else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
                 }
-                resolveOptimizedImageModel(
-                    context = context,
+                rememberOptimizedImageModel(
                     illust = illust,
                     pageIndex = 0,
                     targetUrl = rawTarget,

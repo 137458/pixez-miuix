@@ -94,22 +94,25 @@ fun NovelScreen(
         coroutineScope.launch {
             isLoading = true
             initialError = null
-            suspendRunCatchingNonCancel {
-                when (currentTab) {
-                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels()
-                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = rankingMode)
-                }
-            }.fold(
-                onSuccess = { response ->
-                    novels = response.novels
-                    nextUrl = response.nextUrl
-                    isLoading = false
-                },
-                onFailure = { error ->
-                    initialError = error
-                    isLoading = false
-                },
-            )
+            try {
+                suspendRunCatchingNonCancel {
+                    when (currentTab) {
+                        NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels()
+                        NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = rankingMode)
+                    }
+                }.fold(
+                    onSuccess = { response ->
+                        novels = response.novels
+                        nextUrl = response.nextUrl
+                    },
+                    onFailure = { error ->
+                        initialError = error
+                    },
+                )
+            } finally {
+                // 取消或异常时同样复位，避免列表被永久标记为加载中。
+                isLoading = false
+            }
         }
     }
 

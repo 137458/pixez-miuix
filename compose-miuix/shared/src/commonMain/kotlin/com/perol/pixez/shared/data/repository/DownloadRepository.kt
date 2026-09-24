@@ -369,19 +369,6 @@ class DownloadRepository(
     }
 
     /**
-     * 下载图片字节。
-     *
-     * 显式附加 Referer，满足 Pixiv 图片防盗链要求（客户端 defaultRequest 已配置，此处作为防御性补充）。
-     */
-    private suspend fun downloadBytes(url: String): ByteArray {
-        val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(url)
-        val response = httpClient.get(trustedUrl) {
-            header("Referer", com.perol.pixez.shared.ui.AppConstants.Urls.PIXIV_APP_API)
-        }
-        return response.readRawBytes()
-    }
-
-    /**
      * 从 URL 路径中提取扩展名；提取失败或不在白名单时返回 jpg。
      */
     private fun extractExtension(url: String): String {

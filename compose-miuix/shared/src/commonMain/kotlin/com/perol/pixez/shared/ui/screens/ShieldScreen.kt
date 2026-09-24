@@ -125,20 +125,23 @@ fun ShieldScreen(
     fun loadAll() {
         coroutineScope.launch {
             isLoading = true
-            suspendRunCatchingNonCancel {
-                val tags = banRepository.getAllBanTags()
-                val users = banRepository.getAllBanUsers()
-                val illusts = banRepository.getAllBanIllusts()
-                Triple(tags, users, illusts)
-            }.onSuccess { (tags, users, illusts) ->
-                banTags = tags.sortedBy { it.name.lowercase() }
-                banUsers = users.sortedBy { it.name.lowercase() }
-                banIllusts = illusts.sortedBy { it.name.lowercase() }
-            }.onFailure { e ->
-                Napier.e("加载屏蔽数据失败", e)
-                toastMessage = "${strings.loadFailed}: ${e.message}"
+            try {
+                suspendRunCatchingNonCancel {
+                    val tags = banRepository.getAllBanTags()
+                    val users = banRepository.getAllBanUsers()
+                    val illusts = banRepository.getAllBanIllusts()
+                    Triple(tags, users, illusts)
+                }.onSuccess { (tags, users, illusts) ->
+                    banTags = tags.sortedBy { it.name.lowercase() }
+                    banUsers = users.sortedBy { it.name.lowercase() }
+                    banIllusts = illusts.sortedBy { it.name.lowercase() }
+                }.onFailure { e ->
+                    Napier.e("加载屏蔽数据失败", e)
+                    toastMessage = "${strings.loadFailed}: ${e.message}"
+                }
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
@@ -347,16 +350,19 @@ fun ShieldScreen(
             onConfirm = { name ->
                 coroutineScope.launch {
                     isAddingTag = true
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanTag(name, translateName = "")
-                    }.onSuccess {
-                        showAddDialog = false
-                        loadAll()
-                    }.onFailure { e ->
-                        Napier.e("添加屏蔽标签失败", e)
-                        toastMessage = "${strings.btnAdd}${strings.loadFailed}：${e.message}"
+                    try {
+                        suspendRunCatchingNonCancel {
+                            banRepository.insertBanTag(name, translateName = "")
+                        }.onSuccess {
+                            showAddDialog = false
+                            loadAll()
+                        }.onFailure { e ->
+                            Napier.e("添加屏蔽标签失败", e)
+                            toastMessage = "${strings.btnAdd}${strings.loadFailed}：${e.message}"
+                        }
+                    } finally {
+                        isAddingTag = false
                     }
-                    isAddingTag = false
                 }
             },
         )
@@ -379,21 +385,24 @@ fun ShieldScreen(
                 showDeleteDialog = false
                 coroutineScope.launch {
                     isDeleting = true
-                    val result = suspendRunCatchingNonCancel {
-                        when (target) {
-                            is DeleteTarget.Tag -> banRepository.deleteBanTag(target.tag.id)
-                            is DeleteTarget.User -> banRepository.deleteBanUser(target.user.id)
-                            is DeleteTarget.Illust -> banRepository.deleteBanIllust(target.illust.id)
+                    try {
+                        val result = suspendRunCatchingNonCancel {
+                            when (target) {
+                                is DeleteTarget.Tag -> banRepository.deleteBanTag(target.tag.id)
+                                is DeleteTarget.User -> banRepository.deleteBanUser(target.user.id)
+                                is DeleteTarget.Illust -> banRepository.deleteBanIllust(target.illust.id)
+                            }
                         }
+                        result.onSuccess {
+                            loadAll()
+                        }.onFailure { e ->
+                            Napier.e("删除屏蔽项失败", e)
+                            toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
+                            toastType = ToastType.Error
+                        }
+                    } finally {
+                        isDeleting = false
                     }
-                    result.onSuccess {
-                        loadAll()
-                    }.onFailure { e ->
-                        Napier.e("删除屏蔽项失败", e)
-                        toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
-                        toastType = ToastType.Error
-                    }
-                    isDeleting = false
                 }
             },
         )

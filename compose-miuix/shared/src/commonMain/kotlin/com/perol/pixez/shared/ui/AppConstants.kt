@@ -20,6 +20,25 @@ object AppConstants {
 
         const val IMAGE_MAX_DECODE_DIMENSION = 4096
 
+        /**
+         * Pixivision 页面 Referer（Pixivision 域名下的图片同样启用防盗链校验）。
+         */
+        const val REFERER_PIXIVISION = "https://www.pixivision.net/"
+
+        /**
+         * 图片请求统一使用的浏览器 User-Agent。
+         */
+        const val IMAGE_REQUEST_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+        /**
+         * 相邻页预加载的解码边长上限（px）。
+         *
+         * 预加载只为写入 Coil 磁盘缓存，解码结果随即丢弃，因此按最小尺寸解码，
+         * 避免原图全尺寸位图（数十 MB）在堆内存中短暂驻留。
+         */
+        const val IMAGE_PRELOAD_DECODE_DIMENSION = 192
+
         const val DOH_URL = "https://cloudflare-dns.com/dns-query"
         const val DOH_TIMEOUT_SECONDS = 5L
         val DOH_BOOTSTRAP_HOSTS = listOf("1.1.1.1", "1.0.0.1")
