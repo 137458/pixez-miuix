@@ -23,6 +23,7 @@ import com.perol.pixez.shared.LocalDownloadRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import okio.FileSystem
@@ -174,6 +175,7 @@ fun IllustCard(
         modifier = modifier
             .fillMaxWidth()
             .illustDragAndDropSource(illust, 0)
+            .illustTransitionBounds(illust.id)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 contentDescription = illustA11yDescription

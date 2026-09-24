@@ -18,13 +18,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.geometry.Rect
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
-import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAnimatable
-import com.perol.pixez.shared.ui.navigation.animation.miuixSlideStackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
+import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -121,6 +126,8 @@ fun RootContent(
     val active = stack.active.instance
 
     val floatingBackdrop = rememberBlurBackdrop()
+    // 作品卡片几何信息源：列表卡片登记矩形，二级页面转场据此播放「卡片展开/收回」动画。
+    val sharedBounds = remember { SharedBoundsRegistry() }
     val bottomBarVisible = remember { mutableStateOf(true) }
     val mainContentBottomPadding = if (active is Child.Main && bottomBarVisible.value) 100.dp else 16.dp
     val currentLanguageNum = settingsRepository.languageNum
@@ -148,6 +155,7 @@ fun RootContent(
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalBottomBarContentPadding provides mainContentBottomPadding,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+            LocalSharedBoundsRegistry provides sharedBounds,
         ) {
             val updateInfo = appReleaseInfo
             if (showAppUpdateDialog && updateInfo != null) {
@@ -183,6 +191,18 @@ fun RootContent(
                     val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
                     availableWidth.toPx()
                 }
+                // 页面容器在窗口坐标系中的矩形，用于把卡片矩形归一化为容器内相对几何。
+                var containerBounds by remember { mutableStateOf(Rect.Zero) }
+
+                // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
+                // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
+                val stackAnimation = remember(sharedBounds, containerBounds, screenCornerRadius) {
+                    miuixCardExpandStackAnimation(
+                        registry = sharedBounds,
+                        containerBounds = containerBounds,
+                        containerCornerRadius = screenCornerRadius,
+                    )
+                }
 
                 Row(
                     modifier = Modifier
@@ -201,7 +221,10 @@ fun RootContent(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(MiuixTheme.colorScheme.surface),
+                            .background(MiuixTheme.colorScheme.surface)
+                            .onGloballyPositioned { coordinates ->
+                                containerBounds = coordinates.boundsInWindow()
+                            },
                     ) {
                         Children(
                             stack = component.stack,
@@ -210,11 +233,15 @@ fun RootContent(
                                 .blurBackdropSource(floatingBackdrop),
                             animation = predictiveBackAnimation(
                                 backHandler = component.backHandler,
-                                fallbackAnimation = miuixSlideStackAnimation(),
+                                fallbackAnimation = stackAnimation,
                                 selector = { initialBackEvent, _, _ ->
-                                    miuixSlidePredictiveBackAnimatable(
+                                    // 预测性返回手势来源页即当前栈顶页面，作品详情页可取到对应卡片矩形。
+                                    miuixCardExpandPredictiveBackAnimatable(
                                         initialBackEvent = initialBackEvent,
+                                        registry = sharedBounds,
+                                        illustId = (active as? Child.IllustDetail)?.illustId,
                                         containerWidthPx = containerWidthPx,
+                                        containerBounds = containerBounds,
                                         deviceCornerRadius = screenCornerRadius,
                                     )
                                 },
