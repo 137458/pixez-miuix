@@ -6,8 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -31,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,10 +40,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -54,12 +50,8 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.isCtrlPressed as pointerIsCtrlPressed
-import androidx.compose.ui.input.pointer.isMetaPressed as pointerIsMetaPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
@@ -72,9 +64,11 @@ import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
@@ -87,6 +81,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.engawapg.lib.zoomable.MouseWheelZoom
+import net.engawapg.lib.zoomable.ScrollGesturePropagation
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.toggleScale
+import net.engawapg.lib.zoomable.zoomable
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
@@ -140,7 +139,6 @@ fun IllustFullScreenViewer(
     }
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    var currentPageScale by remember { mutableFloatStateOf(1f) }
     var showControls by remember { mutableStateOf(true) }
 
     val internalBackdrop = if (isRuntimeShaderSupported()) {
@@ -294,6 +292,7 @@ fun IllustFullScreenViewer(
                                 zoomQuality = zoomQuality,
                                 previewUrl = previewUrl,
                                 isVerticalMode = true,
+                                isCurrentPage = true,
                                 onTap = { showControls = !showControls },
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -305,7 +304,6 @@ fun IllustFullScreenViewer(
                 } else {
                     HorizontalPager(
                         state = pagerState,
-                        userScrollEnabled = currentPageScale <= 1.05f,
                         modifier = Modifier.fillMaxSize(),
                     ) { pageIndex ->
                         ViewerPageItem(
@@ -315,12 +313,8 @@ fun IllustFullScreenViewer(
                             zoomQuality = zoomQuality,
                             previewUrl = previewUrl,
                             isVerticalMode = false,
+                            isCurrentPage = pagerState.currentPage == pageIndex,
                             onTap = { showControls = !showControls },
-                            onScaleChanged = { scale ->
-                                if (pagerState.currentPage == pageIndex) {
-                                    currentPageScale = scale
-                                }
-                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -333,8 +327,8 @@ fun IllustFullScreenViewer(
                     zoomQuality = zoomQuality,
                     previewUrl = previewUrl,
                     isVerticalMode = false,
+                    isCurrentPage = true,
                     onTap = { showControls = !showControls },
-                    onScaleChanged = { scale -> currentPageScale = scale },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -589,9 +583,9 @@ private fun ViewerPageItem(
     zoomQuality: Int,
     previewUrl: String?,
     isVerticalMode: Boolean,
+    isCurrentPage: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
-    onScaleChanged: ((Float) -> Unit)? = null,
 ) {
     val settings = LocalSettingsRepository.current
     val page = illust.metaPages.getOrNull(pageIndex)
@@ -631,20 +625,30 @@ private fun ViewerPageItem(
             illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
         }
     }
+    val contentSize = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            Size(illust.width.toFloat(), illust.height.toFloat())
+        } else {
+            Size.Zero
+        }
+    }
 
     ZoomableImage(
         model = zoomUrl,
         thumbnailUrl = thumbnailUrl,
         contentDescription = if (page != null) "${illust.title} ($pageIndex)" else illust.title,
-        onTap = onTap,
-        onScaleChanged = onScaleChanged,
+        contentSize = contentSize,
         isVerticalMode = isVerticalMode,
+        isCurrentPage = isCurrentPage,
+        onTap = onTap,
         modifier = modifier,
     )
 }
 
 /**
- * 支持双指手势平滑缩放、鼠标滚轮定点缩放、双击放大/重置与边界限制拖拽平移的图片组件。
+ * 基于 `net.engawapg.lib.zoomable` 的手势缩放图片组件：
+ * 支持双指焦点中心缩放 (Pinch-to-zoom)、双击弹性动画缩放、单指拖拽惯性滑动 (Fling)、
+ * 精准 ContentScale.Fit 边界约束以及与 HorizontalPager / LazyColumn 的边缘嵌套滑动让渡。
  */
 @Composable
 private fun ZoomableImage(
@@ -652,21 +656,30 @@ private fun ZoomableImage(
     thumbnailUrl: Any?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    contentSize: Size = Size.Zero,
     isVerticalMode: Boolean = false,
+    isCurrentPage: Boolean = true,
     onTap: () -> Unit = {},
-    onScaleChanged: ((Float) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
     val coroutineScope = rememberCoroutineScope()
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    val zoomState = rememberZoomState(
+        maxScale = 8f,
+        contentSize = contentSize,
+    )
     var isLoading by remember(model) { mutableStateOf(true) }
     var isError by remember(model) { mutableStateOf(false) }
     var reloadTrigger by remember { mutableIntStateOf(0) }
     var autoRetryCount by remember(model) { mutableIntStateOf(0) }
     var showLoadingIndicator by remember(model) { mutableStateOf(false) }
+
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage && zoomState.scale > 1f) {
+            zoomState.reset()
+        }
+    }
 
     LaunchedEffect(isLoading, model) {
         if (isLoading) {
@@ -680,84 +693,7 @@ private fun ZoomableImage(
     Box(
         modifier = modifier
             .clipToBounds()
-            .pointerInput(isVerticalMode) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        if (event.type == PointerEventType.Scroll) {
-                            val change = event.changes.firstOrNull() ?: continue
-                            val scrollDelta = change.scrollDelta.y
-                            if (scrollDelta != 0f) {
-                                val isCtrlDown = event.keyboardModifiers.pointerIsCtrlPressed || event.keyboardModifiers.pointerIsMetaPressed
-                                if (isVerticalMode && scale <= 1.05f && !isCtrlDown) {
-                                    continue
-                                }
-                                val zoomFactor = if (scrollDelta < 0f) 1.15f else 0.8695f
-                                val newScale = (scale * zoomFactor).coerceIn(1f, 8f)
-                                val mousePos = change.position
-                                val center = Offset(size.width / 2f, size.height / 2f)
-
-                                if (newScale > 1.05f) {
-                                    val scaleRatio = newScale / scale
-                                    val newOffset = (offset + (center - mousePos)) * scaleRatio - (center - mousePos)
-                                    val maxOffsetX = (size.width * (newScale - 1f)) / 2f
-                                    val maxOffsetY = (size.height * (newScale - 1f)) / 2f
-                                    offset = Offset(
-                                        newOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
-                                        newOffset.y.coerceIn(-maxOffsetY, maxOffsetY),
-                                    )
-                                } else {
-                                    offset = Offset.Zero
-                                }
-                                scale = newScale
-                                onScaleChanged?.invoke(newScale)
-                                change.consume()
-                            }
-                        }
-                    }
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = { tapOffset ->
-                        com.perol.pixez.shared.platform.performHapticFeedback(com.perol.pixez.shared.platform.HapticType.Tick)
-                        if (scale > 1.05f) {
-                            scale = 1f
-                            offset = Offset.Zero
-                            onScaleChanged?.invoke(1f)
-                        } else {
-                            scale = 2.5f
-                            val center = Offset(size.width / 2f, size.height / 2f)
-                            val targetOffset = (center - tapOffset) * 1.5f
-                            val maxOffsetX = (size.width * 1.5f) / 2f
-                            val maxOffsetY = (size.height * 1.5f) / 2f
-                            offset = Offset(
-                                targetOffset.x.coerceIn(-maxOffsetX, maxOffsetX),
-                                targetOffset.y.coerceIn(-maxOffsetY, maxOffsetY),
-                            )
-                            onScaleChanged?.invoke(2.5f)
-                        }
-                    },
-                    onTap = { onTap() },
-                )
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 8f)
-                    scale = newScale
-                    onScaleChanged?.invoke(newScale)
-                    if (newScale > 1.05f) {
-                        val maxOffsetX = (size.width * (newScale - 1f)) / 2f
-                        val maxOffsetY = (size.height * (newScale - 1f)) / 2f
-                        val newOffsetX = (offset.x + pan.x * newScale).coerceIn(-maxOffsetX, maxOffsetX)
-                        val newOffsetY = (offset.y + pan.y * newScale).coerceIn(-maxOffsetY, maxOffsetY)
-                        offset = Offset(newOffsetX, newOffsetY)
-                    } else {
-                        offset = Offset.Zero
-                    }
-                }
-            }
-            .pointerHoverIcon(if (scale > 1.05f) PointerIcon.Hand else PointerIcon.Default),
+            .pointerHoverIcon(if (zoomState.scale > 1.05f) PointerIcon.Hand else PointerIcon.Default),
         contentAlignment = Alignment.Center,
     ) {
         val effectiveModel = remember(model, reloadTrigger) {
@@ -813,12 +749,20 @@ private fun ZoomableImage(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = offset.x
-                    translationY = offset.y
-                },
+                .zoomable(
+                    zoomState = zoomState,
+                    scrollGesturePropagation = ScrollGesturePropagation.ContentEdge,
+                    mouseWheelZoom = if (isVerticalMode) {
+                        MouseWheelZoom.EnabledWithCtrlKey
+                    } else {
+                        MouseWheelZoom.Enabled
+                    },
+                    onTap = { onTap() },
+                    onDoubleTap = { position ->
+                        performHapticFeedback(HapticType.Tick)
+                        zoomState.toggleScale(2.5f, position)
+                    },
+                ),
         )
 
         // 高清原图加载中指示器（轻量悬浮暗色胶囊，防抖避免闪烁）

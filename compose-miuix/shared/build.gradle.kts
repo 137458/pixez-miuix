@@ -30,8 +30,6 @@ kotlin {
         }
     }
 
-    macosArm64()
-
     sourceSets {
         val desktopMain by getting
         val desktopTest by getting
@@ -53,6 +51,7 @@ kotlin {
 
             // Kyant0 Backdrop (Liquid Glass & Realtime Blur Multiplatform)
             implementation(libs.backdrop)
+            implementation(libs.zoomable)
 
             // Ktor
             implementation(libs.ktor.client.core)
@@ -110,11 +109,6 @@ kotlin {
         }
 
         iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
-            implementation(libs.sqldelight.native.driver)
-        }
-
-        macosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native.driver)
         }

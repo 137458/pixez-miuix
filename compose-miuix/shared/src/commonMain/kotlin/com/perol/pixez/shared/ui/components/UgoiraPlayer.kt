@@ -57,16 +57,18 @@ import kotlinx.datetime.Clock
 import okio.FileSystem
 import okio.Path
 import org.jetbrains.compose.resources.decodeToImageBitmap
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.ui.AppConstants
+import net.engawapg.lib.zoomable.MouseWheelZoom
+import net.engawapg.lib.zoomable.rememberZoomState
+import net.engawapg.lib.zoomable.toggleScale
+import net.engawapg.lib.zoomable.zoomable
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -549,40 +551,23 @@ fun UgoiraPlayer(
         ) {
             PlatformBackHandler(onBack = { isFullScreen = false })
 
-            var fullScale by remember { mutableFloatStateOf(1f) }
-            var fullOffset by remember { mutableStateOf(Offset.Zero) }
+            val ugoiraContentSize = remember(illust.width, illust.height) {
+                if (illust.width > 0 && illust.height > 0) {
+                    Size(illust.width.toFloat(), illust.height.toFloat())
+                } else {
+                    Size.Zero
+                }
+            }
+            val fullZoomState = rememberZoomState(
+                maxScale = 5f,
+                contentSize = ugoiraContentSize,
+            )
             var showFullControls by remember { mutableStateOf(true) }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                showFullControls = !showFullControls
-                            },
-                            onDoubleTap = {
-                                if (fullScale > 1.05f) {
-                                    fullScale = 1f
-                                    fullOffset = Offset.Zero
-                                } else {
-                                    fullScale = 2.5f
-                                }
-                            },
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val newScale = (fullScale * zoom).coerceIn(0.8f, 5f)
-                            fullScale = newScale
-                            if (newScale > 1.05f) {
-                                fullOffset += pan
-                            } else {
-                                fullOffset = Offset.Zero
-                            }
-                        }
-                    },
+                    .background(Color.Black),
                 contentAlignment = Alignment.Center,
             ) {
                 val currentBitmap = readyState.provider.getFrameBitmap(currentFrameIndex)
@@ -593,12 +578,15 @@ fun UgoiraPlayer(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = fullScale
-                                scaleY = fullScale
-                                translationX = fullOffset.x
-                                translationY = fullOffset.y
-                            },
+                            .zoomable(
+                                zoomState = fullZoomState,
+                                mouseWheelZoom = MouseWheelZoom.Enabled,
+                                onTap = { showFullControls = !showFullControls },
+                                onDoubleTap = { position ->
+                                    performHapticFeedback(HapticType.Tick)
+                                    fullZoomState.toggleScale(2.5f, position)
+                                },
+                            ),
                     )
                 }
 

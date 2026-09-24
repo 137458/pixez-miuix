@@ -36,6 +36,7 @@ navigationevent = "1.1.2"
 napier = "2.7.1"
 kotlinx-datetime = "0.6.2"
 backdrop = "2.0.0"
+zoomable = "2.14.0"
 
 # 测试
 junit = "4.13.2"
@@ -46,6 +47,7 @@ junit = "4.13.2"
 
 # Backdrop / Liquid Glass
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
+zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 
 # MIUIX
 miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }

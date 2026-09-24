@@ -29,8 +29,6 @@ kotlin {
         }
     }
 
-    macosArm64()
-
     sourceSets {
         val desktopMain by getting
         val desktopTest by getting
