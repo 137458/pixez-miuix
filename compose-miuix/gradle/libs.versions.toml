@@ -5,7 +5,7 @@ compose = "1.12.0"
 android-gradle-plugin = "8.13.0"
 
 # MIUIX
-miuix = "0.9.4-rc01"
+miuix = "0.9.4"
 
 # KMP / Android 基础
 androidx-activity-compose = "1.10.1"
@@ -32,7 +32,7 @@ okhttp = "4.12.0"
 # DI / 导航 / 工具
 # DI / 导航 / 工具 / 特效
 decompose = "3.3.0"
-navigationevent = "1.1.0"
+navigationevent = "1.1.2"
 napier = "2.7.1"
 kotlinx-datetime = "0.6.2"
 backdrop = "2.0.0"
@@ -97,7 +97,7 @@ decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decom
 decompose-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
 
 # Navigation Event
-navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
+navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 
 
 # Logging

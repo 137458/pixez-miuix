@@ -123,7 +123,7 @@ kotlin {
 
 android {
     namespace = "com.perol.pixez.shared"
-    // MIUIX 0.9.4-rc01 要求 compileSdk >= 36
+    // MIUIX 0.9.4 要求 compileSdk >= 36
     compileSdk = 36
 
     defaultConfig {
