@@ -273,6 +273,8 @@ fun SearchScreen(
                         },
                     )
 
+                    val queryTarget = remember(query) { parseSearchQueryTarget(query) }
+
                     SearchInputBar(
                         isSearchCollapsed = isSearchCollapsed,
                         query = query,
@@ -281,12 +283,24 @@ fun SearchScreen(
                             if (it.isBlank()) isSearching = false
                         },
                         onSearch = {
-                            if (query.isNotBlank()) {
-                                isSearching = true
+                            val trimmed = query.trim()
+                            if (trimmed.isNotBlank()) {
                                 // 将新搜索词加入历史（去重，最多保留 20 条）。
                                 updateHistory(
-                                    (listOf(query) + searchHistory.filter { it != query }).take(20)
+                                    (listOf(trimmed) + searchHistory.filter { it != trimmed }).take(20)
                                 )
+                                when (val target = parseSearchQueryTarget(trimmed)) {
+                                    is SearchQueryTarget.IllustId -> onIllustClick(target.id)
+                                    is SearchQueryTarget.UserId -> onUserClick(target.id)
+                                    is SearchQueryTarget.NumericId -> {
+                                        if (searchTypeIndex == 1) {
+                                            onUserClick(target.id)
+                                        } else {
+                                            onIllustClick(target.id)
+                                        }
+                                    }
+                                    null -> isSearching = true
+                                }
                             }
                         },
                     )
@@ -378,6 +392,7 @@ fun SearchScreen(
                 }
             } else {
                 val trendResult = trendState.value
+                val currentTarget = remember(query) { parseSearchQueryTarget(query) }
                 SearchSuggestions(
                     trendTags = trendResult?.getOrNull().orEmpty(),
                     searchHistory = searchHistory,
@@ -391,9 +406,23 @@ fun SearchScreen(
                         end = 0.dp,
                         bottom = LocalBottomBarContentPadding.current,
                     ),
+                    queryTarget = currentTarget,
+                    onIllustIdClick = onIllustClick,
+                    onUserIdClick = onUserClick,
                     onTagClick = { tag ->
-                        query = tag
-                        isSearching = true
+                        val target = parseSearchQueryTarget(tag)
+                        if (target != null) {
+                            when (target) {
+                                is SearchQueryTarget.IllustId -> onIllustClick(target.id)
+                                is SearchQueryTarget.UserId -> onUserClick(target.id)
+                                is SearchQueryTarget.NumericId -> {
+                                    if (searchTypeIndex == 1) onUserClick(target.id) else onIllustClick(target.id)
+                                }
+                            }
+                        } else {
+                            query = tag
+                            isSearching = true
+                        }
                     },
                     onHistoryRemove = { history ->
                         updateHistory(searchHistory.filter { it != history })
@@ -424,4 +453,37 @@ data class SearchFilterState(
         get() = bookmarkThreshold > 0 || searchAiType != 0 || ugoiraFilter != 0 || ratioFilter != 0 ||
             startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
             hIsNotAllow
+}
+
+sealed interface SearchQueryTarget {
+    val id: Int
+    data class NumericId(override val id: Int) : SearchQueryTarget
+    data class IllustId(override val id: Int) : SearchQueryTarget
+    data class UserId(override val id: Int) : SearchQueryTarget
+}
+
+private val ILLUST_URL_REGEX = Regex("""(?:artworks/|illust_id=|pixiv://illusts?/)(\d+)""", RegexOption.IGNORE_CASE)
+private val USER_URL_REGEX = Regex("""(?:users/|member\.php\?id=|pixiv://users?/)(\d+)""", RegexOption.IGNORE_CASE)
+
+internal fun parseSearchQueryTarget(rawQuery: String): SearchQueryTarget? {
+    val trimmed = rawQuery.trim()
+    if (trimmed.isEmpty()) return null
+
+    if (trimmed.all { it.isDigit() }) {
+        val numeric = trimmed.toIntOrNull()
+        if (numeric != null && numeric > 0) {
+            return SearchQueryTarget.NumericId(numeric)
+        }
+        return null
+    }
+
+    ILLUST_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 }?.let {
+        return SearchQueryTarget.IllustId(it)
+    }
+
+    USER_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 }?.let {
+        return SearchQueryTarget.UserId(it)
+    }
+
+    return null
 }

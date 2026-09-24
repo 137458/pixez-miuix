@@ -56,6 +56,9 @@ internal fun SearchSuggestions(
     onHistoryRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
+    queryTarget: SearchQueryTarget? = null,
+    onIllustIdClick: (Int) -> Unit = {},
+    onUserIdClick: (Int) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues? = null,
 ) {
@@ -75,6 +78,39 @@ internal fun SearchSuggestions(
             contentPadding = effectiveContentPadding,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+        if (queryTarget != null) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    if (queryTarget !is SearchQueryTarget.UserId) {
+                        Text(
+                            text = "${strings.copyTextChipIllustId}: ${queryTarget.id}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onIllustIdClick(queryTarget.id) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.primary,
+                        )
+                    }
+                    if (queryTarget !is SearchQueryTarget.IllustId) {
+                        Text(
+                            text = "${strings.copyTextChipUserId}: ${queryTarget.id}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onUserIdClick(queryTarget.id) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             SmallTitle(
                 text = strings.searchHotTags,
