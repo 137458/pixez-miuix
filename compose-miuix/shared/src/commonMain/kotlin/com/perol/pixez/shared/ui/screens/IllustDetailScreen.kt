@@ -323,38 +323,39 @@ private fun IllustDetailSingleContent(
             }
         }
 
-        IllustDetailTopBarSection(
-            illust = illust,
-            isBookmarked = isBookmarked,
-            isBookmarkLoading = isBookmarkLoading,
-            isDownloading = isDownloading,
-            isBanned = isBanned,
-            settings = settings,
-            strings = strings,
-            detailBackdrop = detailBackdrop,
-            collapseProgressProvider = { collapseProgressState.value },
-            bookmarkHeartScale = bookmarkHeartScale,
-            coroutineScope = coroutineScope,
-            repository = repository,
-            bookmarkRepository = bookmarkRepository,
-            downloadRepository = downloadRepository,
-            banRepository = banRepository,
-            onBookmarkedChange = { isBookmarked = it },
-            onBookmarkLoadingChange = { isBookmarkLoading = it },
-            onBookmarkErrorChange = { bookmarkError = it },
-            onDownloadingChange = { isDownloading = it },
-            onToast = { toastMessage = it },
-            onBanSuccess = { isBanned = true },
-            onBack = onBack,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
-
         val fullScreenPage = fullScreenPageIndex
-        if (fullScreenPage != null && illust != null) {
+        if (fullScreenPage == null) {
+            IllustDetailTopBarSection(
+                illust = illust,
+                isBookmarked = isBookmarked,
+                isBookmarkLoading = isBookmarkLoading,
+                isDownloading = isDownloading,
+                isBanned = isBanned,
+                settings = settings,
+                strings = strings,
+                detailBackdrop = detailBackdrop,
+                collapseProgressProvider = { collapseProgressState.value },
+                bookmarkHeartScale = bookmarkHeartScale,
+                coroutineScope = coroutineScope,
+                repository = repository,
+                bookmarkRepository = bookmarkRepository,
+                downloadRepository = downloadRepository,
+                banRepository = banRepository,
+                onBookmarkedChange = { isBookmarked = it },
+                onBookmarkLoadingChange = { isBookmarkLoading = it },
+                onBookmarkErrorChange = { bookmarkError = it },
+                onDownloadingChange = { isDownloading = it },
+                onToast = { toastMessage = it },
+                onBanSuccess = { isBanned = true },
+                onBack = onBack,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        } else if (illust != null) {
             IllustDetailFullScreenOverlay(
                 illust = illust,
                 pageIndex = fullScreenPage,
                 settings = settings,
+                repository = repository,
                 downloadRepository = downloadRepository,
                 detailBackdrop = detailBackdrop,
                 onToast = { toastMessage = it },

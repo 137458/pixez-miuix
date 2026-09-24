@@ -170,6 +170,7 @@ internal fun IllustDetailSinglePageImage(
         UgoiraPlayer(
             illust = illust,
             illustRepository = repository,
+            onClick = { onPageClick(0) },
             modifier = Modifier.fillMaxWidth(),
         )
     } else {
@@ -232,6 +233,7 @@ internal fun IllustDetailFullScreenOverlay(
     illust: Illust,
     pageIndex: Int,
     settings: SettingsRepository?,
+    repository: IllustRepository,
     downloadRepository: DownloadRepository,
     detailBackdrop: LayerBackdrop?,
     onToast: (String) -> Unit,
@@ -283,6 +285,7 @@ internal fun IllustDetailFullScreenOverlay(
         initialPage = pageIdx,
         zoomQuality = settings?.zoomQuality ?: 0,
         downloadRepository = downloadRepository,
+        illustRepository = repository,
         previewUrl = currentPreviewUrl,
         onToast = onToast,
         onDismiss = onDismiss,

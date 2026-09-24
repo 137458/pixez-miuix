@@ -98,11 +98,14 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+import com.perol.pixez.shared.data.repository.IllustRepository
+
 /**
  * 插画全屏/高清缩放预览组件：
  * 支持双指平滑手势缩放 (Pinch-to-zoom)、鼠标滚轮定点缩放、鼠标拖拽平移 (Pan)、双击放大/复原 (Double-tap-to-zoom)、
  * 键盘左右方向键/翻页键切页、ESC 快速退出以及多 P 左右切页。
- * 根据 [SettingsRepository.zoomQuality] 加载对应画质大图，优先使用已有内存缓存作为过渡底图。
+ * 根据 [SettingsRepository.zoomQuality] 加载对应画质大图，优先使用已有内存缓存作为过渡底图；
+ * 当作品为 Ugoira 动图时，直接渲染无缝续播的可手势缩放动态画面，并统一使用液态玻璃顶栏。
  */
 @Composable
 fun IllustFullScreenViewer(
@@ -114,6 +117,7 @@ fun IllustFullScreenViewer(
     onDismiss: () -> Unit,
     detailBackdrop: Backdrop? = null,
     previewUrl: String? = null,
+    illustRepository: IllustRepository? = null,
 ) {
     val strings = LocalStrings.current
     val context = LocalPlatformContext.current
@@ -150,6 +154,42 @@ fun IllustFullScreenViewer(
     val effectiveBackdrop = internalBackdrop ?: detailBackdrop
     val effectiveLayerBackdrop = internalBackdrop ?: (detailBackdrop as? LayerBackdrop)
 
+    val triggerDownload: (Int) -> Unit = { currentPage ->
+        val pageNumber = currentPage + 1
+        coroutineScope.launch {
+            if (illust.type == "ugoira" && illustRepository != null) {
+                onToast("${strings.downloadStatusDownloading}…")
+                suspendRunCatchingNonCancel {
+                    val meta = illustRepository.getUgoiraMetadata(illust.id)
+                    val zipBytes = illustRepository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
+                    downloadRepository.saveUgoiraZip(
+                        illust = illust,
+                        bytes = zipBytes,
+                        zipUrl = meta.ugoiraMetadata.zipUrls.medium,
+                    )
+                }.fold(
+                    onSuccess = {
+                        performHapticFeedback(HapticType.Confirm)
+                        onToast(strings.downloadStatusSuccess)
+                    },
+                    onFailure = { e ->
+                        performHapticFeedback(HapticType.Reject)
+                        onToast("${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}")
+                    },
+                )
+            } else {
+                onToast("${strings.downloadStatusDownloading} P$pageNumber…")
+                val task = downloadRepository.download(illust, pageIndex = currentPage)
+                val msg = when (task.status) {
+                    DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
+                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                    else -> null
+                }
+                if (msg != null) onToast(msg)
+            }
+        }
+    }
+
     PlatformBackHandler(onBack = onDismiss)
 
     LaunchedEffect(Unit) {
@@ -170,18 +210,7 @@ fun IllustFullScreenViewer(
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     if ((keyEvent.isCtrlPressed || keyEvent.isMetaPressed) && keyEvent.key == Key.S) {
-                        val currentPage = currentDisplayPage
-                        val pageNumber = currentPage + 1
-                        coroutineScope.launch {
-                            onToast("${strings.downloadStatusDownloading} P$pageNumber…")
-                            val task = downloadRepository.download(illust, pageIndex = currentPage)
-                            val msg = when (task.status) {
-                                DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                else -> null
-                            }
-                            if (msg != null) onToast(msg)
-                        }
+                        triggerDownload(currentDisplayPage)
                         true
                     } else when (keyEvent.key) {
                         Key.Escape -> {
@@ -230,7 +259,14 @@ fun IllustFullScreenViewer(
                 .fillMaxSize()
                 .blurBackdropSource(internalBackdrop),
         ) {
-            if (pageCount > 1) {
+            if (illust.type == "ugoira" && illustRepository != null) {
+                ZoomableUgoiraViewer(
+                    illust = illust,
+                    illustRepository = illustRepository,
+                    onTap = { showControls = !showControls },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else if (pageCount > 1) {
                 // 多 P 相邻页静默预加载（前后各 1 页）
                 LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings?.pictureSource) {
                     val imageLoader = SingletonImageLoader.get(context)
@@ -430,20 +466,7 @@ fun IllustFullScreenViewer(
                         // 下载当前展示页
                         LiquidCircleActionButton(
                             tooltip = strings.download,
-                            onClick = {
-                                val currentPage = currentDisplayPage
-                                val pageNumber = currentPage + 1
-                                coroutineScope.launch {
-                                    onToast("${strings.downloadStatusDownloading} P$pageNumber…")
-                                    val task = downloadRepository.download(illust, pageIndex = currentPage)
-                                    val msg = when (task.status) {
-                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                        else -> null
-                                    }
-                                    if (msg != null) onToast(msg)
-                                }
-                            },
+                            onClick = { triggerDownload(currentDisplayPage) },
                             detailBackdrop = effectiveBackdrop,
                         ) {
                             Icon(

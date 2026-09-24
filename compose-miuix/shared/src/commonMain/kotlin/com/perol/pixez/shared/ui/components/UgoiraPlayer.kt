@@ -136,23 +136,46 @@ private class UgoiraFrameProvider(
     }
 }
 
+private class UgoiraReadyData(
+    val provider: UgoiraFrameProvider,
+    val tempZipPath: Path?,
+    val framesDir: Path?,
+    val zipUrl: String,
+    var currentFrameIndex: Int = 0,
+)
+
+/**
+ * 进程内轻量级最近动图会话缓存（最多保留 2 个作品），
+ * 确保从详情页内嵌视图切换到 [IllustFullScreenViewer] 全屏预览时零延迟无缝续播，不重复请求网络。
+ */
+private object UgoiraSessionCache {
+    private const val MAX_ENTRIES = 2
+    private val map = LinkedHashMap<Int, UgoiraReadyData>()
+
+    fun get(illustId: Int): UgoiraReadyData? = map[illustId]
+
+    fun put(illustId: Int, data: UgoiraReadyData) {
+        map[illustId] = data
+        while (map.size > MAX_ENTRIES) {
+            val eldestKey = map.entries.firstOrNull()?.key ?: break
+            val removed = map.remove(eldestKey)
+            removed?.tempZipPath?.let { runCatching { FileSystem.SYSTEM.delete(it) } }
+            removed?.framesDir?.let { runCatching { FileSystem.SYSTEM.deleteRecursively(it) } }
+        }
+    }
+}
+
 private sealed interface UgoiraState {
     data object Idle : UgoiraState
     data class Loading(val stageText: String) : UgoiraState
-    data class Ready(
-        val provider: UgoiraFrameProvider,
-        val tempZipPath: Path?,
-        val framesDir: Path?,
-        val zipUrl: String,
-    ) : UgoiraState
+    data class Ready(val data: UgoiraReadyData) : UgoiraState
     data class Error(val message: String) : UgoiraState
 }
-
 
 /**
  * Pixiv Ugoira 动图渲染组件：
  * 默认与普通插画图片保持一致的排版比例与铺满宽度显示，进入页面自动后台拉取帧并无缝切换为循环动态画面，
- * 点击时支持全屏手势缩放预览，不展示冗余播放器控制条与重复保存按钮（保存统一由详情页顶栏下载按钮处理）。
+ * 点击时直接触发详情页统一的 [IllustFullScreenViewer] 全屏查看器。
  */
 @Composable
 fun UgoiraPlayer(
@@ -164,11 +187,23 @@ fun UgoiraPlayer(
 ) {
     val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
-    var state by remember(illust.id) { mutableStateOf<UgoiraState>(UgoiraState.Idle) }
-    var currentFrameIndex by remember(illust.id) { mutableIntStateOf(0) }
-    var isFullScreen by remember(illust.id) { mutableStateOf(false) }
+    val cachedReady = remember(illust.id) { UgoiraSessionCache.get(illust.id) }
+    var state by remember(illust.id) {
+        mutableStateOf<UgoiraState>(
+            if (cachedReady != null) UgoiraState.Ready(cachedReady) else UgoiraState.Idle,
+        )
+    }
+    var currentFrameIndex by remember(illust.id) {
+        mutableIntStateOf(cachedReady?.currentFrameIndex ?: 0)
+    }
 
     fun loadUgoira() {
+        val existing = UgoiraSessionCache.get(illust.id)
+        if (existing != null) {
+            currentFrameIndex = existing.currentFrameIndex
+            state = UgoiraState.Ready(existing)
+            return
+        }
         scope.launch {
             state = UgoiraState.Loading(strings.ugoiraLoadingMetadata)
             try {
@@ -212,28 +247,22 @@ fun UgoiraPlayer(
                         provider.getFrameBitmap(0)
                         provider.preloadNext(0)
                     }
+                    val readyData = UgoiraReadyData(
+                        provider = provider,
+                        tempZipPath = tempZipPath,
+                        framesDir = framesDir,
+                        zipUrl = zipUrl,
+                        currentFrameIndex = 0,
+                    )
+                    UgoiraSessionCache.put(illust.id, readyData)
                     currentFrameIndex = 0
-                    state = UgoiraState.Ready(provider, tempZipPath, framesDir, zipUrl)
+                    state = UgoiraState.Ready(readyData)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Napier.e("加载动图失败 illustId=${illust.id}", e, tag = "UgoiraPlayer")
                 state = UgoiraState.Error(e.message ?: strings.ugoiraLoadFailed)
-            }
-        }
-    }
-
-    DisposableEffect(illust.id) {
-        onDispose {
-            val ready = state as? UgoiraState.Ready
-            val tempPath = ready?.tempZipPath
-            if (tempPath != null) {
-                runCatching { FileSystem.SYSTEM.delete(tempPath) }
-            }
-            val framesDir = ready?.framesDir
-            if (framesDir != null) {
-                runCatching { FileSystem.SYSTEM.deleteRecursively(framesDir) }
             }
         }
     }
@@ -248,7 +277,7 @@ fun UgoiraPlayer(
     val currentState = state
     LaunchedEffect(currentState) {
         if (currentState !is UgoiraState.Ready) return@LaunchedEffect
-        val frames = currentState.provider.frames
+        val frames = currentState.data.provider.frames
         if (frames.isEmpty()) return@LaunchedEffect
 
         var nextFrameTargetTime = Clock.System.now().toEpochMilliseconds()
@@ -257,8 +286,10 @@ fun UgoiraPlayer(
             val expectedDelay = currentFrame.delay.toLong().coerceAtLeast(10L)
             nextFrameTargetTime += expectedDelay
 
-            currentState.provider.preloadNext(currentFrameIndex)
-            currentFrameIndex = (currentFrameIndex + 1) % frames.size
+            currentState.data.provider.preloadNext(currentFrameIndex)
+            val nextIdx = (currentFrameIndex + 1) % frames.size
+            currentFrameIndex = nextIdx
+            currentState.data.currentFrameIndex = nextIdx
 
             val now = Clock.System.now().toEpochMilliseconds()
             val waitTime = nextFrameTargetTime - now
@@ -285,19 +316,13 @@ fun UgoiraPlayer(
                 when (state) {
                     is UgoiraState.Error -> loadUgoira()
                     is UgoiraState.Idle -> loadUgoira()
-                    else -> {
-                        if (onClick != null) {
-                            onClick()
-                        } else {
-                            isFullScreen = true
-                        }
-                    }
+                    else -> onClick?.invoke()
                 }
             },
         contentAlignment = Alignment.Center,
     ) {
         val readyState = state as? UgoiraState.Ready
-        val currentBitmap = readyState?.provider?.getFrameBitmap(currentFrameIndex)
+        val currentBitmap = readyState?.data?.provider?.getFrameBitmap(currentFrameIndex)
 
         if (currentBitmap != null) {
             Image(
@@ -351,98 +376,188 @@ fun UgoiraPlayer(
             }
         }
     }
+}
 
-    if (isFullScreen) {
-        Popup(
-            onDismissRequest = { isFullScreen = false },
-            properties = PopupProperties(focusable = true),
-        ) {
-            PlatformBackHandler(onBack = { isFullScreen = false })
+/**
+ * 供 [IllustFullScreenViewer] 调用的全屏可手势缩放动图渲染组件：
+ * 复用 [UgoiraSessionCache] 已解码的动图帧，并与普通图片共用同一个全屏查看器顶栏与液态玻璃材质按钮。
+ */
+@Composable
+internal fun ZoomableUgoiraViewer(
+    illust: Illust,
+    illustRepository: IllustRepository,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val strings = LocalStrings.current
+    val scope = rememberCoroutineScope()
+    val cachedReady = remember(illust.id) { UgoiraSessionCache.get(illust.id) }
+    var state by remember(illust.id) {
+        mutableStateOf<UgoiraState>(
+            if (cachedReady != null) UgoiraState.Ready(cachedReady) else UgoiraState.Idle,
+        )
+    }
+    var currentFrameIndex by remember(illust.id) {
+        mutableIntStateOf(cachedReady?.currentFrameIndex ?: 0)
+    }
 
-            val ugoiraContentSize = remember(illust.width, illust.height) {
-                if (illust.width > 0 && illust.height > 0) {
-                    Size(illust.width.toFloat(), illust.height.toFloat())
-                } else {
-                    Size.Zero
-                }
-            }
-            val fullZoomState = rememberZoomState(
-                maxScale = 8f,
-                contentSize = ugoiraContentSize,
-            )
-            var showFullControls by remember { mutableStateOf(true) }
+    fun loadUgoira() {
+        val existing = UgoiraSessionCache.get(illust.id)
+        if (existing != null) {
+            currentFrameIndex = existing.currentFrameIndex
+            state = UgoiraState.Ready(existing)
+            return
+        }
+        scope.launch {
+            state = UgoiraState.Loading(strings.ugoiraLoadingMetadata)
+            try {
+                val metadataResponse = illustRepository.getUgoiraMetadata(illust.id)
+                val zipUrl = metadataResponse.ugoiraMetadata.zipUrls.medium
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black),
-                contentAlignment = Alignment.Center,
-            ) {
-                val ready = state as? UgoiraState.Ready
-                val fullBitmap = ready?.provider?.getFrameBitmap(currentFrameIndex)
-                if (fullBitmap != null) {
-                    Image(
-                        bitmap = fullBitmap,
-                        contentDescription = illust.title,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .zoomable(
-                                zoomState = fullZoomState,
-                                mouseWheelZoom = MouseWheelZoom.Enabled,
-                                onTap = { showFullControls = !showFullControls },
-                                onDoubleTap = { position ->
-                                    performHapticFeedback(HapticType.Tick)
-                                    fullZoomState.toggleScale(2.5f, position)
-                                },
-                            ),
-                    )
-                } else {
-                    PixivAsyncImage(
-                        model = illust.imageUrls.large.ifEmpty { illust.imageUrls.medium },
-                        contentDescription = illust.title,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .zoomable(
-                                zoomState = fullZoomState,
-                                mouseWheelZoom = MouseWheelZoom.Enabled,
-                                onTap = { showFullControls = !showFullControls },
-                                onDoubleTap = { position ->
-                                    performHapticFeedback(HapticType.Tick)
-                                    fullZoomState.toggleScale(2.5f, position)
-                                },
-                            ),
-                    )
+                state = UgoiraState.Loading(strings.ugoiraDownloading)
+                val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)
+
+                val tempZipPath = withContext(Dispatchers.IO) {
+                    val cacheDir = getAppCacheDirectory()
+                    val path = cacheDir / "ugoira_temp_${illust.id}.zip"
+                    runCatching {
+                        FileSystem.SYSTEM.write(path) {
+                            write(zipBytes)
+                        }
+                        path
+                    }.getOrNull()
                 }
 
-                // 顶部返回按钮
-                AnimatedVisibility(
-                    visible = showFullControls,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(16.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .clickable { isFullScreen = false }
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.ugoiraExitFullScreen,
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
+                state = UgoiraState.Loading(strings.ugoiraExtracting)
+                val (framesDir, validFrames) = withContext(Dispatchers.IO) {
+                    val cacheDir = getAppCacheDirectory()
+                    val dir = cacheDir / "ugoira_frames_${illust.id}"
+                    FileSystem.SYSTEM.createDirectories(dir)
+                    val frameMap = UgoiraZipExtractor().extractFrames(zipBytes)
+                    for ((fileName, bytes) in frameMap) {
+                        FileSystem.SYSTEM.write(dir / fileName) {
+                            write(bytes)
+                        }
                     }
+                    val valid = metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
+                    dir to valid
                 }
+
+                if (validFrames.isEmpty()) {
+                    state = UgoiraState.Error(strings.ugoiraDecodeFailed)
+                } else {
+                    val provider = UgoiraFrameProvider(validFrames, framesDir)
+                    withContext(Dispatchers.Default) {
+                        provider.getFrameBitmap(0)
+                        provider.preloadNext(0)
+                    }
+                    val readyData = UgoiraReadyData(
+                        provider = provider,
+                        tempZipPath = tempZipPath,
+                        framesDir = framesDir,
+                        zipUrl = zipUrl,
+                        currentFrameIndex = 0,
+                    )
+                    UgoiraSessionCache.put(illust.id, readyData)
+                    currentFrameIndex = 0
+                    state = UgoiraState.Ready(readyData)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Napier.e("全屏加载动图失败 illustId=${illust.id}", e, tag = "UgoiraPlayer")
+                state = UgoiraState.Error(e.message ?: strings.ugoiraLoadFailed)
             }
         }
     }
+
+    LaunchedEffect(illust.id) {
+        if (state is UgoiraState.Idle) {
+            loadUgoira()
+        }
+    }
+
+    val currentState = state
+    LaunchedEffect(currentState) {
+        if (currentState !is UgoiraState.Ready) return@LaunchedEffect
+        val frames = currentState.data.provider.frames
+        if (frames.isEmpty()) return@LaunchedEffect
+
+        var nextFrameTargetTime = Clock.System.now().toEpochMilliseconds()
+        while (isActive) {
+            val currentFrame = frames.getOrNull(currentFrameIndex) ?: frames.first()
+            val expectedDelay = currentFrame.delay.toLong().coerceAtLeast(10L)
+            nextFrameTargetTime += expectedDelay
+
+            currentState.data.provider.preloadNext(currentFrameIndex)
+            val nextIdx = (currentFrameIndex + 1) % frames.size
+            currentFrameIndex = nextIdx
+            currentState.data.currentFrameIndex = nextIdx
+
+            val now = Clock.System.now().toEpochMilliseconds()
+            val waitTime = nextFrameTargetTime - now
+            if (waitTime > 0L) {
+                delay(waitTime)
+            } else if (now - nextFrameTargetTime > expectedDelay * 2) {
+                nextFrameTargetTime = now
+            }
+        }
+    }
+
+    val ugoiraContentSize = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            Size(illust.width.toFloat(), illust.height.toFloat())
+        } else {
+            Size.Zero
+        }
+    }
+    val fullZoomState = rememberZoomState(
+        maxScale = 8f,
+        contentSize = ugoiraContentSize,
+    )
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        val ready = state as? UgoiraState.Ready
+        val fullBitmap = ready?.data?.provider?.getFrameBitmap(currentFrameIndex)
+        if (fullBitmap != null) {
+            Image(
+                bitmap = fullBitmap,
+                contentDescription = illust.title,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zoomable(
+                        zoomState = fullZoomState,
+                        mouseWheelZoom = MouseWheelZoom.Enabled,
+                        onTap = { onTap() },
+                        onDoubleTap = { position ->
+                            performHapticFeedback(HapticType.Tick)
+                            fullZoomState.toggleScale(2.5f, position)
+                        },
+                    ),
+            )
+        } else {
+            PixivAsyncImage(
+                model = illust.imageUrls.large.ifEmpty { illust.imageUrls.medium },
+                thumbnailUrl = illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium },
+                contentDescription = illust.title,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zoomable(
+                        zoomState = fullZoomState,
+                        mouseWheelZoom = MouseWheelZoom.Enabled,
+                        onTap = { onTap() },
+                        onDoubleTap = { position ->
+                            performHapticFeedback(HapticType.Tick)
+                            fullZoomState.toggleScale(2.5f, position)
+                        },
+                    ),
+            )
+        }
+    }
 }
+
