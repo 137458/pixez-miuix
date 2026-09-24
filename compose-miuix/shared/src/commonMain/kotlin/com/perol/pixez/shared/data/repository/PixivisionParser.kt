@@ -107,8 +107,9 @@ object PixivisionParser {
         // 策略 1：匹配所有 <article ...> ... </article>（Pixivision 官方标准结构）
         val articleRegex = Regex("""<article\b[^>]*class=["'][^"']*\bam__work\b[^"']*["'][^>]*>([\s\S]*?)</article>""", RegexOption.IGNORE_CASE)
         for (match in articleRegex.findAll(html)) {
-            val work = parseWorkFromBlock(match.groupValues[1])
-            if (work?.arworkLink != null && seenArtworkLinks.add(work.arworkLink!!)) {
+            val work = parseWorkFromBlock(match.groupValues[1]) ?: continue
+            val artworkLink = work.arworkLink ?: continue
+            if (seenArtworkLinks.add(artworkLink)) {
                 works.add(work)
             }
         }
@@ -117,8 +118,9 @@ object PixivisionParser {
         if (works.isEmpty()) {
             val divRegex = Regex("""<div\b[^>]*class=["'][^"']*\bam__work\b[^"']*["'][^>]*>([\s\S]*?)(?=<div\b[^>]*class=["'][^"']*\bam__work\b|</main>|</body>|$)""", RegexOption.IGNORE_CASE)
             for (match in divRegex.findAll(html)) {
-                val work = parseWorkFromBlock(match.groupValues[1])
-                if (work?.arworkLink != null && seenArtworkLinks.add(work.arworkLink!!)) {
+                val work = parseWorkFromBlock(match.groupValues[1]) ?: continue
+                val artworkLink = work.arworkLink ?: continue
+                if (seenArtworkLinks.add(artworkLink)) {
                     works.add(work)
                 }
             }

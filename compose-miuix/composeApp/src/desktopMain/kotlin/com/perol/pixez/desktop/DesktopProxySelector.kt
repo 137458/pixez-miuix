@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.desktop
+package com.perol.pixez.desktop
 
 import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.WinReg
@@ -49,7 +49,10 @@ class DesktopProxySelector(
     override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
         try {
             delegate?.connectFailed(uri, sa, ioe)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            // 代理连接失败通知仅用于诊断，委派实现异常不应影响调用方
+            Napier.d("委派代理选择器连接失败回调异常 uri=$uri", e, tag = "DesktopProxy")
+        }
     }
 
     private fun getEnvProxy(uri: URI?): Proxy? {

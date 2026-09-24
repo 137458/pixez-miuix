@@ -371,11 +371,12 @@ fun UpdateSettingScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                if (downloadedFilePath != null) {
+                                val installFilePath = downloadedFilePath
+                                if (installFilePath != null) {
                                     TextButton(
                                         text = strings.updateInstallNow,
                                         onClick = {
-                                            com.perol.pixez.shared.platform.AppInstaller().install(downloadedFilePath!!)
+                                            com.perol.pixez.shared.platform.AppInstaller().install(installFilePath)
                                         },
                                         colors = ButtonDefaults.textButtonColorsPrimary(),
                                         modifier = Modifier.fillMaxWidth(),
@@ -532,10 +533,11 @@ fun UpdateSettingScreen(
         }
 
         // 官方 Miuix 风格更新弹窗
-        if (showDialog && releaseInfo != null) {
+        val dialogReleaseInfo = releaseInfo
+        if (showDialog && dialogReleaseInfo != null) {
             UpdateDialog(
                 show = showDialog,
-                releaseInfo = releaseInfo!!,
+                releaseInfo = dialogReleaseInfo,
                 onDismiss = { showDialog = false },
                 onUpdate = { url ->
                     showDialog = false

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import io.github.aakira.napier.Napier
 
 /**
  * Android 平台实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。
@@ -26,7 +27,10 @@ actual class DownloadNotifier {
             // 尝试移除旧版低优先级渠道，确保状态栏实时动态胶囊不受抑制
             try {
                 manager.deleteNotificationChannel("pixez_download_channel")
-            } catch (_: Throwable) {}
+            } catch (e: Throwable) {
+                // 旧渠道可能本身不存在，删除失败不影响后续实时进度通知
+                Napier.d("删除旧版下载通知渠道失败", e, tag = "DownloadNotifier")
+            }
 
             val existing = manager.getNotificationChannel(channelId)
             if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT) {

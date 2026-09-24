@@ -82,6 +82,7 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -156,7 +157,10 @@ fun IllustFullScreenViewer(
     LaunchedEffect(Unit) {
         try {
             focusRequester.requestFocus()
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {
+            // 窗口尚未就绪时可能无法获取焦点，不影响查看器主体功能，仅记录日志
+            Napier.w("全屏查看器请求焦点失败", e, tag = "IllustViewer")
+        }
     }
 
     Box(

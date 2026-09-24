@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import io.github.aakira.napier.Napier
 
 @Composable
 actual fun rememberDirectoryPicker(onResult: (String?) -> Unit): () -> Unit {
@@ -19,7 +20,10 @@ actual fun rememberDirectoryPicker(onResult: (String?) -> Unit): () -> Unit {
             try {
                 val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                // 持久化授权失败时本次选择的目录仍可用，但重启后需要重新授权
+                Napier.w("持久化目录访问授权失败 uri=$uri", e, tag = "DirectoryPicker")
+            }
 
             val resolvedPath = resolveTreeUriPath(uri)
             onResult(resolvedPath)

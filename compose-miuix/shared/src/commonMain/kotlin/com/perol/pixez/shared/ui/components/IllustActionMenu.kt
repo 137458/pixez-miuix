@@ -94,21 +94,21 @@ fun IllustActionMenu(
  * illust id:{id}
  * ```
  */
-fun buildIllustCopyInfo(illust: Illust): String {
+internal fun buildIllustCopyInfo(illust: Illust): String {
     return "title:${illust.title}\npainter:${illust.user.name}\nillust id:${illust.id}"
 }
 
 /**
  * 构造作品详情页链接。
  */
-fun buildIllustShareLink(illust: Illust): String {
+internal fun buildIllustShareLink(illust: Illust): String {
     return AppConstants.Urls.pixivArtworkUrl(illust.id)
 }
 
 /**
  * 构造 SauceNAO 以图搜图链接。
  */
-fun buildSauceNaoUrl(imageUrl: String): String {
+internal fun buildSauceNaoUrl(imageUrl: String): String {
     return io.ktor.http.URLBuilder(com.perol.pixez.shared.ui.AppConstants.Urls.SAUCE_NAO_SEARCH).apply {
         parameters.append("db", "999")
         parameters.append("url", imageUrl)

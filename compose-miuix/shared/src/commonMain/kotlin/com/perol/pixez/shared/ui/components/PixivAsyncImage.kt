@@ -35,6 +35,13 @@ private val PixivisionHeaders = NetworkHeaders.Builder()
     .build()
 
 /**
+ * 原图尺寸请求的内存缓存键后缀。
+ *
+ * 与列表/详情页使用的普通 URL 键隔离，避免小尺寸解码结果被全屏查看器命中。
+ */
+private const val ORIGINAL_SIZE_CACHE_KEY_SUFFIX = "#original_size"
+
+/**
  * 自动附加 Pixiv 图片必需 Referer 的 AsyncImage 包装组件。
  *
  * i.pximg.net 要求请求头 `Referer: https://app-api.pixiv.net/`，否则返回 403。
@@ -94,7 +101,12 @@ fun PixivAsyncImage(
                     httpHeaders(headers)
                     val modelStr = transformedModel?.toString()
                     if (!modelStr.isNullOrBlank()) {
-                        memoryCacheKey(modelStr)
+                        // 原图尺寸请求（全屏查看器）使用独立内存缓存键：Coil 对 Precision.INEXACT
+                        // 请求不校验缓存位图尺寸，共用普通键会命中列表/详情页的小尺寸解码结果，
+                        // 导致放大后画面模糊；独立键同时避免高清位图被列表项复用。
+                        memoryCacheKey(
+                            if (loadOriginalSize) "$modelStr$ORIGINAL_SIZE_CACHE_KEY_SUFFIX" else modelStr,
+                        )
                         diskCacheKey(modelStr)
                     }
                 }

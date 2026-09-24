@@ -141,7 +141,7 @@ fun HtmlCaptionText(
 /**
  * 解码 URL 百分号编码（例如 `%2F` -> `/`），纯 Kotlin 实现以支持跨平台。
  */
-fun decodeUrlPercent(input: String): String {
+internal fun decodeUrlPercent(input: String): String {
     if (!input.contains('%') && !input.contains('+')) return input
     val bytes = mutableListOf<Byte>()
     var i = 0
@@ -181,7 +181,7 @@ fun decodeUrlPercent(input: String): String {
 /**
  * 解包 Pixiv 外链跳转地址（jump.php），提取出真实目标 URL 并解码。
  */
-fun unwrapPixivJumpUrl(url: String): String {
+internal fun unwrapPixivJumpUrl(url: String): String {
     val jumpIndex = url.indexOf("jump.php")
     if (jumpIndex < 0) return url
     val queryIndex = url.indexOf('?', jumpIndex)
@@ -199,7 +199,7 @@ fun unwrapPixivJumpUrl(url: String): String {
 /**
  * 链接路由分发：优先将 Pixiv 站内深层链接重定向为 App 内部页面跳转，外部链接唤起浏览器。
  */
-fun handleCaptionLink(
+internal fun handleCaptionLink(
     url: String,
     onUserClick: ((Int) -> Unit)? = null,
     onIllustClick: ((Int) -> Unit)? = null,
@@ -300,7 +300,7 @@ fun handleCaptionLink(
 /**
  * 解析 Pixiv HTML 简介文案为带有 [LinkAnnotation.Url] 的 [AnnotatedString]。
  */
-fun parseHtmlCaption(
+internal fun parseHtmlCaption(
     html: String,
     linkColor: Color,
     onLinkClick: (String) -> Unit,
@@ -442,14 +442,14 @@ private val AUTO_LINK_PATTERN = Regex(
 /**
  * 清除字符串中的 HTML 标签。
  */
-fun stripHtmlTags(input: String): String {
+internal fun stripHtmlTags(input: String): String {
     return input.replace(Regex("""<[^>]*>"""), "")
 }
 
 /**
  * 去除 URL 末尾由于标点符号贴附而多匹配的符号（例如句子末尾句号、逗号等）。
  */
-fun trimTrailingUrlPunctuation(url: String): Pair<String, String> {
+internal fun trimTrailingUrlPunctuation(url: String): Pair<String, String> {
     var endIndex = url.length
     while (endIndex > 0) {
         val lastChar = url[endIndex - 1]
@@ -594,7 +594,7 @@ private fun AnnotatedString.Builder.appendPlainChunkWithAutoLinks(
 /**
  * 快速解码常见命名与数字（十进制与十六进制）类型的 HTML 实体转义字符。
  */
-fun decodeHtmlEntities(input: String): String {
+internal fun decodeHtmlEntities(input: String): String {
     if (!input.contains('&')) return input
 
     return input
