@@ -1,115 +1,53 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.ui.components.LiquidFilterChip
-import top.yukonga.miuix.kmp.blur.Backdrop
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.font.FontWeight
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.TrendTag
-import com.perol.pixez.shared.data.model.UserPreview
-import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
-import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
-import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SearchBar
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.basic.TabRow
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.VerticalScrollBar
-import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
-import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
-import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 搜索页：搜索栏 + 真实热门标签 + 历史记录，输入后展示真实搜索结果。
+ *
+ * 本函数仅保留状态声明、数据加载副作用与 Scaffold 骨架编排：
+ * 顶部栏见 [SearchTopAppBar] / [SearchInputBar] / [SearchResultFilterBar]，
+ * 结果区见 [SearchIllustResultGrid] / [SearchUserResultList]，
+ * 筛选面板见 [SearchFilterBottomSheet]，推荐区见 [SearchSuggestions]。
  */
 @Composable
 fun SearchScreen(
@@ -289,6 +227,26 @@ fun SearchScreen(
 
     val currentTopBarTitle = if (isSearching && query.isNotBlank()) query else strings.tabSearch
 
+    // 当前筛选条件快照：顶部筛选标签行、结果区与筛选抽屉共用同一份值对象。
+    val currentFilterState = SearchFilterState(
+        searchTarget = searchTarget,
+        searchAiType = searchAiType,
+        bookmarkThreshold = bookmarkThreshold,
+        ugoiraFilter = ugoiraFilter,
+        ratioFilter = ratioFilter,
+        startDate = startDate,
+        endDate = endDate,
+        hIsNotAllow = settingsRepository.hIsNotAllow,
+    )
+
+    // 顶栏返回 / 展开时统一归零滚动偏移，让大标题与搜索框平滑复位。
+    val onResetSearchScroll: () -> Unit = {
+        coroutineScope.launch {
+            scrollBehavior.state.heightOffset = 0f
+            scrollBehavior.state.contentOffset = 0f
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -297,202 +255,64 @@ fun SearchScreen(
                 scrollBehavior = scrollBehavior,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    TopAppBar(
+                    SearchTopAppBar(
                         title = currentTopBarTitle,
                         scrollBehavior = scrollBehavior,
-                        color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                        navigationIcon = {
-                            if (isSearching) {
-                                IconButton(
-                                    onClick = {
-                                        isSearching = false
-                                        query = ""
-                                        isSearchCollapsed = false
-                                        coroutineScope.launch {
-                                            scrollBehavior.state.heightOffset = 0f
-                                            scrollBehavior.state.contentOffset = 0f
-                                        }
-                                    },
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.Back,
-                                        contentDescription = strings.back,
-                                    )
-                                }
-                            }
+                        backdrop = backdrop,
+                        isSearching = isSearching,
+                        isSearchCollapsed = isSearchCollapsed,
+                        onBack = {
+                            isSearching = false
+                            query = ""
+                            isSearchCollapsed = false
+                            onResetSearchScroll()
                         },
-                        actions = {
-                            if (isSearchCollapsed) {
-                                IconButton(
-                                    onClick = {
-                                        isSearchCollapsed = false
-                                        coroutineScope.launch {
-                                            scrollBehavior.state.heightOffset = 0f
-                                            scrollBehavior.state.contentOffset = 0f
-                                        }
-                                    },
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.Search,
-                                        contentDescription = strings.tabSearch,
-                                    )
-                                }
+                        onExpand = {
+                            isSearchCollapsed = false
+                            onResetSearchScroll()
+                        },
+                    )
+
+                    SearchInputBar(
+                        isSearchCollapsed = isSearchCollapsed,
+                        query = query,
+                        onQueryChange = {
+                            query = it
+                            if (it.isBlank()) isSearching = false
+                        },
+                        onSearch = {
+                            if (query.isNotBlank()) {
+                                isSearching = true
+                                // 将新搜索词加入历史（去重，最多保留 20 条）。
+                                updateHistory(
+                                    (listOf(query) + searchHistory.filter { it != query }).take(20)
+                                )
                             }
                         },
                     )
 
-                    AnimatedVisibility(
-                        visible = !isSearchCollapsed,
-                        enter = expandVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.8f,
-                                stiffness = 500f,
-                            ),
-                        ) + fadeIn(),
-                        exit = shrinkVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.8f,
-                                stiffness = 500f,
-                            ),
-                        ) + fadeOut(),
-                    ) {
-                        SearchBar(
-                            inputField = {
-                                InputField(
-                                    query = query,
-                                    onQueryChange = {
-                                        query = it
-                                        if (it.isBlank()) isSearching = false
-                                    },
-                                    onSearch = {
-                                        if (query.isNotBlank()) {
-                                            isSearching = true
-                                            // 将新搜索词加入历史（去重，最多保留 20 条）。
-                                            updateHistory(
-                                                (listOf(query) + searchHistory.filter { it != query }).take(20)
-                                            )
-                                        }
-                                    },
-                                    expanded = false,
-                                    onExpandedChange = { },
-                                    label = strings.searchPlaceholder,
-                                )
-                            },
-                            expanded = false,
-                            onExpandedChange = { },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                        ) {
-                            // SearchBar 展开状态下的内容区域，M4 暂空。
-                        }
-                    }
-
                     if (isSearching && query.isNotBlank()) {
-                        AnimatedVisibility(
-                            visible = !isSearchCollapsed,
-                            enter = expandVertically(
-                                animationSpec = spring(
-                                    dampingRatio = 0.8f,
-                                    stiffness = 500f,
-                                ),
-                            ) + fadeIn(),
-                            exit = shrinkVertically(
-                                animationSpec = spring(
-                                    dampingRatio = 0.8f,
-                                    stiffness = 500f,
-                                ),
-                            ) + fadeOut(),
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                // 搜索类型切换：作品 / 画师
-                                TabRow(
-                                    tabs = searchTypes,
-                                    selectedTabIndex = searchTypeIndex,
-                                    onTabSelected = { searchTypeIndex = it },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                                )
-
-                                if (searchTypeIndex == 0) {
-                                    val sortLabel = when (sort) {
-                                        "date_asc" -> strings.searchSortOldest
-                                        "popular_desc" -> strings.searchSortPopular
-                                        else -> strings.searchSortLatest
-                                    }
-                                    val currentFilterState = SearchFilterState(
-                                        searchTarget = searchTarget,
-                                        searchAiType = searchAiType,
-                                        bookmarkThreshold = bookmarkThreshold,
-                                        ugoiraFilter = ugoiraFilter,
-                                        ratioFilter = ratioFilter,
-                                        startDate = startDate,
-                                        endDate = endDate,
-                                        hIsNotAllow = settingsRepository.hIsNotAllow,
-                                    )
-                                    val hasActiveFilters = currentFilterState.hasActiveFilters
-
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        LiquidFilterChip(
-                                            text = strings.searchSortLabel.format(sortLabel),
-                                            selected = sort != "date_desc",
-                                            backdrop = backdrop,
-                                            textStyle = MiuixTheme.textStyles.footnote1,
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                                            onClick = {
-                                                sort = when (sort) {
-                                                    "date_desc" -> "popular_desc"
-                                                    "popular_desc" -> "date_asc"
-                                                    else -> "date_desc"
-                                                }
-                                            },
-                                        )
-
-                                        LiquidFilterChip(
-                                            text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
-                                            selected = searchAiType != 0,
-                                            backdrop = backdrop,
-                                            textStyle = MiuixTheme.textStyles.footnote1,
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                                            onClick = {
-                                                searchAiType = if (searchAiType == 0) 1 else 0
-                                            },
-                                        )
-
-                                        if (bookmarkThreshold > 0) {
-                                            LiquidFilterChip(
-                                                text = "${bookmarkThreshold}+ ✕",
-                                                selected = true,
-                                                backdrop = backdrop,
-                                                textStyle = MiuixTheme.textStyles.footnote1,
-                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                                                onClick = {
-                                                    bookmarkThreshold = 0
-                                                },
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.weight(1f))
-
-                                        LiquidFilterChip(
-                                            text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
-                                            selected = hasActiveFilters,
-                                            backdrop = backdrop,
-                                            textStyle = MiuixTheme.textStyles.footnote1,
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                                            onClick = { showFilterSheet = true },
-                                        )
-                                    }
+                        SearchResultFilterBar(
+                            isSearchCollapsed = isSearchCollapsed,
+                            searchTypes = searchTypes,
+                            searchTypeIndex = searchTypeIndex,
+                            onSearchTypeSelected = { searchTypeIndex = it },
+                            sort = sort,
+                            onSortClick = {
+                                sort = when (sort) {
+                                    "date_desc" -> "popular_desc"
+                                    "popular_desc" -> "date_asc"
+                                    else -> "date_desc"
                                 }
-                            }
-                        }
+                            },
+                            searchAiType = searchAiType,
+                            onAiTypeClick = { searchAiType = if (searchAiType == 0) 1 else 0 },
+                            bookmarkThreshold = bookmarkThreshold,
+                            onClearBookmarkThreshold = { bookmarkThreshold = 0 },
+                            hasActiveFilters = currentFilterState.hasActiveFilters,
+                            onOpenFilter = { showFilterSheet = true },
+                            backdrop = backdrop,
+                        )
                     }
                 }
             }
@@ -516,16 +336,6 @@ fun SearchScreen(
                 .nestedScroll(searchNestedScrollConnection),
         ) {
             if (isSearching && query.isNotBlank()) {
-                val currentFilterState = SearchFilterState(
-                    searchTarget = searchTarget,
-                    searchAiType = searchAiType,
-                    bookmarkThreshold = bookmarkThreshold,
-                    ugoiraFilter = ugoiraFilter,
-                    ratioFilter = ratioFilter,
-                    startDate = startDate,
-                    endDate = endDate,
-                    hIsNotAllow = settingsRepository.hIsNotAllow,
-                )
                 when (searchTypeIndex) {
                     0 -> SearchIllustResultGrid(
                         query = query,
@@ -615,761 +425,3 @@ data class SearchFilterState(
             startDate.isNotBlank() || endDate.isNotBlank() || searchTarget != "partial_match_for_tags" ||
             hIsNotAllow
 }
-
-/**
- * 搜索筛选底部抽屉：匹配目标、AI 作品、收藏数门槛、动图过滤与时间范围。
- *
- * 采用本地草稿状态，仅在用户点击「确定」时统一提交生效，避免频繁触发网络请求。
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SearchFilterBottomSheet(
-    onDismissRequest: () -> Unit,
-    filterState: SearchFilterState,
-    onApply: (SearchFilterState) -> Unit,
-) {
-    val strings = LocalStrings.current
-    val targetOptions: List<Pair<String, String>> = listOf(
-        strings.searchTargetPartialTag to "partial_match_for_tags",
-        strings.searchTargetExactTag to "exact_match_for_tags",
-        strings.searchTargetTitleCaption to "title_and_caption",
-    )
-    val bookmarkOptions: List<Pair<String, Int>> = remember(strings) {
-        com.perol.pixez.shared.ui.AppConstants.Search.BOOKMARK_THRESHOLDS.map { threshold ->
-            if (threshold == 0) strings.searchUgoiraAll to 0
-            else "${threshold}+" to threshold
-        }
-    }
-    val ugoiraOptions: List<Pair<String, Int>> = listOf(
-        strings.searchUgoiraAll to 0,
-        strings.searchUgoiraOnly to 1,
-        strings.searchUgoiraExclude to 2,
-    )
-
-    var draftState by remember(filterState) { mutableStateOf(filterState) }
-
-    val selectedTargetIndex = targetOptions.indexOfFirst { it.second == draftState.searchTarget }.coerceAtLeast(0)
-    val selectedUgoiraIndex = ugoiraOptions.indexOfFirst { it.second == draftState.ugoiraFilter }.coerceAtLeast(0)
-
-    OverlayBottomSheet(
-        show = true,
-        title = strings.searchFilter,
-        onDismissRequest = onDismissRequest,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 8.dp,
-                    bottom = 24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
-                ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.searchTargetPartialTag)
-                TabRow(
-                    tabs = targetOptions.map { it.first },
-                    selectedTabIndex = selectedTargetIndex,
-                    onTabSelected = { draftState = draftState.copy(searchTarget = targetOptions[it].second) },
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.interactionSettingHNotAllow)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    SwitchPreference(
-                        title = strings.interactionSettingHNotAllow,
-                        summary = if (draftState.hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
-                        checked = draftState.hIsNotAllow,
-                        onCheckedChange = { draftState = draftState.copy(hIsNotAllow = it) },
-                    )
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.filterAi)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    SwitchPreference(
-                        title = strings.searchAiIncludeWorks,
-                        checked = draftState.searchAiType == 0,
-                        onCheckedChange = { draftState = draftState.copy(searchAiType = if (it) 0 else 1) },
-                    )
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.userBookmarkTab)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    bookmarkOptions.forEach { (label, value) ->
-                        LiquidFilterChip(
-                            text = label,
-                            selected = draftState.bookmarkThreshold == value,
-                            textStyle = MiuixTheme.textStyles.footnote1,
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                            onClick = { draftState = draftState.copy(bookmarkThreshold = value) },
-                        )
-                    }
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.searchTypeIllust)
-                TabRow(
-                    tabs = ugoiraOptions.map { it.first },
-                    selectedTabIndex = selectedUgoiraIndex,
-                    onTabSelected = { draftState = draftState.copy(ugoiraFilter = ugoiraOptions[it].second) },
-                )
-            }
-
-            val ratioOptions: List<Pair<String, Int>> = listOf(
-                strings.searchRatioAll to 0,
-                strings.searchRatioHorizontal to 1,
-                strings.searchRatioVertical to 2,
-                strings.searchRatioSquare to 3,
-            )
-            val selectedRatioIndex = ratioOptions.indexOfFirst { it.second == draftState.ratioFilter }.coerceAtLeast(0)
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.searchRatioTitle)
-                TabRow(
-                    tabs = ratioOptions.map { it.first },
-                    selectedTabIndex = selectedRatioIndex,
-                    onTabSelected = { draftState = draftState.copy(ratioFilter = ratioOptions[it].second) },
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallTitle(text = strings.publishDate)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextField(
-                        value = draftState.startDate,
-                        onValueChange = { draftState = draftState.copy(startDate = it) },
-                        label = strings.searchDateRangeStart,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = strings.searchDateRangeTo,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                    TextField(
-                        value = draftState.endDate,
-                        onValueChange = { draftState = draftState.copy(endDate = it) },
-                        label = strings.searchDateRangeEnd,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Button(
-                    onClick = {
-                        draftState = SearchFilterState()
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        color = MiuixTheme.colorScheme.surfaceContainer,
-                        contentColor = MiuixTheme.colorScheme.onSurface,
-                    ),
-                ) {
-                    Text(text = strings.searchResetAll)
-                }
-                Button(
-                    onClick = {
-                        onApply(
-                            draftState.copy(
-                                startDate = draftState.startDate.trim(),
-                                endDate = draftState.endDate.trim(),
-                            )
-                        )
-                        onDismissRequest()
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        color = MiuixTheme.colorScheme.primary,
-                        contentColor = MiuixTheme.colorScheme.onPrimary,
-                    ),
-                ) {
-                    Text(text = strings.confirm)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchIllustResultGrid(
-    query: String,
-    sort: String,
-    filterState: SearchFilterState,
-    repository: SearchRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
-    onIllustClick: (Int) -> Unit,
-    scrollBehavior: ScrollBehavior,
-    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    contentPadding: PaddingValues? = null,
-) {
-    val searchTarget = filterState.searchTarget
-    val searchAiType = filterState.searchAiType
-    val bookmarkThreshold = filterState.bookmarkThreshold
-    val ugoiraFilter = filterState.ugoiraFilter
-    val ratioFilter = filterState.ratioFilter
-    val startDate = filterState.startDate.takeIf { it.isNotBlank() }
-    val endDate = filterState.endDate.takeIf { it.isNotBlank() }
-    val effectiveContentPadding = contentPadding ?: PaddingValues(
-        start = 8.dp,
-        top = 8.dp,
-        end = 8.dp,
-        bottom = LocalBottomBarContentPadding.current,
-    )
-    // 根据收藏数阈值构建实际搜索词：先清除原有 \d+users入り，再按需追加 " ${value}users入り"。
-    val searchWord = remember(query, bookmarkThreshold) {
-        val cleanQuery = query.replace(Regex("""\s*\d+users入り"""), "").trim()
-        if (bookmarkThreshold > 0) "$cleanQuery ${bookmarkThreshold}users入り" else cleanQuery
-    }
-
-    // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
-    var retryCount by rememberSaveable(
-        searchWord,
-        sort,
-        searchTarget,
-        searchAiType,
-        startDate,
-        endDate,
-    ) { mutableIntStateOf(0) }
-
-    // 对日期输入做防抖，避免用户逐字输入时频繁请求。
-    val effectiveStartDate = debouncedSearchDate(startDate)
-    val effectiveEndDate = debouncedSearchDate(endDate)
-
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
-    fun applyClientFilters(list: List<Illust>, ugoira: Int, ratio: Int): List<Illust> {
-        var res = when (ugoira) {
-            1 -> list.filter { it.type == "ugoira" }
-            2 -> list.filter { it.type != "ugoira" }
-            else -> list
-        }
-        res = when (ratio) {
-            1 -> res.filter { it.width > it.height }
-            2 -> res.filter { it.height > it.width }
-            3 -> res.filter { it.width == it.height }
-            else -> res
-        }
-        return res
-    }
-
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    var requestGeneration by remember { mutableIntStateOf(0) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(
-        searchWord,
-        sort,
-        searchTarget,
-        searchAiType,
-        effectiveStartDate,
-        effectiveEndDate,
-        retryCount,
-        settingsRepository.filterChangeVersion,
-    ) {
-        requestGeneration++
-        val generation = requestGeneration
-        illustsState = null
-        nextUrl = null
-        initialError = null
-        loadMoreError = null
-        isLoadingMore = false
-        val searchResult = suspendRunCatchingNonCancel {
-            repository.searchIllustResponse(
-                word = searchWord,
-                sort = sort,
-                searchTarget = searchTarget,
-                searchAiType = searchAiType,
-                startDate = effectiveStartDate,
-                endDate = effectiveEndDate,
-            )
-        }
-        searchResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                illustsState = filterBanned(response.illusts)
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration) {
-                initialError = error
-            }
-        }
-    }
-
-    fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        val generation = requestGeneration
-        if (isLoadingMore) return
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel {
-                repository.searchIllustResponse(
-                    word = searchWord,
-                    sort = sort,
-                    searchTarget = searchTarget,
-                    searchAiType = searchAiType,
-                    startDate = effectiveStartDate,
-                    endDate = effectiveEndDate,
-                    nextUrl = currentNextUrl,
-                )
-            }.onSuccess { response ->
-                if (generation == requestGeneration) {
-                    val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                    nextUrl = response.nextUrl
-                }
-            }.onFailure { error ->
-                if (generation == requestGeneration) {
-                    loadMoreError = error
-                }
-            }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
-    }
-
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val currentIllusts = illustsState
-    when {
-        currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-        currentIllusts == null && initialError != null -> ErrorPlaceholder(
-            error = initialError,
-            onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
-        )
-        currentIllusts != null -> {
-            val filteredIllusts = remember(currentIllusts, ugoiraFilter, ratioFilter) {
-                applyClientFilters(currentIllusts, ugoiraFilter, ratioFilter)
-            }
-            if (filteredIllusts.isEmpty() && !isLoadingMore) {
-                if (nextUrl != null) {
-                    LaunchedEffect(filteredIllusts.isEmpty(), nextUrl) {
-                        loadMore()
-                    }
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            InfiniteProgressIndicator()
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = strings.loading,
-                                style = MiuixTheme.textStyles.body2,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            )
-                        }
-                    }
-                } else {
-                    EmptyPlaceholder(
-                        message = strings.searchEmptyIllust,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            } else {
-                IllustStaggeredGrid(
-                    illusts = filteredIllusts,
-                    onIllustClick = onIllustClick,
-                    state = gridState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = effectiveContentPadding,
-                    hasMore = nextUrl != null,
-                    isLoadingMore = isLoadingMore,
-                    loadMoreError = loadMoreError,
-                    onLoadMore = ::loadMore,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalScrollBarApi::class)
-@Composable
-private fun SearchUserResultList(
-    query: String,
-    repository: SearchRepository,
-    settingsRepository: SettingsRepository,
-    onUserClick: (Int) -> Unit,
-    scrollBehavior: ScrollBehavior,
-    listState: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues? = null,
-) {
-    val effectiveContentPadding = contentPadding ?: PaddingValues(bottom = LocalBottomBarContentPadding.current)
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    // 画师搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
-    var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
-
-    // 统一 UI 状态机（单向数据流 UDF）
-    var previewsState by remember { mutableStateOf<List<UserPreview>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    var requestGeneration by remember { mutableIntStateOf(0) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(query, retryCount, settingsRepository.filterChangeVersion) {
-        requestGeneration++
-        val generation = requestGeneration
-        previewsState = null
-        nextUrl = null
-        initialError = null
-        loadMoreError = null
-        isLoadingMore = false
-        val userResult = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
-        userResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                previewsState = response.userPreviews
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration) {
-                initialError = error
-            }
-        }
-    }
-
-    fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        val generation = requestGeneration
-        if (isLoadingMore) return
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        previewsState = (previewsState.orEmpty()) + response.userPreviews
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
-    }
-
-    val currentPreviews = previewsState
-    val shouldLoadMore by remember(nextUrl, isLoadingMore, loadMoreError, currentPreviews?.size) {
-        derivedStateOf {
-            if (nextUrl == null || isLoadingMore || loadMoreError != null || currentPreviews.isNullOrEmpty()) {
-                false
-            } else {
-                val layoutInfo = listState.layoutInfo
-                val totalItems = layoutInfo.totalItemsCount
-                val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
-                lastVisibleIndex >= totalItems - 4
-            }
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
-
-    when {
-        currentPreviews == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-        currentPreviews == null && initialError != null -> ErrorPlaceholder(
-            error = initialError,
-            onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
-        )
-        currentPreviews != null -> {
-            if (currentPreviews.isEmpty()) {
-                EmptyPlaceholder(
-                    message = strings.searchEmptyUser,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = effectiveContentPadding,
-                    ) {
-                        items(
-                            items = currentPreviews,
-                            key = { it.user.id },
-                            contentType = { "user_preview_item" },
-                        ) { preview ->
-                            UserPreviewItem(
-                                preview = preview,
-                                onClick = { onUserClick(preview.user.id) },
-                            )
-                        }
-
-                        if (isLoadingMore || loadMoreError != null || (nextUrl == null && currentPreviews.isNotEmpty())) {
-                            item(key = "search_user_footer", contentType = "footer") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    when {
-                                        isLoadingMore -> {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            ) {
-                                                InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
-                                                Text(
-                                                    text = strings.loadingMore,
-                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
-                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                                )
-                                            }
-                                        }
-                                        loadMoreError != null -> {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                            ) {
-                                                Text(
-                                                    text = strings.loadMoreFailedRetry,
-                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
-                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
-                                                )
-                                                TextButton(
-                                                    text = strings.retry,
-                                                    onClick = ::loadMore,
-                                                )
-                                            }
-                                        }
-                                        else -> {
-                                            Text(
-                                                text = strings.noMoreData,
-                                                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
-                                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    VerticalScrollBar(
-                        adapter = rememberScrollBarAdapter(listState),
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .fillMaxHeight(),
-                        trackPadding = effectiveContentPadding,
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-@OptIn(ExperimentalScrollBarApi::class)
-@Composable
-private fun SearchSuggestions(
-    trendTags: List<TrendTag>,
-    searchHistory: List<String>,
-    isLoadingTrend: Boolean,
-    trendError: Throwable?,
-    scrollBehavior: ScrollBehavior,
-    onTagClick: (String) -> Unit,
-    onHistoryRemove: (String) -> Unit,
-    onClearHistory: () -> Unit,
-    onRetryTrend: () -> Unit,
-    listState: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues? = null,
-) {
-    val effectiveContentPadding = contentPadding ?: PaddingValues(
-        start = 0.dp,
-        top = 0.dp,
-        end = 0.dp,
-        bottom = LocalBottomBarContentPadding.current,
-    )
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = effectiveContentPadding,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-        item {
-            SmallTitle(
-                text = strings.searchHotTags,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-            )
-        }
-
-        when {
-            isLoadingTrend -> item {
-                LoadingPlaceholder(modifier = Modifier.fillMaxWidth().padding(16.dp))
-            }
-            trendError != null -> item {
-                ErrorPlaceholder(
-                    error = trendError,
-                    onRetry = onRetryTrend,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                )
-            }
-            trendTags.isEmpty() -> item {
-                EmptyPlaceholder(
-                    message = strings.searchHotTagsEmpty,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                )
-            }
-            else -> item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    trendTags.forEach { tag ->
-                        Text(
-                            text = tag.translatedName ?: tag.tag,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onTagClick(tag.tag) }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            style = MiuixTheme.textStyles.body1,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (searchHistory.isNotEmpty()) {
-            item {
-                SmallTitle(
-                    text = strings.searchHistory,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    searchHistory.forEach { history ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = history,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onTagClick(history) }
-                                    .padding(end = 8.dp),
-                                style = MiuixTheme.textStyles.body1,
-                            )
-                            IconButton(
-                                onClick = { onHistoryRemove(history) },
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.Close,
-                                    contentDescription = strings.btnDelete,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
-                TextButton(
-                    text = strings.searchClearHistory,
-                    onClick = onClearHistory,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-        }
-    }
-
-    VerticalScrollBar(
-        adapter = rememberScrollBarAdapter(listState),
-        modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .fillMaxHeight(),
-        trackPadding = effectiveContentPadding,
-    )
-}
-}
-
-/**
- * 将日期字符串延迟 500ms 后返回，避免用户逐字输入时频繁触发搜索。
- * 空字符串或格式不符合 YYYY-MM-DD 时返回 null，表示不应用该日期筛选。
- */
-@Composable
-private fun debouncedSearchDate(date: String?): String? {
-    if (date == null) return null
-    var debounced by remember { mutableStateOf(date) }
-    LaunchedEffect(date) {
-        delay(500)
-        debounced = date
-    }
-    return debounced.takeIf { it.matches(SearchDateRegex) }
-}
-
-private val SearchDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")

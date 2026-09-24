@@ -1,37 +1,20 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.perol.pixez.shared.ui.AppConstants
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,93 +25,39 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.runtime.mutableFloatStateOf
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import com.perol.pixez.shared.ui.components.BlurredBar
-import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.data.model.DownloadStatus
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
-import com.perol.pixez.shared.ui.components.liquidGlass
-import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
-import com.perol.pixez.shared.platform.HapticType
+import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
-import com.perol.pixez.shared.platform.PlatformBackHandler
-import com.perol.pixez.shared.platform.performHapticFeedback
-import com.perol.pixez.shared.platform.illustDragAndDropSource
-import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.HtmlCaptionText
-import com.perol.pixez.shared.ui.components.IllustActionMenu
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
-import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.components.IllustDetailTopBar
-import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
-import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
-import com.perol.pixez.shared.ui.components.buildIllustShareLink
-import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
-import com.perol.pixez.shared.ui.utils.openSafeUrl
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.BasicComponent
+import kotlinx.coroutines.CoroutineScope
 import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TooltipBox
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
-import top.yukonga.miuix.kmp.squircle.squircleBorder
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
-import com.perol.pixez.shared.data.repository.HistoryRepository
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 
 /**
  * 作品详情页：沉浸式大图展示、单一大标题、高对比度 MIUIX Card 容器与胶囊标签（Capsule Chips）。
@@ -210,7 +139,6 @@ fun IllustDetailScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IllustDetailSingleContent(
     illustId: Int,
@@ -229,7 +157,7 @@ private fun IllustDetailSingleContent(
     onIllustClick: ((Int) -> Unit)? = null,
     onNovelClick: ((Int) -> Unit)? = null,
 ) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
 
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
@@ -271,7 +199,7 @@ private fun IllustDetailSingleContent(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val coroutineScope = rememberCoroutineScope()
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val hapticFeedback = LocalHapticFeedback.current
 
     // 页面进入或作品 ID 变化时，查询本地屏蔽记录；数据库异常时保持未屏蔽，避免崩溃。
     LaunchedEffect(illustId) {
@@ -281,7 +209,7 @@ private fun IllustDetailSingleContent(
 
     val detailBackdrop = rememberBlurBackdrop()
     val listState = rememberLazyListState()
-    val density = androidx.compose.ui.platform.LocalDensity.current
+    val density = LocalDensity.current
     val scrollThresholdPx = with(density) { 72.dp.toPx() }
     var scrollOffset by remember { mutableStateOf(0f) }
 
@@ -338,454 +266,32 @@ private fun IllustDetailSingleContent(
                         }
                     }
 
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .blurBackdropSource(detailBackdrop)
-                            .nestedScroll(detailNestedScrollConnection),
-                    ) {
-                        // 1. 沉浸式顶部大图（从屏幕最顶端开始渲染，消除生硬的一刀切顶栏）
-                        if (illust.metaPages.isNotEmpty()) {
-                            items(
-                                count = illust.metaPages.size,
-                                key = { "page_$it" },
-                                contentType = { "meta_page" },
-                            ) { pageIndex ->
-                                val page = illust.metaPages[pageIndex]
-                                val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
-                                    if (illust.type == "manga") {
-                                        settings?.mangaQuality ?: settings?.pictureQuality ?: 0
-                                    } else {
-                                        settings?.pictureQuality ?: 0
-                                    }
-                                }
-                                val rawPageUrl = remember(page, effectiveQuality) {
-                                    when (effectiveQuality) {
-                                        0 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                                        1 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                                        2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                                        else -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                                    }
-                                }
-                                val pageUrl = rememberOptimizedImageModel(
-                                    illust = illust,
-                                    pageIndex = pageIndex,
-                                    targetUrl = rawPageUrl,
-                                    originalUrl = page.imageUrls?.original,
-                                    customBasePath = settings?.storePath,
-                                    pictureSource = settings?.pictureSource,
-                                )
-                                val thumbnailUrl = remember(page) {
-                                    page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
-                                }
-                                var pageLoaded by remember(pageIndex) { mutableStateOf(false) }
-                                val pageModifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(
-                                        if (!pageLoaded && illustAspectRatio != null) {
-                                            Modifier.aspectRatio(illustAspectRatio)
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    .illustDragAndDropSource(illust, pageIndex = pageIndex)
-                                    .clickable(
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                        indication = null,
-                                    ) { fullScreenPageIndex = pageIndex }
-
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    PixivAsyncImage(
-                                        model = pageUrl,
-                                        thumbnailUrl = thumbnailUrl,
-                                        contentDescription = "${illust.title} ($pageIndex)",
-                                        contentScale = ContentScale.FillWidth,
-                                        modifier = pageModifier,
-                                        onSuccess = { pageLoaded = true },
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(6.dp)
-                                            .accessibleTouchTarget(48.dp)
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.55f))
-                                            .clickable {
-                                                coroutineScope.launch {
-                                                    val pageNumber = pageIndex + 1
-                                                    toastMessage = "${strings.downloadStatusDownloading} P$pageNumber…"
-                                                    val task = downloadRepository.download(illust, pageIndex = pageIndex)
-                                                    toastMessage = when (task.status) {
-                                                        DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                                                        DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                                        else -> null
-                                                    }
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            imageVector = MiuixIcons.Download,
-                                            contentDescription = "${strings.download} P${pageIndex + 1}",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                }
-                                if (pageIndex < illust.metaPages.lastIndex) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                            }
-                        } else {
-                            item(key = "single_page", contentType = "single_page") {
-                                if (illust.type == "ugoira") {
-                                    UgoiraPlayer(
-                                        illust = illust,
-                                        illustRepository = repository,
-                                        downloadRepository = downloadRepository,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        onSavedZip = { path ->
-                                            toastMessage = "${strings.ugoiraSaveZipSuccess}: $path"
-                                        },
-                                    )
-                                } else {
-                                    val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
-                                        if (illust.type == "manga") {
-                                            settings?.mangaQuality ?: settings?.pictureQuality ?: 0
-                                        } else {
-                                            settings?.pictureQuality ?: 0
-                                        }
-                                    }
-                                    val rawSingleUrl = remember(illust, effectiveQuality) {
-                                        when (effectiveQuality) {
-                                            0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                                            1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                                            2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                                            else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                                        }
-                                    }
-                                    val singleUrl = rememberOptimizedImageModel(
-                                        illust = illust,
-                                        pageIndex = 0,
-                                        targetUrl = rawSingleUrl,
-                                        originalUrl = illust.metaSinglePage?.originalImageUrl,
-                                        customBasePath = settings?.storePath,
-                                        pictureSource = settings?.pictureSource,
-                                    )
-                                    val thumbnailUrl = remember(illust) {
-                                        illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
-                                    }
-                                    val singleModifier = Modifier
-                                        .fillMaxWidth()
-                                        .then(
-                                            if (illustAspectRatio != null) {
-                                                Modifier.aspectRatio(illustAspectRatio)
-                                            } else {
-                                                Modifier
-                                            },
-                                        )
-                                        .illustDragAndDropSource(illust, pageIndex = 0)
-                                        .clickable(
-                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                            indication = null,
-                                        ) { fullScreenPageIndex = 0 }
-
-                                    PixivAsyncImage(
-                                        model = singleUrl,
-                                        thumbnailUrl = thumbnailUrl,
-                                        contentDescription = illust.title,
-                                        contentScale = ContentScale.FillWidth,
-                                        modifier = singleModifier,
-                                    )
-                                }
-                            }
-                        }
-
-                        // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
-                        item(key = "illust_info_card", contentType = "info_card") {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .wrapContentWidth(Alignment.CenterHorizontally)
-                                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                    .padding(horizontal = 12.dp),
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                ) {
-                                    // 唯一大标题
-                                    Text(
-                                        text = illust.title,
-                                        style = MiuixTheme.textStyles.title2,
-                                    )
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    // 浏览、收藏、日期指标
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = MiuixIcons.Show,
-                                                contentDescription = strings.views,
-                                                modifier = Modifier.size(16.dp),
-                                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                            Text(
-                                                text = illust.totalView.toString(),
-                                                style = MiuixTheme.textStyles.footnote1,
-                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                        }
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = MiuixIcons.Favorites,
-                                                contentDescription = strings.bookmarks,
-                                                modifier = Modifier.size(16.dp),
-                                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                            Text(
-                                                text = illust.totalBookmarks.toString(),
-                                                style = MiuixTheme.textStyles.footnote1,
-                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                        }
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = MiuixIcons.Recent,
-                                                contentDescription = strings.publishDate,
-                                                modifier = Modifier.size(16.dp),
-                                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                            Text(
-                                                text = illust.createDate.take(10),
-                                                style = MiuixTheme.textStyles.footnote1,
-                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "ID: ${illust.id}   ${illust.width}x${illust.height}",
-                                        style = MiuixTheme.textStyles.footnote2,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    )
-
-                                    Spacer(modifier = Modifier.height(14.dp))
-
-                                    // 画师信息栏
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
-                                            .clickable { onUserClick(illust.user.id) }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        PixivAsyncImage(
-                                            model = illust.user.profileImageUrls.medium,
-                                            contentDescription = illust.user.name,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(44.dp)
-                                                .clip(CircleShape),
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = illust.user.name,
-                                                style = MiuixTheme.textStyles.title4,
-                                            )
-                                            Text(
-                                                text = "@${illust.user.account}",
-                                                style = MiuixTheme.textStyles.footnote1,
-                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
-                                        }
-                                        Icon(
-                                            imageVector = MiuixIcons.Search,
-                                            contentDescription = strings.author,
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-
-                                    // 多页作品下载全部入口
-                                    if (illust.pageCount > 1) {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        BasicComponent(
-                                            title = strings.downloadTaskFilterAll,
-                                            summary = "${illust.pageCount} P",
-                                            onClick = {
-                                                if (isDownloading) return@BasicComponent
-                                                coroutineScope.launch {
-                                                    try {
-                                                        isDownloading = true
-                                                        val tasks = downloadRepository.downloadAllPages(
-                                                            illust = illust,
-                                                            onProgress = { completed, total ->
-                                                                toastMessage = "${strings.downloadStatusDownloading} $completed/$total"
-                                                            },
-                                                            maxConcurrency = settings?.maxRunningTask ?: 3,
-                                                        )
-                                                        val successCount = tasks.count { it.status == DownloadStatus.Success }
-                                                        val failedCount = tasks.count { it.status == DownloadStatus.Failed }
-                                                        if (successCount > 0 && settings?.starAfterSave == true && !isBookmarked) {
-                                                            coroutineScope.launch {
-                                                                suspendRunCatchingNonCancel {
-                                                                    bookmarkRepository.addBookmark(
-                                                                        illustId = illust.id,
-                                                                        isPrivate = settings.defaultPrivateLike,
-                                                                    )
-                                                                }.onSuccess {
-                                                                    isBookmarked = true
-                                                                }
-                                                            }
-                                                        }
-                                                        toastMessage = when {
-                                                            failedCount == 0 -> "${strings.downloadStatusSuccess}: $successCount/${tasks.size}"
-                                                            successCount == 0 -> strings.downloadStatusFailed
-                                                            else -> "${strings.downloadStatusSuccess}: $successCount, ${strings.downloadStatusFailed} $failedCount"
-                                                        }
-                                                    } finally {
-                                                        isDownloading = false
-                                                    }
-                                                }
-                                            },
-                                        )
-                                    }
-
-                                    // 系列入口
-                                    illust.series?.let { series ->
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        BasicComponent(
-                                            title = series.title.orEmpty(),
-                                            summary = "",
-                                            onClick = { onIllustSeriesClick(series.id) },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // 3. 简介与文案卡片
-                        if (illust.caption.isNotBlank()) {
-                            item {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentWidth(Alignment.CenterHorizontally)
-                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                        .padding(horizontal = 12.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                    ) {
-                                        Text(
-                                            text = strings.searchTargetTitleCaption,
-                                            style = MiuixTheme.textStyles.title4,
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        HtmlCaptionText(
-                                            html = illust.caption,
-                                            onUserClick = onUserClick,
-                                            onIllustClick = onIllustClick,
-                                            onIllustSeriesClick = onIllustSeriesClick,
-                                            onNovelClick = onNovelClick,
-                                            onTagClick = onTagClick,
-                                            style = MiuixTheme.textStyles.body2,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // 4. 标签卡片与胶囊包裹（Capsule Chips）
-                        if (illust.tags.isNotEmpty()) {
-                            item {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentWidth(Alignment.CenterHorizontally)
-                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                        .padding(horizontal = 12.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                    ) {
-                                        Text(
-                                            text = strings.tags,
-                                            style = MiuixTheme.textStyles.title4,
-                                        )
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.fillMaxWidth(),
-                                        ) {
-                                            illust.tags.forEach { tag ->
-                                                TagCapsuleChip(
-                                                    tag = tag,
-                                                    onClick = { onTagClick(tag.name) },
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 5. 互动操作卡片（评论与相关作品）
-                        item {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .wrapContentWidth(Alignment.CenterHorizontally)
-                                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                    .padding(horizontal = 12.dp),
-                            ) {
-                                BasicComponent(
-                                    title = strings.commentsTitle,
-                                    summary = "${illust.totalComments ?: 0}",
-                                    onClick = { onCommentsClick(illust.id) },
-                                )
-                                BasicComponent(
-                                    title = strings.relatedIllusts,
-                                    summary = "",
-                                    onClick = { onRelatedIllustsClick(illust.id) },
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(32.dp))
-                        }
-
-                    }
+                    IllustDetailContentList(
+                        illust = illust,
+                        illustAspectRatio = illustAspectRatio,
+                        settings = settings,
+                        listState = listState,
+                        nestedScrollConnection = detailNestedScrollConnection,
+                        detailBackdrop = detailBackdrop,
+                        repository = repository,
+                        bookmarkRepository = bookmarkRepository,
+                        downloadRepository = downloadRepository,
+                        isDownloading = isDownloading,
+                        isBookmarked = isBookmarked,
+                        coroutineScope = coroutineScope,
+                        strings = strings,
+                        onToast = { toastMessage = it },
+                        onDownloadingChange = { isDownloading = it },
+                        onBookmarkedChange = { isBookmarked = it },
+                        onFullScreen = { fullScreenPageIndex = it },
+                        onUserClick = onUserClick,
+                        onCommentsClick = onCommentsClick,
+                        onRelatedIllustsClick = onRelatedIllustsClick,
+                        onIllustSeriesClick = onIllustSeriesClick,
+                        onTagClick = onTagClick,
+                        onIllustClick = onIllustClick,
+                        onNovelClick = onNovelClick,
+                    )
                 }
             }
             else -> ErrorPlaceholder(
@@ -817,199 +323,42 @@ private fun IllustDetailSingleContent(
             }
         }
 
-        // 提取通用业务操作逻辑
-        val performBookmark: () -> Unit = {
-            illust?.let { targetIllust ->
-                coroutineScope.launch {
-                    try {
-                        isBookmarkLoading = true
-                        bookmarkError = null
-                        val wasBookmarked = isBookmarked
-                        suspendRunCatchingNonCancel {
-                            if (wasBookmarked) {
-                                bookmarkRepository.deleteBookmark(targetIllust.id)
-                            } else {
-                                val autoTags = if (settings?.autoTagWhenStar == true) {
-                                    targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
-                                } else null
-                                bookmarkRepository.addBookmark(
-                                    illustId = targetIllust.id,
-                                    isPrivate = settings?.defaultPrivateLike ?: false,
-                                    tags = autoTags,
-                                )
-                            }
-                        }.onSuccess {
-                            performHapticFeedback(HapticType.Confirm)
-                            isBookmarked = !wasBookmarked
-                            if (!wasBookmarked) {
-                                if (settings?.saveAfterStar == true) {
-                                    coroutineScope.launch {
-                                        toastMessage = "${strings.downloadStatusDownloading}…"
-                                        val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                                        toastMessage = when (task.status) {
-                                            DownloadStatus.Success -> strings.downloadStatusSuccess
-                                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                            else -> null
-                                        }
-                                    }
-                                }
-                                if (settings?.followAfterStar == true) {
-                                    coroutineScope.launch {
-                                        suspendRunCatchingNonCancel {
-                                            bookmarkRepository.followUser(targetIllust.user.id)
-                                        }
-                                    }
-                                }
-                            }
-                        }.onFailure { e ->
-                            performHapticFeedback(HapticType.Reject)
-                            bookmarkError = e.message ?: strings.loadFailed
-                        }
-                    } finally {
-                        isBookmarkLoading = false
-                    }
-                }
-            }
-        }
-
-        val performDownload: () -> Unit = {
-            if (!isDownloading && illust != null) {
-                val targetIllust = illust
-                coroutineScope.launch {
-                    try {
-                        isDownloading = true
-                        performHapticFeedback(HapticType.GestureStart)
-                        toastMessage = "${strings.downloadStatusDownloading}…"
-                        if (targetIllust.type == "ugoira") {
-                            val meta = repository.getUgoiraMetadata(targetIllust.id)
-                            val zipBytes = repository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
-                            val savedPath = downloadRepository.saveUgoiraZip(
-                                illust = targetIllust,
-                                bytes = zipBytes,
-                                zipUrl = meta.ugoiraMetadata.zipUrls.medium,
-                            )
-                            if (settings?.starAfterSave == true && !isBookmarked) {
-                                coroutineScope.launch {
-                                    suspendRunCatchingNonCancel {
-                                        bookmarkRepository.addBookmark(
-                                            illustId = targetIllust.id,
-                                            isPrivate = settings.defaultPrivateLike,
-                                        )
-                                    }.onSuccess {
-                                        isBookmarked = true
-                                    }
-                                }
-                            }
-                            performHapticFeedback(HapticType.Confirm)
-                            toastMessage = strings.downloadStatusSuccess
-                        } else {
-                            val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                            toastMessage = when (task.status) {
-                                DownloadStatus.Success -> {
-                                    performHapticFeedback(HapticType.Confirm)
-                                    if (settings?.starAfterSave == true && !isBookmarked) {
-                                        coroutineScope.launch {
-                                            suspendRunCatchingNonCancel {
-                                                bookmarkRepository.addBookmark(
-                                                    illustId = targetIllust.id,
-                                                    isPrivate = settings.defaultPrivateLike,
-                                                )
-                                            }.onSuccess {
-                                                isBookmarked = true
-                                            }
-                                        }
-                                    }
-                                    strings.downloadStatusSuccess
-                                }
-                                DownloadStatus.Failed -> {
-                                    performHapticFeedback(HapticType.Reject)
-                                    "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
-                                }
-                                else -> null
-                            }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        performHapticFeedback(HapticType.Reject)
-                        toastMessage = "${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}"
-                    } finally {
-                        isDownloading = false
-                    }
-                }
-            }
-        }
-
-        // ── 统一锚点单层顶栏与液态玻璃操作菜单 ──
-        IllustDetailTopBar(
+        IllustDetailTopBarSection(
             illust = illust,
-            collapseProgressProvider = { collapseProgressState.value },
-            detailBackdrop = detailBackdrop,
             isBookmarked = isBookmarked,
             isBookmarkLoading = isBookmarkLoading,
-            bookmarkHeartScale = bookmarkHeartScale,
-            onBookmarkClick = performBookmark,
             isDownloading = isDownloading,
-            onDownloadClick = performDownload,
-            onBack = onBack,
             isBanned = isBanned,
+            settings = settings,
+            strings = strings,
+            detailBackdrop = detailBackdrop,
+            collapseProgressProvider = { collapseProgressState.value },
+            bookmarkHeartScale = bookmarkHeartScale,
+            coroutineScope = coroutineScope,
+            repository = repository,
+            bookmarkRepository = bookmarkRepository,
+            downloadRepository = downloadRepository,
             banRepository = banRepository,
-            onBanSuccess = { isBanned = true },
+            onBookmarkedChange = { isBookmarked = it },
+            onBookmarkLoadingChange = { isBookmarkLoading = it },
+            onBookmarkErrorChange = { bookmarkError = it },
+            onDownloadingChange = { isDownloading = it },
             onToast = { toastMessage = it },
+            onBanSuccess = { isBanned = true },
+            onBack = onBack,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
-        if (fullScreenPageIndex != null && illust != null) {
-            val pageIdx = fullScreenPageIndex!!.coerceAtLeast(0)
-            val effectiveQuality = if (illust.type == "manga") {
-                settings?.mangaQuality ?: settings?.pictureQuality ?: 0
-            } else {
-                settings?.pictureQuality ?: 0
-            }
-            val currentPreviewUrl = if (illust.metaPages.isNotEmpty()) {
-                val p = illust.metaPages.getOrNull(pageIdx)
-                val rawTarget = if (p != null) {
-                    when (effectiveQuality) {
-                        0 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
-                        1 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                        2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
-                        else -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
-                    }
-                } else illust.imageUrls.large
-                rememberOptimizedImageModel(
-                    illust = illust,
-                    pageIndex = pageIdx,
-                    targetUrl = rawTarget,
-                    originalUrl = p?.imageUrls?.original,
-                    customBasePath = settings?.storePath,
-                    pictureSource = settings?.pictureSource,
-                )
-            } else {
-                val rawTarget = when (effectiveQuality) {
-                    0 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                    1 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                    2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                    else -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                }
-                rememberOptimizedImageModel(
-                    illust = illust,
-                    pageIndex = 0,
-                    targetUrl = rawTarget,
-                    originalUrl = illust.metaSinglePage?.originalImageUrl,
-                    customBasePath = settings?.storePath,
-                    pictureSource = settings?.pictureSource,
-                )
-            }
-
-            IllustFullScreenViewer(
+        val fullScreenPage = fullScreenPageIndex
+        if (fullScreenPage != null && illust != null) {
+            IllustDetailFullScreenOverlay(
                 illust = illust,
-                initialPage = pageIdx,
-                zoomQuality = settings?.zoomQuality ?: 0,
+                pageIndex = fullScreenPage,
+                settings = settings,
                 downloadRepository = downloadRepository,
-                previewUrl = currentPreviewUrl,
+                detailBackdrop = detailBackdrop,
                 onToast = { toastMessage = it },
                 onDismiss = { fullScreenPageIndex = null },
-                detailBackdrop = detailBackdrop,
             )
         }
 
@@ -1025,37 +374,134 @@ private fun IllustDetailSingleContent(
     }
 }
 
-
-
 /**
- * 胶囊标签 Chip：圆角胶囊背景包裹，清晰展示标签与翻译名称。
+ * 作品详情页主列表：沉浸式图片页、作品信息卡、简介卡、标签卡与互动卡。
+ *
+ * 仅负责 LazyColumn 骨架与子组件编排，所有页面级状态由 [IllustDetailSingleContent] 通过参数下发。
  */
 @Composable
-private fun TagCapsuleChip(
-    tag: IllustTag,
-    onClick: () -> Unit,
+private fun IllustDetailContentList(
+    illust: Illust,
+    illustAspectRatio: Float?,
+    settings: SettingsRepository?,
+    listState: LazyListState,
+    nestedScrollConnection: NestedScrollConnection,
+    detailBackdrop: LayerBackdrop?,
+    repository: IllustRepository,
+    bookmarkRepository: BookmarkRepository,
+    downloadRepository: DownloadRepository,
+    isDownloading: Boolean,
+    isBookmarked: Boolean,
+    coroutineScope: CoroutineScope,
+    strings: AppStrings,
+    onToast: (String?) -> Unit,
+    onDownloadingChange: (Boolean) -> Unit,
+    onBookmarkedChange: (Boolean) -> Unit,
+    onFullScreen: (Int) -> Unit,
+    onUserClick: (Int) -> Unit,
+    onCommentsClick: (Int) -> Unit,
+    onRelatedIllustsClick: (Int) -> Unit,
+    onIllustSeriesClick: (Int) -> Unit,
+    onTagClick: (String) -> Unit,
+    onIllustClick: ((Int) -> Unit)?,
+    onNovelClick: ((Int) -> Unit)?,
 ) {
-    val tagText = buildString {
-        append("#")
-        append(tag.name)
-        if (!tag.translatedName.isNullOrBlank() && tag.translatedName != tag.name) {
-            append(" ")
-            append(tag.translatedName)
-        }
-    }
-    Box(
+    LazyColumn(
+        state = listState,
         modifier = Modifier
-            .clip(RoundedCornerShape(100.dp))
-            .background(MiuixTheme.colorScheme.secondaryContainer)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp),
-        contentAlignment = Alignment.Center,
+            .fillMaxSize()
+            .blurBackdropSource(detailBackdrop)
+            .nestedScroll(nestedScrollConnection),
     ) {
-        Text(
-            text = tagText,
-            style = MiuixTheme.textStyles.footnote1,
-            color = MiuixTheme.colorScheme.primary,
-        )
+        // 1. 沉浸式顶部大图（从屏幕最顶端开始渲染，消除生硬的一刀切顶栏）
+        if (illust.metaPages.isNotEmpty()) {
+            items(
+                count = illust.metaPages.size,
+                key = { "page_$it" },
+                contentType = { "meta_page" },
+            ) { pageIndex ->
+                IllustDetailImagePage(
+                    illust = illust,
+                    pageIndex = pageIndex,
+                    page = illust.metaPages[pageIndex],
+                    illustAspectRatio = illustAspectRatio,
+                    settings = settings,
+                    downloadRepository = downloadRepository,
+                    coroutineScope = coroutineScope,
+                    strings = strings,
+                    onToast = onToast,
+                    onPageClick = onFullScreen,
+                )
+            }
+        } else {
+            item(key = "single_page", contentType = "single_page") {
+                IllustDetailSinglePageImage(
+                    illust = illust,
+                    illustAspectRatio = illustAspectRatio,
+                    settings = settings,
+                    repository = repository,
+                    downloadRepository = downloadRepository,
+                    strings = strings,
+                    onToast = onToast,
+                    onPageClick = onFullScreen,
+                )
+            }
+        }
+
+        // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
+        item(key = "illust_info_card", contentType = "info_card") {
+            IllustDetailInfoCard(
+                illust = illust,
+                isDownloading = isDownloading,
+                isBookmarked = isBookmarked,
+                settings = settings,
+                strings = strings,
+                downloadRepository = downloadRepository,
+                bookmarkRepository = bookmarkRepository,
+                coroutineScope = coroutineScope,
+                onToast = onToast,
+                onDownloadingChange = onDownloadingChange,
+                onBookmarkedChange = onBookmarkedChange,
+                onUserClick = onUserClick,
+                onIllustSeriesClick = onIllustSeriesClick,
+            )
+        }
+
+        // 3. 简介与文案卡片
+        if (illust.caption.isNotBlank()) {
+            item {
+                IllustDetailCaptionCard(
+                    illust = illust,
+                    strings = strings,
+                    onUserClick = onUserClick,
+                    onIllustClick = onIllustClick,
+                    onIllustSeriesClick = onIllustSeriesClick,
+                    onNovelClick = onNovelClick,
+                    onTagClick = onTagClick,
+                )
+            }
+        }
+
+        // 4. 标签卡片与胶囊包裹（Capsule Chips）
+        if (illust.tags.isNotEmpty()) {
+            item {
+                IllustDetailTagsCard(
+                    tags = illust.tags,
+                    strings = strings,
+                    onTagClick = onTagClick,
+                )
+            }
+        }
+
+        // 5. 互动操作卡片（评论与相关作品）
+        item {
+            IllustDetailInteractionCard(
+                illust = illust,
+                strings = strings,
+                onCommentsClick = onCommentsClick,
+                onRelatedIllustsClick = onRelatedIllustsClick,
+            )
+        }
     }
 }
 
@@ -1068,7 +514,7 @@ private fun BanPage(
     onView: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1084,5 +530,3 @@ private fun BanPage(
         }
     }
 }
-
-
