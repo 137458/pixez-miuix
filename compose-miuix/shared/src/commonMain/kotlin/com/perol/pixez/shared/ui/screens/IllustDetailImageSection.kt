@@ -170,11 +170,7 @@ internal fun IllustDetailSinglePageImage(
         UgoiraPlayer(
             illust = illust,
             illustRepository = repository,
-            downloadRepository = downloadRepository,
             modifier = Modifier.fillMaxWidth(),
-            onSavedZip = { path ->
-                onToast("${strings.ugoiraSaveZipSuccess}: $path")
-            },
         )
     } else {
         val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
