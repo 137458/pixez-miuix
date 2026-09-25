@@ -32,6 +32,7 @@ import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
+import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +66,7 @@ internal fun IllustDetailImagePage(
     onPageClick: (Int) -> Unit,
 ) {
     val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
-        if (illust.type == "manga") {
+        if (illust.type == IllustType.MANGA) {
             settings?.mangaQuality ?: settings?.pictureQuality ?: 0
         } else {
             settings?.pictureQuality ?: 0
@@ -166,7 +167,7 @@ internal fun IllustDetailSinglePageImage(
     onToast: (String?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
-    if (illust.type == "ugoira") {
+    if (IllustType.isUgoira(illust.type)) {
         UgoiraPlayer(
             illust = illust,
             illustRepository = repository,
@@ -175,7 +176,7 @@ internal fun IllustDetailSinglePageImage(
         )
     } else {
         val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
-            if (illust.type == "manga") {
+            if (illust.type == IllustType.MANGA) {
                 settings?.mangaQuality ?: settings?.pictureQuality ?: 0
             } else {
                 settings?.pictureQuality ?: 0
@@ -240,7 +241,7 @@ internal fun IllustDetailFullScreenOverlay(
     onDismiss: () -> Unit,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
-    val effectiveQuality = if (illust.type == "manga") {
+    val effectiveQuality = if (illust.type == IllustType.MANGA) {
         settings?.mangaQuality ?: settings?.pictureQuality ?: 0
     } else {
         settings?.pictureQuality ?: 0

@@ -46,6 +46,7 @@ import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -119,8 +120,8 @@ internal fun SearchIllustResultGrid(
 
     fun applyClientFilters(list: List<Illust>, ugoira: Int, ratio: Int): List<Illust> {
         var res = when (ugoira) {
-            1 -> list.filter { it.type == "ugoira" }
-            2 -> list.filter { it.type != "ugoira" }
+            1 -> list.filter { IllustType.isUgoira(it.type) }
+            2 -> list.filterNot { IllustType.isUgoira(it.type) }
             else -> list
         }
         res = when (ratio) {

@@ -27,6 +27,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
@@ -191,16 +192,25 @@ fun RootContent(
                     val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
                     availableWidth.toPx()
                 }
-                // 页面容器在窗口坐标系中的矩形，用于把卡片矩形归一化为容器内相对几何。
-                var containerBounds by remember { mutableStateOf(Rect.Zero) }
+                // 页面容器几何：矩形由布局回填，宽度与圆角由本层测量得出。
+                var containerGeometry by remember {
+                    mutableStateOf(PageContainerGeometry(widthPx = containerWidthPx, cornerRadius = screenCornerRadius))
+                }
+                // 宽度与圆角随环境变化时同步到几何快照；矩形保持布局回填的最新值。
+                LaunchedEffect(containerWidthPx, screenCornerRadius) {
+                    containerGeometry = containerGeometry.copy(
+                        widthPx = containerWidthPx,
+                        cornerRadius = screenCornerRadius,
+                    )
+                }
 
                 // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                val stackAnimation = remember(sharedBounds, containerBounds, screenCornerRadius) {
+                val stackAnimation = remember(sharedBounds, containerGeometry) {
                     miuixCardExpandStackAnimation(
                         registry = sharedBounds,
-                        containerBounds = containerBounds,
-                        containerCornerRadius = screenCornerRadius,
+                        containerBounds = containerGeometry.bounds,
+                        containerCornerRadius = containerGeometry.cornerRadius,
                     )
                 }
 
@@ -223,7 +233,10 @@ fun RootContent(
                             .fillMaxHeight()
                             .background(MiuixTheme.colorScheme.surface)
                             .onGloballyPositioned { coordinates ->
-                                containerBounds = coordinates.boundsInWindow()
+                                val newBounds = coordinates.boundsInWindow()
+                                if (newBounds != containerGeometry.bounds) {
+                                    containerGeometry = containerGeometry.withBounds(newBounds)
+                                }
                             },
                     ) {
                         Children(
@@ -240,9 +253,9 @@ fun RootContent(
                                         initialBackEvent = initialBackEvent,
                                         registry = sharedBounds,
                                         illustId = (active as? Child.IllustDetail)?.illustId,
-                                        containerWidthPx = containerWidthPx,
-                                        containerBounds = containerBounds,
-                                        deviceCornerRadius = screenCornerRadius,
+                                        containerWidthPx = containerGeometry.widthPx,
+                                        containerBounds = containerGeometry.bounds,
+                                        deviceCornerRadius = containerGeometry.cornerRadius,
                                     )
                                 },
                                 onBack = { component.onBack() },

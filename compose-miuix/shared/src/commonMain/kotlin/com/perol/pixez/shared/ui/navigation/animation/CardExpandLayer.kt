@@ -109,32 +109,25 @@ internal fun Modifier.cardExpandLayer(
         this.scaleX = scaleX
         this.scaleY = scaleY
         transformOrigin = TransformOrigin(pivotX, pivotY)
-        if (cornerRadius > 0.dp) {
-            shape = RoundedCornerShape(cornerRadius)
-            clip = true
-        }
+        // 必须始终设置 shape：graphicsLayer 的 shadowElevation 只在图层具备 shape
+        // （或非透明背景）时才会真正绘制阴影；圆角收敛到 0 时仍需保留矩形 shape，
+        // 否则展开末段的边界阴影会凭空消失。
+        shape = RoundedCornerShape(cornerRadius)
+        clip = true
         this.shadowElevation = shadowElevation
     }
 }
 
 /**
- * 在页面内容之上叠加一层随展开度消退的暗色遮罩。
+ * 在页面内容之上叠加一层暗色遮罩。
  *
  * 用于底层页面：卡片展开/收回过程中，底层页面不位移，仅靠这层遮罩
  * 建立「顶层卡片浮在其上」的纵深关系，避免两个页面视觉上糊在一起。
  *
- * 遮罩强度与顶层页面的展开度直接挂钩：顶层页面收缩在卡片内时最深，
- * 铺满容器时完全消失，因此传入的展开度必须取自同一个 [resolveCardExpandFrame]，
- * 否则两层页面的纵深关系会与缩放进度脱节。
- *
- * @param expansion 顶层页面的展开度，0f 时遮罩最强、1f 时完全消失。
- * @param maxAlpha 遮罩在最深时的最大不透明度，默认取 [BACKDROP_SCRIM_ALPHA]。
+ * @param alpha 遮罩不透明度，0f 表示完全透明（不绘制）；越界值会被钳制。
  */
-internal fun Modifier.cardExpandScrim(
-    expansion: Float,
-    maxAlpha: Float = BACKDROP_SCRIM_ALPHA,
-): Modifier {
-    val scrimAlpha = maxAlpha * (1f - expansion.coerceIn(0f, 1f))
+internal fun Modifier.cardExpandScrim(alpha: Float): Modifier {
+    val scrimAlpha = alpha.coerceIn(0f, 1f)
     return this.drawWithContent {
         drawContent()
         if (scrimAlpha > 0.001f) {
@@ -142,6 +135,20 @@ internal fun Modifier.cardExpandScrim(
         }
     }
 }
+
+/**
+ * 由顶层页面的展开度换算出底层遮罩应有的不透明度。
+ *
+ * 顶层页面收缩在卡片内时遮罩最深，铺满容器时完全消失；与缩放进度取自
+ * 同一个展开度，两层页面的纵深关系才不会脱节。
+ *
+ * @param expansion 顶层页面的展开度，0f 时遮罩最强、1f 时完全消失。
+ * @param maxAlpha 遮罩在最深时的最大不透明度，默认取 [BACKDROP_SCRIM_ALPHA]。
+ */
+internal fun cardExpandScrimAlpha(
+    expansion: Float,
+    maxAlpha: Float = BACKDROP_SCRIM_ALPHA,
+): Float = maxAlpha * (1f - expansion.coerceIn(0f, 1f))
 
 /**
  * 一次转场中某一层页面所对应的「卡片展开」帧数据。

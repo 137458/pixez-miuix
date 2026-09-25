@@ -72,6 +72,7 @@ import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -157,17 +158,14 @@ fun IllustFullScreenViewer(
     val triggerDownload: (Int) -> Unit = { currentPage ->
         val pageNumber = currentPage + 1
         coroutineScope.launch {
-            if (illust.type == "ugoira" && illustRepository != null) {
+            if (IllustType.isUgoira(illust.type) && illustRepository != null) {
+                // 动图保存复用与详情页顶栏同一条路径，避免两处各自维护下载流程。
                 onToast("${strings.downloadStatusDownloading}…")
-                suspendRunCatchingNonCancel {
-                    val meta = illustRepository.getUgoiraMetadata(illust.id)
-                    val zipBytes = illustRepository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
-                    downloadRepository.saveUgoiraZip(
-                        illust = illust,
-                        bytes = zipBytes,
-                        zipUrl = meta.ugoiraMetadata.zipUrls.medium,
-                    )
-                }.fold(
+                saveUgoiraIllust(
+                    illust = illust,
+                    illustRepository = illustRepository,
+                    downloadRepository = downloadRepository,
+                ).fold(
                     onSuccess = {
                         performHapticFeedback(HapticType.Confirm)
                         onToast(strings.downloadStatusSuccess)
@@ -259,7 +257,9 @@ fun IllustFullScreenViewer(
                 .fillMaxSize()
                 .blurBackdropSource(internalBackdrop),
         ) {
-            if (illust.type == "ugoira" && illustRepository != null) {
+            if (IllustType.isUgoira(illust.type) && illustRepository != null) {
+                // 动图为单页作品：其画面由帧序列驱动，不存在多 P 翻页与相邻页预加载，
+                // 因此这里优先于 pageCount 分支；页码指示与翻页让渡对其不适用。
                 ZoomableUgoiraViewer(
                     illust = illust,
                     illustRepository = illustRepository,

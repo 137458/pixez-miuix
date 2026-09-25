@@ -13,6 +13,7 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.performHapticFeedback
+import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -119,7 +120,7 @@ internal fun IllustDetailTopBarSection(
                     onDownloadingChange(true)
                     performHapticFeedback(HapticType.GestureStart)
                     onToast("${strings.downloadStatusDownloading}…")
-                    if (targetIllust.type == "ugoira") {
+                    if (IllustType.isUgoira(targetIllust.type)) {
                         val meta = repository.getUgoiraMetadata(targetIllust.id)
                         val zipBytes = repository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
                         val savedPath = downloadRepository.saveUgoiraZip(

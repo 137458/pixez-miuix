@@ -15,6 +15,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
+import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -24,6 +25,9 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
  * 具有强阻尼与迅速启动特征的非线性贝塞尔曲线。
  */
 val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
+
+/** 平移兜底方案收缩态下的遮罩最大不透明度（略深于卡片展开方案，补偿缺失的缩放纵深线索）。 */
+private const val SLIDE_FALLBACK_SCRIM_ALPHA = 0.20f
 
 /**
  * 构造 MIUIX / HyperOS「卡片展开」出入栈转场。
@@ -60,21 +64,43 @@ fun miuixCardExpandStackAnimation(
 /**
  * 解析一次转场所对应的来源卡片作品 ID。
  *
+ * 「哪一侧是发起转场的页面」这一语义统一收敛到 [sourceChild]，
+ * 与转场帧换算 [resolveCardExpandFrame] 共用同一套方向判定，避免两处口径漂移。
+ *
  * @param direction 转场方向。
  * @param initialChild 转场前的栈顶页面，push 时为 null。
  * @param targetChild 转场后的栈顶页面。
- * @return 卡片作品 ID；本次转场与作品详情页无关时返回 null。
+ * @return 卡片作品 ID；本次转场不由作品详情页发起时返回 null。
  */
 private fun resolveTransitionIllustId(
     direction: Direction,
     initialChild: Child.Created<RootComponent.Config, RootComponent.Child>?,
     targetChild: Child.Created<RootComponent.Config, RootComponent.Child>,
-): Int? = when (direction) {
-    // push：新页面入场所依据的卡片，即 targetChild 自身。
-    Direction.ENTER_FRONT -> (targetChild.configuration as? RootComponent.Config.IllustDetail)?.illustId
-    // pop：即将离场页面所依据的卡片，即 initialChild 自身。
-    Direction.EXIT_FRONT -> (initialChild?.configuration as? RootComponent.Config.IllustDetail)?.illustId
-    else -> null
+): Int? = sourceChild(direction, initialChild, targetChild)
+    ?.configuration
+    ?.let { it as? RootComponent.Config.IllustDetail }
+    ?.illustId
+
+/**
+ * 取出本次转场中「发起者」一侧的页面：前层画面（详情页）所在的那一层。
+ *
+ * push 时为入场的 targetChild，pop 时为离场的 initialChild；两层方向
+ * （ENTER_BACK / EXIT_BACK）不承担转场进度，返回 null。
+ *
+ * @param direction 转场方向。
+ * @param initialChild 转场前的栈顶页面，push 时为 null。
+ * @param targetChild 转场后的栈顶页面。
+ * @return 发起转场的页面；非前层方向时返回 null。
+ */
+private fun <C : Any, T : Any> sourceChild(
+    direction: Direction,
+    initialChild: Child.Created<C, T>?,
+    targetChild: Child.Created<C, T>,
+): Child.Created<C, T>? = if (direction.isFront) {
+    // 前层即详情页所在层：push 取 targetChild，pop 取 initialChild。
+    if (direction == Direction.ENTER_FRONT) targetChild else initialChild
+} else {
+    null
 }
 
 /**
@@ -84,7 +110,10 @@ private fun resolveTransitionIllustId(
  * 圆角同步由 0 渐变到设备屏幕物理圆角，并在收缩态投出边界阴影；
  * 底层页面保持静止仅叠加消退遮罩，让「收回卡片」的纵深关系清晰可读。
  *
- * 未登记卡片矩形时回退为纯左右平移，保留既有 MIUIX 侧滑手感。
+ * 以下三种情况没有可用的来源卡片几何，一律显式回退为经典纯左右平移：
+ * 1. 当前栈顶不是作品详情页（[illustId] 为 null）；
+ * 2. 该详情页由分享链接直达或进程重建恢复进入，从未有卡片登记过矩形；
+ * 3. 卡片矩形随列表滚出组合已被注销。
  *
  * @param initialBackEvent 手势起始事件。
  * @param registry 卡片几何信息源，用于取出手势来源页对应的卡片矩形。
@@ -102,7 +131,9 @@ fun miuixCardExpandPredictiveBackAnimatable(
     containerBounds: Rect,
     deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
-    val sourceBounds = illustId?.let(registry::get)
+    // 无来源卡片信息（非详情页、直达入口、几何已注销）时显式走侧滑兜底，
+    // 不依赖「查表恰好落空」来隐式达成，避免后续改动意外让该分支失效。
+    val sourceBounds = resolveGestureSourceBounds(illustId = illustId, registry = registry)
         ?: return miuixSlidePredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
             containerWidthPx = containerWidthPx,
@@ -120,9 +151,29 @@ fun miuixCardExpandPredictiveBackAnimatable(
             )
         },
         enterModifier = { progress, _ ->
-            Modifier.cardExpandScrim(expansion = predictiveBackCardExpandExpansion(progress = progress))
+            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(predictiveBackCardExpandExpansion(progress = progress)))
         },
     )
+}
+
+/**
+ * 解析预测性返回手势可用的来源卡片矩形。
+ *
+ * 这是「有来源卡片 / 无来源卡片」的唯一判定点：返回 null 即代表本次手势必须
+ * 走经典侧滑兜底。
+ *
+ * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
+ * @param registry 卡片几何信息源。
+ * @return 可用的卡片窗口矩形；没有来源卡片信息时返回 null。
+ */
+internal fun resolveGestureSourceBounds(
+    illustId: Int?,
+    registry: SharedBoundsRegistry,
+): Rect? {
+    val id = illustId ?: return null
+    val bounds = registry.get(id) ?: return null
+    // 尺寸非正（卡片尚未完成布局或已退化）时同样视为无可用几何。
+    return bounds.takeIf { it.width > 0f && it.height > 0f }
 }
 
 /**
@@ -168,8 +219,10 @@ fun miuixSlidePredictiveBackAnimatable(
                     this.translationX = -(1f - progress) * (containerWidthPx * 0.30f)
                 }
                 .cardExpandScrim(
-                    expansion = predictiveBackCardExpandExpansion(progress = progress),
-                    maxAlpha = 0.20f,
+                    alpha = cardExpandScrimAlpha(
+                        expansion = predictiveBackCardExpandExpansion(progress = progress),
+                        maxAlpha = SLIDE_FALLBACK_SCRIM_ALPHA,
+                    ),
                 )
         },
     )

@@ -62,7 +62,7 @@ internal fun cardExpandStackAnimator(
                 )
             } else {
                 // 被覆盖的作品列表：不位移，只按同一展开度叠加消退遮罩建立纵深。
-                Modifier.cardExpandScrim(expansion = frame.expansion)
+                Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(frame.expansion))
             },
         )
     }

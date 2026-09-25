@@ -209,5 +209,19 @@ object AppConstants {
     object Ugoira {
         val PLAY_SPEEDS = listOf(0.5f, 1.0f, 1.5f, 2.0f)
     }
+
+    /**
+     * 作品类型标识（对应 [com.perol.pixez.shared.data.model.Illust.type] 的接口取值）。
+     *
+     * 收敛集中，避免该领域词在界面层散落为字面量后各处判断口径漂移。
+     */
+    object IllustType {
+        const val ILLUST = "illust"
+        const val MANGA = "manga"
+        const val UGOIRA = "ugoira"
+
+        /** 判断该作品类型是否为 Ugoira 动图。 */
+        fun isUgoira(type: String): Boolean = type == UGOIRA
+    }
 }
 
