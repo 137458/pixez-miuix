@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.Dp
-import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
@@ -14,17 +13,6 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
  * MIUIX / HyperOS 二级页面转场的统一时长（毫秒）。
  */
 private const val TRANSITION_DURATION_MILLIS = 340
-
-/**
- * 判断某个转场方向是否属于「顶层页面由小放大」：
- *
- * - [Direction.ENTER_FRONT]：push 时新页面入场。
- * - [Direction.EXIT_BACK]：pop 时被覆盖的底层页面重新回到前台。
- *
- * 其余方向（[Direction.EXIT_FRONT]、[Direction.ENTER_BACK]）播放「由大收缩」。
- */
-internal fun Direction.expandsOnTop(): Boolean =
-    this == Direction.ENTER_FRONT || this == Direction.EXIT_BACK
 
 /**
  * 构造 MIUIX / HyperOS 统一的二级页面转场动画器。
@@ -61,15 +49,21 @@ internal fun cardExpandStackAnimator(
         return slide(animationSpec = duration)
     }
 
-    return stackAnimator(animationSpec = duration) { fraction, direction, content ->
+    return stackAnimator(animationSpec = duration) { factor, direction, content ->
+        val frame = resolveCardExpandFrame(direction = direction, factor = factor)
         content(
-            Modifier.cardExpandLayer(
-                expand = direction.expandsOnTop(),
-                fraction = fraction,
-                sourceBounds = sourceBounds,
-                containerBounds = containerBounds,
-                containerCornerRadius = containerCornerRadius,
-            ),
+            if (frame.isTopLayer) {
+                // 发起转场的作品详情页：按卡片展开度缩放、裁圆角并投出边界阴影。
+                Modifier.cardExpandLayer(
+                    expansion = frame.expansion,
+                    sourceBounds = sourceBounds,
+                    containerBounds = containerBounds,
+                    containerCornerRadius = containerCornerRadius,
+                )
+            } else {
+                // 被覆盖的作品列表：不位移，只按同一展开度叠加消退遮罩建立纵深。
+                Modifier.cardExpandScrim(expansion = frame.expansion)
+            },
         )
     }
 }

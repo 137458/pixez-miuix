@@ -113,15 +113,14 @@ fun miuixCardExpandPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
             Modifier.cardExpandLayer(
-                expand = false,
-                fraction = progress,
+                expansion = predictiveBackCardExpandExpansion(progress = progress),
                 sourceBounds = sourceBounds,
                 containerBounds = containerBounds,
                 containerCornerRadius = deviceCornerRadius,
             )
         },
         enterModifier = { progress, _ ->
-            Modifier.cardExpandScrim(progress = progress)
+            Modifier.cardExpandScrim(expansion = predictiveBackCardExpandExpansion(progress = progress))
         },
     )
 }
@@ -168,7 +167,10 @@ fun miuixSlidePredictiveBackAnimatable(
                 .graphicsLayer {
                     this.translationX = -(1f - progress) * (containerWidthPx * 0.30f)
                 }
-                .cardExpandScrim(progress = progress, maxAlpha = 0.20f)
+                .cardExpandScrim(
+                    expansion = predictiveBackCardExpandExpansion(progress = progress),
+                    maxAlpha = 0.20f,
+                )
         },
     )
 }
