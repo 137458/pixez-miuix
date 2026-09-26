@@ -66,4 +66,15 @@ class AppStringsCoverageTest {
         assertEquals("前の章", JaStrings.novelPrevChapter)
         assertEquals("Pixiv ID", JaStrings.pixivId)
     }
+
+    @Test
+    fun `韩语关键功能区不回退到中文默认值`() {
+        assertEquals("스탬프", KoStrings.stamp)
+        assertEquals("재생", KoStrings.ugoiraPlay)
+        assertEquals("계정 관리", KoStrings.accountManageTitle)
+        assertEquals("소설", KoStrings.novelBrowseTitle)
+        assertEquals("글자 크기", KoStrings.novelFontSize)
+        assertEquals("이전 장", KoStrings.novelPrevChapter)
+        assertEquals("Pixiv ID", KoStrings.pixivId)
+    }
 }
