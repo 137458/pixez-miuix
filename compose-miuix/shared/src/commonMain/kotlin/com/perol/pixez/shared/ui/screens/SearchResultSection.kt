@@ -332,7 +332,7 @@ internal fun SearchUserResultList(
             suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
                     if (generation == requestGeneration) {
-                        previewsState = (previewsState.orEmpty()) + response.userPreviews
+                        previewsState = (previewsState.orEmpty()).appendDistinct(response.userPreviews)
                         nextUrl = response.nextUrl
                     }
                 }

@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.UserPreview
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -85,32 +86,45 @@ fun UserFollowListScreen(
     var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    // 请求代数：刷新时自增，使在途 loadMore 的过期回调失效，避免旧页数据混入新列表。
+    var requestGeneration by remember(userId) { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(state.value) {
+        requestGeneration++
+        val generation = requestGeneration
         state.value?.onSuccess { (initialPreviews, initialNextUrl) ->
-            previews = initialPreviews
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
+            if (generation == requestGeneration) {
+                previews = initialPreviews
+                nextUrl = initialNextUrl
+                isLoadingMore = false
+                loadMoreError = null
+            }
         }
     }
 
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
         if (isLoadingMore) return
+        val generation = requestGeneration
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.getUserFollowingResponse(userId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    previews = previews + response.userPreviews
-                    nextUrl = response.nextUrl
+                    if (generation == requestGeneration) {
+                        previews = previews.appendDistinct(response.userPreviews)
+                        nextUrl = response.nextUrl
+                    }
                 }
                 .onFailure { error ->
-                    loadMoreError = error
+                    if (generation == requestGeneration) {
+                        loadMoreError = error
+                    }
                 }
-            isLoadingMore = false
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
         }
     }
 
