@@ -59,7 +59,33 @@ private const val ORIGINAL_SIZE_CACHE_KEY_SUFFIX = "#original_size"
 private const val REQUEST_STALL_TIMEOUT_MS = 5_000L
 
 /** 看门狗对同一图片模型的最大重启次数。 */
-private const val REQUEST_STALL_MAX_RESTARTS = 2
+internal const val REQUEST_STALL_MAX_RESTARTS = 2
+
+/**
+ * 阶段二看门狗超时：已收到首个真实进展事件（onStart/Loading）后，仍未等到终态
+ * （Success / 非取消类 Error）的最长等待时长。覆盖「事件之后底层管线被静默取消」——
+ * 例如去重排队中的请求被上游取消：请求已死但不会再产生任何事件与回调，画面永久停留在占位。
+ */
+private const val REQUEST_COMPLETION_TIMEOUT_MS = 12_000L
+
+/**
+ * 看门狗两阶段等待策略：
+ *
+ * 1. 阶段一：等待首个真实进展事件，超时未到（引擎层完全挂起）→ 判定重建（预算内）。
+ * 2. 阶段二：已收到首事件后等待终态，超时未到（事件之后被静默取消）→ 判定重建（预算内）。
+ *
+ * 返回 true 表示应当重建图片节点重启加载；重建预算耗尽时返回 false 放弃干预。
+ */
+internal suspend fun awaitImageRequestProgress(
+    waitForFirstEvent: suspend () -> Boolean,
+    waitForTerminalEvent: suspend () -> Boolean,
+    restartCount: Int,
+    maxRestarts: Int,
+): Boolean = when {
+    !waitForFirstEvent() -> restartCount < maxRestarts
+    !waitForTerminalEvent() -> restartCount < maxRestarts
+    else -> false
+}
 
 /** 调用方未接管错误时的静默重试次数（瞬时网络/代理抖动自愈）。 */
 internal const val SILENT_ERROR_MAX_RETRIES = 1
@@ -169,12 +195,25 @@ fun PixivAsyncImage(
         AppConstants.Network.IMAGE_STANDARD_DECODE_DIMENSION
     }
 
-    // 看门狗与静默重试是两条独立预算的自愈路径：看门狗按 requestRestartCount 兜底「无进展」，
+    // 看门狗与静默重试是两条独立预算的自愈路径：看门狗按 requestRestartCount 兜底「无进展/无终态」，
     // 静默重试按 silentRetryCount 兜底「一次性错误」，互不挤占次数；各自计数变化都会用 key()
     // 强制销毁重建 AsyncImage 节点重启加载。
     var requestRestartCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
     var silentRetryCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
-    var observedLoadEvent by remember(transformedModel, loadOriginalSize) { mutableStateOf(false) }
+    // 事件标志按「同一代请求」记忆化：重启计数变化即更换全新标志，天然隔离各代请求的事件，
+    // 避免「效果启动时复位布尔把 apply 期间已到达的同步事件抹掉」的竞态。
+    var observedLoadEvent by remember(
+        transformedModel,
+        loadOriginalSize,
+        requestRestartCount,
+        silentRetryCount,
+    ) { mutableStateOf(false) }
+    var observedTerminalEvent by remember(
+        transformedModel,
+        loadOriginalSize,
+        requestRestartCount,
+        silentRetryCount,
+    ) { mutableStateOf(false) }
 
     val mainRequest = remember<ImageRequest>(
         transformedModel,
@@ -259,17 +298,29 @@ fun PixivAsyncImage(
     // 看门狗：重启计数变化时用 key() 强制销毁重建 AsyncImage 节点，新 painter 实例必然
     // 重新走 onRemembered → launchJob 执行加载。仅重建 ImageRequest 是无效的——Coil 的
     // AsyncImageModelEqualityDelegate 按结构比较请求，等价请求会被 Input 相等去重跳过
-    // restart()。用于从「底层请求被取消/挂起导致状态永远停在 Empty」中自愈；
-    // 取消类 Error 不计为进展（见 shouldCountAsLoadProgress），同样由本循环兜底重建。
+    // restart()。两阶段覆盖两类静默死亡：
+    // 1. 引擎层完全无事件（状态永远停在 Empty）；
+    // 2. Loading 之后管线被静默取消（如去重排队中的请求被上游取消）：请求已死但不会再有
+    //    任何事件与回调，画面永久停留在占位——旧看门狗收到首事件即退出，对此无能为力。
+    // 取消类 Error 不计为事件与终态（见 shouldCountAsLoadProgress），同样由超时兜底重建。
     LaunchedEffect(mainRequest) {
-        observedLoadEvent = false
-        while (requestRestartCount < REQUEST_STALL_MAX_RESTARTS) {
-            val progressed = withTimeoutOrNull(REQUEST_STALL_TIMEOUT_MS) {
-                snapshotFlow { observedLoadEvent }.filter { it }.first()
-            }
-            if (progressed != null) return@LaunchedEffect
+        val shouldRestart = awaitImageRequestProgress(
+            waitForFirstEvent = {
+                withTimeoutOrNull(REQUEST_STALL_TIMEOUT_MS) {
+                    snapshotFlow { observedLoadEvent }.filter { it }.first()
+                } != null
+            },
+            waitForTerminalEvent = {
+                withTimeoutOrNull(REQUEST_COMPLETION_TIMEOUT_MS) {
+                    snapshotFlow { observedTerminalEvent }.filter { it }.first()
+                } != null
+            },
+            restartCount = requestRestartCount,
+            maxRestarts = REQUEST_STALL_MAX_RESTARTS,
+        )
+        if (shouldRestart) {
             Napier.w(
-                "PixivAsyncImage request stalled without any engine event, restarting (attempt ${requestRestartCount + 1}): $transformedModel",
+                "PixivAsyncImage request stalled without terminal result, restarting (attempt ${requestRestartCount + 1}): $transformedModel",
                 tag = "CoilImage",
             )
             requestRestartCount++
@@ -292,8 +343,13 @@ fun PixivAsyncImage(
                         observedLoadEvent = true
                         when (state) {
                             is AsyncImagePainter.State.Loading -> onLoading?.invoke()
-                            is AsyncImagePainter.State.Success -> onSuccess?.invoke()
+                            is AsyncImagePainter.State.Success -> {
+                                observedTerminalEvent = true
+                                onSuccess?.invoke()
+                            }
                             is AsyncImagePainter.State.Error -> {
+                                // 非取消类 Error 属于终态：看门狗放行，由静默重试或调用方接管。
+                                observedTerminalEvent = true
                                 val throwable = state.result.throwable
                                 if (transformedModel != null) {
                                     Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
