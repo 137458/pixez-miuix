@@ -75,6 +75,9 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
+/** 引导页分步切换的转场时长（毫秒），四段位移动画与两段淡入淡出共用。 */
+private const val GUIDE_PAGE_TRANSITION_MILLIS = 300
+
 /**
  * 首次启动引导向导页（Onboarding Guide）：
  * Step 1: 语言与界面偏好（品牌 Hero 欢迎区、即时语言切换、贡献者感谢）
@@ -156,11 +159,11 @@ fun GuideScreen(
                 targetState = currentStep,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        (slideInHorizontally(tween(300)) { width -> width } + fadeIn(tween(300)))
-                            .togetherWith(slideOutHorizontally(tween(300)) { width -> -width } + fadeOut(tween(300)))
+                        (slideInHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } + fadeIn(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
+                            .togetherWith(slideOutHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } + fadeOut(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
                     } else {
-                        (slideInHorizontally(tween(300)) { width -> -width } + fadeIn(tween(300)))
-                            .togetherWith(slideOutHorizontally(tween(300)) { width -> width } + fadeOut(tween(300)))
+                        (slideInHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } + fadeIn(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
+                            .togetherWith(slideOutHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } + fadeOut(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
                     }
                 },
                 modifier = Modifier

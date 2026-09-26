@@ -154,6 +154,15 @@ fun inferToastType(message: String, strings: AppStrings? = null): ToastType {
  * @param backdrop 可选的背景采样 Backdrop，若提供则渲染物理透镜折射
  * @param onDismiss 提示消失后的回调，用于清空外部状态
  */
+
+// Toast 出入场物理参数（HyperOS 弹性曲线，组件内独立调参值）。
+private const val TOAST_FADE_ENTER_DAMPING = 0.8f
+private const val TOAST_SCALE_ENTER_DAMPING = 0.65f
+private const val TOAST_SLIDE_ENTER_DAMPING = 0.7f
+private const val TOAST_ENTER_STIFFNESS = 380f
+private const val TOAST_FADE_EXIT_DAMPING = 0.9f
+private const val TOAST_SCALE_EXIT_DAMPING = 0.9f
+
 @Composable
 fun ToastMessage(
     message: String?,
@@ -190,22 +199,22 @@ fun ToastMessage(
     ) {
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(spring(dampingRatio = 0.8f)) +
+            enter = fadeIn(spring(dampingRatio = TOAST_FADE_ENTER_DAMPING)) +
                 scaleIn(
-                    animationSpec = spring(dampingRatio = 0.65f, stiffness = 380f),
+                    animationSpec = spring(dampingRatio = TOAST_SCALE_ENTER_DAMPING, stiffness = TOAST_ENTER_STIFFNESS),
                     initialScale = 0.85f,
                 ) +
                 slideInVertically(
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 380f),
+                    animationSpec = spring(dampingRatio = TOAST_SLIDE_ENTER_DAMPING, stiffness = TOAST_ENTER_STIFFNESS),
                     initialOffsetY = { it / 3 },
                 ),
-            exit = fadeOut(spring(dampingRatio = 0.9f)) +
+            exit = fadeOut(spring(dampingRatio = TOAST_FADE_EXIT_DAMPING)) +
                 scaleOut(
-                    animationSpec = spring(dampingRatio = 0.9f),
+                    animationSpec = spring(dampingRatio = TOAST_SCALE_EXIT_DAMPING),
                     targetScale = 0.90f,
                 ) +
                 slideOutVertically(
-                    animationSpec = spring(dampingRatio = 0.9f),
+                    animationSpec = spring(dampingRatio = TOAST_SCALE_EXIT_DAMPING),
                     targetOffsetY = { it / 4 },
                 ),
         ) {

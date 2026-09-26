@@ -57,6 +57,13 @@ import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.icon.extended.Show
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 
+// 弹层出入场物理参数（HyperOS 弹性曲线，组件内独立调参值）。
+private const val MENU_FADE_ENTER_DAMPING = 0.8f
+private const val MENU_SCALE_ENTER_DAMPING = 0.65f
+private const val MENU_SCALE_ENTER_STIFFNESS = 420f
+private const val MENU_FADE_EXIT_DAMPING = 0.9f
+private const val MENU_SCALE_EXIT_DAMPING = 0.85f
+
 /**
  * 更多操作浮动菜单容器。
  *
@@ -80,15 +87,15 @@ internal fun IllustDetailMoreMenu(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(spring(dampingRatio = 0.8f)) +
+        enter = fadeIn(spring(dampingRatio = MENU_FADE_ENTER_DAMPING)) +
             scaleIn(
-                animationSpec = spring(dampingRatio = 0.65f, stiffness = 420f),
+                animationSpec = spring(dampingRatio = MENU_SCALE_ENTER_DAMPING, stiffness = MENU_SCALE_ENTER_STIFFNESS),
                 initialScale = 0.80f,
                 transformOrigin = TransformOrigin(0.95f, 0f),
             ),
-        exit = fadeOut(spring(dampingRatio = 0.9f)) +
+        exit = fadeOut(spring(dampingRatio = MENU_FADE_EXIT_DAMPING)) +
             scaleOut(
-                animationSpec = spring(dampingRatio = 0.85f),
+                animationSpec = spring(dampingRatio = MENU_SCALE_EXIT_DAMPING),
                 targetScale = 0.85f,
                 transformOrigin = TransformOrigin(0.95f, 0f),
             ),
