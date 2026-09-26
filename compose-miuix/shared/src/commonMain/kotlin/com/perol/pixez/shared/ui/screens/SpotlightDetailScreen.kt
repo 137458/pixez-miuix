@@ -109,20 +109,7 @@ fun SpotlightDetailScreen(
         retryKey++
     }
 
-    val settings = LocalSettingsRepository.current
-    val effectiveColumns = remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, settings?.changeVersion) {
-        if (settings?.crossAdapt == true) {
-            val minWidth = (settings.crossAdapterWidth * 1.2f).toInt().coerceIn(160, 600)
-            StaggeredGridCells.Adaptive(minWidth.dp)
-        } else {
-            val configuredCols = settings?.crossCount ?: 2
-            if (configuredCols == 2) {
-                StaggeredGridCells.Adaptive(240.dp)
-            } else {
-                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 4))
-            }
-        }
-    }
+    val effectiveColumns = rememberSpotlightGridColumns()
 
 
     val scrollBehavior = MiuixScrollBehavior()

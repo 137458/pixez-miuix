@@ -219,20 +219,7 @@ fun SpotlightScreen(
             }
     }
 
-    val settings = LocalSettingsRepository.current
-    val effectiveColumns = remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, settings?.changeVersion) {
-        if (settings?.crossAdapt == true) {
-            val minWidth = (settings.crossAdapterWidth * 1.2f).toInt().coerceIn(160, 600)
-            StaggeredGridCells.Adaptive(minWidth.dp)
-        } else {
-            val configuredCols = settings?.crossCount ?: 2
-            if (configuredCols == 2) {
-                StaggeredGridCells.Adaptive(240.dp)
-            } else {
-                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 4))
-            }
-        }
-    }
+    val effectiveColumns = rememberSpotlightGridColumns()
 
 
     val backdrop = rememberBlurBackdrop()
@@ -418,3 +405,32 @@ internal fun SpotlightArticleCard(
         }
     }
 }
+
+/**
+ * Spotlight 特辑网格的列数策略（SpotlightScreen 与 SpotlightDetailScreen 共用）：
+ * 自适应模式按设置宽度换算最小卡宽（160-600dp 收敛），
+ * 固定模式下 2 列走 240dp 自适应、其余列数收敛到 1-4。
+ */
+@Composable
+internal fun rememberSpotlightGridColumns(): StaggeredGridCells {
+    val settings = LocalSettingsRepository.current
+    return remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, settings?.changeVersion) {
+        if (settings?.crossAdapt == true) {
+            val minWidth = (settings.crossAdapterWidth * 1.2f).toInt()
+                .coerceIn(SPOTLIGHT_CARD_MIN_WIDTH_DP, SPOTLIGHT_CARD_MAX_WIDTH_DP)
+            StaggeredGridCells.Adaptive(minWidth.dp)
+        } else {
+            val configuredCols = settings?.crossCount ?: 2
+            if (configuredCols == 2) {
+                StaggeredGridCells.Adaptive(SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP.dp)
+            } else {
+                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, SPOTLIGHT_GRID_MAX_COLUMNS))
+            }
+        }
+    }
+}
+
+private const val SPOTLIGHT_CARD_MIN_WIDTH_DP = 160
+private const val SPOTLIGHT_CARD_MAX_WIDTH_DP = 600
+private const val SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP = 240
+private const val SPOTLIGHT_GRID_MAX_COLUMNS = 4
