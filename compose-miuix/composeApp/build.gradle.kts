@@ -40,11 +40,10 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            // decompose/decompose-compose 由 shared 以 api 暴露，经 projects.shared 传递可达
             implementation(projects.shared)
             implementation(libs.miuix.ui)
             implementation(libs.napier)
-            implementation(libs.decompose)
-            implementation(libs.decompose.compose)
         }
 
         androidMain.dependencies {
@@ -55,7 +54,7 @@ kotlin {
         }
 
         desktopMain.dependencies {
-            implementation(projects.shared)
+            // projects.shared 已在 commonMain 声明，desktop 继承，无需重复
             implementation(compose.desktop.currentOs)
             implementation("net.java.dev.jna:jna:5.14.0")
             implementation("net.java.dev.jna:jna-platform:5.14.0")

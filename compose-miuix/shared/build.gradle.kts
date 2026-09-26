@@ -103,11 +103,7 @@ kotlin {
             implementation(libs.sqldelight.sqlite.driver)
         }
 
-        desktopTest.dependencies {
-            implementation(kotlin("test"))
-            implementation(libs.junit)
-        }
-
+        // desktopTest 复用 commonTest 的 kotlin("test")/junit 依赖，无需重复声明
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native.driver)
