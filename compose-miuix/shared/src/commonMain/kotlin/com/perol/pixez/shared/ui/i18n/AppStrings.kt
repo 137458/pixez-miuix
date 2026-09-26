@@ -691,6 +691,9 @@ interface AppStrings {
  * 简体中文 (zh-CN)
  */
 object ZhCnStrings : AppStrings {
+    // 显式实现本语言全部 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count 字"
+
     // 二级菜单与设置子页面本地化 (ZhCnStrings)
     override val accountEditTitle = "账号信息"
     override val accountEditSectionInfo = "修改信息"
@@ -1303,6 +1306,12 @@ object ZhCnStrings : AppStrings {
  * 繁體中文 (zh-TW)
  */
 object ZhTwStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口简体默认值回退（字號 为繁体）。
+    override val novelPrevChapter: String get() = "上一章"
+    override val novelNextChapter: String get() = "下一章"
+    override val novelFontSize: String get() = "字號"
+    override fun formatNovelWordCount(count: Int): String = "$count 字"
+
     // 二级菜单与设置子页面本地化 (ZhTwStrings)
     override val accountEditTitle = "帳號資訊"
     override val accountEditSectionInfo = "修改資訊"
@@ -1944,6 +1953,12 @@ object ZhTwStrings : AppStrings {
  * 英语 (en-US)
  */
 object EnStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override val novelPrevChapter: String get() = "Previous Chapter"
+    override val novelNextChapter: String get() = "Next Chapter"
+    override val novelFontSize: String get() = "Font Size"
+    override fun formatNovelWordCount(count: Int): String = "$count words"
+
     // 二级菜单与设置子页面本地化 (EnStrings)
     override val accountEditTitle = "Account Information"
     override val accountEditSectionInfo = "Edit Information"
@@ -2584,6 +2599,9 @@ object EnStrings : AppStrings {
  * 日本语 (ja)
  */
 object JaStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "${count}文字"
+
     // 二级菜单与设置子页面本地化 (JaStrings)
     override val accountEditTitle = "アカウント情報"
     override val accountEditSectionInfo = "情報編集"
@@ -3194,6 +3212,9 @@ object JaStrings : AppStrings {
  * 韩语 (ko)
  */
 object KoStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "${count}자"
+
     // 二级菜单与设置子页面本地化 (KoStrings)
     override val accountEditTitle = "계정 정보"
     override val accountEditSectionInfo = "정보 수정"
@@ -3787,6 +3808,9 @@ object KoStrings : AppStrings {
  * 俄语 (ru)
  */
 object RuStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count слов"
+
     // 二级菜单与设置子页面本地化 (RuStrings)
     override val accountEditTitle = "Информация об аккаунте"
     override val accountEditSectionInfo = "Изменить информацию"
@@ -4381,6 +4405,9 @@ object RuStrings : AppStrings {
  * 西班牙语 (es)
  */
 object EsStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count palabras"
+
     // 二级菜单与设置子页面本地化 (EsStrings)
     override val accountEditTitle = "Información de la cuenta"
     override val accountEditSectionInfo = "Editar información"
@@ -4974,6 +5001,9 @@ object EsStrings : AppStrings {
  * 土耳其语 (tr)
  */
 object TrStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count kelime"
+
     // 二级菜单与设置子页面本地化 (TrStrings)
     override val accountEditTitle = "Hesap Bilgileri"
     override val accountEditSectionInfo = "Bilgileri Düzenle"
@@ -5568,6 +5598,9 @@ object TrStrings : AppStrings {
  * 印尼语 (id)
  */
 object IdStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count kata"
+
     // 二级菜单与设置子页面本地化 (IdStrings)
     override val accountEditTitle = "Informasi Akun"
     override val accountEditSectionInfo = "Edit Informasi"
@@ -6161,6 +6194,9 @@ object IdStrings : AppStrings {
  * 菲律宾语 (fil)
  */
 object FilStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count salita"
+
     // 二级菜单与设置子页面本地化 (FilStrings)
     override val accountEditTitle = "Impormasyon ng Account"
     override val accountEditSectionInfo = "I-edit ang Impormasyon"
@@ -6754,6 +6790,9 @@ object FilStrings : AppStrings {
  * 德语 (de)
  */
 object DeStrings : AppStrings {
+    // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
+    override fun formatNovelWordCount(count: Int): String = "$count Wörter"
+
     // 二级菜单与设置子页面本地化 (DeStrings)
     override val accountEditTitle = "Kontoinformationen"
     override val accountEditSectionInfo = "Informationen bearbeiten"
