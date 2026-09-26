@@ -87,4 +87,14 @@ class AppStringsCoverageTest {
         assertEquals("Размер шрифта", RuStrings.novelFontSize)
         assertEquals("Pixiv ID", RuStrings.pixivId)
     }
+
+    @Test
+    fun `西班牙语关键功能区不回退到中文默认值`() {
+        assertEquals("Sello", EsStrings.stamp)
+        assertEquals("Reproducir", EsStrings.ugoiraPlay)
+        assertEquals("Gestión de cuentas", EsStrings.accountManageTitle)
+        assertEquals("Novelas", EsStrings.novelBrowseTitle)
+        assertEquals("Tamaño de la fuente", EsStrings.novelFontSize)
+        assertEquals("ID de Pixiv", EsStrings.pixivId)
+    }
 }
