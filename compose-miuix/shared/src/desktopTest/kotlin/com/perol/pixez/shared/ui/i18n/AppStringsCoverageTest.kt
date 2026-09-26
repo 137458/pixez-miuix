@@ -77,4 +77,14 @@ class AppStringsCoverageTest {
         assertEquals("이전 장", KoStrings.novelPrevChapter)
         assertEquals("Pixiv ID", KoStrings.pixivId)
     }
+
+    @Test
+    fun `俄语关键功能区不回退到中文默认值`() {
+        assertEquals("Стикер", RuStrings.stamp)
+        assertEquals("Воспроизвести", RuStrings.ugoiraPlay)
+        assertEquals("Управление аккаунтами", RuStrings.accountManageTitle)
+        assertEquals("Новеллы", RuStrings.novelBrowseTitle)
+        assertEquals("Размер шрифта", RuStrings.novelFontSize)
+        assertEquals("Pixiv ID", RuStrings.pixivId)
+    }
 }
