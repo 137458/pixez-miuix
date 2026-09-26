@@ -7,13 +7,28 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import io.github.aakira.napier.Napier
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * 跨 Activity 传递的照片选择回调注册表。
+ *
+ * 采用原子「领取即清空」语义：结果回调与启动失败路径并发触发时，
+ * 不会重复回调或互相覆盖（回调仅被领取一次）。
+ */
 internal object PhotoPickerRegistry {
-    var callback: ((byteArray: ByteArray?, fileName: String?) -> Unit)? = null
+    private val callbackRef = AtomicReference<((byteArray: ByteArray?, fileName: String?) -> Unit)?>(null)
+
+    fun setCallback(callback: ((ByteArray?, String?) -> Unit)?) {
+        callbackRef.set(callback)
+    }
+
+    /** 原子领取当前回调，领取后注册表内不再持有。 */
+    fun claimCallback(): ((ByteArray?, String?) -> Unit)? = callbackRef.getAndSet(null)
 }
 
 /**
@@ -25,24 +40,26 @@ internal object PhotoPickerRegistry {
 class PhotoPickerActivity : ComponentActivity() {
 
     private val pickerLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        val cb = PhotoPickerRegistry.callback
-        PhotoPickerRegistry.callback = null
+        val cb = PhotoPickerRegistry.claimCallback()
         if (uri != null) {
-            CoroutineScope(Dispatchers.IO).launch {
+            // 绑定 Activity 生命周期的作用域替代裸 CoroutineScope；回调与 finish 统一回主线程。
+            lifecycleScope.launch {
+                var bytes: ByteArray? = null
+                var fileName: String? = null
                 try {
-                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    var fileName: String? = null
-                    contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        if (nameIndex >= 0 && cursor.moveToFirst()) {
-                            fileName = cursor.getString(nameIndex)
+                    withContext(Dispatchers.IO) {
+                        bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                                fileName = cursor.getString(nameIndex)
+                            }
                         }
                     }
-                    cb?.invoke(bytes, fileName)
                 } catch (e: Exception) {
                     Napier.e("Failed to read picked photo", e, tag = "PhotoPicker")
-                    cb?.invoke(null, null)
                 } finally {
+                    cb?.invoke(bytes, fileName)
                     finish()
                 }
             }
@@ -58,8 +75,7 @@ class PhotoPickerActivity : ComponentActivity() {
             pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         } catch (e: Exception) {
             Napier.e("Failed to launch PickVisualMedia", e, tag = "PhotoPicker")
-            PhotoPickerRegistry.callback?.invoke(null, null)
-            PhotoPickerRegistry.callback = null
+            PhotoPickerRegistry.claimCallback()?.invoke(null, null)
             finish()
         }
     }

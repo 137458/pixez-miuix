@@ -17,7 +17,7 @@ actual class PlatformPhotoPicker {
             return
         }
         try {
-            PhotoPickerRegistry.callback = onResult
+            PhotoPickerRegistry.setCallback(onResult)
             val intent = Intent(context, PhotoPickerActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -25,7 +25,7 @@ actual class PlatformPhotoPicker {
             Napier.i("PlatformPhotoPicker started PhotoPickerActivity", tag = "PhotoPicker")
         } catch (e: Exception) {
             Napier.e("Failed to launch PhotoPickerActivity", e, tag = "PhotoPicker")
-            PhotoPickerRegistry.callback = null
+            PhotoPickerRegistry.setCallback(null)
             onResult(null, null)
         }
     }

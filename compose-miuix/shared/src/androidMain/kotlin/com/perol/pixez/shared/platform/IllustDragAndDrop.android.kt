@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import coil3.SingletonImageLoader
 import com.perol.pixez.shared.data.model.Illust
+import io.github.aakira.napier.Napier
 import java.io.File
 
 /**
@@ -71,7 +72,9 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
                 if (!hasValidImage && imageFile.exists() && imageFile.length() > 0) {
                     hasValidImage = true
                 }
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                // 降级到已暂存文件兜底，但保留日志便于排查拖拽源读取失败原因。
+                Napier.w("拖拽暂存图片读取失败，降级使用本地缓存文件", e, tag = "DragAndDrop")
                 hasValidImage = imageFile.exists() && imageFile.length() > 0
             }
 
@@ -86,7 +89,9 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
                     // 补充作品直达链接，便于纯文本/网页意图的接收端解析
                     uriClip.addItem(ClipData.Item(Uri.parse(url)))
                     uriClip
-                } catch (_: Throwable) {
+                } catch (e: Throwable) {
+                    // 降级为纯文本链接，但保留日志便于排查 FileProvider URI 生成失败原因。
+                    Napier.w("拖拽 ClipData URI 生成失败，降级为纯文本链接", e, tag = "DragAndDrop")
                     ClipData.newPlainText(illust.title, url)
                 }
             } else {
