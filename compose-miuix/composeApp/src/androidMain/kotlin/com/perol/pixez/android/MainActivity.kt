@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import com.arkivanov.decompose.Cancellation
 import com.arkivanov.decompose.defaultComponentContext
 import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var dependencies: AppDependencies
     private lateinit var rootComponent: RootComponent
     private var lastBackPressTime = 0L
+    private var stackSubscription: Cancellation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -94,7 +96,8 @@ class MainActivity : ComponentActivity() {
 
         // 监听 Decompose 页面栈变化：仅在处于一级主页面且开启「再次返回退出」时启用拦截器。
         // 在二级详情页面时 isEnabled = false，将手势完全放行给 Decompose 的 predictiveBackAnimation。
-        rootComponent.stack.subscribe { updateExitCallbackState() }
+        // Decompose 的 router state 经 InstanceKeeper 跨 Activity 重建保留，旧订阅不清会累积泄漏已销毁的 Activity。
+        stackSubscription = rootComponent.stack.subscribe { updateExitCallbackState() }
     }
 
     private fun updateExitCallbackState() {
@@ -232,8 +235,9 @@ class MainActivity : ComponentActivity() {
             if (pureId != null && text.trim().length in 6..10) {
                 rootComponent.onIllustClicked(pureId)
             }
-        } catch (_: Throwable) {
-            // 忽略重复导航或异常 URL 导致的解析错误
+        } catch (e: Throwable) {
+            // 忽略重复导航或异常 URL 导致的解析错误，但保留日志便于排查跳转问题。
+            Log.w("MainActivity", "解析跳转文本失败: $text", e)
         }
     }
 
@@ -253,6 +257,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        // 栈订阅先于依赖关闭取消，避免销毁期间栈状态回调引用已关闭的依赖。
+        stackSubscription?.cancel()
         // 先释放数据库与网络资源，再调用 super.onDestroy()，避免 Activity 销毁期间句柄泄漏。
         if (::dependencies.isInitialized) {
             dependencies.close()
