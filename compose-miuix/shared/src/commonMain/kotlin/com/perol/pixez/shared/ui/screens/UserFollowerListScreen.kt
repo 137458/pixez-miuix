@@ -139,7 +139,7 @@ fun UserFollowerListScreen(
                 false
             } else {
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
-                lastVisibleItem >= totalCount - 4
+                lastVisibleItem >= totalCount - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
             }
         }
     }

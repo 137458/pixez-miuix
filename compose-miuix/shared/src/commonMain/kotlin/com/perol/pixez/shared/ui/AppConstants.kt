@@ -180,6 +180,12 @@ object AppConstants {
 
         /** 浏览历史卡片视觉圆角（dp），HistoryScreen 手动 clip 的视觉圆角。 */
         const val HISTORY_CARD_CORNER_RADIUS_DP = 12
+
+        /** 列表触底预加载阈值：最后可见项距列表末尾不足该数量时触发加载更多。 */
+        const val PRELOAD_THRESHOLD_ITEMS = 4
+
+        /** 瀑布流双列场景的触底预加载阈值：单屏条目少，需更早触发（IllustStaggeredGrid）。 */
+        const val PRELOAD_THRESHOLD_STAGGERED_ITEMS = 6
     }
 
     /**
