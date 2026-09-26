@@ -2599,6 +2599,40 @@ object EnStrings : AppStrings {
  * 日本语 (ja)
  */
 object JaStrings : AppStrings {
+    // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
+    override val menuSauceNao = "SauceNAO"
+    override val stamp = "スタンプ"
+    override val ugoiraLoadingMetadata = "うごイラのメタデータを取得中..."
+    override val ugoiraDownloading = "うごイラのフレームをダウンロード中..."
+    override val ugoiraExtracting = "うごイラのデータを展開中..."
+    override val ugoiraPlay = "再生"
+    override val ugoiraPause = "一時停止"
+    override val ugoiraSaveZip = "うごイラZipを保存"
+    override val ugoiraSaveZipSuccess = "うごイラZipを保存しました"
+    override val ugoiraLoadFailed = "うごイラの読み込みに失敗しました。タップで再試行"
+    override val ugoiraClickToPlay = "タップしてうごイラを読み込む"
+    override val ugoiraDecodeFailed = "うごイラのフレームをデコードできませんでした"
+    override val accountManageTitle = "アカウント管理"
+    override val accountCurrentActive = "現在のアカウント"
+    override val accountSwitch = "このアカウントに切り替える"
+    override val accountDelete = "アカウントを削除"
+    override val accountDeleteConfirmTitle = "アカウントの削除確認"
+    override val accountDeleteConfirmMsg = "このアカウントをローカルから削除しますか？"
+    override val accountAdd = "新しいアカウントを追加"
+    override val accountEmpty = "ログイン済みのアカウントがありません"
+    override val accountSwitchSuccess = "アカウントを切り替えました"
+    override val novelReaderTitle = "小説リーダー"
+    override val novelBrowseTitle = "小説"
+    override val novelRecommend = "小説のおすすめ"
+    override val novelRanking = "小説ランキング"
+    override val novelSeries = "シリーズ"
+    override val novelWordsCount = "文字数"
+    override val novelTextEmpty = "小説の本文が空です"
+    override val novelPrevChapter = "前の章"
+    override val novelNextChapter = "次の章"
+    override val novelFontSize = "文字サイズ"
+    override val pixivId = "Pixiv ID"
+
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
     override fun formatNovelWordCount(count: Int): String = "${count}文字"
 

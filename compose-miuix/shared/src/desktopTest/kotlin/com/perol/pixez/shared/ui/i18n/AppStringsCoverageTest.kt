@@ -54,4 +54,16 @@ class AppStringsCoverageTest {
         assertEquals("100 字", ZhCnStrings.formatNovelWordCount(100))
         assertEquals("100 字", ZhTwStrings.formatNovelWordCount(100))
     }
+
+    @Test
+    fun `日语关键功能区不回退到中文默认值`() {
+        assertEquals("スタンプ", JaStrings.stamp)
+        assertEquals("再生", JaStrings.ugoiraPlay)
+        assertEquals("一時停止", JaStrings.ugoiraPause)
+        assertEquals("アカウント管理", JaStrings.accountManageTitle)
+        assertEquals("小説", JaStrings.novelBrowseTitle)
+        assertEquals("文字サイズ", JaStrings.novelFontSize)
+        assertEquals("前の章", JaStrings.novelPrevChapter)
+        assertEquals("Pixiv ID", JaStrings.pixivId)
+    }
 }
