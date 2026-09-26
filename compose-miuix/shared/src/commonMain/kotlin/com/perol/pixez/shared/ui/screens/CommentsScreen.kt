@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Comment
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -121,26 +122,32 @@ fun CommentsScreen(
     var initialError by remember(illustId) { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    // 请求代数：刷新时自增，使在途 loadMore 的过期回调失效，避免旧页数据混入新列表。
+    var requestGeneration by remember(illustId) { mutableIntStateOf(0) }
 
     val listState = rememberLazyListState()
 
     LaunchedEffect(illustId, retryCount) {
         val force = isManualRefreshing
+        requestGeneration++
+        val generation = requestGeneration
         if (commentsState == null) {
             initialError = null
         }
         val commentResult = suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId) }
         isManualRefreshing = false
         commentResult.onSuccess { response ->
-            commentsState = response.comments
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
-            if (force && listState.firstVisibleItemIndex > 0) {
-                listState.scrollToItem(0)
+            if (generation == requestGeneration) {
+                commentsState = response.comments
+                nextUrl = response.nextUrl
+                initialError = null
+                loadMoreError = null
+                if (force && listState.firstVisibleItemIndex > 0) {
+                    listState.scrollToItem(0)
+                }
             }
         }.onFailure { error ->
-            if (commentsState == null) {
+            if (generation == requestGeneration && commentsState == null) {
                 initialError = error
             }
         }
@@ -149,17 +156,22 @@ fun CommentsScreen(
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
         if (isLoadingMore) return
+        val generation = requestGeneration
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
             try {
                 suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
                     .onSuccess { response ->
-                        commentsState = (commentsState.orEmpty()) + response.comments
-                        nextUrl = response.nextUrl
+                        if (generation == requestGeneration) {
+                            commentsState = (commentsState.orEmpty()).appendDistinct(response.comments)
+                            nextUrl = response.nextUrl
+                        }
                     }
                     .onFailure { error ->
-                        loadMoreError = error
+                        if (generation == requestGeneration) {
+                            loadMoreError = error
+                        }
                     }
             } finally {
                 // 取消或异常时同样复位，避免分页加载被永久阻塞。

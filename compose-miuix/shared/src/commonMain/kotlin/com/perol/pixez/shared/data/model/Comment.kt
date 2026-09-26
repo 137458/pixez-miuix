@@ -39,3 +39,15 @@ data class CommentStamp(
     @SerialName("stamp_id") val stampId: Int? = null,
     @SerialName("stamp_url") val stampUrl: String? = null,
 )
+
+/**
+ * 基于评论 ID 幂等合并列表，过滤重复评论，避免刷新与触底加载竞态出现重复项。
+ * id 为 null 的异常数据不参与去重，直接保留。
+ */
+fun List<Comment>.appendDistinct(newItems: List<Comment>): List<Comment> {
+    if (newItems.isEmpty()) return this
+    if (this.isEmpty()) return newItems
+    val existingIds = mapNotNullTo(HashSet(size + newItems.size)) { it.id }
+    val uniqueNew = newItems.filter { it.id == null || existingIds.add(it.id) }
+    return this + uniqueNew
+}
