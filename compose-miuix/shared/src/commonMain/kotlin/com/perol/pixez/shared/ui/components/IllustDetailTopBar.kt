@@ -43,6 +43,8 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okio.FileSystem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -186,18 +188,18 @@ internal fun LiquidMenuItem(
 /**
  * 从 Coil 磁盘缓存中尝试提取已有图片数据。
  */
-internal fun extractCachedImageBytes(context: PlatformContext, urls: List<String>): ByteArray? {
+internal suspend fun extractCachedImageBytes(context: PlatformContext, urls: List<String>): ByteArray? = withContext(Dispatchers.IO) {
     val imageLoader = SingletonImageLoader.get(context)
-    val diskCache = imageLoader.diskCache ?: return null
+    val diskCache = imageLoader.diskCache ?: return@withContext null
     for (candidateUrl in urls) {
         diskCache.openSnapshot(candidateUrl)?.use { snapshot ->
             val fileSystem = FileSystem.SYSTEM
             if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
-                return fileSystem.read(snapshot.data) { readByteArray() }
+                return@withContext fileSystem.read(snapshot.data) { readByteArray() }
             }
         }
     }
-    return null
+    null
 }
 
 @Composable

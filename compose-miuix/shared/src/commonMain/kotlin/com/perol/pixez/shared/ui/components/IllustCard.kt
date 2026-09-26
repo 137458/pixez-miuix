@@ -25,7 +25,9 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okio.FileSystem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -114,8 +116,6 @@ fun IllustCard(
                 showActionMenu = false
                 coroutineScope.launch {
                     runCatching {
-                        val imageLoader = SingletonImageLoader.get(context)
-                        val diskCache = imageLoader.diskCache
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
                         val pictureSource = settings?.pictureSource
                         val transformedUrls = candidateUrls.map {
@@ -125,17 +125,10 @@ fun IllustCard(
                                 it
                             }
                         }
-                        var bytes: ByteArray? = null
-                        for (candidateUrl in transformedUrls) {
-                            diskCache?.openSnapshot(candidateUrl)?.use { snapshot ->
-                                val fileSystem = FileSystem.SYSTEM
-                                if (fileSystem.exists(snapshot.data) && (fileSystem.metadata(snapshot.data).size ?: 0L) > 0L) {
-                                    bytes = fileSystem.read(snapshot.data) { readByteArray() }
-                                }
-                            }
-                            if (bytes != null) break
+                        withContext(Dispatchers.IO) {
+                            val bytes = extractCachedImageBytes(context, transformedUrls)
+                            bytes?.let { IllustClipboard().copyImage(it) }
                         }
-                        bytes?.let { IllustClipboard().copyImage(it) }
                     }
                 }
             },

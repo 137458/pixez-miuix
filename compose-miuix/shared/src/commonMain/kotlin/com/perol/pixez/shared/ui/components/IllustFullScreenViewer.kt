@@ -491,14 +491,16 @@ fun IllustFullScreenViewer(
                                 }
                                 coroutineScope.launch {
                                     suspendRunCatchingNonCancel {
-                                        val candidateUrls = listOfNotNull(
-                                            targetUrl,
-                                            illust.imageUrls.large,
-                                            illust.imageUrls.medium,
-                                        )
-                                        val bytes = extractCachedImageBytes(context, candidateUrls)
-                                        bytes?.let { IllustClipboard().copyImage(it) }
-                                            ?: throw IllegalStateException(strings.imageNoCacheFound)
+                                        withContext(Dispatchers.IO) {
+                                            val candidateUrls = listOfNotNull(
+                                                targetUrl,
+                                                illust.imageUrls.large,
+                                                illust.imageUrls.medium,
+                                            )
+                                            val bytes = extractCachedImageBytes(context, candidateUrls)
+                                            bytes?.let { IllustClipboard().copyImage(it) }
+                                                ?: throw IllegalStateException(strings.imageNoCacheFound)
+                                        }
                                     }.fold(
                                         onSuccess = { onToast(strings.imageCopySuccess) },
                                         onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },

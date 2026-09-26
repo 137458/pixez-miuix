@@ -44,7 +44,9 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Blocklist
@@ -191,13 +193,15 @@ internal fun IllustDetailMoreMenuCopyActions(
             onDismiss()
             coroutineScope.launch {
                 suspendRunCatchingNonCancel {
-                    val candidateUrls = listOf(
-                        illust.imageUrls.large,
-                        illust.imageUrls.medium,
-                        illust.imageUrls.squareMedium,
-                    )
-                    val bytes = extractCachedImageBytes(context, candidateUrls)
-                    bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
+                    withContext(Dispatchers.IO) {
+                        val candidateUrls = listOf(
+                            illust.imageUrls.large,
+                            illust.imageUrls.medium,
+                            illust.imageUrls.squareMedium,
+                        )
+                        val bytes = extractCachedImageBytes(context, candidateUrls)
+                        bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
+                    }
                 }.fold(
                     onSuccess = { onToast(strings.imageCopySuccess) },
                     onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
