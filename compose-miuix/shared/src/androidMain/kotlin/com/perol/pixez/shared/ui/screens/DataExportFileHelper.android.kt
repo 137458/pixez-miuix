@@ -22,7 +22,11 @@ internal actual fun writeExportFile(path: String, content: String): Result<Unit>
  */
 internal actual fun readExportFile(path: String): Result<String> = runCatchingNonCancel {
     val safePath = validateExportPath(path)
-    File(safePath).readText(Charsets.UTF_8)
+    val file = File(safePath)
+    if (file.length() > MAX_IMPORT_FILE_BYTES) {
+        throw IllegalArgumentException("导入文件过大: ${'$'}{file.length()} 字节（上限 ${'$'}MAX_IMPORT_FILE_BYTES 字节）")
+    }
+    file.readText(Charsets.UTF_8)
 }
 
 /**

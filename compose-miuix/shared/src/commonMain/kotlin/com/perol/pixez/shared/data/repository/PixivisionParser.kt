@@ -143,7 +143,8 @@ object PixivisionParser {
                     val subBlock = html.substring(subStart, subEnd)
 
                     val work = parseWorkFromBlock(subBlock) ?: AmWork(
-                        title = "作品 $artId",
+                        // 兜底标题用纯符号，避免中文透传到非中文语言的特辑列表。
+                        title = "#$artId",
                         arworkLink = artLink,
                         showImage = "https://embed.pixiv.net/spotlight.php?id=$artId",
                     )

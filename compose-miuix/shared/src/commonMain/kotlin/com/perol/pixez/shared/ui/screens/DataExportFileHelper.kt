@@ -37,6 +37,9 @@ internal expect fun writeExportFile(path: String, content: String): Result<Unit>
  * @param path 用户输入的源文件路径，必须以 `.json` 结尾。
  * @return [Result] 包装读取到的文本，失败时携带异常信息。
  */
+/** 导入文件大小上限：防止误放入 export 目录的超大文件在 readText 时耗尽内存。 */
+internal const val MAX_IMPORT_FILE_BYTES: Long = 8L * 1024 * 1024
+
 internal expect fun readExportFile(path: String): Result<String>
 
 /**
