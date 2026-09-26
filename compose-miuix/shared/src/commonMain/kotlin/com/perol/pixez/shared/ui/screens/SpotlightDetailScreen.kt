@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AmWork
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
@@ -426,10 +427,10 @@ private fun SpotlightWorkCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .let { mod ->
-                val id = work.illustId
-                if (id != null && id > 0) mod.illustTransitionBounds(id) else mod
-            }
+            .illustTransitionBounds(
+                illustId = work.illustId,
+                cornerRadius = AppConstants.Layout.ILLUST_CARD_CORNER_RADIUS_DP.dp,
+            )
             .clickable(enabled = work.illustId != null, onClick = onIllustClick),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

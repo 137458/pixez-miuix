@@ -7,6 +7,7 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.platform.UgoiraZipExtractor
 import com.perol.pixez.shared.platform.getAppCacheDirectory
+import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -282,7 +283,7 @@ internal suspend fun saveUgoiraIllust(
     illust: Illust,
     illustRepository: IllustRepository,
     downloadRepository: DownloadRepository,
-): Result<String> = runCatching {
+): Result<String> = suspendRunCatchingNonCancel {
     val meta = illustRepository.getUgoiraMetadata(illust.id)
     val zipUrl = meta.ugoiraMetadata.zipUrls.medium
     val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)

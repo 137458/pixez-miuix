@@ -6,39 +6,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * [resolveCardExpandGeometry] 的几何换算验证。
+ * [resolveCardExpandTransform] 与底层纵深缩放换算的几何验证。
  *
- * 该函数决定「卡片展开」转场收缩态下顶层页面的缩放系数与缩放锚点，
+ * 该函数决定「卡片展开」转场收缩态下顶层页面的缩放系数、平移与圆角补偿，
  * 一旦换算错误就会出现页面从屏幕外飞入、尺寸跳变或停在错误位置等明显缺陷，
- * 因此需要覆盖常规卡片、被容器裁剪的卡片与非法容器尺寸三类输入。
+ * 因此需要覆盖常规卡片、竖图卡片、被容器裁剪的卡片与非法容器尺寸等输入。
  */
 class CardExpandGeometryTest {
 
     private val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
 
     @Test
-    fun `容器左上角的半宽半高卡片得到半屏缩放与零平移`() {
-        val card = Rect(left = 0f, top = 0f, right = 500f, bottom = 1000f)
-
-        val geometry = resolveCardExpandGeometry(card, container)
-
-        assertClose(0.5f, geometry?.scaleX)
-        assertClose(0.5f, geometry?.scaleY)
-        assertClose(0f, geometry?.transX)
-        assertClose(0f, geometry?.transY)
-    }
-
-    @Test
     fun `偏置卡片按相对偏移换算出正确的平移起点`() {
         // 卡片位于容器右下区域：左 400、上 1200，尺寸 200x400。
         val card = Rect(left = 400f, top = 1200f, right = 600f, bottom = 1600f)
 
-        val geometry = resolveCardExpandGeometry(card, container)
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+        )
 
-        assertClose(0.2f, geometry?.scaleX)
-        assertClose(0.2f, geometry?.scaleY)
-        assertClose(400f, geometry?.transX)
-        assertClose(1200f, geometry?.transY)
+        // expansion = 0 时 backdropScale = 1，uniformScale = 卡片宽/容器宽 = 0.2，左上角严格对齐卡片。
+        assertClose(0.2f, state?.uniformScale)
+        assertClose(400f, state?.transX)
+        assertClose(1200f, state?.transY)
     }
 
     @Test
@@ -47,65 +39,80 @@ class CardExpandGeometryTest {
         val offsetContainer = Rect(left = 100f, top = 50f, right = 1100f, bottom = 2050f)
         val card = Rect(left = 300f, top = 250f, right = 700f, bottom = 850f)
 
-        val geometry = resolveCardExpandGeometry(card, offsetContainer)
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = offsetContainer,
+        )
 
-        assertClose(0.4f, geometry?.scaleX)
-        assertClose(0.3f, geometry?.scaleY)
-        assertClose(200f, geometry?.transX)
-        assertClose(200f, geometry?.transY)
+        assertClose(0.4f, state?.uniformScale)
+        assertClose(200f, state?.transX)
+        assertClose(200f, state?.transY)
     }
 
     @Test
     fun `卡片部分超出容器上边界时平移允许为负`() {
         val card = Rect(left = 0f, top = -200f, right = 400f, bottom = 200f)
 
-        val geometry = resolveCardExpandGeometry(card, container)
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+        )
 
-        assertClose(0.4f, geometry?.scaleX)
-        assertClose(0.2f, geometry?.scaleY)
-        assertClose(0f, geometry?.transX)
-        assertClose(-200f, geometry?.transY)
+        assertClose(0.4f, state?.uniformScale)
+        assertClose(0f, state?.transX)
+        assertClose(-200f, state?.transY)
     }
 
     @Test
-    fun `卡片与容器等大时缩放为 1 且零平移`() {
-        val geometry = resolveCardExpandGeometry(container, container)
+    fun `卡片与容器等大时收缩态即铺满`() {
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = container,
+            containerBounds = container,
+        )
 
-        assertClose(1f, geometry?.scaleX)
-        assertClose(1f, geometry?.scaleY)
-        assertClose(0f, geometry?.transX)
-        assertClose(0f, geometry?.transY)
+        assertClose(1f, state?.uniformScale)
+        assertClose(0f, state?.transX)
+        assertClose(0f, state?.transY)
     }
 
     @Test
     fun `退化卡片尺寸被抬升到缩放下限避免页面不可见`() {
         val card = Rect(left = 0f, top = 0f, right = 0f, bottom = 0f)
 
-        val geometry = resolveCardExpandGeometry(card, container)
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+        )
 
-        assertClose(0.05f, geometry?.scaleX)
-        assertClose(0.05f, geometry?.scaleY)
-        assertClose(0f, geometry?.transX)
-        assertClose(0f, geometry?.transY)
+        assertClose(0.05f, state?.uniformScale)
+        assertClose(0f, state?.transX)
+        assertClose(0f, state?.transY)
     }
 
     @Test
     fun `超宽卡片缩放被钳制为 1 不放大`() {
         val card = Rect(left = -500f, top = -1000f, right = 1500f, bottom = 4000f)
 
-        val geometry = resolveCardExpandGeometry(card, container)
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+        )
 
-        assertClose(1f, geometry?.scaleX)
-        assertClose(1f, geometry?.scaleY)
-        assertClose(-500f, geometry?.transX)
-        assertClose(-1000f, geometry?.transY)
+        assertClose(1f, state?.uniformScale)
+        assertClose(-500f, state?.transX)
+        assertClose(-1000f, state?.transY)
     }
 
     @Test
-    fun `容器尺寸为零时不产生几何结果`() {
+    fun `容器尺寸为零时不产生变换结果`() {
         val degenerate = Rect(left = 0f, top = 0f, right = 0f, bottom = 0f)
 
-        assertNull(resolveCardExpandGeometry(container, degenerate))
+        assertNull(resolveCardExpandTransform(expansion = 0f, sourceBounds = container, containerBounds = degenerate))
     }
 
     @Test
@@ -151,7 +158,6 @@ class CardExpandGeometryTest {
         assertClose(0.46f, state?.uniformScale)
         assertClose(30f, state?.transX)
         assertClose(200f, state?.transY)
-        assertClose(1.0f, state?.visibleWidthFraction)
         assertClose(1.0f, state?.visibleHeightFraction)
     }
 

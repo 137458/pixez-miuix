@@ -107,7 +107,7 @@ class SharedBoundsRegistryTest {
         registry.put(illustId = 1, rect = visibleCard)
         registry.put(illustId = 2, rect = mostlyScrolledOutCard)
 
-        assertEquals(visibleCard, registry.getVisibleInContainer(1, container))
+        assertEquals(visibleCard, registry.getVisibleInContainer(1, container)?.rect)
         assertNull(registry.getVisibleInContainer(2, container))
     }
 
@@ -130,5 +130,56 @@ class SharedBoundsRegistryTest {
         val scrolledBounds = Rect(left = 24f, top = 180f, right = 524f, bottom = 830f)
         registry.put(illustId = 42, rect = scrolledBounds)
         assertEquals(scrolledBounds, registry.get(42))
+    }
+
+    @Test
+    fun `登记时记录卡片圆角并随可视矩形一起返回`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+
+        registry.put(illustId = 42, rect = card, cornerRadiusDp = 12f)
+
+        val visible = registry.getVisibleInContainer(42, container)
+        assertEquals(12f, visible?.cornerRadiusDp, "转场终点圆角必须取卡片自身圆角（如历史卡 12dp）")
+        assertEquals(card, visible?.rect)
+    }
+
+    @Test
+    fun `转场激活期首次登记的卡片按底层纵深缩放逆变换归一为静止态坐标`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
+        val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        // expansion = 0.5 → backdropScale = lerp(1, 0.96, 0.5) = 0.98，缩放锚点 = 源卡片中心 (300, 600)。
+        registry.updateTransitionState(
+            illustId = 42,
+            expansion = 0.5f,
+            sourceBounds = sourceCard,
+            containerBounds = container,
+        )
+
+        // 转场中新进入组合的卡片上报的是被 0.98x 缩放污染的瞬时坐标：
+        // q = pivot + (p - pivot) * 0.98，静止态 p = Rect(200, 500, 600, 900) → q = Rect(202, 502, 594, 894)。
+        val pollutedFromBackdrop = Rect(left = 202f, top = 502f, right = 594f, bottom = 894f)
+        registry.put(illustId = 7, rect = pollutedFromBackdrop, cornerRadiusDp = 12f)
+
+        assertEquals(
+            Rect(left = 200f, top = 500f, right = 600f, bottom = 900f),
+            registry.get(7),
+            "转场期首次登记的坐标必须归一为静止态真实坐标，否则退出动画终点跳变",
+        )
+    }
+
+    @Test
+    fun `转场结束后登记坐标不再做逆变换`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
+        val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        registry.updateTransitionState(illustId = 42, expansion = 0.5f, sourceBounds = sourceCard, containerBounds = container)
+        registry.updateTransitionState(illustId = null, expansion = 0f)
+
+        val stationary = Rect(left = 202f, top = 502f, right = 594f, bottom = 894f)
+        registry.put(illustId = 7, rect = stationary)
+
+        assertEquals(stationary, registry.get(7))
     }
 }

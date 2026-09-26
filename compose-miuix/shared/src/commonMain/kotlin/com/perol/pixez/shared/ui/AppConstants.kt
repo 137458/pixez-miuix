@@ -20,6 +20,9 @@ object AppConstants {
 
         const val IMAGE_MAX_DECODE_DIMENSION = 4096
 
+        /** 普通浏览场景（列表 / 详情页）的解码边长上限（px）。 */
+        const val IMAGE_STANDARD_DECODE_DIMENSION = 2048
+
         /**
          * Pixivision 页面 Referer（Pixivision 域名下的图片同样启用防盗链校验）。
          */
@@ -184,6 +187,12 @@ object AppConstants {
         const val FLOATING_BAR_MIN_WIDTH_DP = 320
         const val TABLET_CONTENT_MAX_WIDTH_DP = 760
         const val GRID_CARD_MIN_WIDTH_DP = 180
+
+        /** 作品卡片视觉圆角（dp），与 MIUIX Card 默认圆角一致，卡片展开转场按登记值对齐收回终点。 */
+        const val ILLUST_CARD_CORNER_RADIUS_DP = 16
+
+        /** 浏览历史卡片视觉圆角（dp），HistoryScreen 手动 clip 的视觉圆角。 */
+        const val HISTORY_CARD_CORNER_RADIUS_DP = 12
     }
 
     /**

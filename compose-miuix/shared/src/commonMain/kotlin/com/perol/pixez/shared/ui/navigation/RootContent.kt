@@ -130,7 +130,6 @@ fun RootContent(
     // 作品卡片几何信息源：列表卡片登记矩形，二级页面转场据此播放「卡片展开/收回」动画。
     val sharedBounds = remember { SharedBoundsRegistry() }
     val bottomBarVisible = remember { mutableStateOf(true) }
-    val mainContentBottomPadding = if (bottomBarVisible.value) 100.dp else 16.dp
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
@@ -154,7 +153,6 @@ fun RootContent(
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
-            LocalBottomBarContentPadding provides mainContentBottomPadding,
             com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
         ) {
@@ -242,47 +240,55 @@ fun RootContent(
                     ) { child ->
                         when (val instance = child.instance) {
                             is Child.Main -> {
-                                val _changeVersion = settingsRepository.changeVersion
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MiuixTheme.colorScheme.surface),
+                                // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
+                                val mainChangeVersion = settingsRepository.changeVersion
+                                // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
+                                // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
+                                // 回落为 CompositionLocal 默认值 16.dp。
+                                CompositionLocalProvider(
+                                    LocalBottomBarContentPadding provides if (bottomBarVisible.value) 100.dp else 16.dp,
                                 ) {
-                                    if (showNavigationRailInMain) {
-                                        MainNavigationRail(
-                                            activeTab = activeTab,
-                                            onTabSelected = component::onMainTabSelected,
-                                        )
-                                    }
-                                    Box(
+                                    Row(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight(),
+                                            .fillMaxSize()
+                                            .background(MiuixTheme.colorScheme.surface),
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .blurBackdropSource(floatingBackdrop),
-                                        ) {
-                                            MainContent(
-                                                initialTab = instance.tab,
-                                                component = component,
-                                                illustRepository = illustRepository,
-                                                searchRepository = searchRepository,
-                                                userRepository = userRepository,
-                                                accountRepository = accountRepository,
-                                                banRepository = banRepository,
-                                                settingsRepository = settingsRepository,
-                                            )
-                                        }
-                                        if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
-                                            MainBottomBar(
+                                        if (showNavigationRailInMain) {
+                                            MainNavigationRail(
                                                 activeTab = activeTab,
                                                 onTabSelected = component::onMainTabSelected,
-                                                isFloating = useFloatingBottomBar,
-                                                backdrop = floatingBackdrop,
-                                                modifier = Modifier.align(Alignment.BottomCenter),
                                             )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight(),
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .blurBackdropSource(floatingBackdrop),
+                                            ) {
+                                                MainContent(
+                                                    initialTab = instance.tab,
+                                                    component = component,
+                                                    illustRepository = illustRepository,
+                                                    searchRepository = searchRepository,
+                                                    userRepository = userRepository,
+                                                    accountRepository = accountRepository,
+                                                    banRepository = banRepository,
+                                                    settingsRepository = settingsRepository,
+                                                )
+                                            }
+                                            if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
+                                                MainBottomBar(
+                                                    activeTab = activeTab,
+                                                    onTabSelected = component::onMainTabSelected,
+                                                    isFloating = useFloatingBottomBar,
+                                                    backdrop = floatingBackdrop,
+                                                    modifier = Modifier.align(Alignment.BottomCenter),
+                                                )
+                                            }
                                         }
                                     }
                                 }

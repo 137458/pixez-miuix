@@ -57,10 +57,11 @@ fun miuixCardExpandStackAnimation(
         val frontConfig = if (direction.isFront) child.configuration else otherChild.configuration
         val rawIllustId = (frontConfig as? RootComponent.Config.IllustDetail)?.illustId
         val effectiveIllustId = if (isPop) registry.resolveEffectiveIllustId(rawIllustId) else rawIllustId
-        val sourceBounds = effectiveIllustId?.let { registry.getVisibleInContainer(it, containerBounds) }
+        val sourceCard = effectiveIllustId?.let { registry.getVisibleInContainer(it, containerBounds) }
 
         cardExpandStackAnimator(
-            sourceBounds = sourceBounds,
+            sourceBounds = sourceCard?.rect,
+            cardCornerRadiusDp = sourceCard?.cornerRadiusDp ?: DEFAULT_CARD_CORNER_RADIUS_DP,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
             isTopLayer = direction.isFront,
@@ -98,7 +99,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
     deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
     val effectiveIllustId = registry.resolveEffectiveIllustId(illustId)
-    val sourceBounds = resolveGestureSourceBounds(
+    val sourceCard = resolveGestureSourceBounds(
         illustId = effectiveIllustId,
         registry = registry,
         containerBounds = containerBounds,
@@ -115,10 +116,16 @@ fun miuixCardExpandPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
-            registry.updateTransitionState(effectiveIllustId, expansion)
+            registry.updateTransitionState(
+                illustId = effectiveIllustId,
+                expansion = expansion,
+                sourceBounds = sourceCard.rect,
+                containerBounds = containerBounds,
+            )
             Modifier.cardExpandLayer(
                 expansion = expansion,
-                sourceBounds = sourceBounds,
+                sourceBounds = sourceCard.rect,
+                cardCornerRadiusDp = sourceCard.cornerRadiusDp,
                 containerBounds = containerBounds,
                 containerCornerRadius = deviceCornerRadius,
             )
@@ -128,7 +135,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
             Modifier.cardExpandScrim(
                 alpha = cardExpandScrimAlpha(expansion),
                 expansion = expansion,
-                sourceBounds = sourceBounds,
+                sourceBounds = sourceCard.rect,
                 containerBounds = containerBounds,
                 containerCornerRadius = deviceCornerRadius,
             )
@@ -137,7 +144,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
 }
 
 /**
- * 解析预测性返回手势可用的来源卡片矩形。
+ * 解析预测性返回手势可用的来源卡片登记。
  *
  * 这是「有来源卡片 / 无来源卡片」的唯一判定点：返回 null 即代表本次手势必须
  * 走经典侧滑兜底。
@@ -145,16 +152,16 @@ fun miuixCardExpandPredictiveBackAnimatable(
  * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
  * @param registry 卡片几何信息源。
  * @param containerBounds 页面容器窗口矩形。
- * @return 可用的卡片窗口矩形；没有来源卡片信息或已滚出容器可视范围时返回 null。
+ * @return 可用的卡片登记（静止态矩形 + 卡片圆角）；没有来源卡片信息或已滚出容器可视范围时返回 null。
  */
 internal fun resolveGestureSourceBounds(
     illustId: Int?,
     registry: SharedBoundsRegistry,
     containerBounds: Rect = Rect.Zero,
-): Rect? {
+): IllustCardBounds? {
     val id = illustId ?: return null
-    val bounds = registry.getVisibleInContainer(id, containerBounds) ?: return null
-    return bounds.takeIf { it.width > 0f && it.height > 0f }
+    val card = registry.getVisibleInContainer(id, containerBounds) ?: return null
+    return card.takeIf { it.rect.width > 0f && it.rect.height > 0f }
 }
 
 /**

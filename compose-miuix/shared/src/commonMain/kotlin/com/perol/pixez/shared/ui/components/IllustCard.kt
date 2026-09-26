@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Card
@@ -65,12 +66,7 @@ fun IllustCard(
 ) {
     val settings = LocalSettingsRepository.current
     val previewUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
-        when (settings?.feedPreviewQuality ?: 0) {
-            0 -> illust.imageUrls.medium
-            1 -> illust.imageUrls.large
-            2 -> illust.imageUrls.squareMedium
-            else -> illust.imageUrls.medium
-        }
+        resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality)
     }
 
     val isAI = remember(illust.illustAIType) { illust.illustAIType == 2 }
@@ -175,7 +171,7 @@ fun IllustCard(
         modifier = modifier
             .fillMaxWidth()
             .illustDragAndDropSource(illust, 0)
-            .illustTransitionBounds(illust.id)
+            .illustTransitionBounds(illust.id, AppConstants.Layout.ILLUST_CARD_CORNER_RADIUS_DP.dp)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 contentDescription = illustA11yDescription

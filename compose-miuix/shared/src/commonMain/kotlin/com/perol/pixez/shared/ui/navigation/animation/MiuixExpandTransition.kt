@@ -32,12 +32,14 @@ private const val FALLBACK_BACK_PARALLAX_FRACTION = 0.10f
  * 消除生硬的整屏线性硬推。
  *
  * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用视差侧滑 + 淡入淡出兜底。
+ * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp），收回终点按它做像素级对齐。
  * @param containerBounds 页面容器自身的窗口矩形，用于归一化卡片几何。
  * @param containerCornerRadius 设备屏幕物理圆角，收缩态下用于裁切顶层页面。
  * @return 可直接交给 stackAnimation 使用的 [StackAnimator]。
  */
 internal fun cardExpandStackAnimator(
     sourceBounds: Rect?,
+    cardCornerRadiusDp: Float,
     containerBounds: Rect,
     containerCornerRadius: Dp,
     isTopLayer: Boolean,
@@ -86,13 +88,19 @@ internal fun cardExpandStackAnimator(
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
         val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
         if (frame.isTopLayer) {
-            registry?.updateTransitionState(illustId, frame.expansion)
+            registry?.updateTransitionState(
+                illustId = illustId,
+                expansion = frame.expansion,
+                sourceBounds = sourceBounds,
+                containerBounds = containerBounds,
+            )
         }
         content(
             if (frame.isTopLayer) {
                 Modifier.cardExpandLayer(
                     expansion = frame.expansion,
                     sourceBounds = sourceBounds,
+                    cardCornerRadiusDp = cardCornerRadiusDp,
                     containerBounds = containerBounds,
                     containerCornerRadius = containerCornerRadius,
                 )

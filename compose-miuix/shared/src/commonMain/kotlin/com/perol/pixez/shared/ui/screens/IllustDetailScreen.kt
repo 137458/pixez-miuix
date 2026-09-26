@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
 import top.yukonga.miuix.kmp.basic.Button
@@ -83,9 +85,9 @@ fun IllustDetailScreen(
 ) {
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
-    val sharedBoundsRegistry = com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry.current
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
 
-    androidx.compose.runtime.DisposableEffect(sharedBoundsRegistry) {
+    DisposableEffect(sharedBoundsRegistry) {
         onDispose {
             sharedBoundsRegistry.activeDetailIllustId = null
         }

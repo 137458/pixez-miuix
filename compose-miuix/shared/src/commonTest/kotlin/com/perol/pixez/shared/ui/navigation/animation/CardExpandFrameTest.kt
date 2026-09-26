@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
+import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -22,8 +23,8 @@ class CardExpandFrameTest {
 
     @Test
     fun `push 入场页面从卡片收缩态展开到铺满`() {
-        val start = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = 1f)
-        val end = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = 0f)
+        val start = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = 1f, isTopLayer = Direction.ENTER_FRONT.isFront)
+        val end = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = 0f, isTopLayer = Direction.ENTER_FRONT.isFront)
 
         assertClose(0f, start.expansion)
         assertClose(1f, end.expansion)
@@ -32,8 +33,8 @@ class CardExpandFrameTest {
 
     @Test
     fun `push 退到后台的页面铺满状态保持不动并以遮罩描述纵深`() {
-        val start = resolveCardExpandFrame(Direction.EXIT_BACK, factor = 0f)
-        val end = resolveCardExpandFrame(Direction.EXIT_BACK, factor = -1f)
+        val start = resolveCardExpandFrame(Direction.EXIT_BACK, factor = 0f, isTopLayer = Direction.EXIT_BACK.isFront)
+        val end = resolveCardExpandFrame(Direction.EXIT_BACK, factor = -1f, isTopLayer = Direction.EXIT_BACK.isFront)
 
         assertClose(0f, start.expansion)
         assertClose(1f, end.expansion)
@@ -42,8 +43,8 @@ class CardExpandFrameTest {
 
     @Test
     fun `pop 离场的顶层页面从铺满收缩回卡片`() {
-        val start = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 0f)
-        val end = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 1f)
+        val start = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 0f, isTopLayer = Direction.EXIT_FRONT.isFront)
+        val end = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 1f, isTopLayer = Direction.EXIT_FRONT.isFront)
 
         assertClose(1f, start.expansion)
         assertClose(0f, end.expansion)
@@ -53,8 +54,8 @@ class CardExpandFrameTest {
     @Test
     fun `pop 重新回到前台的页面按顶层展开度从铺满回到卡片收缩态`() {
         // pop 起手时离场的详情页铺满容器，该层无遮罩；pop 结束时详情页已收回卡片，遮罩最强。
-        val start = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -1f)
-        val end = resolveCardExpandFrame(Direction.ENTER_BACK, factor = 0f)
+        val start = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -1f, isTopLayer = Direction.ENTER_BACK.isFront)
+        val end = resolveCardExpandFrame(Direction.ENTER_BACK, factor = 0f, isTopLayer = Direction.ENTER_BACK.isFront)
 
         assertClose(1f, start.expansion)
         assertClose(0f, end.expansion)
@@ -66,15 +67,15 @@ class CardExpandFrameTest {
         // push：animationState 从 1 走到 0，入场层 factor = a，退场层 factor = a - 1。
         for (step in 0..10) {
             val a = 1f - step / 10f
-            val entering = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = a)
-            val exiting = resolveCardExpandFrame(Direction.EXIT_BACK, factor = a - 1f)
+            val entering = resolveCardExpandFrame(Direction.ENTER_FRONT, factor = a, isTopLayer = Direction.ENTER_FRONT.isFront)
+            val exiting = resolveCardExpandFrame(Direction.EXIT_BACK, factor = a - 1f, isTopLayer = Direction.EXIT_BACK.isFront)
             assertClose(entering.expansion, exiting.expansion)
         }
         // pop：入场层 factor = -a，离场层 factor = 1 - a。
         for (step in 0..10) {
             val a = 1f - step / 10f
-            val entering = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -a)
-            val exiting = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 1f - a)
+            val entering = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -a, isTopLayer = Direction.ENTER_BACK.isFront)
+            val exiting = resolveCardExpandFrame(Direction.EXIT_FRONT, factor = 1f - a, isTopLayer = Direction.EXIT_FRONT.isFront)
             assertClose(entering.expansion, exiting.expansion)
         }
     }
@@ -82,8 +83,8 @@ class CardExpandFrameTest {
     @Test
     fun `展开度被钳制在 0 到 1 之间避免负圆角`() {
         // factor 超出各自方向的理论区间时，展开度必须钳制而不是溢出。
-        val belowZero = resolveCardExpandFrame(Direction.EXIT_BACK, factor = 1.4f)
-        val aboveOne = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -1.4f)
+        val belowZero = resolveCardExpandFrame(Direction.EXIT_BACK, factor = 1.4f, isTopLayer = Direction.EXIT_BACK.isFront)
+        val aboveOne = resolveCardExpandFrame(Direction.ENTER_BACK, factor = -1.4f, isTopLayer = Direction.ENTER_BACK.isFront)
 
         assertClose(0f, belowZero.expansion)
         assertClose(1f, aboveOne.expansion)
@@ -110,8 +111,8 @@ class CardExpandFrameTest {
 
         endpoints.forEach { (direction, factors) ->
             val (factorAtStart, factorAtEnd) = factors
-            val start = resolveCardExpandFrame(direction, factorAtStart).expansion
-            val end = resolveCardExpandFrame(direction, factorAtEnd).expansion
+            val start = resolveCardExpandFrame(direction, factorAtStart, isTopLayer = direction.isFront).expansion
+            val end = resolveCardExpandFrame(direction, factorAtEnd, isTopLayer = direction.isFront).expansion
             assertTrue(
                 (start == 1f && end == 0f) || (start == 0f && end == 1f),
                 "方向 $direction 的展开度端点应为 0 与 1 的组合，实际为 $start -> $end",

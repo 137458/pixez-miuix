@@ -13,32 +13,12 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 
 /**
- * 「卡片展开」转场在容器内坐标系的几何描述。
- *
- * 所有分量都以 [Rect]（容器自身的窗口矩形）为基准归一化到 0..1，
- * 因此可直接作为 [graphicsLayer] 的 [TransformOrigin] 与缩放系数使用，
- * 与具体像素密度、容器尺寸解耦。
- *
- * @param scaleX 收缩态（进度 0）下顶层页面在容器宽度上的占比。
- * @param scaleY 收缩态（进度 0）下顶层页面在容器高度上的占比。
- * @param pivotX 收缩态下顶层页面缩放锚点的水平位置（容器宽度归一化）。
- * @param pivotY 收缩态下顶层页面缩放锚点的垂直位置（容器高度归一化）。
- */
-internal data class CardExpandGeometry(
-    val scaleX: Float,
-    val scaleY: Float,
-    val transX: Float,
-    val transY: Float,
-)
-
-/**
  * 顶层页面在给定展开度 [expansion] 下的完整几何与视觉变换参数。
  */
 internal data class CardExpandTransformState(
     val uniformScale: Float,
     val transX: Float,
     val transY: Float,
-    val visibleWidthFraction: Float,
     val visibleHeightFraction: Float,
     val localCornerRadiusDp: Float,
     val contentAlpha: Float,
@@ -46,45 +26,21 @@ internal data class CardExpandTransformState(
 )
 
 /**
- * 计算卡片展开转场的几何参数。
+ * 计算给定展开度 [expansion] 下顶层页面的变换状态（含圆角缩放逆补偿与高度方向裁切）。
  *
- * 卡片矩形 [sourceBounds] 在容器窗口内的相对位置作为平移起点，
- * 宽高比作为缩放起点，以此实现 100% 严丝合缝贴合卡片位置。
- *
- * @param sourceBounds 卡片在窗口坐标系下的矩形。
+ * @param sourceBounds 卡片在窗口坐标系下的静止态矩形。
  * @param containerBounds 容器在窗口坐标系下的矩形。
- * @return 几何参数；容器尺寸非法时返回 null，调用方应跳过动画。
- */
-internal fun resolveCardExpandGeometry(
-    sourceBounds: Rect,
-    containerBounds: Rect,
-): CardExpandGeometry? {
-    if (containerBounds.width <= 0f || containerBounds.height <= 0f) return null
-
-    val scaleX = (sourceBounds.width / containerBounds.width).coerceIn(MIN_SCALE, 1f)
-    val scaleY = (sourceBounds.height / containerBounds.height).coerceIn(MIN_SCALE, 1f)
-    val transX = sourceBounds.left - containerBounds.left
-    val transY = sourceBounds.top - containerBounds.top
-
-    return CardExpandGeometry(
-        scaleX = scaleX,
-        scaleY = scaleY,
-        transX = transX,
-        transY = transY,
-    )
-}
-
-/**
- * 计算给定展开度 [expansion] 下顶层页面的变换状态（含圆角缩放逆补偿与宽高双向裁切）。
+ * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp）。
+ * @return 变换状态；容器尺寸非法时返回 null，调用方应跳过动画。
  */
 internal fun resolveCardExpandTransform(
     expansion: Float,
     sourceBounds: Rect,
     containerBounds: Rect,
-    cardCornerRadiusDp: Float = 16f,
+    cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerCornerRadiusDp: Float = 0f,
 ): CardExpandTransformState? {
-    val geometry = resolveCardExpandGeometry(sourceBounds, containerBounds) ?: return null
+    if (containerBounds.width <= 0f || containerBounds.height <= 0f) return null
     val progress = expansion.coerceIn(0f, 1f)
 
     // 底层列表围绕 sourceBounds.center 按 backdropScale 纵深微缩放，
@@ -106,7 +62,6 @@ internal fun resolveCardExpandTransform(
     val unscaledHeightFraction = (liveScaleY / baseScale).coerceIn(0.05f, 1f)
 
     val uniformScale = lerp(baseScale, 1f, progress)
-    val visibleWidthFraction = 1f
     val visibleHeightFraction = lerp(unscaledHeightFraction, 1f, progress)
 
     val startTransX = liveLeft - containerBounds.left
@@ -114,7 +69,7 @@ internal fun resolveCardExpandTransform(
     val transX = lerp(startTransX, 0f, progress)
     val transY = lerp(startTransY, 0f, progress)
 
-    // 屏幕物理圆角由卡片圆角（16dp）平滑插值到设备屏幕物理圆角；
+    // 屏幕物理圆角由卡片自身圆角平滑插值到设备屏幕物理圆角；
     // 本地 Shape 圆角需除以 uniformScale 逆向补偿，避免 graphicsLayer 缩小后屏幕圆角缩水成尖角。
     val screenCornerRadiusDp = lerp(cardCornerRadiusDp, containerCornerRadiusDp, progress)
     val localCornerRadiusDp = screenCornerRadiusDp / uniformScale.coerceAtLeast(MIN_SCALE)
@@ -123,7 +78,6 @@ internal fun resolveCardExpandTransform(
         uniformScale = uniformScale,
         transX = transX,
         transY = transY,
-        visibleWidthFraction = visibleWidthFraction,
         visibleHeightFraction = visibleHeightFraction,
         localCornerRadiusDp = localCornerRadiusDp,
         contentAlpha = cardExpandContentAlpha(progress),
@@ -215,8 +169,8 @@ private const val EXPAND_SHADOW_ELEVATION = 16f
 /** 底层页面在展开态下叠加的暗色遮罩最大不透明度。 */
 private const val BACKDROP_SCRIM_ALPHA = 0.24f
 
-/** 底层页面在顶层完全展开时的纵深微缩放比例。 */
-private const val BACKDROP_MIN_SCALE = 0.96f
+/** 底层页面在顶层完全展开时的纵深微缩放比例（转场登记坐标的逆变换同样使用该值）。 */
+internal const val BACKDROP_MIN_SCALE = 0.96f
 
 /** 底层页面缩小脱离屏幕边缘时的最小圆角半径（dp），防止在未上报屏幕圆角的设备上露出四边直角。 */
 private const val BACKDROP_FALLBACK_CORNER_RADIUS_DP = 28f
@@ -245,12 +199,14 @@ internal fun cardExpandContentAlpha(expansion: Float): Float {
  *
  * @param expansion 展开度，0f 表示收缩在卡片内、1f 表示铺满容器；越界值会被钳制。
  * @param sourceBounds 卡片窗口矩形，可为 null。
+ * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp），未登记时回退 [DEFAULT_CARD_CORNER_RADIUS_DP]。
  * @param containerBounds 容器窗口矩形。
  * @param containerCornerRadius 设备屏幕物理圆角，收缩态下用于裁切顶层页面。
  */
 internal fun Modifier.cardExpandLayer(
     expansion: Float,
     sourceBounds: Rect?,
+    cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBounds: Rect,
     containerCornerRadius: Dp,
 ): Modifier {
@@ -259,7 +215,7 @@ internal fun Modifier.cardExpandLayer(
         expansion = expansion,
         sourceBounds = sourceBounds,
         containerBounds = containerBounds,
-        cardCornerRadiusDp = 16f,
+        cardCornerRadiusDp = cardCornerRadiusDp,
         containerCornerRadiusDp = containerCornerRadius.value,
     ) ?: return this
 
@@ -271,7 +227,6 @@ internal fun Modifier.cardExpandLayer(
         this.translationY = state.transY
         this.alpha = state.contentAlpha
         shape = ClippedContainerShape(
-            widthFraction = state.visibleWidthFraction,
             heightFraction = state.visibleHeightFraction,
             cornerRadius = state.localCornerRadiusDp.dp,
         )
@@ -281,12 +236,11 @@ internal fun Modifier.cardExpandLayer(
 }
 
 /**
- * 支持水平居中与垂直顶部比例裁切的圆角矩形 Shape。
+ * 支持垂直顶部比例裁切的圆角矩形 Shape。
  *
- * 用于在等比缩放下将顶层页面容器裁切至卡片当前对应的真实宽高并保留补偿后的圆角。
+ * 用于在等比缩放下将顶层页面容器裁切至卡片当前对应的真实高度并保留补偿后的圆角。
  */
 private data class ClippedContainerShape(
-    val widthFraction: Float,
     val heightFraction: Float,
     val cornerRadius: Dp,
 ) : androidx.compose.ui.graphics.Shape {
@@ -296,15 +250,13 @@ private data class ClippedContainerShape(
         density: androidx.compose.ui.unit.Density,
     ): androidx.compose.ui.graphics.Outline {
         val radiusPx = with(density) { cornerRadius.toPx() }
-        val clampedWidthFraction = widthFraction.coerceIn(0.05f, 1f)
         val clampedHeightFraction = heightFraction.coerceIn(0.05f, 1f)
-        val horizontalInset = size.width * (1f - clampedWidthFraction) * 0.5f
         val clippedHeight = (size.height * clampedHeightFraction).coerceAtMost(size.height)
         return androidx.compose.ui.graphics.Outline.Rounded(
             androidx.compose.ui.geometry.RoundRect(
-                left = horizontalInset,
+                left = 0f,
                 top = 0f,
-                right = (size.width - horizontalInset).coerceAtLeast(horizontalInset + 1f),
+                right = size.width,
                 bottom = clippedHeight,
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(radiusPx, radiusPx),
             ),
@@ -406,7 +358,7 @@ internal data class CardExpandFrame(
 internal fun resolveCardExpandFrame(
     direction: Direction,
     factor: Float,
-    isTopLayer: Boolean = direction.isFront,
+    isTopLayer: Boolean,
 ): CardExpandFrame =
     if (isTopLayer) {
         CardExpandFrame(expansion = (1f - factor).coerceIn(0f, 1f), isTopLayer = true)
