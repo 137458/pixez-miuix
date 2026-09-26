@@ -110,4 +110,25 @@ class SharedBoundsRegistryTest {
         assertEquals(visibleCard, registry.getVisibleInContainer(1, container))
         assertNull(registry.getVisibleInContainer(2, container))
     }
+
+    @Test
+    fun `转场动画进行中禁止用被缩放的后台列表坐标覆盖卡片静止态真实坐标`() {
+        val registry = SharedBoundsRegistry()
+        val stationaryBounds = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
+        val shrunkBoundsFromBackdrop = Rect(left = 38f, top = 320f, right = 518f, bottom = 944f)
+
+        registry.put(illustId = 42, rect = stationaryBounds)
+        // 转场开始（expansion = 0.6f），底层列表被 0.96x 缩放触发 onGloballyPositioned
+        registry.updateTransitionState(illustId = 42, expansion = 0.6f)
+        registry.put(illustId = 42, rect = shrunkBoundsFromBackdrop)
+
+        // 取出退出终点坐标时，必须保持未缩放的静止态真实坐标 stationaryBounds
+        assertEquals(stationaryBounds, registry.get(42))
+
+        // 转场结束后（expansion = 0f），允许正常列表滚动更新坐标
+        registry.updateTransitionState(illustId = 42, expansion = 0f)
+        val scrolledBounds = Rect(left = 24f, top = 180f, right = 524f, bottom = 830f)
+        registry.put(illustId = 42, rect = scrolledBounds)
+        assertEquals(scrolledBounds, registry.get(42))
+    }
 }

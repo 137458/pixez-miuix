@@ -136,22 +136,48 @@ class CardExpandGeometryTest {
     }
 
     @Test
-    fun `宽屏或长竖图卡片在 scaleY 大于 scaleX 时以 scaleY 为基准缩放并裁切宽度以填满卡片高度`() {
-        // 横屏容器 1600x1000，卡片 320x500 -> scaleX = 0.2, scaleY = 0.5 (scaleY > scaleX)
-        val wideContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
-        val tallCard = Rect(left = 400f, top = 200f, right = 720f, bottom = 700f)
+    fun `竖图卡片在 scaleY 大于 scaleX 时退出结束位置严格对齐卡片宽度与左上角避免水平放大跳变`() {
+        // 常见竖屏或宽屏场景：容器 1000x2000，长竖图卡片 460x1100 -> scaleX = 0.46, scaleY = 0.55 (scaleY > scaleX)
+        val tallCard = Rect(left = 30f, top = 200f, right = 490f, bottom = 1300f)
 
         val state = resolveCardExpandTransform(
             expansion = 0f,
             sourceBounds = tallCard,
-            containerBounds = wideContainer,
+            containerBounds = container,
         )
 
-        // 基准缩放必须取 max(0.2, 0.5) = 0.5，以保证缩放后容器高度 1000 * 0.5 = 500px 能完整覆盖卡片高度；
-        // 同时水平可见宽度占比为 0.2 / 0.5 = 0.4，使裁切后屏幕物理宽度 1600 * 0.5 * 0.4 = 320px 精确等于卡片宽度。
-        assertClose(0.5f, state?.uniformScale)
-        assertClose(0.4f, state?.visibleWidthFraction)
+        // 退出结束位置（expansion = 0）必须严格以 scaleX (0.46) 缩放，保证详情页顶部图片宽度 100% 等于卡片宽度 460px，
+        // 左上角严格落在 (30, 200)，绝不能放大到 0.55 并向左偏移。
+        assertClose(0.46f, state?.uniformScale)
+        assertClose(30f, state?.transX)
+        assertClose(200f, state?.transY)
+        assertClose(1.0f, state?.visibleWidthFraction)
         assertClose(1.0f, state?.visibleHeightFraction)
+    }
+
+    @Test
+    fun `底层列表页面在展开缩小后具备经过缩放逆补偿的圆角以消除四边直角`() {
+        val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        // 未展开（expansion = 0）时列表铺满屏幕不缩小，本地圆角为 0
+        val idleBackdrop = resolveBackdropLayerState(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+            containerCornerRadiusDp = 0f,
+        )
+        assertClose(1.0f, idleBackdrop.scale)
+        assertClose(0f, idleBackdrop.localCornerRadiusDp)
+
+        // 完全展开（expansion = 1）时列表缩小到 0.96，即使设备未上报物理圆角（0dp），
+        // 也必须启用兜底圆角（28dp）并除以 0.96 逆向补偿（28 / 0.96 = 29.166668dp），防止露出四边直角。
+        val shrunkBackdrop = resolveBackdropLayerState(
+            expansion = 1f,
+            sourceBounds = card,
+            containerBounds = container,
+            containerCornerRadiusDp = 0f,
+        )
+        assertClose(0.96f, shrunkBackdrop.scale)
+        assertClose(28f / 0.96f, shrunkBackdrop.localCornerRadiusDp, epsilon = 1e-4f)
     }
 
     @Test

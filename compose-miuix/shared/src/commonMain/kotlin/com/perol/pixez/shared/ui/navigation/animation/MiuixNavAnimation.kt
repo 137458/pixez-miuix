@@ -130,6 +130,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
                 expansion = expansion,
                 sourceBounds = sourceBounds,
                 containerBounds = containerBounds,
+                containerCornerRadius = deviceCornerRadius,
             )
         },
     )
@@ -194,15 +195,18 @@ fun miuixSlidePredictiveBackAnimatable(
             }
         },
         enterModifier = { progress, _ ->
+            val expansion = predictiveBackCardExpandExpansion(progress = progress)
             Modifier
                 .graphicsLayer {
                     this.translationX = -(1f - progress) * (containerWidthPx * 0.30f)
                 }
                 .cardExpandScrim(
                     alpha = cardExpandScrimAlpha(
-                        expansion = predictiveBackCardExpandExpansion(progress = progress),
+                        expansion = expansion,
                         maxAlpha = SLIDE_FALLBACK_SCRIM_ALPHA,
                     ),
+                    expansion = expansion,
+                    containerCornerRadius = deviceCornerRadius,
                 )
         },
     )

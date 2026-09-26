@@ -87,20 +87,32 @@ internal fun resolveCardExpandTransform(
     val geometry = resolveCardExpandGeometry(sourceBounds, containerBounds) ?: return null
     val progress = expansion.coerceIn(0f, 1f)
 
-    // 基准等比缩放系数取宽高占比中的较大值（Cover 模式），确保无论是竖屏瀑布流还是平板/横屏/长竖图卡片，
-    // 缩放后的详情页容器都能 100% 完整覆盖卡片区域，再通过双向视口裁切精确匹配卡片真实宽高。
-    val baseScale = maxOf(geometry.scaleX, geometry.scaleY)
-    val unscaledWidthFraction = (geometry.scaleX / baseScale).coerceIn(0.05f, 1f)
-    val unscaledHeightFraction = (geometry.scaleY / baseScale).coerceIn(0.05f, 1f)
+    // 底层列表围绕 sourceBounds.center 按 backdropScale 纵深微缩放，
+    // 因此源卡片在当前展开度下的实时中心不变、宽高与左上角随 backdropScale 同相缩放；
+    // 在 progress = 0（退出动画终点）时 backdropScale = 1.0，实时矩形 100% 收敛回静止态 sourceBounds。
+    val backdropScale = lerp(1f, BACKDROP_MIN_SCALE, progress)
+    val liveWidth = sourceBounds.width * backdropScale
+    val liveHeight = sourceBounds.height * backdropScale
+    val liveLeft = sourceBounds.center.x - liveWidth * 0.5f
+    val liveTop = sourceBounds.center.y - liveHeight * 0.5f
+
+    val liveScaleX = (liveWidth / containerBounds.width).coerceIn(MIN_SCALE, 1f)
+    val liveScaleY = (liveHeight / containerBounds.height).coerceIn(MIN_SCALE, 1f)
+
+    // 详情页顶部大图与列表卡片封面图均为 fillMaxWidth()，
+    // 始终以水平宽度比 liveScaleX 作为基准等比缩放系数，确保退出结束位置（expansion = 0）
+    // 详情页宽度、顶部大图宽度及左上角 (transX, transY) 100% 严丝合缝贴合列表卡片，消除竖图水平放大与左偏跳变。
+    val baseScale = liveScaleX
+    val unscaledHeightFraction = (liveScaleY / baseScale).coerceIn(0.05f, 1f)
 
     val uniformScale = lerp(baseScale, 1f, progress)
-    val visibleWidthFraction = lerp(unscaledWidthFraction, 1f, progress)
+    val visibleWidthFraction = 1f
     val visibleHeightFraction = lerp(unscaledHeightFraction, 1f, progress)
 
-    // 水平方向采用居中视口裁切：当 scaleY > scaleX 时需向左补偿裁切留白，使裁切左边缘依然严丝合缝贴合 sourceBounds.left
-    val startTransX = geometry.transX - containerBounds.width * (baseScale - geometry.scaleX) * 0.5f
+    val startTransX = liveLeft - containerBounds.left
+    val startTransY = liveTop - containerBounds.top
     val transX = lerp(startTransX, 0f, progress)
-    val transY = lerp(geometry.transY, 0f, progress)
+    val transY = lerp(startTransY, 0f, progress)
 
     // 屏幕物理圆角由卡片圆角（16dp）平滑插值到设备屏幕物理圆角；
     // 本地 Shape 圆角需除以 uniformScale 逆向补偿，避免 graphicsLayer 缩小后屏幕圆角缩水成尖角。
@@ -116,6 +128,53 @@ internal fun resolveCardExpandTransform(
         localCornerRadiusDp = localCornerRadiusDp,
         contentAlpha = cardExpandContentAlpha(progress),
         shadowElevation = lerp(EXPAND_SHADOW_ELEVATION, 0f, progress),
+    )
+}
+
+/**
+ * 底层页面（作品列表）在给定展开度下的纵深缩放与圆角裁切状态。
+ */
+internal data class BackdropLayerState(
+    val scale: Float,
+    val transformOrigin: TransformOrigin,
+    val localCornerRadiusDp: Float,
+)
+
+/**
+ * 计算底层列表页面在给定展开度下的缩放比例、缩放锚点与逆向补偿后的本地圆角。
+ *
+ * 当底层页面向屏幕内部缩小（[expansion] > 0）脱离物理屏幕边缘时，
+ * 自动施加圆角（优先取设备屏幕圆角，无屏幕圆角时平滑过渡至 [BACKDROP_FALLBACK_CORNER_RADIUS_DP]），
+ * 消除底层列表缩小后四边露出的 90° 直角。
+ */
+internal fun resolveBackdropLayerState(
+    expansion: Float,
+    sourceBounds: Rect?,
+    containerBounds: Rect,
+    containerCornerRadiusDp: Float = 0f,
+): BackdropLayerState {
+    val progress = expansion.coerceIn(0f, 1f)
+    val backdropScale = lerp(1f, BACKDROP_MIN_SCALE, progress)
+    val origin = resolveBackdropTransformOrigin(sourceBounds, containerBounds)
+    if (progress <= 0.001f) {
+        return BackdropLayerState(
+            scale = 1f,
+            transformOrigin = origin,
+            localCornerRadiusDp = 0f,
+        )
+    }
+    val targetCornerRadiusDp = maxOf(containerCornerRadiusDp, BACKDROP_FALLBACK_CORNER_RADIUS_DP)
+    val screenCornerRadiusDp = if (containerCornerRadiusDp > 0f) {
+        lerp(containerCornerRadiusDp, targetCornerRadiusDp, progress)
+    } else {
+        val cornerRamp = (progress / 0.15f).coerceIn(0f, 1f)
+        lerp(0f, targetCornerRadiusDp, cornerRamp)
+    }
+    val localCornerRadiusDp = screenCornerRadiusDp / backdropScale.coerceAtLeast(MIN_SCALE)
+    return BackdropLayerState(
+        scale = backdropScale,
+        transformOrigin = origin,
+        localCornerRadiusDp = localCornerRadiusDp,
     )
 }
 
@@ -159,8 +218,11 @@ private const val BACKDROP_SCRIM_ALPHA = 0.24f
 /** 底层页面在顶层完全展开时的纵深微缩放比例。 */
 private const val BACKDROP_MIN_SCALE = 0.96f
 
+/** 底层页面缩小脱离屏幕边缘时的最小圆角半径（dp），防止在未上报屏幕圆角的设备上露出四边直角。 */
+private const val BACKDROP_FALLBACK_CORNER_RADIUS_DP = 28f
+
 /** 顶层页面在卡片展开初段/收缩末段完成淡入淡出的进度阈值。 */
-private const val CONTENT_FADE_THRESHOLD = 0.24f
+private const val CONTENT_FADE_THRESHOLD = 0.20f
 
 /**
  * 计算顶层页面在给定展开度 [expansion] 下的不透明度。
@@ -176,8 +238,8 @@ internal fun cardExpandContentAlpha(expansion: Float): Float {
 /**
  * 为顶层页面叠加「卡片展开 / 收回」视觉层（Container Transform）。
  *
- * 采用**等比缩放 + 双向动态视口裁切 + 圆角缩放逆向补偿 + 透明度交接**：
- * - 水平与垂直方向统一按 `baseScale = max(scaleX, scaleY)` 等比插值，彻底消除非等比拉伸与横屏高度坍缩；
+ * 采用**宽度对齐等比缩放 + 动态高度视口裁切 + 圆角缩放逆向补偿 + 透明度交接**：
+ * - 水平与垂直方向统一按 `liveScaleX` 等比插值，确保退出结束位置与列表卡片封面宽度和左上角 100% 重合；
  * - 本地圆角半径按 `screenCornerRadius / uniformScale` 逆向补偿，使缩放后的视觉圆角与卡片 16.dp 严丝合缝；
  * - 配合 [cardExpandContentAlpha] 与 [cardExpandSourceCardAlpha] 在初段/末段无缝交叉交接。
  *
@@ -251,27 +313,37 @@ private data class ClippedContainerShape(
 }
 
 /**
- * 在底层页面内容之上叠加暗色遮罩与围绕源卡片中心的纵深微缩放。
+ * 在底层页面内容之上叠加暗色遮罩、围绕源卡片中心的纵深微缩放以及圆角裁切。
  *
  * @param alpha 遮罩不透明度，0f 表示完全透明（不绘制）；越界值会被钳制。
- * @param expansion 顶层页面的展开度（0f..1f），用于同步底层纵深缩放。
+ * @param expansion 顶层页面的展开度（0f..1f），用于同步底层纵深缩放与圆角裁切。
  * @param sourceBounds 源卡片矩形，用于将底层缩放锚点对齐到卡片中心。
  * @param containerBounds 容器窗口矩形。
+ * @param containerCornerRadius 设备屏幕物理圆角，用于底层页面缩小时平滑裁切四角避免露出直角。
  */
 internal fun Modifier.cardExpandScrim(
     alpha: Float,
     expansion: Float = (alpha / BACKDROP_SCRIM_ALPHA).coerceIn(0f, 1f),
     sourceBounds: Rect? = null,
     containerBounds: Rect = Rect.Zero,
+    containerCornerRadius: Dp = 0.dp,
 ): Modifier {
     val scrimAlpha = alpha.coerceIn(0f, 1f)
-    val backdropScale = lerp(1f, BACKDROP_MIN_SCALE, expansion.coerceIn(0f, 1f))
-    val origin = resolveBackdropTransformOrigin(sourceBounds, containerBounds)
+    val backdropState = resolveBackdropLayerState(
+        expansion = expansion,
+        sourceBounds = sourceBounds,
+        containerBounds = containerBounds,
+        containerCornerRadiusDp = containerCornerRadius.value,
+    )
     return this
         .graphicsLayer {
-            this.transformOrigin = origin
-            this.scaleX = backdropScale
-            this.scaleY = backdropScale
+            this.transformOrigin = backdropState.transformOrigin
+            this.scaleX = backdropState.scale
+            this.scaleY = backdropState.scale
+            if (backdropState.localCornerRadiusDp > 0.1f) {
+                this.shape = RoundedCornerShape(backdropState.localCornerRadiusDp.dp)
+                this.clip = true
+            }
         }
         .drawWithContent {
             drawContent()

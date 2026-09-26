@@ -47,9 +47,14 @@ class SharedBoundsRegistry {
     fun put(illustId: Int, rect: Rect?) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
             bounds.remove(illustId)
-        } else {
-            bounds[illustId] = rect
+            return
         }
+        // 转场进行中底层列表处于 graphicsLayer 缩放态，此时 boundsInWindow() 为缩放偏移后的瞬时坐标；
+        // 若该卡片已有静止态真实坐标，禁止覆盖以确保退出动画终点 100% 还原到静止卡片位置。
+        if (activeTransitionIllustId != null && bounds.containsKey(illustId)) {
+            return
+        }
+        bounds[illustId] = rect
     }
 
     /**

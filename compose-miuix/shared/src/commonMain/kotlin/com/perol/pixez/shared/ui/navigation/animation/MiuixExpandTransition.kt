@@ -75,6 +75,8 @@ internal fun cardExpandStackAnimator(
                         .cardExpandScrim(
                             alpha = cardExpandScrimAlpha(progress),
                             expansion = progress,
+                            containerBounds = containerBounds,
+                            containerCornerRadius = containerCornerRadius,
                         )
                 },
             )
@@ -100,6 +102,7 @@ internal fun cardExpandStackAnimator(
                     expansion = frame.expansion,
                     sourceBounds = sourceBounds,
                     containerBounds = containerBounds,
+                    containerCornerRadius = containerCornerRadius,
                 )
             },
         )

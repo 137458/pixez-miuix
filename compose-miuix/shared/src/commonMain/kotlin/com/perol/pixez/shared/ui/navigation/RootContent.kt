@@ -130,7 +130,7 @@ fun RootContent(
     // 作品卡片几何信息源：列表卡片登记矩形，二级页面转场据此播放「卡片展开/收回」动画。
     val sharedBounds = remember { SharedBoundsRegistry() }
     val bottomBarVisible = remember { mutableStateOf(true) }
-    val mainContentBottomPadding = if (active is Child.Main && bottomBarVisible.value) 100.dp else 16.dp
+    val mainContentBottomPadding = if (bottomBarVisible.value) 100.dp else 16.dp
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
         com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
@@ -181,17 +181,12 @@ fun RootContent(
                     .background(MiuixTheme.colorScheme.surface),
             ) {
                 val isWideScreen = maxWidth >= 600.dp
-                val isMainTab = active is Child.Main
                 val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
-                val showNavigationRail = isWideScreen && isMainTab && !useFloatingBottomBar
-                val showBottomBar = isMainTab && bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)
+                val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
                 val activeTab by component.selectedTab.collectAsState()
                 val density = LocalDensity.current
                 val screenCornerRadius = rememberScreenCornerRadius()
-                val containerWidthPx = with(density) {
-                    val availableWidth = if (showNavigationRail) (maxWidth - 80.dp).coerceAtLeast(0.dp) else maxWidth
-                    availableWidth.toPx()
-                }
+                val containerWidthPx = with(density) { maxWidth.toPx() }
                 // 页面容器几何：矩形由布局回填，宽度与圆角由本层测量得出。
                 var containerGeometry by remember {
                     mutableStateOf(PageContainerGeometry(widthPx = containerWidthPx, cornerRadius = screenCornerRadius))
@@ -214,64 +209,84 @@ fun RootContent(
                     )
                 }
 
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MiuixTheme.colorScheme.surface),
+                        .background(MiuixTheme.colorScheme.surface)
+                        .onGloballyPositioned { coordinates ->
+                            val newBounds = coordinates.boundsInWindow()
+                            if (newBounds != containerGeometry.bounds) {
+                                containerGeometry = containerGeometry.withBounds(newBounds)
+                            }
+                        },
                 ) {
-                    // 在平板/桌面宽屏且关闭悬浮底栏模式下，一级主页面在左侧展示 MIUIX 官方 NavigationRail 侧边栏
-                    if (showNavigationRail) {
-                        MainNavigationRail(
-                            activeTab = activeTab,
-                            onTabSelected = component::onMainTabSelected,
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(MiuixTheme.colorScheme.surface)
-                            .onGloballyPositioned { coordinates ->
-                                val newBounds = coordinates.boundsInWindow()
-                                if (newBounds != containerGeometry.bounds) {
-                                    containerGeometry = containerGeometry.withBounds(newBounds)
-                                }
-                            },
-                    ) {
-                        Children(
-                            stack = component.stack,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .blurBackdropSource(floatingBackdrop),
-                            animation = predictiveBackAnimation(
-                                backHandler = component.backHandler,
-                                fallbackAnimation = stackAnimation,
-                                selector = { initialBackEvent, _, _ ->
-                                    // 预测性返回手势来源页即当前栈顶页面，作品详情页可取到对应卡片矩形。
-                                    miuixCardExpandPredictiveBackAnimatable(
-                                        initialBackEvent = initialBackEvent,
-                                        registry = sharedBounds,
-                                        illustId = (active as? Child.IllustDetail)?.illustId,
-                                        containerWidthPx = containerGeometry.widthPx,
-                                        containerBounds = containerGeometry.bounds,
-                                        deviceCornerRadius = containerGeometry.cornerRadius,
-                                    )
-                                },
-                                onBack = { component.onBack() },
-                            ),
-                        ) { child ->
-                            when (val instance = child.instance) {
-                                is Child.Main -> MainContent(
-                                    initialTab = instance.tab,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                    searchRepository = searchRepository,
-                                    userRepository = userRepository,
-                                    accountRepository = accountRepository,
-                                    banRepository = banRepository,
-                                    settingsRepository = settingsRepository,
+                    Children(
+                        stack = component.stack,
+                        modifier = Modifier.fillMaxSize(),
+                        animation = predictiveBackAnimation(
+                            backHandler = component.backHandler,
+                            fallbackAnimation = stackAnimation,
+                            selector = { initialBackEvent, _, _ ->
+                                // 预测性返回手势来源页即当前栈顶页面，作品详情页可取到对应卡片矩形。
+                                miuixCardExpandPredictiveBackAnimatable(
+                                    initialBackEvent = initialBackEvent,
+                                    registry = sharedBounds,
+                                    illustId = (active as? Child.IllustDetail)?.illustId,
+                                    containerWidthPx = containerGeometry.widthPx,
+                                    containerBounds = containerGeometry.bounds,
+                                    deviceCornerRadius = containerGeometry.cornerRadius,
                                 )
+                            },
+                            onBack = { component.onBack() },
+                        ),
+                    ) { child ->
+                        when (val instance = child.instance) {
+                            is Child.Main -> {
+                                val _changeVersion = settingsRepository.changeVersion
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MiuixTheme.colorScheme.surface),
+                                ) {
+                                    if (showNavigationRailInMain) {
+                                        MainNavigationRail(
+                                            activeTab = activeTab,
+                                            onTabSelected = component::onMainTabSelected,
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .blurBackdropSource(floatingBackdrop),
+                                        ) {
+                                            MainContent(
+                                                initialTab = instance.tab,
+                                                component = component,
+                                                illustRepository = illustRepository,
+                                                searchRepository = searchRepository,
+                                                userRepository = userRepository,
+                                                accountRepository = accountRepository,
+                                                banRepository = banRepository,
+                                                settingsRepository = settingsRepository,
+                                            )
+                                        }
+                                        if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
+                                            MainBottomBar(
+                                                activeTab = activeTab,
+                                                onTabSelected = component::onMainTabSelected,
+                                                isFloating = useFloatingBottomBar,
+                                                backdrop = floatingBackdrop,
+                                                modifier = Modifier.align(Alignment.BottomCenter),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
                                 is Child.IllustDetail -> renderIllustDetail(
                                     instance = instance,
@@ -496,23 +511,10 @@ fun RootContent(
                                 )
                             }
                         }
-
-                        // 仅在符合条件的展示场景下渲染底部导航栏
-                        val _changeVersion = settingsRepository.changeVersion
-                        if (showBottomBar && active is Child.Main) {
-                            MainBottomBar(
-                                activeTab = activeTab,
-                                onTabSelected = component::onMainTabSelected,
-                                isFloating = useFloatingBottomBar,
-                                backdrop = floatingBackdrop,
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                            )
-                        }
                     }
                 }
             }
         }
-    }
 }
 
 /**
