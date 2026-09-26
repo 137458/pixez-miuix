@@ -1,6 +1,6 @@
 # PixEz MIUIX — Agent 约束入口
 
-PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatform + Miuix 重制版，Android / Windows Desktop 双端（iOS/macOS 仅编译验证）。
+PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatform + Miuix 重制版，Android / Windows Desktop 双端（iOS 仅编译验证；macOS target 因 zoomable 无 macOS 变体暂未启用）。
 
 > 本文件是本项目构建验证命令的**唯一清单**，其他文档只引用、不重复维护。所有命令在 `compose-miuix/` 目录执行。
 
@@ -17,7 +17,7 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Windows 单文件 EXE | `./gradlew :composeApp:packageWindowsSingleFileExe` |
 | 桌面端运行 | `./gradlew :composeApp:run` |
-| iOS/macOS 编译验证（仅 macOS 机器 / CI） | `./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinMacosArm64` |
+| iOS 编译验证（仅 macOS 机器 / CI） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
 
 发布前全量验证（一行版）：
 
@@ -36,8 +36,8 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 ## 项目约定
 
 - `archive/flutter-v1/` 为旧 Flutter 版源码归档，修复默认不改动。
-- iOS/macOS 目标仅在 macOS 环境（本地或 CI）验证，Windows 无法运行 Apple toolchain。
-- CI（`.github/workflows/build_compose_miuix.yml`）在 push/PR 时自动构建 Android Release APK、Windows EXE/ZIP/MSI 并编译 iOS/macOS 共享模块。
+- iOS 目标仅在 macOS 环境（本地或 CI）验证，Windows 无法运行 Apple toolchain；macOS target 当前未启用。
+- CI（`.github/workflows/build_compose_miuix.yml`）在 push/PR 时自动构建 Android Release APK、Windows EXE/ZIP/MSI、iOS 共享模块编译验证，并在 Android job 运行 JVM 单元测试与 SQLDelight 迁移校验。
 
 ## 文档索引
 

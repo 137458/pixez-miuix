@@ -23,10 +23,16 @@ on:
       - '.github/workflows/build_compose_miuix.yml'
   workflow_dispatch:
 
+# 同分支连续 push 时取消进行中的旧构建，避免三平台昂贵构建并行堆积
+concurrency:
+  group: build-compose-miuix-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
     name: Android Debug
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: compose-miuix
@@ -66,6 +72,11 @@ jobs:
       - name: 构建 Android Release APK
         run: ./gradlew :composeApp:assembleRelease --no-daemon --stacktrace -Dorg.gradle.java.home=$JAVA_HOME
 
+      # Windows 的 desktopTest 不覆盖 Android 变体，且迁移校验被 onlyIf 排除在 Windows 之外，
+      # 因此 JVM 单元测试与 SQLDelight 迁移校验统一放在本 job（ubuntu）执行。
+      - name: 运行 Android 变体单元测试与 SQLDelight 迁移校验
+        run: ./gradlew :shared:testDebugUnitTest :shared:verifySqlDelightMigration --no-daemon --stacktrace -Dorg.gradle.java.home=$JAVA_HOME
+
       - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
@@ -76,6 +87,7 @@ jobs:
   desktop:
     name: Desktop Build & Package
     runs-on: windows-latest
+    timeout-minutes: 120
     defaults:
       run:
         working-directory: compose-miuix
@@ -119,8 +131,9 @@ jobs:
           compression-level: 9
 
   ios-macos:
-    name: iOS/macOS Compile
+    name: iOS Compile
     runs-on: macos-latest
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: compose-miuix
@@ -142,7 +155,7 @@ jobs:
       - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
 
-      - name: 编译 iOS / macOS 共享模块
-        run: ./gradlew :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinMacosArm64 --no-daemon --stacktrace -Dorg.gradle.java.home=$JAVA_HOME
+      - name: 编译 iOS 共享模块
+        run: ./gradlew :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64 --no-daemon --stacktrace -Dorg.gradle.java.home=$JAVA_HOME
 
 
