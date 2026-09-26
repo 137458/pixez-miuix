@@ -14,6 +14,7 @@ import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.platform.BrowserLauncherContext
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.launch
 
@@ -159,7 +160,7 @@ class MainActivity : ComponentActivity() {
         val path = uri.path.orEmpty()
 
         when {
-            (scheme == "pixez" || scheme == "pixiv") -> {
+            (scheme == AppConstants.Scheme.SCHEME_PIXEZ || scheme == "pixiv") -> {
                 when (host) {
                     "ranking" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
                     "search" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Search)
@@ -176,9 +177,11 @@ class MainActivity : ComponentActivity() {
                     "account", "oauth" -> handleAuthIntent(intent)
                 }
             }
-            host.contains("pixiv.net") || host.contains("pixiv.me") -> {
+            // 严格后缀匹配：contains 会放行 pixiv.net.attacker.com 这类伪造 host
+            (host == "pixiv.net" || host.endsWith(".pixiv.net") ||
+                host == "pixiv.me" || host.endsWith(".pixiv.me")) -> {
                 when {
-                    path.contains("/users/auth/pixiv/callback") -> handleAuthIntent(intent)
+                    path.startsWith("/users/auth/pixiv/callback") -> handleAuthIntent(intent)
                     path.contains("/artworks/") -> {
                         val id = uri.lastPathSegment?.toIntOrNull()
                         if (id != null) rootComponent.onIllustClicked(id)
