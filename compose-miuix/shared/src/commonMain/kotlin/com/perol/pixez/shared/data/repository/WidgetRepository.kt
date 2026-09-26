@@ -31,6 +31,8 @@ class WidgetRepository(
         val cached = try {
             glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
         } catch (e: Exception) {
+            // 缓存读失败回退网络拉取，但保留日志便于发现 DB 损坏/权限问题（同文件其余 catch 均有日志）。
+            Napier.w("小组件缓存读取失败 type=$type", e)
             null
         }
         if (cached != null) {

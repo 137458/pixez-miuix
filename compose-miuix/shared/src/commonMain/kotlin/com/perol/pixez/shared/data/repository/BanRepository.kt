@@ -31,8 +31,13 @@ class BanRepository(
     private val tagQueries = BanTagDatabase(banTagDriver).banTagQueries
 
     private val cacheMutex = Mutex()
+
+    // 双检锁快路径无锁读，须 @Volatile 保证写侧（Mutex 内）对读侧的可见性（写法同 AuthTokenStorage）。
+    @kotlin.concurrent.Volatile
     private var cachedBannedIllustIds: Set<Int>? = null
+    @kotlin.concurrent.Volatile
     private var cachedBannedUserIds: Set<Int>? = null
+    @kotlin.concurrent.Volatile
     private var cachedBanTags: List<BanTag>? = null
 
     private fun invalidateCache() {

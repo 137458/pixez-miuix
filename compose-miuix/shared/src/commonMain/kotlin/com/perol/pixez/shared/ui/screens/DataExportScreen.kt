@@ -77,7 +77,15 @@ fun DataExportScreen(
     muteRepository: MuteRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val json = remember { Json { prettyPrint = true } }
+    // 导入侧须宽松解析：含未知字段的新版本/手工编辑导出文件不应导入失败（配置同 PixivHttpClient）。
+    val json = remember {
+        Json {
+            prettyPrint = true
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+            isLenient = true
+        }
+    }
 
     // 轻量提示文本；页面重建后恢复，避免用户错过结果。
     var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
