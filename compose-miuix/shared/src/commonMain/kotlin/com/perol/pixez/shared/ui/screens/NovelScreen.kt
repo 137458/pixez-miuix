@@ -90,28 +90,42 @@ fun NovelScreen(
     var isLoadingMore by remember { mutableStateOf(false) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
 
+    // 请求代次守卫：切 tab/切榜单/刷新后，在途旧请求的结果不得写回新数据源（写法同 RankingScreen）。
+    var requestGeneration by remember { mutableIntStateOf(0) }
+
     fun loadInitialData() {
+        val generation = ++requestGeneration
+        val tab = currentTab
+        val mode = rankingMode
         coroutineScope.launch {
             isLoading = true
             initialError = null
+            // 使在途旧 loadMore 的结果失配后被拒绝；复位加载态避免其卡死阻塞新列表分页。
+            isLoadingMore = false
             try {
                 suspendRunCatchingNonCancel {
-                    when (currentTab) {
+                    when (tab) {
                         NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels()
-                        NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = rankingMode)
+                        NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode)
                     }
                 }.fold(
                     onSuccess = { response ->
-                        novels = response.novels
-                        nextUrl = response.nextUrl
+                        if (generation == requestGeneration) {
+                            novels = response.novels
+                            nextUrl = response.nextUrl
+                        }
                     },
                     onFailure = { error ->
-                        initialError = error
+                        if (generation == requestGeneration) {
+                            initialError = error
+                        }
                     },
                 )
             } finally {
                 // 取消或异常时同样复位，避免列表被永久标记为加载中。
-                isLoading = false
+                if (generation == requestGeneration) {
+                    isLoading = false
+                }
             }
         }
     }
@@ -134,22 +148,29 @@ fun NovelScreen(
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore && !nextUrl.isNullOrBlank() && !isLoadingMore) {
             val url = nextUrl ?: return@LaunchedEffect
+            val generation = requestGeneration
+            val tab = currentTab
+            val mode = rankingMode
             isLoadingMore = true
             suspendRunCatchingNonCancel {
-                when (currentTab) {
+                when (tab) {
                     NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = url)
-                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = rankingMode, nextUrl = url)
+                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = url)
                 }
             }.fold(
                 onSuccess = { response ->
-                    val currentList = novels.orEmpty()
-                    val existingIds = currentList.map { it.id }.toSet()
-                    novels = currentList + response.novels.filter { it.id !in existingIds }
-                    nextUrl = response.nextUrl
-                    isLoadingMore = false
+                    if (generation == requestGeneration) {
+                        val currentList = novels.orEmpty()
+                        val existingIds = currentList.map { it.id }.toSet()
+                        novels = currentList + response.novels.filter { it.id !in existingIds }
+                        nextUrl = response.nextUrl
+                        isLoadingMore = false
+                    }
                 },
                 onFailure = {
-                    isLoadingMore = false
+                    if (generation == requestGeneration) {
+                        isLoadingMore = false
+                    }
                 },
             )
         }
