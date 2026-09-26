@@ -699,29 +699,35 @@ class SettingsRepository(
 /**
  * 带旧版 `flutter.` 前缀回退的读取辅助函数。
  * 优先读取新键；若不存在则读取带 `flutter.` 前缀的旧键；仍不存在则返回默认值。
+ *
+ * 所有主键读取均包 try/catch：Android SharedPreferences 对类型失配的键抛
+ * ClassCastException（桌面 Preferences 后端静默回退），失配时按缺失处理走旧键/默认值，
+ * 写法与下方 getBooleanWithIntLegacyFallback 等兼容函数一致。
  */
 private fun Settings.getStringWithLegacyFallback(key: String, default: String): String {
-    val value: String? = this[key]
+    val value: String? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key, default]
+    val legacy: String? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
+    return legacy ?: default
 }
 
 private fun Settings.getStringWithLegacyFallbackOrNull(key: String): String? {
-    val value: String? = this[key]
+    val value: String? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key]
+    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
 }
 
 private fun Settings.getIntWithLegacyFallback(key: String, default: Int): Int {
-    val value: Int? = this[key]
+    val value: Int? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key, default]
+    val legacy: Int? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
+    return legacy ?: default
 }
 
 private fun Settings.getIntWithLegacyFallbackOrNull(key: String): Int? {
-    val value: Int? = this[key]
+    val value: Int? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key]
+    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
 }
 
 private fun Settings.getIntWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Int): Int {
@@ -731,9 +737,10 @@ private fun Settings.getIntWithKeyAndLegacyFallback(key: String, fallbackKey: St
 }
 
 private fun Settings.getBooleanWithLegacyFallback(key: String, default: Boolean): Boolean {
-    val value: Boolean? = this[key]
+    val value: Boolean? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key, default]
+    val legacy: Boolean? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
+    return legacy ?: default
 }
 
 private fun Settings.getBooleanWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Boolean): Boolean {
@@ -765,9 +772,9 @@ private fun Settings.getBooleanWithIntLegacyFallback(key: String, default: Boole
 }
 
 private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? {
-    val value: Boolean? = this[key]
+    val value: Boolean? = try { this[key] } catch (_: Exception) { null }
     if (value != null) return value
-    return this[SettingsRepository_LegacyPrefix + key]
+    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
 }
 
 /**
@@ -776,12 +783,12 @@ private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? {
  * 若不存在则尝试读取 int 并转换为 "0"/"1"；带 `flutter.` 前缀的旧键同样处理。
  */
 private fun Settings.getStringOrIntLegacyFallback(key: String, default: String): String {
-    val stringValue: String? = this[key]
+    val stringValue: String? = try { this[key] } catch (_: Exception) { null }
     if (stringValue != null) return stringValue
     val intValue: Int? = try { this[key] } catch (_: Exception) { null }
     if (intValue != null) return intValue.toString()
     val legacyKey = SettingsRepository_LegacyPrefix + key
-    val legacyString: String? = this[legacyKey]
+    val legacyString: String? = try { this[legacyKey] } catch (_: Exception) { null }
     if (legacyString != null) return legacyString
     val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
     if (legacyInt != null) return legacyInt.toString()
