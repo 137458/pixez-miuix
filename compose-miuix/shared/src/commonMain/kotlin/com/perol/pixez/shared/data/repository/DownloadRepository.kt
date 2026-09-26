@@ -25,6 +25,7 @@ import okio.Path
 import com.perol.pixez.shared.platform.getAppCacheDirectory
 import kotlinx.datetime.Clock
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -32,6 +33,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 
 /**
  * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存，
@@ -251,12 +253,15 @@ class DownloadRepository(
             header("Referer", AppConstants.Urls.PIXIV_APP_API)
         }.execute { response ->
             val channel: ByteReadChannel = response.bodyAsChannel()
-            FileSystem.SYSTEM.write(tempPath) {
-                val buffer = ByteArray(64 * 1024)
-                while (!channel.isClosedForRead) {
-                    val read = channel.readAvailable(buffer, 0, buffer.size)
-                    if (read <= 0) break
-                    write(buffer, 0, read)
+            // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方（UI 主协程）线程。
+            withContext(Dispatchers.IO) {
+                FileSystem.SYSTEM.write(tempPath) {
+                    val buffer = ByteArray(64 * 1024)
+                    while (!channel.isClosedForRead) {
+                        val read = channel.readAvailable(buffer, 0, buffer.size)
+                        if (read <= 0) break
+                        write(buffer, 0, read)
+                    }
                 }
             }
         }
@@ -360,7 +365,12 @@ class DownloadRepository(
             )
             notifier.notifyFinished(illust.id, illust.title, 0, 1)
             if (historyId > 0 && historyRepository != null) {
-                runCatching { historyRepository?.saveTask(failedTask, illust, historyId) }
+                // 回写失败需记录并附加到原始异常，避免失败状态静默丢失（与 retry() 口径一致）。
+                suspendRunCatchingNonCancel { historyRepository.saveTask(failedTask, illust, historyId) }
+                    .onFailure { saveError ->
+                        Napier.e("动图保存失败时回写下载历史失败 historyId=$historyId", saveError)
+                        e.addSuppressed(saveError)
+                    }
             }
             throw e
         } finally {
