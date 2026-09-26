@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -105,7 +106,7 @@ suspend fun fetchLatestReleaseInfo(
 ): Result<ReleaseInfo> {
     return try {
         val response = client
-            .get("https://api.github.com/repos/137458/pixez-miuix/releases/latest") {
+            .get(AppConstants.Urls.GITHUB_RELEASES_LATEST_API) {
                 header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
             }
         if (!response.status.isSuccess()) {

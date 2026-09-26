@@ -86,6 +86,7 @@ object AppConstants {
         fun pixivUserUrl(userId: String): String = "$PIXIV_USER_PREFIX$userId"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
         const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
+        const val GITHUB_RELEASES_LATEST_API = "https://api.github.com/repos/137458/pixez-miuix/releases/latest"
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
         const val PIXIV_LEAVE_ACCOUNT = "https://www.pixiv.net/leave_pixiv.php"
