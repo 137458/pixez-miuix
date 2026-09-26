@@ -24,7 +24,7 @@ internal actual fun readExportFile(path: String): Result<String> = runCatchingNo
     val safePath = validateExportPath(path)
     val file = File(safePath)
     if (file.length() > MAX_IMPORT_FILE_BYTES) {
-        throw IllegalArgumentException("导入文件过大: ${'$'}{file.length()} 字节（上限 ${'$'}MAX_IMPORT_FILE_BYTES 字节）")
+        throw IllegalArgumentException("导入文件过大: ${file.length()} 字节（上限 $MAX_IMPORT_FILE_BYTES 字节）")
     }
     file.readText(Charsets.UTF_8)
 }
