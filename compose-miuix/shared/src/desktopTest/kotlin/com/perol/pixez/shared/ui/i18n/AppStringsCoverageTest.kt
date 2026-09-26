@@ -107,4 +107,14 @@ class AppStringsCoverageTest {
         assertEquals("Yazı tipi boyutu", TrStrings.novelFontSize)
         assertEquals("Pixiv ID", TrStrings.pixivId)
     }
+
+    @Test
+    fun `印尼语关键功能区不回退到中文默认值`() {
+        assertEquals("Stempel", IdStrings.stamp)
+        assertEquals("Putar", IdStrings.ugoiraPlay)
+        assertEquals("Kelola akun", IdStrings.accountManageTitle)
+        assertEquals("Novel", IdStrings.novelBrowseTitle)
+        assertEquals("Ukuran font", IdStrings.novelFontSize)
+        assertEquals("ID Pixiv", IdStrings.pixivId)
+    }
 }
