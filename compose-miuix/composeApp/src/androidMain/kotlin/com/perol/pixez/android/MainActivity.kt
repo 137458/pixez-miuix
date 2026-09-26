@@ -29,6 +29,16 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
  */
 class MainActivity : ComponentActivity() {
 
+    private companion object {
+        // SettingsRepository.displayMode 的档位取值
+        const val DISPLAY_MODE_LIMIT_60HZ = 1
+        const val DISPLAY_MODE_HIGH_REFRESH = 2
+
+        // 各档位对应的刷新率过滤区间（Hz）：60Hz 档容忍 58-62，高刷档取 >= 88（90/120Hz）
+        val REFRESH_RATE_60HZ_RANGE = 58f..62f
+        const val REFRESH_RATE_HIGH_MIN = 88f
+    }
+
     private lateinit var dependencies: AppDependencies
     private lateinit var rootComponent: RootComponent
     private var lastBackPressTime = 0L
@@ -129,8 +139,11 @@ class MainActivity : ComponentActivity() {
             }
             val modes = display?.supportedModes.orEmpty()
             val targetMode = when (dependencies.settingsRepository.displayMode) {
-                1 -> modes.filter { it.refreshRate in 58f..62f }.maxByOrNull { it.physicalWidth * it.physicalHeight }
-                2 -> modes.filter { it.refreshRate >= 88f }.maxByOrNull { it.refreshRate }
+                // 与 SettingsRepository.displayMode 的取值映射：1 = 限制 60Hz，2 = 高刷新率
+                DISPLAY_MODE_LIMIT_60HZ ->
+                    modes.filter { it.refreshRate in REFRESH_RATE_60HZ_RANGE }.maxByOrNull { it.physicalWidth * it.physicalHeight }
+                DISPLAY_MODE_HIGH_REFRESH ->
+                    modes.filter { it.refreshRate >= REFRESH_RATE_HIGH_MIN }.maxByOrNull { it.refreshRate }
                 else -> null
             }
             val layoutParams = window.attributes

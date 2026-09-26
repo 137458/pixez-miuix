@@ -515,6 +515,8 @@ interface AppStrings {
     val commentsAnonymousUser: String
     val commentsReplyAction: String
     val commentsEmojiPicker: String
+    /** 评论内表情贴图（stamp）图片的无障碍描述 */
+    val stamp: String get() = "Stamp"
     val historyEmpty: String
     val historyNoMatch: String
     val historyClearConfirm: String
@@ -888,6 +890,7 @@ object ZhCnStrings : AppStrings {
     override val commentsAnonymousUser = "未知用户"
     override val commentsReplyAction = "回复"
     override val commentsEmojiPicker = "表情"
+    override val stamp = "表情贴图"
     override val historyEmpty = "暂无浏览历史"
     override val historyNoMatch = "未找到匹配记录"
     override val historyClearConfirm = "确定清空全部浏览历史？"
@@ -1499,6 +1502,7 @@ object ZhTwStrings : AppStrings {
     override val commentsAnonymousUser = "未知使用者"
     override val commentsReplyAction = "回覆"
     override val commentsEmojiPicker = "表情"
+    override val stamp = "表情貼圖"
     override val historyEmpty = "暫無瀏覽歷史"
     override val historyNoMatch = "未找到符合紀錄"
     override val historyClearConfirm = "確定清空全部瀏覽歷史？"

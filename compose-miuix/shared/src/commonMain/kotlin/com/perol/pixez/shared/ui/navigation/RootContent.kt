@@ -26,6 +26,8 @@ import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
@@ -132,7 +134,7 @@ fun RootContent(
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
-        com.perol.pixez.shared.ui.i18n.AppStrings.fromLanguageNum(currentLanguageNum)
+        AppStrings.fromLanguageNum(currentLanguageNum)
     }
 
     var appReleaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
@@ -153,7 +155,7 @@ fun RootContent(
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
-            com.perol.pixez.shared.ui.i18n.LocalStrings provides strings,
+            LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
         ) {
             val updateInfo = appReleaseInfo

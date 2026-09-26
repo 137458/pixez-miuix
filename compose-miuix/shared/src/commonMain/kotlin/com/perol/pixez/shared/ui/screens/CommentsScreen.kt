@@ -46,6 +46,7 @@ import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -206,7 +207,7 @@ fun CommentsScreen(
         }
     }
 
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
@@ -395,7 +396,7 @@ private fun CommentInputBar(
     error: String?,
     modifier: Modifier = Modifier,
 ) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
     var showEmojiPanel by rememberSaveable { mutableStateOf(false) }
 
     Box(
@@ -537,7 +538,7 @@ private fun CommentItem(
     onReplyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val strings = LocalStrings.current
     val userId = comment.user?.id
     Column(modifier = modifier.padding(16.dp)) {
         Row(
@@ -607,7 +608,7 @@ private fun CommentItem(
             Spacer(modifier = Modifier.height(8.dp))
             PixivAsyncImage(
                 model = stampUrl,
-                contentDescription = "Stamp",
+                contentDescription = strings.stamp,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .size(100.dp)
