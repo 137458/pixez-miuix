@@ -117,4 +117,14 @@ class AppStringsCoverageTest {
         assertEquals("Ukuran font", IdStrings.novelFontSize)
         assertEquals("ID Pixiv", IdStrings.pixivId)
     }
+
+    @Test
+    fun `菲律宾语关键功能区不回退到中文默认值`() {
+        assertEquals("Stamp", FilStrings.stamp)
+        assertEquals("I-play", FilStrings.ugoiraPlay)
+        assertEquals("Pamahalaan ang mga account", FilStrings.accountManageTitle)
+        assertEquals("Mga nobela", FilStrings.novelBrowseTitle)
+        assertEquals("Laki ng font", FilStrings.novelFontSize)
+        assertEquals("Pixiv ID", FilStrings.pixivId)
+    }
 }
