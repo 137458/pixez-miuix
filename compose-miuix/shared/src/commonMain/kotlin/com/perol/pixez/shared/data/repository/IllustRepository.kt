@@ -3,7 +3,6 @@ package com.perol.pixez.shared.data.repository
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.ui.AppConstants
 
-import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.FollowIllusts
 import com.perol.pixez.shared.data.model.Illust
@@ -183,7 +182,6 @@ class IllustRepository(
     suspend fun getFollowIllusts(restrict: String = "all"): List<Illust> =
         getFollowIllustsResponse(restrict = restrict).illusts
 
-
     private val spotlightArticlesCache = ThreadSafeLruCache<String, SpotlightResponse>(20)
 
     /**
@@ -316,12 +314,6 @@ class IllustRepository(
     }
 
     /**
-     * 获取作品评论列表。
-     */
-    suspend fun getIllustComments(illustId: Int): List<Comment> =
-        getIllustCommentsResponse(illustId).comments
-
-    /**
      * 发表作品评论或回复指定评论。
      *
      * @param illustId 作品 ID。
@@ -374,7 +366,6 @@ class IllustRepository(
     suspend fun getIllustRelated(illustId: Int): List<Illust> =
         getIllustRelatedResponse(illustId).illusts
 
-
     /**
      * 获取插画系列响应（含 nextUrl 与系列详情）。
      */
@@ -394,16 +385,6 @@ class IllustRepository(
     }
 
     /**
-     * 获取插画系列详情与系列内作品列表（兼容旧调用）。
-     */
-    suspend fun getIllustSeries(seriesId: Int): Pair<String, List<Illust>> =
-        networkCall("获取系列详情失败 seriesId=$seriesId") {
-            val response = getIllustSeriesResponse(seriesId)
-            val title = response.illustSeriesDetail?.title ?: "系列"
-            title to (response.illusts.orEmpty())
-        }
-
-    /**
      * 下载动图 Zip 包字节流。
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
@@ -414,5 +395,4 @@ class IllustRepository(
             }.body()
         }
 }
-
 

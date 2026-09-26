@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.NovelRecomResponse
-import com.perol.pixez.shared.data.model.NovelSeriesResponse
 import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import io.ktor.client.HttpClient
@@ -45,20 +44,6 @@ class NovelRepository(
             apiClient.get("/v1/novel/text") {
                 parameter("novel_id", novelId)
             }.body()
-        }
-
-    /**
-     * 获取小说系列作品列表（支持分页）。
-     */
-    suspend fun getNovelSeries(seriesId: Int, nextUrl: String? = null): NovelSeriesResponse =
-        networkCall("获取小说系列失败 seriesId=$seriesId") {
-            if (!nextUrl.isNullOrBlank()) {
-                apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-            } else {
-                apiClient.get("/v2/novel/series") {
-                    parameter("series_id", seriesId)
-                }.body()
-            }
         }
 
     /**

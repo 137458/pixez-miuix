@@ -62,14 +62,6 @@ class UserRepository(
     }
 
     /**
-     * 获取用户插画/漫画作品列表（兼容旧调用）。
-     */
-    suspend fun getUserIllusts(
-        userId: Int,
-        type: String = "illust",
-    ): List<Illust> = getUserIllustsResponse(userId, type).illusts
-
-    /**
      * 获取用户收藏的插画响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
@@ -95,15 +87,6 @@ class UserRepository(
     }
 
     /**
-     * 获取用户收藏的插画列表（兼容旧调用）。
-     */
-    suspend fun getUserBookmarks(
-        userId: Int,
-        restrict: String = "public",
-    ): List<Illust> = getUserBookmarksResponse(userId, restrict).illusts
-
-
-    /**
      * 获取用户关注列表响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
@@ -127,14 +110,6 @@ class UserRepository(
     }
 
     /**
-     * 获取用户关注列表（兼容旧调用）。
-     */
-    suspend fun getUserFollowing(
-        userId: Int,
-        restrict: String = "public",
-    ): List<UserPreview> = getUserFollowingResponse(userId, restrict).userPreviews
-
-    /**
      * 获取用户粉丝列表响应（含 nextUrl）。
      *
      * @param userId 用户 ID。
@@ -156,15 +131,6 @@ class UserRepository(
             }.body()
         }
     }
-
-    /**
-     * 获取用户粉丝列表（兼容旧调用）。
-     */
-    suspend fun getUserFollowers(
-        userId: Int,
-        restrict: String = "public",
-    ): List<UserPreview> = getUserFollowersResponse(userId, restrict).userPreviews
-
 
     /**
      * 获取推荐用户列表。
