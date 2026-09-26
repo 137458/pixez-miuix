@@ -17,6 +17,10 @@ object BrowserLauncherContext {
 actual fun openBrowser(url: String) {
     val context = BrowserLauncherContext.applicationContext
         ?: throw IllegalStateException("BrowserLauncherContext 未初始化")
+    if (!isBrowserUrlAllowed(url)) {
+        Napier.w("openBrowser 拒绝非白名单 scheme: ${url.take(64)}")
+        return
+    }
     try {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
