@@ -97,4 +97,14 @@ class AppStringsCoverageTest {
         assertEquals("Tamaño de la fuente", EsStrings.novelFontSize)
         assertEquals("ID de Pixiv", EsStrings.pixivId)
     }
+
+    @Test
+    fun `土耳其语关键功能区不回退到中文默认值`() {
+        assertEquals("Damga", TrStrings.stamp)
+        assertEquals("Oynat", TrStrings.ugoiraPlay)
+        assertEquals("Hesap yönetimi", TrStrings.accountManageTitle)
+        assertEquals("Romanlar", TrStrings.novelBrowseTitle)
+        assertEquals("Yazı tipi boyutu", TrStrings.novelFontSize)
+        assertEquals("Pixiv ID", TrStrings.pixivId)
+    }
 }
