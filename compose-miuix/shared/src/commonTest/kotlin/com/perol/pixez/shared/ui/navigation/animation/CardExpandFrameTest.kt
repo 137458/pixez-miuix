@@ -119,6 +119,21 @@ class CardExpandFrameTest {
         }
     }
 
+    @Test
+    fun `顶层内容不透明度在展开前段平滑淡入且铺满时完全不透明`() {
+        assertClose(0f, cardExpandContentAlpha(0f))
+        assertTrue(cardExpandContentAlpha(0.14f) in 0.4f..0.6f)
+        assertClose(1f, cardExpandContentAlpha(0.28f))
+        assertClose(1f, cardExpandContentAlpha(1f))
+    }
+
+    @Test
+    fun `底层遮罩随顶层展开度同步加深并在收回时完全透明避免闪跳`() {
+        assertClose(0f, cardExpandScrimAlpha(0f, maxAlpha = 0.24f))
+        assertClose(0.12f, cardExpandScrimAlpha(0.5f, maxAlpha = 0.24f))
+        assertClose(0.24f, cardExpandScrimAlpha(1f, maxAlpha = 0.24f))
+    }
+
     /**
      * 换算结果为浮点加减，按 [EPSILON] 容差比较，避免表示误差导致的假失败。
      */

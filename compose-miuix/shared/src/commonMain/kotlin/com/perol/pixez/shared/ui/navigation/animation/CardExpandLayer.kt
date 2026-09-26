@@ -64,18 +64,36 @@ internal fun resolveCardExpandGeometry(
 private const val MIN_SCALE = 0.05f
 
 /** 收缩态顶层页面外的边界阴影高度（px）。 */
-private const val EXPAND_SHADOW_ELEVATION = 12f
+private const val EXPAND_SHADOW_ELEVATION = 16f
 
-/** 底层页面在收缩态下叠加的暗色遮罩最大不透明度。 */
-private const val BACKDROP_SCRIM_ALPHA = 0.18f
+/** 底层页面在展开态下叠加的暗色遮罩最大不透明度。 */
+private const val BACKDROP_SCRIM_ALPHA = 0.24f
+
+/** 底层页面在顶层完全展开时的纵深微缩放比例。 */
+private const val BACKDROP_MIN_SCALE = 0.96f
+
+/** 顶层页面在卡片展开初段/收缩末段完成淡入淡出的进度阈值。 */
+private const val CONTENT_FADE_THRESHOLD = 0.28f
 
 /**
- * 为顶层页面叠加「卡片展开 / 收回」视觉层。
+ * 计算顶层页面在给定展开度 [expansion] 下的不透明度。
  *
- * [expansion] 为 0 时页面完全收在卡片内（带圆角与阴影），为 1 时铺满容器且无变换；
- * 展开与收回共用同一条 0..1 的展开度，方向与帧值的换算统一收敛到 [resolveCardExpandFrame]、
- * [predictiveBackCardExpandExpansion]。
- * [sourceBounds] 缺失或容器几何非法时直接返回原 [Modifier]，保证不引入任何副作用。
+ * 在展开前段（0..[CONTENT_FADE_THRESHOLD]）由 0 平滑淡入到 1，
+ * 收回末段由 1 平滑淡出到 0，消除收缩态下整页内容与列表卡片切换时的生硬跳变。
+ */
+internal fun cardExpandContentAlpha(expansion: Float): Float {
+    val progress = expansion.coerceIn(0f, 1f)
+    return (progress / CONTENT_FADE_THRESHOLD).coerceIn(0f, 1f)
+}
+
+/**
+ * 为顶层页面叠加「卡片展开 / 收回」视觉层（Container Transform）。
+ *
+ * 采用**等比缩放 + 动态视口高度裁切 + 透明度渐变**：
+ * - 水平与垂直方向统一按宽度缩放系数 `scaleX` 等比插值，彻底消除 `scaleX != scaleY`
+ *   导致的圆形按钮压扁、文字拉伸与插画比例失真；
+ * - 垂直方向通过动态高度裁切形状（Clip Shape）从卡片真实高度平滑扩展至全屏高度；
+ * - 配合 [cardExpandContentAlpha] 在初段/末段平滑淡入淡出，无缝衔接列表原卡片。
  *
  * @param expansion 展开度，0f 表示收缩在卡片内、1f 表示铺满容器；越界值会被钳制。
  * @param sourceBounds 卡片窗口矩形，可为 null。
@@ -93,57 +111,103 @@ internal fun Modifier.cardExpandLayer(
 
     val progress = expansion.coerceIn(0f, 1f)
 
-    val scaleX = lerp(geometry.scaleX, 1f, progress)
-    val scaleY = lerp(geometry.scaleY, 1f, progress)
+    // 使用等比缩放（以宽度占比为基准），保证详情页顶部大图与卡片宽度严丝合缝且画面 0 拉伸畸变
+    val uniformScale = lerp(geometry.scaleX, 1f, progress)
     val transX = lerp(geometry.transX, 0f, progress)
     val transY = lerp(geometry.transY, 0f, progress)
     val cornerRadius = androidx.compose.ui.unit.lerp(16.dp, containerCornerRadius, progress)
     val shadowElevation = lerp(EXPAND_SHADOW_ELEVATION, 0f, progress)
+    val contentAlpha = cardExpandContentAlpha(progress)
 
-    // 以 (0, 0) 为缩放原点，通过平移精确定位到卡片起点
+    // 收缩态下在等比缩放坐标系内对底部进行视口高度裁切，使容器视觉高度精确等于卡片高度
+    val unscaledCardHeightFraction = (geometry.scaleY / geometry.scaleX).coerceIn(0.1f, 1f)
+    val visibleHeightFraction = lerp(unscaledCardHeightFraction, 1f, progress)
+
     return this.graphicsLayer {
         this.transformOrigin = TransformOrigin(0f, 0f)
-        this.scaleX = scaleX
-        this.scaleY = scaleY
+        this.scaleX = uniformScale
+        this.scaleY = uniformScale
         this.translationX = transX
         this.translationY = transY
-        shape = RoundedCornerShape(cornerRadius)
+        this.alpha = contentAlpha
+        shape = ClippedContainerShape(
+            heightFraction = visibleHeightFraction,
+            cornerRadius = cornerRadius,
+        )
         clip = true
         this.shadowElevation = shadowElevation
     }
 }
 
 /**
- * 在页面内容之上叠加一层暗色遮罩。
+ * 支持垂直视口比例裁切的圆角矩形 Shape。
  *
- * 用于底层页面：卡片展开/收回过程中，底层页面不位移，仅靠这层遮罩
- * 建立「顶层卡片浮在其上」的纵深关系，避免两个页面视觉上糊在一起。
+ * 用于在等比缩放下将顶层页面容器底部裁切至卡片当前对应的高度并保留圆角。
+ */
+private class ClippedContainerShape(
+    private val heightFraction: Float,
+    private val cornerRadius: Dp,
+) : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density,
+    ): androidx.compose.ui.graphics.Outline {
+        val radiusPx = with(density) { cornerRadius.toPx() }
+        val clippedHeight = (size.height * heightFraction.coerceIn(0.05f, 1f)).coerceAtMost(size.height)
+        return androidx.compose.ui.graphics.Outline.Rounded(
+            androidx.compose.ui.geometry.RoundRect(
+                left = 0f,
+                top = 0f,
+                right = size.width,
+                bottom = clippedHeight,
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(radiusPx, radiusPx),
+            ),
+        )
+    }
+}
+
+/**
+ * 在底层页面内容之上叠加暗色遮罩与纵深微缩放。
+ *
+ * 卡片展开/收回过程中，底层页面随顶层展开度产生轻微后退缩放（1.0 -> 0.96）
+ * 并叠加渐暗遮罩，建立真实的 HyperOS 空间纵深感。
  *
  * @param alpha 遮罩不透明度，0f 表示完全透明（不绘制）；越界值会被钳制。
+ * @param expansion 顶层页面的展开度（0f..1f），用于同步底层纵深缩放。
  */
-internal fun Modifier.cardExpandScrim(alpha: Float): Modifier {
+internal fun Modifier.cardExpandScrim(
+    alpha: Float,
+    expansion: Float = (alpha / BACKDROP_SCRIM_ALPHA).coerceIn(0f, 1f),
+): Modifier {
     val scrimAlpha = alpha.coerceIn(0f, 1f)
-    return this.drawWithContent {
-        drawContent()
-        if (scrimAlpha > 0.001f) {
-            drawRect(Color.Black.copy(alpha = scrimAlpha))
+    val backdropScale = lerp(1f, BACKDROP_MIN_SCALE, expansion.coerceIn(0f, 1f))
+    return this
+        .graphicsLayer {
+            this.scaleX = backdropScale
+            this.scaleY = backdropScale
         }
-    }
+        .drawWithContent {
+            drawContent()
+            if (scrimAlpha > 0.001f) {
+                drawRect(Color.Black.copy(alpha = scrimAlpha))
+            }
+        }
 }
 
 /**
  * 由顶层页面的展开度换算出底层遮罩应有的不透明度。
  *
- * 顶层页面收缩在卡片内时遮罩最深，铺满容器时完全消失；与缩放进度取自
- * 同一个展开度，两层页面的纵深关系才不会脱节。
+ * 顶层页面铺满容器（expansion = 1）时遮罩最深，完全收回卡片（expansion = 0）时遮罩消失；
+ * 与缩放进度取自同一个展开度，两层页面的纵深关系保持同步。
  *
- * @param expansion 顶层页面的展开度，0f 时遮罩最强、1f 时完全消失。
+ * @param expansion 顶层页面的展开度，1f 时遮罩最强、0f 时完全消失。
  * @param maxAlpha 遮罩在最深时的最大不透明度，默认取 [BACKDROP_SCRIM_ALPHA]。
  */
 internal fun cardExpandScrimAlpha(
     expansion: Float,
     maxAlpha: Float = BACKDROP_SCRIM_ALPHA,
-): Float = maxAlpha * (1f - expansion.coerceIn(0f, 1f))
+): Float = maxAlpha * expansion.coerceIn(0f, 1f)
 
 /**
  * 一次转场中某一层页面所对应的「卡片展开」帧数据。

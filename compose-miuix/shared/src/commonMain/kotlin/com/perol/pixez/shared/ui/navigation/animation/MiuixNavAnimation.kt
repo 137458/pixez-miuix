@@ -51,17 +51,16 @@ fun miuixCardExpandStackAnimation(
     containerCornerRadius: Dp,
 ): StackAnimation<RootComponent.Config, RootComponent.Child> =
     stackAnimation { child, otherChild, direction ->
-        // 转场发生的瞬间解析来源卡片作品 ID：转场双方任一为作品详情页即提取对应 ID
-        val illustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
-            ?: (otherChild.configuration as? RootComponent.Config.IllustDetail)?.illustId
+        // 仅当本次转场的前层（入栈或出栈的栈顶页面）为作品详情页时，才使用对应卡片矩形执行展开/收缩
+        val frontConfig = if (direction.isFront) child.configuration else otherChild.configuration
+        val illustId = (frontConfig as? RootComponent.Config.IllustDetail)?.illustId
         val sourceBounds = illustId?.let(registry::get)
-        val isTopLayer = child.configuration is RootComponent.Config.IllustDetail
 
         cardExpandStackAnimator(
             sourceBounds = sourceBounds,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
-            isTopLayer = isTopLayer,
+            isTopLayer = direction.isFront,
         )
     }
 
@@ -69,8 +68,8 @@ fun miuixCardExpandStackAnimation(
  * 创建 MIUIX / HyperOS「卡片收回」预测性返回动画。
  *
  * 手势拖拽期间，顶层详情页随手指进度从整屏收缩回列表卡片位置，
- * 圆角同步由 0 渐变到设备屏幕物理圆角，并在收缩态投出边界阴影；
- * 底层页面保持静止仅叠加消退遮罩，让「收回卡片」的纵深关系清晰可读。
+ * 圆角同步由设备屏幕物理圆角渐变到卡片圆角，并在收缩态投出边界阴影；
+ * 底层页面随手势进度由 0.96 缩放还原至 1.0 并消退遮罩，让「收回卡片」的纵深关系清晰可读。
  *
  * 以下三种情况没有可用的来源卡片几何，一律显式回退为经典纯左右平移：
  * 1. 当前栈顶不是作品详情页（[illustId] 为 null）；
@@ -113,7 +112,11 @@ fun miuixCardExpandPredictiveBackAnimatable(
             )
         },
         enterModifier = { progress, _ ->
-            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(predictiveBackCardExpandExpansion(progress = progress)))
+            val expansion = predictiveBackCardExpandExpansion(progress = progress)
+            Modifier.cardExpandScrim(
+                alpha = cardExpandScrimAlpha(expansion),
+                expansion = expansion,
+            )
         },
     )
 }
