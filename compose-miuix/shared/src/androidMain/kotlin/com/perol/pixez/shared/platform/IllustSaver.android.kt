@@ -152,13 +152,12 @@ actual class IllustSaver {
                     ?: throw IllegalStateException("MediaStore 插入失败: $fileName")
 
                 try {
-                    val out = resolver.openOutputStream(uri)
-                        ?: throw IllegalStateException("无法打开输出流: $fileName")
-                    tempFile.inputStream().use { input ->
-                        out.use { output ->
+                    // openOutputStream 与 use 合并为同一表达式，避免取流后临时文件读取抛异常时输出流泄漏。
+                    resolver.openOutputStream(uri)?.use { output ->
+                        tempFile.inputStream().use { input ->
                             input.copyTo(output, bufferSize = 64 * 1024)
                         }
-                    }
+                    } ?: throw IllegalStateException("无法打开输出流: $fileName")
 
                     contentValues.clear()
                     contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)

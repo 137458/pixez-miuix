@@ -183,32 +183,47 @@ internal suspend fun loadUgoiraSession(
     }
 
     onStage(UgoiraLoadStage.Extracting)
-    val (framesDir, validFrames) = withContext(Dispatchers.IO) {
-        val dir = getAppCacheDirectory() / "ugoira_frames_${illustId}"
-        FileSystem.SYSTEM.createDirectories(dir)
-        val frameMap = UgoiraZipExtractor().extractFrames(zipBytes)
-        for ((fileName, bytes) in frameMap) {
-            FileSystem.SYSTEM.write(dir / fileName) { write(bytes) }
+    val framesDir = getAppCacheDirectory() / "ugoira_frames_${illustId}"
+    try {
+        val validFrames = withContext(Dispatchers.IO) {
+            FileSystem.SYSTEM.createDirectories(framesDir)
+            val frameMap = UgoiraZipExtractor().extractFrames(zipBytes)
+            for ((fileName, bytes) in frameMap) {
+                FileSystem.SYSTEM.write(framesDir / fileName) { write(bytes) }
+            }
+            metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
         }
-        val valid = metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
-        dir to valid
-    }
 
-    if (validFrames.isEmpty()) return null
+        if (validFrames.isEmpty()) {
+            // 无有效帧：清理临时 zip 与空帧目录后返回，避免残留累积。
+            cleanupUgoiraLoadFailure(tempZipPath, framesDir)
+            return null
+        }
 
-    val provider = UgoiraFrameProvider(validFrames, framesDir)
-    withContext(Dispatchers.Default) {
-        provider.getFrameBitmap(0)
-        provider.preloadNext(0)
+        val provider = UgoiraFrameProvider(validFrames, framesDir)
+        withContext(Dispatchers.Default) {
+            provider.getFrameBitmap(0)
+            provider.preloadNext(0)
+        }
+        val session = UgoiraReadySession(
+            provider = provider,
+            tempZipPath = tempZipPath,
+            framesDir = framesDir,
+            zipUrl = zipUrl,
+        )
+        UgoiraSessionCache.put(illustId, session)
+        return session
+    } catch (e: Throwable) {
+        // 失败路径同样清理临时文件：反复失败时缓存目录可能累积数百 MB 残留。
+        cleanupUgoiraLoadFailure(tempZipPath, framesDir)
+        throw e
     }
-    val session = UgoiraReadySession(
-        provider = provider,
-        tempZipPath = tempZipPath,
-        framesDir = framesDir,
-        zipUrl = zipUrl,
-    )
-    UgoiraSessionCache.put(illustId, session)
-    return session
+}
+
+/** 删除一次失败的 ugoira 加载留下的临时 zip 与帧目录；路径可能不存在，尽力清理即可。 */
+private fun cleanupUgoiraLoadFailure(tempZipPath: Path?, framesDir: Path) {
+    tempZipPath?.let { runCatching { FileSystem.SYSTEM.delete(it) } }
+    runCatching { FileSystem.SYSTEM.deleteRecursively(framesDir) }
 }
 
 /** [loadUgoiraSession] 的加载阶段，用于向用户呈现进度文案。 */

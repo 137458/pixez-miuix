@@ -136,24 +136,29 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
                 setRequestProperty("User-Agent", "PixivAndroidApp/5.0.234")
                 instanceFollowRedirects = true
             }
-            connection.inputStream.use { input ->
-                val options = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.RGB_565
-                }
-                val originalBitmap = BitmapFactory.decodeStream(input, null, options) ?: return null
-                val maxDimension = 800
-                if (originalBitmap.width > maxDimension || originalBitmap.height > maxDimension) {
-                    val scale = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
-                    val newWidth = (originalBitmap.width * scale).toInt().coerceAtLeast(1)
-                    val newHeight = (originalBitmap.height * scale).toInt().coerceAtLeast(1)
-                    val scaled = Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
-                    if (scaled != originalBitmap) {
-                        originalBitmap.recycle()
+            try {
+                connection.inputStream.use { input ->
+                    val options = BitmapFactory.Options().apply {
+                        inPreferredConfig = Bitmap.Config.RGB_565
                     }
-                    scaled
-                } else {
-                    originalBitmap
+                    val originalBitmap = BitmapFactory.decodeStream(input, null, options) ?: return null
+                    val maxDimension = 800
+                    if (originalBitmap.width > maxDimension || originalBitmap.height > maxDimension) {
+                        val scale = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
+                        val newWidth = (originalBitmap.width * scale).toInt().coerceAtLeast(1)
+                        val newHeight = (originalBitmap.height * scale).toInt().coerceAtLeast(1)
+                        val scaled = Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+                        if (scaled != originalBitmap) {
+                            originalBitmap.recycle()
+                        }
+                        scaled
+                    } else {
+                        originalBitmap
+                    }
                 }
+            } finally {
+                // 释放连接与 keep-alive socket，覆盖解码失败提前返回路径。
+                connection.disconnect()
             }
         } catch (e: Exception) {
             Log.w("PixEzAppWidgetProvider", "Failed to download widget bitmap: $imageUrl", e)
