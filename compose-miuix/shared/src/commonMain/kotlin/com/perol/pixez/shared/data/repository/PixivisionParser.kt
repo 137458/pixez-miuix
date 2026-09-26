@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.model.AmWork
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
@@ -135,7 +136,7 @@ object PixivisionParser {
             val allArtworks = globalArtworkRegex.findAll(html).map { it.groupValues[1] }.distinct().toList()
 
             for (artId in allArtworks) {
-                val artLink = "https://www.pixiv.net/artworks/$artId"
+                val artLink = AppConstants.Urls.PIXIV_ARTWORK_PREFIX + artId
                 if (seenArtworkLinks.add(artLink)) {
                     val index = html.indexOf("artworks/$artId")
                     val subStart = (index - 600).coerceAtLeast(0)
@@ -161,7 +162,7 @@ object PixivisionParser {
             ?: Regex("""https?://(?:www\.)?pixiv\.net/member_illust\.php\?(?:[^"'\s]*&)?illust_id=(\d+)""", RegexOption.IGNORE_CASE).find(block)
 
         val artworkId = artworkMatch?.groupValues?.get(1) ?: return null
-        val artworkLink = "https://www.pixiv.net/artworks/$artworkId"
+        val artworkLink = AppConstants.Urls.PIXIV_ARTWORK_PREFIX + artworkId
 
         val userMatch = Regex("""https?://(?:www\.)?pixiv\.net/(?:[a-z]{2}(?:-[a-z]{2})?/)?users/(\d+)""", RegexOption.IGNORE_CASE).find(block)
             ?: Regex("""https?://(?:www\.)?pixiv\.net/member\.php\?(?:[^"'\s]*&)?id=(\d+)""", RegexOption.IGNORE_CASE).find(block)

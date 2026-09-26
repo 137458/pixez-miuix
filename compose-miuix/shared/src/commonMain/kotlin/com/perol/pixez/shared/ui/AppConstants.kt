@@ -27,6 +27,9 @@ object AppConstants {
          */
         const val REFERER_PIXIVISION = "https://www.pixivision.net/"
 
+        /** Pixivision 中文站点 Referer：作品图源抓取走 /zh/ 路径以匹配文章语言。 */
+        const val REFERER_PIXIVISION_ZH = "https://www.pixivision.net/zh/"
+
         /**
          * 图片请求统一使用的浏览器 User-Agent。
          */

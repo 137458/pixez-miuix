@@ -263,7 +263,7 @@ class IllustRepository(
         return networkCall("获取 Spotlight 特辑详情失败 url=$articleUrl") {
             val response: String = webClient.get(TrustedUrlPolicy.spotlightUrl(articleUrl)) {
                 headers {
-                    append("Referer", "https://www.pixivision.net/zh/")
+                    append("Referer", AppConstants.Network.REFERER_PIXIVISION_ZH)
                     append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/85.0.564.13")
                     append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7")
                 }
