@@ -15,7 +15,8 @@ data class NovelRecomResponse(
 data class Novel(
     val id: Int,
     val title: String,
-    val caption: String,
+    // caption/total_* 为 pixiv 可返回 null 的展示字段（参照 Illust.totalComments 先例），给默认值防单条脏数据毒化整页。
+    val caption: String = "",
     val restrict: Int,
     @SerialName("x_restrict") val xRestrict: Int,
     @SerialName("is_original") val isOriginal: Boolean,
@@ -28,10 +29,10 @@ data class Novel(
     // 旧版 novel_recom_response 中 Series 的 id/title 均可空，说明 novel 不一定属于 series。
     val series: NovelSeries? = null,
     @SerialName("is_bookmarked") val isBookmarked: Boolean,
-    @SerialName("total_bookmarks") val totalBookmarks: Int,
-    @SerialName("total_view") val totalView: Int,
+    @SerialName("total_bookmarks") val totalBookmarks: Int = 0,
+    @SerialName("total_view") val totalView: Int = 0,
     val visible: Boolean,
-    @SerialName("total_comments") val totalComments: Int,
+    @SerialName("total_comments") val totalComments: Int = 0,
     @SerialName("is_muted") val isMuted: Boolean,
     @SerialName("is_mypixiv_only") val isMypixivOnly: Boolean,
     @SerialName("is_x_restricted") val isXRestricted: Boolean,
@@ -105,10 +106,10 @@ data class NovelSeriesNovel(
     val user: NovelSeriesUser,
     val series: NovelSeriesSeries,
     @SerialName("is_bookmarked") val isBookmarked: Boolean,
-    @SerialName("total_bookmarks") val totalBookmarks: Int,
-    @SerialName("total_view") val totalView: Int,
+    @SerialName("total_bookmarks") val totalBookmarks: Int = 0,
+    @SerialName("total_view") val totalView: Int = 0,
     val visible: Boolean,
-    @SerialName("total_comments") val totalComments: Int,
+    @SerialName("total_comments") val totalComments: Int = 0,
     @SerialName("is_muted") val isMuted: Boolean,
     @SerialName("is_mypixiv_only") val isMypixivOnly: Boolean,
     @SerialName("is_x_restricted") val isXRestricted: Boolean,
@@ -149,7 +150,8 @@ data class NovelSeriesNovel(
  data class NovelSeriesFirstNovel(
     val id: Int,
     val title: String,
-    val caption: String,
+    // caption/total_* 为 pixiv 可返回 null 的展示字段，给默认值防单条脏数据毒化整页。
+    val caption: String = "",
     val restrict: Int,
     @SerialName("x_restrict") val xRestrict: Int,
     @SerialName("is_original") val isOriginal: Boolean,
@@ -161,13 +163,14 @@ data class NovelSeriesNovel(
     val user: NovelSeriesUser,
     val series: NovelSeriesSeries,
     @SerialName("is_bookmarked") val isBookmarked: Boolean,
-    @SerialName("total_bookmarks") val totalBookmarks: Int,
-    @SerialName("total_view") val totalView: Int,
+    @SerialName("total_bookmarks") val totalBookmarks: Int = 0,
+    @SerialName("total_view") val totalView: Int = 0,
     val visible: Boolean,
-    @SerialName("total_comments") val totalComments: Int,
+    @SerialName("total_comments") val totalComments: Int = 0,
     @SerialName("is_muted") val isMuted: Boolean? = null,
     @SerialName("is_my_pixiv_only") val isMypixivOnly: Boolean? = null,
-    @SerialName("is_X_restricted") val isXRestricted: Boolean? = null,
+    // API 实际键名为小写 is_x_restricted，原 is_X_restricted 大小写失配导致字段恒为 null。
+    @SerialName("is_x_restricted") val isXRestricted: Boolean? = null,
     @SerialName("novel_ai_type") val novelAIType: Int,
 )
 
