@@ -222,7 +222,7 @@ private fun GuideLanguageStep(
                     ) {
                         Image(
                             painter = painterResource(Res.drawable.ic_pixez_logo),
-                            contentDescription = "PixEz Logo",
+                            contentDescription = strings.logoContentDescription,
                             modifier = Modifier.size(56.dp),
                         )
                     }
