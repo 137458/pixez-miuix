@@ -1,14 +1,3 @@
-# PixEz MIUIX 项目开发规范与自动化规则
+# GEMINI
 
-## 🤖 项目专属构建验证 (Auto-Verification)
-
-- 代码改动完成后，自动执行多平台编译验证：
-  - `./gradlew :shared:compileKotlinDesktop`
-  - `./gradlew :composeApp:compileKotlinDesktop`
-  - `./gradlew :composeApp:compileDebugKotlinAndroid`
-- 确保 Desktop 与 Android 双端无编译错误和破坏性回归。
-
-## 🎨 MIUIX / HyperOS 规范约束
-- 严格使用 Xiaomi HyperOS / MIUIX (`top.yukonga.miuix.kmp`) 官方组件（`Card`, `BasicComponent`, `OverlayDialog`, `OverlayBottomSheet`, `WindowDialog`, `Slider`, `LinearProgressIndicator`, `InfiniteProgressIndicator` 等），严禁泄漏引入 Material 3 控件。
-- UI 文本统一接入 `LocalStrings.current` 多语言体系（`AppStrings.kt`）。
-- 外部链接、占位符模板、预设档位与阈值统一收敛至 `AppConstants.kt`。
+本项目面向 AI 的约束与构建验证命令统一维护在 `AGENTS.md`（唯一事实源），请直接读取并遵循 `AGENTS.md`，本文件不再重复维护。
