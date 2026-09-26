@@ -127,4 +127,14 @@ class AppStringsCoverageTest {
         assertEquals("Laki ng font", FilStrings.novelFontSize)
         assertEquals("Pixiv ID", FilStrings.pixivId)
     }
+
+    @Test
+    fun `德语关键功能区不回退到中文默认值`() {
+        assertEquals("Stempel", DeStrings.stamp)
+        assertEquals("Abspielen", DeStrings.ugoiraPlay)
+        assertEquals("Kontoverwaltung", DeStrings.accountManageTitle)
+        assertEquals("Romane", DeStrings.novelBrowseTitle)
+        assertEquals("Schriftgröße", DeStrings.novelFontSize)
+        assertEquals("Pixiv-ID", DeStrings.pixivId)
+    }
 }
