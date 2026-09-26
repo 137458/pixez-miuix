@@ -108,6 +108,62 @@ class CardExpandGeometryTest {
         assertNull(resolveCardExpandGeometry(container, degenerate))
     }
 
+    @Test
+    fun `收缩态本地圆角按缩放比例逆向补偿以保证屏幕物理圆角等于卡片圆角`() {
+        // 卡片宽度为容器的 0.25 倍（例如平板 4 列瀑布流），卡片圆角 16dp，屏幕圆角 32dp。
+        val card = Rect(left = 100f, top = 200f, right = 350f, bottom = 500f)
+        val startState = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = card,
+            containerBounds = container,
+            cardCornerRadiusDp = 16f,
+            containerCornerRadiusDp = 32f,
+        )
+        val endState = resolveCardExpandTransform(
+            expansion = 1f,
+            sourceBounds = card,
+            containerBounds = container,
+            cardCornerRadiusDp = 16f,
+            containerCornerRadiusDp = 32f,
+        )
+
+        // progress = 0 时，uniformScale = 0.25，本地圆角必须为 16 / 0.25 = 64dp，缩放后屏幕视觉圆角才精确等于 16dp。
+        assertClose(0.25f, startState?.uniformScale)
+        assertClose(64f, startState?.localCornerRadiusDp)
+        // progress = 1 时，uniformScale = 1.0，本地圆角等于屏幕圆角 32dp。
+        assertClose(1f, endState?.uniformScale)
+        assertClose(32f, endState?.localCornerRadiusDp)
+    }
+
+    @Test
+    fun `宽屏或长竖图卡片在 scaleY 大于 scaleX 时以 scaleY 为基准缩放并裁切宽度以填满卡片高度`() {
+        // 横屏容器 1600x1000，卡片 320x500 -> scaleX = 0.2, scaleY = 0.5 (scaleY > scaleX)
+        val wideContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
+        val tallCard = Rect(left = 400f, top = 200f, right = 720f, bottom = 700f)
+
+        val state = resolveCardExpandTransform(
+            expansion = 0f,
+            sourceBounds = tallCard,
+            containerBounds = wideContainer,
+        )
+
+        // 基准缩放必须取 max(0.2, 0.5) = 0.5，以保证缩放后容器高度 1000 * 0.5 = 500px 能完整覆盖卡片高度；
+        // 同时水平可见宽度占比为 0.2 / 0.5 = 0.4，使裁切后屏幕物理宽度 1600 * 0.5 * 0.4 = 320px 精确等于卡片宽度。
+        assertClose(0.5f, state?.uniformScale)
+        assertClose(0.4f, state?.visibleWidthFraction)
+        assertClose(1.0f, state?.visibleHeightFraction)
+    }
+
+    @Test
+    fun `底层页面微缩放锚点对齐源卡片中心在容器内的归一化位置`() {
+        val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        // 卡片中心为 (300, 600)，容器为 1000x2000 -> 归一化锚点应为 (0.3, 0.3)
+        val origin = resolveBackdropTransformOrigin(card, container)
+
+        assertClose(0.3f, origin.pivotFractionX)
+        assertClose(0.3f, origin.pivotFractionY)
+    }
+
     /**
      * 归一化几何由浮点除法得出，按 [EPSILON] 容差比较，避免 0.70000005 这类
      * 表示误差导致的假失败；容差远小于任何肉眼可辨的动画偏差。

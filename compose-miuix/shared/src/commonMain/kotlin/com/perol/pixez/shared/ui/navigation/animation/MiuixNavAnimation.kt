@@ -51,16 +51,21 @@ fun miuixCardExpandStackAnimation(
     containerCornerRadius: Dp,
 ): StackAnimation<RootComponent.Config, RootComponent.Child> =
     stackAnimation { child, otherChild, direction ->
-        // 仅当本次转场的前层（入栈或出栈的栈顶页面）为作品详情页时，才使用对应卡片矩形执行展开/收缩
+        // 仅当本次转场的前层（入栈或出栈的栈顶页面）为作品详情页时，才使用对应卡片矩形执行展开/收缩；
+        // 出栈（EXIT_FRONT / ENTER_BACK）时优先取详情页内实际滑切到的作品 ID。
+        val isPop = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK
         val frontConfig = if (direction.isFront) child.configuration else otherChild.configuration
-        val illustId = (frontConfig as? RootComponent.Config.IllustDetail)?.illustId
-        val sourceBounds = illustId?.let(registry::get)
+        val rawIllustId = (frontConfig as? RootComponent.Config.IllustDetail)?.illustId
+        val effectiveIllustId = if (isPop) registry.resolveEffectiveIllustId(rawIllustId) else rawIllustId
+        val sourceBounds = effectiveIllustId?.let { registry.getVisibleInContainer(it, containerBounds) }
 
         cardExpandStackAnimator(
             sourceBounds = sourceBounds,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
             isTopLayer = direction.isFront,
+            registry = registry,
+            illustId = effectiveIllustId,
         )
     }
 
@@ -71,10 +76,10 @@ fun miuixCardExpandStackAnimation(
  * 圆角同步由设备屏幕物理圆角渐变到卡片圆角，并在收缩态投出边界阴影；
  * 底层页面随手势进度由 0.96 缩放还原至 1.0 并消退遮罩，让「收回卡片」的纵深关系清晰可读。
  *
- * 以下三种情况没有可用的来源卡片几何，一律显式回退为经典纯左右平移：
+ * 以下情况没有可用的来源卡片几何，一律显式回退为经典纯左右平移：
  * 1. 当前栈顶不是作品详情页（[illustId] 为 null）；
- * 2. 该详情页由分享链接直达或进程重建恢复进入，从未有卡片登记过矩形；
- * 3. 卡片矩形随列表滚出组合已被注销。
+ * 2. 该详情页由分享链接直达、进程重建恢复进入，或用户在详情页内滑动切换到了不在当前列表的作品；
+ * 3. 卡片矩形随列表滚出可视区超过阈值或已被注销。
  *
  * @param initialBackEvent 手势起始事件。
  * @param registry 卡片几何信息源，用于取出手势来源页对应的卡片矩形。
@@ -92,20 +97,27 @@ fun miuixCardExpandPredictiveBackAnimatable(
     containerBounds: Rect,
     deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
-    // 无来源卡片信息（非详情页、直达入口、几何已注销）时显式走侧滑兜底，
-    // 不依赖「查表恰好落空」来隐式达成，避免后续改动意外让该分支失效。
-    val sourceBounds = resolveGestureSourceBounds(illustId = illustId, registry = registry)
-        ?: return miuixSlidePredictiveBackAnimatable(
+    val effectiveIllustId = registry.resolveEffectiveIllustId(illustId)
+    val sourceBounds = resolveGestureSourceBounds(
+        illustId = effectiveIllustId,
+        registry = registry,
+        containerBounds = containerBounds,
+    ) ?: run {
+        registry.updateTransitionState(null, 0f)
+        return miuixSlidePredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
             containerWidthPx = containerWidthPx,
             deviceCornerRadius = deviceCornerRadius,
         )
+    }
 
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
+            val expansion = predictiveBackCardExpandExpansion(progress = progress)
+            registry.updateTransitionState(effectiveIllustId, expansion)
             Modifier.cardExpandLayer(
-                expansion = predictiveBackCardExpandExpansion(progress = progress),
+                expansion = expansion,
                 sourceBounds = sourceBounds,
                 containerBounds = containerBounds,
                 containerCornerRadius = deviceCornerRadius,
@@ -116,6 +128,8 @@ fun miuixCardExpandPredictiveBackAnimatable(
             Modifier.cardExpandScrim(
                 alpha = cardExpandScrimAlpha(expansion),
                 expansion = expansion,
+                sourceBounds = sourceBounds,
+                containerBounds = containerBounds,
             )
         },
     )
@@ -129,15 +143,16 @@ fun miuixCardExpandPredictiveBackAnimatable(
  *
  * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
  * @param registry 卡片几何信息源。
- * @return 可用的卡片窗口矩形；没有来源卡片信息时返回 null。
+ * @param containerBounds 页面容器窗口矩形。
+ * @return 可用的卡片窗口矩形；没有来源卡片信息或已滚出容器可视范围时返回 null。
  */
 internal fun resolveGestureSourceBounds(
     illustId: Int?,
     registry: SharedBoundsRegistry,
+    containerBounds: Rect = Rect.Zero,
 ): Rect? {
     val id = illustId ?: return null
-    val bounds = registry.get(id) ?: return null
-    // 尺寸非正（卡片尚未完成布局或已退化）时同样视为无可用几何。
+    val bounds = registry.getVisibleInContainer(id, containerBounds) ?: return null
     return bounds.takeIf { it.width > 0f && it.height > 0f }
 }
 

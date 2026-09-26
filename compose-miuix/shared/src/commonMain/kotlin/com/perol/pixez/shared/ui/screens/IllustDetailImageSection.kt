@@ -88,8 +88,12 @@ internal fun IllustDetailImagePage(
         customBasePath = settings?.storePath,
         pictureSource = settings?.pictureSource,
     )
-    val thumbnailUrl = remember(page) {
-        page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
+    val thumbnailUrl = remember(page, pageIndex, illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+        if (pageIndex == 0) {
+            resolveFeedPreviewThumbnailUrl(illust, settings?.feedPreviewQuality)
+        } else {
+            page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
+        }
     }
     var pageLoaded by remember(pageIndex) { mutableStateOf(false) }
     val pageModifier = Modifier
@@ -154,6 +158,23 @@ internal fun IllustDetailImagePage(
 }
 
 /**
+ * 解析与列表卡片 [com.perol.pixez.shared.ui.components.IllustCard] 完全一致的封面缩略图 URL，
+ * 确保卡片展开转场首帧 100% 命中 Coil 内存缓存，实现零白屏一镜到底。
+ */
+internal fun resolveFeedPreviewThumbnailUrl(
+    illust: Illust,
+    feedPreviewQuality: Int?,
+): String {
+    val preferred = when (feedPreviewQuality ?: 0) {
+        0 -> illust.imageUrls.medium
+        1 -> illust.imageUrls.large
+        2 -> illust.imageUrls.squareMedium
+        else -> illust.imageUrls.medium
+    }
+    return preferred.ifBlank { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
+}
+
+/**
  * 单页作品的图片项：Ugoira 动图播放器或普通单图。
  */
 @Composable
@@ -198,8 +219,8 @@ internal fun IllustDetailSinglePageImage(
             customBasePath = settings?.storePath,
             pictureSource = settings?.pictureSource,
         )
-        val thumbnailUrl = remember(illust) {
-            illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium }
+        val thumbnailUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+            resolveFeedPreviewThumbnailUrl(illust, settings?.feedPreviewQuality)
         }
         val singleModifier = Modifier
             .fillMaxWidth()

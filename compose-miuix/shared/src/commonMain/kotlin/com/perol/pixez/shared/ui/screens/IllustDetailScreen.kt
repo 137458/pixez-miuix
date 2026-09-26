@@ -83,6 +83,13 @@ fun IllustDetailScreen(
 ) {
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
+    val sharedBoundsRegistry = com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry.current
+
+    androidx.compose.runtime.DisposableEffect(sharedBoundsRegistry) {
+        onDispose {
+            sharedBoundsRegistry.activeDetailIllustId = null
+        }
+    }
 
     if (swipeChangeArtwork) {
         val relatedState = produceState<List<Int>>(initialValue = emptyList(), illustId) {
@@ -93,6 +100,11 @@ fun IllustDetailScreen(
             listOf(illustId) + relatedState.value
         }
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { idList.size })
+        val currentDisplayedId = idList.getOrElse(pagerState.currentPage) { illustId }
+
+        LaunchedEffect(sharedBoundsRegistry, currentDisplayedId) {
+            sharedBoundsRegistry.activeDetailIllustId = currentDisplayedId
+        }
 
         HorizontalPager(
             state = pagerState,
@@ -119,6 +131,10 @@ fun IllustDetailScreen(
             )
         }
     } else {
+        LaunchedEffect(sharedBoundsRegistry, illustId) {
+            sharedBoundsRegistry.activeDetailIllustId = illustId
+        }
+
         IllustDetailSingleContent(
             illustId = illustId,
             isCurrentPage = true,

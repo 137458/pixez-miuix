@@ -41,6 +41,8 @@ internal fun cardExpandStackAnimator(
     containerBounds: Rect,
     containerCornerRadius: Dp,
     isTopLayer: Boolean,
+    registry: SharedBoundsRegistry? = null,
+    illustId: Int? = null,
 ): StackAnimator {
     val duration: FiniteAnimationSpec<Float> = tween(
         durationMillis = TRANSITION_DURATION_MILLIS,
@@ -49,6 +51,9 @@ internal fun cardExpandStackAnimator(
     if (sourceBounds == null) {
         return stackAnimator(animationSpec = duration) { factor, direction, content ->
             val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
+            if (frame.isTopLayer) {
+                registry?.updateTransitionState(null, 0f)
+            }
             val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
             content(
                 if (frame.isTopLayer) {
@@ -78,6 +83,9 @@ internal fun cardExpandStackAnimator(
 
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
         val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
+        if (frame.isTopLayer) {
+            registry?.updateTransitionState(illustId, frame.expansion)
+        }
         content(
             if (frame.isTopLayer) {
                 Modifier.cardExpandLayer(
@@ -90,6 +98,8 @@ internal fun cardExpandStackAnimator(
                 Modifier.cardExpandScrim(
                     alpha = cardExpandScrimAlpha(frame.expansion),
                     expansion = frame.expansion,
+                    sourceBounds = sourceBounds,
+                    containerBounds = containerBounds,
                 )
             },
         )

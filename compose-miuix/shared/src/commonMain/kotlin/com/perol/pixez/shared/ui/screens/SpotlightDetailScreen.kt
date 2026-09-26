@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -425,6 +426,10 @@ private fun SpotlightWorkCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .let { mod ->
+                val id = work.illustId
+                if (id != null && id > 0) mod.illustTransitionBounds(id) else mod
+            }
             .clickable(enabled = work.illustId != null, onClick = onIllustClick),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

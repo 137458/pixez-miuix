@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
@@ -375,6 +376,10 @@ private fun HistoryCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .let { mod ->
+                val id = item.illustId.toInt()
+                if (id > 0) mod.illustTransitionBounds(id) else mod
+            }
             .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
                 onClick = onClick,
