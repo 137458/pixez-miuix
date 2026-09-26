@@ -117,7 +117,7 @@ fun IllustStaggeredGrid(
                         val layoutInfo = state.layoutInfo
                         val totalItems = layoutInfo.totalItemsCount
                         val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
-                        lastVisibleIndex >= totalItems - 6
+                        lastVisibleIndex >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS
                     }
                 }
             }

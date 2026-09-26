@@ -130,8 +130,8 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
         return try {
             val url = URL(imageUrl)
             val connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 10000
-                readTimeout = 10000
+                connectTimeout = WIDGET_HTTP_TIMEOUT_MS
+                readTimeout = WIDGET_HTTP_TIMEOUT_MS
                 setRequestProperty("Referer", "https://app-api.pixiv.net/")
                 setRequestProperty("User-Agent", "PixivAndroidApp/5.0.234")
                 instanceFollowRedirects = true
@@ -167,6 +167,8 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        /** 小组件图片下载超时（毫秒），广播刷新需快速返回，不宜用全局默认。 */
+        private const val WIDGET_HTTP_TIMEOUT_MS = 10_000
         const val ACTION_REFRESH_WIDGET = "com.perol.pixez.action.REFRESH_WIDGET"
     }
 }
