@@ -567,7 +567,7 @@ class SettingsRepository(
     var copyInfoText: String
         get() = settings.getStringWithLegacyFallback(
             SettingsKeys.COPY_INFO_TEXT,
-            "title:{title}\npainter:{user_name}\nillust id:{illust_id}",
+            AppConstants.Share.DEFAULT_COPY_TEXT_FORMAT,
         )
         set(value) { settings[SettingsKeys.COPY_INFO_TEXT] = value; notifyChanged() }
 

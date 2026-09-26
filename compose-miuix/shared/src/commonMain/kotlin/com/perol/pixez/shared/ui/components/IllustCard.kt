@@ -21,6 +21,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
 import com.perol.pixez.shared.LocalDownloadRepository
 import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
@@ -117,14 +118,7 @@ fun IllustCard(
                 coroutineScope.launch {
                     runCatching {
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
-                        val pictureSource = settings?.pictureSource
-                        val transformedUrls = candidateUrls.map {
-                            if (pictureSource != null && pictureSource != "i.pximg.net") {
-                                it.replace("://i.pximg.net", "://$pictureSource")
-                            } else {
-                                it
-                            }
-                        }
+                        val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings?.pictureSource) }
                         withContext(Dispatchers.IO) {
                             val bytes = extractCachedImageBytes(context, transformedUrls)
                             bytes?.let { IllustClipboard().copyImage(it) }

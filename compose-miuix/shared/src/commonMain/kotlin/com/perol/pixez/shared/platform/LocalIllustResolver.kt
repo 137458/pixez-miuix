@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.perol.pixez.shared.ui.AppConstants
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
 import kotlinx.coroutines.Dispatchers
@@ -46,9 +47,8 @@ fun isUrlInCoilDiskCache(
     val diskCache = SingletonImageLoader.get(context).diskCache ?: return false
     val candidateKeys = buildList {
         add(url)
-        if (!pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
-            add(url.replace("://i.pximg.net", "://$pictureSource"))
-        }
+        val mapped = url.mapToPictureSource(pictureSource)
+        if (mapped != url) add(mapped)
     }
     for (key in candidateKeys) {
         val snapshot = diskCache.openSnapshot(key)
@@ -73,9 +73,8 @@ fun isUrlInCoilMemoryCache(
     val memoryCache = SingletonImageLoader.get(context).memoryCache ?: return false
     val candidateKeys = buildList {
         add(url)
-        if (!pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
-            add(url.replace("://i.pximg.net", "://$pictureSource"))
-        }
+        val mapped = url.mapToPictureSource(pictureSource)
+        if (mapped != url) add(mapped)
     }
     for (key in candidateKeys) {
         if (memoryCache[coil3.memory.MemoryCache.Key(key)] != null) {
@@ -163,4 +162,14 @@ fun rememberOptimizedImageModel(
         model = resolved
     }
     return model
+}
+
+/**
+ * 将 pximg 图片 URL 映射到用户配置的镜像图源。
+ *
+ * 图源未配置、为空白或就是默认 i.pximg.net 时原样返回；仅替换 host 部分。
+ */
+fun String.mapToPictureSource(pictureSource: String?): String {
+    if (pictureSource.isNullOrBlank() || pictureSource == AppConstants.Network.HOST_PXIMG) return this
+    return replace("://${AppConstants.Network.HOST_PXIMG}", "://$pictureSource")
 }

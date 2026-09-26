@@ -27,6 +27,7 @@ import coil3.size.Dimension
 import coil3.size.Precision
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
+import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -151,21 +152,11 @@ fun PixivAsyncImage(
     val settings = LocalSettingsRepository.current
 
     val transformedModel = remember(model, settings?.pictureSource, settings?.changeVersion) {
-        val pictureSource = settings?.pictureSource
-        if (model is String && !model.startsWith("file:") && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
-            model.replace("://i.pximg.net", "://$pictureSource")
-        } else {
-            model
-        }
+        (model as? String)?.mapToPictureSource(settings?.pictureSource) ?: model
     }
 
     val transformedThumbnailCacheKey = remember(thumbnailUrl, settings?.pictureSource, settings?.changeVersion) {
-        val pictureSource = settings?.pictureSource
-        if (thumbnailUrl is String && !thumbnailUrl.startsWith("file:") && !pictureSource.isNullOrBlank() && pictureSource != "i.pximg.net") {
-            thumbnailUrl.replace("://i.pximg.net", "://$pictureSource")
-        } else {
-            thumbnailUrl
-        }
+        (thumbnailUrl as? String)?.mapToPictureSource(settings?.pictureSource) ?: thumbnailUrl
     }
 
     val hasThumbnail = transformedThumbnailCacheKey != null &&
