@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
  * - banuserid：id（自增主键）、user_id（被屏蔽画师 ID，文本存储）、name（画师名称）
  * - bantag：id（自增主键）、translate_name（标签翻译名）、name（标签名或正则表达式）
  *
- * 所有公开方法均为 suspend，内部切到 [Dispatchers.Default] 执行，避免阻塞 UI 线程。
+ * 所有公开方法均为 suspend，内部切到 [Dispatchers.IO] 执行，避免阻塞 UI 线程。
  */
 class BanRepository(
     banIllustIdDriver: SqlDriver,
@@ -46,7 +46,7 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的作品。
      */
-    suspend fun getAllBanIllusts(): List<BanIllust> = withContext(Dispatchers.Default) {
+    suspend fun getAllBanIllusts(): List<BanIllust> = withContext(Dispatchers.IO) {
         illustQueries.selectAll().executeAsList().map {
             BanIllust(
                 id = it.id,
@@ -59,7 +59,7 @@ class BanRepository(
     /**
      * 查询指定作品是否已被屏蔽。
      */
-    suspend fun isBanIllust(illustId: Int): Boolean = withContext(Dispatchers.Default) {
+    suspend fun isBanIllust(illustId: Int): Boolean = withContext(Dispatchers.IO) {
         val cached = cachedBannedIllustIds
         if (cached != null) return@withContext illustId in cached
         illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull() != null
@@ -68,7 +68,7 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的作品 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
-    suspend fun getBannedIllustIds(): Set<Int> = withContext(Dispatchers.Default) {
+    suspend fun getBannedIllustIds(): Set<Int> = withContext(Dispatchers.IO) {
         cachedBannedIllustIds ?: cacheMutex.withLock {
             cachedBannedIllustIds ?: illustQueries.selectAll().executeAsList().mapNotNull {
                 it.illust_id.toIntOrNull()
@@ -82,7 +82,7 @@ class BanRepository(
      * 若该作品已存在，先删除旧记录再插入，对齐旧 Flutter 的
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
-    suspend fun insertBanIllust(illustId: Int, name: String) = withContext(Dispatchers.Default) {
+    suspend fun insertBanIllust(illustId: Int, name: String) = withContext(Dispatchers.IO) {
         val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
         if (existing != null) {
             illustQueries.delete(existing.id)
@@ -94,7 +94,7 @@ class BanRepository(
     /**
      * 按主键删除屏蔽作品记录。
      */
-    suspend fun deleteBanIllust(id: Long) = withContext(Dispatchers.Default) {
+    suspend fun deleteBanIllust(id: Long) = withContext(Dispatchers.IO) {
         illustQueries.delete(id)
         invalidateCache()
     }
@@ -102,7 +102,7 @@ class BanRepository(
     /**
      * 清空全部屏蔽作品记录。
      */
-    suspend fun clearAllBanIllusts() = withContext(Dispatchers.Default) {
+    suspend fun clearAllBanIllusts() = withContext(Dispatchers.IO) {
         illustQueries.deleteAll()
         invalidateCache()
     }
@@ -110,7 +110,7 @@ class BanRepository(
     /**
      * 批量导入屏蔽作品记录，事务内逐条写入并替换已存在记录。
      */
-    suspend fun insertAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.Default) {
+    suspend fun insertAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
         illustQueries.transaction {
             items.forEach { item ->
                 illustQueries.insert(item.illustId, item.name)
@@ -123,7 +123,7 @@ class BanRepository(
      * 原子替换全部屏蔽作品记录：在单个事务内先清空再插入。
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
-    suspend fun replaceAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.Default) {
+    suspend fun replaceAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
         illustQueries.transaction {
             illustQueries.deleteAll()
             items.forEach { item ->
@@ -140,7 +140,7 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的画师。
      */
-    suspend fun getAllBanUsers(): List<BanUser> = withContext(Dispatchers.Default) {
+    suspend fun getAllBanUsers(): List<BanUser> = withContext(Dispatchers.IO) {
         userQueries.selectAll().executeAsList().map {
             BanUser(
                 id = it.id,
@@ -156,7 +156,7 @@ class BanRepository(
     /**
      * 查询指定画师是否已被屏蔽。
      */
-    suspend fun isBanUser(userId: Int): Boolean = withContext(Dispatchers.Default) {
+    suspend fun isBanUser(userId: Int): Boolean = withContext(Dispatchers.IO) {
         val cached = cachedBannedUserIds
         if (cached != null) return@withContext userId in cached
         userQueries.selectByUserId(userId.toString()).executeAsOneOrNull() != null
@@ -165,7 +165,7 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的画师 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
-    suspend fun getBannedUserIds(): Set<Int> = withContext(Dispatchers.Default) {
+    suspend fun getBannedUserIds(): Set<Int> = withContext(Dispatchers.IO) {
         cachedBannedUserIds ?: cacheMutex.withLock {
             cachedBannedUserIds ?: userQueries.selectAll().executeAsList().mapNotNull {
                 it.user_id.toIntOrNull()
@@ -179,7 +179,7 @@ class BanRepository(
      * 若该画师已存在，先删除旧记录再插入，对齐旧 Flutter 的
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
-    suspend fun insertBanUser(userId: Int, name: String) = withContext(Dispatchers.Default) {
+    suspend fun insertBanUser(userId: Int, name: String) = withContext(Dispatchers.IO) {
         val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()
         if (existing != null) {
             userQueries.delete(existing.id)
@@ -191,7 +191,7 @@ class BanRepository(
     /**
      * 按主键删除屏蔽画师记录。
      */
-    suspend fun deleteBanUser(id: Long) = withContext(Dispatchers.Default) {
+    suspend fun deleteBanUser(id: Long) = withContext(Dispatchers.IO) {
         userQueries.delete(id)
         invalidateCache()
     }
@@ -199,7 +199,7 @@ class BanRepository(
     /**
      * 批量导入屏蔽画师记录，事务内逐条写入并替换已存在记录。
      */
-    suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.Default) {
+    suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
         userQueries.transaction {
             items.forEach { item ->
                 userQueries.insert(item.userId, item.name)
@@ -212,7 +212,7 @@ class BanRepository(
      * 原子替换全部屏蔽画师记录：在单个事务内先清空再插入。
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
-    suspend fun replaceAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.Default) {
+    suspend fun replaceAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
         userQueries.transaction {
             userQueries.deleteAll()
             items.forEach { item ->
@@ -229,7 +229,7 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的标签（带内存缓存）。
      */
-    suspend fun getAllBanTags(): List<BanTag> = withContext(Dispatchers.Default) {
+    suspend fun getAllBanTags(): List<BanTag> = withContext(Dispatchers.IO) {
         cachedBanTags ?: cacheMutex.withLock {
             cachedBanTags ?: tagQueries.selectAll().executeAsList().map {
                 BanTag(
@@ -273,7 +273,7 @@ class BanRepository(
      * 若该标签已存在，先删除旧记录再插入，对齐旧 Flutter 的
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
-    suspend fun insertBanTag(name: String, translateName: String) = withContext(Dispatchers.Default) {
+    suspend fun insertBanTag(name: String, translateName: String) = withContext(Dispatchers.IO) {
         val existing = tagQueries.selectByName(name).executeAsOneOrNull()
         if (existing != null) {
             tagQueries.delete(existing.id)
@@ -285,7 +285,7 @@ class BanRepository(
     /**
      * 按主键删除屏蔽标签记录。
      */
-    suspend fun deleteBanTag(id: Long) = withContext(Dispatchers.Default) {
+    suspend fun deleteBanTag(id: Long) = withContext(Dispatchers.IO) {
         tagQueries.delete(id)
         invalidateCache()
     }
@@ -293,7 +293,7 @@ class BanRepository(
     /**
      * 批量导入屏蔽标签记录，事务内逐条写入并替换已存在记录。
      */
-    suspend fun insertAllBanTags(items: List<BanTag>) = withContext(Dispatchers.Default) {
+    suspend fun insertAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
         tagQueries.transaction {
             items.forEach { item ->
                 tagQueries.insert(item.translateName, item.name)
@@ -306,7 +306,7 @@ class BanRepository(
      * 原子替换全部屏蔽标签记录：在单个事务内先清空再插入。
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
-    suspend fun replaceAllBanTags(items: List<BanTag>) = withContext(Dispatchers.Default) {
+    suspend fun replaceAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
         tagQueries.transaction {
             tagQueries.deleteAll()
             items.forEach { item ->

@@ -46,7 +46,7 @@ class AuthTokenStorage(
      * 内部使用内存缓存，优先从缓存返回，避免首屏频繁查询 SQLite 阻塞。
      * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏。
      */
-    suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.Default) {
+    suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.IO) {
         if (isCacheInitialized) return@withContext cachedAccount
         mutex.withLock {
             if (isCacheInitialized) return@withLock cachedAccount
@@ -85,7 +85,7 @@ class AuthTokenStorage(
         account: AccountResponse,
         password: String = AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER,
         deviceToken: String = "",
-    ) = withContext(Dispatchers.Default) {
+    ) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val user = account.user
             val existing = queries.selectByUserId(user.id).executeAsList().firstOrNull()
@@ -113,7 +113,7 @@ class AuthTokenStorage(
     /**
      * 保存账号信息（直接使用已有的 [Account]）。
      */
-    suspend fun saveAccount(account: Account) = withContext(Dispatchers.Default) {
+    suspend fun saveAccount(account: Account) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val enc = account.encrypted()
             queries.insertOrReplace(
@@ -140,7 +140,7 @@ class AuthTokenStorage(
     /**
      * 获取本地所有已保存的账号列表。
      */
-    suspend fun getAllAccounts(): List<Account> = withContext(Dispatchers.Default) {
+    suspend fun getAllAccounts(): List<Account> = withContext(Dispatchers.IO) {
         mutex.withLock {
             queries.selectAll().executeAsList().map { it.decrypted() }
         }
@@ -149,7 +149,7 @@ class AuthTokenStorage(
     /**
      * 切换当前活跃账号。
      */
-    suspend fun switchAccount(userId: String): Account = withContext(Dispatchers.Default) {
+    suspend fun switchAccount(userId: String): Account = withContext(Dispatchers.IO) {
         mutex.withLock {
             val acc = queries.selectByUserId(userId).executeAsList().firstOrNull()?.decrypted()
                 ?: throw IllegalArgumentException("未找到该账号: $userId")
@@ -163,7 +163,7 @@ class AuthTokenStorage(
     /**
      * 移除指定账号。如果移除的是当前活跃账号，则自动切换到下一个可用账号。
      */
-    suspend fun deleteAccount(userId: String) = withContext(Dispatchers.Default) {
+    suspend fun deleteAccount(userId: String) = withContext(Dispatchers.IO) {
         mutex.withLock {
             queries.deleteByUserId(userId)
             val current = cachedAccount
@@ -181,7 +181,7 @@ class AuthTokenStorage(
      *
      * @throws IllegalStateException 当本地没有登录账号时。
      */
-    suspend fun updateTokens(accessToken: String, refreshToken: String) = withContext(Dispatchers.Default) {
+    suspend fun updateTokens(accessToken: String, refreshToken: String) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val activeUid = getActiveUserId?.invoke()
             val current = if (!activeUid.isNullOrBlank()) {
@@ -220,7 +220,7 @@ class AuthTokenStorage(
      *
      * @param transform 接收当前账号（未登录时为 null），返回更新后的账号；返回 null 表示不写入。
      */
-    suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.Default) {
+    suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val activeUid = getActiveUserId?.invoke()
             val rawCurrent = if (!activeUid.isNullOrBlank()) {
@@ -256,7 +256,7 @@ class AuthTokenStorage(
     /**
      * 清空所有账号信息，相当于登出。
      */
-    suspend fun clear() = withContext(Dispatchers.Default) {
+    suspend fun clear() = withContext(Dispatchers.IO) {
         mutex.withLock {
             queries.deleteAll()
             setActiveUserId?.invoke(null)
