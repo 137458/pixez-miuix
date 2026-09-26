@@ -39,6 +39,7 @@ internal fun cardExpandStackAnimator(
     sourceBounds: Rect?,
     containerBounds: Rect,
     containerCornerRadius: Dp,
+    isTopLayer: Boolean,
 ): StackAnimator {
     val duration: FiniteAnimationSpec<Float> = tween(
         durationMillis = TRANSITION_DURATION_MILLIS,
@@ -50,7 +51,7 @@ internal fun cardExpandStackAnimator(
     }
 
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
-        val frame = resolveCardExpandFrame(direction = direction, factor = factor)
+        val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
         content(
             if (frame.isTopLayer) {
                 // 发起转场的作品详情页：按卡片展开度缩放、裁圆角并投出边界阴影。

@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -193,7 +194,7 @@ fun PixivAsyncImage(
                 contentDescription = contentDescription,
                 contentScale = contentScale,
                 filterQuality = filterQuality,
-                modifier = Modifier.matchParentSize(),
+                modifier = Modifier.fillMaxSize(),
                 onLoading = { onLoading?.invoke() },
                 onSuccess = { onSuccess?.invoke() },
                 onError = { state ->

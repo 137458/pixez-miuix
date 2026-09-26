@@ -22,12 +22,11 @@ import androidx.compose.ui.composed
 internal fun Modifier.illustTransitionBounds(illustId: Int): Modifier = composed {
     val registry = LocalSharedBoundsRegistry.current
     val currentIllustId by rememberUpdatedState(illustId)
-    DisposableEffect(registry, illustId) {
-        onDispose { registry.remove(illustId) }
-    }
     remember(registry, illustId) {
         Modifier.onGloballyPositioned { coordinates ->
-            registry.put(currentIllustId, coordinates.boundsInWindow())
+            if (coordinates.isAttached) {
+                registry.put(currentIllustId, coordinates.boundsInWindow())
+            }
         }
     }
 }

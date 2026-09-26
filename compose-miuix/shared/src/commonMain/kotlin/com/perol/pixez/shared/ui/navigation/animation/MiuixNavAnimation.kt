@@ -50,58 +50,20 @@ fun miuixCardExpandStackAnimation(
     containerBounds: Rect,
     containerCornerRadius: Dp,
 ): StackAnimation<RootComponent.Config, RootComponent.Child> =
-    stackAnimation { initialChild, targetChild, direction ->
-        // 转场发生的瞬间解析来源卡片矩形；解析不到则由动画器内部退化为经典平移。
-        val sourceBounds = resolveTransitionIllustId(direction, initialChild, targetChild)
-            ?.let(registry::get)
+    stackAnimation { child, otherChild, direction ->
+        // 转场发生的瞬间解析来源卡片作品 ID：转场双方任一为作品详情页即提取对应 ID
+        val illustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
+            ?: (otherChild.configuration as? RootComponent.Config.IllustDetail)?.illustId
+        val sourceBounds = illustId?.let(registry::get)
+        val isTopLayer = child.configuration is RootComponent.Config.IllustDetail
+
         cardExpandStackAnimator(
             sourceBounds = sourceBounds,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
+            isTopLayer = isTopLayer,
         )
     }
-
-/**
- * 解析一次转场所对应的来源卡片作品 ID。
- *
- * 「哪一侧是发起转场的页面」这一语义统一收敛到 [sourceChild]，
- * 与转场帧换算 [resolveCardExpandFrame] 共用同一套方向判定，避免两处口径漂移。
- *
- * @param direction 转场方向。
- * @param initialChild 转场前的栈顶页面，push 时为 null。
- * @param targetChild 转场后的栈顶页面。
- * @return 卡片作品 ID；本次转场不由作品详情页发起时返回 null。
- */
-private fun resolveTransitionIllustId(
-    direction: Direction,
-    initialChild: Child.Created<RootComponent.Config, RootComponent.Child>?,
-    targetChild: Child.Created<RootComponent.Config, RootComponent.Child>,
-): Int? = sourceChild(direction, initialChild, targetChild)
-    ?.configuration
-    ?.let { it as? RootComponent.Config.IllustDetail }
-    ?.illustId
-
-/**
- * 取出本次转场中「发起者」一侧的页面：前层画面（详情页）所在的那一层。
- *
- * push 时为入场的 targetChild，pop 时为离场的 initialChild；两层方向
- * （ENTER_BACK / EXIT_BACK）不承担转场进度，返回 null。
- *
- * @param direction 转场方向。
- * @param initialChild 转场前的栈顶页面，push 时为 null。
- * @param targetChild 转场后的栈顶页面。
- * @return 发起转场的页面；非前层方向时返回 null。
- */
-private fun <C : Any, T : Any> sourceChild(
-    direction: Direction,
-    initialChild: Child.Created<C, T>?,
-    targetChild: Child.Created<C, T>,
-): Child.Created<C, T>? = if (direction.isFront) {
-    // 前层即详情页所在层：push 取 targetChild，pop 取 initialChild。
-    if (direction == Direction.ENTER_FRONT) targetChild else initialChild
-} else {
-    null
-}
 
 /**
  * 创建 MIUIX / HyperOS「卡片收回」预测性返回动画。

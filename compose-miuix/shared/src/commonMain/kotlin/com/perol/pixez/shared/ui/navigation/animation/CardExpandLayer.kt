@@ -27,19 +27,19 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 internal data class CardExpandGeometry(
     val scaleX: Float,
     val scaleY: Float,
-    val pivotX: Float,
-    val pivotY: Float,
+    val transX: Float,
+    val transY: Float,
 )
 
 /**
- * 计算卡片展开转场的归一化几何参数。
+ * 计算卡片展开转场的几何参数。
  *
- * 卡片矩形 [sourceBounds] 可能部分位于容器之外（例如列表被顶栏遮挡或滚动到容器外），
- * 这里对位置不做裁剪，只对尺寸做下限保护，避免缩放系数退化为 0 导致页面不可见。
+ * 卡片矩形 [sourceBounds] 在容器窗口内的相对位置作为平移起点，
+ * 宽高比作为缩放起点，以此实现 100% 严丝合缝贴合卡片位置。
  *
  * @param sourceBounds 卡片在窗口坐标系下的矩形。
  * @param containerBounds 容器在窗口坐标系下的矩形。
- * @return 归一化几何参数；容器尺寸非法时返回 null，调用方应跳过动画。
+ * @return 几何参数；容器尺寸非法时返回 null，调用方应跳过动画。
  */
 internal fun resolveCardExpandGeometry(
     sourceBounds: Rect,
@@ -49,17 +49,14 @@ internal fun resolveCardExpandGeometry(
 
     val scaleX = (sourceBounds.width / containerBounds.width).coerceIn(MIN_SCALE, 1f)
     val scaleY = (sourceBounds.height / containerBounds.height).coerceIn(MIN_SCALE, 1f)
-
-    // 卡片左上角在容器内的相对位置（可能为负，表示卡片部分超出容器上边界）。
-    val leftRatio = (sourceBounds.left - containerBounds.left) / containerBounds.width
-    val topRatio = (sourceBounds.top - containerBounds.top) / containerBounds.height
+    val transX = sourceBounds.left - containerBounds.left
+    val transY = sourceBounds.top - containerBounds.top
 
     return CardExpandGeometry(
         scaleX = scaleX,
         scaleY = scaleY,
-        // 以卡片中心为缩放锚点，使页面视觉上正好落在卡片位置。
-        pivotX = leftRatio + scaleX / 2f,
-        pivotY = topRatio + scaleY / 2f,
+        transX = transX,
+        transY = transY,
     )
 }
 
@@ -76,8 +73,8 @@ private const val BACKDROP_SCRIM_ALPHA = 0.18f
  * 为顶层页面叠加「卡片展开 / 收回」视觉层。
  *
  * [expansion] 为 0 时页面完全收在卡片内（带圆角与阴影），为 1 时铺满容器且无变换；
- * 展开与收回共用同一条 0..1 的展开度，不再由调用方传入「方向」，
- * 方向与帧值的换算统一收敛到 [resolveCardExpandFrame]、[predictiveBackCardExpandExpansion]。
+ * 展开与收回共用同一条 0..1 的展开度，方向与帧值的换算统一收敛到 [resolveCardExpandFrame]、
+ * [predictiveBackCardExpandExpansion]。
  * [sourceBounds] 缺失或容器几何非法时直接返回原 [Modifier]，保证不引入任何副作用。
  *
  * @param expansion 展开度，0f 表示收缩在卡片内、1f 表示铺满容器；越界值会被钳制。
@@ -98,20 +95,18 @@ internal fun Modifier.cardExpandLayer(
 
     val scaleX = lerp(geometry.scaleX, 1f, progress)
     val scaleY = lerp(geometry.scaleY, 1f, progress)
-    val pivotX = lerp(geometry.pivotX, 0.5f, progress)
-    val pivotY = lerp(geometry.pivotY, 0.5f, progress)
-    val cornerRadius = containerCornerRadius * (1f - progress)
-    val shadowElevation = EXPAND_SHADOW_ELEVATION * (1f - progress)
+    val transX = lerp(geometry.transX, 0f, progress)
+    val transY = lerp(geometry.transY, 0f, progress)
+    val cornerRadius = androidx.compose.ui.unit.lerp(16.dp, containerCornerRadius, progress)
+    val shadowElevation = lerp(EXPAND_SHADOW_ELEVATION, 0f, progress)
 
-    // 只缩放与裁切：纵深关系由底层页面的 cardExpandScrim 表达，
-    // 这里若再叠一层暗色遮罩，会正好压暗用户视线聚焦的「正在生长」的内容。
+    // 以 (0, 0) 为缩放原点，通过平移精确定位到卡片起点
     return this.graphicsLayer {
+        this.transformOrigin = TransformOrigin(0f, 0f)
         this.scaleX = scaleX
         this.scaleY = scaleY
-        transformOrigin = TransformOrigin(pivotX, pivotY)
-        // 必须始终设置 shape：graphicsLayer 的 shadowElevation 只在图层具备 shape
-        // （或非透明背景）时才会真正绘制阴影；圆角收敛到 0 时仍需保留矩形 shape，
-        // 否则展开末段的边界阴影会凭空消失。
+        this.translationX = transX
+        this.translationY = transY
         shape = RoundedCornerShape(cornerRadius)
         clip = true
         this.shadowElevation = shadowElevation
@@ -186,8 +181,12 @@ internal data class CardExpandFrame(
  * @param factor Decompose 给出的转场帧值，取值区间随方向变化。
  * @return 当前层的展开度与是否为顶层缩放层；展开度已钳制到 0f..1f。
  */
-internal fun resolveCardExpandFrame(direction: Direction, factor: Float): CardExpandFrame =
-    if (direction.isFront) {
+internal fun resolveCardExpandFrame(
+    direction: Direction,
+    factor: Float,
+    isTopLayer: Boolean = direction.isFront,
+): CardExpandFrame =
+    if (isTopLayer) {
         CardExpandFrame(expansion = (1f - factor).coerceIn(0f, 1f), isTopLayer = true)
     } else {
         CardExpandFrame(expansion = (-factor).coerceIn(0f, 1f), isTopLayer = false)

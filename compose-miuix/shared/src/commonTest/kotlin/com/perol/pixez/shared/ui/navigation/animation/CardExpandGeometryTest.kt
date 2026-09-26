@@ -17,20 +17,19 @@ class CardExpandGeometryTest {
     private val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
 
     @Test
-    fun `容器左上角的半宽半高卡片得到半屏缩放与居中锚点`() {
+    fun `容器左上角的半宽半高卡片得到半屏缩放与零平移`() {
         val card = Rect(left = 0f, top = 0f, right = 500f, bottom = 1000f)
 
         val geometry = resolveCardExpandGeometry(card, container)
 
         assertClose(0.5f, geometry?.scaleX)
         assertClose(0.5f, geometry?.scaleY)
-        // 卡片中心落在容器宽度的 25%、高度的 25% 处。
-        assertClose(0.25f, geometry?.pivotX)
-        assertClose(0.25f, geometry?.pivotY)
+        assertClose(0f, geometry?.transX)
+        assertClose(0f, geometry?.transY)
     }
 
     @Test
-    fun `偏置卡片按相对偏移换算出正确的缩放锚点`() {
+    fun `偏置卡片按相对偏移换算出正确的平移起点`() {
         // 卡片位于容器右下区域：左 400、上 1200，尺寸 200x400。
         val card = Rect(left = 400f, top = 1200f, right = 600f, bottom = 1600f)
 
@@ -38,9 +37,8 @@ class CardExpandGeometryTest {
 
         assertClose(0.2f, geometry?.scaleX)
         assertClose(0.2f, geometry?.scaleY)
-        assertClose(0.5f, geometry?.pivotX)
-        // 卡片左上角相对容器为 (0.4, 0.6)，中心再加半宽半高得到 (0.5, 0.7)。
-        assertClose(0.7f, geometry?.pivotY)
+        assertClose(400f, geometry?.transX)
+        assertClose(1200f, geometry?.transY)
     }
 
     @Test
@@ -53,33 +51,30 @@ class CardExpandGeometryTest {
 
         assertClose(0.4f, geometry?.scaleX)
         assertClose(0.3f, geometry?.scaleY)
-        // 卡片左上角相对容器为 (200, 200)，半宽半高为 (0.2, 0.15)，得锚点 (0.4, 0.25)。
-        assertClose(0.4f, geometry?.pivotX)
-        assertClose(0.25f, geometry?.pivotY)
+        assertClose(200f, geometry?.transX)
+        assertClose(200f, geometry?.transY)
     }
 
     @Test
-    fun `卡片部分超出容器上边界时锚点允许为负`() {
+    fun `卡片部分超出容器上边界时平移允许为负`() {
         val card = Rect(left = 0f, top = -200f, right = 400f, bottom = 200f)
 
         val geometry = resolveCardExpandGeometry(card, container)
 
         assertClose(0.4f, geometry?.scaleX)
         assertClose(0.2f, geometry?.scaleY)
-        assertClose(0.2f, geometry?.pivotX)
-        // 卡片中心正好落在容器上边界：-0.1 的偏移加 0.1 的半高得到 0.0，
-        // 保证页面从卡片真实位置（部分在屏幕上沿之外）生长。
-        assertClose(0f, geometry?.pivotY)
+        assertClose(0f, geometry?.transX)
+        assertClose(-200f, geometry?.transY)
     }
 
     @Test
-    fun `卡片与容器等大时缩放为 1 且锚点居中`() {
+    fun `卡片与容器等大时缩放为 1 且零平移`() {
         val geometry = resolveCardExpandGeometry(container, container)
 
         assertClose(1f, geometry?.scaleX)
         assertClose(1f, geometry?.scaleY)
-        assertClose(0.5f, geometry?.pivotX)
-        assertClose(0.5f, geometry?.pivotY)
+        assertClose(0f, geometry?.transX)
+        assertClose(0f, geometry?.transY)
     }
 
     @Test
@@ -90,6 +85,8 @@ class CardExpandGeometryTest {
 
         assertClose(0.05f, geometry?.scaleX)
         assertClose(0.05f, geometry?.scaleY)
+        assertClose(0f, geometry?.transX)
+        assertClose(0f, geometry?.transY)
     }
 
     @Test
@@ -100,6 +97,8 @@ class CardExpandGeometryTest {
 
         assertClose(1f, geometry?.scaleX)
         assertClose(1f, geometry?.scaleY)
+        assertClose(-500f, geometry?.transX)
+        assertClose(-1000f, geometry?.transY)
     }
 
     @Test
