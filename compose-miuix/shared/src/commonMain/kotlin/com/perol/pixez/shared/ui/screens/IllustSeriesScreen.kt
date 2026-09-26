@@ -81,28 +81,35 @@ fun IllustSeriesScreen(
     var initialError by remember(seriesId) { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    // 请求代次守卫：刷新/切系列后，在途旧请求的结果不得写回新数据源（写法同 RankingScreen）。
+    var requestGeneration by remember(seriesId) { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 系列 ID 变更、重试或手动刷新时重新加载作品
     LaunchedEffect(seriesId, retryCount, settingsRepository.filterChangeVersion) {
+        val generation = ++requestGeneration
         val force = isManualRefreshing
+        // 使在途旧 loadMore 的结果失配后被拒绝；复位加载态避免其卡死阻塞新列表分页。
+        isLoadingMore = false
         if (illustsState == null) {
             initialError = null
         }
         val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
         isManualRefreshing = false
         seriesResult.onSuccess { response ->
-            seriesTitle = response.illustSeriesDetail?.title ?: ""
-            illustsState = filterBanned(response.illusts.orEmpty())
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
-            if (force && gridState.firstVisibleItemIndex > 0) {
-                gridState.scrollToItem(0)
+            if (generation == requestGeneration) {
+                seriesTitle = response.illustSeriesDetail?.title ?: ""
+                illustsState = filterBanned(response.illusts.orEmpty())
+                nextUrl = response.nextUrl
+                initialError = null
+                loadMoreError = null
+                if (force && gridState.firstVisibleItemIndex > 0) {
+                    gridState.scrollToItem(0)
+                }
             }
         }.onFailure { error ->
-            if (illustsState == null) {
+            if (generation == requestGeneration && illustsState == null) {
                 initialError = error
             }
         }
@@ -111,19 +118,26 @@ fun IllustSeriesScreen(
     fun loadMore() {
         val currentNextUrl = nextUrl ?: return
         if (isLoadingMore) return
+        val generation = requestGeneration
         coroutineScope.launch {
             isLoadingMore = true
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    val filtered = filterBanned(response.illusts.orEmpty())
-                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                    nextUrl = response.nextUrl
+                    if (generation == requestGeneration) {
+                        val filtered = filterBanned(response.illusts.orEmpty())
+                        illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
+                        nextUrl = response.nextUrl
+                    }
                 }
                 .onFailure { error ->
-                    loadMoreError = error
+                    if (generation == requestGeneration) {
+                        loadMoreError = error
+                    }
                 }
-            isLoadingMore = false
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
         }
     }
 
