@@ -132,7 +132,7 @@ fun DownloadTaskScreen(
     LaunchedEffect(selectedFilter) {
         if (selectedFilter != TaskFilter.Running) return@LaunchedEffect
         while (true) {
-            delay(1000L)
+            delay(RUNNING_PROGRESS_POLL_MILLIS)
             refreshToken++
         }
     }
@@ -422,6 +422,9 @@ private fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings)
 /**
  * 用于 [rememberSaveable] 保存/恢复 [TaskFilter] 的 [Saver]。
  */
+/** 运行中 Tab 的进度轮询间隔（毫秒），每秒刷新以跟踪下载进度。 */
+private const val RUNNING_PROGRESS_POLL_MILLIS = 1_000L
+
 private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
     save = { it.name },
     restore = { name -> TaskFilter.entries.find { it.name == name } ?: TaskFilter.All },

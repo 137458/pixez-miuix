@@ -465,6 +465,9 @@ internal fun SearchUserResultList(
     }
 }
 
+/** 搜索日期输入防抖时长（毫秒）。 */
+private const val SEARCH_DATE_DEBOUNCE_MILLIS = 500L
+
 /**
  * 将日期字符串延迟 500ms 后返回，避免用户逐字输入时频繁触发搜索。
  * 空字符串或格式不符合 YYYY-MM-DD 时返回 null，表示不应用该日期筛选。
@@ -474,7 +477,7 @@ internal fun debouncedSearchDate(date: String?): String? {
     if (date == null) return null
     var debounced by remember { mutableStateOf(date) }
     LaunchedEffect(date) {
-        delay(500)
+        delay(SEARCH_DATE_DEBOUNCE_MILLIS)
         debounced = date
     }
     return debounced.takeIf { it.matches(SearchDateRegex) }

@@ -108,6 +108,12 @@ import com.perol.pixez.shared.data.repository.IllustRepository
  * 根据 [SettingsRepository.zoomQuality] 加载对应画质大图，优先使用已有内存缓存作为过渡底图；
  * 当作品为 Ugoira 动图时，直接渲染无缝续播的可手势缩放动态画面，并统一使用液态玻璃顶栏。
  */
+/** 加载指示器延迟显示时长（毫秒），快速加载完成时不闪指示器。 */
+private const val LOADING_INDICATOR_DELAY_MILLIS = 200L
+
+/** 加载失败自动重试前探测磁盘缓存的等待时长（毫秒）。 */
+private const val RETRY_CACHE_PROBE_DELAY_MILLIS = 350L
+
 @Composable
 fun IllustFullScreenViewer(
     illust: Illust,
@@ -708,7 +714,7 @@ private fun ZoomableImage(
 
     LaunchedEffect(isLoading, model) {
         if (isLoading) {
-            delay(200)
+            delay(LOADING_INDICATOR_DELAY_MILLIS)
             showLoadingIndicator = true
         } else {
             showLoadingIndicator = false
@@ -749,7 +755,7 @@ private fun ZoomableImage(
                 if (autoRetryCount < 2) {
                     autoRetryCount++
                     coroutineScope.launch {
-                        delay(350)
+                        delay(RETRY_CACHE_PROBE_DELAY_MILLIS)
                         // 磁盘缓存探测属于阻塞 IO，切到 IO 线程执行
                         val cached = modelStr != null && withContext(Dispatchers.IO) {
                             com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings?.pictureSource)

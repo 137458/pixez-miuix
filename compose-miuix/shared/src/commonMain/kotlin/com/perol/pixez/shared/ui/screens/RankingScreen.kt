@@ -410,10 +410,13 @@ private fun RankingDateInput(
 private fun debouncedRankingDate(date: String): String? {
     var debounced by remember { mutableStateOf(date) }
     LaunchedEffect(date) {
-        delay(500)
+        delay(RANKING_DATE_DEBOUNCE_MILLIS)
         debounced = date
     }
     return debounced.takeIf { it.matches(RankingDateRegex) }
 }
 
 private val RankingDateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
+
+/** 榜单日期输入防抖时长（毫秒），避免逐字输入频繁触发请求。 */
+private const val RANKING_DATE_DEBOUNCE_MILLIS = 500L
