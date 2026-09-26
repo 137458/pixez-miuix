@@ -36,8 +36,7 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 ## 项目约定
 
 - `archive/flutter-v1/` 为旧 Flutter 版源码归档，修复默认不改动。
-- iOS 目标仅在 macOS 环境（本地或 CI）验证，Windows 无法运行 Apple toolchain；macOS target 当前未启用。
-- CI（`.github/workflows/build_compose_miuix.yml`）在 push/PR 时自动构建 Android Release APK、Windows EXE/ZIP/MSI、iOS 共享模块编译验证，并在 Android job 运行 JVM 单元测试与 SQLDelight 迁移校验。
+- iOS 目标仅能在 macOS 机器本地验证，Windows 无法运行 Apple toolchain；macOS target 当前未启用。项目当前无 CI，构建与测试均本地执行（命令以上表为唯一清单）。
 
 ## 文档索引
 
