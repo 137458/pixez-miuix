@@ -88,11 +88,14 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanIllust(illustId: Int, name: String) = withContext(Dispatchers.IO) {
-        val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
-        if (existing != null) {
-            illustQueries.delete(existing.id)
+        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
+        illustQueries.transaction {
+            val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
+            if (existing != null) {
+                illustQueries.delete(existing.id)
+            }
+            illustQueries.insert(illustId.toString(), name)
         }
-        illustQueries.insert(illustId.toString(), name)
         invalidateCache()
     }
 
@@ -185,11 +188,14 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanUser(userId: Int, name: String) = withContext(Dispatchers.IO) {
-        val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()
-        if (existing != null) {
-            userQueries.delete(existing.id)
+        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
+        userQueries.transaction {
+            val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()
+            if (existing != null) {
+                userQueries.delete(existing.id)
+            }
+            userQueries.insert(userId.toString(), name)
         }
-        userQueries.insert(userId.toString(), name)
         invalidateCache()
     }
 
@@ -279,11 +285,14 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanTag(name: String, translateName: String) = withContext(Dispatchers.IO) {
-        val existing = tagQueries.selectByName(name).executeAsOneOrNull()
-        if (existing != null) {
-            tagQueries.delete(existing.id)
+        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
+        tagQueries.transaction {
+            val existing = tagQueries.selectByName(name).executeAsOneOrNull()
+            if (existing != null) {
+                tagQueries.delete(existing.id)
+            }
+            tagQueries.insert(translateName, name)
         }
-        tagQueries.insert(translateName, name)
         invalidateCache()
     }
 
