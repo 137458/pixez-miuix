@@ -197,14 +197,6 @@ class BanRepository(
     }
 
     /**
-     * 清空全部屏蔽画师记录。
-     */
-    suspend fun clearAllBanUsers() = withContext(Dispatchers.Default) {
-        userQueries.deleteAll()
-        invalidateCache()
-    }
-
-    /**
      * 批量导入屏蔽画师记录，事务内逐条写入并替换已存在记录。
      */
     suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.Default) {
@@ -295,14 +287,6 @@ class BanRepository(
      */
     suspend fun deleteBanTag(id: Long) = withContext(Dispatchers.Default) {
         tagQueries.delete(id)
-        invalidateCache()
-    }
-
-    /**
-     * 清空全部屏蔽标签记录。
-     */
-    suspend fun clearAllBanTags() = withContext(Dispatchers.Default) {
-        tagQueries.deleteAll()
         invalidateCache()
     }
 

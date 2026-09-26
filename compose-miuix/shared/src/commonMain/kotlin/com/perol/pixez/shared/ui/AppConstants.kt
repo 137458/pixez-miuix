@@ -11,7 +11,6 @@ object AppConstants {
     object Network {
         const val HOST_PXIMG = "i.pximg.net"
         const val HOST_PIXIV_RE = "i.pixiv.re"
-        const val URL_PXIMG_FAVICON = "https://$HOST_PXIMG/favicon.ico"
 
         const val HTTP_POOL_MAX_IDLE_CONNECTIONS = 32
         const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = 5L
@@ -78,27 +77,18 @@ object AppConstants {
      */
     object Urls {
         const val PIXIV_APP_API = "https://app-api.pixiv.net/"
-        const val PIXIV_OAUTH = "https://oauth.secure.pixiv.net/"
-        const val PIXIV_FAVICON = Network.URL_PXIMG_FAVICON
         const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
+        const val PIXIV_USER_PREFIX = "https://www.pixiv.net/users/"
         fun pixivArtworkUrl(id: Long): String = "$PIXIV_ARTWORK_PREFIX$id"
         fun pixivArtworkUrl(id: Int): String = "$PIXIV_ARTWORK_PREFIX$id"
-        const val PIXIV_USER_PREFIX = "https://www.pixiv.net/users/"
         fun pixivUserUrl(userId: Long): String = "$PIXIV_USER_PREFIX$userId"
         fun pixivUserUrl(userId: Int): String = "$PIXIV_USER_PREFIX$userId"
         fun pixivUserUrl(userId: String): String = "$PIXIV_USER_PREFIX$userId"
-        const val PIXIV_NOVEL_PREFIX = "https://www.pixiv.net/novel/show.php?id="
-        fun pixivNovelUrl(id: Long): String = "$PIXIV_NOVEL_PREFIX$id"
-        fun pixivNovelUrl(id: Int): String = "$PIXIV_NOVEL_PREFIX$id"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
         const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
-        const val GITHUB_ISSUES = "https://github.com/137458/pixez-miuix/issues"
-        const val TELEGRAM_GROUP = "https://t.me/pixez_group"
-        const val AFDIAN = "https://afdian.com/a/perol"
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
         const val PIXIV_LEAVE_ACCOUNT = "https://www.pixiv.net/leave_pixiv.php"
-        const val SAUCE_NAO = "https://saucenao.com"
         const val SAUCE_NAO_SEARCH = "https://saucenao.com/search.php"
         const val AUTHOR_NOTSFSSSF = "https://github.com/Notsfsssf"
         const val AUTHOR_ROSEMARY = "https://github.com/137458"
@@ -130,9 +120,6 @@ object AppConstants {
         )
 
         val MAX_TASK_OPTIONS = listOf(1, 2, 3, 5, 8, 10)
-        const val TASK_COUNT_MIN = 1
-        const val TASK_COUNT_MAX = 10
-        val TASK_COUNT_RANGE = TASK_COUNT_MIN..TASK_COUNT_MAX
 
         const val EXTRA_ANDROID_LIVE_STATUS = "android.requestLiveStatusNotification"
         const val EXTRA_ANDROID_LIVE = "android.liveStatus"
@@ -167,7 +154,6 @@ object AppConstants {
     object Search {
         val BOOKMARK_THRESHOLDS = listOf(0, 100, 250, 500, 1000, 5000, 10000, 20000, 50000, 100000)
     }
-
 
     /**
      * 跨适配网格预设

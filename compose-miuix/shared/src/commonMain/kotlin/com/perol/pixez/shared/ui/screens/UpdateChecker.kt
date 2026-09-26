@@ -155,15 +155,6 @@ suspend fun fetchLatestReleaseInfo(
 }
 
 /**
- * 从 GitHub Release API 异步获取最新版本号。
- */
-suspend fun checkLatestVersion(
-    client: HttpClient = defaultUpdateCheckClient,
-): Result<String> {
-    return fetchLatestReleaseInfo(client).map { it.versionName }
-}
-
-/**
  * 判断 [latest] 是否比当前应用版本新。
  */
 fun hasNewVersion(

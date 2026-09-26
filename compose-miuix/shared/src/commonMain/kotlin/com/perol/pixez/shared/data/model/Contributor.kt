@@ -49,13 +49,13 @@ val CONTRIBUTORS: List<Contributor> = listOf(
     Contributor(
         name = "karin722",
         avatar = "https://avatars.githubusercontent.com/u/54385201?v=4",
-        url = "http://ivtune.net/",
+        url = "https://ivtune.net/",
         content = "🌍",
     ),
     Contributor(
         name = "Romani-Archman",
         avatar = "https://avatars.githubusercontent.com/u/68731023?v=4",
-        url = "http://archman.fun/",
+        url = "https://archman.fun/",
         content = "📖",
     ),
     Contributor(
