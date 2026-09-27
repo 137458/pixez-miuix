@@ -52,7 +52,9 @@ actual class DriverFactory {
             }
             // 旧 Flutter 数据库：文件存在、有表但 user_version 为 0
             currentVersion == 0L && dbFile.exists() && hasTables -> {
-                // 旧版 sqflite 未设置 user_version，直接同步到目标版本，避免 SQLDelight 重复 CREATE
+                // 旧 v1 结构缺 1.sqm 新增列（title/user_name/medium/original_url/large_url），
+                // 先按列探测补 ALTER 再同步版本号，否则历史/下载/小组件查询 "no such column" 全挂。
+                LegacyDatabaseMigrations.migrateLegacyDatabase(fileName, LegacyDatabaseMigrations.sqlDriverMigrator(driver))
                 driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
             }
             // 正常升级：旧 Flutter v1 库通过 1.sqm 补齐 medium / original_url / large_url 列
