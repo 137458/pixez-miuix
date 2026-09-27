@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.ui.navigation.RootComponent
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 import java.awt.Dimension
 import java.awt.SystemTray
@@ -188,20 +190,26 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         }.getOrNull()
     }
 
+    // 托盘文案随 languageNum 实时重建：key(languageNum) 会先 dispose 旧 Tray
+    // （Compose Desktop 的 Tray 在 onDispose 中从 SystemTray 移除 TrayIcon），再创建新托盘，避免 AWT 资源泄漏。
+    val trayLanguageNum = dependencies.settingsRepository.languageNum
+    val trayStrings = remember(trayLanguageNum) { AppStrings.fromLanguageNum(trayLanguageNum) }
     if (trayAvailable) {
-        Tray(
-            icon = appIconPainter ?: PixEzTrayPainter,
-            tooltip = "PixEz MIUIX",
-            onAction = ::showWindow,
-            menu = {
-                Item("打开主界面", onClick = ::showWindow)
-                Item("下载任务", onClick = {
-                    showWindow()
-                    rootComponent.onDownloadTaskClicked()
-                })
-                Item("退出", onClick = ::shutdownAndExit)
-            },
-        )
+        key(trayLanguageNum) {
+            Tray(
+                icon = appIconPainter ?: PixEzTrayPainter,
+                tooltip = "PixEz MIUIX",
+                onAction = ::showWindow,
+                menu = {
+                    Item(trayStrings.trayOpenMainWindow, onClick = ::showWindow)
+                    Item(trayStrings.trayDownloadTasks, onClick = {
+                        showWindow()
+                        rootComponent.onDownloadTaskClicked()
+                    })
+                    Item(trayStrings.trayQuit, onClick = ::shutdownAndExit)
+                },
+            )
+        }
     }
 
     if (isWindowVisible) {

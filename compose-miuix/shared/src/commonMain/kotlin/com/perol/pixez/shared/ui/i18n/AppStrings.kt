@@ -669,6 +669,11 @@ interface AppStrings {
     val ugoiraFullScreen: String
     val ugoiraExitFullScreen: String
 
+    // 桌面端系统托盘菜单（品牌名 PixEz 不翻译，仅本地化描述性文案）
+    val trayOpenMainWindow: String
+    val trayDownloadTasks: String
+    val trayQuit: String
+
     companion object {
         fun fromLanguageNum(num: Int): AppStrings = when (num) {
             1 -> ZhCnStrings
@@ -1300,6 +1305,9 @@ object ZhCnStrings : AppStrings {
     override val viewerModeHorizontal = "水平切页模式"
     override val ugoiraFullScreen = "全屏沉浸播放"
     override val ugoiraExitFullScreen = "退出全屏"
+    override val trayOpenMainWindow = "打开主界面"
+    override val trayDownloadTasks = "下载任务"
+    override val trayQuit = "退出"
 }
 
 /**
@@ -1948,6 +1956,9 @@ object ZhTwStrings : AppStrings {
     override val viewerModeHorizontal = "水平切頁模式"
     override val ugoiraFullScreen = "全螢幕沉浸播放"
     override val ugoiraExitFullScreen = "結束全螢幕"
+    override val trayOpenMainWindow = "開啟主介面"
+    override val trayDownloadTasks = "下載任務"
+    override val trayQuit = "結束"
 }
 
 /**
@@ -2597,6 +2608,9 @@ object EnStrings : AppStrings {
 
     override val ugoiraFullScreen = "Immersive Fullscreen"
     override val ugoiraExitFullScreen = "Exit Fullscreen"
+    override val trayOpenMainWindow = "Open Main Window"
+    override val trayDownloadTasks = "Download Tasks"
+    override val trayQuit = "Quit"
 }
 
 /**
@@ -3244,6 +3258,9 @@ object JaStrings : AppStrings {
     override val viewerModeHorizontal = "ページめくりモード"
     override val ugoiraFullScreen = "全画面再生"
     override val ugoiraExitFullScreen = "全画面終了"
+    override val trayOpenMainWindow = "メインウィンドウを開く"
+    override val trayDownloadTasks = "ダウンロードタスク"
+    override val trayQuit = "終了"
 }
 
 /**
@@ -3891,6 +3908,9 @@ object KoStrings : AppStrings {
     override val viewerModeHorizontal = "가로 페이지 모드"
     override val ugoiraFullScreen = "전체 화면 재생"
     override val ugoiraExitFullScreen = "전체 화면 종료"
+    override val trayOpenMainWindow = "메인 창 열기"
+    override val trayDownloadTasks = "다운로드 작업"
+    override val trayQuit = "종료"
 }
 
 /**
@@ -4538,6 +4558,9 @@ object RuStrings : AppStrings {
     override val viewerModeHorizontal = "Постраничный режим"
     override val ugoiraFullScreen = "Полноэкранный режим"
     override val ugoiraExitFullScreen = "Выйти из полноэкранного"
+    override val trayOpenMainWindow = "Открыть главное окно"
+    override val trayDownloadTasks = "Загрузки"
+    override val trayQuit = "Выход"
 }
 
 /**
@@ -5185,6 +5208,9 @@ object EsStrings : AppStrings {
     override val viewerModeHorizontal = "Modo cambio horizontal"
     override val ugoiraFullScreen = "Pantalla completa inmersiva"
     override val ugoiraExitFullScreen = "Salir de pantalla completa"
+    override val trayOpenMainWindow = "Abrir ventana principal"
+    override val trayDownloadTasks = "Descargas"
+    override val trayQuit = "Salir"
 }
 
 /**
@@ -5832,6 +5858,9 @@ object TrStrings : AppStrings {
     override val viewerModeHorizontal = "Yatay Sayfalama Modu"
     override val ugoiraFullScreen = "Tam Ekran Oynatma"
     override val ugoiraExitFullScreen = "Tam Ekrandan Çık"
+    override val trayOpenMainWindow = "Ana Pencereyi Aç"
+    override val trayDownloadTasks = "İndirme Görevleri"
+    override val trayQuit = "Çık"
 }
 
 /**
@@ -6479,6 +6508,9 @@ object IdStrings : AppStrings {
     override val viewerModeHorizontal = "Mode Balik Halaman Horizontal"
     override val ugoiraFullScreen = "Layar Penuh Imersif"
     override val ugoiraExitFullScreen = "Keluar dari Layar Penuh"
+    override val trayOpenMainWindow = "Buka Jendela Utama"
+    override val trayDownloadTasks = "Tugas Unduhan"
+    override val trayQuit = "Keluar"
 }
 
 /**
@@ -7126,6 +7158,9 @@ object FilStrings : AppStrings {
     override val viewerModeHorizontal = "Horizontal Pager Mode"
     override val ugoiraFullScreen = "Immersive Fullscreen"
     override val ugoiraExitFullScreen = "Lumabas sa Fullscreen"
+    override val trayOpenMainWindow = "Buksan ang Main Window"
+    override val trayDownloadTasks = "Mga Download na Gawain"
+    override val trayQuit = "Lumabas"
 }
 
 /**
@@ -7773,6 +7808,9 @@ object DeStrings : AppStrings {
     override val viewerModeHorizontal = "Horizontaler Seiten-Modus"
     override val ugoiraFullScreen = "Vollbildmodus"
     override val ugoiraExitFullScreen = "Vollbild beenden"
+    override val trayOpenMainWindow = "Hauptfenster öffnen"
+    override val trayDownloadTasks = "Download-Aufgaben"
+    override val trayQuit = "Beenden"
 }
 
 /**
