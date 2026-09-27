@@ -3,7 +3,9 @@ package com.perol.pixez.shared.ui.navigation.animation
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -26,9 +28,6 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
  */
 val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
-/** 平移兜底方案收缩态下的遮罩最大不透明度（略深于卡片展开方案，补偿缺失的缩放纵深线索）。 */
-private const val SLIDE_FALLBACK_SCRIM_ALPHA = 0.20f
-
 /**
  * 构造 MIUIX / HyperOS「卡片展开」出入栈转场。
  *
@@ -36,8 +35,9 @@ private const val SLIDE_FALLBACK_SCRIM_ALPHA = 0.20f
  * - push（[Direction.ENTER_FRONT]）：以新入场的详情页配置为键，取出对应列表卡片矩形。
  * - pop（[Direction.EXIT_FRONT]）：以即将离场的详情页配置为键，取出对应列表卡片矩形。
  *
- * 无法解析到卡片矩形时（分享链接直达、进程重建恢复、由非列表入口进入），
- * 转场自动退化为无变换切换，避免出现无依据的缩放跳动。
+ * 前层不是作品详情页、或解析不到卡片矩形时（分享链接直达、进程重建恢复、由非列表入口进入），
+ * 转场回退为逐层复刻 miuix-nav `NavTransitions.MiuixDefault` 的默认全宽侧滑，
+ * 保证除「列表 -> 作品详情」外的所有页面都与 Miuix 官方导航默认行为一致。
  *
  * @param registry 卡片几何信息源，由 [LocalSharedBoundsRegistry] 提供。
  * @param containerBounds 页面容器自身的窗口矩形。
@@ -165,16 +165,16 @@ internal fun resolveGestureSourceBounds(
 }
 
 /**
- * 创建 MIUIX / HyperOS 经典纯左右平移视差预测性返回手势（Slide Predictive Back Animatable）。
+ * 创建 Miuix 默认全宽平移预测性返回手势（MiuixDefault Predictive Back Animatable）。
  *
- * 作为卡片展开方案的兜底：手势力来源页没有卡片几何信息（分享链接直达、进程重建恢复）时使用。
+ * 作为卡片展开方案的兜底：手势力来源页没有卡片几何信息（非作品详情页、分享链接直达、
+ * 进程重建恢复）时使用。映射逐层复刻 miuix-nav `NavTransitions.MiuixDefault` 手势路径
+ * （与弹簧收敛路径共用同一 d -> visual 关系）：
  *
- * 核心特性：
- * 1. **纯平移无缩小（No Scaling）**：保持 1.0 原始页面缩放比例，不作卡片缩小与圆角变形。
- * 2. **硬件级屏幕物理圆角自适应**：顶层滑出页面在拖拽时贴合设备屏幕圆角 [deviceCornerRadius]。
- * 3. **100% 视口全行程位移**：顶层页面随手势从 0 平移至 containerWidthPx（100% 屏幕宽度滑出）。
- * 4. **底层页面 30% 视差滑入与柔和遮罩**：底层页面从 -30% 屏幕宽度平滑推进至 0。
- * 5. **无缝生命周期终结**：手势确认完成时顶层页面自然完全滑出屏幕右侧，出栈切换时零闪现。
+ * 1. **顶层页面全行程平移**：随手势从 0 平移至 containerWidthPx（100% 屏幕宽度滑出），
+ *    滑动中贴合设备屏幕物理圆角 [deviceCornerRadius] 裁切，无边框阴影。
+ * 2. **被露出页面 25% 视差与轻微淡出**：从 -25% 屏幕宽度与 alpha 0.9 随手势还原至 0 与 1.0。
+ * 3. **线性暗色遮罩**：被露出页面随覆盖进度叠加最深 0.5 的遮罩，手势结束完全消退。
  *
  * @param initialBackEvent 手势起始事件。
  * @param containerWidthPx 页面容器当前的物理像素宽度。
@@ -186,35 +186,31 @@ fun miuixSlidePredictiveBackAnimatable(
     containerWidthPx: Float,
     deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
-    val shape = if (deviceCornerRadius > 0.dp) RoundedCornerShape(deviceCornerRadius) else null
-
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
-            val translationX = progress * containerWidthPx
             Modifier.graphicsLayer {
-                this.translationX = translationX
-                shadowElevation = 16f
-                if (shape != null) {
-                    this.shape = shape
-                    this.clip = true
+                translationX = progress * containerWidthPx
+                if (deviceCornerRadius > 0.dp) {
+                    shape = RoundedCornerShape(deviceCornerRadius)
+                    clip = true
                 }
             }
         },
         enterModifier = { progress, _ ->
-            val expansion = predictiveBackCardExpandExpansion(progress = progress)
+            val coveredFraction = (1f - progress).coerceIn(0f, 1f)
             Modifier
                 .graphicsLayer {
-                    this.translationX = -(1f - progress) * (containerWidthPx * 0.30f)
+                    translationX = -containerWidthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * coveredFraction
+                    alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * coveredFraction
                 }
-                .cardExpandScrim(
-                    alpha = cardExpandScrimAlpha(
-                        expansion = expansion,
-                        maxAlpha = SLIDE_FALLBACK_SCRIM_ALPHA,
-                    ),
-                    expansion = expansion,
-                    containerCornerRadius = deviceCornerRadius,
-                )
+                .drawWithContent {
+                    drawContent()
+                    val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * coveredFraction
+                    if (dimAlpha > 0.001f) {
+                        drawRect(Color.Black.copy(alpha = dimAlpha))
+                    }
+                }
         },
     )
 }

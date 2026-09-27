@@ -1,24 +1,75 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
+import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
 
 /**
- * MIUIX / HyperOS 二级页面转场的统一时长（毫秒）。
+ * MIUIX / HyperOS「卡片展开」二级页面转场的统一时长（毫秒）。
  */
 private const val TRANSITION_DURATION_MILLIS = 340
 
-/** 无来源卡片时顶层入场/退场页面的水平视差位移比例（相对于容器宽度）。 */
-private const val FALLBACK_FRONT_SLIDE_FRACTION = 0.28f
+/** Miuix 默认转场：被覆盖页面朝前缘的视差位移比例（相对于容器宽度）。 */
+internal const val MIUIX_DEFAULT_COVER_PARALLAX_FRACTION = 0.25f
 
-/** 无来源卡片时底层页面退后/回前的水平视差位移比例（相对于容器宽度）。 */
-private const val FALLBACK_BACK_PARALLAX_FRACTION = 0.10f
+/** Miuix 默认转场：被覆盖页面的不透明度衰减幅度（完全覆盖时 alpha = 1 - 0.1）。 */
+internal const val MIUIX_DEFAULT_COVER_ALPHA_FALLOFF = 0.1f
+
+/** Miuix 默认转场：过渡期间叠在被露出页面上的暗色遮罩最大不透明度。 */
+internal const val MIUIX_DEFAULT_DIM_MAX_ALPHA = 0.5f
+
+/**
+ * Miuix 默认转场的收敛弹簧，参数取自 miuix-nav `NavDriverSpec` 默认值：
+ * 临界阻尼（不回弹）+ 低刚度（深度轴 146），单步进/出栈约 500ms 收敛，
+ * 与官方导航「既定手感」一致。
+ */
+internal val MiuixDefaultSlideSpec: FiniteAnimationSpec<Float> = spring(
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = 146f,
+    visibilityThreshold = 0.0025f,
+)
+
+/**
+ * 一次转场中某一层页面对应的 Miuix 默认侧滑帧数据。
+ *
+ * @param isTopLayer 当前层是否为进/出栈顶的那一层（全宽滑动）。
+ * @param fraction 顶层页：相对栈顶位置的位移比例（0 贴顶、1 完全滑出到尾缘）；
+ * 底层页：被覆盖进度（0 贴顶、1 完全被上层盖住）。
+ */
+internal data class MiuixDefaultSlideFrame(
+    val isTopLayer: Boolean,
+    val fraction: Float,
+)
+
+/**
+ * 把 Decompose 的转场帧换算为 Miuix 默认侧滑帧数据。
+ *
+ * 与 [resolveCardExpandFrame] 同一套 factor 区间（见 `StackAnimator.kt` 文档），
+ * 映射自 miuix-nav `NavTransitions.MiuixDefault` 的 d -> visual 关系：
+ * - 进/出栈顶（d <= 0）：全宽滑动，fraction = -d；
+ * - 被覆盖（d > 0）：25% 视差 + 轻微淡出，fraction = d。
+ *
+ * 同一时刻顶层与底层帧互补（fraction 之和为 1），两层画面严格同相。
+ */
+internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float): MiuixDefaultSlideFrame =
+    if (direction.isFront) {
+        MiuixDefaultSlideFrame(isTopLayer = true, fraction = factor.coerceIn(0f, 1f))
+    } else {
+        MiuixDefaultSlideFrame(isTopLayer = false, fraction = (-factor).coerceIn(0f, 1f))
+    }
 
 /**
  * 构造 MIUIX / HyperOS 统一的二级页面转场动画器。
@@ -28,10 +79,12 @@ private const val FALLBACK_BACK_PARALLAX_FRACTION = 0.10f
  * 渐变到设备屏幕物理圆角 [containerCornerRadius]，形成连贯的空间连续性。
  *
  * [sourceBounds] 为 null 时（画师页、设置页这类本就没有来源卡片的二级页面，
- * 以及分享链接直达、进程重建恢复等入口）采用 HyperOS 视差侧滑 + 透明度渐变 + 纵深遮罩，
- * 消除生硬的整屏线性硬推。
+ * 以及分享链接直达、进程重建恢复等入口）逐层复刻 Miuix 官方默认转场
+ * `NavTransitions.MiuixDefault`：顶层页面全宽滑入/滑出（滑动中贴合设备屏幕
+ * 物理圆角裁切），被覆盖页面 25% 视差左移、轻微淡出并叠加线性加深的暗色遮罩，
+ * 驱动弹簧取 miuix-nav `NavDriverSpec` 默认参数。
  *
- * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用视差侧滑 + 淡入淡出兜底。
+ * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用 Miuix 默认全宽侧滑。
  * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp），收回终点按它做像素级对齐。
  * @param containerBounds 页面容器自身的窗口矩形，用于归一化卡片几何。
  * @param containerCornerRadius 设备屏幕物理圆角，收缩态下用于裁切顶层页面。
@@ -51,35 +104,34 @@ internal fun cardExpandStackAnimator(
         easing = HyperOSDecelerateEasing,
     )
     if (sourceBounds == null) {
-        return stackAnimator(animationSpec = duration) { factor, direction, content ->
-            val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
+        return stackAnimator(animationSpec = MiuixDefaultSlideSpec) { factor, direction, content ->
+            val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
             if (frame.isTopLayer) {
                 registry?.updateTransitionState(null, 0f)
             }
             val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
             content(
                 if (frame.isTopLayer) {
-                    val progress = frame.expansion
-                    val offsetFraction = 1f - progress
-                    val scale = 0.96f + 0.04f * progress
                     Modifier.graphicsLayer {
-                        translationX = widthPx * FALLBACK_FRONT_SLIDE_FRACTION * offsetFraction
-                        alpha = progress.coerceIn(0f, 1f)
-                        scaleX = scale
-                        scaleY = scale
+                        translationX = widthPx * frame.fraction
+                        if (containerCornerRadius > 0.dp && frame.fraction > 0f) {
+                            shape = RoundedCornerShape(containerCornerRadius)
+                            clip = true
+                        }
                     }
                 } else {
-                    val progress = frame.expansion
                     Modifier
                         .graphicsLayer {
-                            translationX = -widthPx * FALLBACK_BACK_PARALLAX_FRACTION * progress
+                            translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
+                            alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * frame.fraction
                         }
-                        .cardExpandScrim(
-                            alpha = cardExpandScrimAlpha(progress),
-                            expansion = progress,
-                            containerBounds = containerBounds,
-                            containerCornerRadius = containerCornerRadius,
-                        )
+                        .drawWithContent {
+                            drawContent()
+                            val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * frame.fraction
+                            if (dimAlpha > 0.001f) {
+                                drawRect(Color.Black.copy(alpha = dimAlpha))
+                            }
+                        }
                 },
             )
         }
