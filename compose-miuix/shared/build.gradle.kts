@@ -102,6 +102,8 @@ kotlin {
         desktopMain.dependencies {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqldelight.sqlite.driver)
+            // 桌面端凭据加密走 Windows DPAPI（CryptProtectData），非 Windows JVM 运行时回退明文
+            implementation(libs.jna.platform)
         }
 
         // desktopTest 复用 commonTest 的 kotlin("test")/junit 依赖，无需重复声明
