@@ -62,16 +62,9 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         scope.launch {
             try {
-                val settingsFactory = SettingsFactory(context)
-                val settings = SettingsRepository(settingsFactory.createSettings())
-                val driverFactory = DriverFactory(context)
-                val widgetRepository = WidgetRepository(driverFactory, settings)
+                val (settings, widgetRepository) = obtainWidgetDependencies(context.applicationContext)
                 val targetType = settings.widgetIllustType.ifBlank { "recom" }
-                val cached = try {
-                    widgetRepository.getOrFetchWidgetIllust(targetType)
-                } finally {
-                    widgetRepository.close()
-                }
+                val cached = widgetRepository.getOrFetchWidgetIllust(targetType)
 
                 val illustId = cached?.illust_id?.toInt() ?: 0
                 val title = cached?.title ?: "PixEz"
@@ -170,5 +163,34 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
         /** 小组件图片下载超时（毫秒），广播刷新需快速返回，不宜用全局默认。 */
         private const val WIDGET_HTTP_TIMEOUT_MS = 10_000
         const val ACTION_REFRESH_WIDGET = "com.perol.pixez.action.REFRESH_WIDGET"
+
+        /** 进程级常驻的小部件依赖（设置仓库 + 缓存仓库）。 */
+        private data class WidgetDependencies(
+            val settingsRepository: SettingsRepository,
+            val widgetRepository: WidgetRepository,
+        )
+
+        @Volatile
+        private var widgetDependencies: WidgetDependencies? = null
+        private val dependenciesMutex = Any()
+
+        /**
+         * 首次广播懒创建并常驻进程的依赖单例（P-11）：
+         * AppWidgetProvider 实例每次广播都会重建，旧实现随之每次重建 DB 驱动工厂与设置仓库；
+         * 单例化后数据库驱动只创建一次，随进程退出由系统回收。
+         */
+        private fun obtainWidgetDependencies(applicationContext: Context): WidgetDependencies {
+            widgetDependencies?.let { return it }
+            synchronized(dependenciesMutex) {
+                widgetDependencies?.let { return it }
+                val settingsRepository = SettingsRepository(SettingsFactory(applicationContext).createSettings())
+                val dependencies = WidgetDependencies(
+                    settingsRepository = settingsRepository,
+                    widgetRepository = WidgetRepository(DriverFactory(applicationContext), settingsRepository),
+                )
+                widgetDependencies = dependencies
+                return dependencies
+            }
+        }
     }
 }

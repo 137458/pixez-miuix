@@ -25,6 +25,10 @@ val LocalSettingsRepository = staticCompositionLocalOf<SettingsRepository?> { nu
 class SettingsRepository(
     private val settings: Settings,
 ) {
+    // P-12：设置 getter 的快照追踪锚点。getter 读取经 tracked() 建立 Compose 快照订阅，
+    // 任何写入（notifyChanged）递增 revision 触发订阅方重组，未在组合中读取时为普通读。
+    private var settingsRevision by mutableIntStateOf(0)
+
     var changeVersion by mutableIntStateOf(0)
         private set
 
@@ -32,7 +36,14 @@ class SettingsRepository(
         private set
 
     fun notifyChanged() {
+        settingsRevision++
         changeVersion++
+    }
+
+    /** 供 getter 经此读取底层设置：在组合中调用时建立对 [settingsRevision] 的快照订阅。 */
+    private fun tracked(): Settings {
+        settingsRevision
+        return settings
     }
 
     fun notifyFilterChanged() {
@@ -42,37 +53,37 @@ class SettingsRepository(
 
     // region 画质与网络
     var zoomQuality: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.ZOOM_QUALITY, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.ZOOM_QUALITY, 0)
         set(value) { settings[SettingsKeys.ZOOM_QUALITY] = value; notifyChanged() }
 
     var feedPreviewQuality: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.FEED_PREVIEW_QUALITY, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.FEED_PREVIEW_QUALITY, 0)
         set(value) { settings[SettingsKeys.FEED_PREVIEW_QUALITY] = value; notifyChanged() }
 
     var pictureQuality: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.PICTURE_QUALITY, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.PICTURE_QUALITY, 0)
         set(value) { settings[SettingsKeys.PICTURE_QUALITY] = value; notifyChanged() }
 
     var mangaQuality: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.MANGA_QUALITY, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.MANGA_QUALITY, 0)
         set(value) { settings[SettingsKeys.MANGA_QUALITY] = value; notifyChanged() }
 
     var pictureSource: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.PICTURE_SOURCE,
             DEFAULT_PICTURE_SOURCE,
         )
         set(value) { settings[SettingsKeys.PICTURE_SOURCE] = value; notifyChanged() }
 
     var apiNetworkMode: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.API_NETWORK_MODE,
             DEFAULT_NETWORK_MODE,
         )
         set(value) { settings[SettingsKeys.API_NETWORK_MODE] = value; notifyChanged() }
 
     var oauthNetworkMode: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.OAUTH_NETWORK_MODE,
             DEFAULT_NETWORK_MODE,
         )
@@ -80,19 +91,19 @@ class SettingsRepository(
 
     // region 主题与显示
     var themeMode: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.THEME_MODE, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.THEME_MODE, 0)
         set(value) { settings[SettingsKeys.THEME_MODE] = value; notifyChanged() }
 
     var useDynamicColor: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, false)
         set(value) { settings[SettingsKeys.USE_DYNAMIC_COLOR] = value; notifyChanged() }
 
     var seedColor: Int?
-        get() = settings.getIntWithLegacyFallbackOrNull(SettingsKeys.SEED_COLOR)
+        get() = tracked().getIntWithLegacyFallbackOrNull(SettingsKeys.SEED_COLOR)
         set(value) { settings[SettingsKeys.SEED_COLOR] = value; notifyChanged() }
 
     var isAmoled: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_AMOLED, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.IS_AMOLED, false)
         set(value) { settings[SettingsKeys.IS_AMOLED] = value; notifyChanged() }
 
     /**
@@ -100,7 +111,7 @@ class SettingsRepository(
      * 默认 0 即 TonalSpot，与 MIUIX 默认行为保持一致。
      */
     var miuixPaletteStyle: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.MIUIX_PALETTE_STYLE, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.MIUIX_PALETTE_STYLE, 0)
         set(value) { settings[SettingsKeys.MIUIX_PALETTE_STYLE] = value; notifyChanged() }
 
     /**
@@ -108,7 +119,7 @@ class SettingsRepository(
      * 仅在部分调色板风格下生效，其余风格会由 MIUIX 自动回退到 Spec2021。
      */
     var miuixUseSpec2025: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.MIUIX_USE_SPEC_2025, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.MIUIX_USE_SPEC_2025, false)
         set(value) { settings[SettingsKeys.MIUIX_USE_SPEC_2025] = value; notifyChanged() }
 
     // region 保存与下载
@@ -135,15 +146,15 @@ class SettingsRepository(
         }
 
     var storePath: String?
-        get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.STORE_PATH)
+        get() = tracked().getStringWithLegacyFallbackOrNull(SettingsKeys.STORE_PATH)
         set(value) { settings[SettingsKeys.STORE_PATH] = value; notifyChanged() }
 
     var singleFolder: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.SINGLE_FOLDER, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.SINGLE_FOLDER, false)
         set(value) { settings[SettingsKeys.SINGLE_FOLDER] = value; notifyChanged() }
 
     var maxRunningTask: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.MAX_RUNNING_TASK, 2)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.MAX_RUNNING_TASK, 2)
         set(value) { settings[SettingsKeys.MAX_RUNNING_TASK] = value; notifyChanged() }
 
     /**
@@ -151,7 +162,7 @@ class SettingsRepository(
      * 默认与原 Flutter 版一致：{illust_id}_p{part}。
      */
     var format: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.SAVE_FORMAT,
             DEFAULT_SAVE_FORMAT,
         )
@@ -162,7 +173,7 @@ class SettingsRepository(
      * 旧版 Flutter 用 int 0/1 存储，读取时兼容转换；新版统一用布尔值存储。
      */
     var fileNameEval: Boolean
-        get() = settings.getBooleanWithIntLegacyFallback(
+        get() = tracked().getBooleanWithIntLegacyFallback(
             SettingsKeys.FILE_NAME_EVAL_LEGACY,
             false,
         )
@@ -172,14 +183,14 @@ class SettingsRepository(
      * 脚本文件名代码（name_eval）。开启 fileNameEval 后由该脚本计算文件名。
      */
     var nameEval: String
-        get() = settings.getStringWithLegacyFallback(SettingsKeys.NAME_EVAL, "")
+        get() = tracked().getStringWithLegacyFallback(SettingsKeys.NAME_EVAL, "")
         set(value) { settings[SettingsKeys.NAME_EVAL] = value; notifyChanged() }
 
     /**
      * R18 作品是否保存到独立文件夹。
      */
     var overSanityLevelFolder: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.IS_OVER_SANITY_LEVEL_FOLDER,
             false,
         )
@@ -187,14 +198,14 @@ class SettingsRepository(
 
     // region 通用
     var languageNum: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.LANGUAGE_NUM, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.LANGUAGE_NUM, 0)
         set(value) { settings[SettingsKeys.LANGUAGE_NUM] = value; notifyChanged() }
 
     /**
      * 动态/关注页是否显示未读红点标记。
      */
     var hasUnreadFeedBadge: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.HAS_UNREAD_FEED_BADGE, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.HAS_UNREAD_FEED_BADGE, false)
         set(value) {
             settings[SettingsKeys.HAS_UNREAD_FEED_BADGE] = value
             notifyChanged()
@@ -215,14 +226,14 @@ class SettingsRepository(
         }
 
     var welcomePageType: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.WELCOME_PAGE_TYPE,
             DEFAULT_WELCOME_PAGE_TYPE,
         )
         set(value) { settings[SettingsKeys.WELCOME_PAGE_TYPE] = value; notifyChanged() }
 
     var nsfwMask: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.NSFW_MASK, false)
         set(value) { settings[SettingsKeys.NSFW_MASK] = value; notifyFilterChanged() }
 
     /**
@@ -230,57 +241,57 @@ class SettingsRepository(
      * 对应旧 Flutter mute_store 中的 `ban_ai_illust`。
      */
     var banAIIllust: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.BAN_AI_ILLUST, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.BAN_AI_ILLUST, false)
         set(value) { settings[SettingsKeys.BAN_AI_ILLUST] = value; notifyFilterChanged() }
 
     var defaultPrivateLike: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.DEFAULT_PRIVATE_LIKE, false)
         set(value) { settings[SettingsKeys.DEFAULT_PRIVATE_LIKE] = value; notifyChanged() }
 
     /**
      * 收藏后自动保存作品。
      */
     var saveAfterStar: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.SAVE_AFTER_STAR, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.SAVE_AFTER_STAR, false)
         set(value) { settings[SettingsKeys.SAVE_AFTER_STAR] = value; notifyChanged() }
 
     /**
      * 保存后自动收藏作品。
      */
     var starAfterSave: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.STAR_AFTER_SAVE, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.STAR_AFTER_SAVE, false)
         set(value) { settings[SettingsKeys.STAR_AFTER_SAVE] = value; notifyChanged() }
 
     /**
      * 长按保存时显示确认。
      */
     var longPressSaveConfirm: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.LONG_PRESS_SAVE_CONFIRM, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.LONG_PRESS_SAVE_CONFIRM, false)
         set(value) { settings[SettingsKeys.LONG_PRESS_SAVE_CONFIRM] = value; notifyChanged() }
 
     // region 搜索设置
     var searchSort: String
-        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_SORT, "date_desc")
+        get() = tracked().getStringWithLegacyFallback(SettingsKeys.SEARCH_SORT, "date_desc")
         set(value) { settings[SettingsKeys.SEARCH_SORT] = value; notifyChanged() }
 
     var searchTarget: String
-        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_TARGET, "partial_match_for_tags")
+        get() = tracked().getStringWithLegacyFallback(SettingsKeys.SEARCH_TARGET, "partial_match_for_tags")
         set(value) { settings[SettingsKeys.SEARCH_TARGET] = value; notifyChanged() }
 
     var searchAiType: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_AI_TYPE, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.SEARCH_AI_TYPE, 0)
         set(value) { settings[SettingsKeys.SEARCH_AI_TYPE] = value; notifyChanged() }
 
     var searchBookmarkThreshold: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.SEARCH_BOOKMARK_THRESHOLD, 0)
         set(value) { settings[SettingsKeys.SEARCH_BOOKMARK_THRESHOLD] = value; notifyChanged() }
 
     var searchUgoiraFilter: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.SEARCH_UGOIRA_FILTER, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.SEARCH_UGOIRA_FILTER, 0)
         set(value) { settings[SettingsKeys.SEARCH_UGOIRA_FILTER] = value; notifyChanged() }
 
     var activeUserId: String?
-        get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.ACTIVE_USER_ID)
+        get() = tracked().getStringWithLegacyFallbackOrNull(SettingsKeys.ACTIVE_USER_ID)
         set(value) {
             if (value != null) {
                 settings[SettingsKeys.ACTIVE_USER_ID] = value
@@ -292,11 +303,11 @@ class SettingsRepository(
 
 
     var searchStartDate: String
-        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_START_DATE, "")
+        get() = tracked().getStringWithLegacyFallback(SettingsKeys.SEARCH_START_DATE, "")
         set(value) { settings[SettingsKeys.SEARCH_START_DATE] = value; notifyChanged() }
 
     var searchEndDate: String
-        get() = settings.getStringWithLegacyFallback(SettingsKeys.SEARCH_END_DATE, "")
+        get() = tracked().getStringWithLegacyFallback(SettingsKeys.SEARCH_END_DATE, "")
         set(value) { settings[SettingsKeys.SEARCH_END_DATE] = value; notifyChanged() }
 
     var searchHistory: List<String>
@@ -319,7 +330,7 @@ class SettingsRepository(
      * 插画详情页点击保存按钮直接保存，无需长按。
      */
     var illustDetailSaveSkipLongPress: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS,
             false,
         )
@@ -329,14 +340,14 @@ class SettingsRepository(
      * 收藏作品时自动使用收藏标签。
      */
     var autoTagWhenStar: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_TAG_WHEN_STAR, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.AUTO_TAG_WHEN_STAR, false)
         set(value) { settings[SettingsKeys.AUTO_TAG_WHEN_STAR] = value; notifyChanged() }
 
     /**
      * 桌面小部件推荐类型：recom / day / week / month / day_male / day_female / news / follow。
      */
     var widgetIllustType: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.WIDGET_ILLUST_TYPE,
             DEFAULT_WIDGET_ILLUST_TYPE,
         )
@@ -349,7 +360,7 @@ class SettingsRepository(
      * 桌面小部件独立图片代理源，为空时表示跟随全局设置。
      */
     var widgetPictureSource: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.WIDGET_PICTURE_SOURCE,
             "",
         )
@@ -362,7 +373,7 @@ class SettingsRepository(
      * 适配刘海/挖孔屏（异形屏）。
      */
     var isBangs: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.IS_BANGS, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.IS_BANGS, false)
         set(value) { settings[SettingsKeys.IS_BANGS] = value; notifyChanged() }
 
     /**
@@ -370,7 +381,7 @@ class SettingsRepository(
      * 沿用旧版键 `h_is_not_allow`。
      */
     var hIsNotAllow: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.H_IS_NOT_ALLOW_LEGACY,
             false,
         )
@@ -383,7 +394,7 @@ class SettingsRepository(
      * 再次返回退出应用。
      */
     var isReturnAgainToExit: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.IS_RETURN_AGAIN_TO_EXIT,
             false,
         )
@@ -394,7 +405,7 @@ class SettingsRepository(
      * 默认关闭，避免用户误以为应用已经完全退出。
      */
     var closeToTray: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CLOSE_TO_TRAY, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.CLOSE_TO_TRAY, false)
         set(value) {
             settings[SettingsKeys.CLOSE_TO_TRAY] = value
             notifyChanged()
@@ -404,7 +415,7 @@ class SettingsRepository(
      * 插画详情页左右滑动切换作品。
      */
     var swipeChangeArtwork: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.SWIPE_CHANGE_ARTWORK,
             true,
         )
@@ -414,14 +425,14 @@ class SettingsRepository(
      * 是否在 Feed 中显示 AI 生成标识。
      */
     var feedAIBadge: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.FEED_AI_BADGE, true)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.FEED_AI_BADGE, true)
         set(value) { settings[SettingsKeys.FEED_AI_BADGE] = value; notifyChanged() }
 
     /**
      * 收藏作品后自动关注画师。
      */
     var followAfterStar: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.IS_FOLLOW_AFTER_STAR,
             false,
         )
@@ -431,7 +442,7 @@ class SettingsRepository(
      * 使用 WebView 打开 SauceNAO 搜索结果。
      */
     var useSaunceNaoWebview: Boolean
-        get() = settings.getBooleanWithLegacyFallback(
+        get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.USE_SAUNCE_NAO_WEBVIEW,
             false,
         )
@@ -441,14 +452,14 @@ class SettingsRepository(
      * 竖屏是否启用按宽度自适应网格列数（默认开启，以实现全尺寸设备开箱自适应）。
      */
     var crossAdapt: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, true)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.CROSS_ADAPT, true)
         set(value) { settings[SettingsKeys.CROSS_ADAPT] = value; notifyChanged() }
 
     /**
      * 竖屏自适应宽度阈值（50-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
      */
     var crossAdapterWidth: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
             .coerceIn(MIN_CROSS_ADAPTER_WIDTH, MAX_CROSS_ADAPTER_WIDTH)
         set(value) {
             settings[SettingsKeys.CROSS_ADAPT_WIDTH] = value.coerceIn(
@@ -463,7 +474,7 @@ class SettingsRepository(
      * 若未独立设置则回退读取竖屏/共用设置 CROSS_ADAPT。
      */
     var hCrossAdapt: Boolean
-        get() = settings.getBooleanWithKeyAndLegacyFallback(
+        get() = tracked().getBooleanWithKeyAndLegacyFallback(
             SettingsKeys.H_CROSS_ADAPT,
             SettingsKeys.CROSS_ADAPT,
             true,
@@ -475,7 +486,7 @@ class SettingsRepository(
      * 若未独立设置则回退读取竖屏/共用设置 CROSS_ADAPT_WIDTH。
      */
     var hCrossAdapterWidth: Int
-        get() = settings.getIntWithKeyAndLegacyFallback(
+        get() = tracked().getIntWithKeyAndLegacyFallback(
             SettingsKeys.H_CROSS_ADAPT_WIDTH,
             SettingsKeys.CROSS_ADAPT_WIDTH,
             DEFAULT_CROSS_ADAPTER_WIDTH,
@@ -492,7 +503,7 @@ class SettingsRepository(
      * 平板模式：0=V:H, 1=V:V, 2=H:H。
      */
     var padMode: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.PAD_MODE, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.PAD_MODE, 0)
             .coerceIn(PAD_MODE_MIN, PAD_MODE_MAX)
         set(value) {
             settings[SettingsKeys.PAD_MODE] = value.coerceIn(PAD_MODE_MIN, PAD_MODE_MAX)
@@ -503,7 +514,7 @@ class SettingsRepository(
      * 竖屏固定网格列数（2-4）。
      */
     var crossCount: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.CROSS_COUNT, 2)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.CROSS_COUNT, 2)
             .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
         set(value) {
             settings[SettingsKeys.CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
@@ -514,7 +525,7 @@ class SettingsRepository(
      * 横屏固定网格列数（2-4）。
      */
     var hCrossCount: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.H_CROSS_COUNT, 2)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.H_CROSS_COUNT, 2)
             .coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
         set(value) {
             settings[SettingsKeys.H_CROSS_COUNT] = value.coerceIn(CROSS_COUNT_MIN, CROSS_COUNT_MAX)
@@ -526,7 +537,7 @@ class SettingsRepository(
      * 默认 true。
      */
     var useFloatingBottomBar: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.USE_FLOATING_BOTTOM_BAR, true)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.USE_FLOATING_BOTTOM_BAR, true)
         set(value) {
             settings[SettingsKeys.USE_FLOATING_BOTTOM_BAR] = value
             notifyChanged()
@@ -541,7 +552,7 @@ class SettingsRepository(
      * 4: 极致 (64dp)
      */
     var liquidRefractionLevel: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.LIQUID_REFRACTION_LEVEL, 2)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.LIQUID_REFRACTION_LEVEL, 2)
         set(value) {
             settings[SettingsKeys.LIQUID_REFRACTION_LEVEL] = value
             notifyChanged()
@@ -551,7 +562,7 @@ class SettingsRepository(
      * 小说正文字体大小（sp），基准 16sp，范围 12sp ~ 28sp。
      */
     var novelFontSize: Float
-        get() = settings.getFloatWithLegacyFallback(SettingsKeys.NOVEL_FONT_SIZE, 16f)
+        get() = tracked().getFloatWithLegacyFallback(SettingsKeys.NOVEL_FONT_SIZE, 16f)
         set(value) {
             settings[SettingsKeys.NOVEL_FONT_SIZE] = value
             notifyChanged()
@@ -565,7 +576,7 @@ class SettingsRepository(
         set(value) { setStringList(SettingsKeys.BOOK_TAG_LIST, value) }
 
     var copyInfoText: String
-        get() = settings.getStringWithLegacyFallback(
+        get() = tracked().getStringWithLegacyFallback(
             SettingsKeys.COPY_INFO_TEXT,
             AppConstants.Share.DEFAULT_COPY_TEXT_FORMAT,
         )
@@ -575,7 +586,7 @@ class SettingsRepository(
      * 已忽略的版本号；当存在新版本且版本号与此值相同时跳过更新提醒。
      */
     var ignoreUpdateVersion: String?
-        get() = settings.getStringWithLegacyFallbackOrNull(SettingsKeys.IGNORE_UPDATE_VERSION)
+        get() = tracked().getStringWithLegacyFallbackOrNull(SettingsKeys.IGNORE_UPDATE_VERSION)
         set(value) { settings[SettingsKeys.IGNORE_UPDATE_VERSION] = value; notifyChanged() }
 
     /**
@@ -583,7 +594,7 @@ class SettingsRepository(
      * 默认 true。
      */
     var autoCheckUpdate: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.AUTO_CHECK_UPDATE, true)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.AUTO_CHECK_UPDATE, true)
         set(value) { settings[SettingsKeys.AUTO_CHECK_UPDATE] = value; notifyChanged() }
 
     // region Android 平台专属
@@ -592,7 +603,7 @@ class SettingsRepository(
      * 旧版 Flutter 用 `display_mode` 键存 int，默认 0 表示跟随系统/第一个模式。
      */
     var displayMode: Int
-        get() = settings.getIntWithLegacyFallback(SettingsKeys.DISPLAY_MODE, 0)
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.DISPLAY_MODE, 0)
         set(value) { settings[SettingsKeys.DISPLAY_MODE] = value; notifyChanged() }
 
     /**
@@ -601,7 +612,7 @@ class SettingsRepository(
      * 读取时优先按 String，再兼容旧版 int，最后回退到空字符串；写入统一用新键 String。
      */
     var imagePickerType: String
-        get() = settings.getStringOrIntLegacyFallback(
+        get() = tracked().getStringOrIntLegacyFallback(
             SettingsKeys.IMAGE_PICKER_TYPE,
             "",
         )
@@ -613,7 +624,7 @@ class SettingsRepository(
      * 新版增加布尔记录，用于在平台设置页展示开关状态。
      */
     var openByDefault: Boolean
-        get() = settings.getBooleanWithLegacyFallback(SettingsKeys.OPEN_BY_DEFAULT, false)
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.OPEN_BY_DEFAULT, false)
         set(value) { settings[SettingsKeys.OPEN_BY_DEFAULT] = value; notifyChanged() }
 
     // endregion
