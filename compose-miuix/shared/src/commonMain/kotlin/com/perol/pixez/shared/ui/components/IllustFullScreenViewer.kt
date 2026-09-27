@@ -79,7 +79,6 @@ import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
@@ -638,7 +637,11 @@ private fun ViewerQuickActionsSection(
                     illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
                 }
                 coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
+                    suspendRunClipboardShare(
+                        success = ToastData(strings.imageCopySuccess, ToastType.Success),
+                        failurePrefix = strings.menuCopyImage,
+                        onToast = onToast,
+                    ) {
                         withContext(Dispatchers.IO) {
                             val candidateUrls = listOfNotNull(
                                 targetUrl,
@@ -649,10 +652,7 @@ private fun ViewerQuickActionsSection(
                             bytes?.let { IllustClipboard().copyImage(it) }
                                 ?: throw IllegalStateException(strings.imageNoCacheFound)
                         }
-                    }.fold(
-                        onSuccess = { onToast(ToastData(strings.imageCopySuccess, ToastType.Success)) },
-                        onFailure = { e -> onToast(ToastData("${strings.menuCopyImage}: ${e.message}", ToastType.Error)) },
-                    )
+                    }
                 }
             },
             detailBackdrop = effectiveBackdrop,
@@ -672,12 +672,11 @@ private fun ViewerQuickActionsSection(
                 val currentPage = currentDisplayPage
                 val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
-                runCatching {
-                    IllustClipboard().copy(link)
-                    onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
-                }.onFailure {
-                    onToast(ToastData("${strings.copy}${strings.loadFailed}: ${it.message}", ToastType.Error))
-                }
+                runClipboardShare(
+                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    onToast = onToast,
+                ) { IllustClipboard().copy(link) }
             },
             detailBackdrop = effectiveBackdrop,
         ) {
@@ -697,12 +696,11 @@ private fun ViewerQuickActionsSection(
                 val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
                 val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
-                runCatching {
-                    IllustShare().share(link, shareTitle)
-                    onToast(ToastData(strings.share, ToastType.Success))
-                }.onFailure {
-                    onToast(ToastData("${strings.share}: ${it.message}", ToastType.Error))
-                }
+                runClipboardShare(
+                    success = ToastData(strings.share, ToastType.Success),
+                    failurePrefix = strings.share,
+                    onToast = onToast,
+                ) { IllustShare().share(link, shareTitle) }
             },
             detailBackdrop = effectiveBackdrop,
         ) {

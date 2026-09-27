@@ -180,10 +180,11 @@ internal fun IllustDetailMoreMenuCopyActions(
         onClick = {
             onDismiss()
             val text = buildIllustCopyInfo(illust)
-            runCatching { clipboard.copy(text) }.fold(
-                onSuccess = { onToast(ToastData(strings.copiedToClipboard, ToastType.Success)) },
-                onFailure = { e -> onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)) },
-            )
+            runClipboardShare(
+                success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                failurePrefix = "${strings.copy}${strings.loadFailed}",
+                onToast = onToast,
+            ) { clipboard.copy(text) }
         },
     )
     Box(
@@ -199,7 +200,11 @@ internal fun IllustDetailMoreMenuCopyActions(
         onClick = {
             onDismiss()
             coroutineScope.launch {
-                suspendRunCatchingNonCancel {
+                suspendRunClipboardShare(
+                    success = ToastData(strings.imageCopySuccess, ToastType.Success),
+                    failurePrefix = strings.menuCopyImage,
+                    onToast = onToast,
+                ) {
                     withContext(Dispatchers.IO) {
                         val candidateUrls = listOf(
                             illust.imageUrls.large,
@@ -209,10 +214,7 @@ internal fun IllustDetailMoreMenuCopyActions(
                         val bytes = extractCachedImageBytes(context, candidateUrls)
                         bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
                     }
-                }.fold(
-                    onSuccess = { onToast(ToastData(strings.imageCopySuccess, ToastType.Success)) },
-                    onFailure = { e -> onToast(ToastData("${strings.menuCopyImage}: ${e.message}", ToastType.Error)) },
-                )
+                }
             }
         },
     )
@@ -229,10 +231,11 @@ internal fun IllustDetailMoreMenuCopyActions(
         onClick = {
             onDismiss()
             val link = buildIllustShareLink(illust)
-            runCatching { clipboard.copy(link) }.fold(
-                onSuccess = { onToast(ToastData(strings.copiedToClipboard, ToastType.Success)) },
-                onFailure = { e -> onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)) },
-            )
+            runClipboardShare(
+                success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                failurePrefix = "${strings.copy}${strings.loadFailed}",
+                onToast = onToast,
+            ) { clipboard.copy(link) }
         },
     )
     Box(
@@ -265,10 +268,11 @@ internal fun IllustDetailMoreMenuShareActions(
         onClick = {
             onDismiss()
             val link = buildIllustShareLink(illust)
-            runCatching { share.share(link, illust.title) }.fold(
-                onSuccess = { onToast(ToastData(strings.share, ToastType.Success)) },
-                onFailure = { e -> onToast(ToastData("${strings.share}: ${e.message}", ToastType.Error)) },
-            )
+            runClipboardShare(
+                success = ToastData(strings.share, ToastType.Success),
+                failurePrefix = strings.share,
+                onToast = onToast,
+            ) { share.share(link, illust.title) }
         },
     )
     Box(

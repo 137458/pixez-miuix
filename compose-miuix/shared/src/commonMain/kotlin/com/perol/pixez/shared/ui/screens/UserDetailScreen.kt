@@ -45,6 +45,7 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.buildUserCopyInfo
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -236,43 +237,31 @@ private fun buildUserMoreDropdownEntry(
         DropdownItem(
             text = strings.menuCopyInfo,
             onClick = {
-                val text = buildUserCopyInfo(detail)
-                runCatching { clipboard.copy(text) }.fold(
-                    onSuccess = {
-                        onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
-                    },
-                    onFailure = { e ->
-                        onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error))
-                    },
-                )
+                runClipboardShare(
+                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    onToast = onToast,
+                ) { clipboard.copy(buildUserCopyInfo(detail)) }
             }
         ),
         DropdownItem(
             text = strings.menuCopyLink,
             onClick = {
-                val link = AppConstants.Urls.pixivUserUrl(detail.user.id)
-                runCatching { clipboard.copy(link) }.fold(
-                    onSuccess = {
-                        onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
-                    },
-                    onFailure = { e ->
-                        onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error))
-                    },
-                )
+                runClipboardShare(
+                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    onToast = onToast,
+                ) { clipboard.copy(AppConstants.Urls.pixivUserUrl(detail.user.id)) }
             }
         ),
         DropdownItem(
             text = strings.menuShareLink,
             onClick = {
-                val link = AppConstants.Urls.pixivUserUrl(detail.user.id)
-                runCatching { share.share(link, detail.user.name) }.fold(
-                    onSuccess = {
-                        onToast(ToastData(strings.share, ToastType.Success))
-                    },
-                    onFailure = { e ->
-                        onToast(ToastData("${strings.share}${strings.loadFailed}: ${e.message}", ToastType.Error))
-                    },
-                )
+                runClipboardShare(
+                    success = ToastData(strings.share, ToastType.Success),
+                    failurePrefix = "${strings.share}${strings.loadFailed}",
+                    onToast = onToast,
+                ) { share.share(AppConstants.Urls.pixivUserUrl(detail.user.id), detail.user.name) }
             }
         ),
     )

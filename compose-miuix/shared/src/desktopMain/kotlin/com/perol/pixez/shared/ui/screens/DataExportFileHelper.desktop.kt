@@ -2,16 +2,22 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import java.io.File
+import java.io.IOException
 
 /**
  * Desktop(JVM) 平台实现：使用 [java.io.File] 写入 UTF-8 文本。
  *
  * 写入前校验路径必须位于 [getExportBaseDirectory] 之下，防止路径遍历。
+ * 失败只抛带错误码的 [DataExportException]，面向用户的文案由界面层按错误码本地化。
  */
 internal actual fun writeExportFile(path: String, content: String): Result<Unit> =
     runCatchingNonCancel {
         val safePath = validateExportPath(path)
-        File(safePath).apply { parentFile?.mkdirs() }.writeText(content, Charsets.UTF_8)
+        try {
+            File(safePath).apply { parentFile?.mkdirs() }.writeText(content, Charsets.UTF_8)
+        } catch (e: IOException) {
+            throw DataExportException(DataExportErrorCode.IoFailure, "path=$safePath", e)
+        }
     }
 
 /**
@@ -22,10 +28,18 @@ internal actual fun writeExportFile(path: String, content: String): Result<Unit>
 internal actual fun readExportFile(path: String): Result<String> = runCatchingNonCancel {
     val safePath = validateExportPath(path)
     val file = File(safePath)
-    if (file.length() > MAX_IMPORT_FILE_BYTES) {
-        throw IllegalArgumentException("导入文件过大: ${file.length()} 字节（上限 $MAX_IMPORT_FILE_BYTES 字节）")
+    val size = file.length()
+    if (size > MAX_IMPORT_FILE_BYTES) {
+        throw DataExportException(
+            DataExportErrorCode.ImportFileTooLarge,
+            "size=$size limit=$MAX_IMPORT_FILE_BYTES",
+        )
     }
-    file.readText(Charsets.UTF_8)
+    try {
+        file.readText(Charsets.UTF_8)
+    } catch (e: IOException) {
+        throw DataExportException(DataExportErrorCode.IoFailure, "path=$safePath", e)
+    }
 }
 
 /**
@@ -33,7 +47,7 @@ internal actual fun readExportFile(path: String): Result<String> = runCatchingNo
  */
 internal actual fun getExportBaseDirectory(): String {
     val userHome = System.getProperty("user.home")
-        ?: throw IllegalStateException("无法获取用户主目录")
+        ?: throw DataExportException(DataExportErrorCode.BaseDirUnavailable, "user.home")
     return File(userHome, "PixEz/export").absolutePath
 }
 
@@ -43,13 +57,15 @@ internal actual fun getExportBaseDirectory(): String {
  * 使用 [File.getCanonicalPath] 解析 `../` 等路径，确保目标文件不会穿越到应用目录之外。
  */
 private fun validateExportPath(path: String): String {
-    require(path.isNotBlank()) { "文件路径不能为空" }
-    require(path.endsWith(".json", ignoreCase = true)) { "仅支持 .json 文件" }
+    if (path.isBlank()) throw DataExportException(DataExportErrorCode.PathBlank)
+    if (!path.endsWith(".json", ignoreCase = true)) {
+        throw DataExportException(DataExportErrorCode.PathUnsupportedExtension, path)
+    }
     val baseDir = File(getExportBaseDirectory()).canonicalPath
     val targetFile = File(baseDir, path).canonicalFile
     val targetPath = targetFile.canonicalPath
-    require(targetPath.startsWith(baseDir + File.separator) || targetPath == baseDir) {
-        "文件路径必须在应用导出目录内"
+    if (!(targetPath.startsWith(baseDir + File.separator) || targetPath == baseDir)) {
+        throw DataExportException(DataExportErrorCode.PathOutsideExportDir, path)
     }
     return targetPath
 }

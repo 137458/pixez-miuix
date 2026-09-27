@@ -40,6 +40,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -289,11 +290,11 @@ fun AccountEditScreen(
                                 summary = strings.accountEditCopyRefreshTokenSummary,
                                 onClick = {
                                     account?.refreshToken?.let { token ->
-                                        try {
-                                            clipboard.copy(token)
-                                            toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
-                                        } catch (e: Exception) {
-                                            toastMessage = ToastData("${strings.copy}${strings.loadFailed}：${e.message}", ToastType.Error)
+                                        runClipboardShare(
+                                            success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                                            onToast = { toastMessage = it },
+                                        ) { clipboard.copy(token) }.onFailure { e ->
                                             Napier.e("复制 refresh token 失败", e)
                                         }
                                     }

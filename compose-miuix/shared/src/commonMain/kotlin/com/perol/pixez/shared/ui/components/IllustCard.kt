@@ -94,6 +94,10 @@ fun IllustCard(
     val context = LocalPlatformContext.current
     val downloadRepository = LocalDownloadRepository.current
 
+    // 长按菜单宿主（信息流网格）没有 Toast 承载容器，接入门槛是把 onToast 逐层上抛到每个列表页。
+    // 故此处只统一异常捕获与取消语义，提示仍与抽取前一样保持静默。
+    val silentToastSink: (ToastData) -> Unit = {}
+
     if (showActionMenu) {
         IllustActionMenu(
             show = showActionMenu,
@@ -111,12 +115,21 @@ fun IllustCard(
             } else null,
             onCopyInfo = {
                 showActionMenu = false
-                runCatching { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
+                runClipboardShare(
+                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    onToast = silentToastSink,
+                ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
             },
             onCopyImage = {
                 showActionMenu = false
                 coroutineScope.launch {
-                    runCatching {
+                    // 缩略图降级沿用卡片自身的 pictureSource 改写，缓存缺失时静默不复制。
+                    suspendRunClipboardShare(
+                        success = ToastData(strings.imageCopySuccess, ToastType.Success),
+                        failurePrefix = strings.menuCopyImage,
+                        onToast = silentToastSink,
+                    ) {
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
                         val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings?.pictureSource) }
                         withContext(Dispatchers.IO) {
@@ -128,11 +141,19 @@ fun IllustCard(
             },
             onCopyLink = {
                 showActionMenu = false
-                runCatching { IllustClipboard().copy(buildIllustShareLink(illust)) }
+                runClipboardShare(
+                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    onToast = silentToastSink,
+                ) { IllustClipboard().copy(buildIllustShareLink(illust)) }
             },
             onShareLink = {
                 showActionMenu = false
-                runCatching { IllustShare().share(buildIllustShareLink(illust), illust.title) }
+                runClipboardShare(
+                    success = ToastData(strings.share, ToastType.Success),
+                    failurePrefix = strings.share,
+                    onToast = silentToastSink,
+                ) { IllustShare().share(buildIllustShareLink(illust), illust.title) }
             },
             onBan = {
                 showActionMenu = false

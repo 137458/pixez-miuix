@@ -55,6 +55,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
@@ -214,7 +215,7 @@ fun DataExportScreen(
                         if (result.isSuccess) {
                             toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
                         } else {
-                            val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
+                            val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
                             toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
                         }
                     } finally {
@@ -334,6 +335,33 @@ private fun DataType.summary(strings: com.perol.pixez.shared.ui.i18n.AppStrings)
         DataType.NovelHistory -> strings.dataExportTypeNovelHistorySummary
         DataType.MuteData -> strings.dataExportTypeMuteDataSummary
     }
+}
+
+/**
+ * 导入导出失败原因的本地化文案。
+ *
+ * 界面只认 [DataExportErrorCode]：错误码是稳定标识，具体措辞随语言切换。
+ * 未纳入错误码体系的异常仍退化为原始 message，避免出问题时界面完全无信息可看。
+ */
+private fun Throwable.dataExportReason(strings: AppStrings): String = when (this) {
+    is DataExportException -> code.localized(strings)
+    else -> message ?: strings.loadFailed
+}
+
+private fun DataExportErrorCode.localized(strings: AppStrings): String = when (this) {
+    DataExportErrorCode.PathBlank -> strings.dataExportErrorPathBlank
+    DataExportErrorCode.PathUnsupportedExtension -> strings.dataExportErrorPathExtension
+    DataExportErrorCode.PathOutsideExportDir -> strings.dataExportErrorPathOutside
+    DataExportErrorCode.BaseDirUnavailable -> strings.dataExportErrorBaseDirUnavailable
+    DataExportErrorCode.ImportFileTooLarge -> strings.dataExportErrorFileTooLarge
+    DataExportErrorCode.ImportItemCountExceeded -> strings.dataExportErrorItemCountExceeded
+    // 三类字段级校验失败对用户而言是同一件事：导入的数据里有不合法的内容。
+    DataExportErrorCode.ImportFieldTooLong,
+    DataExportErrorCode.ImportIllegalCharacter,
+    DataExportErrorCode.ImportNegativeValue -> strings.dataExportErrorFieldInvalid
+
+    DataExportErrorCode.ImportMalformedContent -> strings.dataExportErrorMalformedContent
+    DataExportErrorCode.IoFailure -> strings.dataExportErrorIoFailed
 }
 
 /**
