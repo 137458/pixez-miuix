@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
@@ -60,6 +61,7 @@ import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.screens.fetchLatestReleaseInfo
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
@@ -240,289 +242,382 @@ fun RootContent(
                             onBack = { component.onBack() },
                         ),
                     ) { child ->
-                        when (val instance = child.instance) {
-                            is Child.Main -> {
-                                // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
-                                val mainChangeVersion = settingsRepository.changeVersion
-                                // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
-                                // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
-                                // 回落为 CompositionLocal 默认值 16.dp。
-                                CompositionLocalProvider(
-                                    LocalBottomBarContentPadding provides if (bottomBarVisible.value) 100.dp else 16.dp,
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(MiuixTheme.colorScheme.surface),
-                                    ) {
-                                        if (showNavigationRailInMain) {
-                                            MainNavigationRail(
-                                                activeTab = activeTab,
-                                                onTabSelected = component::onMainTabSelected,
-                                            )
-                                        }
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight(),
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .blurBackdropSource(floatingBackdrop),
-                                            ) {
-                                                MainContent(
-                                                    initialTab = instance.tab,
-                                                    component = component,
-                                                    illustRepository = illustRepository,
-                                                    searchRepository = searchRepository,
-                                                    userRepository = userRepository,
-                                                    accountRepository = accountRepository,
-                                                    banRepository = banRepository,
-                                                    settingsRepository = settingsRepository,
-                                                )
-                                            }
-                                            if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
-                                                MainBottomBar(
-                                                    activeTab = activeTab,
-                                                    onTabSelected = component::onMainTabSelected,
-                                                    isFloating = useFloatingBottomBar,
-                                                    backdrop = floatingBackdrop,
-                                                    modifier = Modifier.align(Alignment.BottomCenter),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                                is Child.IllustDetail -> renderIllustDetail(
-                                    instance = instance,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                    bookmarkRepository = bookmarkRepository,
-                                    downloadRepository = downloadRepository,
-                                    banRepository = banRepository,
-                                    historyRepository = historyRepository,
-                                )
-
-                                is Child.UserDetail -> renderUserDetail(
-                                    instance = instance,
-                                    component = component,
-                                    userRepository = userRepository,
-                                    bookmarkRepository = bookmarkRepository,
-                                    banRepository = banRepository,
-                                    settingsRepository = settingsRepository,
-                                    accountRepository = accountRepository,
-                                )
-
-                                Child.Login -> renderLogin(
-                                    component = component,
-                                    accountRepository = accountRepository,
-                                )
-
-                                is Child.Comments -> renderComments(
-                                    instance = instance,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                    accountRepository = accountRepository,
-                                )
-
-                                is Child.RelatedIllusts -> renderRelatedIllusts(
-                                    instance = instance,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                    banRepository = banRepository,
-                                    settingsRepository = settingsRepository,
-                                )
-
-                                is Child.IllustSeries -> renderIllustSeries(
-                                    instance = instance,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                    banRepository = banRepository,
-                                    settingsRepository = settingsRepository,
-                                )
-
-                                is Child.UserFollowList -> renderUserFollowList(
-                                    instance = instance,
-                                    component = component,
-                                    userRepository = userRepository,
-                                )
-
-                                is Child.UserFollowerList -> renderUserFollowerList(
-                                    instance = instance,
-                                    component = component,
-                                    userRepository = userRepository,
-                                )
-
-                                Child.RecomUserList -> renderRecomUserList(
-                                    component = component,
-                                    userRepository = userRepository,
-                                )
-
-                                Child.Settings -> renderSettingsPage(
-                                    component = component,
-                                    accountRepository = accountRepository,
-                                    boardRepository = boardRepository,
-                                )
-
-                                is Child.Search -> renderSearch(
-                                    instance = instance,
-                                    component = component,
-                                    searchRepository = searchRepository,
-                                    settingsRepository = settingsRepository,
-                                    banRepository = banRepository,
-                                )
-
-                                Child.DownloadHistory -> renderDownloadHistory(
-                                    component = component,
-                                    downloadHistoryRepository = downloadHistoryRepository,
-                                )
-
-                                Child.Shield -> renderShield(
-                                    component = component,
-                                    settingsRepository = settingsRepository,
-                                    banRepository = banRepository,
-                                    userRepository = userRepository,
-                                )
-
-                                is Child.AISetting -> renderAISetting(
-                                    instance = instance,
-                                    component = component,
-                                    userRepository = userRepository,
-                                )
-
-                                Child.ThemeSetting -> renderThemeSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.NetworkSetting -> renderNetworkSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.DownloadSetting -> renderDownloadSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.LayoutSetting -> renderLayoutSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.LanguageSetting -> renderLanguageSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.WidgetRecommendSetting -> renderWidgetRecommendSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.InteractionSetting -> renderInteractionSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.UpdateSetting -> renderUpdateSetting(
-                                    settingsRepository = settingsRepository,
-                                    updateCheckClient = updateCheckClient,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.AccountEdit -> renderAccountEdit(
-                                    component = component,
-                                    accountRepository = accountRepository,
-                                )
-
-                                Child.History -> renderHistory(
-                                    component = component,
-                                )
-
-                                Child.DownloadTask -> renderDownloadTask(
-                                    component = component,
-                                    downloadRepository = downloadRepository,
-                                    downloadHistoryRepository = downloadHistoryRepository,
-                                )
-
-                                Child.DataExport -> renderDataExport(
-                                    component = component,
-                                    settingsRepository = settingsRepository,
-                                    historyRepository = historyRepository,
-                                    novelHistoryRepository = novelHistoryRepository,
-                                    muteRepository = muteRepository,
-                                )
-
-                                Child.Board -> renderBoard(
-                                    component = component,
-                                    boardRepository = boardRepository,
-                                )
-
-                                Child.QualitySetting -> renderQualitySetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.CopyTextSetting -> renderCopyTextSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.WelcomePageSetting -> renderWelcomePageSetting(
-                                    settingsRepository = settingsRepository,
-                                    onBack = component::onBack,
-                                )
-
-                                Child.About -> renderAbout(
-                                    component = component,
-                                )
-
-                                Child.BookTag -> renderBookTag(
-                                    component = component,
-                                    settingsRepository = settingsRepository,
-                                )
-
-                                Child.Thanks -> renderThanks(
-                                    component = component,
-                                )
-
-                                is Child.SpotlightDetail -> renderSpotlightDetail(
-                                    instance = instance,
-                                    component = component,
-                                    illustRepository = illustRepository,
-                                )
-
-                                Child.Guide -> renderGuide(
-                                    component = component,
-                                    settingsRepository = settingsRepository,
-                                    accountRepository = accountRepository,
-                                )
-
-                                Child.AccountManage -> renderAccountManage(
-                                    component = component,
-                                    accountRepository = accountRepository,
-                                )
-
-                                Child.Novel -> renderNovel(
-                                    component = component,
-                                    novelRepository = novelRepository,
-                                )
-
-                                is Child.NovelViewer -> renderNovelViewer(
-                                    instance = instance,
-                                    component = component,
-                                    novelRepository = novelRepository,
-                                )
-                            }
-                        }
+                        RootChildContent(
+                            instance = child.instance,
+                            component = component,
+                            activeTab = activeTab,
+                            isWideScreen = isWideScreen,
+                            useFloatingBottomBar = useFloatingBottomBar,
+                            showNavigationRailInMain = showNavigationRailInMain,
+                            bottomBarVisible = bottomBarVisible,
+                            floatingBackdrop = floatingBackdrop,
+                            illustRepository = illustRepository,
+                            searchRepository = searchRepository,
+                            userRepository = userRepository,
+                            accountRepository = accountRepository,
+                            bookmarkRepository = bookmarkRepository,
+                            downloadRepository = downloadRepository,
+                            downloadHistoryRepository = downloadHistoryRepository,
+                            banRepository = banRepository,
+                            settingsRepository = settingsRepository,
+                            boardRepository = boardRepository,
+                            historyRepository = historyRepository,
+                            novelHistoryRepository = novelHistoryRepository,
+                            muteRepository = muteRepository,
+                            updateCheckClient = updateCheckClient,
+                            novelRepository = novelRepository,
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Decompose 栈顶页面的分发：按 [Child] 类型路由到对应 render* 页面。
+ * 一级页面（Main）见 [MainChildSection]，其余二级页面渲染见同包 RootChildScreens.kt。
+ */
+@Composable
+private fun RootChildContent(
+    instance: Child,
+    component: RootComponent,
+    activeTab: RootComponent.MainTab,
+    isWideScreen: Boolean,
+    useFloatingBottomBar: Boolean,
+    showNavigationRailInMain: Boolean,
+    bottomBarVisible: MutableState<Boolean>,
+    floatingBackdrop: LayerBackdrop?,
+    illustRepository: IllustRepository,
+    searchRepository: SearchRepository,
+    userRepository: UserRepository,
+    accountRepository: AccountRepository,
+    bookmarkRepository: BookmarkRepository,
+    downloadRepository: DownloadRepository,
+    downloadHistoryRepository: DownloadHistoryRepository,
+    banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
+    boardRepository: BoardRepository,
+    historyRepository: HistoryRepository,
+    novelHistoryRepository: NovelHistoryRepository,
+    muteRepository: MuteRepository,
+    updateCheckClient: HttpClient,
+    novelRepository: NovelRepository?,
+) {
+    when (instance) {
+        is Child.Main -> MainChildSection(
+            instance = instance,
+            component = component,
+            activeTab = activeTab,
+            showNavigationRailInMain = showNavigationRailInMain,
+            bottomBarVisible = bottomBarVisible,
+            isWideScreen = isWideScreen,
+            useFloatingBottomBar = useFloatingBottomBar,
+            floatingBackdrop = floatingBackdrop,
+            illustRepository = illustRepository,
+            searchRepository = searchRepository,
+            userRepository = userRepository,
+            accountRepository = accountRepository,
+            banRepository = banRepository,
+            settingsRepository = settingsRepository,
+        )
+
+        is Child.IllustDetail -> renderIllustDetail(
+            instance = instance,
+            component = component,
+            illustRepository = illustRepository,
+            bookmarkRepository = bookmarkRepository,
+            downloadRepository = downloadRepository,
+            banRepository = banRepository,
+            historyRepository = historyRepository,
+        )
+
+        is Child.UserDetail -> renderUserDetail(
+            instance = instance,
+            component = component,
+            userRepository = userRepository,
+            bookmarkRepository = bookmarkRepository,
+            banRepository = banRepository,
+            settingsRepository = settingsRepository,
+            accountRepository = accountRepository,
+        )
+
+        Child.Login -> renderLogin(
+            component = component,
+            accountRepository = accountRepository,
+        )
+
+        is Child.Comments -> renderComments(
+            instance = instance,
+            component = component,
+            illustRepository = illustRepository,
+            accountRepository = accountRepository,
+        )
+
+        is Child.RelatedIllusts -> renderRelatedIllusts(
+            instance = instance,
+            component = component,
+            illustRepository = illustRepository,
+            banRepository = banRepository,
+            settingsRepository = settingsRepository,
+        )
+
+        is Child.IllustSeries -> renderIllustSeries(
+            instance = instance,
+            component = component,
+            illustRepository = illustRepository,
+            banRepository = banRepository,
+            settingsRepository = settingsRepository,
+        )
+
+        is Child.UserFollowList -> renderUserFollowList(
+            instance = instance,
+            component = component,
+            userRepository = userRepository,
+        )
+
+        is Child.UserFollowerList -> renderUserFollowerList(
+            instance = instance,
+            component = component,
+            userRepository = userRepository,
+        )
+
+        Child.RecomUserList -> renderRecomUserList(
+            component = component,
+            userRepository = userRepository,
+        )
+
+        Child.Settings -> renderSettingsPage(
+            component = component,
+            accountRepository = accountRepository,
+            boardRepository = boardRepository,
+        )
+
+        is Child.Search -> renderSearch(
+            instance = instance,
+            component = component,
+            searchRepository = searchRepository,
+            settingsRepository = settingsRepository,
+            banRepository = banRepository,
+        )
+
+        Child.DownloadHistory -> renderDownloadHistory(
+            component = component,
+            downloadHistoryRepository = downloadHistoryRepository,
+        )
+
+        Child.Shield -> renderShield(
+            component = component,
+            settingsRepository = settingsRepository,
+            banRepository = banRepository,
+            userRepository = userRepository,
+        )
+
+        is Child.AISetting -> renderAISetting(
+            instance = instance,
+            component = component,
+            userRepository = userRepository,
+        )
+
+        Child.ThemeSetting -> renderThemeSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.NetworkSetting -> renderNetworkSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.DownloadSetting -> renderDownloadSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.LayoutSetting -> renderLayoutSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.LanguageSetting -> renderLanguageSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.WidgetRecommendSetting -> renderWidgetRecommendSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.InteractionSetting -> renderInteractionSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.UpdateSetting -> renderUpdateSetting(
+            settingsRepository = settingsRepository,
+            updateCheckClient = updateCheckClient,
+            onBack = component::onBack,
+        )
+
+        Child.AccountEdit -> renderAccountEdit(
+            component = component,
+            accountRepository = accountRepository,
+        )
+
+        Child.History -> renderHistory(
+            component = component,
+        )
+
+        Child.DownloadTask -> renderDownloadTask(
+            component = component,
+            downloadRepository = downloadRepository,
+            downloadHistoryRepository = downloadHistoryRepository,
+        )
+
+        Child.DataExport -> renderDataExport(
+            component = component,
+            settingsRepository = settingsRepository,
+            historyRepository = historyRepository,
+            novelHistoryRepository = novelHistoryRepository,
+            muteRepository = muteRepository,
+        )
+
+        Child.Board -> renderBoard(
+            component = component,
+            boardRepository = boardRepository,
+        )
+
+        Child.QualitySetting -> renderQualitySetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.CopyTextSetting -> renderCopyTextSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.WelcomePageSetting -> renderWelcomePageSetting(
+            settingsRepository = settingsRepository,
+            onBack = component::onBack,
+        )
+
+        Child.About -> renderAbout(
+            component = component,
+        )
+
+        Child.BookTag -> renderBookTag(
+            component = component,
+            settingsRepository = settingsRepository,
+        )
+
+        Child.Thanks -> renderThanks(
+            component = component,
+        )
+
+        is Child.SpotlightDetail -> renderSpotlightDetail(
+            instance = instance,
+            component = component,
+            illustRepository = illustRepository,
+        )
+
+        Child.Guide -> renderGuide(
+            component = component,
+            settingsRepository = settingsRepository,
+            accountRepository = accountRepository,
+        )
+
+        Child.AccountManage -> renderAccountManage(
+            component = component,
+            accountRepository = accountRepository,
+        )
+
+        Child.Novel -> renderNovel(
+            component = component,
+            novelRepository = novelRepository,
+        )
+
+        is Child.NovelViewer -> renderNovelViewer(
+            instance = instance,
+            component = component,
+            novelRepository = novelRepository,
+        )
+    }
+}
+
+/**
+ * 一级页面（Main）区块：可选侧边导航栏 + MainContent + 底部导航栏。
+ */
+@Composable
+private fun MainChildSection(
+    instance: Child.Main,
+    component: RootComponent,
+    activeTab: RootComponent.MainTab,
+    showNavigationRailInMain: Boolean,
+    bottomBarVisible: MutableState<Boolean>,
+    isWideScreen: Boolean,
+    useFloatingBottomBar: Boolean,
+    floatingBackdrop: LayerBackdrop?,
+    illustRepository: IllustRepository,
+    searchRepository: SearchRepository,
+    userRepository: UserRepository,
+    accountRepository: AccountRepository,
+    banRepository: BanRepository,
+    settingsRepository: SettingsRepository,
+) {
+    // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
+    val mainChangeVersion = settingsRepository.changeVersion
+    // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
+    // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
+    // 回落为 CompositionLocal 默认值 16.dp。
+    CompositionLocalProvider(
+        LocalBottomBarContentPadding provides if (bottomBarVisible.value) 100.dp else 16.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MiuixTheme.colorScheme.surface),
+        ) {
+            if (showNavigationRailInMain) {
+                MainNavigationRail(
+                    activeTab = activeTab,
+                    onTabSelected = component::onMainTabSelected,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blurBackdropSource(floatingBackdrop),
+                ) {
+                    MainContent(
+                        initialTab = instance.tab,
+                        component = component,
+                        illustRepository = illustRepository,
+                        searchRepository = searchRepository,
+                        userRepository = userRepository,
+                        accountRepository = accountRepository,
+                        banRepository = banRepository,
+                        settingsRepository = settingsRepository,
+                    )
+                }
+                if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
+                    MainBottomBar(
+                        activeTab = activeTab,
+                        onTabSelected = component::onMainTabSelected,
+                        isFloating = useFloatingBottomBar,
+                        backdrop = floatingBackdrop,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**

@@ -18,14 +18,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
@@ -73,11 +76,13 @@ import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.platform.resolveOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.ktor.http.URLBuilder
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -127,8 +132,6 @@ fun IllustFullScreenViewer(
     illustRepository: IllustRepository? = null,
 ) {
     val strings = LocalStrings.current
-    val context = LocalPlatformContext.current
-    val settings = LocalSettingsRepository.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
     val pagerState = rememberPagerState(
         initialPage = initialPage.coerceIn(0, pageCount - 1),
@@ -138,7 +141,8 @@ fun IllustFullScreenViewer(
         initialFirstVisibleItemIndex = initialPage.coerceIn(0, pageCount - 1),
     )
     var isVerticalScrollMode by rememberSaveable(illust.id) { mutableStateOf(false) }
-    val currentDisplayPage by remember(isVerticalScrollMode, pageCount) {
+    // 页码/控件显隐为跨区块共享状态：以 State 引用传入子 Section，保持原有重组作用域粒度。
+    val currentPageState = remember(isVerticalScrollMode, pageCount) {
         derivedStateOf {
             if (pageCount <= 1) 0
             else if (isVerticalScrollMode) {
@@ -148,9 +152,11 @@ fun IllustFullScreenViewer(
             }
         }
     }
+    val currentDisplayPage by currentPageState
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    var showControls by remember { mutableStateOf(true) }
+    val showControlsState = remember { mutableStateOf(true) }
+    var showControls by showControlsState
 
     val internalBackdrop = if (isRuntimeShaderSupported()) {
         rememberLayerBackdrop {
@@ -258,347 +264,479 @@ fun IllustFullScreenViewer(
                 } else false
             },
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .blurBackdropSource(internalBackdrop),
-        ) {
-            if (IllustType.isUgoira(illust.type) && illustRepository != null) {
-                // 动图为单页作品：其画面由帧序列驱动，不存在多 P 翻页与相邻页预加载，
-                // 因此这里优先于 pageCount 分支；页码指示与翻页让渡对其不适用。
-                ZoomableUgoiraViewer(
-                    illust = illust,
-                    illustRepository = illustRepository,
-                    onTap = { showControls = !showControls },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else if (pageCount > 1) {
-                // 多 P 相邻页静默预加载（前后各 1 页）
-                LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings?.pictureSource) {
-                    val imageLoader = SingletonImageLoader.get(context)
-                    val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
-                        .filter { it in 0 until pageCount }
-                    // 解析过程涉及目录遍历与磁盘缓存查询，统一切到 IO 线程，避免阻塞主线程
-                    withContext(Dispatchers.IO) {
-                        for (pIndex in adjacentPages) {
-                            val p = illust.metaPages.getOrNull(pIndex) ?: continue
-                            val rawTarget = when (zoomQuality) {
-                                0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                                1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
-                                2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
-                                else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                            }
-                            val optModel = resolveOptimizedImageModel(
-                                context = context,
-                                illust = illust,
-                                pageIndex = pIndex,
-                                targetUrl = rawTarget,
-                                originalUrl = p.imageUrls?.original,
-                                customBasePath = settings?.storePath,
-                                pictureSource = settings?.pictureSource,
-                            )
-                            if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
-                                val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
-                                    optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
-                                } else optModel
-                                // 预加载只用于写入磁盘缓存（Coil 在解码前落盘），解码结果随即丢弃，
-                                // 因此禁用内存缓存并把解码尺寸压到最小，避免原图全尺寸位图短暂驻留堆内存引发 OOM
-                                val req = ImageRequest.Builder(context)
-                                    .data(transformed)
-                                    .diskCacheKey(transformed)
-                                    .size(
-                                        Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
-                                        Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
-                                    )
-                                    .precision(Precision.INEXACT)
-                                    .memoryCachePolicy(CachePolicy.DISABLED)
-                                    .diskCachePolicy(CachePolicy.ENABLED)
-                                    .build()
-                                imageLoader.enqueue(req)
-                            }
+        ViewerPagesSection(
+            illust = illust,
+            illustRepository = illustRepository,
+            pageCount = pageCount,
+            pagerState = pagerState,
+            verticalListState = verticalListState,
+            isVerticalScrollMode = isVerticalScrollMode,
+            zoomQuality = zoomQuality,
+            initialPage = initialPage,
+            previewUrl = previewUrl,
+            internalBackdrop = internalBackdrop,
+            onTap = { showControls = !showControls },
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        // 顶部浮层：返回按钮与页码指示器（带淡入淡出动画与液态玻璃效果）
+        ViewerTopOverlaySection(
+            visibleState = showControlsState,
+            strings = strings,
+            pageCount = pageCount,
+            currentPageState = currentPageState,
+            isVerticalScrollMode = isVerticalScrollMode,
+            pagerState = pagerState,
+            verticalListState = verticalListState,
+            coroutineScope = coroutineScope,
+            illust = illust,
+            effectiveBackdrop = effectiveBackdrop,
+            effectiveLayerBackdrop = effectiveLayerBackdrop,
+            onDismiss = onDismiss,
+            onVerticalScrollModeChange = { isVerticalScrollMode = it },
+            onDownloadClick = { triggerDownload(currentDisplayPage) },
+            onToast = onToast,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
+    }
+}
+
+/**
+ * 全屏查看器图片内容区：Ugoira 动图 / 多 P（水平分页或垂直卷轴，含相邻页预加载）/ 单页三种渲染分支。
+ */
+@Composable
+private fun ViewerPagesSection(
+    illust: Illust,
+    illustRepository: IllustRepository?,
+    pageCount: Int,
+    pagerState: PagerState,
+    verticalListState: LazyListState,
+    isVerticalScrollMode: Boolean,
+    zoomQuality: Int,
+    initialPage: Int,
+    previewUrl: String?,
+    internalBackdrop: LayerBackdrop?,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalPlatformContext.current
+    val settings = LocalSettingsRepository.current
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .blurBackdropSource(internalBackdrop),
+    ) {
+        if (IllustType.isUgoira(illust.type) && illustRepository != null) {
+            // 动图为单页作品：其画面由帧序列驱动，不存在多 P 翻页与相邻页预加载，
+            // 因此这里优先于 pageCount 分支；页码指示与翻页让渡对其不适用。
+            ZoomableUgoiraViewer(
+                illust = illust,
+                illustRepository = illustRepository,
+                onTap = onTap,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else if (pageCount > 1) {
+            // 多 P 相邻页静默预加载（前后各 1 页）
+            LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings?.pictureSource) {
+                val imageLoader = SingletonImageLoader.get(context)
+                val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
+                    .filter { it in 0 until pageCount }
+                // 解析过程涉及目录遍历与磁盘缓存查询，统一切到 IO 线程，避免阻塞主线程
+                withContext(Dispatchers.IO) {
+                    for (pIndex in adjacentPages) {
+                        val p = illust.metaPages.getOrNull(pIndex) ?: continue
+                        val rawTarget = when (zoomQuality) {
+                            0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                            1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
+                            2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
+                            else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
+                        }
+                        val optModel = resolveOptimizedImageModel(
+                            context = context,
+                            illust = illust,
+                            pageIndex = pIndex,
+                            targetUrl = rawTarget,
+                            originalUrl = p.imageUrls?.original,
+                            customBasePath = settings?.storePath,
+                            pictureSource = settings?.pictureSource,
+                        )
+                        if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
+                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
+                                optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
+                            } else optModel
+                            // 预加载只用于写入磁盘缓存（Coil 在解码前落盘），解码结果随即丢弃，
+                            // 因此禁用内存缓存并把解码尺寸压到最小，避免原图全尺寸位图短暂驻留堆内存引发 OOM
+                            val req = ImageRequest.Builder(context)
+                                .data(transformed)
+                                .diskCacheKey(transformed)
+                                .size(
+                                    Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
+                                    Dimension(AppConstants.Network.IMAGE_PRELOAD_DECODE_DIMENSION),
+                                )
+                                .precision(Precision.INEXACT)
+                                .memoryCachePolicy(CachePolicy.DISABLED)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .build()
+                            imageLoader.enqueue(req)
                         }
                     }
                 }
+            }
 
-                if (isVerticalScrollMode) {
-                    LazyColumn(
-                        state = verticalListState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 64.dp, bottom = 32.dp),
-                    ) {
-                        items(pageCount, key = { it }) { pageIndex ->
-                            ViewerPageItem(
-                                illust = illust,
-                                pageIndex = pageIndex,
-                                initialPage = initialPage,
-                                zoomQuality = zoomQuality,
-                                previewUrl = previewUrl,
-                                isVerticalMode = true,
-                                isCurrentPage = true,
-                                onTap = { showControls = !showControls },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            if (pageIndex < pageCount - 1) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-                        }
-                    }
-                } else {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
-                    ) { pageIndex ->
+            if (isVerticalScrollMode) {
+                LazyColumn(
+                    state = verticalListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 64.dp, bottom = 32.dp),
+                ) {
+                    items(pageCount, key = { it }) { pageIndex ->
                         ViewerPageItem(
                             illust = illust,
                             pageIndex = pageIndex,
                             initialPage = initialPage,
                             zoomQuality = zoomQuality,
                             previewUrl = previewUrl,
-                            isVerticalMode = false,
-                            isCurrentPage = pagerState.currentPage == pageIndex,
-                            onTap = { showControls = !showControls },
-                            modifier = Modifier.fillMaxSize(),
+                            isVerticalMode = true,
+                            isCurrentPage = true,
+                            onTap = onTap,
+                            modifier = Modifier.fillMaxWidth(),
                         )
+                        if (pageIndex < pageCount - 1) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
                     }
                 }
             } else {
-                ViewerPageItem(
-                    illust = illust,
-                    pageIndex = 0,
-                    initialPage = 0,
-                    zoomQuality = zoomQuality,
-                    previewUrl = previewUrl,
-                    isVerticalMode = false,
-                    isCurrentPage = true,
-                    onTap = { showControls = !showControls },
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier.fillMaxSize(),
+                ) { pageIndex ->
+                    ViewerPageItem(
+                        illust = illust,
+                        pageIndex = pageIndex,
+                        initialPage = initialPage,
+                        zoomQuality = zoomQuality,
+                        previewUrl = previewUrl,
+                        isVerticalMode = false,
+                        isCurrentPage = pagerState.currentPage == pageIndex,
+                        onTap = onTap,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        } else {
+            ViewerPageItem(
+                illust = illust,
+                pageIndex = 0,
+                initialPage = 0,
+                zoomQuality = zoomQuality,
+                previewUrl = previewUrl,
+                isVerticalMode = false,
+                isCurrentPage = true,
+                onTap = onTap,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * 全屏查看器顶部浮层：返回按钮、页码指示器与快捷操作组，带淡入淡出与液态玻璃效果。
+ * visibleState/currentPageState 以 State 引用传入，保持控件显隐与页码更新的原重组粒度。
+ */
+@Composable
+private fun ViewerTopOverlaySection(
+    visibleState: State<Boolean>,
+    strings: AppStrings,
+    pageCount: Int,
+    currentPageState: State<Int>,
+    isVerticalScrollMode: Boolean,
+    pagerState: PagerState,
+    verticalListState: LazyListState,
+    coroutineScope: CoroutineScope,
+    illust: Illust,
+    effectiveBackdrop: Backdrop?,
+    effectiveLayerBackdrop: LayerBackdrop?,
+    onDismiss: () -> Unit,
+    onVerticalScrollModeChange: (Boolean) -> Unit,
+    onDownloadClick: () -> Unit,
+    onToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val visible by visibleState
+    val currentDisplayPage by currentPageState
+    CompositionLocalProvider(LocalBackdrop provides effectiveLayerBackdrop) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = modifier,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                // 左侧：返回按钮
+                LiquidCircleActionButton(
+                    tooltip = strings.back,
+                    onClick = onDismiss,
+                    detailBackdrop = effectiveBackdrop,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Back,
+                        contentDescription = strings.back,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                // 中间：页码指示器（液态玻璃胶囊）
+                ViewerPageIndicatorSection(
+                    pageCount = pageCount,
+                    currentDisplayPage = currentDisplayPage,
+                    effectiveBackdrop = effectiveBackdrop,
+                )
+
+                // 右侧：快捷操作组（阅读模式切换、单页下载、复制链接、分享、SauceNAO 搜图）
+                ViewerQuickActionsSection(
+                    strings = strings,
+                    pageCount = pageCount,
+                    currentDisplayPage = currentDisplayPage,
+                    isVerticalScrollMode = isVerticalScrollMode,
+                    pagerState = pagerState,
+                    verticalListState = verticalListState,
+                    coroutineScope = coroutineScope,
+                    illust = illust,
+                    effectiveBackdrop = effectiveBackdrop,
+                    onVerticalScrollModeChange = onVerticalScrollModeChange,
+                    onDownloadClick = onDownloadClick,
+                    onToast = onToast,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 页码指示器（液态玻璃胶囊），仅多 P 时展示。
+ */
+@Composable
+private fun ViewerPageIndicatorSection(
+    pageCount: Int,
+    currentDisplayPage: Int,
+    effectiveBackdrop: Backdrop?,
+) {
+    if (pageCount > 1) {
+        val indicatorShape = remember { RoundedCornerShape(16.dp) }
+        Box(
+            modifier = Modifier
+                .liquidGlass(
+                    backdrop = effectiveBackdrop,
+                    shape = indicatorShape,
+                    blurRadius = 16.dp,
+                    tintColor = Color.Black,
+                    tintAlpha = 0.45f,
+                )
+                .squircleBorder(
+                    width = 0.6.dp,
+                    color = Color.White.copy(alpha = 0.18f),
+                    cornerRadius = 16.dp,
+                )
+                .clip(indicatorShape)
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = "${currentDisplayPage + 1} / $pageCount",
+                style = MiuixTheme.textStyles.body2,
+                color = Color.White,
+            )
+        }
+    }
+}
+
+/**
+ * 顶部快捷操作组：阅读模式切换、单页下载、复制图片/链接、分享与 SauceNAO 搜图。
+ */
+@Composable
+private fun ViewerQuickActionsSection(
+    strings: AppStrings,
+    pageCount: Int,
+    currentDisplayPage: Int,
+    isVerticalScrollMode: Boolean,
+    pagerState: PagerState,
+    verticalListState: LazyListState,
+    coroutineScope: CoroutineScope,
+    illust: Illust,
+    effectiveBackdrop: Backdrop?,
+    onVerticalScrollModeChange: (Boolean) -> Unit,
+    onDownloadClick: () -> Unit,
+    onToast: (String) -> Unit,
+) {
+    val context = LocalPlatformContext.current
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 切换阅读模式（垂直连续卷轴 vs 水平分页）
+        if (pageCount > 1) {
+            LiquidCircleActionButton(
+                tooltip = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
+                onClick = {
+                    if (isVerticalScrollMode) {
+                        val cur = verticalListState.firstVisibleItemIndex
+                        coroutineScope.launch {
+                            pagerState.scrollToPage(cur.coerceIn(0, pageCount - 1))
+                        }
+                        onVerticalScrollModeChange(false)
+                    } else {
+                        val cur = pagerState.currentPage
+                        coroutineScope.launch {
+                            verticalListState.scrollToItem(cur.coerceIn(0, pageCount - 1))
+                        }
+                        onVerticalScrollModeChange(true)
+                    }
+                },
+                detailBackdrop = effectiveBackdrop,
+            ) {
+                Icon(
+                    imageVector = if (isVerticalScrollMode) MiuixIcons.ExpandMore else MiuixIcons.More,
+                    contentDescription = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
 
-        // 顶部浮层：返回按钮与页码指示器（带淡入淡出动画与液态玻璃效果）
-        CompositionLocalProvider(LocalBackdrop provides effectiveLayerBackdrop) {
-            AnimatedVisibility(
-                visible = showControls,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    // 左侧：返回按钮
-                    LiquidCircleActionButton(
-                        tooltip = strings.back,
-                        onClick = onDismiss,
-                        detailBackdrop = effectiveBackdrop,
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
+        // 下载当前展示页
+        LiquidCircleActionButton(
+            tooltip = strings.download,
+            onClick = { onDownloadClick() },
+            detailBackdrop = effectiveBackdrop,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Download,
+                contentDescription = strings.download,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
 
-                    // 中间：页码指示器（液态玻璃胶囊）
-                    if (pageCount > 1) {
-                        val indicatorShape = remember { RoundedCornerShape(16.dp) }
-                        Box(
-                            modifier = Modifier
-                                .liquidGlass(
-                                    backdrop = effectiveBackdrop,
-                                    shape = indicatorShape,
-                                    blurRadius = 16.dp,
-                                    tintColor = Color.Black,
-                                    tintAlpha = 0.45f,
-                                )
-                                .squircleBorder(
-                                    width = 0.6.dp,
-                                    color = Color.White.copy(alpha = 0.18f),
-                                    cornerRadius = 16.dp,
-                                )
-                                .clip(indicatorShape)
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                        ) {
-                            Text(
-                                text = "${currentDisplayPage + 1} / $pageCount",
-                                style = MiuixTheme.textStyles.body2,
-                                color = Color.White,
-                            )
-                        }
-                    }
-
-                    // 右侧：快捷操作组（阅读模式切换、单页下载、复制链接、分享、SauceNAO 搜图）
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // 切换阅读模式（垂直连续卷轴 vs 水平分页）
-                        if (pageCount > 1) {
-                            LiquidCircleActionButton(
-                                tooltip = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
-                                onClick = {
-                                    if (isVerticalScrollMode) {
-                                        val cur = verticalListState.firstVisibleItemIndex
-                                        coroutineScope.launch {
-                                            pagerState.scrollToPage(cur.coerceIn(0, pageCount - 1))
-                                        }
-                                        isVerticalScrollMode = false
-                                    } else {
-                                        val cur = pagerState.currentPage
-                                        coroutineScope.launch {
-                                            verticalListState.scrollToItem(cur.coerceIn(0, pageCount - 1))
-                                        }
-                                        isVerticalScrollMode = true
-                                    }
-                                },
-                                detailBackdrop = effectiveBackdrop,
-                            ) {
-                                Icon(
-                                    imageVector = if (isVerticalScrollMode) MiuixIcons.ExpandMore else MiuixIcons.More,
-                                    contentDescription = if (isVerticalScrollMode) strings.viewerModeHorizontal else strings.viewerModeVertical,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-
-                        // 下载当前展示页
-                        LiquidCircleActionButton(
-                            tooltip = strings.download,
-                            onClick = { triggerDownload(currentDisplayPage) },
-                            detailBackdrop = effectiveBackdrop,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Download,
-                                contentDescription = strings.download,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-
-                        // 复制单页位图到系统剪贴板
-                        LiquidCircleActionButton(
-                            tooltip = strings.menuCopyImage,
-                            onClick = {
-                                val currentPage = currentDisplayPage
-                                val targetUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
-                                    illust.metaPages[currentPage].imageUrls?.large
-                                        ?: illust.metaPages[currentPage].imageUrls?.medium
-                                        ?: illust.imageUrls.large
-                                } else {
-                                    illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
-                                }
-                                coroutineScope.launch {
-                                    suspendRunCatchingNonCancel {
-                                        withContext(Dispatchers.IO) {
-                                            val candidateUrls = listOfNotNull(
-                                                targetUrl,
-                                                illust.imageUrls.large,
-                                                illust.imageUrls.medium,
-                                            )
-                                            val bytes = extractCachedImageBytes(context, candidateUrls)
-                                            bytes?.let { IllustClipboard().copyImage(it) }
-                                                ?: throw IllegalStateException(strings.imageNoCacheFound)
-                                        }
-                                    }.fold(
-                                        onSuccess = { onToast(strings.imageCopySuccess) },
-                                        onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
-                                    )
-                                }
-                            },
-                            detailBackdrop = effectiveBackdrop,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Copy,
-                                contentDescription = strings.menuCopyImage,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-
-                        // 复制单页作品链接
-                        LiquidCircleActionButton(
-                            tooltip = strings.menuCopyLink,
-                            onClick = {
-                                val currentPage = currentDisplayPage
-                                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
-                                val link = "${buildIllustShareLink(illust)}$pageAnchor"
-                                runCatching {
-                                    IllustClipboard().copy(link)
-                                    onToast(strings.copiedToClipboard)
-                                }.onFailure {
-                                    onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
-                                }
-                            },
-                            detailBackdrop = effectiveBackdrop,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Link,
-                                contentDescription = strings.menuCopyLink,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-
-                        // 分享单页作品
-                        LiquidCircleActionButton(
-                            tooltip = strings.share,
-                            onClick = {
-                                val currentPage = currentDisplayPage
-                                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
-                                val link = "${buildIllustShareLink(illust)}$pageAnchor"
-                                val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
-                                runCatching {
-                                    IllustShare().share(link, shareTitle)
-                                    onToast(strings.share)
-                                }.onFailure {
-                                    onToast("${strings.share}: ${it.message}")
-                                }
-                            },
-                            detailBackdrop = effectiveBackdrop,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Share,
-                                contentDescription = strings.share,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-
-                        // SauceNAO 搜图
-                        LiquidCircleActionButton(
-                            tooltip = strings.menuSauceNao,
-                            onClick = {
-                                val currentPage = currentDisplayPage
-                                val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
-                                    illust.metaPages[currentPage].imageUrls?.medium
-                                        ?: illust.metaPages[currentPage].imageUrls?.squareMedium
-                                        ?: illust.imageUrls.medium
-                                } else {
-                                    illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                                }
-                                val sauceUrl = buildSauceNaoUrl(imgUrl)
-                                openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
-                            },
-                            detailBackdrop = effectiveBackdrop,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Search,
-                                contentDescription = strings.menuSauceNao,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
+        // 复制单页位图到系统剪贴板
+        LiquidCircleActionButton(
+            tooltip = strings.menuCopyImage,
+            onClick = {
+                val currentPage = currentDisplayPage
+                val targetUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
+                    illust.metaPages[currentPage].imageUrls?.large
+                        ?: illust.metaPages[currentPage].imageUrls?.medium
+                        ?: illust.imageUrls.large
+                } else {
+                    illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
                 }
-            }
+                coroutineScope.launch {
+                    suspendRunCatchingNonCancel {
+                        withContext(Dispatchers.IO) {
+                            val candidateUrls = listOfNotNull(
+                                targetUrl,
+                                illust.imageUrls.large,
+                                illust.imageUrls.medium,
+                            )
+                            val bytes = extractCachedImageBytes(context, candidateUrls)
+                            bytes?.let { IllustClipboard().copyImage(it) }
+                                ?: throw IllegalStateException(strings.imageNoCacheFound)
+                        }
+                    }.fold(
+                        onSuccess = { onToast(strings.imageCopySuccess) },
+                        onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
+                    )
+                }
+            },
+            detailBackdrop = effectiveBackdrop,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Copy,
+                contentDescription = strings.menuCopyImage,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        // 复制单页作品链接
+        LiquidCircleActionButton(
+            tooltip = strings.menuCopyLink,
+            onClick = {
+                val currentPage = currentDisplayPage
+                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
+                val link = "${buildIllustShareLink(illust)}$pageAnchor"
+                runCatching {
+                    IllustClipboard().copy(link)
+                    onToast(strings.copiedToClipboard)
+                }.onFailure {
+                    onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
+                }
+            },
+            detailBackdrop = effectiveBackdrop,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Link,
+                contentDescription = strings.menuCopyLink,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        // 分享单页作品
+        LiquidCircleActionButton(
+            tooltip = strings.share,
+            onClick = {
+                val currentPage = currentDisplayPage
+                val pageAnchor = if (pageCount > 1) "#page=${currentPage + 1}" else ""
+                val link = "${buildIllustShareLink(illust)}$pageAnchor"
+                val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
+                runCatching {
+                    IllustShare().share(link, shareTitle)
+                    onToast(strings.share)
+                }.onFailure {
+                    onToast("${strings.share}: ${it.message}")
+                }
+            },
+            detailBackdrop = effectiveBackdrop,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Share,
+                contentDescription = strings.share,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        // SauceNAO 搜图
+        LiquidCircleActionButton(
+            tooltip = strings.menuSauceNao,
+            onClick = {
+                val currentPage = currentDisplayPage
+                val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
+                    illust.metaPages[currentPage].imageUrls?.medium
+                        ?: illust.metaPages[currentPage].imageUrls?.squareMedium
+                        ?: illust.imageUrls.medium
+                } else {
+                    illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                }
+                val sauceUrl = buildSauceNaoUrl(imgUrl)
+                openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
+            },
+            detailBackdrop = effectiveBackdrop,
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Search,
+                contentDescription = strings.menuSauceNao,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
