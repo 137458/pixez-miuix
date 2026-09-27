@@ -25,6 +25,7 @@ class AppStringsCoverageTest {
             "Id" to ("100 kata" to IdStrings),
             "Fil" to ("100 salita" to FilStrings),
             "De" to ("100 Wörter" to DeStrings),
+            "Vi" to ("100 từ" to ViStrings),
         )
         for ((name, pair) in expectedTexts) {
             val (want, strings) = pair
@@ -136,5 +137,19 @@ class AppStringsCoverageTest {
         assertEquals("Romane", DeStrings.novelBrowseTitle)
         assertEquals("Schriftgröße", DeStrings.novelFontSize)
         assertEquals("Pixiv-ID", DeStrings.pixivId)
+    }
+
+    /** 越南语曾以 `by EnStrings` 委托，选越南语实际显示英文；逐条显式实现后须与本语言取值一致。 */
+    @Test
+    fun `越南语关键功能区不再委托英文`() {
+        assertEquals("Sticker", ViStrings.stamp)
+        assertEquals("Phát", ViStrings.ugoiraPlay)
+        assertEquals("Tạm dừng", ViStrings.ugoiraPause)
+        assertEquals("Quản lý tài khoản", ViStrings.accountManageTitle)
+        assertEquals("Truyện", ViStrings.novelBrowseTitle)
+        assertEquals("Cỡ chữ", ViStrings.novelFontSize)
+        assertEquals("Chương trước", ViStrings.novelPrevChapter)
+        assertEquals("Số từ", ViStrings.novelWordsCount)
+        assertEquals("Pixiv ID", ViStrings.pixivId)
     }
 }
