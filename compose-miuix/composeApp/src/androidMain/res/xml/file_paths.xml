@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider 暴露范围收窄：仅覆盖 getUriForFile 三个调用点的实际写入目录，
+    不再声明任何 path="." 的全目录条目。
+    - cache-path/clipboard_images：IllustClipboard 复制图片临时文件
+    - cache-path/drag_shares：IllustDragAndDrop 拖拽暂存图
+    - cache-path|external-cache-path/updates：AppUpdateDownloader 更新 APK
+      （AppInstaller.getUpdateSaveDir 优先 externalCacheDir，无外部缓存时回退 cacheDir）
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <cache-path name="internal_cache" path="." />
-    <files-path name="internal_files" path="." />
-    <external-path name="external_files" path="." />
-    <external-cache-path name="external_cache" path="." />
-    <external-media-path name="external_media" path="." />
+    <cache-path name="clipboard_images" path="clipboard_images/" />
+    <cache-path name="drag_shares" path="drag_shares/" />
+    <cache-path name="updates" path="updates/" />
+    <external-cache-path name="external_updates" path="updates/" />
 </paths>
