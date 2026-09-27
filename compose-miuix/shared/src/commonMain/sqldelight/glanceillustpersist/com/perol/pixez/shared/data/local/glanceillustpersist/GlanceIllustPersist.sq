@@ -18,7 +18,11 @@ selectByIllustId:
 SELECT * FROM glanceillustpersist WHERE illust_id = ?;
 
 selectByType:
-SELECT * FROM glanceillustpersist WHERE ctype = ? ORDER BY ctime;
+-- 按 ctime 倒序取最新缓存行（调用方 firstOrNull 即最新数据，而非旧实现的最旧行）。
+SELECT * FROM glanceillustpersist WHERE ctype = ? ORDER BY ctime DESC;
+
+deleteByType:
+DELETE FROM glanceillustpersist WHERE ctype = ?;
 
 searchByTitleOrUserName:
 SELECT * FROM glanceillustpersist

@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
+import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 
@@ -25,6 +26,9 @@ class WidgetRepository(
 
     /**
      * 获取或网络拉取指定推荐类型的插画信息。
+     *
+     * 缓存命中且未过有效期直接返回最新一行（ctime 倒序）；
+     * 过期视为未命中，重新拉取并在写入前清理同类型旧行，避免缓存永不刷新与库无限膨胀。
      */
     suspend fun getOrFetchWidgetIllust(targetType: String): Glanceillustpersist? {
         val type = targetType.ifBlank { "recom" }
@@ -35,7 +39,7 @@ class WidgetRepository(
             Napier.w("小组件缓存读取失败 type=$type", e)
             null
         }
-        if (cached != null) {
+        if (cached != null && !isCacheExpired(cached.ctime)) {
             return cached
         }
 
@@ -44,6 +48,8 @@ class WidgetRepository(
             val now = Clock.System.now().toEpochMilliseconds()
             try {
                 glanceDatabase.glanceIllustPersistQueries.transaction {
+                    // 先清理同类型旧行再写入，避免每次刷新净增一整页导致库无限膨胀。
+                    glanceDatabase.glanceIllustPersistQueries.deleteByType(type)
                     fetchedList.forEach { illust ->
                         glanceDatabase.glanceIllustPersistQueries.insertOrReplace(
                             id = null,
@@ -66,6 +72,14 @@ class WidgetRepository(
             return glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
         }
         return null
+    }
+
+    /**
+     * 判断缓存行是否已超过有效期（[AppConstants.Widget.CACHE_EXPIRY_MILLIS]，默认 24 小时）。
+     */
+    private fun isCacheExpired(ctime: Long): Boolean {
+        val now = Clock.System.now().toEpochMilliseconds()
+        return now - ctime >= AppConstants.Widget.CACHE_EXPIRY_MILLIS
     }
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {

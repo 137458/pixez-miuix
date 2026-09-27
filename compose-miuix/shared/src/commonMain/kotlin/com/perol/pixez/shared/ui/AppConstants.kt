@@ -228,5 +228,13 @@ object AppConstants {
         /** 判断该作品类型是否为 Ugoira 动图。 */
         fun isUgoira(type: String): Boolean = type == UGOIRA
     }
+
+    /**
+     * 桌面小组件缓存策略。
+     */
+    object Widget {
+        /** 小组件缓存有效期（毫秒），超时后视为过期触发重新拉取（默认 24 小时）。 */
+        const val CACHE_EXPIRY_MILLIS = 24L * 60 * 60 * 1000
+    }
 }
 
