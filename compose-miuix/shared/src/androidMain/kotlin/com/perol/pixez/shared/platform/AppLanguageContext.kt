@@ -27,7 +27,7 @@ internal object AppLanguageContext {
         }
     }
 
-    /** 跟随系统语言时原样返回，不创建包装 Context。 */
+    /** 序号越界（无对应语言）时原样返回，不创建包装 Context。 */
     fun decorate(context: Context): Context {
         val tag = languageTagForNum(settings(context).languageNum) ?: return context
         val base = context.applicationContext ?: context

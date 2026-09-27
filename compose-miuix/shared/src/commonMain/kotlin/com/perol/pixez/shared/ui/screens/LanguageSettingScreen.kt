@@ -355,4 +355,12 @@ internal val LANGUAGE_OPTIONS = listOf(
             ),
         ),
     ),
+    // 越南语此前只存在于 AppStrings 与旧版迁移值中，选择列表里没有条目：
+    // languageNum=11 的存量用户会被 coerce 到末位（德语）显示，界面文案却走 ViStrings。
+    // 译文为机器翻译，未经母语者校对，故标注 beta。
+    LanguageOption(
+        code = "vi",
+        displayName = "Vietnamese (machine translated, beta)",
+        nativeName = "Tiếng Việt",
+    ),
 )
