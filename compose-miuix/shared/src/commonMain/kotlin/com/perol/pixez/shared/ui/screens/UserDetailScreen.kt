@@ -39,6 +39,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -117,8 +118,8 @@ fun UserDetailScreen(
     // 进行中标志使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免关注按钮被永久禁用。
     var isFollowLoading by remember { mutableStateOf(false) }
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
+    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
@@ -146,10 +147,7 @@ fun UserDetailScreen(
                 detail = detail,
                 clipboard = clipboard,
                 share = share,
-                onToast = { message, type ->
-                    toastMessage = message
-                    toastType = type
-                },
+                onToast = { toastMessage = it },
             )
         }
     }
@@ -172,8 +170,7 @@ fun UserDetailScreen(
                     }.onFailure { e ->
                         val err = e.message ?: "${strings.follow}${strings.loadFailed}"
                         followError = err
-                        toastMessage = err
-                        toastType = ToastType.Error
+                        toastMessage = ToastData(err, ToastType.Error)
                     }
                 } finally {
                     isFollowLoading = false
@@ -218,7 +215,6 @@ fun UserDetailScreen(
             onIllustClick = onIllustClick,
             onRefresh = triggerManualRefresh,
             toastMessage = toastMessage,
-            toastType = toastType,
             onToastDismiss = { toastMessage = null },
         )
     }
@@ -227,14 +223,14 @@ fun UserDetailScreen(
 /**
  * 构建用户页「更多操作」下拉菜单项：复制信息 / 复制链接 / 分享链接。
  *
- * @param onToast 操作结果提示回调（消息, 类型）
+ * @param onToast 操作结果提示回调，由调用方给出显式 [ToastData]
  */
 private fun buildUserMoreDropdownEntry(
     strings: AppStrings,
     detail: UserDetail,
     clipboard: IllustClipboard,
     share: IllustShare,
-    onToast: (String, ToastType) -> Unit,
+    onToast: (ToastData) -> Unit,
 ): DropdownEntry = DropdownEntry(
     items = listOf(
         DropdownItem(
@@ -243,10 +239,10 @@ private fun buildUserMoreDropdownEntry(
                 val text = buildUserCopyInfo(detail)
                 runCatching { clipboard.copy(text) }.fold(
                     onSuccess = {
-                        onToast(strings.copiedToClipboard, ToastType.Success)
+                        onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
                     },
                     onFailure = { e ->
-                        onToast("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)
+                        onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error))
                     },
                 )
             }
@@ -257,10 +253,10 @@ private fun buildUserMoreDropdownEntry(
                 val link = AppConstants.Urls.pixivUserUrl(detail.user.id)
                 runCatching { clipboard.copy(link) }.fold(
                     onSuccess = {
-                        onToast(strings.copiedToClipboard, ToastType.Success)
+                        onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
                     },
                     onFailure = { e ->
-                        onToast("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)
+                        onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error))
                     },
                 )
             }
@@ -271,10 +267,10 @@ private fun buildUserMoreDropdownEntry(
                 val link = AppConstants.Urls.pixivUserUrl(detail.user.id)
                 runCatching { share.share(link, detail.user.name) }.fold(
                     onSuccess = {
-                        onToast(strings.share, ToastType.Success)
+                        onToast(ToastData(strings.share, ToastType.Success))
                     },
                     onFailure = { e ->
-                        onToast("${strings.share}${strings.loadFailed}: ${e.message}", ToastType.Error)
+                        onToast(ToastData("${strings.share}${strings.loadFailed}: ${e.message}", ToastType.Error))
                     },
                 )
             }
@@ -363,8 +359,7 @@ private fun UserDetailContent(
     onFollowerListClick: (Int) -> Unit,
     onIllustClick: (Int) -> Unit,
     onRefresh: () -> Unit,
-    toastMessage: String?,
-    toastType: ToastType,
+    toastMessage: ToastData?,
     onToastDismiss: () -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
@@ -410,8 +405,7 @@ private fun UserDetailContent(
             )
         }
         ToastMessage(
-            message = toastMessage,
-            type = toastType,
+            toast = toastMessage,
             onDismiss = onToastDismiss,
         )
     }

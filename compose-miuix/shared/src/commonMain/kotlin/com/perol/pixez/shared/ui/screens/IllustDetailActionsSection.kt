@@ -15,6 +15,8 @@ import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
@@ -50,7 +52,7 @@ internal fun IllustDetailTopBarSection(
     onBookmarkLoadingChange: (Boolean) -> Unit,
     onBookmarkErrorChange: (String?) -> Unit,
     onDownloadingChange: (Boolean) -> Unit,
-    onToast: (String?) -> Unit,
+    onToast: (ToastData?) -> Unit,
     onBanSuccess: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -82,12 +84,17 @@ internal fun IllustDetailTopBarSection(
                         if (!wasBookmarked) {
                             if (settings?.saveAfterStar == true) {
                                 coroutineScope.launch {
-                                    onToast("${strings.downloadStatusDownloading}…")
+                                    onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
                                     val task = downloadRepository.download(targetIllust, pageIndex = 0)
                                     onToast(
                                         when (task.status) {
-                                            DownloadStatus.Success -> strings.downloadStatusSuccess
-                                            DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                            DownloadStatus.Success ->
+                                                ToastData(strings.downloadStatusSuccess, ToastType.Success)
+                                            DownloadStatus.Failed ->
+                                                ToastData(
+                                                    "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}",
+                                                    ToastType.Error,
+                                                )
                                             else -> null
                                         },
                                     )
@@ -119,7 +126,7 @@ internal fun IllustDetailTopBarSection(
                 try {
                     onDownloadingChange(true)
                     performHapticFeedback(HapticType.GestureStart)
-                    onToast("${strings.downloadStatusDownloading}…")
+                    onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
                     if (IllustType.isUgoira(targetIllust.type)) {
                         val meta = repository.getUgoiraMetadata(targetIllust.id)
                         val zipBytes = repository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
@@ -141,7 +148,7 @@ internal fun IllustDetailTopBarSection(
                             }
                         }
                         performHapticFeedback(HapticType.Confirm)
-                        onToast(strings.downloadStatusSuccess)
+                        onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
                     } else {
                         val task = downloadRepository.download(targetIllust, pageIndex = 0)
                         onToast(
@@ -160,11 +167,14 @@ internal fun IllustDetailTopBarSection(
                                             }
                                         }
                                     }
-                                    strings.downloadStatusSuccess
+                                    ToastData(strings.downloadStatusSuccess, ToastType.Success)
                                 }
                                 DownloadStatus.Failed -> {
                                     performHapticFeedback(HapticType.Reject)
-                                    "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                    ToastData(
+                                        "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}",
+                                        ToastType.Error,
+                                    )
                                 }
                                 else -> null
                             },
@@ -174,7 +184,12 @@ internal fun IllustDetailTopBarSection(
                     throw e
                 } catch (e: Exception) {
                     performHapticFeedback(HapticType.Reject)
-                    onToast("${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}")
+                    onToast(
+                        ToastData(
+                            "${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}",
+                            ToastType.Error,
+                        ),
+                    )
                 } finally {
                     onDownloadingChange(false)
                 }

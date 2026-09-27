@@ -74,7 +74,7 @@ fun IllustDetailTopBar(
     isBanned: Boolean,
     banRepository: BanRepository,
     onBanSuccess: () -> Unit,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val collapseProgress = collapseProgressProvider()

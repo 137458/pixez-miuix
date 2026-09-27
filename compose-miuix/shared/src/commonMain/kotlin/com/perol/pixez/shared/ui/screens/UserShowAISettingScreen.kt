@@ -14,11 +14,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -69,8 +70,8 @@ fun UserShowAISettingScreen(
     // 更新操作加载态，防止重复提交。
     var isUpdating by remember { mutableStateOf(false) }
 
-    // 提示信息。
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    // 提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     /**
      * 调用服务器接口更新 AI 显示设置，并以返回结果刷新本地状态。
@@ -88,7 +89,7 @@ fun UserShowAISettingScreen(
                 currentShowAI = response.showAI
             }.onFailure { e ->
                 Napier.e("更新 AI 显示设置失败", e)
-                toastMessage = "${strings.loadFailed}：${e.message}"
+                toastMessage = ToastData("${strings.loadFailed}：${e.message}", ToastType.Error)
             }
             isUpdating = false
         }
@@ -159,7 +160,7 @@ fun UserShowAISettingScreen(
         }
 
         ToastMessage(
-            message = toastMessage,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

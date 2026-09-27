@@ -47,6 +47,7 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -209,7 +210,8 @@ private fun IllustDetailSingleContent(
     var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     var showMoreMenu by rememberSaveable(illustId) { mutableStateOf(false) }
@@ -381,9 +383,9 @@ private fun IllustDetailSingleContent(
             )
         }
 
+        // 收藏失败信息由 onBookmarkErrorChange 单独维护，展示时补上 Error 类型。
         ToastMessage(
-            message = toastMessage ?: bookmarkError,
-            type = if (bookmarkError != null) ToastType.Error else null,
+            toast = toastMessage ?: bookmarkError?.let { ToastData(it, ToastType.Error) },
             backdrop = detailBackdrop,
             onDismiss = {
                 toastMessage = null
@@ -413,7 +415,7 @@ private fun IllustDetailContentList(
     isBookmarked: Boolean,
     coroutineScope: CoroutineScope,
     strings: AppStrings,
-    onToast: (String?) -> Unit,
+    onToast: (ToastData?) -> Unit,
     onDownloadingChange: (Boolean) -> Unit,
     onBookmarkedChange: (Boolean) -> Unit,
     onFullScreen: (Int) -> Unit,

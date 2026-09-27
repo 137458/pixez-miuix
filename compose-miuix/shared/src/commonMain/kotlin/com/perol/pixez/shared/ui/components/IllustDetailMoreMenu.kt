@@ -79,7 +79,7 @@ internal fun IllustDetailMoreMenu(
     isBanned: Boolean,
     banRepository: BanRepository,
     onBanSuccess: () -> Unit,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
     clipboard: IllustClipboard,
     share: IllustShare,
     context: PlatformContext,
@@ -171,7 +171,7 @@ internal fun IllustDetailMoreMenuCopyActions(
     clipboard: IllustClipboard,
     context: PlatformContext,
     coroutineScope: CoroutineScope,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
 ) {
     val strings = LocalStrings.current
     LiquidMenuItem(
@@ -181,8 +181,8 @@ internal fun IllustDetailMoreMenuCopyActions(
             onDismiss()
             val text = buildIllustCopyInfo(illust)
             runCatching { clipboard.copy(text) }.fold(
-                onSuccess = { onToast(strings.copiedToClipboard) },
-                onFailure = { e -> onToast("${strings.copy}${strings.loadFailed}: ${e.message}") },
+                onSuccess = { onToast(ToastData(strings.copiedToClipboard, ToastType.Success)) },
+                onFailure = { e -> onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)) },
             )
         },
     )
@@ -210,8 +210,8 @@ internal fun IllustDetailMoreMenuCopyActions(
                         bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
                     }
                 }.fold(
-                    onSuccess = { onToast(strings.imageCopySuccess) },
-                    onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
+                    onSuccess = { onToast(ToastData(strings.imageCopySuccess, ToastType.Success)) },
+                    onFailure = { e -> onToast(ToastData("${strings.menuCopyImage}: ${e.message}", ToastType.Error)) },
                 )
             }
         },
@@ -230,8 +230,8 @@ internal fun IllustDetailMoreMenuCopyActions(
             onDismiss()
             val link = buildIllustShareLink(illust)
             runCatching { clipboard.copy(link) }.fold(
-                onSuccess = { onToast(strings.copiedToClipboard) },
-                onFailure = { e -> onToast("${strings.copy}${strings.loadFailed}: ${e.message}") },
+                onSuccess = { onToast(ToastData(strings.copiedToClipboard, ToastType.Success)) },
+                onFailure = { e -> onToast(ToastData("${strings.copy}${strings.loadFailed}: ${e.message}", ToastType.Error)) },
             )
         },
     )
@@ -256,7 +256,7 @@ internal fun IllustDetailMoreMenuShareActions(
     banRepository: BanRepository,
     onBanSuccess: () -> Unit,
     coroutineScope: CoroutineScope,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
 ) {
     val strings = LocalStrings.current
     LiquidMenuItem(
@@ -266,8 +266,8 @@ internal fun IllustDetailMoreMenuShareActions(
             onDismiss()
             val link = buildIllustShareLink(illust)
             runCatching { share.share(link, illust.title) }.fold(
-                onSuccess = { onToast(strings.share) },
-                onFailure = { e -> onToast("${strings.share}: ${e.message}") },
+                onSuccess = { onToast(ToastData(strings.share, ToastType.Success)) },
+                onFailure = { e -> onToast(ToastData("${strings.share}: ${e.message}", ToastType.Error)) },
             )
         },
     )
@@ -285,7 +285,7 @@ internal fun IllustDetailMoreMenuShareActions(
             onDismiss()
             val imgUrl = illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
             val sauceUrl = buildSauceNaoUrl(imgUrl)
-            openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
+            openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
         },
     )
     if (!isBanned) {
@@ -307,9 +307,9 @@ internal fun IllustDetailMoreMenuShareActions(
                     }.fold(
                         onSuccess = {
                             onBanSuccess()
-                            onToast(strings.menuBanWork)
+                            onToast(ToastData(strings.menuBanWork, ToastType.Success))
                         },
-                        onFailure = { e -> onToast("${strings.menuBanWork}: ${e.message}") },
+                        onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${e.message}", ToastType.Error)) },
                     )
                 }
             },

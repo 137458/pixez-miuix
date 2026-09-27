@@ -41,7 +41,9 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -72,7 +74,7 @@ fun BoardScreen(
     var boardList by remember { mutableStateOf<List<BoardInfo>>(emptyList()) }
     var isRefreshing by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<Throwable?>(null) }
-    var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     /**
      * 加载公告列表。
@@ -88,7 +90,7 @@ fun BoardScreen(
             .onFailure { error ->
                 loadError = error
                 if (boardList.isEmpty()) {
-                    toastMessage = "${strings.loadFailed}: ${error.message ?: ""}"
+                    toastMessage = ToastData("${strings.loadFailed}: ${error.message ?: ""}", ToastType.Error)
                 }
             }
         isRefreshing = false
@@ -185,7 +187,11 @@ fun BoardScreen(
                         ) { board ->
                             BoardItem(
                                 board = board,
-                                onLinkClick = { url -> openSafeUrl(url, strings, setOf("http", "https")) { toastMessage = it } },
+                                onLinkClick = { url ->
+                                    openSafeUrl(url, strings, setOf("http", "https")) {
+                                        toastMessage = ToastData(it, ToastType.Error)
+                                    }
+                                },
                             )
                         }
                     }
@@ -194,7 +200,7 @@ fun BoardScreen(
         }
 
         ToastMessage(
-            message = toastMessage,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

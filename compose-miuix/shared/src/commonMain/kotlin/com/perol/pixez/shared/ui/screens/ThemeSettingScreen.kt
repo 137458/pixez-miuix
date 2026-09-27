@@ -48,7 +48,9 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -83,7 +85,7 @@ fun ThemeSettingScreen(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
 
     // 统一的 Toast 提示文本。
-    var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     fun setThemeMode(mode: Int) {
         themeMode = mode
@@ -311,7 +313,7 @@ private fun ColorPickerDialog(
 
     var selectedColor by remember(show, currentColor) { mutableStateOf(Color(currentColor)) }
     var customHex by remember(show) { mutableStateOf("") }
-    var toastMessage by remember(show) { mutableStateOf<String?>(null) }
+    var toastMessage by remember(show) { mutableStateOf<ToastData?>(null) }
 
     OverlayDialog(
         title = strings.dialogPickSeedColor,
@@ -383,7 +385,7 @@ private fun ColorPickerDialog(
                             if (parsed != null) {
                                 onColorSelected(parsed)
                             } else {
-                                toastMessage = strings.themeColorFormatError
+                                toastMessage = ToastData(strings.themeColorFormatError, ToastType.Error)
                             }
                         } else {
                             onColorSelected(selectedColor.copy(alpha = 1f).toArgb())
@@ -396,7 +398,7 @@ private fun ColorPickerDialog(
         }
 
         ToastMessage(
-            message = toastMessage,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

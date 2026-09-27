@@ -125,7 +125,7 @@ fun IllustFullScreenViewer(
     initialPage: Int,
     zoomQuality: Int,
     downloadRepository: DownloadRepository,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
     detailBackdrop: Backdrop? = null,
     previewUrl: String? = null,
@@ -172,7 +172,7 @@ fun IllustFullScreenViewer(
         coroutineScope.launch {
             if (IllustType.isUgoira(illust.type) && illustRepository != null) {
                 // 动图保存复用与详情页顶栏同一条路径，避免两处各自维护下载流程。
-                onToast("${strings.downloadStatusDownloading}…")
+                onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
                 saveUgoiraIllust(
                     illust = illust,
                     illustRepository = illustRepository,
@@ -180,22 +180,22 @@ fun IllustFullScreenViewer(
                 ).fold(
                     onSuccess = {
                         performHapticFeedback(HapticType.Confirm)
-                        onToast(strings.downloadStatusSuccess)
+                        onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
                     },
                     onFailure = { e ->
                         performHapticFeedback(HapticType.Reject)
-                        onToast("${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}")
+                        onToast(ToastData("${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}", ToastType.Error))
                     },
                 )
             } else {
-                onToast("${strings.downloadStatusDownloading} P$pageNumber…")
+                onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
                 val task = downloadRepository.download(illust, pageIndex = currentPage)
-                val msg = when (task.status) {
-                    DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                    DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                val toast = when (task.status) {
+                    DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
+                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}", ToastType.Error)
                     else -> null
                 }
-                if (msg != null) onToast(msg)
+                if (toast != null) onToast(toast)
             }
         }
     }
@@ -460,7 +460,7 @@ private fun ViewerTopOverlaySection(
     onDismiss: () -> Unit,
     onVerticalScrollModeChange: (Boolean) -> Unit,
     onDownloadClick: () -> Unit,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visible by visibleState
@@ -574,7 +574,7 @@ private fun ViewerQuickActionsSection(
     effectiveBackdrop: Backdrop?,
     onVerticalScrollModeChange: (Boolean) -> Unit,
     onDownloadClick: () -> Unit,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
 ) {
     val context = LocalPlatformContext.current
     Row(
@@ -650,8 +650,8 @@ private fun ViewerQuickActionsSection(
                                 ?: throw IllegalStateException(strings.imageNoCacheFound)
                         }
                     }.fold(
-                        onSuccess = { onToast(strings.imageCopySuccess) },
-                        onFailure = { e -> onToast("${strings.menuCopyImage}: ${e.message}") },
+                        onSuccess = { onToast(ToastData(strings.imageCopySuccess, ToastType.Success)) },
+                        onFailure = { e -> onToast(ToastData("${strings.menuCopyImage}: ${e.message}", ToastType.Error)) },
                     )
                 }
             },
@@ -674,9 +674,9 @@ private fun ViewerQuickActionsSection(
                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
                 runCatching {
                     IllustClipboard().copy(link)
-                    onToast(strings.copiedToClipboard)
+                    onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
                 }.onFailure {
-                    onToast("${strings.copy}${strings.loadFailed}: ${it.message}")
+                    onToast(ToastData("${strings.copy}${strings.loadFailed}: ${it.message}", ToastType.Error))
                 }
             },
             detailBackdrop = effectiveBackdrop,
@@ -699,9 +699,9 @@ private fun ViewerQuickActionsSection(
                 val shareTitle = if (pageCount > 1) "${illust.title} (P${currentPage + 1})" else illust.title
                 runCatching {
                     IllustShare().share(link, shareTitle)
-                    onToast(strings.share)
+                    onToast(ToastData(strings.share, ToastType.Success))
                 }.onFailure {
-                    onToast("${strings.share}: ${it.message}")
+                    onToast(ToastData("${strings.share}: ${it.message}", ToastType.Error))
                 }
             },
             detailBackdrop = effectiveBackdrop,
@@ -727,7 +727,7 @@ private fun ViewerQuickActionsSection(
                     illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
                 }
                 val sauceUrl = buildSauceNaoUrl(imgUrl)
-                openSafeUrl(sauceUrl, strings, onError = { onToast(it) })
+                openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
             },
             detailBackdrop = effectiveBackdrop,
         ) {

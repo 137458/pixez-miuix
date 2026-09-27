@@ -42,7 +42,9 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -91,7 +93,7 @@ fun UpdateSettingScreen(
 
     var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
     var isChecking by remember { mutableStateOf(false) }
-    var toastMessage by remember { mutableStateOf<String?>(null) }
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     var isOs3Effect by remember { mutableStateOf(true) }
 
@@ -121,13 +123,13 @@ fun UpdateSettingScreen(
                     if (info.isNew && userInitiated) {
                         showDialog = true
                     } else if (!info.isNew && userInitiated) {
-                        toastMessage = strings.updateLatest.format(AppInfo.VERSION_NAME)
+                        toastMessage = ToastData(strings.updateLatest.format(AppInfo.VERSION_NAME), ToastType.Normal)
                     }
                 }
                 .onFailure { error ->
                     if (userInitiated) {
                         val message = error.message ?: strings.loadFailed
-                        toastMessage = "${strings.loadFailed}: $message"
+                        toastMessage = ToastData("${strings.loadFailed}: $message", ToastType.Error)
                     }
                 }
         } finally {
@@ -242,7 +244,7 @@ fun UpdateSettingScreen(
                                 val downloadUrl = releaseInfo?.downloadUrl
                                 val fileName = releaseInfo?.fileName
                                 if (downloadUrl == null || fileName == null) {
-                                    toastMessage = strings.updateDownloadFailed
+                                    toastMessage = ToastData(strings.updateDownloadFailed, ToastType.Error)
                                     return
                                 }
                                 isDownloading = true
@@ -262,7 +264,7 @@ fun UpdateSettingScreen(
                                             downloadedFilePath = path
                                             com.perol.pixez.shared.platform.AppInstaller().install(path)
                                         }.onFailure { error ->
-                                            toastMessage = error.message ?: strings.updateDownloadFailed
+                                            toastMessage = ToastData(error.message ?: strings.updateDownloadFailed, ToastType.Error)
                                         }
                                     } finally {
                                         // 取消或异常时同样复位，避免下载按钮被永久禁用。
@@ -367,7 +369,7 @@ fun UpdateSettingScreen(
         }
 
         ToastMessage(
-            message = toastMessage,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

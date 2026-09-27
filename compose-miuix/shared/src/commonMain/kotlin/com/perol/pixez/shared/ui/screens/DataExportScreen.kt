@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +29,7 @@ import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import kotlinx.coroutines.Dispatchers
@@ -87,9 +87,8 @@ fun DataExportScreen(
         }
     }
 
-    // 轻量提示文本；页面重建后恢复，避免用户错过结果。
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
+    // 轻量提示文本；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     // 当前弹出的导出/导入对话框；切换后重置，避免旧状态残留。
     var pendingOperation by remember { mutableStateOf<PendingOperation?>(null) }
@@ -213,12 +212,10 @@ fun DataExportScreen(
                         val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
                         val typeStr = operation.type.title(strings)
                         if (result.isSuccess) {
-                            toastMessage = strings.dataExportSuccess.format(typeStr, actionStr)
-                            toastType = ToastType.Success
+                            toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
                         } else {
                             val cause = result.exceptionOrNull()?.message ?: strings.loadFailed
-                            toastMessage = strings.dataExportFailed.format(typeStr, actionStr, cause)
-                            toastType = ToastType.Error
+                            toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
                         }
                     } finally {
                         // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
@@ -229,8 +226,7 @@ fun DataExportScreen(
         )
 
         ToastMessage(
-            message = toastMessage,
-            type = toastType,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

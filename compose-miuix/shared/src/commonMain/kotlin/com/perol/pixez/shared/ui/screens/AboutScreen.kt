@@ -45,6 +45,7 @@ import com.perol.pixez.shared.data.model.Contributor
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -87,12 +88,8 @@ fun AboutScreen(
 ) {
     val strings = LocalStrings.current
     // 用于提示打开浏览器失败等信息。
-    var toastMessage by remember { mutableStateOf<String?>(null) }
-    var toastType by remember { mutableStateOf(ToastType.Error) }
-    val showErrorToast: (String) -> Unit = {
-        toastMessage = it
-        toastType = ToastType.Error
-    }
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val showErrorToast: (String) -> Unit = { toastMessage = ToastData(it, ToastType.Error) }
     var showDisclaimerDialog by remember { mutableStateOf(false) }
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -271,8 +268,7 @@ fun AboutScreen(
         }
 
         ToastMessage(
-            message = toastMessage,
-            type = toastType,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

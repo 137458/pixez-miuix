@@ -53,6 +53,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -93,9 +94,8 @@ fun HistoryScreen(
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
     // 待删除记录的主键，为 null 时不显示删除确认栏。
     var itemToDelete by rememberSaveable { mutableStateOf<Long?>(null) }
-    // Toast 提示文本。
-    var toastMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var toastType by rememberSaveable { mutableStateOf(ToastType.Normal) }
+    // Toast 提示；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
     // 删除/清空操作进行中标志，用于禁用确认栏的确定按钮，防止重复提交。
     var isProcessing by remember { mutableStateOf(false) }
 
@@ -264,8 +264,7 @@ fun HistoryScreen(
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {
-                                        toastMessage = "${strings.actionClear}${strings.loadFailed}: ${it.message}"
-                                        toastType = ToastType.Error
+                                        toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${it.message}", ToastType.Error)
                                     }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
@@ -297,8 +296,7 @@ fun HistoryScreen(
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {
-                                        toastMessage = "${strings.btnDelete}${strings.loadFailed}: ${it.message}"
-                                        toastType = ToastType.Error
+                                        toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${it.message}", ToastType.Error)
                                     }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
@@ -315,8 +313,7 @@ fun HistoryScreen(
             }
 
             ToastMessage(
-                message = toastMessage,
-                type = toastType,
+                toast = toastMessage,
                 onDismiss = { toastMessage = null },
             )
         }

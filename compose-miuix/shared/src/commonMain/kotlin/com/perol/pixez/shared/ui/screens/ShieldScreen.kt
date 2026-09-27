@@ -34,6 +34,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
@@ -113,9 +114,8 @@ fun ShieldScreen(
         deleteTarget = null
     }
 
-    // 统一的 Toast 提示文本与类型。
-    var toastMessage by remember { mutableStateOf<String?>(null) }
-    var toastType by remember { mutableStateOf(ToastType.Normal) }
+    // 统一的 Toast 提示。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     val strings = LocalStrings.current
 
@@ -137,7 +137,7 @@ fun ShieldScreen(
                     banIllusts = illusts.sortedBy { it.name.lowercase() }
                 }.onFailure { e ->
                     Napier.e("加载屏蔽数据失败", e)
-                    toastMessage = "${strings.loadFailed}: ${e.message}"
+                    toastMessage = ToastData("${strings.loadFailed}: ${e.message}", ToastType.Error)
                 }
             } finally {
                 isLoading = false
@@ -251,7 +251,7 @@ fun ShieldScreen(
                                         onAISettingClick(response.showAI)
                                     }.onFailure { e ->
                                         Napier.e("加载 AI 显示设置失败", e)
-                                        toastMessage = "${strings.loadFailed}: ${e.message}"
+                                        toastMessage = ToastData("${strings.loadFailed}: ${e.message}", ToastType.Error)
                                     }
                                     isLoadingAISetting = false
                                 }
@@ -358,7 +358,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("添加屏蔽标签失败", e)
-                            toastMessage = "${strings.btnAdd}${strings.loadFailed}：${e.message}"
+                            toastMessage = ToastData("${strings.btnAdd}${strings.loadFailed}：${e.message}", ToastType.Error)
                         }
                     } finally {
                         isAddingTag = false
@@ -397,8 +397,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("删除屏蔽项失败", e)
-                            toastMessage = "${strings.btnDelete}${strings.loadFailed}：${e.message}"
-                            toastType = ToastType.Error
+                            toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}：${e.message}", ToastType.Error)
                         }
                     } finally {
                         isDeleting = false
@@ -408,8 +407,7 @@ fun ShieldScreen(
         )
 
         ToastMessage(
-            message = toastMessage,
-            type = toastType,
+            toast = toastMessage,
             onDismiss = { toastMessage = null },
         )
     }

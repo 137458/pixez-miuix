@@ -33,6 +33,8 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +67,7 @@ internal fun IllustDetailInfoCard(
     downloadRepository: DownloadRepository,
     bookmarkRepository: BookmarkRepository,
     coroutineScope: CoroutineScope,
-    onToast: (String?) -> Unit,
+    onToast: (ToastData?) -> Unit,
     onDownloadingChange: (Boolean) -> Unit,
     onBookmarkedChange: (Boolean) -> Unit,
     onUserClick: (Int) -> Unit,
@@ -127,7 +129,7 @@ internal fun IllustDetailInfoCard(
                                 val tasks = downloadRepository.downloadAllPages(
                                     illust = illust,
                                     onProgress = { completed, total ->
-                                        onToast("${strings.downloadStatusDownloading} $completed/$total")
+                                        onToast(ToastData("${strings.downloadStatusDownloading} $completed/$total", ToastType.Normal))
                                     },
                                     maxConcurrency = settings?.maxRunningTask ?: 3,
                                 )
@@ -147,9 +149,9 @@ internal fun IllustDetailInfoCard(
                                 }
                                 onToast(
                                     when {
-                                        failedCount == 0 -> "${strings.downloadStatusSuccess}: $successCount/${tasks.size}"
-                                        successCount == 0 -> strings.downloadStatusFailed
-                                        else -> "${strings.downloadStatusSuccess}: $successCount, ${strings.downloadStatusFailed} $failedCount"
+                                        failedCount == 0 -> ToastData("${strings.downloadStatusSuccess}: $successCount/${tasks.size}", ToastType.Success)
+                                        successCount == 0 -> ToastData(strings.downloadStatusFailed, ToastType.Error)
+                                        else -> ToastData("${strings.downloadStatusSuccess}: $successCount, ${strings.downloadStatusFailed} $failedCount", ToastType.Normal)
                                     },
                                 )
                             } finally {

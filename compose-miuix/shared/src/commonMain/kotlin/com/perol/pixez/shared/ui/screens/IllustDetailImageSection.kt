@@ -31,6 +31,8 @@ import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
 import com.perol.pixez.shared.ui.AppConstants.IllustType
@@ -73,7 +75,7 @@ internal fun IllustDetailImagePage(
     downloadRepository: DownloadRepository,
     coroutineScope: CoroutineScope,
     strings: AppStrings,
-    onToast: (String?) -> Unit,
+    onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
     val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
@@ -138,12 +140,12 @@ internal fun IllustDetailImagePage(
                 .clickable {
                     coroutineScope.launch {
                         val pageNumber = pageIndex + 1
-                        onToast("${strings.downloadStatusDownloading} P$pageNumber…")
+                        onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
                         val task = downloadRepository.download(illust, pageIndex = pageIndex)
                         onToast(
                             when (task.status) {
-                                DownloadStatus.Success -> "${strings.downloadStatusSuccess} (P$pageNumber)"
-                                DownloadStatus.Failed -> "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}"
+                                DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
+                                DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}", ToastType.Error)
                                 else -> null
                             },
                         )
@@ -175,7 +177,7 @@ internal fun IllustDetailSinglePageImage(
     repository: IllustRepository,
     downloadRepository: DownloadRepository,
     strings: AppStrings,
-    onToast: (String?) -> Unit,
+    onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
     if (IllustType.isUgoira(illust.type)) {
@@ -244,7 +246,7 @@ internal fun IllustDetailFullScreenOverlay(
     repository: IllustRepository,
     downloadRepository: DownloadRepository,
     detailBackdrop: LayerBackdrop?,
-    onToast: (String) -> Unit,
+    onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
