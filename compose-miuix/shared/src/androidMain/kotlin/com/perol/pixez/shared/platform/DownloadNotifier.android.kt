@@ -33,13 +33,19 @@ actual class DownloadNotifier {
             }
 
             val existing = manager.getNotificationChannel(channelId)
-            if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT) {
+            val localized = context.localizedForAppLanguage()
+            val channelName = localized.getString(R.string.download_channel_name)
+            val channelDescription = localized.getString(R.string.download_channel_description)
+            // 渠道名与描述允许原地更新，故应用内语言变更时也要重建，否则渠道一直停在旧语言
+            if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT ||
+                existing.name?.toString() != channelName
+            ) {
                 val channel = NotificationChannel(
                     channelId,
-                    context.getString(R.string.download_channel_name),
+                    channelName,
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = context.getString(R.string.download_channel_description)
+                    description = channelDescription
                     setShowBadge(false)
                     enableLights(false)
                     enableVibration(false)
@@ -67,14 +73,15 @@ actual class DownloadNotifier {
         )
 
         val percent = if (total > 0) (current * 100 / total) else 0
-        val progressTitle = context.getString(R.string.download_progress_title, title)
-        val percentText = context.getString(R.string.download_progress_percent, percent)
+        val localized = context.localizedForAppLanguage()
+        val progressTitle = localized.getString(R.string.download_progress_title, title)
+        val percentText = localized.getString(R.string.download_progress_percent, percent)
         val subText = if (total > 0) percentText else ""
 
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(progressTitle)
-            .setContentText(context.getString(R.string.download_progress_text, current, total, percent))
+            .setContentText(localized.getString(R.string.download_progress_text, current, total, percent))
             .setSubText(subText)
             .setProgress(total, current, false)
             .setOngoing(true)
@@ -93,7 +100,7 @@ actual class DownloadNotifier {
                 putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TITLE, progressTitle)
                 putCharSequence(
                     com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TEXT,
-                    context.getString(R.string.download_live_text, current, total, percent),
+                    localized.getString(R.string.download_live_text, current, total, percent),
                 )
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_PROGRESS, percent)
 
@@ -136,15 +143,16 @@ actual class DownloadNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val localized = context.localizedForAppLanguage()
         val summaryText = if (failedCount == 0) {
-            context.getString(R.string.download_finished_all, successCount)
+            localized.getString(R.string.download_finished_all, successCount)
         } else {
-            context.getString(R.string.download_finished_partial, successCount, failedCount)
+            localized.getString(R.string.download_finished_partial, successCount, failedCount)
         }
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(context.getString(R.string.download_finished_title, title))
+            .setContentTitle(localized.getString(R.string.download_finished_title, title))
             .setContentText(summaryText)
             .setProgress(0, 0, false)
             .setOngoing(false)

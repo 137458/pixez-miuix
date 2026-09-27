@@ -18,7 +18,8 @@ class ShareActionReceiver : BroadcastReceiver() {
             val text = intent.getStringExtra(EXTRA_TEXT) ?: return
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             clipboard?.setPrimaryClip(ClipData.newPlainText("PixEz", text))
-            Toast.makeText(context, context.getString(R.string.share_copied_toast), Toast.LENGTH_SHORT).show()
+            val localized = context.localizedForAppLanguage()
+            Toast.makeText(localized, localized.getString(R.string.share_copied_toast), Toast.LENGTH_SHORT).show()
         }
     }
 

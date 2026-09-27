@@ -43,7 +43,7 @@ actual class IllustShare {
             )
             val copyAction = ChooserAction.Builder(
                 Icon.createWithResource(context, android.R.drawable.ic_menu_save),
-                context.getString(R.string.share_action_copy),
+                context.localizedForAppLanguage().getString(R.string.share_action_copy),
                 pendingIntent,
             ).build()
 
