@@ -1,88 +1,89 @@
 package com.perol.pixez.shared.platform
 
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.Test
-import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import okio.Path
+import okio.Path.Companion.toPath
 
 /**
- * 动图 Zip 解压测试（desktop 实现，android 实现同构）：
- * 验证帧内容提取、目录层级剥离、目录项跳过与空包处理。
+ * 动图 Zip 流式解压测试（desktop 实现，android 实现同构）：
+ * 验证逐 entry 流式落盘、目录层级剥离、目录项跳过与空包处理；
+ * 实现不再将 zip 与全部帧字节整体驻留内存（D-7）。
  */
 class UgoiraZipExtractorTest {
 
-    private fun zipOf(vararg entries: Pair<String, ByteArray>): ByteArray {
-        val out = ByteArrayOutputStream()
-        ZipOutputStream(out).use { zos ->
+    private fun zipOf(vararg entries: Pair<String, ByteArray>): Path {
+        val zipFile = Files.createTempFile("ugoira-test", ".zip")
+        ZipOutputStream(zipFile.toFile().outputStream()).use { zos ->
             entries.forEach { (name, bytes) ->
                 zos.putNextEntry(ZipEntry(name))
                 zos.write(bytes)
                 zos.closeEntry()
             }
         }
-        return out.toByteArray()
+        return zipFile.toAbsolutePath().toString().toPath()
     }
 
+    private fun framesDir(): Path = Files.createTempDirectory("ugoira-frames").toAbsolutePath().toString().toPath()
+
     @Test
-    fun `提取帧内容并以文件名为键`() {
-        val zip = zipOf(
+    fun `逐 entry 落盘并以帧路径返回且内容完整`() {
+        val zipPath = zipOf(
             "000000.jpg" to byteArrayOf(1, 2, 3),
             "000001.jpg" to byteArrayOf(4, 5),
         )
+        val dir = framesDir()
 
-        val frames = UgoiraZipExtractor().extractFrames(zip)
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
 
         assertEquals(2, frames.size)
-        assertContentEquals(byteArrayOf(1, 2, 3), frames["000000.jpg"])
-        assertContentEquals(byteArrayOf(4, 5), frames["000001.jpg"])
+        val written = frames.map { it.toFile() }
+        assertTrue(written.all { it.exists() }, "返回的帧路径应已落盘")
+        assertTrue(written[0].readBytes().contentEquals(byteArrayOf(1, 2, 3)))
+        assertTrue(written[1].readBytes().contentEquals(byteArrayOf(4, 5)))
     }
 
     @Test
     fun `目录层级被剥离仅保留文件名`() {
-        val zip = zipOf(
+        val zipPath = zipOf(
             "ugoira/frames/000000.jpg" to byteArrayOf(9),
             "nested/deep/dir/000001.jpg" to byteArrayOf(8),
         )
+        val dir = framesDir()
 
-        val frames = UgoiraZipExtractor().extractFrames(zip)
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
 
-        assertEquals(setOf("000000.jpg", "000001.jpg"), frames.keys, "键应为剥离目录后的文件名")
-        assertContentEquals(byteArrayOf(9), frames["000000.jpg"])
+        assertEquals(setOf("000000.jpg", "000001.jpg"), frames.map { it.name }.toSet(), "文件名应剥离目录层级")
+        assertEquals(9, (dir / "000000.jpg".toPath()).toFile().readBytes()[0].toInt())
     }
 
     @Test
     fun `目录条目被跳过`() {
-        val zip = zipOf(
+        val zipPath = zipOf(
             "frames/" to ByteArray(0),
             "frames/000000.jpg" to byteArrayOf(7),
         )
+        val dir = framesDir()
 
-        val frames = UgoiraZipExtractor().extractFrames(zip)
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
 
-        assertEquals(setOf("000000.jpg"), frames.keys)
+        assertEquals(setOf("000000.jpg"), frames.map { it.name }.toSet())
+        assertFalse(File(dir.toFile(), "frames").exists(), "目录条目不应落盘")
     }
 
     @Test
-    fun `同名文件名后条目覆盖前条目`() {
-        val zip = zipOf(
-            "a/000000.jpg" to byteArrayOf(1),
-            "b/000000.jpg" to byteArrayOf(2),
-        )
+    fun `空 zip 返回空列表`() {
+        val zipPath = zipOf()
+        val dir = framesDir()
 
-        val frames = UgoiraZipExtractor().extractFrames(zip)
-
-        assertEquals(1, frames.size, "同 basename 的帧按 Map 写入语义后者覆盖前者")
-        assertContentEquals(byteArrayOf(2), frames["000000.jpg"])
-    }
-
-    @Test
-    fun `空 zip 返回空映射`() {
-        val zip = zipOf()
-
-        val frames = UgoiraZipExtractor().extractFrames(zip)
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
 
         assertTrue(frames.isEmpty())
     }

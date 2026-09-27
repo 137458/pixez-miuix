@@ -9,8 +9,12 @@ import com.perol.pixez.shared.platform.UgoiraZipExtractor
 import com.perol.pixez.shared.platform.getAppCacheDirectory
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -32,33 +36,67 @@ internal class UgoiraFrameProvider(
     private val framesDir: Path,
 ) {
     private val cache = mutableMapOf<Int, ImageBitmap>()
+    private val inFlightPreload = mutableSetOf<Int>()
+    private val preloadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** 仅读取已解码缓存，不做任何磁盘读/解码操作，可在组合期安全调用。 */
+    fun getCachedFrame(index: Int): ImageBitmap? = synchronized(cache) { cache[index] }
+
+    /** 同步取帧：缓存未命中时在调用方调度器上解码，调用方须位于 Default 等后台调度器。 */
     fun getFrameBitmap(index: Int): ImageBitmap? {
-        synchronized(cache) { cache[index] }?.let { return it }
+        getCachedFrame(index)?.let { return it }
+        return decodeAndCache(index)
+    }
+
+    /**
+     * 提交式预解码（E-2）：在 Default 调度器后台解码下一帧，调用方立即返回不等解码；
+     * 已缓存或在途的帧会被忽略，缓存仍维持 MAX_DECODED_FRAMES 滑动窗口。
+     */
+    fun requestPreload(index: Int) {
+        if (frames.isEmpty()) return
+        val nextIdx = (index + 1) % frames.size
+        val shouldStart = synchronized(inFlightPreload) {
+            if (cache.containsKey(nextIdx) || inFlightPreload.contains(nextIdx)) {
+                false
+            } else {
+                inFlightPreload.add(nextIdx)
+            }
+        }
+        if (!shouldStart) return
+        preloadScope.launch {
+            try {
+                decodeAndCache(nextIdx)
+            } finally {
+                synchronized(inFlightPreload) { inFlightPreload.remove(nextIdx) }
+            }
+        }
+    }
+
+    /** 会话被缓存淘汰后取消在途预解码任务并释放调度资源。 */
+    fun release() {
+        preloadScope.cancel()
+    }
+
+    private fun decodeAndCache(index: Int): ImageBitmap? {
         val frame = frames.getOrNull(index) ?: return null
         val bitmap = decodeFrame(frame) ?: return null
         synchronized(cache) {
             cache[index] = bitmap
             // 维持最多 8 帧已解码位图窗口，及时回收远离当前播放点的位图
-            if (cache.size > MAX_DECODED_FRAMES) {
-                val keysToRemove = cache.keys.filter { key ->
-                    val diff = kotlin.math.abs(key - index)
-                    val cyclicDiff = frames.size - diff
-                    minOf(diff, cyclicDiff) > DECODED_WINDOW_RADIUS
-                }
-                keysToRemove.forEach { cache.remove(it) }
-            }
+            trimWindow(index)
         }
         return bitmap
     }
 
-    fun preloadNext(index: Int) {
-        if (frames.isEmpty()) return
-        val nextIdx = (index + 1) % frames.size
-        if (synchronized(cache) { cache.containsKey(nextIdx) }) return
-        val frame = frames.getOrNull(nextIdx) ?: return
-        val bitmap = decodeFrame(frame) ?: return
-        synchronized(cache) { cache[nextIdx] = bitmap }
+    private fun trimWindow(index: Int) {
+        if (cache.size > MAX_DECODED_FRAMES) {
+            val keysToRemove = cache.keys.filter { key ->
+                val diff = kotlin.math.abs(key - index)
+                val cyclicDiff = frames.size - diff
+                minOf(diff, cyclicDiff) > DECODED_WINDOW_RADIUS
+            }
+            keysToRemove.forEach { cache.remove(it) }
+        }
     }
 
     /** 从磁盘读取并解码一帧；文件缺失或解码失败时返回 null。 */
@@ -144,6 +182,7 @@ internal object UgoiraSessionCache {
     }
 
     private fun UgoiraReadySession.deleteFiles() {
+        provider.release()
         tempZipPath?.let { runCatching { FileSystem.SYSTEM.delete(it) } }
         framesDir?.let { runCatching { FileSystem.SYSTEM.deleteRecursively(it) } }
     }
@@ -185,14 +224,14 @@ internal suspend fun loadUgoiraSession(
     onStage(UgoiraLoadStage.Extracting)
     val framesDir = getAppCacheDirectory() / "ugoira_frames_${illustId}"
     try {
-        val validFrames = withContext(Dispatchers.IO) {
-            FileSystem.SYSTEM.createDirectories(framesDir)
-            val frameMap = UgoiraZipExtractor().extractFrames(zipBytes)
-            for ((fileName, bytes) in frameMap) {
-                FileSystem.SYSTEM.write(framesDir / fileName) { write(bytes) }
-            }
-            metadataResponse.ugoiraMetadata.frames.filter { frameMap.containsKey(it.file) }
+        // 流式解压：解压器直接从临时 zip 逐 entry 写帧文件，不再整体驻留内存
+        val extractedNames = if (tempZipPath != null) {
+            withContext(Dispatchers.IO) { UgoiraZipExtractor().extractFrames(tempZipPath, framesDir) }
+        } else {
+            emptyList()
         }
+        val extractedNameSet = extractedNames.map { it.name }.toSet()
+        val validFrames = metadataResponse.ugoiraMetadata.frames.filter { it.file in extractedNameSet }
 
         if (validFrames.isEmpty()) {
             // 无有效帧：清理临时 zip 与空帧目录后返回，避免残留累积。
@@ -203,7 +242,7 @@ internal suspend fun loadUgoiraSession(
         val provider = UgoiraFrameProvider(validFrames, framesDir)
         withContext(Dispatchers.Default) {
             provider.getFrameBitmap(0)
-            provider.preloadNext(0)
+            provider.requestPreload(0)
         }
         val session = UgoiraReadySession(
             provider = provider,
@@ -267,7 +306,7 @@ internal suspend fun runUgoiraFrameLoop(
                 ?: MIN_FRAME_DELAY_MILLIS
             nextFrameTargetTime += expectedDelay
 
-            session.provider.preloadNext(frameIndex)
+            session.provider.requestPreload(frameIndex)
             frameIndex = (frameIndex + 1) % frames.size
             onProgress(frameIndex)
 

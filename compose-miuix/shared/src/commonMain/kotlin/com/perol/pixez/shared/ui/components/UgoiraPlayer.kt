@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,8 @@ import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.MouseWheelZoom
@@ -197,11 +200,22 @@ fun UgoiraPlayer(
         contentAlignment = Alignment.Center,
     ) {
         val readyState = state as? UgoiraState.Ready
-        val currentBitmap = readyState?.session?.provider?.getFrameBitmap(playback.frameIndex)
+        val provider = readyState?.session?.provider
+        // E-2：组合期仅读已解码缓存，未命中时后台解码后置状态，主线程不做磁盘读与解码
+        val currentBitmap by produceState(
+            initialValue = provider?.getCachedFrame(playback.frameIndex),
+            key1 = provider,
+            key2 = playback.frameIndex,
+        ) {
+            if (provider != null) {
+                value = withContext(Dispatchers.Default) { provider.getFrameBitmap(playback.frameIndex) }
+            }
+        }
 
-        if (currentBitmap != null) {
+        val bitmap = currentBitmap
+        if (bitmap != null) {
             Image(
-                bitmap = currentBitmap,
+                bitmap = bitmap,
                 contentDescription = illust.title,
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxSize(),
@@ -294,10 +308,21 @@ internal fun ZoomableUgoiraViewer(
         contentAlignment = Alignment.Center,
     ) {
         val readyState = state as? UgoiraState.Ready
-        val fullBitmap = readyState?.session?.provider?.getFrameBitmap(playback.frameIndex)
-        if (fullBitmap != null) {
+        val provider = readyState?.session?.provider
+        // E-2：同内嵌播放器，组合期只读缓存、后台解码置状态
+        val fullBitmap by produceState(
+            initialValue = provider?.getCachedFrame(playback.frameIndex),
+            key1 = provider,
+            key2 = playback.frameIndex,
+        ) {
+            if (provider != null) {
+                value = withContext(Dispatchers.Default) { provider.getFrameBitmap(playback.frameIndex) }
+            }
+        }
+        val full = fullBitmap
+        if (full != null) {
             Image(
-                bitmap = fullBitmap,
+                bitmap = full,
                 contentDescription = illust.title,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
