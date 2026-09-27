@@ -66,6 +66,9 @@ class SharedBoundsRegistry {
     /** 转场激活期底层纵深缩放的当前比例；非激活态保持 1f。 */
     private var backdropScale = 1f
 
+    /** 转场激活期底层页面因视差侧滑产生的水平位移；非激活态保持 0f。 */
+    private var listTranslationX = 0f
+
     /**
      * 登记某个作品卡片的窗口坐标矩形与卡片圆角。
      *
@@ -78,10 +81,10 @@ class SharedBoundsRegistry {
             bounds.remove(illustId)
             return
         }
-        // 转场进行中底层列表处于 graphicsLayer 缩放态，此时 boundsInWindow() 为缩放偏移后的瞬时坐标：
-        // 已有静止态真实坐标的卡片禁止覆盖；首次登记的卡片则按当前纵深缩放逆变换归一为静止态坐标，
+        // 转场进行中底层列表处于 graphicsLayer 变换态，此时 boundsInWindow() 为变换后的瞬时坐标：
+        // 已有静止态真实坐标的卡片禁止覆盖；首次登记的卡片则按当前变换逆变换归一为静止态坐标，
         // 否则污染坐标会驻留到下次真实重排，导致退出动画终点跳变。
-        if (activeTransitionIllustId != null) {
+        if (activeTransitionIllustId != null || listTranslationX != 0f) {
             if (bounds.containsKey(illustId)) {
                 return
             }
@@ -194,6 +197,8 @@ class SharedBoundsRegistry {
         } else {
             activeTransitionIllustId = illustId
             activeTransitionExpansion = clamped
+            // 卡片展开/收回不平移底层列表，清除上一次视差侧滑遗留的位移，避免误按平移逆变换登记坐标。
+            listTranslationX = 0f
             if (sourceBounds != null && containerBounds.width > 0f && containerBounds.height > 0f) {
                 backdropPivot = sourceBounds.center
                 backdropScale = lerp(1f, BACKDROP_MIN_SCALE, clamped)
@@ -201,6 +206,33 @@ class SharedBoundsRegistry {
                 backdropScale = 1f
             }
         }
+    }
+
+    /**
+     * 解析本次转场应收回的卡片锚点。
+     *
+     * 按 [illustIdCandidates] 的顺序（当前展示的作品 → 本次打开的作品）取第一个在当前容器内可用且可落点的登记：
+     * 详情页内左右滑动切换到关联作品后，该作品的卡片往往不在原列表里，
+     * 此时必须退回用户点进来的那张卡片，否则收回动画会整页平移走人、终点不在原作品位置。
+     *
+     * 候选全部不可用（未登记、已滚出容器可视范围，或容器纵横比与卡片纵横比差距过大导致收回终点盖不住卡片全高，
+     * 见 [isCardExpandLandable]）时返回 null，调用方回退为默认侧滑。
+     */
+    fun resolveAnchor(illustIdCandidates: List<Int?>, containerBounds: Rect): Anchor? =
+        illustIdCandidates.filterNotNull().distinct().firstNotNullOfOrNull { id ->
+            getVisibleInContainer(id, containerBounds)
+                ?.takeIf { isCardExpandLandable(it.rect, containerBounds) }
+                ?.let { Anchor(illustId = id, card = it) }
+        }
+
+    /**
+     * 更新底层页面当前的水平位移（视差侧滑期间由底层页面层逐帧上报，归零表示底层已回到静止态）。
+     *
+     * 侧滑转场期间底层列表整体平移，未登记的卡片此时上报的是平移后的瞬时坐标，
+     * 必须按该位移逆变换回静止态，否则会被当作真实坐标驻留到下次转场，导致收回终点错位。
+     */
+    fun updateListTranslation(translationX: Float) {
+        listTranslationX = translationX
     }
 
     /**
@@ -223,22 +255,34 @@ class SharedBoundsRegistry {
         activeTransitionIllustId = null
         activeTransitionExpansion = 0f
         backdropScale = 1f
+        listTranslationX = 0f
     }
 
     /**
-     * 把转场激活期上报的瞬时坐标按底层纵深缩放逆变换回静止态坐标。
+     * 把转场激活期上报的瞬时坐标按底层页面的当前变换逆变换回静止态坐标。
      *
      * 底层页面围绕源卡片中心（窗口坐标 [backdropPivot]）以 [backdropScale] 缩放，
-     * 观测坐标 q 与静止坐标 p 满足 q = pivot + (p - pivot) * scale，反解即得 p。
+     * 视差侧滑时还会整体平移 [listTranslationX]；
+     * 观测坐标 q 与静止坐标 p 满足 q = pivot + (p - pivot) * scale + translation，反解即得 p。
      */
     private fun Rect.toStationaryBounds(): Rect {
-        if (backdropScale >= 1f || backdropScale <= 0f) return this
+        val untranslated = if (listTranslationX != 0f) {
+            Rect(
+                left = left - listTranslationX,
+                top = top,
+                right = right - listTranslationX,
+                bottom = bottom,
+            )
+        } else {
+            this
+        }
+        if (backdropScale >= 1f || backdropScale <= 0f) return untranslated
         val pivot = backdropPivot
         return Rect(
-            left = pivot.x + (left - pivot.x) / backdropScale,
-            top = pivot.y + (top - pivot.y) / backdropScale,
-            right = pivot.x + (right - pivot.x) / backdropScale,
-            bottom = pivot.y + (bottom - pivot.y) / backdropScale,
+            left = pivot.x + (untranslated.left - pivot.x) / backdropScale,
+            top = pivot.y + (untranslated.top - pivot.y) / backdropScale,
+            right = pivot.x + (untranslated.right - pivot.x) / backdropScale,
+            bottom = pivot.y + (untranslated.bottom - pivot.y) / backdropScale,
         )
     }
 
@@ -254,6 +298,18 @@ internal const val DEFAULT_CARD_CORNER_RADIUS_DP = 16f
 /** 线性插值。 */
 private fun lerp(start: Float, stop: Float, fraction: Float): Float =
     start + (stop - start) * fraction
+
+/**
+ * 一次转场应收回的卡片锚点：作品 ID 与其卡片静止态几何。
+ *
+ * @param illustId 锚点作品 ID，供底层源卡片交叉淡出时精确隐藏对应卡片。
+ * @param card 锚点卡片的静止态矩形与圆角。
+ */
+@Stable
+data class Anchor(
+    val illustId: Int,
+    val card: IllustCardBounds,
+)
 
 /**
  * 一次卡片展开/收回转场所依据的单张卡片静止态几何。

@@ -104,13 +104,15 @@ internal fun cardExpandStackAnimator(
         easing = HyperOSDecelerateEasing,
     )
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
-        val effectiveIllustId = registry?.resolveTransitionIllustId(rawIllustId, direction) ?: rawIllustId
-        val resolvedCard = effectiveIllustId?.let { registry?.getVisibleInContainer(it, containerBounds) }
+        val routeIllustId = registry?.resolveTransitionIllustId(rawIllustId, direction) ?: rawIllustId
+        // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
+        // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
+        val anchor = registry?.resolveAnchor(listOf(routeIllustId, rawIllustId), containerBounds)
         // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
         // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
-        val activeSourceBounds = (resolvedCard?.rect ?: sourceBounds)
+        val activeSourceBounds = (anchor?.card?.rect ?: sourceBounds)
             ?.takeIf { isCardExpandLandable(it, containerBounds) }
-        val activeCornerRadiusDp = resolvedCard?.cornerRadiusDp ?: cardCornerRadiusDp
+        val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
 
         if (activeSourceBounds == null) {
             val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
@@ -131,9 +133,12 @@ internal fun cardExpandStackAnimator(
                             }
                         }
                     } else {
+                        // 侧滑会整体平移底层列表，期间新增的卡片登记必须按该位移回退到静止态坐标。
+                        val parallaxX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
+                        registry?.updateListTranslation(parallaxX)
                         Modifier
                             .graphicsLayer {
-                                translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
+                                translationX = parallaxX
                                 alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * frame.fraction
                             }
                             .drawWithContent {
@@ -150,7 +155,7 @@ internal fun cardExpandStackAnimator(
             val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
             if (frame.isTopLayer) {
                 registry?.updateTransitionState(
-                    illustId = effectiveIllustId,
+                    illustId = anchor?.illustId ?: routeIllustId,
                     expansion = frame.expansion,
                     sourceBounds = activeSourceBounds,
                     containerBounds = containerBounds,

@@ -83,10 +83,9 @@ fun miuixCardExpandPredictiveBackAnimatable(
     containerBounds: Rect,
     deviceCornerRadius: Dp = 0.dp,
 ): PredictiveBackAnimatable {
-    val effectiveIllustId = registry.resolveEffectiveIllustId(illustId)
-    val sourceCard = resolveGestureSourceBounds(
-        illustId = effectiveIllustId,
-        registry = registry,
+    val anchor = registry.resolveAnchor(
+        // 与出栈动画同一套候选顺序：当前展示的作品 → 本次打开的作品。
+        illustIdCandidates = listOf(registry.resolveEffectiveIllustId(illustId), illustId),
         containerBounds = containerBounds,
     ) ?: run {
         registry.updateTransitionState(null, 0f)
@@ -96,13 +95,14 @@ fun miuixCardExpandPredictiveBackAnimatable(
             deviceCornerRadius = deviceCornerRadius,
         )
     }
+    val sourceCard = anchor.card
 
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             registry.updateTransitionState(
-                illustId = effectiveIllustId,
+                illustId = anchor.illustId,
                 expansion = expansion,
                 sourceBounds = sourceCard.rect,
                 containerBounds = containerBounds,
@@ -126,31 +126,6 @@ fun miuixCardExpandPredictiveBackAnimatable(
             )
         },
     )
-}
-
-/**
- * 解析预测性返回手势可用的来源卡片登记。
- *
- * 这是「有来源卡片 / 无来源卡片」的唯一判定点：返回 null 即代表本次手势必须
- * 走经典侧滑兜底。除取不到登记或卡片已滚出容器可视范围外，
- * 容器纵横比与卡片纵横比差距过大（该几何下收回终点无法与卡片重合，见 [isCardExpandLandable]）
- * 同样返回 null，避免手势拖拽过程中窗口始终盖不住卡片全高。
- *
- * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
- * @param registry 卡片几何信息源。
- * @param containerBounds 页面容器窗口矩形。
- * @return 可用的卡片登记（静止态矩形 + 卡片圆角）；没有来源卡片信息、已滚出容器可视范围或几何无法落点时返回 null。
- */
-internal fun resolveGestureSourceBounds(
-    illustId: Int?,
-    registry: SharedBoundsRegistry,
-    containerBounds: Rect = Rect.Zero,
-): IllustCardBounds? {
-    val id = illustId ?: return null
-    val card = registry.getVisibleInContainer(id, containerBounds) ?: return null
-    return card.takeIf {
-        it.rect.width > 0f && it.rect.height > 0f && isCardExpandLandable(it.rect, containerBounds)
-    }
 }
 
 /**

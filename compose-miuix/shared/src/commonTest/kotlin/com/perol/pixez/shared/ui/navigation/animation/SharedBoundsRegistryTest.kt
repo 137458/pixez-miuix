@@ -134,6 +134,84 @@ class SharedBoundsRegistryTest {
     }
 
     @Test
+    fun `视差侧滑期间指派的卡片坐标按位移逆变换归一为静止态坐标`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
+        // 侧滑期间底层列表整体左移 250px（25% 视差），卡片上报的是平移后的瞬时坐标
+        registry.updateListTranslation(-250f)
+
+        registry.put(illustId = 7, rect = Rect(left = 90f, top = 500f, right = 490f, bottom = 900f))
+
+        assertEquals(
+            Rect(left = 340f, top = 500f, right = 740f, bottom = 900f),
+            registry.get(7),
+            "侧滑期首次登记的坐标必须按位移逆变换回静止态，否则收回终点会整体错位",
+        )
+
+        // 位移植零（底层回到静止态）后恢复正常登记
+        registry.updateListTranslation(0f)
+        val stationary = Rect(left = 20f, top = 100f, right = 420f, bottom = 500f)
+        registry.put(illustId = 8, rect = stationary)
+        assertEquals(stationary, registry.get(8))
+    }
+
+    @Test
+    fun `侧滑期间已登记卡片的静止态坐标不被瞬时坐标覆盖`() {
+        val registry = SharedBoundsRegistry()
+        val stationary = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        registry.put(illustId = 7, rect = stationary)
+
+        registry.updateListTranslation(-250f)
+        registry.put(illustId = 7, rect = Rect(left = -150f, top = 400f, right = 250f, bottom = 800f))
+
+        assertEquals(stationary, registry.get(7))
+    }
+
+    @Test
+    fun `锚点优先当前展示的作品其次本次打开的作品`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        val displayedCard = Rect(left = 16f, top = 200f, right = 520f, bottom = 800f)
+        val openedCard = Rect(left = 560f, top = 1200f, right = 1064f, bottom = 1800f)
+        registry.put(illustId = 99, rect = displayedCard, cornerRadiusDp = 16f)
+        registry.put(illustId = 42, rect = openedCard, cornerRadiusDp = 12f)
+
+        // 详情页内滑到作品 99：其卡片在列表里，优先收回它
+        registry.activeDetailIllustId = 99
+        val displayedAnchor = registry.resolveAnchor(listOf(99, 42), container)
+        assertEquals(99, displayedAnchor?.illustId)
+        assertEquals(displayedCard, displayedAnchor?.card?.rect)
+
+        // 滑到的作品不在列表（未登记）时，退回本次打开的作品 42
+        registry.activeDetailIllustId = 88
+        val fallbackAnchor = registry.resolveAnchor(listOf(88, 42), container)
+        assertEquals(42, fallbackAnchor?.illustId)
+        assertEquals(openedCard, fallbackAnchor?.card?.rect)
+        assertEquals(12f, fallbackAnchor?.card?.cornerRadiusDp, "退回锚点必须带上该卡片自身的圆角")
+    }
+
+    @Test
+    fun `候选卡片均不可用时锚点为空中止卡片展开`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        // 已滚出容器：可见高度占比不足阈值
+        registry.put(illustId = 42, rect = Rect(left = 16f, top = -580f, right = 520f, bottom = 20f))
+
+        assertNull(registry.resolveAnchor(listOf(88, 42), container))
+        assertNull(registry.resolveAnchor(listOf(null, null), container))
+    }
+
+    @Test
+    fun `容器纵横比不足以让详情页盖住卡片全高时锚点解析为空`() {
+        val registry = SharedBoundsRegistry()
+        // 横向窗口（1600x1000）里的竖图卡片：等比缩放后详情页高度只有卡片的三分之一
+        val landscapeContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
+        registry.put(illustId = 42, rect = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f))
+
+        assertNull(registry.resolveAnchor(listOf(42), landscapeContainer))
+    }
+
+    @Test
     fun `登记时记录卡片圆角并随可视矩形一起返回`() {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
