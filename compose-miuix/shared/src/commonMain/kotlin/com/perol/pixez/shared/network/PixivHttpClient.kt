@@ -130,6 +130,8 @@ class PixivHttpClient(
     }
 
     companion object {
+        /** 错误响应体进入日志/异常消息的最大字符数，超出部分截断并标注总长。 */
+        private const val MAX_ERROR_BODY_LOG_CHARS = 200
         private const val APP_API_HOST = "app-api.pixiv.net"
         private const val OAUTH_HOST = "oauth.secure.pixiv.net"
         private const val ACCOUNTS_HOST = "accounts.pixiv.net"
@@ -279,10 +281,16 @@ class PixivHttpClient(
                     // 401 已由 TokenRefreshPlugin 处理（刷新或抛异常），此处不再重复处理。
                     if (response.status.value >= 400 && response.status != HttpStatusCode.Unauthorized) {
                         val bodyText = runCatching { response.bodyAsText() }.getOrDefault("")
-                        Napier.e("Pixiv API 请求失败 status=${response.status}, url=${response.call.request.url}, body=$bodyText")
+                        // 错误响应体可能含敏感业务数据，日志与异常消息统一截断并标注总长。
+                        val sanitized = if (bodyText.length > MAX_ERROR_BODY_LOG_CHARS) {
+                            "${bodyText.take(MAX_ERROR_BODY_LOG_CHARS)}…（共 ${bodyText.length} 字符）"
+                        } else {
+                            bodyText
+                        }
+                        Napier.e("Pixiv API 请求失败 status=${response.status}, url=${response.call.request.url}, body=$sanitized")
                         throw PixivApiException(
                             statusCode = response.status.value,
-                            message = if (bodyText.isNotBlank()) "请求失败: ${response.status} ($bodyText)" else "请求失败: ${response.status}",
+                            message = if (sanitized.isNotBlank()) "请求失败: ${response.status} ($sanitized)" else "请求失败: ${response.status}",
                         )
                     }
                 }

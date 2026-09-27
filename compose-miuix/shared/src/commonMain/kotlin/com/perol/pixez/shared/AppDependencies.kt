@@ -29,6 +29,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import com.perol.pixez.shared.ui.screens.createUpdateCheckClient
+import com.perol.pixez.shared.platform.isDebugBuild
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -44,7 +45,11 @@ class AppDependencies(
     val settingsFactory: SettingsFactory,
 ) {
     init {
-        runCatching { Napier.base(DebugAntilog()) }
+        runCatching {
+            // 仅 debug 构建安装全量日志；release 不安装 Antilog（日志整体关闭），
+            // 叠加 PixivHttpClient 的错误响应体截断，避免敏感信息进入线上日志。
+            if (isDebugBuild) Napier.base(DebugAntilog())
+        }
     }
     /**
      * 账号数据库驱动，复用旧 Flutter account.db。
