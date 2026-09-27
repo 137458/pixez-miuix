@@ -2,13 +2,11 @@ package com.perol.pixez.shared.data.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.novelpersist.NovelPersistDatabase
-import com.perol.pixez.shared.data.model.NovelHistoryItem
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -53,7 +51,8 @@ class NovelHistoryRepositoryTest {
         val all = repository.getAll()
         assertEquals(2, all.size)
         assertEquals(3L, all.first { it.novelId == 11 }.id, "导入的显式 id 应原样保留")
-        assertNull(all.first { it.novelId == 12 }.id, "无 id 的导入项不应凭空生成 id")
+        // 既有契约：无 id 导入按 id=0L 落库（INSERT OR REPLACE 语义，不生成自增 id）
+        assertEquals(0L, all.first { it.novelId == 12 }.id)
         assertEquals("t-11", all.first { it.novelId == 11 }.title)
     }
 
@@ -70,7 +69,8 @@ class NovelHistoryRepositoryTest {
 
     @Test
     fun `getAll 按时间升序且 limit 上限生效`() = runBlocking {
-        val items = (1..5).map { item(id = null, novelId = it, time = it.toLong()) }
+        // 显式 id 避免既有 id=0 折叠语义干扰本用例的行数断言
+        val items = (1..5).map { item(id = it.toLong(), novelId = it, time = it.toLong()) }
         repository.replaceAll(items)
 
         val limited = repository.getAll(limit = 2)
