@@ -22,10 +22,31 @@ class SharedBoundsRegistry {
 
     private val bounds = mutableStateMapOf<Int, IllustCardBounds>()
 
+    private var _activeDetailIllustId: Int? by mutableStateOf(null)
+
     /**
      * 当前详情页实际展示的作品 ID（支持详情页内左右滑动切换作品后按真实展示的作品定位收回卡片）。
      */
-    var activeDetailIllustId: Int? by mutableStateOf(null)
+    var activeDetailIllustId: Int?
+        get() = _activeDetailIllustId
+        set(value) {
+            _activeDetailIllustId = value
+            if (value != null) {
+                lastActiveDetailIllustId = value
+            }
+        }
+
+    /** 最近一次在作品详情页内确认展示的作品 ID（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */
+    private var lastActiveDetailIllustId: Int? = null
+
+    /** 最近一次同步的栈顶路由作品 ID（非详情页时为 null）。 */
+    private var currentRouteIllustId: Int? = null
+
+    /** 当前入栈转场的前层作品 ID（仅当新栈顶为作品详情页时非空）。 */
+    private var enteringFrontIllustId: Int? = null
+
+    /** 当前出栈转场的前层作品 ID（仅当刚退出的原栈顶为作品详情页时非空）。 */
+    private var exitingFrontIllustId: Int? = null
 
     /**
      * 当前正在执行卡片展开/收回转场的目标作品 ID。
@@ -107,7 +128,47 @@ class SharedBoundsRegistry {
      */
     fun resolveEffectiveIllustId(routeIllustId: Int?): Int? {
         if (routeIllustId == null) return null
-        return activeDetailIllustId ?: routeIllustId
+        return _activeDetailIllustId ?: routeIllustId
+    }
+
+    /**
+     * 同步当前页面栈栈顶路由的作品 ID（栈顶非作品详情页时传入 null）。
+     *
+     * 供单参 `stackAnimation { child -> ... }`（`SimpleStackAnimation`）在无 `otherChild` 参数的条件下，
+     * 让底层页面（`EXIT_BACK` / `ENTER_BACK`）与顶层页面（`ENTER_FRONT` / `EXIT_FRONT`）解析出严格一致的转场作品 ID，
+     * 避免使用 Decompose `@FaultyDecomposeApi` 的三参 `MovableStackAnimation`（会在转场结束时通过 `movableContentOf` 跨槽位搬移子树）。
+     */
+    fun syncActiveRouteIllustId(routeIllustId: Int?) {
+        if (routeIllustId != currentRouteIllustId) {
+            exitingFrontIllustId = if (currentRouteIllustId != null) {
+                _activeDetailIllustId ?: lastActiveDetailIllustId ?: currentRouteIllustId
+            } else {
+                null
+            }
+            currentRouteIllustId = routeIllustId
+            lastActiveDetailIllustId = routeIllustId
+        }
+        enteringFrontIllustId = routeIllustId
+    }
+
+    /**
+     * 按当前层自身的 `rawIllustId` 与转场方向 [direction] 解析本次转场对应的目标作品 ID。
+     *
+     * 仅当本次进/出栈的前层页面为作品详情页时返回对应作品 ID；
+     * 若前层为画师页、设置页等非作品详情页（即使底层是作品详情页），一律返回 null 以回退为默认全宽侧滑。
+     */
+    fun resolveTransitionIllustId(
+        rawIllustId: Int?,
+        direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
+    ): Int? = when (direction) {
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> rawIllustId
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
+            _activeDetailIllustId ?: exitingFrontIllustId ?: lastActiveDetailIllustId ?: rawIllustId
+        } else {
+            null
+        }
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> enteringFrontIllustId
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> exitingFrontIllustId
     }
 
     /**
@@ -153,7 +214,11 @@ class SharedBoundsRegistry {
      */
     fun clear() {
         bounds.clear()
-        activeDetailIllustId = null
+        _activeDetailIllustId = null
+        lastActiveDetailIllustId = null
+        currentRouteIllustId = null
+        enteringFrontIllustId = null
+        exitingFrontIllustId = null
         activeTransitionIllustId = null
         activeTransitionExpansion = 0f
         backdropScale = 1f

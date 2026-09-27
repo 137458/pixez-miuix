@@ -17,10 +17,9 @@ import kotlin.test.assertTrue
  */
 class PixivAsyncImagePlaceholderTest {
 
-    private class FakePainter : Painter() {
-        override val intrinsicSize: Size
-            get() = Size.Unspecified
-
+    private class FakePainter(
+        override val intrinsicSize: Size = Size(100f, 100f),
+    ) : Painter() {
         override fun DrawScope.onDraw() {}
     }
 
@@ -72,6 +71,20 @@ class PixivAsyncImagePlaceholderTest {
         assertFalse(
             result is AsyncImagePainter.State.Loading && result.painter != null,
             "无占位画家时不应伪造携带画家的状态",
+        )
+    }
+
+    @Test
+    fun unspecifiedIntrinsicSizePlaceholderIsNotInjectedToPreventCrossfadeSizePoisoning() {
+        val unreadyPlaceholder = FakePainter(intrinsicSize = Size.Unspecified)
+        val loadingState = AsyncImagePainter.State.Loading(null)
+
+        val result = substitutePixivImagePlaceholder(loadingState, unreadyPlaceholder)
+
+        assertSame(
+            loadingState,
+            result,
+            "intrinsicSize 为 Unspecified 的未就绪占位画家严禁注入，否则 CrossfadePainter.intrinsicSize 会永久退化为 Unspecified",
         )
     }
 }

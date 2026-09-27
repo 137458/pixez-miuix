@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import androidx.compose.ui.geometry.Rect
+import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -181,5 +182,43 @@ class SharedBoundsRegistryTest {
         registry.put(illustId = 7, rect = stationary)
 
         assertEquals(stationary, registry.get(7))
+    }
+
+    @Test
+    fun `单参 StackAnimation 下 push 与滑页后 pop 的前后层均能解析一致的作品 ID`() {
+        val registry = SharedBoundsRegistry()
+        // 1. 初始在 Main 列表页
+        registry.syncActiveRouteIllustId(null)
+
+        // 2. Push 进入 IllustDetail(42)
+        registry.syncActiveRouteIllustId(42)
+        assertEquals(42, registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.ENTER_FRONT))
+        assertEquals(42, registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.EXIT_BACK))
+
+        // 3. 在详情页内左右滑切到作品 99
+        registry.activeDetailIllustId = 99
+
+        // 4. Pop 返回 Main（即使详情页 DisposableEffect 先将 activeDetailIllustId 置空，退出动画仍须保持 99）
+        registry.syncActiveRouteIllustId(null)
+        registry.activeDetailIllustId = null
+        assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.EXIT_FRONT))
+        assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.ENTER_BACK))
+    }
+
+    @Test
+    fun `从作品详情页进入非详情页及从非详情页返回详情页时前后层均解析为空以回退侧滑`() {
+        val registry = SharedBoundsRegistry()
+        registry.syncActiveRouteIllustId(42)
+        registry.activeDetailIllustId = 99
+
+        // 从详情页 (42) Push 进入画师页 (null)
+        registry.syncActiveRouteIllustId(null)
+        assertNull(registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.ENTER_FRONT))
+        assertNull(registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.EXIT_BACK))
+
+        // 从画师页 (null) Pop 返回详情页 (42)
+        registry.syncActiveRouteIllustId(42)
+        assertNull(registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.EXIT_FRONT))
+        assertNull(registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.ENTER_BACK))
     }
 }

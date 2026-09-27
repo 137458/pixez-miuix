@@ -133,6 +133,7 @@ fun RootContent(
     val floatingBackdrop = rememberBlurBackdrop()
     // 作品卡片几何信息源：列表卡片登记矩形，二级页面转场据此播放「卡片展开/收回」动画。
     val sharedBounds = remember { SharedBoundsRegistry() }
+    sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? RootComponent.Config.IllustDetail)?.illustId)
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
     val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {

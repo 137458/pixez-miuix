@@ -210,7 +210,7 @@ internal fun Modifier.cardExpandLayer(
     containerBounds: Rect,
     containerCornerRadius: Dp,
 ): Modifier {
-    if (sourceBounds == null) return this
+    if (sourceBounds == null || expansion >= 0.999f) return this
     val state = resolveCardExpandTransform(
         expansion = expansion,
         sourceBounds = sourceBounds,
@@ -281,6 +281,7 @@ internal fun Modifier.cardExpandScrim(
     containerCornerRadius: Dp = 0.dp,
 ): Modifier {
     val scrimAlpha = alpha.coerceIn(0f, 1f)
+    if (expansion <= 0.001f && scrimAlpha <= 0.001f) return this
     val backdropState = resolveBackdropLayerState(
         expansion = expansion,
         sourceBounds = sourceBounds,

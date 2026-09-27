@@ -91,80 +91,86 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
  * @return 可直接交给 stackAnimation 使用的 [StackAnimator]。
  */
 internal fun cardExpandStackAnimator(
-    sourceBounds: Rect?,
-    cardCornerRadiusDp: Float,
+    rawIllustId: Int? = null,
+    sourceBounds: Rect? = null,
+    cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBounds: Rect,
     containerCornerRadius: Dp,
-    isTopLayer: Boolean,
     registry: SharedBoundsRegistry? = null,
-    illustId: Int? = null,
 ): StackAnimator {
     val duration: FiniteAnimationSpec<Float> = tween(
         durationMillis = TRANSITION_DURATION_MILLIS,
         easing = HyperOSDecelerateEasing,
     )
-    if (sourceBounds == null) {
-        return stackAnimator(animationSpec = MiuixDefaultSlideSpec) { factor, direction, content ->
+    return stackAnimator(animationSpec = duration) { factor, direction, content ->
+        val effectiveIllustId = registry?.resolveTransitionIllustId(rawIllustId, direction) ?: rawIllustId
+        val resolvedCard = effectiveIllustId?.let { registry?.getVisibleInContainer(it, containerBounds) }
+        val activeSourceBounds = resolvedCard?.rect ?: sourceBounds
+        val activeCornerRadiusDp = resolvedCard?.cornerRadiusDp ?: cardCornerRadiusDp
+
+        if (activeSourceBounds == null) {
             val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
             if (frame.isTopLayer) {
                 registry?.updateTransitionState(null, 0f)
             }
-            val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
-            content(
-                if (frame.isTopLayer) {
-                    Modifier.graphicsLayer {
-                        translationX = widthPx * frame.fraction
-                        if (containerCornerRadius > 0.dp && frame.fraction > 0f) {
-                            shape = RoundedCornerShape(containerCornerRadius)
-                            clip = true
-                        }
-                    }
-                } else {
-                    Modifier
-                        .graphicsLayer {
-                            translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
-                            alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * frame.fraction
-                        }
-                        .drawWithContent {
-                            drawContent()
-                            val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * frame.fraction
-                            if (dimAlpha > 0.001f) {
-                                drawRect(Color.Black.copy(alpha = dimAlpha))
+            if (frame.fraction <= 0.001f) {
+                content(Modifier)
+            } else {
+                val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
+                content(
+                    if (frame.isTopLayer) {
+                        Modifier.graphicsLayer {
+                            translationX = widthPx * frame.fraction
+                            if (containerCornerRadius > 0.dp && frame.fraction > 0f) {
+                                shape = RoundedCornerShape(containerCornerRadius)
+                                clip = true
                             }
                         }
+                    } else {
+                        Modifier
+                            .graphicsLayer {
+                                translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
+                                alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * frame.fraction
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * frame.fraction
+                                if (dimAlpha > 0.001f) {
+                                    drawRect(Color.Black.copy(alpha = dimAlpha))
+                                }
+                            }
+                    },
+                )
+            }
+        } else {
+            val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
+            if (frame.isTopLayer) {
+                registry?.updateTransitionState(
+                    illustId = effectiveIllustId,
+                    expansion = frame.expansion,
+                    sourceBounds = activeSourceBounds,
+                    containerBounds = containerBounds,
+                )
+            }
+            content(
+                if (frame.isTopLayer) {
+                    Modifier.cardExpandLayer(
+                        expansion = frame.expansion,
+                        sourceBounds = activeSourceBounds,
+                        cardCornerRadiusDp = activeCornerRadiusDp,
+                        containerBounds = containerBounds,
+                        containerCornerRadius = containerCornerRadius,
+                    )
+                } else {
+                    Modifier.cardExpandScrim(
+                        alpha = cardExpandScrimAlpha(frame.expansion),
+                        expansion = frame.expansion,
+                        sourceBounds = activeSourceBounds,
+                        containerBounds = containerBounds,
+                        containerCornerRadius = containerCornerRadius,
+                    )
                 },
             )
         }
-    }
-
-    return stackAnimator(animationSpec = duration) { factor, direction, content ->
-        val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = isTopLayer)
-        if (frame.isTopLayer) {
-            registry?.updateTransitionState(
-                illustId = illustId,
-                expansion = frame.expansion,
-                sourceBounds = sourceBounds,
-                containerBounds = containerBounds,
-            )
-        }
-        content(
-            if (frame.isTopLayer) {
-                Modifier.cardExpandLayer(
-                    expansion = frame.expansion,
-                    sourceBounds = sourceBounds,
-                    cardCornerRadiusDp = cardCornerRadiusDp,
-                    containerBounds = containerBounds,
-                    containerCornerRadius = containerCornerRadius,
-                )
-            } else {
-                Modifier.cardExpandScrim(
-                    alpha = cardExpandScrimAlpha(frame.expansion),
-                    expansion = frame.expansion,
-                    sourceBounds = sourceBounds,
-                    containerBounds = containerBounds,
-                    containerCornerRadius = containerCornerRadius,
-                )
-            },
-        )
     }
 }

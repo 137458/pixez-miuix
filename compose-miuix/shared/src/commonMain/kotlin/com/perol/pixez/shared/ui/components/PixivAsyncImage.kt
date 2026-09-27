@@ -2,14 +2,15 @@ package com.perol.pixez.shared.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.painter.Painter
@@ -17,7 +18,9 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
+import coil3.compose.preferEndFirstIntrinsicSize
 import coil3.compose.rememberAsyncImagePainter
+import coil3.decode.DataSource
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.CachePolicy
@@ -29,11 +32,9 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 
 private val StandardHeaders = NetworkHeaders.Builder()
     .set("Referer", AppConstants.Urls.PIXIV_APP_API)
@@ -52,92 +53,66 @@ private val PixivisionHeaders = NetworkHeaders.Builder()
  */
 private const val ORIGINAL_SIZE_CACHE_KEY_SUFFIX = "#original_size"
 
-/**
- * 请求停滞看门狗超时：请求发出后超过该时长仍未收到任何真实进展事件
- * （onStart、加载结果；取消类 Error 不计），判定为底层管线挂起并重建请求重启加载。
- */
-private const val REQUEST_STALL_TIMEOUT_MS = 5_000L
-
-/** 看门狗对同一图片模型的最大重启次数。 */
-internal const val REQUEST_STALL_MAX_RESTARTS = 2
-
-/**
- * 阶段二看门狗超时：已收到首个真实进展事件（onStart/Loading）后，仍未等到终态
- * （Success / 非取消类 Error）的最长等待时长。覆盖「事件之后底层管线被静默取消」——
- * 例如去重排队中的请求被上游取消：请求已死但不会再产生任何事件与回调，画面永久停留在占位。
- */
-private const val REQUEST_COMPLETION_TIMEOUT_MS = 12_000L
-
-/**
- * 看门狗两阶段等待策略：
- *
- * 1. 阶段一：等待首个真实进展事件，超时未到（引擎层完全挂起）→ 判定重建（预算内）。
- * 2. 阶段二：已收到首事件后等待终态，超时未到（事件之后被静默取消）→ 判定重建（预算内）。
- *
- * 返回 true 表示应当重建图片节点重启加载；重建预算耗尽时返回 false 放弃干预。
- */
-internal suspend fun awaitImageRequestProgress(
-    waitForFirstEvent: suspend () -> Boolean,
-    waitForTerminalEvent: suspend () -> Boolean,
-    restartCount: Int,
-    maxRestarts: Int,
-): Boolean = when {
-    !waitForFirstEvent() -> restartCount < maxRestarts
-    !waitForTerminalEvent() -> restartCount < maxRestarts
-    else -> false
-}
-
 /** 调用方未接管错误时的静默重试次数（瞬时网络/代理抖动自愈）。 */
 internal const val SILENT_ERROR_MAX_RETRIES = 1
 
 /**
- * 判定一次引擎状态是否代表真实加载进展。
+ * 裁决一次引擎错误回调该怎么处理。
  *
- * 取消类 [CancellationException] 不算进展：被静默取消的请求若被当作「已有事件」，
- * 停滞看门狗会提前放行、灰底自愈失效。
- */
-internal fun shouldCountAsLoadProgress(throwable: Throwable?): Boolean =
-    throwable !is CancellationException
-
-/**
- * 调用方未接管错误回调（onError == null）且未超出静默重试预算时返回 [SilentErrorDecision.Retry]，
- * 否则返回 [SilentErrorDecision.Report] 把错误交还调用方。
+ * 取消类 [CancellationException] 返回 [SilentErrorDecision.Ignore]：节点被回收、去重让位等
+ * 场景下的取消不是加载失败，重建重试只会形成无限重启循环。
  */
 internal fun resolveSilentErrorDecision(
     throwable: Throwable?,
     onError: ((Throwable?) -> Unit)?,
     silentRetryCount: Int,
-): SilentErrorDecision =
-    if (onError == null && silentRetryCount < SILENT_ERROR_MAX_RETRIES) {
-        SilentErrorDecision.Retry
-    } else {
-        SilentErrorDecision.Report(throwable)
-    }
+): SilentErrorDecision = when {
+    throwable is CancellationException -> SilentErrorDecision.Ignore
+    onError == null && silentRetryCount < SILENT_ERROR_MAX_RETRIES -> SilentErrorDecision.Retry
+    else -> SilentErrorDecision.Report(throwable)
+}
 
-/** 静默重试的裁决结果。 */
+/** 错误回调的裁决结果。 */
 internal sealed interface SilentErrorDecision {
     /** 重建图片节点后重试一次。 */
     data object Retry : SilentErrorDecision
+
+    /** 取消类错误：不重试也不上报。 */
+    data object Ignore : SilentErrorDecision
 
     /** 把错误上报给调用方（无回调时仅记录日志）。 */
     data class Report(val throwable: Throwable?) : SilentErrorDecision
 }
 
 /**
+ * 判定一次 [AsyncImagePainter.State.Success] 是否需要触发一次 `MEMORY_CACHE` 同步重绑。
+ *
+ * 当图片首次通过 [DataSource.DISK] 或 [DataSource.NETWORK] 异步加载完成时，若组件处于固定宽高约束
+ * （如 `fillMaxWidth().aspectRatio(...)`），`AbstractContentPainterNode.modifyConstraints` 在测量阶段直接早退，
+ * 不订阅 `painter$delegate`，入场窗口期的绘制失效可能丢失。
+ * 此时位图已写入 Coil `MemoryCache`，触发单次节点重绑即可在 `onAttach` 阶段通过 `CoroutineStart.UNDISPATCHED`
+ * 同步直取 `MEMORY_CACHE` 位图并绑定到新节点，同帧完成绘制且无二次交叉淡入闪烁。
+ */
+internal fun shouldCommitMemoryCacheRebind(
+    dataSource: DataSource,
+    memoryCacheCommitCount: Int,
+): Boolean = memoryCacheCommitCount == 0 && dataSource != DataSource.MEMORY_CACHE
+
+/**
  * 把缺失内容画家的加载状态替换为 [placeholder] 占位画家。
  *
- * Coil 3 的 [AsyncImagePainter.State.Loading] 由引擎 target 的 onStart 派发且请求未配置
- * 占位画家时 painter 为 null，[AsyncImagePainter.State.Error] 在请求未配置 error 画家时
- * painter 也为 null，两种状态下整个节点什么都不绘制，外部只看到容器底色的灰底。
- * 这里统一补上占位画家，保证缩略图位图（通常已命中列表页内存缓存）在加载全程可见。
- * [AsyncImagePainter.State.Empty] 是请求启动前的初始态、不会流经 transform，此处映射为
- * 防御性兜底。
+ * 仅当 [placeholder] 已具备明确的内在尺寸（`intrinsicSize != Size.Unspecified`）时才允许注入：
+ * 若将尚未解码完成的 `AsyncImagePainter`（其 `intrinsicSize` 为 `Size.Unspecified`）注入 `Loading`，
+ * `CrossfadePainter.computeIntrinsicSize(start, end)` 在 `start != null && start.intrinsicSize == Unspecified`
+ * 时会永久返回 `Size.Unspecified`，导致多图详情页在移除预设宽高比后高度坍缩为 0。
  */
 internal fun substitutePixivImagePlaceholder(
     state: AsyncImagePainter.State,
     placeholder: Painter?,
 ): AsyncImagePainter.State {
-    if (placeholder == null || state.painter != null) return state
+    if (placeholder == null || placeholder.intrinsicSize == Size.Unspecified || state.painter != null) {
+        return state
+    }
     return when (state) {
         is AsyncImagePainter.State.Error -> state.copy(painter = placeholder)
         is AsyncImagePainter.State.Loading -> state.copy(painter = placeholder)
@@ -156,11 +131,14 @@ internal fun substitutePixivImagePlaceholder(
  * 缩略图占位画家通过 transform 注入 Loading/Error 中间状态，
  * 在高清/原图尚未下载完成时优先命中列表页内存缓存，避免灰底等待；
  * 同时使用单一 [AsyncImage] 节点直接承载外部 [modifier]，避免在 LazyColumn 中因双层 Box 测量导致高度坍缩或 ConstraintsSizeResolver 死锁。
- * 内置停滞看门狗：请求在引擎层挂起（无真实进展事件，含被静默取消）时通过 key 重建图片节点重启加载，
- * 修复「详情页图片加载成功前永远灰底、只有大图查看页正常」的问题。
- * 调用方未接管 onError 时对一次性错误静默重试一次，与看门狗分别持有独立重启预算。
+ * 调用方未接管 onError 时对真实错误静默重试一次（取消类错误不重试）。
+ *
+ * 不要在这里加「请求停滞看门狗」：网络层已用 30s 请求超时 + 2 次重试保证终态，任何早于该契约
+ * 的强拆都会把下载中的健康请求连已下载字节一起丢弃，反而造成详情页永久灰底（见 CHANGELOG 批次 4）。
+ *
  * 支持通过 [loadOriginalSize] 强制按图片真实原始分辨率解码，防止大图查看器在缩放时因下采样模糊失真。
  */
+@OptIn(coil3.annotation.ExperimentalCoilApi::class)
 @Composable
 fun PixivAsyncImage(
     model: Any?,
@@ -176,6 +154,7 @@ fun PixivAsyncImage(
 ) {
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
 
     val transformedModel = remember(model, settings?.pictureSource, settings?.changeVersion) {
         (model as? String)?.mapToPictureSource(settings?.pictureSource) ?: model
@@ -195,32 +174,25 @@ fun PixivAsyncImage(
         AppConstants.Network.IMAGE_STANDARD_DECODE_DIMENSION
     }
 
-    // 看门狗与静默重试是两条独立预算的自愈路径：看门狗按 requestRestartCount 兜底「无进展/无终态」，
-    // 静默重试按 silentRetryCount 兜底「一次性错误」，互不挤占次数；各自计数变化都会用 key()
-    // 强制销毁重建 AsyncImage 节点重启加载。
-    var requestRestartCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
+    // 静默重试预算：真实错误时递增，计数变化用 key() 强制销毁重建 AsyncImage 节点重启加载。
     var silentRetryCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
-    // 事件标志按「同一代请求」记忆化：重启计数变化即更换全新标志，天然隔离各代请求的事件，
-    // 避免「效果启动时复位布尔把 apply 期间已到达的同步事件抹掉」的竞态。
-    var observedLoadEvent by remember(
-        transformedModel,
-        loadOriginalSize,
-        requestRestartCount,
-        silentRetryCount,
-    ) { mutableStateOf(false) }
-    var observedTerminalEvent by remember(
-        transformedModel,
-        loadOriginalSize,
-        requestRestartCount,
-        silentRetryCount,
-    ) { mutableStateOf(false) }
+    // 异步加载完成后的 MEMORY_CACHE 同步重绑计数：仅对首次 DISK/NETWORK 异步结果在转场稳定后递增一次。
+    var memoryCacheCommitCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
+    var pendingMemoryCacheRebind by remember(transformedModel, loadOriginalSize) { mutableStateOf(false) }
+    val isTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
+
+    LaunchedEffect(pendingMemoryCacheRebind, isTransitionActive) {
+        if (pendingMemoryCacheRebind && !isTransitionActive) {
+            pendingMemoryCacheRebind = false
+            memoryCacheCommitCount++
+        }
+    }
 
     val mainRequest = remember<ImageRequest>(
         transformedModel,
         transformedThumbnailCacheKey,
         context,
         loadOriginalSize,
-        requestRestartCount,
         silentRetryCount,
     ) {
         val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
@@ -252,6 +224,7 @@ fun PixivAsyncImage(
                 }
             }
             .configurePlatformOptimizations()
+            .preferEndFirstIntrinsicSize(true)
             .crossfade(200)
             .build()
     }
@@ -294,79 +267,52 @@ fun PixivAsyncImage(
     } else {
         null
     }
+    val thumbnailState = thumbnailPainter?.state?.collectAsState()
+    val resolvedThumbnailPainter = thumbnailState?.value?.painter
 
-    // 看门狗：重启计数变化时用 key() 强制销毁重建 AsyncImage 节点，新 painter 实例必然
-    // 重新走 onRemembered → launchJob 执行加载。仅重建 ImageRequest 是无效的——Coil 的
-    // AsyncImageModelEqualityDelegate 按结构比较请求，等价请求会被 Input 相等去重跳过
-    // restart()。两阶段覆盖两类静默死亡：
-    // 1. 引擎层完全无事件（状态永远停在 Empty）；
-    // 2. Loading 之后管线被静默取消（如去重排队中的请求被上游取消）：请求已死但不会再有
-    //    任何事件与回调，画面永久停留在占位——旧看门狗收到首事件即退出，对此无能为力。
-    // 取消类 Error 不计为事件与终态（见 shouldCountAsLoadProgress），同样由超时兜底重建。
-    LaunchedEffect(mainRequest) {
-        val shouldRestart = awaitImageRequestProgress(
-            waitForFirstEvent = {
-                withTimeoutOrNull(REQUEST_STALL_TIMEOUT_MS) {
-                    snapshotFlow { observedLoadEvent }.filter { it }.first()
-                } != null
+    // 静默重试与异步加载后的 MEMORY_CACHE 同步重绑均通过 key() 驱动：
+    // 重绑时位图已存于 MemoryCache，新节点在 onAttach 阶段通过 CoroutineStart.UNDISPATCHED 同步完成绑定，
+    // 在同帧首次 draw() 前即就绪，无闪烁、无重复网络请求。
+    key(silentRetryCount, memoryCacheCommitCount) {
+        AsyncImage(
+            model = mainRequest,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            transform = { state ->
+                substitutePixivImagePlaceholder(state, resolvedThumbnailPainter)
             },
-            waitForTerminalEvent = {
-                withTimeoutOrNull(REQUEST_COMPLETION_TIMEOUT_MS) {
-                    snapshotFlow { observedTerminalEvent }.filter { it }.first()
-                } != null
-            },
-            restartCount = requestRestartCount,
-            maxRestarts = REQUEST_STALL_MAX_RESTARTS,
-        )
-        if (shouldRestart) {
-            Napier.w(
-                "PixivAsyncImage request stalled without terminal result, restarting (attempt ${requestRestartCount + 1}): $transformedModel",
-                tag = "CoilImage",
-            )
-            requestRestartCount++
-        }
-    }
-
-    key(requestRestartCount) {
-        key(silentRetryCount) {
-            AsyncImage(
-                model = mainRequest,
-                contentDescription = contentDescription,
-                modifier = modifier,
-                transform = { state ->
-                    substitutePixivImagePlaceholder(state, thumbnailPainter)
-                },
-                onState = { state ->
-                    // 取消类 Error 不算进展：看门狗保持等待并超时重建，静默重试也不处理取消。
-                    val errorThrowable = (state as? AsyncImagePainter.State.Error)?.result?.throwable
-                    if (shouldCountAsLoadProgress(errorThrowable)) {
-                        observedLoadEvent = true
-                        when (state) {
-                            is AsyncImagePainter.State.Loading -> onLoading?.invoke()
-                            is AsyncImagePainter.State.Success -> {
-                                observedTerminalEvent = true
-                                onSuccess?.invoke()
+            onState = { state ->
+                when (state) {
+                    is AsyncImagePainter.State.Loading -> onLoading?.invoke()
+                    is AsyncImagePainter.State.Success -> {
+                        if (shouldCommitMemoryCacheRebind(state.result.dataSource, memoryCacheCommitCount)) {
+                            if (isTransitionActive) {
+                                pendingMemoryCacheRebind = true
+                            } else {
+                                memoryCacheCommitCount++
                             }
-                            is AsyncImagePainter.State.Error -> {
-                                // 非取消类 Error 属于终态：看门狗放行，由静默重试或调用方接管。
-                                observedTerminalEvent = true
-                                val throwable = state.result.throwable
-                                if (transformedModel != null) {
-                                    Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
-                                }
-                                when (val decision = resolveSilentErrorDecision(throwable, onError, silentRetryCount)) {
-                                    // 调用方未接管错误回调时静默重试一次，瞬时抖动无需用户感知。
-                                    SilentErrorDecision.Retry -> silentRetryCount++
-                                    is SilentErrorDecision.Report -> onError?.invoke(decision.throwable)
-                                }
-                            }
-                            is AsyncImagePainter.State.Empty -> Unit
+                        }
+                        onSuccess?.invoke()
+                    }
+                    is AsyncImagePainter.State.Error -> {
+                        val throwable = state.result.throwable
+                        val decision = resolveSilentErrorDecision(throwable, onError, silentRetryCount)
+                        // 取消不是失败：节点回收与去重让位属常态，记错误日志只会淹没真实故障。
+                        if (decision != SilentErrorDecision.Ignore && transformedModel != null) {
+                            Napier.e("PixivAsyncImage error for $transformedModel: $throwable", tag = "CoilImage")
+                        }
+                        when (decision) {
+                            // 调用方未接管错误回调时静默重试一次，瞬时抖动无需用户感知。
+                            SilentErrorDecision.Retry -> silentRetryCount++
+                            is SilentErrorDecision.Report -> onError?.invoke(decision.throwable)
+                            SilentErrorDecision.Ignore -> Unit
                         }
                     }
-                },
-                contentScale = contentScale,
-                filterQuality = filterQuality,
-            )
-        }
+                    is AsyncImagePainter.State.Empty -> Unit
+                }
+            },
+            contentScale = contentScale,
+            filterQuality = filterQuality,
+        )
     }
 }

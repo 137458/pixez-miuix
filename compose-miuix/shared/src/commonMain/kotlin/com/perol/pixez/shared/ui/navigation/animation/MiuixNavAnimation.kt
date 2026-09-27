@@ -9,15 +9,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.arkivanov.decompose.Child
 import com.arkivanov.decompose.ExperimentalDecomposeApi
-import com.arkivanov.decompose.FaultyDecomposeApi
-import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
-import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
-import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -44,29 +39,19 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
  * @param containerCornerRadius 设备屏幕物理圆角。
  * @return 可直接交给 Children(animation = ...) 使用的 [StackAnimation]。
  */
-@OptIn(ExperimentalDecomposeApi::class, FaultyDecomposeApi::class)
+@OptIn(ExperimentalDecomposeApi::class)
 fun miuixCardExpandStackAnimation(
     registry: SharedBoundsRegistry,
     containerBounds: Rect,
     containerCornerRadius: Dp,
 ): StackAnimation<RootComponent.Config, RootComponent.Child> =
-    stackAnimation { child, otherChild, direction ->
-        // 仅当本次转场的前层（入栈或出栈的栈顶页面）为作品详情页时，才使用对应卡片矩形执行展开/收缩；
-        // 出栈（EXIT_FRONT / ENTER_BACK）时优先取详情页内实际滑切到的作品 ID。
-        val isPop = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK
-        val frontConfig = if (direction.isFront) child.configuration else otherChild.configuration
-        val rawIllustId = (frontConfig as? RootComponent.Config.IllustDetail)?.illustId
-        val effectiveIllustId = if (isPop) registry.resolveEffectiveIllustId(rawIllustId) else rawIllustId
-        val sourceCard = effectiveIllustId?.let { registry.getVisibleInContainer(it, containerBounds) }
-
+    stackAnimation { child ->
+        val rawIllustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
         cardExpandStackAnimator(
-            sourceBounds = sourceCard?.rect,
-            cardCornerRadiusDp = sourceCard?.cornerRadiusDp ?: DEFAULT_CARD_CORNER_RADIUS_DP,
+            rawIllustId = rawIllustId,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
-            isTopLayer = direction.isFront,
             registry = registry,
-            illustId = effectiveIllustId,
         )
     }
 
