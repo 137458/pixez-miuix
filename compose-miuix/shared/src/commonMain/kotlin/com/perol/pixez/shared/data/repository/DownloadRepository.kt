@@ -29,6 +29,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -48,6 +51,14 @@ class DownloadRepository(
     private val notifier: DownloadNotifier = DownloadNotifier(),
     private val settingsRepository: SettingsRepository? = null,
 ) {
+    // P-5：任务状态变更事件（下载中/成功/失败写入历史后发出）。
+    // UI 层收集后触发列表刷新，替代秒级全表轮询；tryEmit 无订阅者时丢弃（刷新非关键路径）。
+    private val _taskEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val taskEventFlow: SharedFlow<Unit> = _taskEventFlow.asSharedFlow()
+
+    private fun notifyTaskChanged() {
+        _taskEventFlow.tryEmit(Unit)
+    }
 
     /**
      * 下载指定作品的指定页原图并保存到本地。
@@ -81,6 +92,7 @@ class DownloadRepository(
         return try {
             // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
             historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
+            notifyTaskChanged()
             val tempFileName = "dl_temp_${illust.id}_${pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
             val tempPath = downloadToTempFile(remoteUrl, tempFileName)
             val savedPath = saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
@@ -89,6 +101,7 @@ class DownloadRepository(
             if (historyId > 0 && historyRepository != null) {
                 historyRepository.saveTask(successTask, illust, historyId)
             }
+            notifyTaskChanged()
             if (illust.pageCount <= 1) {
                 notifier.notifyFinished(illust.id, illust.title, 1, 0)
             }
@@ -117,6 +130,7 @@ class DownloadRepository(
                         e.addSuppressed(saveError)
                     }
             }
+            notifyTaskChanged()
             failedTask
         } finally {
             if (illust.pageCount <= 1) {
@@ -203,6 +217,7 @@ class DownloadRepository(
         // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
         suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Downloading)) }
             .onFailure { Napier.e("重试时回写下载历史失败 historyId=${history.id}", it) }
+        notifyTaskChanged()
 
         return try {
             // 复用已有 HTTP 下载与平台保存逻辑。
@@ -221,6 +236,7 @@ class DownloadRepository(
             Napier.d("重试下载完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             historyRepo.saveTask(history.copy(status = DownloadStatus.Success))
+            notifyTaskChanged()
             successTask
         } catch (e: CancellationException) {
             throw e
@@ -236,6 +252,7 @@ class DownloadRepository(
                     Napier.e("重试失败时回写下载历史失败 historyId=${history.id}", saveError)
                     e.addSuppressed(saveError)
                 }
+            notifyTaskChanged()
             // 抛出异常，让调用方感知重试失败，避免 UI 错误地提示「成功」。
             throw e
         }
@@ -346,12 +363,14 @@ class DownloadRepository(
         notifier.notifyProgress(illust.id, illust.title, 0, 1)
         return try {
             historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
+            notifyTaskChanged()
             val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
             Napier.d("动图 Zip 保存完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             if (historyId > 0 && historyRepository != null) {
                 historyRepository.saveTask(successTask, illust, historyId)
             }
+            notifyTaskChanged()
             notifier.notifyFinished(illust.id, illust.title, 1, 0)
             savedPath
         } catch (e: CancellationException) {
@@ -372,6 +391,7 @@ class DownloadRepository(
                         e.addSuppressed(saveError)
                     }
             }
+            notifyTaskChanged()
             throw e
         } finally {
             com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illust.id)

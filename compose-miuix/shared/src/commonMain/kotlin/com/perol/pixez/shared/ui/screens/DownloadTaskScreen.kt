@@ -137,13 +137,9 @@ fun DownloadTaskScreen(
     // 避免运行中轮询每秒导致全量列表重组。
     val filteredTasks by remember { derivedStateOf { state.value?.getOrNull()?.filter(selectedFilter::matches) } }
 
-    // 筛选为「运行中」时启动定时器，每秒刷新一次以跟踪下载进度与状态变化。
-    LaunchedEffect(selectedFilter) {
-        if (selectedFilter != TaskFilter.Running) return@LaunchedEffect
-        while (true) {
-            delay(RUNNING_PROGRESS_POLL_MILLIS)
-            refreshToken++
-        }
+    // P-5：收集下载仓库的任务状态变更事件驱动刷新，替代秒级全表轮询。
+    LaunchedEffect(downloadRepository) {
+        downloadRepository.taskEventFlow.collect { refreshToken++ }
     }
 
     val scrollBehavior = MiuixScrollBehavior()
@@ -431,9 +427,6 @@ private fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings)
 /**
  * 用于 [rememberSaveable] 保存/恢复 [TaskFilter] 的 [Saver]。
  */
-/** 运行中 Tab 的进度轮询间隔（毫秒），每秒刷新以跟踪下载进度。 */
-private const val RUNNING_PROGRESS_POLL_MILLIS = 1_000L
-
 private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
     save = { it.name },
     restore = { name -> TaskFilter.entries.find { it.name == name } ?: TaskFilter.All },
