@@ -28,6 +28,10 @@ internal data class CardExpandTransformState(
 /**
  * 计算给定展开度 [expansion] 下顶层页面的变换状态（含圆角缩放逆补偿与高度方向裁切）。
  *
+ * 可见窗口的矩形严格等于 `lerp(实时卡片矩形, 容器矩形, expansion)`：
+ * 水平方向由等比缩放系数保证宽度与左上角贴合实时卡片，垂直方向由高度裁切比例保证高度贴合实时卡片，
+ * 因此窗口在展开全程都包住实时卡片，收回终点则与卡片静止态矩形像素级重合。
+ *
  * @param sourceBounds 卡片在窗口坐标系下的静止态矩形。
  * @param containerBounds 容器在窗口坐标系下的矩形。
  * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp）。
@@ -53,16 +57,22 @@ internal fun resolveCardExpandTransform(
     val liveTop = sourceBounds.center.y - liveHeight * 0.5f
 
     val liveScaleX = (liveWidth / containerBounds.width).coerceIn(MIN_SCALE, 1f)
-    val liveScaleY = (liveHeight / containerBounds.height).coerceIn(MIN_SCALE, 1f)
 
     // 详情页顶部大图与列表卡片封面图均为 fillMaxWidth()，
     // 始终以水平宽度比 liveScaleX 作为基准等比缩放系数，确保退出结束位置（expansion = 0）
     // 详情页宽度、顶部大图宽度及左上角 (transX, transY) 100% 严丝合缝贴合列表卡片，消除竖图水平放大与左偏跳变。
     val baseScale = liveScaleX
-    val unscaledHeightFraction = (liveScaleY / baseScale).coerceIn(0.05f, 1f)
 
     val uniformScale = lerp(baseScale, 1f, progress)
-    val visibleHeightFraction = lerp(unscaledHeightFraction, 1f, progress)
+
+    // 可见窗口高度直接对「实时卡片高度 -> 容器高度」线性插值：
+    // 这样整条轨迹恰好是 lerp(实时卡片矩形, 容器矩形, expansion)，
+    // 窗口四边始终包住实时卡片。若改为对高度裁切比例 lerp(unscaledHeightFraction, 1, expansion)，
+    // 窗口下边缘会明显滞后于实时卡片下边缘（卡片靠屏幕下方时尤为明显），
+    // 转场中段卡片底边会先于窗口收走而露出列表底色。
+    val windowHeight = lerp(liveHeight, containerBounds.height, progress)
+    val visibleHeightFraction = (windowHeight / (containerBounds.height * uniformScale))
+        .coerceIn(MIN_VISIBLE_HEIGHT_FRACTION, 1f)
 
     val startTransX = liveLeft - containerBounds.left
     val startTransY = liveTop - containerBounds.top
@@ -83,6 +93,28 @@ internal fun resolveCardExpandTransform(
         contentAlpha = cardExpandContentAlpha(progress),
         shadowElevation = lerp(EXPAND_SHADOW_ELEVATION, 0f, progress),
     )
+}
+
+/**
+ * 判定给定容器能否承载「卡片展开」转场：详情页按卡片宽度等比缩放后，
+ * 自身高度必须足以覆盖卡片全高（残余差不超过 [MAX_CARD_HEIGHT_OVERFLOW]）。
+ *
+ * 转场在收回终点依赖两个约束同时成立：详情页顶部大图的显示宽度等于卡片封面宽度（等比缩放保证），
+ * 可见窗口高度等于卡片高度（[resolveCardExpandTransform] 的高度裁切保证）。
+ * 窗口高度上限是「等比缩放后的页面高度」= 卡片宽 × 容器高 ÷ 容器宽，
+ * 因此当卡片纵横比明显大于容器纵横比（典型如横向窗口里的竖图卡片）时窗口只能覆盖卡片的一部分，
+ * 收尾时卡片下半部分会突兀补入。此类几何在数学上无法落点，调用方应与「无卡片几何」同样回退为默认侧滑。
+ *
+ * @param sourceBounds 卡片静止态窗口矩形。
+ * @param containerBounds 页面容器窗口矩形。
+ * @return 可以落点时为 true；容器或卡片尺寸非法时返回 false。
+ */
+internal fun isCardExpandLandable(sourceBounds: Rect, containerBounds: Rect): Boolean {
+    if (containerBounds.width <= 0f || containerBounds.height <= 0f) return false
+    if (sourceBounds.width <= 0f || sourceBounds.height <= 0f) return false
+    val widthRatio = sourceBounds.width / containerBounds.width
+    val heightRatio = sourceBounds.height / containerBounds.height
+    return heightRatio / widthRatio <= MAX_CARD_HEIGHT_OVERFLOW
 }
 
 /**
@@ -150,9 +182,11 @@ internal fun resolveBackdropTransformOrigin(
 /**
  * 计算转场过程中列表底层源卡片的不透明度，实现与顶层详情页的无重影交叉交接。
  *
- * 静止态（expansion == 0 或 1）保持完全不透明；
- * 展开/收回途中当顶层详情页已渐显接管后（expansion >= [CONTENT_FADE_THRESHOLD]），
- * 将列表原位置上的源卡片隐藏（alpha = 0），彻底消除「移动中的详情页 + 原地残留卡片」的分身重影。
+ * 与 [cardExpandContentAlpha] 共用同一个极窄窗口，两者互补（alpha 之和恒为 1），
+ * 交接过程中不存在两层都不可见的空洞：
+ * - 静止态（expansion == 0 或 1）保持完全不透明；
+ * - 越过窗口后（expansion >= [CONTENT_FADE_THRESHOLD]）顶层已完全不透明且窗口全程包住卡片，
+ *   此时把列表原位置上的源卡片隐藏（alpha = 0），彻底消除「移动中的详情页 + 原地残留卡片」的分身重影。
  */
 internal fun cardExpandSourceCardAlpha(expansion: Float): Float {
     val progress = expansion.coerceIn(0f, 1f)
@@ -162,6 +196,9 @@ internal fun cardExpandSourceCardAlpha(expansion: Float): Float {
 
 /** 收缩态缩放系数下限，避免卡片尺寸异常时页面不可见。 */
 private const val MIN_SCALE = 0.05f
+
+/** 可见窗口高度比例下限，避免卡片高度退化时窗口被压成一条线。 */
+private const val MIN_VISIBLE_HEIGHT_FRACTION = 0.05f
 
 /** 收缩态顶层页面外的边界阴影高度（px）。 */
 private const val EXPAND_SHADOW_ELEVATION = 16f
@@ -175,19 +212,34 @@ internal const val BACKDROP_MIN_SCALE = 0.96f
 /** 底层页面缩小脱离屏幕边缘时的最小圆角半径（dp），防止在未上报屏幕圆角的设备上露出四边直角。 */
 private const val BACKDROP_FALLBACK_CORNER_RADIUS_DP = 28f
 
-/** 顶层页面在卡片展开初段/收缩末段完成淡入淡出的进度阈值。 */
-private const val CONTENT_FADE_THRESHOLD = 0.20f
+/**
+ * 顶层页面与列表源卡片的交叉交接进度窗口。
+ *
+ * 取值必须很小：转场缓动是「快起慢收」，收回时展开度最后 20% 会吃掉超过一半的时长
+ * （340ms 转场里约 160ms），若在这么长的区间里让缩小的详情页保持半透明，
+ * 它就会长时间悬在同样在缩放、在变亮的列表之上，形成明显拖影。
+ * 收窄到 0.05 后交接只占约 40ms，而此时可见窗口已与卡片静止态矩形像素级重合，
+ * 内容差异由极短交叉遮蔽，既无拖影也不会露出硬切换。
+ */
+private const val CONTENT_FADE_THRESHOLD = 0.05f
+
+/** 卡片纵横比相对容器纵横比允许的最大超高倍率（约等于卡片文字区占比，即高度缺口不侵入封面图）。 */
+private const val MAX_CARD_HEIGHT_OVERFLOW = 1.25f
 
 /**
  * 计算顶层页面在给定展开度 [expansion] 下的不透明度。
  *
  * 在展开前段（0..[CONTENT_FADE_THRESHOLD]）由 0 平滑淡入到 1，
- * 收回末段由 1 平滑淡出到 0，消除收缩态下整页内容与列表卡片切换时的生硬跳变。
+ * 收回末段由 1 平滑淡出到 0。窗口之所以极窄（见 [CONTENT_FADE_THRESHOLD]），
+ * 是因为此区间内详情页尺寸仍会随展开度变化，长时间半透明会在列表之上留下拖影；
+ * 窗口内的几何差已收敛到像素级，极短交叉即可完成交接。
  */
 internal fun cardExpandContentAlpha(expansion: Float): Float {
     val progress = expansion.coerceIn(0f, 1f)
     return (progress / CONTENT_FADE_THRESHOLD).coerceIn(0f, 1f)
 }
+
+internal fun cardExpandDetailChromeAlpha(expansion: Float): Float = 1f
 
 /**
  * 为顶层页面叠加「卡片展开 / 收回」视觉层（Container Transform）。
@@ -267,6 +319,11 @@ private data class ClippedContainerShape(
 /**
  * 在底层页面内容之上叠加暗色遮罩、围绕源卡片中心的纵深微缩放以及圆角裁切。
  *
+ * 遮罩绘制在缩放图层**之外**，覆盖整个页面容器：
+ * 列表纵深缩小后会从屏幕四边退让，若遮罩仍画在缩放图层内（随图层一起裁切），
+ * 露出的容器底色不受遮罩影响、而列表内部被压暗，浅色主题下就在列表四周显出一圈近似纯白的亮边。
+ * 遮罩铺满容器后，退让出的边缘与列表内部同深，纵深关系只由内容与圆角体现。
+ *
  * @param alpha 遮罩不透明度，0f 表示完全透明（不绘制）；越界值会被钳制。
  * @param expansion 顶层页面的展开度（0f..1f），用于同步底层纵深缩放与圆角裁切。
  * @param sourceBounds 源卡片矩形，用于将底层缩放锚点对齐到卡片中心。
@@ -289,6 +346,12 @@ internal fun Modifier.cardExpandScrim(
         containerCornerRadiusDp = containerCornerRadius.value,
     )
     return this
+        .drawWithContent {
+            drawContent()
+            if (scrimAlpha > 0.001f) {
+                drawRect(Color.Black.copy(alpha = scrimAlpha))
+            }
+        }
         .graphicsLayer {
             this.transformOrigin = backdropState.transformOrigin
             this.scaleX = backdropState.scale
@@ -296,12 +359,6 @@ internal fun Modifier.cardExpandScrim(
             if (backdropState.localCornerRadiusDp > 0.1f) {
                 this.shape = RoundedCornerShape(backdropState.localCornerRadiusDp.dp)
                 this.clip = true
-            }
-        }
-        .drawWithContent {
-            drawContent()
-            if (scrimAlpha > 0.001f) {
-                drawRect(Color.Black.copy(alpha = scrimAlpha))
             }
         }
 }

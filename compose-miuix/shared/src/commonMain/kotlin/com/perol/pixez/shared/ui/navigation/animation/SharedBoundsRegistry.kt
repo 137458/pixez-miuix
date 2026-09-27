@@ -185,6 +185,7 @@ class SharedBoundsRegistry {
         expansion: Float,
         sourceBounds: Rect? = null,
         containerBounds: Rect = Rect.Zero,
+        isClosing: Boolean = false,
     ) {
         val clamped = expansion.coerceIn(0f, 1f)
         if (illustId == null || clamped <= 0.001f || clamped >= 0.999f) {

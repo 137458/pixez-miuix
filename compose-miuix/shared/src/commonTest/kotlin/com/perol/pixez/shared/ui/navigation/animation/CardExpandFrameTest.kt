@@ -121,18 +121,31 @@ class CardExpandFrameTest {
     }
 
     @Test
-    fun `顶层内容不透明度在展开前段平滑淡入且铺满时完全不透明`() {
+    fun `顶层内容不透明度只在展开起步的极窄窗口内淡入`() {
         assertClose(0f, cardExpandContentAlpha(0f))
-        assertTrue(cardExpandContentAlpha(0.12f) in 0.4f..0.6f)
-        assertClose(1f, cardExpandContentAlpha(0.24f))
+        // 新增窗宽的中点（展开度 0.025）应为半透明
+        assertTrue(cardExpandContentAlpha(0.025f) in 0.4f..0.6f)
+        // 越过窗口后必须完全不透明：缓动「快起慢收」，长窗口会让缩小的详情页长时间半透明悬在列表之上形成拖影
+        assertClose(1f, cardExpandContentAlpha(0.05f))
+        assertClose(1f, cardExpandContentAlpha(0.2f))
         assertClose(1f, cardExpandContentAlpha(1f))
     }
 
     @Test
-    fun `底层源卡片在顶层展开接管后平滑隐藏避免双卡片分身重影`() {
+    fun `底层源卡片与顶层在同一个极窄窗口内完成交接`() {
         // 静止在卡片态（expansion = 0）时源卡片完全不透明
         assertClose(1f, cardExpandSourceCardAlpha(0f))
-        // 展开进行中（expansion >= 0.24）顶层已完全不透明，源卡片必须完全隐藏（alpha = 0）以消除底层重影
+        // 与顶层淡入共用同一窗宽：任一瞬间两层至少有一层可见，交接过程不存在「都不可见」的空洞
+        for (step in 0..19) {
+            val expansion = step / 20f
+            assertClose(
+                expected = 1f,
+                actual = cardExpandContentAlpha(expansion) + cardExpandSourceCardAlpha(expansion),
+                epsilon = 1e-4f,
+            )
+        }
+        // 越过窗口后顶层已完全不透明，源卡片必须完全隐藏（alpha = 0）以消除底层重影
+        assertClose(0f, cardExpandSourceCardAlpha(0.05f))
         assertClose(0f, cardExpandSourceCardAlpha(0.30f))
         assertClose(0f, cardExpandSourceCardAlpha(0.85f))
         // 完全铺满（expansion = 1）后动画结束，恢复为 1f 以便后续页面静态绘制不受干扰

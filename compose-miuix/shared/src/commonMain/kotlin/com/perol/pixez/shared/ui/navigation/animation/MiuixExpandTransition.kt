@@ -79,9 +79,10 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
  * 渐变到设备屏幕物理圆角 [containerCornerRadius]，形成连贯的空间连续性。
  *
  * [sourceBounds] 为 null 时（画师页、设置页这类本就没有来源卡片的二级页面，
- * 以及分享链接直达、进程重建恢复等入口）逐层复刻 Miuix 官方默认转场
- * `NavTransitions.MiuixDefault`：顶层页面全宽滑入/滑出（滑动中贴合设备屏幕
- * 物理圆角裁切），被覆盖页面 25% 视差左移、轻微淡出并叠加线性加深的暗色遮罩，
+ * 以及分享链接直达、进程重建恢复等入口），或卡片几何在当前容器下无法落点
+ * （见 [isCardExpandLandable]：横向窗口里的竖图卡片等比缩放后盖不住卡片全高）
+ * 逐层复刻 Miuix 官方默认转场 `NavTransitions.MiuixDefault`：顶层页面全宽滑入/滑出
+ * （滑动中贴合设备屏幕物理圆角裁切），被覆盖页面 25% 视差左移、轻微淡出并叠加线性加深的暗色遮罩，
  * 驱动弹簧取 miuix-nav `NavDriverSpec` 默认参数。
  *
  * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用 Miuix 默认全宽侧滑。
@@ -105,7 +106,10 @@ internal fun cardExpandStackAnimator(
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
         val effectiveIllustId = registry?.resolveTransitionIllustId(rawIllustId, direction) ?: rawIllustId
         val resolvedCard = effectiveIllustId?.let { registry?.getVisibleInContainer(it, containerBounds) }
-        val activeSourceBounds = resolvedCard?.rect ?: sourceBounds
+        // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
+        // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
+        val activeSourceBounds = (resolvedCard?.rect ?: sourceBounds)
+            ?.takeIf { isCardExpandLandable(it, containerBounds) }
         val activeCornerRadiusDp = resolvedCard?.cornerRadiusDp ?: cardCornerRadiusDp
 
         if (activeSourceBounds == null) {
