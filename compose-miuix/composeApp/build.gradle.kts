@@ -56,8 +56,8 @@ kotlin {
         desktopMain.dependencies {
             // projects.shared 已在 commonMain 声明，desktop 继承，无需重复
             implementation(compose.desktop.currentOs)
-            implementation("net.java.dev.jna:jna:5.14.0")
-            implementation("net.java.dev.jna:jna-platform:5.14.0")
+            implementation(libs.jna)
+            implementation(libs.jna.platform)
         }
 
         desktopTest.dependencies {

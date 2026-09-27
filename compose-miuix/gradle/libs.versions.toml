@@ -29,8 +29,8 @@ coil = "3.6.3"
 # 网络扩展
 okhttp = "4.12.0"
 
-# 桌面端 Windows 原生 API 绑定（DPAPI 凭据加密）；版本与本地 Gradle 缓存一致以保持离线可构建
-jna = "5.6.0"
+# 桌面端 Windows 原生 API 绑定（DPAPI 凭据加密、窗口与任务栏调用）
+jna = "5.14.0"
 
 # DI / 导航 / 工具
 # DI / 导航 / 工具 / 特效
@@ -99,6 +99,7 @@ coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 okhttp-dnsoverhttps = { module = "com.squareup.okhttp3:okhttp-dnsoverhttps", version.ref = "okhttp" }
 
 # JNA（仅 desktop source set 使用）
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
 # Decompose
