@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">下载任务与实时进度</string>
+    <string name="download_channel_description">显示插画与漫画实时下载进度及状态栏胶囊</string>
+    <string name="download_progress_title">正在下载: %1$s</string>
+    <string name="download_progress_text">进度: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">下载完成: %1$s</string>
+    <string name="download_finished_all">全部 %1$d 张保存完成</string>
+    <string name="download_finished_partial">完成 %1$d 张，失败 %2$d 张</string>
+    <string name="share_action_copy">复制</string>
+    <string name="share_copied_toast">已复制到剪切板</string>
+</resources>

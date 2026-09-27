@@ -4,4 +4,6 @@
     <string name="shortcut_search">イラスト検索</string>
     <string name="shortcut_downloads">ダウンロード</string>
     <string name="shortcut_history">閲覧履歴</string>
+    <string name="widget_name">PixEz 日替わりイラスト</string>
+    <string name="widget_description">ホーム画面に毎日のおすすめとランキングの Pixiv イラストを表示します</string>
 </resources>

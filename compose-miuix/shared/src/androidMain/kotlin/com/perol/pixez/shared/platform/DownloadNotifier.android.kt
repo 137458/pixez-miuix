@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.perol.pixez.shared.R
 import io.github.aakira.napier.Napier
 
 /**
@@ -15,7 +16,6 @@ import io.github.aakira.napier.Napier
  */
 actual class DownloadNotifier {
     private val channelId = "pixez_download_live_channel"
-    private val channelName = "下载任务与实时进度"
 
     private fun getNotificationManager(context: Context): NotificationManager? {
         return context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
@@ -36,10 +36,10 @@ actual class DownloadNotifier {
             if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT) {
                 val channel = NotificationChannel(
                     channelId,
-                    channelName,
+                    context.getString(R.string.download_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ).apply {
-                    description = "显示插画与漫画实时下载进度及状态栏胶囊"
+                    description = context.getString(R.string.download_channel_description)
                     setShowBadge(false)
                     enableLights(false)
                     enableVibration(false)
@@ -67,12 +67,14 @@ actual class DownloadNotifier {
         )
 
         val percent = if (total > 0) (current * 100 / total) else 0
-        val subText = if (total > 0) "$percent%" else ""
+        val progressTitle = context.getString(R.string.download_progress_title, title)
+        val percentText = context.getString(R.string.download_progress_percent, percent)
+        val subText = if (total > 0) percentText else ""
 
         val notificationBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("正在下载: $title")
-            .setContentText("进度: $current / $total ($percent%)")
+            .setContentTitle(progressTitle)
+            .setContentText(context.getString(R.string.download_progress_text, current, total, percent))
             .setSubText(subText)
             .setProgress(total, current, false)
             .setOngoing(true)
@@ -88,8 +90,11 @@ actual class DownloadNotifier {
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_STATUS, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE, true)
                 putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_SUBST_NAME, "PixEz")
-                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TITLE, "正在下载: $title")
-                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TEXT, "$current / $total ($percent%)")
+                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TITLE, progressTitle)
+                putCharSequence(
+                    com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TEXT,
+                    context.getString(R.string.download_live_text, current, total, percent),
+                )
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_PROGRESS, percent)
 
                 // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
@@ -99,15 +104,15 @@ actual class DownloadNotifier {
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_ENABLE_FLOAT, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FLOAT, true)
                 putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_CATEGORY, "download")
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, "$percent%")
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, percentText)
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS, percent)
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS_MAX, 100)
 
                 // OPLUS / ColorOS / OxygenOS 智慧胶囊与流体云协议支持
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE, true)
                 putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_ONGOING, true)
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TITLE, "正在下载: $title")
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TEXT, "$percent%")
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TITLE, progressTitle)
+                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TEXT, percentText)
                 putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
             })
 
@@ -132,14 +137,14 @@ actual class DownloadNotifier {
         )
 
         val summaryText = if (failedCount == 0) {
-            "全部 $successCount 张保存完成"
+            context.getString(R.string.download_finished_all, successCount)
         } else {
-            "完成 $successCount 张，失败 $failedCount 张"
+            context.getString(R.string.download_finished_partial, successCount, failedCount)
         }
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("下载完成: $title")
+            .setContentTitle(context.getString(R.string.download_finished_title, title))
             .setContentText(summaryText)
             .setProgress(0, 0, false)
             .setOngoing(false)

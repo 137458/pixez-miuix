@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">下載任務與即時進度</string>
+    <string name="download_channel_description">顯示插畫與漫畫即時下載進度及狀態列膠囊</string>
+    <string name="download_progress_title">正在下載: %1$s</string>
+    <string name="download_progress_text">進度: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">下載完成: %1$s</string>
+    <string name="download_finished_all">全部 %1$d 張儲存完成</string>
+    <string name="download_finished_partial">完成 %1$d 張，失敗 %2$d 張</string>
+    <string name="share_action_copy">複製</string>
+    <string name="share_copied_toast">已複製到剪貼簿</string>
+</resources>

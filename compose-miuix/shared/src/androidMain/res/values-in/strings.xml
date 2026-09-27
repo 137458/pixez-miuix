@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">Unduhan dan progres langsung</string>
+    <string name="download_channel_description">Menampilkan progres langsung unduhan ilustrasi dan manga di kapsul bilah status</string>
+    <string name="download_progress_title">Mengunduh: %1$s</string>
+    <string name="download_progress_text">Progres: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">Unduhan selesai: %1$s</string>
+    <string name="download_finished_all">Semua %1$d gambar tersimpan</string>
+    <string name="download_finished_partial">%1$d berhasil, %2$d gagal</string>
+    <string name="share_action_copy">Salin</string>
+    <string name="share_copied_toast">Disalin ke papan klip</string>
+</resources>

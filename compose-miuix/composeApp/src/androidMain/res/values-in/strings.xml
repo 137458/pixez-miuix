@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">Peringkat</string>
+    <string name="shortcut_search">Cari ilustrasi</string>
+    <string name="shortcut_downloads">Unduhan</string>
+    <string name="shortcut_history">Riwayat</string>
+    <string name="widget_name">Ilustrasi Harian PixEz</string>
+    <string name="widget_description">Menampilkan ilustrasi Pixiv pilihan harian dan peringkat di layar utama</string>
+</resources>

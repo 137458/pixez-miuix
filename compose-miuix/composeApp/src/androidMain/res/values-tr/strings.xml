@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">Sıralama</string>
+    <string name="shortcut_search">Çizim ara</string>
+    <string name="shortcut_downloads">İndirmeler</string>
+    <string name="shortcut_history">Geçmiş</string>
+    <string name="widget_name">PixEz Günlük Çizim</string>
+    <string name="widget_description">Ana ekranda günlük önerilen ve sıralamadaki Pixiv çizimlerini gösterir</string>
+</resources>

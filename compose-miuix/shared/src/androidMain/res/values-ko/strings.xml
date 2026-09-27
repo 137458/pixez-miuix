@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">다운로드 및 실시간 진행률</string>
+    <string name="download_channel_description">일러스트와 만화의 실시간 다운로드 진행률과 상태바 캡슐을 표시합니다</string>
+    <string name="download_progress_title">다운로드 중: %1$s</string>
+    <string name="download_progress_text">진행률: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">다운로드 완료: %1$s</string>
+    <string name="download_finished_all">%1$d장 모두 저장 완료</string>
+    <string name="download_finished_partial">%1$d장 완료, %2$d장 실패</string>
+    <string name="share_action_copy">복사</string>
+    <string name="share_copied_toast">클립보드에 복사되었습니다</string>
+</resources>

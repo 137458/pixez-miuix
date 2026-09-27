@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">Download at live na progress</string>
+    <string name="download_channel_description">Ipinapakita ang live na progress ng pag-download ng mga ilustrasyon at manga sa capsule ng status bar</string>
+    <string name="download_progress_title">Dinidownload: %1$s</string>
+    <string name="download_progress_text">Progress: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">Tapos na ang download: %1$s</string>
+    <string name="download_finished_all">Nai-save ang lahat ng %1$d larawan</string>
+    <string name="download_finished_partial">%1$d tapos, %2$d bigo</string>
+    <string name="share_action_copy">Kopyahin</string>
+    <string name="share_copied_toast">Kinopya sa clipboard</string>
+</resources>

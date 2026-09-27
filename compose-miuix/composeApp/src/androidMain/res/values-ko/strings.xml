@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">랭킹</string>
+    <string name="shortcut_search">일러스트 검색</string>
+    <string name="shortcut_downloads">다운로드 관리</string>
+    <string name="shortcut_history">방문 기록</string>
+    <string name="widget_name">PixEz 오늘의 일러스트</string>
+    <string name="widget_description">홈 화면에 매일 추천 및 랭킹 Pixiv 일러스트를 표시합니다</string>
+</resources>

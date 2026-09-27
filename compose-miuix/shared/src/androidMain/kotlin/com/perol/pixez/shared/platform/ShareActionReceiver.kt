@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.perol.pixez.shared.R
 
 /**
  * 接收 Android 14+ Sharesheet 自定义动作点击的广播接收器。
@@ -17,7 +18,7 @@ class ShareActionReceiver : BroadcastReceiver() {
             val text = intent.getStringExtra(EXTRA_TEXT) ?: return
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             clipboard?.setPrimaryClip(ClipData.newPlainText("PixEz", text))
-            Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.share_copied_toast), Toast.LENGTH_SHORT).show()
         }
     }
 

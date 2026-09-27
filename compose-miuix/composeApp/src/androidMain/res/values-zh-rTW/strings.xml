@@ -4,4 +4,6 @@
     <string name="shortcut_search">搜尋插畫</string>
     <string name="shortcut_downloads">下載管理</string>
     <string name="shortcut_history">瀏覽歷史</string>
+    <string name="widget_name">PixEz 每日插畫</string>
+    <string name="widget_description">在桌面顯示每日精選與排名的 Pixiv 插畫</string>
 </resources>

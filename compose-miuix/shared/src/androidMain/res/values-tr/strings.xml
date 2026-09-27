@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">İndirmeler ve canlı ilerleme</string>
+    <string name="download_channel_description">Çizim ve manga indirmelerinin canlı ilerlemesini durum çubuğu kapsülünde gösterir</string>
+    <string name="download_progress_title">İndiriliyor: %1$s</string>
+    <string name="download_progress_text">İlerleme: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">İndirme tamamlandı: %1$s</string>
+    <string name="download_finished_all">%1$d görselin tümü kaydedildi</string>
+    <string name="download_finished_partial">%1$d tamam, %2$d başarısız</string>
+    <string name="share_action_copy">Kopyala</string>
+    <string name="share_copied_toast">Panoya kopyalandı</string>
+</resources>

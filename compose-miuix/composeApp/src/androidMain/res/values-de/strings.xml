@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">Ranking</string>
+    <string name="shortcut_search">Illustrationen suchen</string>
+    <string name="shortcut_downloads">Downloads</string>
+    <string name="shortcut_history">Verlauf</string>
+    <string name="widget_name">PixEz Tagesillustration</string>
+    <string name="widget_description">Zeigt täglich empfohlene und platzierte Pixiv-Illustrationen auf dem Startbildschirm</string>
+</resources>

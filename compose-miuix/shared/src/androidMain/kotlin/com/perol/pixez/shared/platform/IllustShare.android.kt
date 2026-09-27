@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.chooser.ChooserAction
+import com.perol.pixez.shared.R
 
 /**
  * Android 平台实现：使用系统 `Intent.ACTION_SEND` 启动分享选择器。
@@ -42,7 +43,7 @@ actual class IllustShare {
             )
             val copyAction = ChooserAction.Builder(
                 Icon.createWithResource(context, android.R.drawable.ic_menu_save),
-                "复制",
+                context.getString(R.string.share_action_copy),
                 pendingIntent,
             ).build()
 

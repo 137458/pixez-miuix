@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">Загрузки и текущий прогресс</string>
+    <string name="download_channel_description">Показывает прогресс загрузки иллюстраций и манги в капсуле строки состояния</string>
+    <string name="download_progress_title">Загрузка: %1$s</string>
+    <string name="download_progress_text">Прогресс: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">Загрузка завершена: %1$s</string>
+    <string name="download_finished_all">Сохранено изображений: %1$d</string>
+    <string name="download_finished_partial">Готово: %1$d, ошибок: %2$d</string>
+    <string name="share_action_copy">Копировать</string>
+    <string name="share_copied_toast">Скопировано в буфер обмена</string>
+</resources>

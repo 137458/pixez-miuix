@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">Xếp hạng</string>
+    <string name="shortcut_search">Tìm minh họa</string>
+    <string name="shortcut_downloads">Quản lý tải xuống</string>
+    <string name="shortcut_history">Lịch sử xem</string>
+    <string name="widget_name">PixEz minh họa hằng ngày</string>
+    <string name="widget_description">Hiển thị minh họa Pixiv được đề xuất và xếp hạng mỗi ngày trên màn hình chính</string>
+</resources>

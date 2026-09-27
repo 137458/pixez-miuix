@@ -1,0 +1,13 @@
+<resources>
+    <string name="download_channel_name">Downloads and Live Progress</string>
+    <string name="download_channel_description">Shows real-time download progress for illustrations and manga in a status bar capsule</string>
+    <string name="download_progress_title">Downloading: %1$s</string>
+    <string name="download_progress_text">Progress: %1$d / %2$d (%3$d%%)</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="download_live_text">%1$d / %2$d (%3$d%%)</string>
+    <string name="download_finished_title">Download complete: %1$s</string>
+    <string name="download_finished_all">All %1$d images saved</string>
+    <string name="download_finished_partial">%1$d succeeded, %2$d failed</string>
+    <string name="share_action_copy">Copy</string>
+    <string name="share_copied_toast">Copied to clipboard</string>
+</resources>
