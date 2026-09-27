@@ -53,6 +53,8 @@ fun IllustStaggeredGrid(
     isLoadingMore: Boolean = false,
     loadMoreError: Throwable? = null,
     onLoadMore: (() -> Unit)? = null,
+    // 默认取同一次调用传入的 onLoadMore：Compose 对默认表达式按实参记忆化，onLoadMore 变化时默认值同步更新，
+    // 不会固化上一次的引用；仅当重试动作与加载动作不同（如需要先清错误态）才需要显式传入。
     onRetryLoadMore: (() -> Unit)? = onLoadMore,
 ) {
     val settings = LocalSettingsRepository.current
@@ -109,7 +111,15 @@ fun IllustStaggeredGrid(
 
         // 触底自动流式加载监听：当滑动到接近底部（倒数 6 个作品内）时自动触发下一页请求。
         if (onLoadMore != null) {
-            val shouldLoadMore by remember(hasMore, isLoadingMore, loadMoreError, illusts.size) {
+            // derivedStateOf 一旦创建就把参数引用固化在闭包里，故闭包读到的每个参数都要进键：
+            // 用 illusts 本身而不是 illusts.size，避免刷新后条数相同、内容整体替换时仍按旧列表判定。
+            val shouldLoadMore by remember(
+                hasMore,
+                isLoadingMore,
+                loadMoreError,
+                illusts,
+                state,
+            ) {
                 derivedStateOf {
                     if (!hasMore || isLoadingMore || loadMoreError != null || illusts.isEmpty()) {
                         false
