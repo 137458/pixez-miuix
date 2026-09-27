@@ -11,7 +11,7 @@ CREATE TABLE novelpersist (
 );
 
 selectAll:
-SELECT * FROM novelpersist ORDER BY time;
+SELECT * FROM novelpersist ORDER BY time LIMIT :limit;
 
 insertOrReplace:
 INSERT OR REPLACE INTO novelpersist (

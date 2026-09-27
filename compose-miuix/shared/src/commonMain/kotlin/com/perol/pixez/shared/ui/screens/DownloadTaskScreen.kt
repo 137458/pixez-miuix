@@ -115,12 +115,21 @@ fun DownloadTaskScreen(
     val state = produceState<Result<List<DownloadTaskHistory>>?>(
         initialValue = null,
         downloadHistoryRepository,
+        selectedFilter,
         refreshToken,
         retryCount,
     ) {
         // 在 IO 线程执行数据库查询，避免主线程被 SQLite 阻塞。
+        // 运行中 Tab 的秒级轮询只查运行中/待处理任务，缩小查询面（对应 TaskFilter.Running.matches）。
         value = suspendRunCatchingNonCancel {
-            withContext(Dispatchers.Default) { downloadHistoryRepository.getAllTasks() }
+            withContext(Dispatchers.Default) {
+                if (selectedFilter == TaskFilter.Running) {
+                    downloadHistoryRepository.getTasksByStatus(DownloadStatus.Downloading) +
+                        downloadHistoryRepository.getTasksByStatus(DownloadStatus.Pending)
+                } else {
+                    downloadHistoryRepository.getAllTasks()
+                }
+            }
         }
     }
 

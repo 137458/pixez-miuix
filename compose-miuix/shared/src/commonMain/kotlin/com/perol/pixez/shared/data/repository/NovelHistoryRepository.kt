@@ -20,10 +20,12 @@ class NovelHistoryRepository(
     private val queries = NovelPersistDatabase(driver).novelPersistQueries
 
     /**
-     * 查询全部小说浏览历史，按时间升序排列。
+     * 查询小说浏览历史，按时间升序排列。
+     *
+     * @param limit 最大返回条数，默认 1000，与插画历史导出上限语义统一。
      */
-    fun getAll(): List<NovelHistoryItem> {
-        return queries.selectAll().executeAsList().map { it.toNovelHistoryItem() }
+    fun getAll(limit: Long = 1000L): List<NovelHistoryItem> {
+        return queries.selectAll(limit).executeAsList().map { it.toNovelHistoryItem() }
     }
 
     /**
