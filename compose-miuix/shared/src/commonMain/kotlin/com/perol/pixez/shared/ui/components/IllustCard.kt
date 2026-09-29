@@ -96,6 +96,7 @@ fun IllustCard(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
     val downloadRepository = LocalDownloadRepository.current
+    val banRepository = com.perol.pixez.shared.LocalBanRepository.current
 
     // 长按菜单宿主（信息流网格）没有 Toast 承载容器，接入门槛是把 onToast 逐层上抛到每个列表页。
     // 故此处只统一异常捕获与取消语义，提示仍与抽取前一样保持静默。
@@ -162,7 +163,8 @@ fun IllustCard(
                 showActionMenu = false
                 coroutineScope.launch {
                     suspendRunCatchingNonCancel {
-                        com.perol.pixez.shared.AppDependencies.orNull()?.banRepository?.insertBanIllust(
+                        val repo = banRepository ?: com.perol.pixez.shared.AppDependencies.orNull()?.banRepository
+                        repo?.insertBanIllust(
                             illustId = illust.id,
                             name = illust.title,
                         )

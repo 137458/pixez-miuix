@@ -15,18 +15,18 @@ import java.util.concurrent.atomic.AtomicLong
  * 用于接管全屏图片查看器 (`IllustFullScreenViewer`)、弹出菜单 (`IllustDetailTopBar`) 等组件的
  * `PlatformBackHandler`，使键盘 `Esc`、`Ctrl+W` 与鼠标侧键返回优先关闭顶层浮层，而非直接退出整个详情页。
  */
-object DesktopBackDispatcher {
-    private class BackEntry(
-        val id: Long,
-        @Volatile var enabled: Boolean,
-        @Volatile var onBack: () -> Unit,
-    )
+internal class DesktopBackHandle(
+    val id: Long,
+    @Volatile var enabled: Boolean,
+    @Volatile var onBack: () -> Unit,
+)
 
+object DesktopBackDispatcher {
     private val nextId = AtomicLong(1L)
-    private val entries = CopyOnWriteArrayList<BackEntry>()
+    private val entries = CopyOnWriteArrayList<DesktopBackHandle>()
 
     fun register(enabled: Boolean = true, onBack: () -> Unit): () -> Unit {
-        val entry = BackEntry(
+        val entry = DesktopBackHandle(
             id = nextId.getAndIncrement(),
             enabled = enabled,
             onBack = onBack,
@@ -37,25 +37,24 @@ object DesktopBackDispatcher {
         }
     }
 
-    internal fun registerEntry(enabled: Boolean, onBack: () -> Unit): Any {
-        val entry = BackEntry(
+    internal fun createHandle(enabled: Boolean, onBack: () -> Unit): DesktopBackHandle =
+        DesktopBackHandle(
             id = nextId.getAndIncrement(),
             enabled = enabled,
             onBack = onBack,
         )
-        entries.add(entry)
-        return entry
+
+    internal fun attachHandle(handle: DesktopBackHandle) {
+        entries.add(handle)
     }
 
-    internal fun updateEntry(handle: Any, enabled: Boolean, onBack: () -> Unit) {
-        val entry = handle as? BackEntry ?: return
-        entry.enabled = enabled
-        entry.onBack = onBack
+    internal fun detachHandle(handle: DesktopBackHandle) {
+        entries.remove(handle)
     }
 
-    internal fun unregisterEntry(handle: Any) {
-        val entry = handle as? BackEntry ?: return
-        entries.remove(entry)
+    internal fun updateHandle(handle: DesktopBackHandle, enabled: Boolean, onBack: () -> Unit) {
+        handle.enabled = enabled
+        handle.onBack = onBack
     }
 
     /**
@@ -83,14 +82,15 @@ object DesktopBackDispatcher {
 actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
     val currentOnBack by rememberUpdatedState(onBack)
     val handle = remember {
-        DesktopBackDispatcher.registerEntry(enabled) { currentOnBack() }
+        DesktopBackDispatcher.createHandle(enabled) { currentOnBack() }
     }
     SideEffect {
-        DesktopBackDispatcher.updateEntry(handle, enabled) { currentOnBack() }
+        DesktopBackDispatcher.updateHandle(handle, enabled) { currentOnBack() }
     }
     DisposableEffect(handle) {
+        DesktopBackDispatcher.attachHandle(handle)
         onDispose {
-            DesktopBackDispatcher.unregisterEntry(handle)
+            DesktopBackDispatcher.detachHandle(handle)
         }
     }
 }

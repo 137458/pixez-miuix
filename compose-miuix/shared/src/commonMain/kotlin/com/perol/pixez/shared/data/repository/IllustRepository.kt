@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
@@ -37,6 +38,7 @@ class IllustRepository(
     private val apiClient: HttpClient,
     private val webClient: HttpClient = HttpClient(),
     private val downloadClient: HttpClient = webClient,
+    private val settingsRepository: SettingsRepository? = null,
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
@@ -390,7 +392,7 @@ class IllustRepository(
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            val mirrorHost = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.pictureSource
+            val mirrorHost = (settingsRepository ?: com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository)?.pictureSource
             val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
             val verifiedUrl = TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
             downloadClient.get(verifiedUrl) {

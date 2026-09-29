@@ -17,6 +17,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -33,6 +34,11 @@ val LocalHistoryRepository = compositionLocalOf<HistoryRepository> {
  * 卡片与轻量组件通过该 CompositionLocal 获取 [DownloadRepository] 执行单页快捷下载。
  */
 val LocalDownloadRepository = staticCompositionLocalOf<DownloadRepository?> { null }
+
+/**
+ * 卡片与轻量组件通过该 CompositionLocal 获取 [BanRepository] 执行快捷屏蔽。
+ */
+val LocalBanRepository = staticCompositionLocalOf<BanRepository?> { null }
 
 /**
  * 共享的 Compose 应用入口。
@@ -78,6 +84,7 @@ fun App(
         LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
         LocalHistoryRepository provides dependencies.historyRepository,
         LocalDownloadRepository provides dependencies.downloadRepository,
+        LocalBanRepository provides dependencies.banRepository,
     ) {
         RootContent(
             component = component,

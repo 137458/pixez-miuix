@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.platform
 
+import android.os.Build
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.ui.AppInfo
 import io.github.aakira.napier.Napier
@@ -76,11 +77,25 @@ actual class AppUpdateDownloader actual constructor() {
                 }
             }
             require(tempFile.length() > 0L) { "更新包为空" }
-            java.nio.file.Files.move(
-                tempFile.toPath(),
-                targetFile.toPath(),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                java.nio.file.Files.move(
+                    tempFile.toPath(),
+                    targetFile.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                )
+            } else {
+                if (targetFile.exists()) {
+                    targetFile.delete()
+                }
+                if (!tempFile.renameTo(targetFile)) {
+                    tempFile.inputStream().use { input ->
+                        FileOutputStream(targetFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    tempFile.delete()
+                }
+            }
             tempFile = null
             Result.success(targetFile.absolutePath)
         } catch (e: CancellationException) {

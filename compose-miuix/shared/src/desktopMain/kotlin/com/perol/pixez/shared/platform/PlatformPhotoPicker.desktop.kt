@@ -1,6 +1,11 @@
 package com.perol.pixez.shared.platform
 
+import com.perol.pixez.shared.AppDependencies
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.awt.EventQueue
 import java.awt.FileDialog
 import java.awt.Frame
@@ -13,12 +18,14 @@ import java.io.FilenameFilter
  */
 actual class PlatformPhotoPicker {
     actual fun pickPhoto(onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
-        Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 var selectedFile: File? = null
+                val langNum = AppDependencies.orNull()?.settingsRepository?.languageNum ?: 0
+                val title = AppStrings.fromLanguageNum(langNum).menuSauceNao
                 EventQueue.invokeAndWait {
                     val activeFrame = Frame.getFrames().firstOrNull { it.isVisible }
-                    val dialog = FileDialog(activeFrame, "Select Image", FileDialog.LOAD).apply {
+                    val dialog = FileDialog(activeFrame, title, FileDialog.LOAD).apply {
                         filenameFilter = FilenameFilter { _, name ->
                             val lower = name.lowercase()
                             IMAGE_EXTENSIONS.any { lower.endsWith(it) }
@@ -32,7 +39,9 @@ actual class PlatformPhotoPicker {
                     }
                 }
                 val target = selectedFile
-                if (target != null && target.isFile && target.canRead() && target.length() <= MAX_PHOTO_BYTES) {
+                val ext = target?.extension?.lowercase().orEmpty()
+                val isImage = IMAGE_EXTENSIONS.any { it.trimStart('.').equals(ext, ignoreCase = true) }
+                if (target != null && isImage && target.isFile && target.canRead() && target.length() <= MAX_PHOTO_BYTES) {
                     val bytes = target.readBytes()
                     EventQueue.invokeLater {
                         onResult(bytes, target.name)
@@ -48,10 +57,6 @@ actual class PlatformPhotoPicker {
                     onResult(null, null)
                 }
             }
-        }.apply {
-            isDaemon = true
-            name = "PixEz-PhotoPicker"
-            start()
         }
     }
 

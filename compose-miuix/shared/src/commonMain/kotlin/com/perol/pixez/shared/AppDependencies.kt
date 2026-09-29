@@ -195,6 +195,7 @@ class AppDependencies(
             apiClient = httpClient.apiClient,
             webClient = webClient,
             downloadClient = httpClient.downloadClient,
+            settingsRepository = settingsRepository,
         )
     }
 

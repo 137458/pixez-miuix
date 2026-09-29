@@ -125,7 +125,8 @@ class MainActivity : ComponentActivity() {
         if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
             val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
             val hasUser = text.contains("users/")
-            if (hasIllust || hasUser) {
+            val hasScheme = text.startsWith("pixiv://", ignoreCase = true) || text.startsWith("pixez://", ignoreCase = true)
+            if (hasIllust || hasUser || hasScheme) {
                 lastHandledClipboardText = text
                 parseAndNavigateUrlOrId(text)
             }
@@ -186,6 +187,8 @@ class MainActivity : ComponentActivity() {
                         try {
                             Log.i("MainActivity", "收到 OAuth 回调 code，开始登录")
                             dependencies.accountRepository.loginWithCode(code)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e("MainActivity", "OAuth 回调登录失败", e)
                         }

@@ -288,8 +288,8 @@ internal fun IllustDetailMoreMenuShareActions(
             .background(Color.White.copy(alpha = 0.10f)),
     )
     LiquidMenuItem(
-        icon = MiuixIcons.Share,
-        text = strings.updateOpenInBrowser,
+        icon = MiuixIcons.Link,
+        text = strings.openInBrowser,
         onClick = {
             onDismiss()
             com.perol.pixez.shared.platform.openBrowser(buildIllustShareLink(illust))

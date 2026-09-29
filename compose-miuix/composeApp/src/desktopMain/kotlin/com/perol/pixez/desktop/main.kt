@@ -150,8 +150,13 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
             rootComponent = rootComponent,
             onOAuthCode = { code ->
                 scope.launch {
-                    runCatching { dependencies.accountRepository.loginWithCode(code) }
-                        .onFailure { Napier.e("Desktop OAuth login callback failed", it) }
+                    try {
+                        dependencies.accountRepository.loginWithCode(code)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (t: Throwable) {
+                        Napier.e("Desktop OAuth login callback failed", t)
+                    }
                 }
             },
         )
@@ -172,7 +177,8 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
             val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
             val hasUser = text.contains("users/")
-            if (hasIllust || hasUser) {
+            val hasScheme = text.startsWith("pixiv://", ignoreCase = true) || text.startsWith("pixez://", ignoreCase = true)
+            if (hasIllust || hasUser || hasScheme) {
                 lastHandledClipboardText = text
                 dispatchDeepLinkText(text)
             }

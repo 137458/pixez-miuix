@@ -36,7 +36,7 @@ actual class DriverFactory {
             create = { connection ->
                 wrapConnection(connection) { driver ->
                     if (driver.hasLegacyTables()) {
-                        LegacyDatabaseMigrations.migrateLegacyDatabase(driver, fileName, schema.version)
+                        LegacyDatabaseMigrations.migrateLegacyDatabase(fileName, LegacyDatabaseMigrations.sqlDriverMigrator(driver))
                         driver.execute(null, "PRAGMA user_version = ${schema.version}", 0, null)
                     } else {
                         schema.create(driver)

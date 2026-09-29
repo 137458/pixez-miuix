@@ -143,4 +143,38 @@ class PlatformParityUnificationTest {
             TrustedUrlPolicy.imageUrl(customMirrorUrl, mirrorHost = "pximg.my-mirror.example.org"),
         )
     }
+
+    @Test
+    fun `DesktopBackDispatcher handle lifecycle correctly attaches updates and detaches`() {
+        val invoked = mutableListOf<String>()
+        val handle1 = DesktopBackDispatcher.createHandle(enabled = true) { invoked += "h1" }
+        val handle2 = DesktopBackDispatcher.createHandle(enabled = false) { invoked += "h2" }
+
+        DesktopBackDispatcher.attachHandle(handle1)
+        DesktopBackDispatcher.attachHandle(handle2)
+
+        // handle2 is disabled, should invoke handle1
+        assertTrue(DesktopBackDispatcher.dispatchBack())
+        assertEquals(listOf("h1"), invoked)
+
+        // Enable handle2 and update onBack
+        DesktopBackDispatcher.updateHandle(handle2, enabled = true) { invoked += "h2_updated" }
+        assertTrue(DesktopBackDispatcher.dispatchBack())
+        assertEquals(listOf("h1", "h2_updated"), invoked)
+
+        // Detach handle2
+        DesktopBackDispatcher.detachHandle(handle2)
+        assertTrue(DesktopBackDispatcher.dispatchBack())
+        assertEquals(listOf("h1", "h2_updated", "h1"), invoked)
+
+        // Detach handle1
+        DesktopBackDispatcher.detachHandle(handle1)
+        assertFalse(DesktopBackDispatcher.dispatchBack())
+    }
+
+    @Test
+    fun `AppConstants Urls pixivNovelUrl formats correctly for Int and Long`() {
+        assertEquals("https://www.pixiv.net/novel/show.php?id=987654321", com.perol.pixez.shared.ui.AppConstants.Urls.pixivNovelUrl(987654321L))
+        assertEquals("https://www.pixiv.net/novel/show.php?id=123456", com.perol.pixez.shared.ui.AppConstants.Urls.pixivNovelUrl(123456))
+    }
 }

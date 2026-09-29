@@ -17,6 +17,7 @@ import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.saveUgoiraIllust
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
@@ -128,13 +129,11 @@ internal fun IllustDetailTopBarSection(
                     performHapticFeedback(HapticType.GestureStart)
                     onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
                     if (IllustType.isUgoira(targetIllust.type)) {
-                        val meta = repository.getUgoiraMetadata(targetIllust.id)
-                        val zipBytes = repository.downloadUgoiraZip(meta.ugoiraMetadata.zipUrls.medium)
-                        val savedPath = downloadRepository.saveUgoiraZip(
+                        val savedPath = saveUgoiraIllust(
                             illust = targetIllust,
-                            bytes = zipBytes,
-                            zipUrl = meta.ugoiraMetadata.zipUrls.medium,
-                        )
+                            illustRepository = repository,
+                            downloadRepository = downloadRepository,
+                        ).getOrThrow()
                         if (settings?.starAfterSave == true && !isBookmarked) {
                             coroutineScope.launch {
                                 suspendRunCatchingNonCancel {

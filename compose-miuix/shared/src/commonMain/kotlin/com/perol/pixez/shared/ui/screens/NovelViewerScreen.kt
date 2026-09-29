@@ -35,6 +35,9 @@ import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -85,6 +88,8 @@ fun NovelViewerScreen(
             ) ?: AppConstants.Novel.DEFAULT_FONT_SIZE_SP
         )
     }
+
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     fun loadNovel() {
         scope.launch {
@@ -153,14 +158,42 @@ fun NovelViewerScreen(
                                 color = MiuixTheme.colorScheme.primary,
                             )
                         }
+                        // 复制正文
                         IconButton(
                             onClick = {
-                                com.perol.pixez.shared.platform.openBrowser("https://www.pixiv.net/novel/show.php?id=$novelId")
+                                val currentText = (state as? NovelViewState.Success)?.data?.novelText
+                                if (!currentText.isNullOrBlank()) {
+                                    com.perol.pixez.shared.platform.IllustClipboard().copy(currentText)
+                                    toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
+                                }
+                            },
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Copy,
+                                contentDescription = strings.copy,
+                            )
+                        }
+                        // 分享
+                        IconButton(
+                            onClick = {
+                                val novelUrl = AppConstants.Urls.pixivNovelUrl(novelId)
+                                com.perol.pixez.shared.platform.IllustShare().share(novelUrl, strings.novelReaderTitle)
                             },
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Share,
-                                contentDescription = strings.updateOpenInBrowser,
+                                contentDescription = strings.share,
+                            )
+                        }
+                        // 在浏览器中打开
+                        IconButton(
+                            onClick = {
+                                com.perol.pixez.shared.platform.openBrowser(AppConstants.Urls.pixivNovelUrl(novelId))
+                            },
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Link,
+                                contentDescription = strings.openInBrowser,
                             )
                         }
                     },
@@ -313,8 +346,12 @@ fun NovelViewerScreen(
                         }
                     }
                 }
+            }
+            ToastMessage(
+                toast = toastMessage,
+                onDismiss = { toastMessage = null },
+            )
         }
     }
-}
 }
 

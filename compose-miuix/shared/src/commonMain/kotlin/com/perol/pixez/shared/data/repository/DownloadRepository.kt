@@ -224,10 +224,11 @@ class DownloadRepository(
             // 复用已有 HTTP 下载与平台保存逻辑。
             val tempFileName = "dl_retry_${history.illustId}_${history.pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
             val tempPath = downloadToTempFile(history.remoteUrl, tempFileName)
-            val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
-            val subDir = if (settingsRepository?.singleFolder == false && history.userName.isNotBlank() && history.userId > 0) {
-                "${FileNamePolicy.sanitizeSegment(history.userName)}_${history.userId}"
-            } else null
+            val (subDir, customBasePath) = resolveSubDirAndBasePath(
+                userName = history.userName,
+                userId = history.userId,
+                sanityLevel = history.sanityLevel,
+            )
             val savedPath = saver.saveFromTempFile(
                 FileNamePolicy.requireSafeBaseName(history.fileName),
                 tempPath,
@@ -338,12 +339,17 @@ class DownloadRepository(
         return "${safeName}.${ext}"
     }
 
-    private fun resolveSubDirAndBasePath(illust: Illust): Pair<String?, String?> {
-        val authorSegment = if (settingsRepository?.singleFolder == false) {
-            "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
+    private fun resolveSubDirAndBasePath(
+        userName: String,
+        userId: Int,
+        sanityLevel: Int?,
+        xRestrict: Int = 0,
+    ): Pair<String?, String?> {
+        val authorSegment = if (settingsRepository?.singleFolder == false && userName.isNotBlank() && userId > 0) {
+            "${FileNamePolicy.sanitizeSegment(userName)}_${userId}"
         } else null
         val isNsfw = settingsRepository?.overSanityLevelFolder == true &&
-            (illust.sanityLevel > 4 || illust.xRestrict > 0)
+            ((sanityLevel ?: 0) > 4 || xRestrict > 0)
         val subDir = when {
             isNsfw && authorSegment != null -> "NSFW_${authorSegment}"
             isNsfw -> "NSFW"
@@ -352,6 +358,14 @@ class DownloadRepository(
         val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
         return subDir to customBasePath
     }
+
+    private fun resolveSubDirAndBasePath(illust: Illust): Pair<String?, String?> =
+        resolveSubDirAndBasePath(
+            userName = illust.user.name,
+            userId = illust.user.id,
+            sanityLevel = illust.sanityLevel,
+            xRestrict = illust.xRestrict,
+        )
 
     /**
      * 保存动图原始 ZIP 压缩包，写入下载历史并发送系统通知。
