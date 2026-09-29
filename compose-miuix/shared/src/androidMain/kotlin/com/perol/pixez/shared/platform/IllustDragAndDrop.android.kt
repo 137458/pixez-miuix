@@ -144,33 +144,40 @@ private fun extractExtension(url: String): String {
  * 检索公共存储 Pictures/PixEz 目录中是否已下载该插画原图。
  */
 private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int, ext: String): File? {
-    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex) ?: return null
+    val customBasePath = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.storePath
+    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex, customBasePath) ?: return null
     return runCatching {
         if (uri.startsWith("file:")) File(java.net.URI(uri)) else File(uri)
     }.getOrNull()
 }
 
 /**
- * 构建渐进式候选 URL 列表（原图 -> 大图 -> 中图 -> 缩略图）。
+ * 构建渐进式候选 URL 列表（原图 -> 大图 -> 中图 -> 缩略图），优先匹配已映射图源的缓存键。
  */
 private fun buildCandidateUrls(illust: Illust, pageIndex: Int, originalUrl: String): List<String> {
-    val urls = mutableListOf<String>()
+    val rawUrls = mutableListOf<String>()
 
     if (originalUrl.isNotBlank()) {
-        urls.add(originalUrl)
+        rawUrls.add(originalUrl)
     }
 
     if (illust.pageCount > 1) {
         val page = illust.metaPages.getOrNull(pageIndex)
-        page?.imageUrls?.large?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-        page?.imageUrls?.medium?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-        page?.imageUrls?.squareMedium?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
+        page?.imageUrls?.large?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+        page?.imageUrls?.medium?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+        page?.imageUrls?.squareMedium?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
     }
 
-    illust.imageUrls.large.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-    illust.imageUrls.medium.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-    illust.imageUrls.squareMedium.takeIf { it.isNotBlank() }?.let { urls.add(it) }
+    illust.imageUrls.large.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+    illust.imageUrls.medium.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+    illust.imageUrls.squareMedium.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
 
+    val mirrorHost = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.pictureSource
+    val urls = mutableListOf<String>()
+    for (url in rawUrls) {
+        urls.add(url.mapToPictureSource(mirrorHost))
+        urls.add(url)
+    }
     return urls.distinct()
 }
 

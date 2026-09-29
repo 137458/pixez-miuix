@@ -45,11 +45,19 @@ class AppDependencies(
     val settingsFactory: SettingsFactory,
 ) {
     init {
+        currentInstance = this
         runCatching {
             // 仅 debug 构建安装全量日志；release 不安装 Antilog（日志整体关闭），
             // 叠加 PixivHttpClient 的错误响应体截断，避免敏感信息进入线上日志。
             if (isDebugBuild) Napier.base(DebugAntilog())
         }
+    }
+
+    companion object {
+        @kotlin.concurrent.Volatile
+        private var currentInstance: AppDependencies? = null
+
+        fun orNull(): AppDependencies? = currentInstance
     }
     /**
      * 账号数据库驱动，复用旧 Flutter account.db。
@@ -165,7 +173,7 @@ class AppDependencies(
      * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
      */
     val webClient: HttpClient by lazy {
-        HttpClient {
+        com.perol.pixez.shared.network.createPlatformHttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 15_000
                 connectTimeoutMillis = 10_000
@@ -211,7 +219,7 @@ class AppDependencies(
      * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
      */
     private val boardHttpClient: HttpClient by lazy {
-        HttpClient {
+        com.perol.pixez.shared.network.createPlatformHttpClient {
             install(ContentNegotiation) {
                 json(boardJson)
             }

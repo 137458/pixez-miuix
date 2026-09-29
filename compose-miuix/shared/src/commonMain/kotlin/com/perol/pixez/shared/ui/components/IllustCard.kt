@@ -3,6 +3,9 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -157,6 +160,15 @@ fun IllustCard(
             },
             onBan = {
                 showActionMenu = false
+                coroutineScope.launch {
+                    suspendRunCatchingNonCancel {
+                        com.perol.pixez.shared.AppDependencies.orNull()?.banRepository?.insertBanIllust(
+                            illustId = illust.id,
+                            name = illust.title,
+                        )
+                        settings?.notifyFilterChanged()
+                    }
+                }
             },
         )
     }
@@ -194,6 +206,20 @@ fun IllustCard(
                         true
                     }
                 )
+            }
+            .pointerInput(illust.id) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Press &&
+                            event.buttons.isSecondaryPressed
+                        ) {
+                            event.changes.forEach { it.consume() }
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showActionMenu = true
+                        }
+                    }
+                }
             }
             .combinedClickable(
                 onClick = onClick,

@@ -26,6 +26,13 @@ private val sharedDispatcher = Dispatcher().apply {
 
 private class RobustDohDns(private val doh: Dns, private val fallback: Dns = Dns.SYSTEM) : Dns {
     override fun lookup(hostname: String): List<InetAddress> {
+        val settings = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository
+        val isOauthHost = hostname.contains("oauth", ignoreCase = true) ||
+            hostname.contains("accounts.pixiv.net", ignoreCase = true)
+        val mode = if (isOauthHost) settings?.oauthNetworkMode else settings?.apiNetworkMode
+        if (mode == AppConstants.Network.MODE_STANDARD) {
+            return fallback.lookup(hostname)
+        }
         return try {
             val addresses = doh.lookup(hostname)
             if (addresses.isNotEmpty()) addresses else fallback.lookup(hostname)

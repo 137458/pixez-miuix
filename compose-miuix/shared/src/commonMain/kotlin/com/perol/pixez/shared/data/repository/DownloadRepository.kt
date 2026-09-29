@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
+import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -152,7 +153,7 @@ class DownloadRepository(
     suspend fun downloadAllPages(
         illust: Illust,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null,
-        maxConcurrency: Int = 3,
+        maxConcurrency: Int = settingsRepository?.maxRunningTask ?: 3,
     ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
         if (total <= 0) return@coroutineScope emptyList()
@@ -262,7 +263,9 @@ class DownloadRepository(
      * 流式下载图片至应用缓存临时文件，配合 64KB 缓冲区边拉取边落盘，避免大图或动图占用 JVM 堆内存。
      */
     private suspend fun downloadToTempFile(url: String, tempFileName: String): Path {
-        val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(url)
+        val mirrorHost = settingsRepository?.pictureSource
+        val mappedUrl = url.mapToPictureSource(mirrorHost)
+        val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
         val cacheDir = getAppCacheDirectory()
         val tempPath = cacheDir / tempFileName
 
@@ -336,9 +339,16 @@ class DownloadRepository(
     }
 
     private fun resolveSubDirAndBasePath(illust: Illust): Pair<String?, String?> {
-        val subDir = if (settingsRepository?.singleFolder == false) {
+        val authorSegment = if (settingsRepository?.singleFolder == false) {
             "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
         } else null
+        val isNsfw = settingsRepository?.overSanityLevelFolder == true &&
+            (illust.sanityLevel > 4 || illust.xRestrict > 0)
+        val subDir = when {
+            isNsfw && authorSegment != null -> "NSFW_${authorSegment}"
+            isNsfw -> "NSFW"
+            else -> authorSegment
+        }
         val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
         return subDir to customBasePath
     }

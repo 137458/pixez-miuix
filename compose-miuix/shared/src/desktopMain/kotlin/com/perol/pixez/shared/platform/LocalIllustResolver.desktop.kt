@@ -15,19 +15,25 @@ actual object LocalIllustResolver {
                 if (custom.exists() && custom.isDirectory) custom else null
             } else null
 
-            val baseDir = customDir ?: run {
-                val userHome = System.getProperty("user.home") ?: return@runCatching null
-                val picturesDir = File(userHome, "Pictures")
-                File(picturesDir, "PixEz")
+            val defaultDir = System.getProperty("user.home")?.let { userHome ->
+                File(File(userHome, "Pictures"), "PixEz")
             }
+            val baseDirs = buildList {
+                if (customDir != null) add(customDir)
+                if (defaultDir != null && defaultDir.exists() && defaultDir.isDirectory && defaultDir != customDir) {
+                    add(defaultDir)
+                }
+            }
+            if (baseDirs.isEmpty()) return@runCatching null
 
-            if (!baseDir.exists() || !baseDir.isDirectory) return@runCatching null
-
-            val searchDirs = mutableListOf(baseDir)
             val authorSubDirName = "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
-            val authorSubDir = File(baseDir, authorSubDirName)
-            if (authorSubDir.exists() && authorSubDir.isDirectory) {
-                searchDirs.add(authorSubDir)
+            val searchDirs = mutableListOf<File>()
+            for (rootDir in baseDirs) {
+                searchDirs.add(rootDir)
+                listOf(authorSubDirName, "NSFW_${authorSubDirName}", "NSFW").forEach { subName ->
+                    val sub = File(rootDir, subName)
+                    if (sub.exists() && sub.isDirectory) searchDirs.add(sub)
+                }
             }
 
             val extensions = listOf("png", "jpg", "jpeg", "gif", "webp")

@@ -109,15 +109,17 @@ fun InteractionSettingScreen(
                                 settingsRepository.swipeChangeArtwork = checked
                             },
                         )
-                        SwitchPreference(
-                            title = strings.interactionSettingDoubleBackExit,
-                            summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
-                            checked = isReturnAgainToExit,
-                            onCheckedChange = { checked ->
-                                isReturnAgainToExit = checked
-                                settingsRepository.isReturnAgainToExit = checked
-                            },
-                        )
+                        if (com.perol.pixez.shared.platform.isAndroidPlatform()) {
+                            SwitchPreference(
+                                title = strings.interactionSettingDoubleBackExit,
+                                summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
+                                checked = isReturnAgainToExit,
+                                onCheckedChange = { checked ->
+                                    isReturnAgainToExit = checked
+                                    settingsRepository.isReturnAgainToExit = checked
+                                },
+                            )
+                        }
                         if (isDesktopPlatform()) {
                             SwitchPreference(
                                 title = strings.interactionSettingCloseToTray,

@@ -17,16 +17,27 @@ actual object LocalIllustResolver {
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.fileExistsAtPath(baseDir)) return null
 
-        val extensions = listOf("png", "jpg", "jpeg", "gif", "webp")
-        for (ext in extensions) {
-            val candidate = (baseDir as NSString).stringByAppendingPathComponent("${illust.id}_p${pageIndex}.${ext}")
-            if (fileManager.fileExistsAtPath(candidate)) {
-                return "file://$candidate"
+        val authorSubDirName = "${FileNamePolicy.sanitizeSegment(illust.user.name)}_${illust.user.id}"
+        val searchDirs = buildList {
+            add(baseDir)
+            for (sub in listOf(authorSubDirName, "NSFW_${authorSubDirName}", "NSFW")) {
+                val subPath = (baseDir as NSString).stringByAppendingPathComponent(sub)
+                if (fileManager.fileExistsAtPath(subPath)) add(subPath)
             }
-            if (pageIndex == 0) {
-                val singleCandidate = (baseDir as NSString).stringByAppendingPathComponent("${illust.id}.${ext}")
-                if (fileManager.fileExistsAtPath(singleCandidate)) {
-                    return "file://$singleCandidate"
+        }
+
+        val extensions = listOf("png", "jpg", "jpeg", "gif", "webp")
+        for (dir in searchDirs) {
+            for (ext in extensions) {
+                val candidate = (dir as NSString).stringByAppendingPathComponent("${illust.id}_p${pageIndex}.${ext}")
+                if (fileManager.fileExistsAtPath(candidate)) {
+                    return "file://$candidate"
+                }
+                if (pageIndex == 0) {
+                    val singleCandidate = (dir as NSString).stringByAppendingPathComponent("${illust.id}.${ext}")
+                    if (fileManager.fileExistsAtPath(singleCandidate)) {
+                        return "file://$singleCandidate"
+                    }
                 }
             }
         }

@@ -343,6 +343,26 @@ internal suspend fun saveUgoiraIllust(
     illustRepository: IllustRepository,
     downloadRepository: DownloadRepository,
 ): Result<String> = suspendRunCatchingNonCancel {
+    val cachedSession = UgoiraSessionCache.get(illust.id)
+    val cachedZipPath = cachedSession?.tempZipPath
+    val cachedBytes = if (cachedZipPath != null) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                if (FileSystem.SYSTEM.exists(cachedZipPath)) {
+                    FileSystem.SYSTEM.read(cachedZipPath) { readByteArray() }.takeIf { it.isNotEmpty() }
+                } else null
+            }.getOrNull()
+        }
+    } else null
+
+    if (cachedSession != null && cachedBytes != null && cachedSession.zipUrl.isNotBlank()) {
+        return@suspendRunCatchingNonCancel downloadRepository.saveUgoiraZip(
+            illust = illust,
+            bytes = cachedBytes,
+            zipUrl = cachedSession.zipUrl,
+        )
+    }
+
     val meta = illustRepository.getUgoiraMetadata(illust.id)
     val zipUrl = meta.ugoiraMetadata.zipUrls.medium
     val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)

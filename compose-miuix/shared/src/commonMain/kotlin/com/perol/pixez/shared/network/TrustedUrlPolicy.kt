@@ -25,8 +25,8 @@ object TrustedUrlPolicy {
     fun apiPaginationUrl(raw: String): String =
         requireHost(raw, setOf(API_HOST), "Pixiv API 分页 URL")
 
-    fun imageUrl(raw: String): String =
-        requireHost(raw, setOf(IMAGE_HOST, IMAGE_STATIC_HOST), "Pixiv 图片 URL")
+    fun imageUrl(raw: String, mirrorHost: String? = null): String =
+        requireUrl(raw, "Pixiv 图片 URL") { isTrustedImageHost(it, mirrorHost) }
 
     fun spotlightUrl(raw: String): String =
         requireHost(raw, setOf(SPOTLIGHT_HOST), "Pixivision 文章 URL")

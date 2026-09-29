@@ -35,9 +35,8 @@ actual class DriverFactory {
             version = schema.version.toInt(),
             create = { connection ->
                 wrapConnection(connection) { driver ->
-                    // 旧 Flutter 数据库可能已有表但 user_version 为 0，
-                    // 仅同步版本号，避免 CREATE TABLE 冲突。
                     if (driver.hasLegacyTables()) {
+                        LegacyDatabaseMigrations.migrateLegacyDatabase(driver, fileName, schema.version)
                         driver.execute(null, "PRAGMA user_version = ${schema.version}", 0, null)
                     } else {
                         schema.create(driver)

@@ -321,11 +321,13 @@ fun SettingsScreen(
                         summary = strings.interactionSettingSwipeChange,
                         onClick = onInteractionSettingClick,
                     )
-                    ArrowPreference(
-                        title = strings.settingWidgetRecommend,
-                        summary = strings.settingWidgetRecommendSummary,
-                        onClick = onWidgetRecommendSettingClick,
-                    )
+                    if (isAndroidPlatform()) {
+                        ArrowPreference(
+                            title = strings.settingWidgetRecommend,
+                            summary = strings.settingWidgetRecommendSummary,
+                            onClick = onWidgetRecommendSettingClick,
+                        )
+                    }
                     ArrowPreference(
                         title = strings.settingHistory,
                         summary = strings.settingHistorySummary,

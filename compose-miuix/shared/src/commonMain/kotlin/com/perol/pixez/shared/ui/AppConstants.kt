@@ -11,6 +11,7 @@ object AppConstants {
     object Network {
         const val HOST_PXIMG = "i.pximg.net"
         const val HOST_PIXIV_RE = "i.pixiv.re"
+        const val MODE_STANDARD = "standard"
 
         const val HTTP_POOL_MAX_IDLE_CONNECTIONS = 32
         const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = 5L

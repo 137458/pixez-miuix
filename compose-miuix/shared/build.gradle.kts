@@ -101,6 +101,7 @@ kotlin {
 
         desktopMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.okhttp.dnsoverhttps)
             implementation(libs.sqldelight.sqlite.driver)
             // 桌面端凭据加密走 Windows DPAPI（CryptProtectData），非 Windows JVM 运行时回退明文
             implementation(libs.jna.platform)

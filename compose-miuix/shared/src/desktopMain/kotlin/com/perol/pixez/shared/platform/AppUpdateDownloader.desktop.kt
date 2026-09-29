@@ -76,7 +76,11 @@ actual class AppUpdateDownloader actual constructor() {
                 }
             }
             require(tempFile.length() > 0L) { "更新包为空" }
-            require(tempFile.renameTo(targetFile)) { "无法提交更新包" }
+            java.nio.file.Files.move(
+                tempFile.toPath(),
+                targetFile.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            )
             tempFile = null
             Result.success(targetFile.absolutePath)
         } catch (e: CancellationException) {

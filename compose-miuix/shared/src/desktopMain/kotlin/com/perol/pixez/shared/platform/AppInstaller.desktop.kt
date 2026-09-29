@@ -11,7 +11,11 @@ actual class AppInstaller actual constructor() {
     actual fun install(filePath: String): Boolean {
         return try {
             val file = File(filePath)
-            if (Desktop.isDesktopSupported()) {
+            if (!file.exists()) return false
+            if (file.name.endsWith(".zip", ignoreCase = true)) {
+                FileLocator().showInFileManager(file.absolutePath) ||
+                    (Desktop.isDesktopSupported() && runCatching { Desktop.getDesktop().open(file); true }.getOrDefault(false))
+            } else if (Desktop.isDesktopSupported()) {
                 Desktop.getDesktop().open(file)
                 true
             } else {

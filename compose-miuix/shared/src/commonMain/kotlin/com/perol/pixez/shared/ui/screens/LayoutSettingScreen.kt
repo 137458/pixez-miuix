@@ -84,7 +84,13 @@ fun LayoutSettingScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    val crossCountOptions = remember { listOf("2", "3", "4") }
+    val crossCountOptions = remember {
+        if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
+            listOf("2", "3", "4", "5", "6", "7", "8")
+        } else {
+            listOf("2", "3", "4", "5", "6")
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

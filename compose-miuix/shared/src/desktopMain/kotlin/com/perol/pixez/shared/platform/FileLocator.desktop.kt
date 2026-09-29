@@ -5,7 +5,7 @@ import java.awt.Desktop
 import java.io.File
 
 /**
- * Desktop(JVM) 平台实现：在资源管理器/Finder 中定位文件。
+ * Desktop(JVM) 平台实现：在资源管理器/Finder 中定位文件或打开目录。
  */
 actual class FileLocator {
     actual fun showInFileManager(filePath: String): Boolean {
@@ -16,22 +16,35 @@ actual class FileLocator {
                 return false
             }
 
+            if (file.isDirectory) {
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                    Desktop.getDesktop().open(file)
+                    return true
+                }
+            }
+
             val os = System.getProperty("os.name")?.lowercase() ?: ""
             when {
                 os.contains("win") -> {
-                    // Windows: explorer.exe /select,"C:\path\to\file"
-                    Runtime.getRuntime().exec(arrayOf("explorer.exe", "/select,", file.absolutePath))
+                    // Windows explorer.exe 要求 /select, 与路径作为同一个参数传入，否则会忽略路径打开默认文档目录
+                    if (file.isDirectory) {
+                        ProcessBuilder("explorer.exe", file.absolutePath).start()
+                    } else {
+                        ProcessBuilder("explorer.exe", "/select,${file.absolutePath}").start()
+                    }
                     true
                 }
                 os.contains("mac") -> {
-                    // macOS: open -R "/path/to/file"
-                    Runtime.getRuntime().exec(arrayOf("open", "-R", file.absolutePath))
+                    if (file.isDirectory) {
+                        ProcessBuilder("open", file.absolutePath).start()
+                    } else {
+                        ProcessBuilder("open", "-R", file.absolutePath).start()
+                    }
                     true
                 }
                 else -> {
-                    // Linux / Other: 使用 Desktop 打开父文件夹
                     if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-                        Desktop.getDesktop().open(file.parentFile ?: file)
+                        Desktop.getDesktop().open(if (file.isDirectory) file else (file.parentFile ?: file))
                         true
                     } else {
                         false

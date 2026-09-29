@@ -78,8 +78,15 @@ fun DownloadSettingScreen(
 
     // 页面状态：从 SettingsRepository 读取当前各项下载设置。
     var storePath by remember { mutableStateOf(settingsRepository.storePath.orEmpty()) }
+    val effectiveStorePath = remember(storePath) {
+        storePath.ifBlank { com.perol.pixez.shared.platform.getDefaultPictureDirectory() }
+    }
     var format by remember { mutableStateOf(settingsRepository.format) }
     var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
+    var singleFolder by remember { mutableStateOf(settingsRepository.singleFolder) }
+    var overSanityLevelFolder by remember { mutableStateOf(settingsRepository.overSanityLevelFolder) }
+    var maxRunningTask by remember { mutableIntStateOf(settingsRepository.maxRunningTask.coerceIn(1, 6)) }
+    val taskCountOptions = remember { listOf("1", "2", "3", "4", "5", "6") }
 
     // 对话框显隐状态。
     var showFormatDialog by rememberSaveable { mutableStateOf(false) }
@@ -155,12 +162,12 @@ fun DownloadSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         ArrowPreference(
                             title = strings.dialogSavePath,
-                            summary = storePath.ifEmpty { strings.noData },
+                            summary = effectiveStorePath,
                             onClick = { pickDirectory() },
                         )
-                        if (storePath.isNotBlank()) {
-                            val pathSegments = remember(storePath) {
-                                storePath.split(Regex("[/\\\\]")).filter { it.isNotBlank() }
+                        if (effectiveStorePath.isNotBlank()) {
+                            val pathSegments = remember(effectiveStorePath) {
+                                effectiveStorePath.split(Regex("[/\\\\]")).filter { it.isNotBlank() }
                             }
                             if (pathSegments.isNotEmpty()) {
                                 val breadcrumbs = remember(pathSegments) {
@@ -173,6 +180,36 @@ fun DownloadSettingScreen(
                                 )
                             }
                         }
+                        ArrowPreference(
+                            title = strings.downloadTaskShowInFolder,
+                            summary = effectiveStorePath,
+                            onClick = {
+                                runCatching {
+                                    okio.FileSystem.SYSTEM.createDirectories(
+                                        with(okio.Path) { effectiveStorePath.toPath() },
+                                    )
+                                    com.perol.pixez.shared.platform.FileLocator().showInFileManager(effectiveStorePath)
+                                }
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.downloadSingleFolder,
+                            summary = strings.downloadSingleFolderSummary,
+                            checked = singleFolder,
+                            onCheckedChange = { checked ->
+                                singleFolder = checked
+                                settingsRepository.singleFolder = checked
+                            },
+                        )
+                        SwitchPreference(
+                            title = strings.downloadSanityFolder,
+                            summary = strings.downloadSanityFolderSummary,
+                            checked = overSanityLevelFolder,
+                            onCheckedChange = { checked ->
+                                overSanityLevelFolder = checked
+                                settingsRepository.overSanityLevelFolder = checked
+                            },
+                        )
                     }
                 }
 
@@ -183,6 +220,16 @@ fun DownloadSettingScreen(
                             title = strings.dialogSaveFormat,
                             summary = if (fileNameEval) strings.settingShareFormat else format,
                             onClick = { showFormatDialog = true },
+                        )
+                        OverlayDropdownPreference(
+                            title = strings.dialogTaskCount,
+                            items = taskCountOptions,
+                            selectedIndex = (maxRunningTask - 1).coerceIn(0, taskCountOptions.lastIndex),
+                            onSelectedIndexChange = { idx ->
+                                val count = idx + 1
+                                maxRunningTask = count
+                                settingsRepository.maxRunningTask = count
+                            },
                         )
                     }
                 }

@@ -153,6 +153,16 @@ fun NovelViewerScreen(
                                 color = MiuixTheme.colorScheme.primary,
                             )
                         }
+                        IconButton(
+                            onClick = {
+                                com.perol.pixez.shared.platform.openBrowser("https://www.pixiv.net/novel/show.php?id=$novelId")
+                            },
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Share,
+                                contentDescription = strings.updateOpenInBrowser,
+                            )
+                        }
                     },
                 )
             }
@@ -222,85 +232,87 @@ fun NovelViewerScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                         ) {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                            item { Spacer(modifier = Modifier.height(16.dp)) }
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                            if (paragraphChunks.isEmpty()) {
-                                item {
-                                    Text(
-                                        text = strings.novelTextEmpty,
-                                        fontSize = 14.sp,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                        modifier = Modifier.padding(horizontal = 18.dp),
-                                    )
-                                }
-                            } else {
-                                items(
-                                    count = paragraphChunks.size,
-                                    key = { it },
-                                    contentType = { "novel_chunk" },
-                                ) { index ->
-                                    val chunk = paragraphChunks[index]
-                                    Text(
-                                        text = chunk,
-                                        fontSize = fontSizeSp.sp,
-                                        lineHeight = (fontSizeSp * 1.65f).sp,
-                                        color = MiuixTheme.colorScheme.onSurface,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 18.dp),
-                                    )
-                                }
-                            }
-
-                            // 系列上下章节导航
-                            if (seriesPrev?.id != null || seriesNext?.id != null) {
-                                item {
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 18.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    ) {
-                                        if (seriesPrev?.id != null) {
-                                            Button(
-                                                onClick = { onNovelClick(seriesPrev.id) },
-                                                modifier = Modifier.weight(1f).height(44.dp),
-                                            ) {
-                                                Text(
-                                                    text = "◀ ${strings.novelPrevChapter}",
-                                                    fontSize = 13.sp,
-                                                )
-                                            }
-                                        } else {
-                                            Spacer(modifier = Modifier.weight(1f))
+                                    if (paragraphChunks.isEmpty()) {
+                                        item {
+                                            Text(
+                                                text = strings.novelTextEmpty,
+                                                fontSize = 14.sp,
+                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                                modifier = Modifier.padding(horizontal = 18.dp),
+                                            )
                                         }
-
-                                        if (seriesNext?.id != null) {
-                                            Button(
-                                                onClick = { onNovelClick(seriesNext.id) },
-                                                modifier = Modifier.weight(1f).height(44.dp),
-                                            ) {
-                                                Text(
-                                                    text = "${strings.novelNextChapter} ▶",
-                                                    fontSize = 13.sp,
-                                                )
-                                            }
-                                        } else {
-                                            Spacer(modifier = Modifier.weight(1f))
+                                    } else {
+                                        items(
+                                            count = paragraphChunks.size,
+                                            key = { it },
+                                            contentType = { "novel_chunk" },
+                                        ) { index ->
+                                            val chunk = paragraphChunks[index]
+                                            Text(
+                                                text = chunk,
+                                                fontSize = fontSizeSp.sp,
+                                                lineHeight = (fontSizeSp * 1.65f).sp,
+                                                color = MiuixTheme.colorScheme.onSurface,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 18.dp),
+                                            )
                                         }
                                     }
+
+                                    // 系列上下章节导航
+                                    if (seriesPrev?.id != null || seriesNext?.id != null) {
+                                        item {
+                                            Spacer(modifier = Modifier.height(24.dp))
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 18.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            ) {
+                                                if (seriesPrev?.id != null) {
+                                                    Button(
+                                                        onClick = { onNovelClick(seriesPrev.id) },
+                                                        modifier = Modifier.weight(1f).height(44.dp),
+                                                    ) {
+                                                        Text(
+                                                            text = "◀ ${strings.novelPrevChapter}",
+                                                            fontSize = 13.sp,
+                                                        )
+                                                    }
+                                                } else {
+                                                    Spacer(modifier = Modifier.weight(1f))
+                                                }
+
+                                                if (seriesNext?.id != null) {
+                                                    Button(
+                                                        onClick = { onNovelClick(seriesNext.id) },
+                                                        modifier = Modifier.weight(1f).height(44.dp),
+                                                    ) {
+                                                        Text(
+                                                            text = "${strings.novelNextChapter} ▶",
+                                                            fontSize = 13.sp,
+                                                        )
+                                                    }
+                                                } else {
+                                                    Spacer(modifier = Modifier.weight(1f))
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    item { Spacer(modifier = Modifier.height(32.dp)) }
                                 }
                             }
-
-                            item { Spacer(modifier = Modifier.height(32.dp)) }
                         }
                     }
                 }
-            }
         }
     }
 }

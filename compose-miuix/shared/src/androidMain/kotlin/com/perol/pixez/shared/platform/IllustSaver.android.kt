@@ -33,6 +33,10 @@ actual class IllustSaver {
             File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
         } else ""
 
+        val baseFolderName = customBasePath?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+            FileNamePolicy.sanitizeSegment(File(raw).name).takeIf { it.isNotBlank() }
+        } ?: "PixEz"
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val targetUri = if (isZip) {
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI
@@ -40,9 +44,9 @@ actual class IllustSaver {
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             }
             val relativePath = if (isZip) {
-                Environment.DIRECTORY_DOWNLOADS + File.separator + "PixEz" + relativeSubDir
+                Environment.DIRECTORY_DOWNLOADS + File.separator + baseFolderName + relativeSubDir
             } else {
-                Environment.DIRECTORY_PICTURES + File.separator + "PixEz" + relativeSubDir
+                Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
             }
 
             val contentValues = ContentValues().apply {
@@ -53,6 +57,13 @@ actual class IllustSaver {
             }
 
             val resolver = context.contentResolver
+            runCatching {
+                resolver.delete(
+                    targetUri,
+                    "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND (${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?)",
+                    arrayOf(safeFileName, relativePath, "$relativePath/"),
+                )
+            }
             val uri = resolver.insert(targetUri, contentValues)
                 ?: throw IllegalStateException("MediaStore 插入失败: $fileName")
 
@@ -124,6 +135,10 @@ actual class IllustSaver {
             File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
         } else ""
 
+        val baseFolderName = customBasePath?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+            FileNamePolicy.sanitizeSegment(File(raw).name).takeIf { it.isNotBlank() }
+        } ?: "PixEz"
+
         val tempFile = File(tempFilePath.toString())
         require(tempFile.exists() && tempFile.length() > 0) { "临时文件不存在或为空: $tempFilePath" }
 
@@ -135,9 +150,9 @@ actual class IllustSaver {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                 }
                 val relativePath = if (isZip) {
-                    Environment.DIRECTORY_DOWNLOADS + File.separator + "PixEz" + relativeSubDir
+                    Environment.DIRECTORY_DOWNLOADS + File.separator + baseFolderName + relativeSubDir
                 } else {
-                    Environment.DIRECTORY_PICTURES + File.separator + "PixEz" + relativeSubDir
+                    Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
                 }
 
                 val contentValues = ContentValues().apply {
@@ -148,6 +163,13 @@ actual class IllustSaver {
                 }
 
                 val resolver = context.contentResolver
+                runCatching {
+                    resolver.delete(
+                        targetUri,
+                        "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND (${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?)",
+                        arrayOf(safeFileName, relativePath, "$relativePath/"),
+                    )
+                }
                 val uri = resolver.insert(targetUri, contentValues)
                     ?: throw IllegalStateException("MediaStore 插入失败: $fileName")
 

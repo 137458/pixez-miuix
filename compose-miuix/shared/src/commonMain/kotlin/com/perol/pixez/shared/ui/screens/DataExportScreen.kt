@@ -280,8 +280,15 @@ private fun PathInputDialog(
     val actionStr = if (operation?.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
     val typeStr = operation?.type?.title(strings) ?: ""
 
-    // 对话框重新打开时重置输入内容，避免上一次的路径干扰新操作。
-    var path by remember(dialogKey, operation?.type, operation?.action) { mutableStateOf("") }
+    val defaultFileName = when (operation?.type) {
+        DataType.SearchTagHistory -> "pixez_search_tags.json"
+        DataType.BookTags -> "pixez_book_tags.json"
+        DataType.IllustHistory -> "pixez_illust_history.json"
+        DataType.NovelHistory -> "pixez_novel_history.json"
+        DataType.MuteData -> "pixez_mute_data.json"
+        null -> ""
+    }
+    var path by remember(dialogKey, operation?.type, operation?.action) { mutableStateOf(defaultFileName) }
 
     OverlayDialog(
         title = if (operation != null) "$typeStr - $actionStr" else "",

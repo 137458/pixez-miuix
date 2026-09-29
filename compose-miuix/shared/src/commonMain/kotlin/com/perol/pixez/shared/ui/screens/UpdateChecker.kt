@@ -16,15 +16,48 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+import com.perol.pixez.shared.network.createPlatformHttpClient
+import com.perol.pixez.shared.platform.isAndroidPlatform
+import com.perol.pixez.shared.platform.isDesktopPlatform
+
 /**
  * GitHub Release Asset 信息。
  */
 @Serializable
-private data class GitHubReleaseAsset(
+internal data class GitHubReleaseAsset(
     val name: String? = null,
     val browser_download_url: String? = null,
     val size: Long? = null,
 )
+
+/**
+ * 按当前运行平台从 Release Assets 中择优匹配安装包：
+ * - Desktop 优先匹配 `.exe`，其次 `.msi`，再次 `.zip`；绝不误选 `.apk`。
+ * - Android 匹配 `.apk`。
+ */
+internal fun selectPlatformReleaseAsset(
+    assets: List<GitHubReleaseAsset>?,
+    isDesktop: Boolean = isDesktopPlatform(),
+    isAndroid: Boolean = isAndroidPlatform(),
+): GitHubReleaseAsset? {
+    val validAssets = assets?.filter {
+        !it.name.isNullOrBlank() && !it.browser_download_url.isNullOrBlank()
+    }.orEmpty()
+    if (validAssets.isEmpty()) return null
+
+    return when {
+        isDesktop -> {
+            val desktopExtensions = listOf(".exe", ".msi", ".zip")
+            desktopExtensions.firstNotNullOfOrNull { ext ->
+                validAssets.firstOrNull { it.name.orEmpty().endsWith(ext, ignoreCase = true) }
+            }
+        }
+        isAndroid -> {
+            validAssets.firstOrNull { it.name.orEmpty().endsWith(".apk", ignoreCase = true) }
+        }
+        else -> null
+    }
+}
 
 /**
  * GitHub Release API 返回的完整版本信息。
@@ -56,9 +89,9 @@ data class ReleaseInfo(
 )
 
 /**
- * 创建用于检查 GitHub Release 的 HttpClient，配置 JSON、超时与 User-Agent。
+ * 创建用于检查 GitHub Release 的 HttpClient，复用平台网络引擎（含 DoH / 代理支持）。
  */
-internal fun createUpdateCheckClient(): HttpClient = HttpClient {
+internal fun createUpdateCheckClient(): HttpClient = createPlatformHttpClient {
     install(ContentNegotiation) {
         json(
             Json {
@@ -120,15 +153,12 @@ suspend fun fetchLatestReleaseInfo(
         val versionName = tag.removePrefix("v").ifBlank { "unknown" }
         val isNew = hasNewVersion(versionName)
 
-        val apkAsset = release.assets?.firstOrNull {
-            it.name?.endsWith(".apk", ignoreCase = true) == true &&
-                !it.browser_download_url.isNullOrBlank()
-        }
-        val downloadUrl = apkAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
-        val fileName = apkAsset?.name?.let {
+        val matchedAsset = selectPlatformReleaseAsset(release.assets)
+        val downloadUrl = matchedAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
+        val fileName = matchedAsset?.name?.let {
             com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
         }
-        val fileSize = apkAsset?.size
+        val fileSize = matchedAsset?.size
 
         // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
         val changelog = release.body?.takeIf { it.isNotBlank() }

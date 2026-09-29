@@ -48,6 +48,7 @@ import java.awt.SystemTray
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 
@@ -140,10 +141,42 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         focusRequestVersion++
     }
 
-    suspend fun handleLaunchArguments(arguments: List<String>) {
-        val loginArgument = arguments.firstOrNull(::isLoginLaunchArgument) ?: return
-        runCatching { dependencies.accountRepository.login(loginArgument) }
-            .onFailure { Napier.e("Desktop login callback handling failed") }
+    var lastHandledClipboardText by remember { mutableStateOf<String?>(null) }
+
+    fun dispatchDeepLinkText(rawText: String?) {
+        val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(rawText) ?: return
+        com.perol.pixez.shared.navigation.DeepLinkParser.dispatch(
+            parsed = parsed,
+            rootComponent = rootComponent,
+            onOAuthCode = { code ->
+                scope.launch {
+                    runCatching { dependencies.accountRepository.loginWithCode(code) }
+                        .onFailure { Napier.e("Desktop OAuth login callback failed", it) }
+                }
+            },
+        )
+    }
+
+    fun handleLaunchArguments(arguments: List<String>) {
+        for (arg in arguments) {
+            val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(arg)
+            if (parsed != null) {
+                dispatchDeepLinkText(arg)
+                return
+            }
+        }
+    }
+
+    fun checkClipboardOnFocus() {
+        val text = com.perol.pixez.shared.platform.IllustClipboard().getText()?.trim()
+        if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
+            val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
+            val hasUser = text.contains("users/")
+            if (hasIllust || hasUser) {
+                lastHandledClipboardText = text
+                dispatchDeepLinkText(text)
+            }
+        }
     }
 
     DisposableEffect(lifecycle) {
@@ -163,6 +196,7 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
     }
 
     LaunchedEffect(dependencies) {
+        WindowsProtocolRegistrar.registerIfNeeded()
         dependencies.settingsFactory.migrateIfNeeded()
         dependencies.settingsRepository.notifyChanged()
         dependencies.warmupAsync(scope)
@@ -229,7 +263,10 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     val isModifier = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
                     when {
-                        keyEvent.key == Key.Escape -> rootComponent.onBack()
+                        keyEvent.key == Key.Escape -> {
+                            com.perol.pixez.shared.platform.DesktopBackDispatcher.dispatchBack() ||
+                                rootComponent.onBack()
+                        }
                         isModifier && keyEvent.key == Key.F -> {
                             rootComponent.onSearchClicked("")
                             true
@@ -239,14 +276,18 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                             true
                         }
                         isModifier && keyEvent.key == Key.Two -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
+                            rootComponent.onMainTabSelected(RootComponent.MainTab.Search)
                             true
                         }
                         isModifier && keyEvent.key == Key.Three -> {
-                            rootComponent.onMainTabSelected(RootComponent.MainTab.New)
+                            rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
                             true
                         }
                         isModifier && keyEvent.key == Key.Four -> {
+                            rootComponent.onMainTabSelected(RootComponent.MainTab.New)
+                            true
+                        }
+                        isModifier && keyEvent.key == Key.Five -> {
                             rootComponent.onMainTabSelected(RootComponent.MainTab.Spotlight)
                             true
                         }
@@ -267,7 +308,8 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                             true
                         }
                         (isModifier && keyEvent.key == Key.R) || keyEvent.key == Key.F5 -> {
-                            dependencies.settingsRepository.notifyChanged()
+                            dependencies.settingsRepository.notifyFilterChanged()
+                            rootComponent.onTabReselected(rootComponent.selectedTab.value)
                             true
                         }
                         isModifier && keyEvent.key == Key.Comma -> {
@@ -275,7 +317,9 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                             true
                         }
                         isModifier && keyEvent.key == Key.W -> {
-                            if (!rootComponent.onBack()) {
+                            val handled = com.perol.pixez.shared.platform.DesktopBackDispatcher.dispatchBack() ||
+                                rootComponent.onBack()
+                            if (!handled) {
                                 if (trayAvailable && dependencies.settingsRepository.closeToTray) {
                                     saveWindowPlacement()
                                     isWindowVisible = false
@@ -312,11 +356,26 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
             DisposableEffect(window) {
                 val mouseListener = object : java.awt.event.MouseAdapter() {
                     override fun mousePressed(event: java.awt.event.MouseEvent) {
-                        if (event.button == 4) rootComponent.onBack()
+                        if (event.button == 4) {
+                            if (!com.perol.pixez.shared.platform.DesktopBackDispatcher.dispatchBack()) {
+                                rootComponent.onBack()
+                            }
+                        }
                     }
                 }
+                val focusListener = object : java.awt.event.WindowFocusListener {
+                    override fun windowGainedFocus(event: java.awt.event.WindowEvent?) {
+                        checkClipboardOnFocus()
+                    }
+
+                    override fun windowLostFocus(event: java.awt.event.WindowEvent?) = Unit
+                }
                 window.addMouseListener(mouseListener)
-                onDispose { window.removeMouseListener(mouseListener) }
+                window.addWindowFocusListener(focusListener)
+                onDispose {
+                    window.removeMouseListener(mouseListener)
+                    window.removeWindowFocusListener(focusListener)
+                }
             }
             LaunchedEffect(focusRequestVersion) {
                 window.toFront()
@@ -330,6 +389,3 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         }
     }
 }
-
-private fun isLoginLaunchArgument(argument: String): Boolean =
-    argument.startsWith("pixiv://", ignoreCase = true) || argument.contains("code=")

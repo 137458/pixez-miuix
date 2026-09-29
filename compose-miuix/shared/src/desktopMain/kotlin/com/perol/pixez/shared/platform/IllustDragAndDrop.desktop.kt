@@ -99,27 +99,34 @@ private fun extractExtension(url: String): String {
 }
 
 private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int, ext: String): File? {
-    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex) ?: return null
+    val customBasePath = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.storePath
+    val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex, customBasePath) ?: return null
     return runCatching {
         if (uri.startsWith("file:")) File(java.net.URI(uri)) else File(uri)
     }.getOrNull()
 }
 
 private fun buildCandidateUrls(illust: Illust, pageIndex: Int, originalUrl: String): List<String> {
-    val urls = mutableListOf<String>()
-    if (originalUrl.isNotBlank()) urls.add(originalUrl)
+    val rawUrls = mutableListOf<String>()
+    if (originalUrl.isNotBlank()) rawUrls.add(originalUrl)
 
     if (illust.pageCount > 1) {
         val page = illust.metaPages.getOrNull(pageIndex)
-        page?.imageUrls?.large?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-        page?.imageUrls?.medium?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-        page?.imageUrls?.squareMedium?.takeIf { it.isNotBlank() }?.let { urls.add(it) }
+        page?.imageUrls?.large?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+        page?.imageUrls?.medium?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+        page?.imageUrls?.squareMedium?.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
     }
 
-    illust.imageUrls.large.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-    illust.imageUrls.medium.takeIf { it.isNotBlank() }?.let { urls.add(it) }
-    illust.imageUrls.squareMedium.takeIf { it.isNotBlank() }?.let { urls.add(it) }
+    illust.imageUrls.large.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+    illust.imageUrls.medium.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
+    illust.imageUrls.squareMedium.takeIf { it.isNotBlank() }?.let { rawUrls.add(it) }
 
+    val mirrorHost = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.pictureSource
+    val urls = mutableListOf<String>()
+    for (url in rawUrls) {
+        urls.add(url.mapToPictureSource(mirrorHost))
+        urls.add(url)
+    }
     return urls.distinct()
 }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,8 +63,24 @@ fun <T> LiquidFilterBar(
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
 ) {
     if (isScrollable) {
+        val listState = rememberLazyListState()
         LazyRow(
-            modifier = modifier.fillMaxWidth(),
+            state = listState,
+            modifier = modifier
+                .fillMaxWidth()
+                .pointerInput(listState) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Scroll) {
+                                val delta = event.changes.firstOrNull()?.scrollDelta
+                                if (delta != null && delta.y != 0f && delta.x == 0f) {
+                                    listState.dispatchRawDelta(delta.y * 64f)
+                                }
+                            }
+                        }
+                    }
+                },
             contentPadding = contentPadding,
             horizontalArrangement = horizontalArrangement,
             verticalAlignment = Alignment.CenterVertically,

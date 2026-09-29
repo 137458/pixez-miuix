@@ -268,11 +268,31 @@ internal fun IllustDetailMoreMenuShareActions(
         onClick = {
             onDismiss()
             val link = buildIllustShareLink(illust)
+            val successMsg = if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
+                strings.copiedToClipboard
+            } else {
+                strings.share
+            }
             runClipboardShare(
-                success = ToastData(strings.share, ToastType.Success),
+                success = ToastData(successMsg, ToastType.Success),
                 failurePrefix = strings.share,
                 onToast = onToast,
             ) { share.share(link, illust.title) }
+        },
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .height(0.5.dp)
+            .background(Color.White.copy(alpha = 0.10f)),
+    )
+    LiquidMenuItem(
+        icon = MiuixIcons.Share,
+        text = strings.updateOpenInBrowser,
+        onClick = {
+            onDismiss()
+            com.perol.pixez.shared.platform.openBrowser(buildIllustShareLink(illust))
         },
     )
     Box(

@@ -171,88 +171,29 @@ class MainActivity : ComponentActivity() {
         }
 
         val uri = intent.data ?: return
-        val scheme = uri.scheme?.lowercase()
-        val host = uri.host?.lowercase().orEmpty()
-        val path = uri.path.orEmpty()
-
-        when {
-            (scheme == AppConstants.Scheme.SCHEME_PIXEZ || scheme == "pixiv") -> {
-                when (host) {
-                    "ranking" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Ranking)
-                    "search" -> rootComponent.onMainTabSelected(RootComponent.MainTab.Search)
-                    "downloads", "download_task" -> rootComponent.onDownloadTaskClicked()
-                    "history" -> rootComponent.onHistoryClicked()
-                    "illust", "artworks" -> {
-                        val id = uri.lastPathSegment?.toIntOrNull()
-                        if (id != null) rootComponent.onIllustClicked(id)
-                    }
-                    "users", "user" -> {
-                        val id = uri.lastPathSegment?.toIntOrNull()
-                        if (id != null) rootComponent.onUserClicked(id)
-                    }
-                    "account", "oauth" -> handleAuthIntent(intent)
-                }
-            }
-            // 严格后缀匹配：contains 会放行 pixiv.net.attacker.com 这类伪造 host
-            (host == "pixiv.net" || host.endsWith(".pixiv.net") ||
-                host == "pixiv.me" || host.endsWith(".pixiv.me")) -> {
-                when {
-                    path.startsWith("/users/auth/pixiv/callback") -> handleAuthIntent(intent)
-                    path.contains("/artworks/") -> {
-                        val id = uri.lastPathSegment?.toIntOrNull()
-                        if (id != null) rootComponent.onIllustClicked(id)
-                    }
-                    path.contains("/users/") -> {
-                        val id = uri.lastPathSegment?.toIntOrNull()
-                        if (id != null) rootComponent.onUserClicked(id)
-                    }
-                    else -> parseAndNavigateUrlOrId(uri.toString())
-                }
-            }
-        }
+        parseAndNavigateUrlOrId(uri.toString())
     }
 
     private fun parseAndNavigateUrlOrId(text: String?) {
         if (text.isNullOrBlank()) return
         try {
-            val illustMatch = Regex("""(?:artworks/|illust_id=)(\d+)""").find(text)
-            if (illustMatch != null) {
-                val id = illustMatch.groupValues[1].toIntOrNull()
-                if (id != null) {
-                    rootComponent.onIllustClicked(id)
-                    return
-                }
-            }
-            val userMatch = Regex("""(?:users/|member\.php\?id=)(\d+)""").find(text)
-            if (userMatch != null) {
-                val id = userMatch.groupValues[1].toIntOrNull()
-                if (id != null) {
-                    rootComponent.onUserClicked(id)
-                    return
-                }
-            }
-            val pureId = text.trim().toIntOrNull()
-            if (pureId != null && text.trim().length in 6..10) {
-                rootComponent.onIllustClicked(pureId)
-            }
+            val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(text) ?: return
+            com.perol.pixez.shared.navigation.DeepLinkParser.dispatch(
+                parsed = parsed,
+                rootComponent = rootComponent,
+                onOAuthCode = { code ->
+                    lifecycleScope.launch {
+                        try {
+                            Log.i("MainActivity", "收到 OAuth 回调 code，开始登录")
+                            dependencies.accountRepository.loginWithCode(code)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "OAuth 回调登录失败", e)
+                        }
+                    }
+                },
+            )
         } catch (e: Throwable) {
-            // 忽略重复导航或异常 URL 导致的解析错误，但保留日志便于排查跳转问题。
             Log.w("MainActivity", "解析跳转文本失败: $text", e)
-        }
-    }
-
-    private fun handleAuthIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
-        val code = uri.getQueryParameter("code")
-        if (!code.isNullOrBlank()) {
-            lifecycleScope.launch {
-                try {
-                    Log.i("MainActivity", "收到 OAuth 回调 code，开始登录")
-                    dependencies.accountRepository.loginWithCode(code)
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "OAuth 回调登录失败", e)
-                }
-            }
         }
     }
 

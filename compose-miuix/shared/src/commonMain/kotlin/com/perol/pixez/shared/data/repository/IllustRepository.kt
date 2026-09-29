@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
 
 import com.perol.pixez.shared.data.model.CommentResponse
@@ -385,11 +386,13 @@ class IllustRepository(
     }
 
     /**
-     * 下载动图 Zip 包字节流。
+     * 下载动图 Zip 包字节流（自动应用用户配置的图源镜像 Host）。
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            val verifiedUrl = TrustedUrlPolicy.imageUrl(zipUrl)
+            val mirrorHost = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.pictureSource
+            val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
+            val verifiedUrl = TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
             downloadClient.get(verifiedUrl) {
                 header("Referer", AppConstants.Urls.PIXIV_APP_API)
             }.body()

@@ -8,10 +8,19 @@
 
 ### 新增
 
-- Windows 桌面端系统托盘菜单（打开主界面 / 下载任务 / 退出）接入多语言，切换界面语言后即时生效。
-- 语言设置新增越南语（Tiếng Việt），标注为机器翻译 beta：619 条文案全量显式实现，占位符与格式符逐条与英文对齐；此前该语言不在可选列表中，从旧版带入越南语设置的用户会被错标为德语。
+- 全面统一桌面端与移动端核心功能体验：
+  - 新增全平台统一的深链与剪贴板解析器（`DeepLinkParser`），支持 `pixiv://`、`pixez://`、Pixiv 网页端作品/画师链接与 6~10 位数字 ID 解析，并在 Windows 桌面端自动向当前用户注册表（`HKCU\Software\Classes`）注册 `pixiv://` 与 `pixez://` 协议处理器及窗口获焦剪贴板链接自动识别。
+  - 桌面端补齐 SauceNAO 以图搜图的本地图片文件选择器（`PlatformPhotoPicker`）支持，与移动端体验一致。
+  - 桌面端补齐 `DesktopBackDispatcher` 栈式返回分发器，按下 `Esc`、`Ctrl+W` 或鼠标侧键返回（Button 4）时，优先关闭全屏大图/动图查看器与弹窗菜单，再退出二级详情页；补齐桌面端 `Ctrl+1..5` 顶层标签切换、`Ctrl+R` / `F5` 列表刷新、作品卡片鼠标右键快捷菜单与横向筛选栏滚轮滚动支持。
+  - 桌面端补齐 DNS over HTTPS（`okhttp-dnsoverhttps`）与 API / OAuth 独立网络模式配置支持，与 Android 端网络栈对齐。
+  - 小说阅读器补齐移动端与桌面端一致的分享菜单、复制正文与系统浏览器打开入口；作品详情更多菜单新增「复制作品信息」与「分享文本」双选项，消除桌面端分享退化为复制的问题。
 
 ### 修复
+
+- 修复了桌面端检查更新时误匹配并下载 Android `.apk` 安装包、以及 Windows 下覆盖已存在更新包时 `renameTo` 失败的问题：新增 `selectPlatformReleaseAsset` 按当前系统精准筛选更新资产（桌面端匹配 `.exe` / `.msi` / `.zip`，Android 端匹配 `.apk`），安装包替换统一改用 `Files.move(..., REPLACE_EXISTING)`，并为 `.zip` 便携版更新包提供资源管理器定位支持。
+- 修复了原图保存与动图（Ugoira）ZIP 下载未应用用户自定义图源镜像（`pictureSource`）的问题，并在保存动图 ZIP 时直接复用播放期已缓存的本地压缩包，避免二次重复下载。
+- 修复了下载仓库未读取设置项中「按画师分目录保存」（`singleFolder`）、「R-18/高敏感度作品独立目录」（`overSanityLevelFolder`）与最大并发下载任务数（`maxRunningTask`）的问题，以及 Android 端 MediaStore 重复保存同名文件产生 `(1)` 副本、自定义下载目录无法通过本地已下载状态校验的问题。
+- 修复了 Windows 桌面端下载管理点击「在文件夹中显示」无法选中目标文件的问题（修正 `explorer.exe /select,<path>` 单参数调用与目录直接打开逻辑）。
 
 - 修复了横屏（以及竖屏下超长比例竖图卡片）不触发卡片展开/收回转场而直接回退为侧滑的问题：`resolveCardExpandTransform` 升级为 `maxOf(liveScaleX, liveScaleY)` 无畸变等比缩放配合水平与垂直双向视口裁切（`visibleWidthFraction` + `visibleHeightFraction`），使竖屏与横屏下任意比例卡片的收回终点均能与卡片四边及圆角 100% 像素级重合。
 - 修复了快速多次进入/退出不同作品详情页以及使用预测性返回手势时出现「返回位置错落到上一张卡片」或「不触发卡片动画直接侧滑返回」的问题：`RootContent` 预测性返回 `selector` 改为直接从实时入参 `exitChild` 提取作品 ID（消除 `remember` 闭包捕获首次组合 `Child.Main` 或旧详情页实例导致的失效）；`SharedBoundsRegistry` 改为按详情页打开时的初始 `originIllustId` 独立维护展示映射并隔离旧页面的异步回调、`onDispose` 与退场收尾帧，同时在 1.0x 卡片转场期允许实时刷新滚动后的卡片静止坐标。
