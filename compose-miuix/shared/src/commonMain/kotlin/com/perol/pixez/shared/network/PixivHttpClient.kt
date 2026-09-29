@@ -41,7 +41,7 @@ class PixivHttpClient(
     /**
      * OAuth 业务封装，外部可用它构建登录 URL 或手动刷新 token。
      */
-    val oAuthClient: OAuthClient = OAuthClient(baseOAuthClient)
+    val oAuthClient: OAuthClient = DefaultOAuthClient(baseOAuthClient)
 
     /**
      * 业务 API 客户端。

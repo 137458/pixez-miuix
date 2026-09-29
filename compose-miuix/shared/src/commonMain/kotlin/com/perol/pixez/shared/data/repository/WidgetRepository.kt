@@ -7,6 +7,7 @@ import com.perol.pixez.shared.data.local.glanceillustpersist.Glanceillustpersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
+import com.perol.pixez.shared.network.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
@@ -84,7 +85,7 @@ class WidgetRepository(
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {
         val accountDriver = driverFactory.createDriver(AccountDatabase.Schema, "account.db")
-        val tokenStorage = AuthTokenStorage(accountDriver)
+        val tokenStorage = SqlDelightAuthTokenStorage(accountDriver)
         val pixivHttpClient = PixivHttpClient(
             tokenStorage = tokenStorage,
             languageProvider = { "zh-CN" },

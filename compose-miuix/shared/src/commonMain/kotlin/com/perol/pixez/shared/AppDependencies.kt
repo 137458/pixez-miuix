@@ -21,6 +21,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
+import com.perol.pixez.shared.network.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.IllustSaver
 import io.ktor.client.HttpClient
@@ -140,7 +141,7 @@ class AppDependencies(
      * Token 与账号本地存储。
      */
     val tokenStorage: AuthTokenStorage by lazy {
-        AuthTokenStorage(
+        SqlDelightAuthTokenStorage(
             driver = accountDriver,
             getActiveUserId = { settingsRepository.activeUserId },
             setActiveUserId = { settingsRepository.activeUserId = it },

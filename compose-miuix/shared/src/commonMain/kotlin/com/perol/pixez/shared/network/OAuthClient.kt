@@ -13,7 +13,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
- * Pixiv OAuth2 认证客户端。
+ * Pixiv OAuth2 认证客户端契约（A-21 抽接口以便测试注入替身）。
  *
  * 负责：
  * - 生成 PKCE 流程所需的 code_verifier / code_challenge。
@@ -21,14 +21,34 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * - 用授权码换取 access_token / refresh_token。
  * - 用 refresh_token 刷新 access_token。
  */
-class OAuthClient(
+interface OAuthClient {
+    val lastCodeVerifier: String?
+
+    fun generatePkcePair(): PkcePair
+
+    fun buildLoginUrl(create: Boolean = false): String
+
+    suspend fun exchangeCodeForToken(code: String, codeVerifier: String? = null): Account
+
+    suspend fun refreshToken(refreshToken: String): Account
+
+    data class PkcePair(
+        val codeVerifier: String,
+        val codeChallenge: String,
+    )
+}
+
+/**
+ * 默认实现：经 Ktor 调用 Pixiv OAuth 端点。
+ */
+class DefaultOAuthClient(
     private val httpClient: HttpClient,
-) {
+) : OAuthClient {
     // 维护最近生成的 verifier 列表（保留最近 10 个），采用 Volatile 不可变快照保障跨端原子性
     @kotlin.concurrent.Volatile
     private var verifiers: List<String> = emptyList()
 
-    val lastCodeVerifier: String?
+    override val lastCodeVerifier: String?
         get() = verifiers.lastOrNull()
 
     /**
@@ -37,12 +57,12 @@ class OAuthClient(
      * 调用后可通过 [lastCodeVerifier] 获取刚生成的 verifier，供 token 交换时使用。
      */
     @OptIn(ExperimentalEncodingApi::class)
-    fun generatePkcePair(): PkcePair {
+    override fun generatePkcePair(): OAuthClient.PkcePair {
         val verifier = generateCodeVerifier()
         verifiers = (verifiers + verifier).takeLast(10)
         val challenge = sha256(verifier.encodeToByteArray())
         val challengeBase64 = Base64.UrlSafe.encode(challenge).trimEnd { it == '=' }
-        return PkcePair(verifier, challengeBase64)
+        return OAuthClient.PkcePair(verifier, challengeBase64)
     }
 
     /**
@@ -50,7 +70,7 @@ class OAuthClient(
      *
      * @param create 是否进入创建账号流程。
      */
-    fun buildLoginUrl(create: Boolean = false): String {
+    override fun buildLoginUrl(create: Boolean): String {
         val pair = generatePkcePair()
         val base = if (create) {
             "https://app-api.pixiv.net/web/v1/provisional-accounts/create"
@@ -67,9 +87,9 @@ class OAuthClient(
      * @param codeVerifier 与登录 URL 中 challenge 对应的 verifier；
      *                     若为空则优先使用最近记录的 verifier。
      */
-    suspend fun exchangeCodeForToken(
+    override suspend fun exchangeCodeForToken(
         code: String,
-        codeVerifier: String? = null,
+        codeVerifier: String?,
     ): Account {
         val cleanCode = code.trim()
         require(cleanCode.isNotBlank()) { "授权码 code 不能为空。" }
@@ -106,7 +126,7 @@ class OAuthClient(
     /**
      * 用 refresh_token 刷新 access_token。
      */
-    suspend fun refreshToken(refreshToken: String): Account {
+    override suspend fun refreshToken(refreshToken: String): Account {
         val cleanToken = refreshToken.trim()
         require(cleanToken.isNotBlank()) { "Refresh Token 不能为空" }
         return httpClient.post("/auth/token") {
@@ -137,11 +157,6 @@ class OAuthClient(
             }
         }
     }
-
-    data class PkcePair(
-        val codeVerifier: String,
-        val codeChallenge: String,
-    )
 
     companion object {
         private const val CLIENT_ID = "MOBrBDS8blbauoSck0ZfDbtuzpyT"
