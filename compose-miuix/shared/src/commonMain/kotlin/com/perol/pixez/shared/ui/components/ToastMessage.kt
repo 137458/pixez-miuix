@@ -48,6 +48,7 @@ import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.libs.liquid.lens
 import com.perol.pixez.shared.ui.libs.liquid.vibrancy
+import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 
 private val ToastHighlightLight = Highlight(
     width = 0.8.dp,
@@ -149,7 +150,9 @@ fun ToastMessage(
         }
     }
 
-    val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+    // I-26：明暗信号改由主题令牌层提供，与底色/前景同源
+    val extra = LocalAppExtraColors.current
+    val isDark = extra.isDark
     val cornerRadius = 24.dp
     val shape = remember(cornerRadius) { SquircleShape(cornerRadius) }
     val effectiveType = type ?: ToastType.Normal
@@ -225,11 +228,7 @@ fun ToastMessage(
                         ),
                     )
                     .background(
-                        color = if (isDark) {
-                            Color(0xFF222224).copy(alpha = 0.88f)
-                        } else {
-                            Color(0xFFF2F2F7).copy(alpha = 0.92f)
-                        },
+                        color = extra.toastSurface,
                         shape = shape,
                     )
                     .squircleBorder(
@@ -273,8 +272,8 @@ fun ToastMessage(
                         text = message ?: "",
                         style = MiuixTheme.textStyles.body2,
                         color = when (effectiveType) {
-                            ToastType.Error -> if (isDark) Color(0xFFFF6961) else MiuixTheme.colorScheme.error
-                            else -> if (isDark) Color.White else Color(0xFF1C1C1E)
+                            ToastType.Error -> extra.toastErrorTextOverride ?: MiuixTheme.colorScheme.error
+                            else -> extra.onToastSurface
                         },
                     )
                 }

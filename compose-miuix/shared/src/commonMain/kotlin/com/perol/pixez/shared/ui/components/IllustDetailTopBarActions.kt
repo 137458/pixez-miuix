@@ -39,6 +39,7 @@ import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 
 /**
  * 顶栏主体内容行：返回按钮 + 动态标题 + 右侧操作组。
@@ -162,7 +163,7 @@ internal fun IllustDetailTopBarActions(
             Icon(
                 imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
                 contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                tint = if (isBookmarked) Color(0xFFFF4D6A) else dynamicIconTint,
+                tint = if (isBookmarked) LocalAppExtraColors.current.bookmarkActive else dynamicIconTint,
                 modifier = Modifier
                     .size(22.dp)
                     .graphicsLayer {

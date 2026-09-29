@@ -2,6 +2,8 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.AppInfo
 import com.perol.pixez.shared.ui.components.MarkdownBlock
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import com.perol.pixez.shared.ui.components.buildAnnotatedContent
 import com.perol.pixez.shared.ui.components.parseMarkdownBlocks
 import org.junit.Test
@@ -89,5 +91,14 @@ class UpdateCheckerTest {
         val annotated = buildAnnotatedContent(text)
         assertEquals("Support bold and code and link", annotated.text)
         assertTrue(annotated.spanStyles.isNotEmpty())
+    }
+
+    @Test
+    fun testBuildAnnotatedContentUsesProvidedLinkColor() {
+        // I-26：链接色必须完全来自调用方传入的令牌色，不允许函数内兜底硬编码
+        val linkColor = Color(0xFF123456)
+        val annotated = buildAnnotatedContent("[link](https://github.com)", linkColor)
+        val linkSpan = annotated.spanStyles.single { it.item.textDecoration == TextDecoration.Underline }
+        assertEquals(linkColor, linkSpan.item.color)
     }
 }

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.navigation
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +30,9 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
+import com.perol.pixez.shared.ui.theme.darkAppExtraColors
+import com.perol.pixez.shared.ui.theme.lightAppExtraColors
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
@@ -154,12 +158,21 @@ fun RootContent(
         }
     }
 
+    // I-26：明暗判定由 themeMode 解析（与 buildThemeController 的 ColorSchemeMode 一致，AMOLED/动态色不影响）
+    val resolvedDark = when (themeMode) {
+        1 -> false
+        2 -> true
+        else -> isSystemInDarkTheme()
+    }
+    val appExtraColors = if (resolvedDark) darkAppExtraColors else lightAppExtraColors
+
     MiuixTheme(controller = themeController) {
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
+            LocalAppExtraColors provides appExtraColors,
         ) {
             val updateInfo = appReleaseInfo
             if (showAppUpdateDialog && updateInfo != null) {
