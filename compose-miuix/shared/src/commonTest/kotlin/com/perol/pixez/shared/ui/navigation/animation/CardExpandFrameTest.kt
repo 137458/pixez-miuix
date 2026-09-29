@@ -159,6 +159,18 @@ class CardExpandFrameTest {
         assertClose(0.24f, cardExpandScrimAlpha(1f, maxAlpha = 0.24f))
     }
 
+    @Test
+    fun `详情页非图片附属控件在收缩前段快速淡出避免横图与方图拖出白底文字尾迹`() {
+        // 铺满时完全不透明
+        assertClose(1f, cardExpandDetailChromeAlpha(1f))
+        // 0.65..1.0 区间内线性过渡（中点 0.825 对应 alpha 0.5）
+        assertClose(0.5f, cardExpandDetailChromeAlpha(0.825f))
+        // 收缩至 0.65 及以下时完全隐藏，使收缩中后段仅保留干净封面图归位
+        assertClose(0f, cardExpandDetailChromeAlpha(0.65f))
+        assertClose(0f, cardExpandDetailChromeAlpha(0.30f))
+        assertClose(0f, cardExpandDetailChromeAlpha(0f))
+    }
+
     /**
      * 换算结果为浮点加减，按 [EPSILON] 容差比较，避免表示误差导致的假失败。
      */

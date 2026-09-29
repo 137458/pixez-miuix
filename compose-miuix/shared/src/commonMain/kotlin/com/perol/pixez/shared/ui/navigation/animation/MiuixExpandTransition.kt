@@ -104,14 +104,14 @@ internal fun cardExpandStackAnimator(
         easing = HyperOSDecelerateEasing,
     )
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
-        val routeIllustId = registry?.resolveTransitionIllustId(rawIllustId, direction) ?: rawIllustId
+        val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
         // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
         // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
-        val anchor = registry?.resolveAnchor(listOf(routeIllustId, rawIllustId), containerBounds)
+        val anchor = registry?.resolveAnchor(candidates, containerBounds)
         // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
         // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
-        val activeSourceBounds = (anchor?.card?.rect ?: sourceBounds)
-            ?.takeIf { isCardExpandLandable(it, containerBounds) }
+        val activeSourceBounds = anchor?.card?.rect
+            ?: sourceBounds?.takeIf { isCardExpandLandable(it, containerBounds) }
         val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
 
         if (activeSourceBounds == null) {
@@ -119,48 +119,24 @@ internal fun cardExpandStackAnimator(
             if (frame.isTopLayer) {
                 registry?.updateTransitionState(null, 0f)
             }
-            if (frame.fraction <= 0.001f) {
-                content(Modifier)
-            } else {
-                val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
-                content(
-                    if (frame.isTopLayer) {
-                        Modifier.graphicsLayer {
-                            translationX = widthPx * frame.fraction
-                            if (containerCornerRadius > 0.dp && frame.fraction > 0f) {
-                                shape = RoundedCornerShape(containerCornerRadius)
-                                clip = true
-                            }
-                        }
-                    } else {
-                        // 侧滑会整体平移底层列表，期间新增的卡片登记必须按该位移回退到静止态坐标。
-                        val parallaxX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * frame.fraction
-                        registry?.updateListTranslation(parallaxX)
-                        Modifier
-                            .graphicsLayer {
-                                translationX = parallaxX
-                                alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * frame.fraction
-                            }
-                            .drawWithContent {
-                                drawContent()
-                                val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * frame.fraction
-                                if (dimAlpha > 0.001f) {
-                                    drawRect(Color.Black.copy(alpha = dimAlpha))
-                                }
-                            }
-                    },
-                )
-            }
+            val widthPx = containerBounds.width.takeIf { it > 0f } ?: 1080f
+            content(
+                Modifier.miuixDefaultSlideLayer(
+                    isTopLayer = frame.isTopLayer,
+                    fraction = frame.fraction,
+                    widthPx = widthPx,
+                    cornerRadius = containerCornerRadius,
+                    registry = registry,
+                ),
+            )
         } else {
             val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
-            if (frame.isTopLayer) {
-                registry?.updateTransitionState(
-                    illustId = anchor?.illustId ?: routeIllustId,
-                    expansion = frame.expansion,
-                    sourceBounds = activeSourceBounds,
-                    containerBounds = containerBounds,
-                )
-            }
+            registry?.updateTransitionState(
+                illustId = anchor?.illustId ?: candidates.firstOrNull { it != null },
+                expansion = frame.expansion,
+                sourceBounds = activeSourceBounds,
+                containerBounds = containerBounds,
+            )
             content(
                 if (frame.isTopLayer) {
                     Modifier.cardExpandLayer(
@@ -181,5 +157,45 @@ internal fun cardExpandStackAnimator(
                 },
             )
         }
+    }
+}
+
+/**
+ * 为顶层或底层页面应用 Miuix 默认全宽侧滑与视差遮罩图层，并同步底层列表视差位移状态。
+ */
+internal fun Modifier.miuixDefaultSlideLayer(
+    isTopLayer: Boolean,
+    fraction: Float,
+    widthPx: Float,
+    cornerRadius: Dp,
+    registry: SharedBoundsRegistry? = null,
+): Modifier {
+    val clampedFraction = fraction.coerceIn(0f, 1f)
+    if (!isTopLayer) {
+        registry?.updateSlideParallax(widthPx = widthPx, fraction = clampedFraction)
+    }
+    if (clampedFraction <= 0.001f) return this
+    return if (isTopLayer) {
+        this.graphicsLayer {
+            translationX = widthPx * clampedFraction
+            if (cornerRadius > 0.dp && clampedFraction > 0f) {
+                shape = RoundedCornerShape(cornerRadius)
+                clip = true
+            }
+        }
+    } else {
+        val parallaxX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clampedFraction
+        this
+            .graphicsLayer {
+                translationX = parallaxX
+                alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * clampedFraction
+            }
+            .drawWithContent {
+                drawContent()
+                val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * clampedFraction
+                if (dimAlpha > 0.001f) {
+                    drawRect(Color.Black.copy(alpha = dimAlpha))
+                }
+            }
     }
 }

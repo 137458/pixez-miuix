@@ -139,28 +139,11 @@ internal fun resolveBackdropLayerState(
     containerBounds: Rect,
     containerCornerRadiusDp: Float = 0f,
 ): BackdropLayerState {
-    val progress = expansion.coerceIn(0f, 1f)
-    val backdropScale = lerp(1f, BACKDROP_MIN_SCALE, progress)
     val origin = resolveBackdropTransformOrigin(sourceBounds, containerBounds)
-    if (progress <= 0.001f) {
-        return BackdropLayerState(
-            scale = 1f,
-            transformOrigin = origin,
-            localCornerRadiusDp = 0f,
-        )
-    }
-    val targetCornerRadiusDp = maxOf(containerCornerRadiusDp, BACKDROP_FALLBACK_CORNER_RADIUS_DP)
-    val screenCornerRadiusDp = if (containerCornerRadiusDp > 0f) {
-        lerp(containerCornerRadiusDp, targetCornerRadiusDp, progress)
-    } else {
-        val cornerRamp = (progress / 0.15f).coerceIn(0f, 1f)
-        lerp(0f, targetCornerRadiusDp, cornerRamp)
-    }
-    val localCornerRadiusDp = screenCornerRadiusDp / backdropScale.coerceAtLeast(MIN_SCALE)
     return BackdropLayerState(
-        scale = backdropScale,
+        scale = 1f,
         transformOrigin = origin,
-        localCornerRadiusDp = localCornerRadiusDp,
+        localCornerRadiusDp = 0f,
     )
 }
 
@@ -206,11 +189,11 @@ private const val EXPAND_SHADOW_ELEVATION = 16f
 /** 底层页面在展开态下叠加的暗色遮罩最大不透明度。 */
 private const val BACKDROP_SCRIM_ALPHA = 0.24f
 
-/** 底层页面在顶层完全展开时的纵深微缩放比例（转场登记坐标的逆变换同样使用该值）。 */
-internal const val BACKDROP_MIN_SCALE = 0.96f
-
-/** 底层页面缩小脱离屏幕边缘时的最小圆角半径（dp），防止在未上报屏幕圆角的设备上露出四边直角。 */
-private const val BACKDROP_FALLBACK_CORNER_RADIUS_DP = 28f
+/**
+ * 底层页面在顶层完全展开时的缩放比例：保持 1.0f 铺满全屏，
+ * 避免局部卡片展开/收回期间底层列表向内收缩退让而在列表四周露出浅色容器底色白边。
+ */
+internal const val BACKDROP_MIN_SCALE = 1.0f
 
 /**
  * 顶层页面与列表源卡片的交叉交接进度窗口。
@@ -222,6 +205,9 @@ private const val BACKDROP_FALLBACK_CORNER_RADIUS_DP = 28f
  * 内容差异由极短交叉遮蔽，既无拖影也不会露出硬切换。
  */
 private const val CONTENT_FADE_THRESHOLD = 0.05f
+
+/** 详情页非图片附属控件（悬浮顶栏与图片下方信息/标签卡片）开始淡入、完成淡出的展开度阈值。 */
+private const val DETAIL_CHROME_FADE_START = 0.65f
 
 /** 卡片纵横比相对容器纵横比允许的最大超高倍率（约等于卡片文字区占比，即高度缺口不侵入封面图）。 */
 private const val MAX_CARD_HEIGHT_OVERFLOW = 1.25f
@@ -239,7 +225,16 @@ internal fun cardExpandContentAlpha(expansion: Float): Float {
     return (progress / CONTENT_FADE_THRESHOLD).coerceIn(0f, 1f)
 }
 
-internal fun cardExpandDetailChromeAlpha(expansion: Float): Float = 1f
+/**
+ * 计算卡片转场期间详情页非图片附属控件（悬浮液态玻璃顶栏与大图下方的详情卡片）的不透明度。
+ *
+ * 在收回前段（1.0 -> [DETAIL_CHROME_FADE_START]）快速淡出至 0，
+ * 使收缩中后段仅保留干净的作品封面图归位到列表卡片，消除方图/横图下方大面积白底文字卡片的视觉拖尾。
+ */
+internal fun cardExpandDetailChromeAlpha(expansion: Float): Float {
+    val progress = expansion.coerceIn(0f, 1f)
+    return ((progress - DETAIL_CHROME_FADE_START) / (1f - DETAIL_CHROME_FADE_START)).coerceIn(0f, 1f)
+}
 
 /**
  * 为顶层页面叠加「卡片展开 / 收回」视觉层（Container Transform）。

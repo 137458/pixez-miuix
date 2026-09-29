@@ -48,6 +48,9 @@ class SharedBoundsRegistry {
     /** 当前出栈转场的前层作品 ID（仅当刚退出的原栈顶为作品详情页时非空）。 */
     private var exitingFrontIllustId: Int? = null
 
+    /** 当前出栈的详情页最初打开时的路由作品 ID（详情页内滑切到其他作品后，供底层 ENTER_BACK 同样回退到打开时的卡片）。 */
+    private var exitingOriginRouteIllustId: Int? = null
+
     /**
      * 当前正在执行卡片展开/收回转场的目标作品 ID。
      */
@@ -143,10 +146,12 @@ class SharedBoundsRegistry {
      */
     fun syncActiveRouteIllustId(routeIllustId: Int?) {
         if (routeIllustId != currentRouteIllustId) {
-            exitingFrontIllustId = if (currentRouteIllustId != null) {
-                _activeDetailIllustId ?: lastActiveDetailIllustId ?: currentRouteIllustId
+            if (currentRouteIllustId != null) {
+                exitingOriginRouteIllustId = currentRouteIllustId
+                exitingFrontIllustId = _activeDetailIllustId ?: lastActiveDetailIllustId ?: currentRouteIllustId
             } else {
-                null
+                exitingOriginRouteIllustId = null
+                exitingFrontIllustId = null
             }
             currentRouteIllustId = routeIllustId
             lastActiveDetailIllustId = routeIllustId
@@ -175,6 +180,46 @@ class SharedBoundsRegistry {
     }
 
     /**
+     * 按转场方向解析本次转场的锚点作品 ID 候选序列（当前展示的作品 → 本次打开的作品）。
+     *
+     * 保证单参 `stackAnimation` 下顶层（`EXIT_FRONT`，持有 `rawIllustId`）与底层（`ENTER_BACK`，`rawIllustId == null`）
+     * 拿到完全一致的候选序列，防止详情页内滑切到列表外作品后返回时顶层缩回原卡片而底层误走侧滑。
+     */
+    fun resolveTransitionIllustIdCandidates(
+        rawIllustId: Int?,
+        direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
+    ): List<Int?> = when (direction) {
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> listOf(rawIllustId)
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
+            listOf(
+                _activeDetailIllustId ?: exitingFrontIllustId ?: lastActiveDetailIllustId ?: rawIllustId,
+                exitingOriginRouteIllustId ?: rawIllustId,
+                rawIllustId,
+            )
+        } else {
+            emptyList()
+        }
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> listOf(enteringFrontIllustId)
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> listOf(
+            exitingFrontIllustId,
+            exitingOriginRouteIllustId,
+        )
+    }
+
+    /**
+     * 按 Miuix 默认侧滑进度更新底层页面的视差位移；当进度处于起点（<= 0.001f）或终点（>= 0.999f）时自动归零，
+     * 防止侧滑转场结束后残留非零位移导致后续页面的卡片坐标登记被永久冻结或偏移。
+     */
+    fun updateSlideParallax(widthPx: Float, fraction: Float) {
+        val clamped = fraction.coerceIn(0f, 1f)
+        if (widthPx <= 0f || clamped <= 0.001f || clamped >= 0.999f) {
+            listTranslationX = 0f
+        } else {
+            listTranslationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clamped
+        }
+    }
+
+    /**
      * 更新当前转场的激活状态；当展开度到达端点（0 或 1）时自动释放激活标记。
      *
      * 激活期间同时记录底层页面的纵深缩放状态（锚点 = 源卡片中心、比例 = [BACKDROP_MIN_SCALE]
@@ -188,7 +233,6 @@ class SharedBoundsRegistry {
         expansion: Float,
         sourceBounds: Rect? = null,
         containerBounds: Rect = Rect.Zero,
-        isClosing: Boolean = false,
     ) {
         val clamped = expansion.coerceIn(0f, 1f)
         if (illustId == null || clamped <= 0.001f || clamped >= 0.999f) {
@@ -232,7 +276,7 @@ class SharedBoundsRegistry {
      * 必须按该位移逆变换回静止态，否则会被当作真实坐标驻留到下次转场，导致收回终点错位。
      */
     fun updateListTranslation(translationX: Float) {
-        listTranslationX = translationX
+        listTranslationX = if (kotlin.math.abs(translationX) <= 0.5f) 0f else translationX
     }
 
     /**
@@ -252,6 +296,7 @@ class SharedBoundsRegistry {
         currentRouteIllustId = null
         enteringFrontIllustId = null
         exitingFrontIllustId = null
+        exitingOriginRouteIllustId = null
         activeTransitionIllustId = null
         activeTransitionExpansion = 0f
         backdropScale = 1f

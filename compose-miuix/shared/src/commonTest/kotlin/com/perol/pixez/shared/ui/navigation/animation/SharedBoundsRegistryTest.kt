@@ -136,7 +136,6 @@ class SharedBoundsRegistryTest {
     @Test
     fun `视差侧滑期间指派的卡片坐标按位移逆变换归一为静止态坐标`() {
         val registry = SharedBoundsRegistry()
-        val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
         // 侧滑期间底层列表整体左移 250px（25% 视差），卡片上报的是平移后的瞬时坐标
         registry.updateListTranslation(-250f)
 
@@ -224,11 +223,10 @@ class SharedBoundsRegistryTest {
     }
 
     @Test
-    fun `转场激活期首次登记的卡片按底层纵深缩放逆变换归一为静止态坐标`() {
+    fun `卡片转场激活期底层列表保持无缩放原尺寸登记`() {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
         val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        // expansion = 0.5 → backdropScale = lerp(1, 0.96, 0.5) = 0.98，缩放锚点 = 源卡片中心 (300, 600)。
         registry.updateTransitionState(
             illustId = 42,
             expansion = 0.5f,
@@ -236,15 +234,13 @@ class SharedBoundsRegistryTest {
             containerBounds = container,
         )
 
-        // 转场中新进入组合的卡片上报的是被 0.98x 缩放污染的瞬时坐标：
-        // q = pivot + (p - pivot) * 0.98，静止态 p = Rect(200, 500, 600, 900) → q = Rect(202, 502, 594, 894)。
-        val pollutedFromBackdrop = Rect(left = 202f, top = 502f, right = 594f, bottom = 894f)
-        registry.put(illustId = 7, rect = pollutedFromBackdrop, cornerRadiusDp = 12f)
+        val newCard = Rect(left = 200f, top = 500f, right = 600f, bottom = 900f)
+        registry.put(illustId = 7, rect = newCard, cornerRadiusDp = 12f)
 
         assertEquals(
-            Rect(left = 200f, top = 500f, right = 600f, bottom = 900f),
+            newCard,
             registry.get(7),
-            "转场期首次登记的坐标必须归一为静止态真实坐标，否则退出动画终点跳变",
+            "底层列表在卡片转场期保持 1.0x 不缩放，新进入组合的卡片直接为静止态真实坐标",
         )
     }
 
@@ -281,6 +277,52 @@ class SharedBoundsRegistryTest {
         registry.activeDetailIllustId = null
         assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.EXIT_FRONT))
         assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.ENTER_BACK))
+    }
+
+    @Test
+    fun `详情页滑切到列表外作品后返回时顶层与底层均能回退到本次打开的作品锚点`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        val openedCard = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
+        registry.put(illustId = 42, rect = openedCard, cornerRadiusDp = 16f)
+
+        // 1. 从列表点击作品 42 进入详情页
+        registry.syncActiveRouteIllustId(42)
+        // 2. 在详情页内右滑切到不在列表中的关联作品 99
+        registry.activeDetailIllustId = 99
+        // 3. 按返回出栈回到 Main（rawIllustId = null）
+        registry.syncActiveRouteIllustId(null)
+        registry.activeDetailIllustId = null
+
+        val frontCandidates = registry.resolveTransitionIllustIdCandidates(rawIllustId = 42, direction = Direction.EXIT_FRONT)
+        val backCandidates = registry.resolveTransitionIllustIdCandidates(rawIllustId = null, direction = Direction.ENTER_BACK)
+
+        val frontAnchor = registry.resolveAnchor(frontCandidates, container)
+        val backAnchor = registry.resolveAnchor(backCandidates, container)
+
+        assertEquals(42, frontAnchor?.illustId, "顶层 EXIT_FRONT 应回退到打开时的卡片 42")
+        assertEquals(42, backAnchor?.illustId, "底层 ENTER_BACK (rawIllustId=null) 也必须一致回退到卡片 42，防止底层误走侧滑")
+    }
+
+    @Test
+    fun `视差侧滑到达起点或终点时自动归零位移以防后续页面卡片坐标冻结或偏移`() {
+        val registry = SharedBoundsRegistry()
+        val initialRect = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
+        registry.put(illustId = 42, rect = initialRect)
+
+        // 侧滑中段（fraction = 0.5）记录视差位移
+        registry.updateSlideParallax(widthPx = 1000f, fraction = 0.5f)
+        // 侧滑入栈到达终点（fraction = 1.0，例如进入搜索页/画师页）必须释放位移状态
+        registry.updateSlideParallax(widthPx = 1000f, fraction = 1.0f)
+
+        // 释放后在二级页新登记的卡片不得被叠加视差偏移，已有卡片滚动后也必须能正常刷新坐标
+        val newCardRect = Rect(left = 100f, top = 200f, right = 500f, bottom = 600f)
+        registry.put(illustId = 88, rect = newCardRect)
+        assertEquals(newCardRect, registry.get(88), "侧滑入栈结束后新卡片不得被叠加陈旧视差偏移")
+
+        val scrolledRect = Rect(left = 24f, top = 120f, right = 524f, bottom = 770f)
+        registry.put(illustId = 42, rect = scrolledRect)
+        assertEquals(scrolledRect, registry.get(42), "侧滑结束后已登记卡片在滚动时必须允许更新坐标")
     }
 
     @Test

@@ -93,6 +93,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
             containerWidthPx = containerWidthPx,
             deviceCornerRadius = deviceCornerRadius,
+            registry = registry,
         )
     }
     val sourceCard = anchor.card
@@ -143,38 +144,35 @@ fun miuixCardExpandPredictiveBackAnimatable(
  * @param initialBackEvent 手势起始事件。
  * @param containerWidthPx 页面容器当前的物理像素宽度。
  * @param deviceCornerRadius 设备屏幕硬件物理圆角半径。
+ * @param registry 卡片几何信息源，用于同步底层列表视差位移。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixSlidePredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     containerWidthPx: Float,
     deviceCornerRadius: Dp = 0.dp,
+    registry: SharedBoundsRegistry? = null,
 ): PredictiveBackAnimatable {
     return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
         exitModifier = { progress, _ ->
-            Modifier.graphicsLayer {
-                translationX = progress * containerWidthPx
-                if (deviceCornerRadius > 0.dp) {
-                    shape = RoundedCornerShape(deviceCornerRadius)
-                    clip = true
-                }
-            }
+            Modifier.miuixDefaultSlideLayer(
+                isTopLayer = true,
+                fraction = progress,
+                widthPx = containerWidthPx,
+                cornerRadius = deviceCornerRadius,
+                registry = registry,
+            )
         },
         enterModifier = { progress, _ ->
             val coveredFraction = (1f - progress).coerceIn(0f, 1f)
-            Modifier
-                .graphicsLayer {
-                    translationX = -containerWidthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * coveredFraction
-                    alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * coveredFraction
-                }
-                .drawWithContent {
-                    drawContent()
-                    val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * coveredFraction
-                    if (dimAlpha > 0.001f) {
-                        drawRect(Color.Black.copy(alpha = dimAlpha))
-                    }
-                }
+            Modifier.miuixDefaultSlideLayer(
+                isTopLayer = false,
+                fraction = coveredFraction,
+                widthPx = containerWidthPx,
+                cornerRadius = deviceCornerRadius,
+                registry = registry,
+            )
         },
     )
 }

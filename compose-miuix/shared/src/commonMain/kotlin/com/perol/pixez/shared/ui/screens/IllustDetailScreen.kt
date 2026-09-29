@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -55,6 +56,7 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
 import top.yukonga.miuix.kmp.basic.Button
@@ -263,6 +265,16 @@ private fun IllustDetailSingleContent(
         isBanned || (settings?.hIsNotAllow == true && illust?.isR18() == true)
     }
 
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val isCardTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
+    val detailChromeAlpha = if (isCardTransitionActive) {
+        com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha(
+            sharedBoundsRegistry.activeTransitionExpansion,
+        )
+    } else {
+        1f
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -293,6 +305,7 @@ private fun IllustDetailSingleContent(
                         listState = listState,
                         nestedScrollConnection = detailNestedScrollConnection,
                         detailBackdrop = detailBackdrop,
+                        detailChromeAlpha = if (listState.firstVisibleItemIndex == 0) detailChromeAlpha else 1f,
                         repository = repository,
                         bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
@@ -344,7 +357,7 @@ private fun IllustDetailSingleContent(
         }
 
         val fullScreenPage = fullScreenPageIndex
-        if (fullScreenPage == null) {
+        if (fullScreenPage == null && detailChromeAlpha > 0.001f) {
             IllustDetailTopBarSection(
                 illust = illust,
                 isBookmarked = isBookmarked,
@@ -353,7 +366,7 @@ private fun IllustDetailSingleContent(
                 isBanned = isBanned,
                 settings = settings,
                 strings = strings,
-                detailBackdrop = detailBackdrop,
+                detailBackdrop = if (isCardTransitionActive) null else detailBackdrop,
                 collapseProgressProvider = { collapseProgressState.value },
                 bookmarkHeartScale = bookmarkHeartScale,
                 coroutineScope = coroutineScope,
@@ -368,9 +381,11 @@ private fun IllustDetailSingleContent(
                 onToast = { toastMessage = it },
                 onBanSuccess = { isBanned = true },
                 onBack = onBack,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = detailChromeAlpha },
             )
-        } else if (illust != null) {
+        } else if (fullScreenPage != null && illust != null) {
             IllustDetailFullScreenOverlay(
                 illust = illust,
                 pageIndex = fullScreenPage,
@@ -408,6 +423,7 @@ private fun IllustDetailContentList(
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection,
     detailBackdrop: LayerBackdrop?,
+    detailChromeAlpha: Float = 1f,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
@@ -427,6 +443,11 @@ private fun IllustDetailContentList(
     onIllustClick: ((Int) -> Unit)?,
     onNovelClick: ((Int) -> Unit)?,
 ) {
+    val chromeModifier = if (detailChromeAlpha < 0.999f) {
+        Modifier.graphicsLayer { alpha = detailChromeAlpha }
+    } else {
+        Modifier
+    }
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -471,57 +492,65 @@ private fun IllustDetailContentList(
 
         // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
         item(key = "illust_info_card", contentType = "info_card") {
-            IllustDetailInfoCard(
-                illust = illust,
-                isDownloading = isDownloading,
-                isBookmarked = isBookmarked,
-                settings = settings,
-                strings = strings,
-                downloadRepository = downloadRepository,
-                bookmarkRepository = bookmarkRepository,
-                coroutineScope = coroutineScope,
-                onToast = onToast,
-                onDownloadingChange = onDownloadingChange,
-                onBookmarkedChange = onBookmarkedChange,
-                onUserClick = onUserClick,
-                onIllustSeriesClick = onIllustSeriesClick,
-            )
+            Box(modifier = chromeModifier) {
+                IllustDetailInfoCard(
+                    illust = illust,
+                    isDownloading = isDownloading,
+                    isBookmarked = isBookmarked,
+                    settings = settings,
+                    strings = strings,
+                    downloadRepository = downloadRepository,
+                    bookmarkRepository = bookmarkRepository,
+                    coroutineScope = coroutineScope,
+                    onToast = onToast,
+                    onDownloadingChange = onDownloadingChange,
+                    onBookmarkedChange = onBookmarkedChange,
+                    onUserClick = onUserClick,
+                    onIllustSeriesClick = onIllustSeriesClick,
+                )
+            }
         }
 
         // 3. 简介与文案卡片
         if (illust.caption.isNotBlank()) {
             item {
-                IllustDetailCaptionCard(
-                    illust = illust,
-                    strings = strings,
-                    onUserClick = onUserClick,
-                    onIllustClick = onIllustClick,
-                    onIllustSeriesClick = onIllustSeriesClick,
-                    onNovelClick = onNovelClick,
-                    onTagClick = onTagClick,
-                )
+                Box(modifier = chromeModifier) {
+                    IllustDetailCaptionCard(
+                        illust = illust,
+                        strings = strings,
+                        onUserClick = onUserClick,
+                        onIllustClick = onIllustClick,
+                        onIllustSeriesClick = onIllustSeriesClick,
+                        onNovelClick = onNovelClick,
+                        onTagClick = onTagClick,
+                    )
+                }
             }
         }
 
         // 4. 标签卡片与胶囊包裹（Capsule Chips）
         if (illust.tags.isNotEmpty()) {
             item {
-                IllustDetailTagsCard(
-                    tags = illust.tags,
-                    strings = strings,
-                    onTagClick = onTagClick,
-                )
+                Box(modifier = chromeModifier) {
+                    IllustDetailTagsCard(
+                        tags = illust.tags,
+                        strings = strings,
+                        onTagClick = onTagClick,
+                    )
+                }
             }
         }
 
         // 5. 互动操作卡片（评论与相关作品）
         item {
-            IllustDetailInteractionCard(
-                illust = illust,
-                strings = strings,
-                onCommentsClick = onCommentsClick,
-                onRelatedIllustsClick = onRelatedIllustsClick,
-            )
+            Box(modifier = chromeModifier) {
+                IllustDetailInteractionCard(
+                    illust = illust,
+                    strings = strings,
+                    onCommentsClick = onCommentsClick,
+                    onRelatedIllustsClick = onRelatedIllustsClick,
+                )
+            }
         }
     }
 }

@@ -169,9 +169,8 @@ class CardExpandGeometryTest {
     }
 
     @Test
-    fun `底层列表页面在展开缩小后具备经过缩放逆补偿的圆角以消除四边直角`() {
+    fun `底层列表页面在卡片展开与收回全程保持铺满不缩放不裁切以根除四周白边`() {
         val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        // 未展开（expansion = 0）时列表铺满屏幕不缩小，本地圆角为 0
         val idleBackdrop = resolveBackdropLayerState(
             expansion = 0f,
             sourceBounds = card,
@@ -181,16 +180,14 @@ class CardExpandGeometryTest {
         assertClose(1.0f, idleBackdrop.scale)
         assertClose(0f, idleBackdrop.localCornerRadiusDp)
 
-        // 完全展开（expansion = 1）时列表缩小到 0.96，即使设备未上报物理圆角（0dp），
-        // 也必须启用兜底圆角（28dp）并除以 0.96 逆向补偿（28 / 0.96 = 29.166668dp），防止露出四边直角。
-        val shrunkBackdrop = resolveBackdropLayerState(
+        val expandedBackdrop = resolveBackdropLayerState(
             expansion = 1f,
             sourceBounds = card,
             containerBounds = container,
-            containerCornerRadiusDp = 0f,
+            containerCornerRadiusDp = 32f,
         )
-        assertClose(0.96f, shrunkBackdrop.scale)
-        assertClose(28f / 0.96f, shrunkBackdrop.localCornerRadiusDp, epsilon = 1e-4f)
+        assertClose(1.0f, expandedBackdrop.scale)
+        assertClose(0f, expandedBackdrop.localCornerRadiusDp)
     }
 
     @Test
