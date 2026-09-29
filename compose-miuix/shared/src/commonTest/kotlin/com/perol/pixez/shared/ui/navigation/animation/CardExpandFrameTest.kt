@@ -132,20 +132,25 @@ class CardExpandFrameTest {
     }
 
     @Test
-    fun `底层源卡片与顶层在同一个极窄窗口内完成交接`() {
+    fun `底层源卡片在顶层完全不透明之后才隐藏以消除半透明叠加时的白底透光闪烁`() {
         // 静止在卡片态（expansion = 0）时源卡片完全不透明
         assertClose(1f, cardExpandSourceCardAlpha(0f))
-        // 与顶层淡入共用同一窗宽：任一瞬间两层至少有一层可见，交接过程不存在「都不可见」的空洞
-        for (step in 0..19) {
-            val expansion = step / 20f
+        // 在顶层淡入期间（0..0.05），底层源卡片必须保持 1.0 不透明，
+        // 使 Porter-Duff SRC_OVER 合成不透明度 1 - (1 - sourceAlpha) * (1 - contentAlpha) 恒等于 1.0，
+        // 彻底避免两层同时半透明（0.5 + 0.5 合成后仅 0.75）导致列表浅色底板透出闪烁。
+        for (step in 0..20) {
+            val expansion = step / 400f
+            val contentAlpha = cardExpandContentAlpha(expansion)
+            val sourceAlpha = cardExpandSourceCardAlpha(expansion)
+            val combinedOpacity = 1f - (1f - sourceAlpha) * (1f - contentAlpha)
             assertClose(
                 expected = 1f,
-                actual = cardExpandContentAlpha(expansion) + cardExpandSourceCardAlpha(expansion),
+                actual = combinedOpacity,
                 epsilon = 1e-4f,
             )
         }
-        // 越过窗口后顶层已完全不透明，源卡片必须完全隐藏（alpha = 0）以消除底层重影
-        assertClose(0f, cardExpandSourceCardAlpha(0.05f))
+        // 顶层完全不透明并遮盖源卡片后（expansion >= 0.12），源卡片必须完全隐藏（alpha = 0）以消除移动过程中的双卡重影
+        assertClose(0f, cardExpandSourceCardAlpha(0.12f))
         assertClose(0f, cardExpandSourceCardAlpha(0.30f))
         assertClose(0f, cardExpandSourceCardAlpha(0.85f))
         // 完全铺满（expansion = 1）后动画结束，恢复为 1f 以便后续页面静态绘制不受干扰

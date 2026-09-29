@@ -201,13 +201,15 @@ class SharedBoundsRegistryTest {
     }
 
     @Test
-    fun `容器纵横比不足以让详情页盖住卡片全高时锚点解析为空`() {
+    fun `横屏容器下竖图卡片锚点正常解析不回退侧滑`() {
         val registry = SharedBoundsRegistry()
-        // 横向窗口（1600x1000）里的竖图卡片：等比缩放后详情页高度只有卡片的三分之一
         val landscapeContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
-        registry.put(illustId = 42, rect = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f))
+        val portraitCard = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f)
+        registry.put(illustId = 42, rect = portraitCard)
 
-        assertNull(registry.resolveAnchor(listOf(42), landscapeContainer))
+        val anchor = registry.resolveAnchor(listOf(42), landscapeContainer)
+        assertEquals(42, anchor?.illustId)
+        assertEquals(portraitCard, anchor?.card?.rect)
     }
 
     @Test
@@ -223,10 +225,11 @@ class SharedBoundsRegistryTest {
     }
 
     @Test
-    fun `卡片转场激活期底层列表保持无缩放原尺寸登记`() {
+    fun `卡片转场激活期底层列表保持无缩放原尺寸登记且已登记卡片允许实时更新滚动位置`() {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
         val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
+        registry.put(illustId = 42, rect = sourceCard)
         registry.updateTransitionState(
             illustId = 42,
             expansion = 0.5f,
@@ -236,12 +239,16 @@ class SharedBoundsRegistryTest {
 
         val newCard = Rect(left = 200f, top = 500f, right = 600f, bottom = 900f)
         registry.put(illustId = 7, rect = newCard, cornerRadiusDp = 12f)
-
         assertEquals(
             newCard,
             registry.get(7),
             "底层列表在卡片转场期保持 1.0x 不缩放，新进入组合的卡片直接为静止态真实坐标",
         )
+
+        // 快速进出期间用户在上一张 (42) 收回尚未结束时滚动列表并点击另一张已登记卡片 (7)，该卡片的新坐标必须实时刷新而非丢弃
+        val scrolledCard = Rect(left = 200f, top = 260f, right = 600f, bottom = 660f)
+        registry.put(illustId = 7, rect = scrolledCard)
+        assertEquals(scrolledCard, registry.get(7))
     }
 
     @Test
@@ -270,11 +277,11 @@ class SharedBoundsRegistryTest {
         assertEquals(42, registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.EXIT_BACK))
 
         // 3. 在详情页内左右滑切到作品 99
-        registry.activeDetailIllustId = 99
+        registry.updateDisplayedIllustId(originIllustId = 42, displayedIllustId = 99)
 
         // 4. Pop 返回 Main（即使详情页 DisposableEffect 先将 activeDetailIllustId 置空，退出动画仍须保持 99）
         registry.syncActiveRouteIllustId(null)
-        registry.activeDetailIllustId = null
+        registry.onDetailDisposed(originIllustId = 42)
         assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.EXIT_FRONT))
         assertEquals(99, registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.ENTER_BACK))
     }
@@ -289,10 +296,10 @@ class SharedBoundsRegistryTest {
         // 1. 从列表点击作品 42 进入详情页
         registry.syncActiveRouteIllustId(42)
         // 2. 在详情页内右滑切到不在列表中的关联作品 99
-        registry.activeDetailIllustId = 99
+        registry.updateDisplayedIllustId(originIllustId = 42, displayedIllustId = 99)
         // 3. 按返回出栈回到 Main（rawIllustId = null）
         registry.syncActiveRouteIllustId(null)
-        registry.activeDetailIllustId = null
+        registry.onDetailDisposed(originIllustId = 42)
 
         val frontCandidates = registry.resolveTransitionIllustIdCandidates(rawIllustId = 42, direction = Direction.EXIT_FRONT)
         val backCandidates = registry.resolveTransitionIllustIdCandidates(rawIllustId = null, direction = Direction.ENTER_BACK)
@@ -302,6 +309,43 @@ class SharedBoundsRegistryTest {
 
         assertEquals(42, frontAnchor?.illustId, "顶层 EXIT_FRONT 应回退到打开时的卡片 42")
         assertEquals(42, backAnchor?.illustId, "底层 ENTER_BACK (rawIllustId=null) 也必须一致回退到卡片 42，防止底层误走侧滑")
+    }
+
+    @Test
+    fun `快速多次进入退出不同作品详情页时旧页面的延迟回调与收尾帧绝不污染新页面的返回锚点`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        val cardA = Rect(left = 24f, top = 200f, right = 524f, bottom = 800f)
+        val cardB = Rect(left = 556f, top = 200f, right = 1056f, bottom = 800f)
+        registry.put(illustId = 101, rect = cardA)
+        registry.put(illustId = 202, rect = cardB)
+
+        // 1. 打开作品 A (101)
+        registry.syncActiveRouteIllustId(101)
+        registry.updateDisplayedIllustId(originIllustId = 101, displayedIllustId = 101)
+
+        // 2. 快速返回（此时作品 101 仍在执行 340ms EXIT_FRONT 动画，尚未从组合树销毁）
+        registry.syncActiveRouteIllustId(null)
+
+        // 3. 在 101 尚未销毁前，用户立即点击打开作品 B (202)
+        registry.syncActiveRouteIllustId(202)
+        registry.updateTransitionState(illustId = 202, expansion = 0.4f, sourceBounds = cardB, containerBounds = container)
+
+        // 4. 此时旧页面 101 的异步关联列表或 DisposableEffect.onDispose 延迟触发，甚至其收尾帧上报 expansion = 0f
+        registry.updateDisplayedIllustId(originIllustId = 101, displayedIllustId = 101)
+        registry.onDetailDisposed(originIllustId = 101)
+        registry.updateTransitionState(illustId = 101, expansion = 0f)
+
+        // 断言：202 的激活态不得被旧页面 101 的收尾帧清空
+        assertEquals(202, registry.activeTransitionIllustId, "旧页面 101 的收尾帧不得清空当前正在展开的 202")
+
+        // 5. 用户再次快速从作品 B (202) 返回，即使 202 的 LaunchedEffect 尚未执行，返回位置也必须精准落在卡片 B (202) 而非卡片 A (101)
+        registry.syncActiveRouteIllustId(null)
+        val candidatesB = registry.resolveTransitionIllustIdCandidates(rawIllustId = 202, direction = Direction.EXIT_FRONT)
+        val backCandidatesB = registry.resolveTransitionIllustIdCandidates(rawIllustId = null, direction = Direction.ENTER_BACK)
+
+        assertEquals(202, registry.resolveAnchor(candidatesB, container)?.illustId, "作品 202 必须收回卡片 202，绝不能误收回 101")
+        assertEquals(202, registry.resolveAnchor(backCandidatesB, container)?.illustId, "底层 ENTER_BACK 同样必须定位到 202")
     }
 
     @Test
@@ -329,7 +373,7 @@ class SharedBoundsRegistryTest {
     fun `从作品详情页进入非详情页及从非详情页返回详情页时前后层均解析为空以回退侧滑`() {
         val registry = SharedBoundsRegistry()
         registry.syncActiveRouteIllustId(42)
-        registry.activeDetailIllustId = 99
+        registry.updateDisplayedIllustId(originIllustId = 42, displayedIllustId = 99)
 
         // 从详情页 (42) Push 进入画师页 (null)
         registry.syncActiveRouteIllustId(null)

@@ -229,12 +229,12 @@ fun RootContent(
                         animation = predictiveBackAnimation(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
-                            selector = { initialBackEvent, _, _ ->
-                                // 预测性返回手势来源页即当前栈顶页面，作品详情页可取到对应卡片矩形。
+                            selector = { initialBackEvent, exitChild, _ ->
+                                // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
                                 miuixCardExpandPredictiveBackAnimatable(
                                     initialBackEvent = initialBackEvent,
                                     registry = sharedBounds,
-                                    illustId = (active as? Child.IllustDetail)?.illustId,
+                                    illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
                                     containerWidthPx = containerGeometry.widthPx,
                                     containerBounds = containerGeometry.bounds,
                                     deviceCornerRadius = containerGeometry.cornerRadius,

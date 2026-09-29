@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
+import coil3.compose.asPainter
 import coil3.compose.preferEndFirstIntrinsicSize
 import coil3.compose.rememberAsyncImagePainter
 import coil3.decode.DataSource
@@ -154,7 +155,6 @@ fun PixivAsyncImage(
 ) {
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
-    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
 
     val transformedModel = remember(model, settings?.pictureSource, settings?.changeVersion) {
         (model as? String)?.mapToPictureSource(settings?.pictureSource) ?: model
@@ -176,17 +176,8 @@ fun PixivAsyncImage(
 
     // 静默重试预算：真实错误时递增，计数变化用 key() 强制销毁重建 AsyncImage 节点重启加载。
     var silentRetryCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
-    // 异步加载完成后的 MEMORY_CACHE 同步重绑计数：仅对首次 DISK/NETWORK 异步结果在转场稳定后递增一次。
+    // 异步加载完成后的 MEMORY_CACHE 同步重绑计数：仅对首次 DISK/NETWORK 异步结果递增一次。
     var memoryCacheCommitCount by remember(transformedModel, loadOriginalSize) { mutableIntStateOf(0) }
-    var pendingMemoryCacheRebind by remember(transformedModel, loadOriginalSize) { mutableStateOf(false) }
-    val isTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
-
-    LaunchedEffect(pendingMemoryCacheRebind, isTransitionActive) {
-        if (pendingMemoryCacheRebind && !isTransitionActive) {
-            pendingMemoryCacheRebind = false
-            memoryCacheCommitCount++
-        }
-    }
 
     val mainRequest = remember<ImageRequest>(
         transformedModel,
@@ -194,6 +185,7 @@ fun PixivAsyncImage(
         context,
         loadOriginalSize,
         silentRetryCount,
+        memoryCacheCommitCount,
     ) {
         val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
         val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
@@ -225,7 +217,16 @@ fun PixivAsyncImage(
             }
             .configurePlatformOptimizations()
             .preferEndFirstIntrinsicSize(true)
-            .crossfade(200)
+            .apply {
+                // 已有同幅缩略图占位或执行 MEMORY_CACHE 同步重绑时禁用 crossfade：
+                // CrossfadePainter 默认同时将旧图淡出（alpha = 1 - t）与新图淡入（alpha = t），
+                // 中点合成不透明度仅 0.75，会导致详情页大图加载完成或重绑时透出 25% 浅色底板闪白。
+                if (hasThumbnail || memoryCacheCommitCount > 0) {
+                    crossfade(false)
+                } else {
+                    crossfade(200)
+                }
+            }
             .build()
     }
 
@@ -258,6 +259,22 @@ fun PixivAsyncImage(
         }
     }
 
+    // 首帧组合阶段直接从 Coil MemoryCache 同步提取已就绪的列表缩略图 Painter：
+    // rememberAsyncImagePainter 需等到 onRemembered() 才会拉起协程，导致首次组合帧（Frame 0）state 为 Empty；
+    // 同步直取可保证点入详情页的第 0 帧即具备有效缩略图，彻底消除转场首帧白板闪烁。
+    val syncThumbnailPainter = remember(transformedThumbnailCacheKey, context, hasThumbnail) {
+        val thumbKey = transformedThumbnailCacheKey?.toString()
+        if (hasThumbnail && !thumbKey.isNullOrBlank()) {
+            val cachedImage = coil3.SingletonImageLoader.get(context)
+                .memoryCache
+                ?.get(coil3.memory.MemoryCache.Key(thumbKey))
+                ?.image
+            cachedImage?.asPainter(context, filterQuality)
+        } else {
+            null
+        }
+    }
+
     val thumbnailPainter = if (thumbnailRequest != null) {
         rememberAsyncImagePainter(
             model = thumbnailRequest,
@@ -268,10 +285,10 @@ fun PixivAsyncImage(
         null
     }
     val thumbnailState = thumbnailPainter?.state?.collectAsState()
-    val resolvedThumbnailPainter = thumbnailState?.value?.painter
+    val resolvedThumbnailPainter = thumbnailState?.value?.painter ?: syncThumbnailPainter
 
     // 静默重试与异步加载后的 MEMORY_CACHE 同步重绑均通过 key() 驱动：
-    // 重绑时位图已存于 MemoryCache，新节点在 onAttach 阶段通过 CoroutineStart.UNDISPATCHED 同步完成绑定，
+    // 重绑时位图已存于 MemoryCache 且已关闭 crossfade，新节点在 onAttach 阶段通过 CoroutineStart.UNDISPATCHED 同步完成绑定，
     // 在同帧首次 draw() 前即就绪，无闪烁、无重复网络请求。
     key(silentRetryCount, memoryCacheCommitCount) {
         AsyncImage(
@@ -286,11 +303,7 @@ fun PixivAsyncImage(
                     is AsyncImagePainter.State.Loading -> onLoading?.invoke()
                     is AsyncImagePainter.State.Success -> {
                         if (shouldCommitMemoryCacheRebind(state.result.dataSource, memoryCacheCommitCount)) {
-                            if (isTransitionActive) {
-                                pendingMemoryCacheRebind = true
-                            } else {
-                                memoryCacheCommitCount++
-                            }
+                            memoryCacheCommitCount++
                         }
                         onSuccess?.invoke()
                     }

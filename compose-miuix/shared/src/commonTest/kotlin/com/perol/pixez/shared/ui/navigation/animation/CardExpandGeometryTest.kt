@@ -150,22 +150,26 @@ class CardExpandGeometryTest {
     }
 
     @Test
-    fun `竖图卡片在 scaleY 大于 scaleX 时退出结束位置严格对齐卡片宽度与左上角避免水平放大跳变`() {
-        // 常见竖屏或宽屏场景：容器 1000x2000，长竖图卡片 460x1100 -> scaleX = 0.46, scaleY = 0.55 (scaleY > scaleX)
+    fun `竖图卡片在 scaleY 大于 scaleX 时通过双向视口裁切使退出结束窗口严格重合卡片四边与左上角`() {
+        // 容器 1000x2000，长竖图卡片 460x1100 -> scaleX = 0.46, scaleY = 0.55 (scaleY > scaleX)
         val tallCard = Rect(left = 30f, top = 200f, right = 490f, bottom = 1300f)
 
-        val state = resolveCardExpandTransform(
-            expansion = 0f,
-            sourceBounds = tallCard,
-            containerBounds = container,
+        val state = assertNotNull(
+            resolveCardExpandTransform(
+                expansion = 0f,
+                sourceBounds = tallCard,
+                containerBounds = container,
+            ),
         )
+        val window = windowRect(state, container)
 
-        // 退出结束位置（expansion = 0）必须严格以 scaleX (0.46) 缩放，保证详情页顶部图片宽度 100% 等于卡片宽度 460px，
-        // 左上角严格落在 (30, 200)，绝不能放大到 0.55 并向左偏移。
-        assertClose(0.46f, state?.uniformScale)
-        assertClose(30f, state?.transX)
-        assertClose(200f, state?.transY)
-        assertClose(1.0f, state?.visibleHeightFraction)
+        // 退出结束位置（expansion = 0）以 max(scaleX, scaleY) = 0.55 等比缩放，并由 visibleWidthFraction 裁切宽度，
+        // 保证可见窗口四边与卡片 (30, 200, 490, 1300) 100% 像素级重合。
+        assertClose(0.55f, state.uniformScale)
+        assertClose(30f, state.transX)
+        assertClose(200f, state.transY)
+        assertClose(tallCard.width, window.width, epsilon = RECT_EPSILON)
+        assertClose(tallCard.height, window.height, epsilon = RECT_EPSILON)
     }
 
     @Test
@@ -248,39 +252,39 @@ class CardExpandGeometryTest {
     }
 
     @Test
-    fun `横向容器下按卡片宽度等比缩放后盖不住卡片全高`() {
-        // 桌面端横向窗口 + 竖图卡片：宽度对齐后详情页自身高度不足，终点只能落在一个明显比卡片矮的窗口上，
-        // 收尾时卡片下半部分会突兀补入。此处固定这一几何事实，作为 isCardExpandLandable 拦截的依据。
-        val landscapeContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
+    fun `横屏容器下竖图与方图卡片均可触发卡片转场且收回终点与卡片四边像素级重合`() {
+        val landscapeContainer = Rect(left = 0f, top = 0f, right = 2400f, bottom = 1080f)
         val card = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f)
+
+        assertTrue(isCardExpandLandable(card, landscapeContainer))
 
         val state = assertNotNull(
             resolveCardExpandTransform(expansion = 0f, sourceBounds = card, containerBounds = landscapeContainer),
         )
         val window = windowRect(state, landscapeContainer)
 
+        assertClose(card.left, window.left, epsilon = RECT_EPSILON)
+        assertClose(card.top, window.top, epsilon = RECT_EPSILON)
         assertClose(card.width, window.width, epsilon = RECT_EPSILON)
-        assertTrue(window.height < card.height * 0.5f, "窗口高度 ${window.height} 应远小于卡片高度 ${card.height}")
-        assertFalse(isCardExpandLandable(card, landscapeContainer))
+        assertClose(card.height, window.height, epsilon = RECT_EPSILON)
     }
 
     @Test
-    fun `卡片超高倍率未超过阈值时判定为可落点`() {
-        // 高度差仍落在卡片文字区内（未侵入封面图），终点几何差可由极短交叉窗口遮蔽。
+    fun `方形容器与超长竖图卡片均判定为可落点并精确覆盖卡片全高`() {
         val squareContainer = Rect(left = 0f, top = 0f, right = 1000f, bottom = 1000f)
-        // 400x500 的卡片：超高倍率恰好等于阈值 1.25，属于边界，仍必须可落点
-        val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 600f)
+        val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 850f)
 
         assertTrue(isCardExpandLandable(card, squareContainer))
-        // 卡片高度 500 -> 510：超高倍率升至 1.275，超出阈值
-        assertFalse(isCardExpandLandable(card.copy(bottom = card.bottom + 10f), squareContainer))
-        // 明显更矮的卡片（350 高，倍率 0.875）余量充足
-        assertTrue(isCardExpandLandable(card.copy(bottom = 450f), squareContainer))
+        val state = assertNotNull(
+            resolveCardExpandTransform(expansion = 0f, sourceBounds = card, containerBounds = squareContainer),
+        )
+        val window = windowRect(state, squareContainer)
+        assertClose(card.width, window.width, epsilon = RECT_EPSILON)
+        assertClose(card.height, window.height, epsilon = RECT_EPSILON)
     }
 
     @Test
     fun `横图卡片在竖屏容器内判定为可落点并精确落位`() {
-        // 卡片比容器更「扁」时高度方向不会溢出，终点同样严格重合。
         val portraitContainer = Rect(left = 100f, top = 50f, right = 1100f, bottom = 2050f)
         val card = Rect(left = 300f, top = 250f, right = 700f, bottom = 850f)
 
@@ -298,7 +302,8 @@ class CardExpandGeometryTest {
     }
 
     /**
-     * 顶层可见窗口：裁切形状保留整宽、按 [CardExpandTransformState.visibleHeightFraction] 裁高，
+     * 顶层可见窗口：裁切形状按 [CardExpandTransformState.visibleWidthFraction] 裁宽、
+     * 按 [CardExpandTransformState.visibleHeightFraction] 裁高，
      * 再经 `graphicsLayer` 以左上角为原点等比缩放并按 (transX, transY) 平移所得。
      */
     private fun windowRect(state: CardExpandTransformState, containerBounds: Rect): Rect {
@@ -307,7 +312,7 @@ class CardExpandGeometryTest {
         return Rect(
             left = left,
             top = top,
-            right = left + state.uniformScale * containerBounds.width,
+            right = left + state.uniformScale * state.visibleWidthFraction * containerBounds.width,
             bottom = top + state.uniformScale * state.visibleHeightFraction * containerBounds.height,
         )
     }

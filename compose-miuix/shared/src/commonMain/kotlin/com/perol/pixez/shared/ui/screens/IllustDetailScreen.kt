@@ -90,9 +90,9 @@ fun IllustDetailScreen(
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
 
-    DisposableEffect(sharedBoundsRegistry) {
+    DisposableEffect(sharedBoundsRegistry, illustId) {
         onDispose {
-            sharedBoundsRegistry.activeDetailIllustId = null
+            sharedBoundsRegistry.onDetailDisposed(originIllustId = illustId)
         }
     }
 
@@ -107,8 +107,11 @@ fun IllustDetailScreen(
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { idList.size })
         val currentDisplayedId = idList.getOrElse(pagerState.currentPage) { illustId }
 
-        LaunchedEffect(sharedBoundsRegistry, currentDisplayedId) {
-            sharedBoundsRegistry.activeDetailIllustId = currentDisplayedId
+        LaunchedEffect(sharedBoundsRegistry, illustId, currentDisplayedId) {
+            sharedBoundsRegistry.updateDisplayedIllustId(
+                originIllustId = illustId,
+                displayedIllustId = currentDisplayedId,
+            )
         }
 
         HorizontalPager(
@@ -137,7 +140,10 @@ fun IllustDetailScreen(
         }
     } else {
         LaunchedEffect(sharedBoundsRegistry, illustId) {
-            sharedBoundsRegistry.activeDetailIllustId = illustId
+            sharedBoundsRegistry.updateDisplayedIllustId(
+                originIllustId = illustId,
+                displayedIllustId = illustId,
+            )
         }
 
         IllustDetailSingleContent(
@@ -366,7 +372,7 @@ private fun IllustDetailSingleContent(
                 isBanned = isBanned,
                 settings = settings,
                 strings = strings,
-                detailBackdrop = if (isCardTransitionActive) null else detailBackdrop,
+                detailBackdrop = detailBackdrop,
                 collapseProgressProvider = { collapseProgressState.value },
                 bookmarkHeartScale = bookmarkHeartScale,
                 coroutineScope = coroutineScope,

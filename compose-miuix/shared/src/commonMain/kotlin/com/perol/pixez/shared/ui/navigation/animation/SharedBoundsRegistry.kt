@@ -24,6 +24,9 @@ class SharedBoundsRegistry {
 
     private var _activeDetailIllustId: Int? by mutableStateOf(null)
 
+    /** 按详情页打开时的初始路由作品 ID 记录该页面内当前实际展示的作品 ID（隔离多实例快速进出时的生命周期延迟回调）。 */
+    private val displayedIllustIdByOrigin = mutableMapOf<Int, Int>()
+
     /**
      * 当前详情页实际展示的作品 ID（支持详情页内左右滑动切换作品后按真实展示的作品定位收回卡片）。
      */
@@ -33,8 +36,39 @@ class SharedBoundsRegistry {
             _activeDetailIllustId = value
             if (value != null) {
                 lastActiveDetailIllustId = value
+                val origin = currentRouteIllustId
+                if (origin != null) {
+                    displayedIllustIdByOrigin[origin] = value
+                }
             }
         }
+
+    /**
+     * 登记指定详情页（初始路由为 [originIllustId]）当前正在展示的作品 ID [displayedIllustId]。
+     *
+     * 仅当 [originIllustId] 仍为当前栈顶路由时才同步刷新全局 [activeDetailIllustId]，
+     * 防止快速多次进出时前一个正在执行 340ms 退场动画的详情页重组或异步返回后篡改新详情页的返回锚点。
+     */
+    fun updateDisplayedIllustId(originIllustId: Int, displayedIllustId: Int) {
+        displayedIllustIdByOrigin[originIllustId] = displayedIllustId
+        if (currentRouteIllustId == originIllustId) {
+            _activeDetailIllustId = displayedIllustId
+            lastActiveDetailIllustId = displayedIllustId
+        } else if (exitingOriginRouteIllustId == originIllustId && currentRouteIllustId == null) {
+            exitingFrontIllustId = displayedIllustId
+        }
+    }
+
+    /**
+     * 当初始路由为 [originIllustId] 的详情页从组合树销毁时调用。
+     *
+     * 仅当当前栈顶仍为该页面时才清空 [activeDetailIllustId]，避免旧页面退场销毁时误清空新打开页面的状态。
+     */
+    fun onDetailDisposed(originIllustId: Int) {
+        if (currentRouteIllustId == originIllustId) {
+            _activeDetailIllustId = null
+        }
+    }
 
     /** 最近一次在作品详情页内确认展示的作品 ID（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */
     private var lastActiveDetailIllustId: Int? = null
@@ -74,20 +108,18 @@ class SharedBoundsRegistry {
 
     /**
      * 登记某个作品卡片的窗口坐标矩形与卡片圆角。
-     *
-     * @param illustId 作品 ID，与 [com.perol.pixez.shared.ui.navigation.RootComponent.Config.IllustDetail] 一一对应。
-     * @param rect 卡片在窗口坐标系下的矩形；为空表示卡片已离开组合，移除登记。
-     * @param cornerRadiusDp 卡片自身视觉圆角（dp），转场收回时按它对齐终点圆角。
      */
     fun put(illustId: Int, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
             bounds.remove(illustId)
             return
         }
-        // 转场进行中底层列表处于 graphicsLayer 变换态，此时 boundsInWindow() 为变换后的瞬时坐标：
-        // 已有静止态真实坐标的卡片禁止覆盖；首次登记的卡片则按当前变换逆变换归一为静止态坐标，
-        // 否则污染坐标会驻留到下次真实重排，导致退出动画终点跳变。
-        if (activeTransitionIllustId != null || listTranslationX != 0f) {
+        // 正在执行展开/收回动画的目标卡片自身锁定静止态坐标，确保单次动画全程终点锚点恒定不漂移。
+        if (illustId == activeTransitionIllustId && bounds.containsKey(illustId)) {
+            return
+        }
+        val isListTransformed = listTranslationX != 0f || (backdropScale > 0f && backdropScale < 0.999f)
+        if (isListTransformed) {
             if (bounds.containsKey(illustId)) {
                 return
             }
@@ -99,9 +131,6 @@ class SharedBoundsRegistry {
 
     /**
      * 取出某个作品卡片最近一次登记的窗口坐标矩形。
-     *
-     * @param illustId 作品 ID。
-     * @return 命中则返回矩形，否则返回 null（调用方应回退为默认转场）。
      */
     fun get(illustId: Int): Rect? = bounds[illustId]?.rect
 
@@ -134,36 +163,41 @@ class SharedBoundsRegistry {
      */
     fun resolveEffectiveIllustId(routeIllustId: Int?): Int? {
         if (routeIllustId == null) return null
-        return _activeDetailIllustId ?: routeIllustId
+        return displayedIllustIdByOrigin[routeIllustId] ?: _activeDetailIllustId ?: routeIllustId
     }
 
     /**
      * 同步当前页面栈栈顶路由的作品 ID（栈顶非作品详情页时传入 null）。
-     *
-     * 供单参 `stackAnimation { child -> ... }`（`SimpleStackAnimation`）在无 `otherChild` 参数的条件下，
-     * 让底层页面（`EXIT_BACK` / `ENTER_BACK`）与顶层页面（`ENTER_FRONT` / `EXIT_FRONT`）解析出严格一致的转场作品 ID，
-     * 避免使用 Decompose `@FaultyDecomposeApi` 的三参 `MovableStackAnimation`（会在转场结束时通过 `movableContentOf` 跨槽位搬移子树）。
      */
     fun syncActiveRouteIllustId(routeIllustId: Int?) {
         if (routeIllustId != currentRouteIllustId) {
-            if (currentRouteIllustId != null) {
-                exitingOriginRouteIllustId = currentRouteIllustId
-                exitingFrontIllustId = _activeDetailIllustId ?: lastActiveDetailIllustId ?: currentRouteIllustId
+            val previousOrigin = currentRouteIllustId
+            if (previousOrigin != null) {
+                exitingOriginRouteIllustId = previousOrigin
+                exitingFrontIllustId = displayedIllustIdByOrigin[previousOrigin]
+                    ?: _activeDetailIllustId
+                    ?: lastActiveDetailIllustId
+                    ?: previousOrigin
             } else {
                 exitingOriginRouteIllustId = null
                 exitingFrontIllustId = null
             }
             currentRouteIllustId = routeIllustId
-            lastActiveDetailIllustId = routeIllustId
+            if (routeIllustId != null) {
+                val displayed = displayedIllustIdByOrigin[routeIllustId] ?: routeIllustId
+                displayedIllustIdByOrigin[routeIllustId] = displayed
+                _activeDetailIllustId = displayed
+                lastActiveDetailIllustId = displayed
+            } else {
+                _activeDetailIllustId = null
+            }
+            listTranslationX = 0f
         }
         enteringFrontIllustId = routeIllustId
     }
 
     /**
      * 按当前层自身的 `rawIllustId` 与转场方向 [direction] 解析本次转场对应的目标作品 ID。
-     *
-     * 仅当本次进/出栈的前层页面为作品详情页时返回对应作品 ID；
-     * 若前层为画师页、设置页等非作品详情页（即使底层是作品详情页），一律返回 null 以回退为默认全宽侧滑。
      */
     fun resolveTransitionIllustId(
         rawIllustId: Int?,
@@ -171,19 +205,27 @@ class SharedBoundsRegistry {
     ): Int? = when (direction) {
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> rawIllustId
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
-            _activeDetailIllustId ?: exitingFrontIllustId ?: lastActiveDetailIllustId ?: rawIllustId
+            displayedIllustIdByOrigin[rawIllustId]
+                ?: _activeDetailIllustId
+                ?: exitingFrontIllustId
+                ?: lastActiveDetailIllustId
+                ?: rawIllustId
         } else {
             null
         }
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> enteringFrontIllustId
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> exitingFrontIllustId
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> {
+            val origin = exitingOriginRouteIllustId
+            if (origin != null) {
+                displayedIllustIdByOrigin[origin] ?: exitingFrontIllustId ?: origin
+            } else {
+                exitingFrontIllustId
+            }
+        }
     }
 
     /**
-     * 按转场方向解析本次转场的锚点作品 ID 候选序列（当前展示的作品 → 本次打开的作品）。
-     *
-     * 保证单参 `stackAnimation` 下顶层（`EXIT_FRONT`，持有 `rawIllustId`）与底层（`ENTER_BACK`，`rawIllustId == null`）
-     * 拿到完全一致的候选序列，防止详情页内滑切到列表外作品后返回时顶层缩回原卡片而底层误走侧滑。
+     * 按转场方向解析本次转场的锚点作品 ID 候选序列（当前展示的作品 -> 本次打开的作品）。
      */
     fun resolveTransitionIllustIdCandidates(
         rawIllustId: Int?,
@@ -192,23 +234,26 @@ class SharedBoundsRegistry {
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> listOf(rawIllustId)
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
             listOf(
-                _activeDetailIllustId ?: exitingFrontIllustId ?: lastActiveDetailIllustId ?: rawIllustId,
-                exitingOriginRouteIllustId ?: rawIllustId,
+                displayedIllustIdByOrigin[rawIllustId]
+                    ?: (if (exitingOriginRouteIllustId == rawIllustId) exitingFrontIllustId else null)
+                    ?: rawIllustId,
                 rawIllustId,
-            )
+            ).distinct()
         } else {
             emptyList()
         }
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> listOf(enteringFrontIllustId)
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> listOf(
-            exitingFrontIllustId,
-            exitingOriginRouteIllustId,
-        )
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> {
+            val origin = exitingOriginRouteIllustId
+            listOf(
+                origin?.let { displayedIllustIdByOrigin[it] } ?: exitingFrontIllustId,
+                origin,
+            ).distinct()
+        }
     }
 
     /**
-     * 按 Miuix 默认侧滑进度更新底层页面的视差位移；当进度处于起点（<= 0.001f）或终点（>= 0.999f）时自动归零，
-     * 防止侧滑转场结束后残留非零位移导致后续页面的卡片坐标登记被永久冻结或偏移。
+     * 按 Miuix 默认侧滑进度更新底层页面的视差位移；当进度处于起点（<= 0.001f）或终点（>= 0.999f）时自动归零。
      */
     fun updateSlideParallax(widthPx: Float, fraction: Float) {
         val clamped = fraction.coerceIn(0f, 1f)
@@ -222,11 +267,7 @@ class SharedBoundsRegistry {
     /**
      * 更新当前转场的激活状态；当展开度到达端点（0 或 1）时自动释放激活标记。
      *
-     * 激活期间同时记录底层页面的纵深缩放状态（锚点 = 源卡片中心、比例 = [BACKDROP_MIN_SCALE]
-     * 随展开度插值），供 [put] 把转场中新登记的瞬时坐标逆变换回静止态真实坐标。
-     *
-     * @param sourceBounds 发起转场的源卡片静止态矩形，用于推算底层纵深缩放锚点。
-     * @param containerBounds 页面容器窗口矩形，用于把锚点换算到窗口坐标系。
+     * 快速多次进出时，若已有更新的转场目标处于激活态，旧页面残余退场帧的上报会被忽略，防止清空新转场状态。
      */
     fun updateTransitionState(
         illustId: Int?,
@@ -235,13 +276,27 @@ class SharedBoundsRegistry {
         containerBounds: Rect = Rect.Zero,
     ) {
         val clamped = expansion.coerceIn(0f, 1f)
+        val expectedOwner = currentRouteIllustId
+            ?.let { displayedIllustIdByOrigin[it] ?: it }
+            ?: exitingOriginRouteIllustId?.let { displayedIllustIdByOrigin[it] ?: it }
+
         if (illustId == null || clamped <= 0.001f || clamped >= 0.999f) {
-            activeTransitionIllustId = null
-            activeTransitionExpansion = 0f
+            if (illustId == null || activeTransitionIllustId == null || activeTransitionIllustId == illustId) {
+                activeTransitionIllustId = null
+                activeTransitionExpansion = 0f
+                backdropScale = 1f
+            }
         } else {
+            if (activeTransitionIllustId != null &&
+                activeTransitionIllustId != illustId &&
+                expectedOwner != null &&
+                illustId != expectedOwner &&
+                illustId != currentRouteIllustId
+            ) {
+                return
+            }
             activeTransitionIllustId = illustId
             activeTransitionExpansion = clamped
-            // 卡片展开/收回不平移底层列表，清除上一次视差侧滑遗留的位移，避免误按平移逆变换登记坐标。
             listTranslationX = 0f
             if (sourceBounds != null && containerBounds.width > 0f && containerBounds.height > 0f) {
                 backdropPivot = sourceBounds.center
@@ -291,6 +346,7 @@ class SharedBoundsRegistry {
      */
     fun clear() {
         bounds.clear()
+        displayedIllustIdByOrigin.clear()
         _activeDetailIllustId = null
         lastActiveDetailIllustId = null
         currentRouteIllustId = null
