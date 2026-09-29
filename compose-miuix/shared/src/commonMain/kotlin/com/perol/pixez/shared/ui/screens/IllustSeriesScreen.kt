@@ -55,9 +55,9 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
  */
 @Composable
 fun IllustSeriesScreen(
-    seriesId: Int,
+    seriesId: Long,
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: IllustRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,

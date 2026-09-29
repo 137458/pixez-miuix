@@ -11,8 +11,8 @@ import io.ktor.http.decodeURLQueryComponent
 sealed interface ParsedDeepLink {
     data class OAuthLogin(val code: String) : ParsedDeepLink
     data class MainTab(val tab: RootComponent.MainTab) : ParsedDeepLink
-    data class IllustDetail(val illustId: Int) : ParsedDeepLink
-    data class UserDetail(val userId: Int) : ParsedDeepLink
+    data class IllustDetail(val illustId: Long) : ParsedDeepLink
+    data class UserDetail(val userId: Long) : ParsedDeepLink
     data class Search(val keyword: String) : ParsedDeepLink
     data object DownloadTasks : ParsedDeepLink
     data object History : ParsedDeepLink
@@ -38,16 +38,16 @@ object DeepLinkParser {
             return ParsedDeepLink.OAuthLogin(decodeComponentSafe(code))
         }
 
-        ILLUST_REGEX.find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { id ->
+        ILLUST_REGEX.find(text)?.groupValues?.getOrNull(1)?.toLongOrNull()?.let { id ->
             return ParsedDeepLink.IllustDetail(id)
         }
 
-        USER_REGEX.find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { id ->
+        USER_REGEX.find(text)?.groupValues?.getOrNull(1)?.toLongOrNull()?.let { id ->
             return ParsedDeepLink.UserDetail(id)
         }
 
         // 3. 纯 6~10 位数字视为插画 ID
-        val pureId = text.toIntOrNull()
+        val pureId = text.toLongOrNull()
         if (pureId != null && text.length in 6..10) {
             return ParsedDeepLink.IllustDetail(pureId)
         }
@@ -103,13 +103,13 @@ object DeepLinkParser {
                     "downloads", "download_task" -> return ParsedDeepLink.DownloadTasks
                     "history" -> return ParsedDeepLink.History
                     "illust", "artworks" -> {
-                        val id = pathSegments.lastOrNull()?.toIntOrNull()
-                            ?: url.parameters["id"]?.toIntOrNull()
+                        val id = pathSegments.lastOrNull()?.toLongOrNull()
+                            ?: url.parameters["id"]?.toLongOrNull()
                         if (id != null) return ParsedDeepLink.IllustDetail(id)
                     }
                     "users", "user" -> {
-                        val id = pathSegments.lastOrNull()?.toIntOrNull()
-                            ?: url.parameters["id"]?.toIntOrNull()
+                        val id = pathSegments.lastOrNull()?.toLongOrNull()
+                            ?: url.parameters["id"]?.toLongOrNull()
                         if (id != null) return ParsedDeepLink.UserDetail(id)
                     }
                 }
@@ -122,17 +122,17 @@ object DeepLinkParser {
                 }
                 val artworksIndex = pathSegments.indexOfFirst { it.equals("artworks", ignoreCase = true) }
                 if (artworksIndex >= 0) {
-                    val id = pathSegments.getOrNull(artworksIndex + 1)?.toIntOrNull()
+                    val id = pathSegments.getOrNull(artworksIndex + 1)?.toLongOrNull()
                     if (id != null) return ParsedDeepLink.IllustDetail(id)
                 }
                 val usersIndex = pathSegments.indexOfFirst { it.equals("users", ignoreCase = true) }
                 if (usersIndex >= 0) {
-                    val id = pathSegments.getOrNull(usersIndex + 1)?.toIntOrNull()
+                    val id = pathSegments.getOrNull(usersIndex + 1)?.toLongOrNull()
                     if (id != null) return ParsedDeepLink.UserDetail(id)
                 }
-                url.parameters["illust_id"]?.toIntOrNull()?.let { return ParsedDeepLink.IllustDetail(it) }
+                url.parameters["illust_id"]?.toLongOrNull()?.let { return ParsedDeepLink.IllustDetail(it) }
                 if (path.endsWith("/member.php")) {
-                    url.parameters["id"]?.toIntOrNull()?.let { return ParsedDeepLink.UserDetail(it) }
+                    url.parameters["id"]?.toLongOrNull()?.let { return ParsedDeepLink.UserDetail(it) }
                 }
             }
         }

@@ -75,7 +75,7 @@ class UgoiraSessionTest {
     fun `缓存按作品 ID 命中同一会话实例`() {
         UgoiraSessionCache.clear()
         val cached = session()
-        UgoiraSessionCache.put(illustId = 101, session = cached)
+        UgoiraSessionCache.put(illustId = 101L, session = cached)
 
         assertSame(cached, UgoiraSessionCache.get(101))
         assertEquals(cached, UgoiraSessionCache.get(101))

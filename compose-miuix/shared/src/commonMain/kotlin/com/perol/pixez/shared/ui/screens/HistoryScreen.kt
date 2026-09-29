@@ -374,7 +374,7 @@ private fun HistoryCard(
         modifier = modifier
             .fillMaxWidth()
             .illustTransitionBounds(
-                illustId = item.illustId.toInt().takeIf { it > 0 },
+                illustId = item.illustId.takeIf { it > 0 },
                 cornerRadius = AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP.dp,
             )
             .clip(RoundedCornerShape(12.dp))

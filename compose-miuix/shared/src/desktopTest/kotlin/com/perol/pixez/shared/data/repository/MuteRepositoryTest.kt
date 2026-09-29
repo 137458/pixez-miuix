@@ -43,8 +43,8 @@ class MuteRepositoryTest {
 
     @Test
     fun `getMuteData maps all three categories with fields intact`() = runBlocking {
-        banRepository.insertBanIllust(illustId = 12345, name = "作品标题")
-        banRepository.insertBanUser(userId = 6789, name = "画师名")
+        banRepository.insertBanIllust(illustId = 12345L, name = "作品标题")
+        banRepository.insertBanUser(userId = 6789L, name = "画师名")
         banRepository.insertBanTag(name = "タグ", translateName = "标签")
 
         val data = repository.getMuteData()
@@ -65,8 +65,8 @@ class MuteRepositoryTest {
     @Test
     fun `importMuteData replaces existing data per table`() = runBlocking {
         // 预置旧数据
-        banRepository.insertBanIllust(illustId = 1, name = "旧作品")
-        banRepository.insertBanUser(userId = 2, name = "旧画师")
+        banRepository.insertBanIllust(illustId = 1L, name = "旧作品")
+        banRepository.insertBanUser(userId = 2L, name = "旧画师")
         banRepository.insertBanTag(name = "旧标签", translateName = "old")
 
         repository.importMuteData(
@@ -86,8 +86,8 @@ class MuteRepositoryTest {
 
     @Test
     fun `importMuteData with empty lists clears all tables`() = runBlocking {
-        banRepository.insertBanIllust(illustId = 1, name = "a")
-        banRepository.insertBanUser(userId = 2, name = "b")
+        banRepository.insertBanIllust(illustId = 1L, name = "a")
+        banRepository.insertBanUser(userId = 2L, name = "b")
         banRepository.insertBanTag(name = "c", translateName = "d")
 
         repository.importMuteData(MuteData(illusts = emptyList(), users = emptyList(), tags = emptyList()))

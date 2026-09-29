@@ -8,11 +8,11 @@ import java.util.concurrent.ConcurrentHashMap
 import com.perol.pixez.shared.ui.AppConstants
 
 actual object PlatformDownloadKeeper {
-    private val activeTasks = ConcurrentHashMap.newKeySet<Int>()
+    private val activeTasks = ConcurrentHashMap.newKeySet<Long>()
     private var wakeLock: PowerManager.WakeLock? = null
     private val lock = Any()
 
-    actual fun acquire(taskId: Int) {
+    actual fun acquire(taskId: Long) {
         val context = BrowserLauncherContext.applicationContext ?: return
         synchronized(lock) {
             activeTasks.add(taskId)
@@ -35,7 +35,7 @@ actual object PlatformDownloadKeeper {
         }
     }
 
-    actual fun release(taskId: Int) {
+    actual fun release(taskId: Long) {
         synchronized(lock) {
             activeTasks.remove(taskId)
             if (activeTasks.isEmpty()) {

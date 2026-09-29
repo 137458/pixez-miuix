@@ -53,10 +53,10 @@ import top.yukonga.miuix.kmp.basic.TabRow
  */
 @Composable
 internal fun UserWorksTab(
-    userId: Int,
+    userId: Long,
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
@@ -151,10 +151,10 @@ internal fun UserWorksTab(
  */
 @Composable
 internal fun UserBookmarksTab(
-    userId: Int,
+    userId: Long,
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
@@ -341,7 +341,7 @@ internal fun IllustTabBody(
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onLoadMore: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     onRetry: () -> Unit,
     emptyText: String,
     topPadding: Dp = 0.dp,

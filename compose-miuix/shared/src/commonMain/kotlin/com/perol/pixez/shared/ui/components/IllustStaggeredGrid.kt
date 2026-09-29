@@ -43,7 +43,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun IllustStaggeredGrid(
     illusts: List<Illust>,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     columns: StaggeredGridCells? = null,

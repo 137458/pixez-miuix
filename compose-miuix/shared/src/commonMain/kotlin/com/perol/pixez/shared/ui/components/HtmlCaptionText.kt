@@ -55,10 +55,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun HtmlCaptionText(
     html: String,
     modifier: Modifier = Modifier,
-    onUserClick: ((Int) -> Unit)? = null,
-    onIllustClick: ((Int) -> Unit)? = null,
-    onIllustSeriesClick: ((Int) -> Unit)? = null,
-    onNovelClick: ((Int) -> Unit)? = null,
+    onUserClick: ((Long) -> Unit)? = null,
+    onIllustClick: ((Long) -> Unit)? = null,
+    onIllustSeriesClick: ((Long) -> Unit)? = null,
+    onNovelClick: ((Long) -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
     onLinkClick: (String) -> Unit = { openBrowser(it) },
     style: TextStyle = MiuixTheme.textStyles.body2,
@@ -201,10 +201,10 @@ internal fun unwrapPixivJumpUrl(url: String): String {
  */
 internal fun handleCaptionLink(
     url: String,
-    onUserClick: ((Int) -> Unit)? = null,
-    onIllustClick: ((Int) -> Unit)? = null,
-    onIllustSeriesClick: ((Int) -> Unit)? = null,
-    onNovelClick: ((Int) -> Unit)? = null,
+    onUserClick: ((Long) -> Unit)? = null,
+    onIllustClick: ((Long) -> Unit)? = null,
+    onIllustSeriesClick: ((Long) -> Unit)? = null,
+    onNovelClick: ((Long) -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
     onLinkClick: (String) -> Unit = { openBrowser(it) },
 ) {
@@ -217,7 +217,7 @@ internal fun handleCaptionLink(
         RegexOption.IGNORE_CASE
     ).find(cleanUrl)
     if (userMatch != null) {
-        val userId = (userMatch.groups[1]?.value ?: userMatch.groups[2]?.value)?.toIntOrNull()
+        val userId = (userMatch.groups[1]?.value ?: userMatch.groups[2]?.value)?.toLongOrNull()
         if (userId != null && onUserClick != null) {
             onUserClick(userId)
             return
@@ -231,7 +231,7 @@ internal fun handleCaptionLink(
         RegexOption.IGNORE_CASE
     ).find(cleanUrl)
     if (illustMatch != null) {
-        val illustId = (illustMatch.groups[1]?.value ?: illustMatch.groups[2]?.value)?.toIntOrNull()
+        val illustId = (illustMatch.groups[1]?.value ?: illustMatch.groups[2]?.value)?.toLongOrNull()
         if (illustId != null && onIllustClick != null) {
             onIllustClick(illustId)
             return
@@ -244,7 +244,7 @@ internal fun handleCaptionLink(
         RegexOption.IGNORE_CASE
     ).find(cleanUrl)
     if (seriesMatch != null) {
-        val seriesId = seriesMatch.groupValues[1].toIntOrNull()
+        val seriesId = seriesMatch.groupValues[1].toLongOrNull()
         if (seriesId != null && onIllustSeriesClick != null) {
             onIllustSeriesClick(seriesId)
             return
@@ -258,7 +258,7 @@ internal fun handleCaptionLink(
         RegexOption.IGNORE_CASE
     ).find(cleanUrl)
     if (novelMatch != null) {
-        val novelId = (novelMatch.groups[1]?.value ?: novelMatch.groups[2]?.value)?.toIntOrNull()
+        val novelId = (novelMatch.groups[1]?.value ?: novelMatch.groups[2]?.value)?.toLongOrNull()
         if (novelId != null && onNovelClick != null) {
             onNovelClick(novelId)
             return
@@ -619,10 +619,10 @@ internal fun decodeHtmlEntities(input: String): String {
         .replace("&pound;", "£")
         .replace("&cent;", "¢")
         .replace(Regex("""&#(\d+);""")) { match ->
-            val code = match.groupValues[1].toIntOrNull()
-            if (code != null && code in 0..0x10FFFF) {
+            val code = match.groupValues[1].toLongOrNull()
+            if (code != null && code in 0L..0x10FFFFL) {
                 try {
-                    codePointToString(code)
+                    codePointToString(code.toInt())
                 } catch (_: Throwable) {
                     match.value
                 }
@@ -630,9 +630,9 @@ internal fun decodeHtmlEntities(input: String): String {
         }
         .replace(Regex("""&#x([0-9a-fA-F]+);""")) { match ->
             val code = match.groupValues[1].toIntOrNull(16)
-            if (code != null && code in 0..0x10FFFF) {
+            if (code != null && code in 0L..0x10FFFFL) {
                 try {
-                    codePointToString(code)
+                    codePointToString(code.toInt())
                 } catch (_: Throwable) {
                     match.value
                 }

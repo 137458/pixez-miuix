@@ -53,9 +53,9 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  */
 @Composable
 fun RelatedIllustsScreen(
-    illustId: Int,
+    illustId: Long,
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: IllustRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,

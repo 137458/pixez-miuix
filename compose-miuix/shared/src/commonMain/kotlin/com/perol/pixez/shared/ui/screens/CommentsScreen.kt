@@ -93,9 +93,9 @@ import pixez_miuix.shared.generated.resources.emoji_304
 @OptIn(ExperimentalScrollBarApi::class)
 @Composable
 fun CommentsScreen(
-    illustId: Int,
+    illustId: Long,
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
 ) {
@@ -534,7 +534,7 @@ private fun CommentInputBar(
 @Composable
 private fun CommentItem(
     comment: Comment,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     onReplyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

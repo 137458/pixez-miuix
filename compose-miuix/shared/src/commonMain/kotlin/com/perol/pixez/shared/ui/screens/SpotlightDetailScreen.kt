@@ -81,8 +81,8 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 fun SpotlightDetailScreen(
     article: SpotlightArticle,
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
-    onUserClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
     onArticleClick: (SpotlightArticle) -> Unit,
     repository: IllustRepository,
     modifier: Modifier = Modifier,

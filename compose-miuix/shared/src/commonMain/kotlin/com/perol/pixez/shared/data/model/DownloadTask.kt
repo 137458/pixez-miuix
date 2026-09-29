@@ -21,7 +21,7 @@ enum class DownloadStatus {
  * @param error 错误信息
  */
 data class DownloadTask(
-    val illustId: Int,
+    val illustId: Long,
     val pageIndex: Int,
     val remoteUrl: String,
     val fileName: String,

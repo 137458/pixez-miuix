@@ -11,19 +11,19 @@ data class AmWork(
     val userImage: String? = null,
     val showImage: String? = null,
 ) {
-    val illustId: Int?
+    val illustId: Long?
         get() {
             val link = arworkLink ?: return null
             val match = Regex("""artworks/(\d+)""").find(link)
                 ?: Regex("""illust_id=(\d+)""").find(link)
-            return match?.groupValues?.get(1)?.toIntOrNull()
+            return match?.groupValues?.get(1)?.toLongOrNull()
         }
 
-    val userId: Int?
+    val userId: Long?
         get() {
             val link = userLink ?: return null
             val match = Regex("""users/(\d+)""").find(link)
                 ?: Regex("""(?:users/|id=)(\d+)""").find(link)
-            return match?.groupValues?.get(1)?.toIntOrNull()
+            return match?.groupValues?.get(1)?.toLongOrNull()
         }
 }

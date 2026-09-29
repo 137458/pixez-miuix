@@ -39,7 +39,7 @@ class LocalIllustResolverTest {
         SingletonImageLoader.reset()
     }
 
-    private fun createDummyIllust(id: Int = 123456): Illust {
+    private fun createDummyIllust(id: Long = 123456L): Illust {
         return Illust(
             id = id,
             title = "Test Artwork",
@@ -52,7 +52,7 @@ class LocalIllustResolverTest {
             caption = "Test Caption",
             restrict = 0,
             user = IllustUser(
-                id = 999,
+                id = 999L,
                 name = "Artist",
                 account = "artist_acc",
                 profileImageUrls = IllustProfileImageUrls(""),

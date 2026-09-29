@@ -12,7 +12,7 @@ data class CommentResponse(
 
 @Serializable
 data class Comment(
-    val id: Int? = null,
+    val id: Long? = null,
     val comment: String? = null,
     val date: String? = null,
     val user: CommentUser? = null,
@@ -23,7 +23,7 @@ data class Comment(
 
 @Serializable
 data class CommentUser(
-    val id: Int? = null,
+    val id: Long? = null,
     val name: String,
     val account: String,
     @SerialName("profile_image_urls") val profileImageUrls: CommentProfileImageUrls,

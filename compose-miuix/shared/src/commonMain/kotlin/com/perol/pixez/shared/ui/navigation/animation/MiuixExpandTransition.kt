@@ -92,7 +92,7 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
  * @return 可直接交给 stackAnimation 使用的 [StackAnimator]。
  */
 internal fun cardExpandStackAnimator(
-    rawIllustId: Int? = null,
+    rawIllustId: Long? = null,
     sourceBounds: Rect? = null,
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBounds: Rect,

@@ -52,7 +52,7 @@ class WidgetRepositoryCacheTest {
         GlanceIllustPersistDatabase(db).glanceIllustPersistQueries.insertOrReplace(
             id = id,
             illust_id = illustId,
-            user_id = 1,
+            user_id = 1L,
             picture_url = "p",
             title = "t",
             user_name = "u",
@@ -66,9 +66,9 @@ class WidgetRepositoryCacheTest {
     @Test
     fun `selectByType 按 ctime 倒序返回最新缓存行`() {
         val db = openDb()
-        insertRow(db, id = null, illustId = 1, ctype = "recom", ctime = 100)
-        insertRow(db, id = null, illustId = 2, ctype = "recom", ctime = 300)
-        insertRow(db, id = null, illustId = 3, ctype = "recom", ctime = 200)
+        insertRow(db, id = null, illustId = 1L, ctype = "recom", ctime = 100)
+        insertRow(db, id = null, illustId = 2L, ctype = "recom", ctime = 300)
+        insertRow(db, id = null, illustId = 3L, ctype = "recom", ctime = 200)
 
         val rows = GlanceIllustPersistDatabase(db).glanceIllustPersistQueries.selectByType("recom").executeAsList()
 
@@ -79,9 +79,9 @@ class WidgetRepositoryCacheTest {
     @Test
     fun `deleteByType 仅清理同类型行`() {
         val db = openDb()
-        insertRow(db, id = null, illustId = 1, ctype = "recom", ctime = 100)
-        insertRow(db, id = null, illustId = 2, ctype = "recom", ctime = 200)
-        insertRow(db, id = null, illustId = 3, ctype = "rank", ctime = 300)
+        insertRow(db, id = null, illustId = 1L, ctype = "recom", ctime = 100)
+        insertRow(db, id = null, illustId = 2L, ctype = "recom", ctime = 200)
+        insertRow(db, id = null, illustId = 3L, ctype = "rank", ctime = 300)
 
         GlanceIllustPersistDatabase(db).glanceIllustPersistQueries.deleteByType("recom")
 
@@ -94,7 +94,7 @@ class WidgetRepositoryCacheTest {
     fun `未过期缓存直接返回且不触发网络拉取`() = runBlocking {
         val now = System.currentTimeMillis()
         val db = openDb()
-        insertRow(db, id = null, illustId = 42, ctype = "recom", ctime = now)
+        insertRow(db, id = null, illustId = 42L, ctype = "recom", ctime = now)
         db.close()
 
         val result = repository.getOrFetchWidgetIllust("recom")
@@ -107,8 +107,8 @@ class WidgetRepositoryCacheTest {
         val now = System.currentTimeMillis()
         val db = openDb()
         // 旧行（过期）与新行并存：命中判断取最新行 ctime，未过期则直接返回新行
-        insertRow(db, id = null, illustId = 1, ctype = "recom", ctime = now - 48 * 60 * 60 * 1000)
-        insertRow(db, id = null, illustId = 2, ctype = "recom", ctime = now)
+        insertRow(db, id = null, illustId = 1L, ctype = "recom", ctime = now - 48 * 60 * 60 * 1000)
+        insertRow(db, id = null, illustId = 2L, ctype = "recom", ctime = now)
         db.close()
 
         val result = repository.getOrFetchWidgetIllust("recom")

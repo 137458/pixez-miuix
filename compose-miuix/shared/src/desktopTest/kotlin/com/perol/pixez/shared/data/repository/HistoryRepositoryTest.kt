@@ -33,14 +33,14 @@ class HistoryRepositoryTest {
         driver.close()
     }
 
-    private fun illust(id: Int, title: String = "title-$id", medium: String = "https://img/$id.jpg") = Illust(
+    private fun illust(id: Long, title: String = "title-$id", medium: String = "https://img/$id.jpg") = Illust(
         id = id,
         title = title,
         type = "illust",
         imageUrls = ImageUrls(squareMedium = "s", medium = medium, large = "l"),
         restrict = 0,
         user = IllustUser(
-            id = 900 + id,
+            id = 900L + id,
             name = "user-$id",
             account = "acc-$id",
             profileImageUrls = IllustProfileImageUrls(medium = "pm"),
@@ -95,7 +95,7 @@ class HistoryRepositoryTest {
 
     @Test
     fun `getAll 的 limit 上限生效`() = runBlocking {
-        for (id in 1..5) {
+        for (id in 1L..5L) {
             repository.insert(illust(id))
             Thread.sleep(1)
         }

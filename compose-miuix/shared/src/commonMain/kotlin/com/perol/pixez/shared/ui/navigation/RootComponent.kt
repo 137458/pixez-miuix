@@ -118,7 +118,7 @@ class RootComponent(
     /**
      * 打开作品详情页。
      */
-    fun onIllustClicked(illustId: Int) {
+    fun onIllustClicked(illustId: Long) {
         navigation.pushToFront(Config.IllustDetail(illustId))
     }
 
@@ -127,11 +127,11 @@ class RootComponent(
      *
      * @param initialTab 初始选中的标签页：0 = 作品，1 = 收藏。
      */
-    fun onUserClicked(userId: Int, initialTab: Int = 0) {
+    fun onUserClicked(userId: Long, initialTab: Int = 0) {
         navigation.pushToFront(Config.UserDetail(userId, initialTab))
     }
 
-    fun onUserClicked(userId: Int) {
+    fun onUserClicked(userId: Long) {
         onUserClicked(userId, 0)
     }
 
@@ -259,7 +259,7 @@ class RootComponent(
     /**
      * 打开小说阅读页。
      */
-    fun onNovelClicked(novelId: Int) {
+    fun onNovelClicked(novelId: Long) {
         navigation.pushToFront(Config.NovelViewer(novelId))
     }
 
@@ -331,35 +331,35 @@ class RootComponent(
     /**
      * 打开作品评论页。
      */
-    fun onCommentsClicked(illustId: Int) {
+    fun onCommentsClicked(illustId: Long) {
         navigation.pushToFront(Config.Comments(illustId))
     }
 
     /**
      * 打开相关作品页。
      */
-    fun onRelatedIllustsClicked(illustId: Int) {
+    fun onRelatedIllustsClicked(illustId: Long) {
         navigation.pushToFront(Config.RelatedIllusts(illustId))
     }
 
     /**
      * 打开插画系列页。
      */
-    fun onIllustSeriesClicked(seriesId: Int) {
+    fun onIllustSeriesClicked(seriesId: Long) {
         navigation.pushToFront(Config.IllustSeries(seriesId))
     }
 
     /**
      * 打开用户关注列表页。
      */
-    fun onUserFollowListClicked(userId: Int) {
+    fun onUserFollowListClicked(userId: Long) {
         navigation.pushToFront(Config.UserFollowList(userId))
     }
 
     /**
      * 打开用户粉丝列表页。
      */
-    fun onUserFollowerListClicked(userId: Int) {
+    fun onUserFollowerListClicked(userId: Long) {
         navigation.pushToFront(Config.UserFollowerList(userId))
     }
 
@@ -475,10 +475,10 @@ class RootComponent(
         data class Main(val tab: MainTab) : Config()
 
         @Serializable
-        data class IllustDetail(val illustId: Int) : Config()
+        data class IllustDetail(val illustId: Long) : Config()
 
         @Serializable
-        data class UserDetail(val userId: Int, val initialTab: Int = 0) : Config()
+        data class UserDetail(val userId: Long, val initialTab: Int = 0) : Config()
 
         @Serializable
         data class SpotlightDetail(val article: SpotlightArticle) : Config()
@@ -502,19 +502,19 @@ class RootComponent(
         data object Login : Config()
 
         @Serializable
-        data class Comments(val illustId: Int) : Config()
+        data class Comments(val illustId: Long) : Config()
 
         @Serializable
-        data class RelatedIllusts(val illustId: Int) : Config()
+        data class RelatedIllusts(val illustId: Long) : Config()
 
         @Serializable
-        data class IllustSeries(val seriesId: Int) : Config()
+        data class IllustSeries(val seriesId: Long) : Config()
 
         @Serializable
-        data class UserFollowList(val userId: Int) : Config()
+        data class UserFollowList(val userId: Long) : Config()
 
         @Serializable
-        data class UserFollowerList(val userId: Int) : Config()
+        data class UserFollowerList(val userId: Long) : Config()
 
         @Serializable
         data object RecomUserList : Config()
@@ -586,13 +586,13 @@ class RootComponent(
         data object Novel : Config()
 
         @Serializable
-        data class NovelViewer(val novelId: Int) : Config()
+        data class NovelViewer(val novelId: Long) : Config()
     }
 
     sealed class Child {
         data class Main(val tab: MainTab) : Child()
-        data class IllustDetail(val illustId: Int) : Child()
-        data class UserDetail(val userId: Int, val initialTab: Int = 0) : Child()
+        data class IllustDetail(val illustId: Long) : Child()
+        data class UserDetail(val userId: Long, val initialTab: Int = 0) : Child()
         data class SpotlightDetail(val article: SpotlightArticle) : Child()
         data object Guide : Child()
         data object Settings : Child()
@@ -600,11 +600,11 @@ class RootComponent(
         data object BookTag : Child()
         data object Thanks : Child()
         data object Login : Child()
-        data class Comments(val illustId: Int) : Child()
-        data class RelatedIllusts(val illustId: Int) : Child()
-        data class IllustSeries(val seriesId: Int) : Child()
-        data class UserFollowList(val userId: Int) : Child()
-        data class UserFollowerList(val userId: Int) : Child()
+        data class Comments(val illustId: Long) : Child()
+        data class RelatedIllusts(val illustId: Long) : Child()
+        data class IllustSeries(val seriesId: Long) : Child()
+        data class UserFollowList(val userId: Long) : Child()
+        data class UserFollowerList(val userId: Long) : Child()
         data object RecomUserList : Child()
         data class Search(val query: String) : Child()
         data object DownloadHistory : Child()
@@ -628,7 +628,7 @@ class RootComponent(
         data object WelcomePageSetting : Child()
         data object AccountManage : Child()
         data object Novel : Child()
-        data class NovelViewer(val novelId: Int) : Child()
+        data class NovelViewer(val novelId: Long) : Child()
     }
 
     companion object {

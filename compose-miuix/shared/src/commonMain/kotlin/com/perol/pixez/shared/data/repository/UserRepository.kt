@@ -28,7 +28,7 @@ class UserRepository(
     /**
      * 获取用户详情。
      */
-    suspend fun getUserDetail(userId: Int): UserDetail =
+    suspend fun getUserDetail(userId: Long): UserDetail =
         networkCall("获取用户详情失败 userId=$userId") {
             apiClient.get("/v1/user/detail") {
                 parameter("filter", "for_android")
@@ -44,7 +44,7 @@ class UserRepository(
      * @param nextUrl 分页请求 URL。
      */
     suspend fun getUserIllustsResponse(
-        userId: Int,
+        userId: Long,
         type: String = "illust",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户作品失败 userId=$userId type=$type") {
@@ -69,7 +69,7 @@ class UserRepository(
      * @param nextUrl 分页请求 URL。
      */
     suspend fun getUserBookmarksResponse(
-        userId: Int,
+        userId: Long,
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
@@ -94,7 +94,7 @@ class UserRepository(
      * @param nextUrl 分页请求 URL。
      */
     suspend fun getUserFollowingResponse(
-        userId: Int,
+        userId: Long,
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户关注列表失败 userId=$userId restrict=$restrict") {
@@ -117,7 +117,7 @@ class UserRepository(
      * @param nextUrl 分页请求 URL。
      */
     suspend fun getUserFollowersResponse(
-        userId: Int,
+        userId: Long,
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户粉丝列表失败 userId=$userId restrict=$restrict") {

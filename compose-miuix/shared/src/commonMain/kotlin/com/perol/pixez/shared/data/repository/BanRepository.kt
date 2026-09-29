@@ -34,9 +34,9 @@ class BanRepository(
 
     // 双检锁快路径无锁读，须 @Volatile 保证写侧（Mutex 内）对读侧的可见性（写法同 AuthTokenStorage）。
     @kotlin.concurrent.Volatile
-    private var cachedBannedIllustIds: Set<Int>? = null
+    private var cachedBannedIllustIds: Set<Long>? = null
     @kotlin.concurrent.Volatile
-    private var cachedBannedUserIds: Set<Int>? = null
+    private var cachedBannedUserIds: Set<Long>? = null
     @kotlin.concurrent.Volatile
     private var cachedBanTags: List<BanTag>? = null
 
@@ -64,7 +64,7 @@ class BanRepository(
     /**
      * 查询指定作品是否已被屏蔽。
      */
-    suspend fun isBanIllust(illustId: Int): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isBanIllust(illustId: Long): Boolean = withContext(Dispatchers.IO) {
         val cached = cachedBannedIllustIds
         if (cached != null) return@withContext illustId in cached
         illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull() != null
@@ -73,10 +73,10 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的作品 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
-    suspend fun getBannedIllustIds(): Set<Int> = withContext(Dispatchers.IO) {
+    suspend fun getBannedIllustIds(): Set<Long> = withContext(Dispatchers.IO) {
         cachedBannedIllustIds ?: cacheMutex.withLock {
             cachedBannedIllustIds ?: illustQueries.selectAll().executeAsList().mapNotNull {
-                it.illust_id.toIntOrNull()
+                it.illust_id.toLongOrNull()
             }.toSet().also { cachedBannedIllustIds = it }
         }
     }
@@ -87,7 +87,7 @@ class BanRepository(
      * 若该作品已存在，先删除旧记录再插入，对齐旧 Flutter 的
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
-    suspend fun insertBanIllust(illustId: Int, name: String) = withContext(Dispatchers.IO) {
+    suspend fun insertBanIllust(illustId: Long, name: String) = withContext(Dispatchers.IO) {
         // 查删插包同库事务，避免进程中断留下重复或丢失记录。
         illustQueries.transaction {
             val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
@@ -164,7 +164,7 @@ class BanRepository(
     /**
      * 查询指定画师是否已被屏蔽。
      */
-    suspend fun isBanUser(userId: Int): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isBanUser(userId: Long): Boolean = withContext(Dispatchers.IO) {
         val cached = cachedBannedUserIds
         if (cached != null) return@withContext userId in cached
         userQueries.selectByUserId(userId.toString()).executeAsOneOrNull() != null
@@ -173,10 +173,10 @@ class BanRepository(
     /**
      * 查询全部被屏蔽的画师 ID 集合，用于列表页快速过滤（带内存缓存）。
      */
-    suspend fun getBannedUserIds(): Set<Int> = withContext(Dispatchers.IO) {
+    suspend fun getBannedUserIds(): Set<Long> = withContext(Dispatchers.IO) {
         cachedBannedUserIds ?: cacheMutex.withLock {
             cachedBannedUserIds ?: userQueries.selectAll().executeAsList().mapNotNull {
-                it.user_id.toIntOrNull()
+                it.user_id.toLongOrNull()
             }.toSet().also { cachedBannedUserIds = it }
         }
     }
@@ -187,7 +187,7 @@ class BanRepository(
      * 若该画师已存在，先删除旧记录再插入，对齐旧 Flutter 的
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
-    suspend fun insertBanUser(userId: Int, name: String) = withContext(Dispatchers.IO) {
+    suspend fun insertBanUser(userId: Long, name: String) = withContext(Dispatchers.IO) {
         // 查删插包同库事务，避免进程中断留下重复或丢失记录。
         userQueries.transaction {
             val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()

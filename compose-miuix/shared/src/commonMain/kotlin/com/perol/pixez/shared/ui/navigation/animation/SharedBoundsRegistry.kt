@@ -20,17 +20,17 @@ import androidx.compose.ui.geometry.Rect
 @Stable
 class SharedBoundsRegistry {
 
-    private val bounds = mutableStateMapOf<Int, IllustCardBounds>()
+    private val bounds = mutableStateMapOf<Long, IllustCardBounds>()
 
-    private var _activeDetailIllustId: Int? by mutableStateOf(null)
+    private var _activeDetailIllustId: Long? by mutableStateOf(null)
 
     /** 按详情页打开时的初始路由作品 ID 记录该页面内当前实际展示的作品 ID（隔离多实例快速进出时的生命周期延迟回调）。 */
-    private val displayedIllustIdByOrigin = mutableMapOf<Int, Int>()
+    private val displayedIllustIdByOrigin = mutableMapOf<Long, Long>()
 
     /**
      * 当前详情页实际展示的作品 ID（支持详情页内左右滑动切换作品后按真实展示的作品定位收回卡片）。
      */
-    var activeDetailIllustId: Int?
+    var activeDetailIllustId: Long?
         get() = _activeDetailIllustId
         set(value) {
             _activeDetailIllustId = value
@@ -49,7 +49,7 @@ class SharedBoundsRegistry {
      * 仅当 [originIllustId] 仍为当前栈顶路由时才同步刷新全局 [activeDetailIllustId]，
      * 防止快速多次进出时前一个正在执行 340ms 退场动画的详情页重组或异步返回后篡改新详情页的返回锚点。
      */
-    fun updateDisplayedIllustId(originIllustId: Int, displayedIllustId: Int) {
+    fun updateDisplayedIllustId(originIllustId: Long, displayedIllustId: Long) {
         displayedIllustIdByOrigin[originIllustId] = displayedIllustId
         if (currentRouteIllustId == originIllustId) {
             _activeDetailIllustId = displayedIllustId
@@ -64,31 +64,31 @@ class SharedBoundsRegistry {
      *
      * 仅当当前栈顶仍为该页面时才清空 [activeDetailIllustId]，避免旧页面退场销毁时误清空新打开页面的状态。
      */
-    fun onDetailDisposed(originIllustId: Int) {
+    fun onDetailDisposed(originIllustId: Long) {
         if (currentRouteIllustId == originIllustId) {
             _activeDetailIllustId = null
         }
     }
 
     /** 最近一次在作品详情页内确认展示的作品 ID（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */
-    private var lastActiveDetailIllustId: Int? = null
+    private var lastActiveDetailIllustId: Long? = null
 
     /** 最近一次同步的栈顶路由作品 ID（非详情页时为 null）。 */
-    private var currentRouteIllustId: Int? = null
+    private var currentRouteIllustId: Long? = null
 
     /** 当前入栈转场的前层作品 ID（仅当新栈顶为作品详情页时非空）。 */
-    private var enteringFrontIllustId: Int? = null
+    private var enteringFrontIllustId: Long? = null
 
     /** 当前出栈转场的前层作品 ID（仅当刚退出的原栈顶为作品详情页时非空）。 */
-    private var exitingFrontIllustId: Int? = null
+    private var exitingFrontIllustId: Long? = null
 
     /** 当前出栈的详情页最初打开时的路由作品 ID（详情页内滑切到其他作品后，供底层 ENTER_BACK 同样回退到打开时的卡片）。 */
-    private var exitingOriginRouteIllustId: Int? = null
+    private var exitingOriginRouteIllustId: Long? = null
 
     /**
      * 当前正在执行卡片展开/收回转场的目标作品 ID。
      */
-    var activeTransitionIllustId: Int? by mutableStateOf(null)
+    var activeTransitionIllustId: Long? by mutableStateOf(null)
         private set
 
     /**
@@ -109,7 +109,7 @@ class SharedBoundsRegistry {
     /**
      * 登记某个作品卡片的窗口坐标矩形与卡片圆角。
      */
-    fun put(illustId: Int, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
+    fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
             bounds.remove(illustId)
             return
@@ -132,13 +132,13 @@ class SharedBoundsRegistry {
     /**
      * 取出某个作品卡片最近一次登记的窗口坐标矩形。
      */
-    fun get(illustId: Int): Rect? = bounds[illustId]?.rect
+    fun get(illustId: Long): Rect? = bounds[illustId]?.rect
 
     /**
      * 取出卡片在当前容器可视区域内的有效登记；
      * 若卡片大部分（超过 75%）已滚出容器可视范围则返回 null，使转场优雅回退为视差侧滑。
      */
-    fun getVisibleInContainer(illustId: Int, containerBounds: Rect): IllustCardBounds? {
+    fun getVisibleInContainer(illustId: Long, containerBounds: Rect): IllustCardBounds? {
         val card = bounds[illustId] ?: return null
         val rect = card.rect
         if (rect.width <= 0f || rect.height <= 0f) return null
@@ -161,7 +161,7 @@ class SharedBoundsRegistry {
     /**
      * 解析转场应该使用的有效作品 ID（优先取详情页内滑动切换后的当前作品 ID）。
      */
-    fun resolveEffectiveIllustId(routeIllustId: Int?): Int? {
+    fun resolveEffectiveIllustId(routeIllustId: Long?): Long? {
         if (routeIllustId == null) return null
         return displayedIllustIdByOrigin[routeIllustId] ?: _activeDetailIllustId ?: routeIllustId
     }
@@ -169,7 +169,7 @@ class SharedBoundsRegistry {
     /**
      * 同步当前页面栈栈顶路由的作品 ID（栈顶非作品详情页时传入 null）。
      */
-    fun syncActiveRouteIllustId(routeIllustId: Int?) {
+    fun syncActiveRouteIllustId(routeIllustId: Long?) {
         if (routeIllustId != currentRouteIllustId) {
             val previousOrigin = currentRouteIllustId
             if (previousOrigin != null) {
@@ -200,9 +200,9 @@ class SharedBoundsRegistry {
      * 按当前层自身的 `rawIllustId` 与转场方向 [direction] 解析本次转场对应的目标作品 ID。
      */
     fun resolveTransitionIllustId(
-        rawIllustId: Int?,
+        rawIllustId: Long?,
         direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
-    ): Int? = when (direction) {
+    ): Long? = when (direction) {
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> rawIllustId
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
             displayedIllustIdByOrigin[rawIllustId]
@@ -228,9 +228,9 @@ class SharedBoundsRegistry {
      * 按转场方向解析本次转场的锚点作品 ID 候选序列（当前展示的作品 -> 本次打开的作品）。
      */
     fun resolveTransitionIllustIdCandidates(
-        rawIllustId: Int?,
+        rawIllustId: Long?,
         direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
-    ): List<Int?> = when (direction) {
+    ): List<Long?> = when (direction) {
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> listOf(rawIllustId)
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
             listOf(
@@ -270,7 +270,7 @@ class SharedBoundsRegistry {
      * 快速多次进出时，若已有更新的转场目标处于激活态，旧页面残余退场帧的上报会被忽略，防止清空新转场状态。
      */
     fun updateTransitionState(
-        illustId: Int?,
+        illustId: Long?,
         expansion: Float,
         sourceBounds: Rect? = null,
         containerBounds: Rect = Rect.Zero,
@@ -317,7 +317,7 @@ class SharedBoundsRegistry {
      * 候选全部不可用（未登记、已滚出容器可视范围，或容器纵横比与卡片纵横比差距过大导致收回终点盖不住卡片全高，
      * 见 [isCardExpandLandable]）时返回 null，调用方回退为默认侧滑。
      */
-    fun resolveAnchor(illustIdCandidates: List<Int?>, containerBounds: Rect): Anchor? =
+    fun resolveAnchor(illustIdCandidates: List<Long?>, containerBounds: Rect): Anchor? =
         illustIdCandidates.filterNotNull().distinct().firstNotNullOfOrNull { id ->
             getVisibleInContainer(id, containerBounds)
                 ?.takeIf { isCardExpandLandable(it.rect, containerBounds) }
@@ -337,7 +337,7 @@ class SharedBoundsRegistry {
     /**
      * 移除某个作品卡片的登记，避免已销毁页面的陈旧几何信息被复用。
      */
-    fun remove(illustId: Int) {
+    fun remove(illustId: Long) {
         bounds.remove(illustId)
     }
 
@@ -408,7 +408,7 @@ private fun lerp(start: Float, stop: Float, fraction: Float): Float =
  */
 @Stable
 data class Anchor(
-    val illustId: Int,
+    val illustId: Long,
     val card: IllustCardBounds,
 )
 

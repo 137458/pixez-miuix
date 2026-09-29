@@ -341,7 +341,7 @@ class DownloadRepository(
 
     private fun resolveSubDirAndBasePath(
         userName: String,
-        userId: Int,
+        userId: Long,
         sanityLevel: Int?,
         xRestrict: Int = 0,
     ): Pair<String?, String?> {

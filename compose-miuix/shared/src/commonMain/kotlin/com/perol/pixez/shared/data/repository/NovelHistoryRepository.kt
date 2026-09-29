@@ -40,8 +40,8 @@ class NovelHistoryRepository(
             items.forEach { item ->
                 queries.insertOrReplace(
                     id = item.id ?: 0L,
-                    novel_id = item.novelId.toLong(),
-                    user_id = item.userId.toLong(),
+                    novel_id = item.novelId,
+                    user_id = item.userId,
                     picture_url = item.pictureUrl,
                     title = item.title,
                     user_name = item.userName,
@@ -56,8 +56,8 @@ class NovelHistoryRepository(
      */
     private fun Novelpersist.toNovelHistoryItem(): NovelHistoryItem = NovelHistoryItem(
         id = id,
-        novelId = novel_id.toInt(),
-        userId = user_id.toInt(),
+        novelId = novel_id,
+        userId = user_id,
         pictureUrl = picture_url,
         title = title,
         userName = user_name,
@@ -71,8 +71,8 @@ class NovelHistoryRepository(
 @Serializable
 data class NovelHistoryItem(
     @SerialName("id") val id: Long? = null,
-    @SerialName("novel_id") val novelId: Int,
-    @SerialName("user_id") val userId: Int,
+    @SerialName("novel_id") val novelId: Long,
+    @SerialName("user_id") val userId: Long,
     @SerialName("picture_url") val pictureUrl: String,
     @SerialName("title") val title: String,
     @SerialName("user_name") val userName: String,

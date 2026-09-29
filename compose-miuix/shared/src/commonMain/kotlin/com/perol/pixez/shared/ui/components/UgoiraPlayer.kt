@@ -79,7 +79,7 @@ private fun UgoiraLoadStage.toText(strings: AppStrings): String = when (this) {
  */
 @Composable
 private fun rememberUgoiraPlayback(
-    illustId: Int,
+    illustId: Long,
     illustRepository: IllustRepository,
     autoLoad: Boolean,
     onError: (Throwable) -> Unit,

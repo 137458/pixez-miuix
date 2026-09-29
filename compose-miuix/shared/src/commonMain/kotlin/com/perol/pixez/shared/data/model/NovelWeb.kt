@@ -60,7 +60,7 @@ data class NovelSeriesNavigation(
 
 @Serializable
 data class NovelPrevNext(
-    val id: Int,
+    val id: Long,
     val viewable: Boolean,
     val contentOrder: String,
     val title: String? = null,

@@ -5,8 +5,8 @@ import kotlin.test.assertEquals
 
 class AppendDistinctModelsTest {
 
-    private fun comment(id: Int?) = Comment(id = id, comment = "c$id")
-    private fun userPreview(id: Int) = UserPreview(
+    private fun comment(id: Long?) = Comment(id = id, comment = "c$id")
+    private fun userPreview(id: Long) = UserPreview(
         user = IllustUser(
             id = id,
             name = "u$id",
@@ -25,7 +25,7 @@ class AppendDistinctModelsTest {
         val existing = listOf(comment(1), comment(2))
         val newItems = listOf(comment(2), comment(3))
         val merged = existing.appendDistinct(newItems)
-        assertEquals(listOf(1, 2, 3), merged.map { it.id })
+        assertEquals(listOf(1L, 2L, 3L), merged.map { it.id })
     }
 
     @Test
@@ -34,7 +34,7 @@ class AppendDistinctModelsTest {
         val newItems = listOf(comment(null), comment(2))
         val merged = existing.appendDistinct(newItems)
         // null id 视为彼此不同，不做过滤
-        assertEquals(listOf(1, null, null, 2), merged.map { it.id })
+        assertEquals(listOf(1L, null, null, 2L), merged.map { it.id })
     }
 
     @Test
@@ -52,7 +52,7 @@ class AppendDistinctModelsTest {
         val existing = listOf(userPreview(10), userPreview(20))
         val newItems = listOf(userPreview(20), userPreview(30))
         val merged = existing.appendDistinct(newItems)
-        assertEquals(listOf(10, 20, 30), merged.map { it.user.id })
+        assertEquals(listOf(10L, 20L, 30L), merged.map { it.user.id })
     }
 
     @Test

@@ -42,7 +42,7 @@ class IllustRepository(
 ) {
     private var cachedRecommendedResponse: Recommend? = null
     private var cachedWalkthroughResponse: Walkthrough? = null
-    private val illustsCache = ThreadSafeLruCache<Int, Illust>(500)
+    private val illustsCache = ThreadSafeLruCache<Long, Illust>(500)
 
     /**
      * 将单个插画作品存入内存缓存（LRU 策略，最大 500 条）。
@@ -62,7 +62,7 @@ class IllustRepository(
      * 根据 ID 获取已在内存缓存中的插画作品，若未缓存则返回 null。
      * 读取不可变快照，保障高并发安全且无锁开销。
      */
-    fun getCachedIllust(illustId: Int): Illust? = illustsCache.get(illustId)
+    fun getCachedIllust(illustId: Long): Illust? = illustsCache.get(illustId)
 
     /**
      * 获取首页推荐插画响应（含 nextUrl），默认使用内存缓存，通过 [forceRefresh] 触发强制刷新。
@@ -280,7 +280,7 @@ class IllustRepository(
     /**
      * 获取作品详情。
      */
-    suspend fun getIllustDetail(illustId: Int): Illust =
+    suspend fun getIllustDetail(illustId: Long): Illust =
         networkCall("获取作品详情失败 illustId=$illustId") {
             val response: IllustDetailResponse = apiClient.get("/v1/illust/detail") {
                 parameter("filter", "for_android")
@@ -293,7 +293,7 @@ class IllustRepository(
     /**
      * 获取动图 (Ugoira) 元数据（含 zip 包地址与各帧延迟时间）。
      */
-    suspend fun getUgoiraMetadata(illustId: Int): UgoiraMetadataResponse =
+    suspend fun getUgoiraMetadata(illustId: Long): UgoiraMetadataResponse =
         networkCall("获取动图元数据失败 illustId=$illustId") {
             apiClient.get("/v1/ugoira/metadata") {
                 parameter("illust_id", illustId)
@@ -304,7 +304,7 @@ class IllustRepository(
      * 获取作品评论响应（含 nextUrl）。
      */
     suspend fun getIllustCommentsResponse(
-        illustId: Int,
+        illustId: Long,
         nextUrl: String? = null,
     ): CommentResponse = networkCall("获取作品评论失败 illustId=$illustId") {
         if (nextUrl != null && nextUrl.isNotBlank()) {
@@ -324,9 +324,9 @@ class IllustRepository(
      * @param parentCommentId 被回复的评论 ID；为空时发表普通评论。
      */
     suspend fun postComment(
-        illustId: Int,
+        illustId: Long,
         comment: String,
-        parentCommentId: Int? = null,
+        parentCommentId: Long? = null,
     ): Unit = networkCall("发表评论失败 illustId=$illustId") {
         apiClient.post("/v1/illust/comment/add") {
             header("Content-Type", "application/x-www-form-urlencoded")
@@ -348,7 +348,7 @@ class IllustRepository(
      * 获取相关作品响应（含 nextUrl）。
      */
     suspend fun getIllustRelatedResponse(
-        illustId: Int,
+        illustId: Long,
         nextUrl: String? = null,
     ): Recommend = networkCall("获取相关作品失败 illustId=$illustId") {
         val response: Recommend = if (nextUrl != null && nextUrl.isNotBlank()) {
@@ -366,14 +366,14 @@ class IllustRepository(
     /**
      * 获取相关作品列表（兼容旧调用）。
      */
-    suspend fun getIllustRelated(illustId: Int): List<Illust> =
+    suspend fun getIllustRelated(illustId: Long): List<Illust> =
         getIllustRelatedResponse(illustId).illusts
 
     /**
      * 获取插画系列响应（含 nextUrl 与系列详情）。
      */
     suspend fun getIllustSeriesResponse(
-        seriesId: Int,
+        seriesId: Long,
         nextUrl: String? = null,
     ): IllustSeriesWithIdModel = networkCall("获取系列详情失败 seriesId=$seriesId") {
         val response: IllustSeriesWithIdModel = if (nextUrl != null && nextUrl.isNotBlank()) {

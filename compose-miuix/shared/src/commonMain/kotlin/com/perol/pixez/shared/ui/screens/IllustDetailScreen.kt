@@ -71,20 +71,20 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun IllustDetailScreen(
-    illustId: Int,
+    illustId: Long,
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
-    onCommentsClick: (Int) -> Unit,
-    onRelatedIllustsClick: (Int) -> Unit,
-    onIllustSeriesClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
-    onIllustClick: ((Int) -> Unit)? = null,
-    onNovelClick: ((Int) -> Unit)? = null,
+    onIllustClick: ((Long) -> Unit)? = null,
+    onNovelClick: ((Long) -> Unit)? = null,
 ) {
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings?.swipeChangeArtwork == true
@@ -97,7 +97,7 @@ fun IllustDetailScreen(
     }
 
     if (swipeChangeArtwork) {
-        val relatedState = produceState<List<Int>>(initialValue = emptyList(), illustId) {
+        val relatedState = produceState<List<Long>>(initialValue = emptyList(), illustId) {
             val list = suspendRunCatchingNonCancel { repository.getIllustRelated(illustId) }.getOrNull().orEmpty()
             value = list.map { it.id }.filter { it != illustId }
         }
@@ -168,21 +168,21 @@ fun IllustDetailScreen(
 
 @Composable
 private fun IllustDetailSingleContent(
-    illustId: Int,
+    illustId: Long,
     isCurrentPage: Boolean = true,
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
-    onCommentsClick: (Int) -> Unit,
-    onRelatedIllustsClick: (Int) -> Unit,
-    onIllustSeriesClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     repository: IllustRepository,
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
     historyRepository: HistoryRepository? = null,
-    onIllustClick: ((Int) -> Unit)? = null,
-    onNovelClick: ((Int) -> Unit)? = null,
+    onIllustClick: ((Long) -> Unit)? = null,
+    onNovelClick: ((Long) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
@@ -441,13 +441,13 @@ private fun IllustDetailContentList(
     onDownloadingChange: (Boolean) -> Unit,
     onBookmarkedChange: (Boolean) -> Unit,
     onFullScreen: (Int) -> Unit,
-    onUserClick: (Int) -> Unit,
-    onCommentsClick: (Int) -> Unit,
-    onRelatedIllustsClick: (Int) -> Unit,
-    onIllustSeriesClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
-    onIllustClick: ((Int) -> Unit)?,
-    onNovelClick: ((Int) -> Unit)?,
+    onIllustClick: ((Long) -> Unit)?,
+    onNovelClick: ((Long) -> Unit)?,
 ) {
     val chromeModifier = if (detailChromeAlpha < 0.999f) {
         Modifier.graphicsLayer { alpha = detailChromeAlpha }

@@ -56,7 +56,7 @@ actual class DownloadNotifier {
         }
     }
 
-    actual fun notifyProgress(id: Int, title: String, current: Int, total: Int) {
+    actual fun notifyProgress(id: Long, title: String, current: Int, total: Int) {
         val context = BrowserLauncherContext.applicationContext ?: return
         createChannelIfNeeded(context)
         val manager = getNotificationManager(context) ?: return
@@ -67,7 +67,7 @@ actual class DownloadNotifier {
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
-            id,
+            stableNotificationId(id),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -124,10 +124,10 @@ actual class DownloadNotifier {
             })
 
         val notification = notificationBuilder.build()
-        manager.notify(id, notification)
+        manager.notify(stableNotificationId(id), notification)
     }
 
-    actual fun notifyFinished(id: Int, title: String, successCount: Int, failedCount: Int) {
+    actual fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int) {
         val context = BrowserLauncherContext.applicationContext ?: return
         createChannelIfNeeded(context)
         val manager = getNotificationManager(context) ?: return
@@ -138,7 +138,7 @@ actual class DownloadNotifier {
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
-            id,
+            stableNotificationId(id),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -160,12 +160,12 @@ actual class DownloadNotifier {
             .setContentIntent(pendingIntent)
             .build()
 
-        manager.notify(id, notification)
+        manager.notify(stableNotificationId(id), notification)
     }
 
-    actual fun cancel(id: Int) {
+    actual fun cancel(id: Long) {
         val context = BrowserLauncherContext.applicationContext ?: return
         val manager = getNotificationManager(context) ?: return
-        manager.cancel(id)
+        manager.cancel(stableNotificationId(id))
     }
 }

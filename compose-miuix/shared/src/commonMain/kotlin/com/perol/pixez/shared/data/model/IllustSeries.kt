@@ -20,7 +20,7 @@ data class IllustSeriesContext(
 data class IllustSeriesDetail(
     val height: Int,
     @SerialName("series_work_count") val seriesWorkCount: Int,
-    val id: Int,
+    val id: Long,
     @SerialName("create_date") val createDate: String,
     val title: String,
     val width: Int,
@@ -32,7 +32,7 @@ data class IllustSeriesDetail(
 
 @Serializable
 data class IllustSeriesUser(
-    val id: Int,
+    val id: Long,
     val account: String,
     val name: String,
     @SerialName("profile_image_urls") val profileImageUrls: IllustSeriesProfileImageUrls? = null,

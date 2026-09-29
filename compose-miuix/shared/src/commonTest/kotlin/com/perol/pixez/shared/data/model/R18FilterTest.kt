@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 class R18FilterTest {
 
     private fun createDummyIllust(
-        id: Int = 1001,
+        id: Long = 1001L,
         xRestrict: Int = 0,
         sanityLevel: Int = 2,
         tags: List<IllustTag> = listOf(IllustTag(name = "original")),
@@ -24,7 +24,7 @@ class R18FilterTest {
             caption = "Test Caption",
             restrict = 0,
             user = IllustUser(
-                id = 1,
+                id = 1L,
                 name = "Artist",
                 account = "artist_acc",
                 profileImageUrls = IllustProfileImageUrls(medium = "https://example.com/avatar.jpg"),
@@ -49,7 +49,7 @@ class R18FilterTest {
     }
 
     private fun createDummyNovel(
-        id: Int = 2001,
+        id: Long = 2001L,
         xRestrict: Int = 0,
         isXRestricted: Boolean = false,
         tags: List<NovelTag> = listOf(NovelTag(name = "original", addedByUploadedUser = false)),
@@ -71,7 +71,7 @@ class R18FilterTest {
             pageCount = 5,
             textLength = 2000,
             user = NovelUser(
-                id = 2,
+                id = 2L,
                 name = "Writer",
                 account = "writer_acc",
                 profileImageUrls = NovelProfileImageUrls(medium = "https://example.com/avatar.jpg"),

@@ -17,7 +17,7 @@ package com.perol.pixez.shared.data.model
  */
 data class DownloadTaskHistory(
     val id: Long,
-    val illustId: Int,
+    val illustId: Long,
     val pageIndex: Int,
     val title: String,
     val userName: String,
@@ -25,6 +25,6 @@ data class DownloadTaskHistory(
     val fileName: String,
     val status: DownloadStatus,
     val sanityLevel: Int? = null,
-    val userId: Int = 0,
+    val userId: Long = 0,
     val medium: String? = null,
 )

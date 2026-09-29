@@ -33,7 +33,7 @@ class DownloadHistoryRepositoryTest {
 
     private fun task(id: Long, url: String, status: DownloadStatus = DownloadStatus.Success, marker: Int = 0) = DownloadTaskHistory(
         id = id,
-        illustId = 100 + marker,
+        illustId = 100L + marker,
         pageIndex = 0,
         title = "title-$marker",
         userName = "user-$marker",
@@ -41,7 +41,7 @@ class DownloadHistoryRepositoryTest {
         fileName = "file-$marker.jpg",
         status = status,
         sanityLevel = 2,
-        userId = 900,
+        userId = 900L,
         medium = "m",
     )
 
@@ -52,7 +52,7 @@ class DownloadHistoryRepositoryTest {
         assertTrue(saved.id > 0, "新任务应分配自增 id")
         val loaded = repository.getAllTasks().single()
         assertEquals("title-7", loaded.title)
-        assertEquals(107, loaded.illustId)
+        assertEquals(107L, loaded.illustId)
         assertEquals("https://pximg/1.jpg", loaded.remoteUrl)
         assertEquals("m", loaded.medium)
         assertEquals(DownloadStatus.Success, loaded.status)

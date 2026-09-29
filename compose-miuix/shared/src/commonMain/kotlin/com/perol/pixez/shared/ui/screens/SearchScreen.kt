@@ -51,8 +51,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun SearchScreen(
-    onIllustClick: (Int) -> Unit,
-    onUserClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
     repository: SearchRepository,
     settingsRepository: SettingsRepository,
     banRepository: BanRepository,
@@ -456,10 +456,10 @@ data class SearchFilterState(
 }
 
 sealed interface SearchQueryTarget {
-    val id: Int
-    data class NumericId(override val id: Int) : SearchQueryTarget
-    data class IllustId(override val id: Int) : SearchQueryTarget
-    data class UserId(override val id: Int) : SearchQueryTarget
+    val id: Long
+    data class NumericId(override val id: Long) : SearchQueryTarget
+    data class IllustId(override val id: Long) : SearchQueryTarget
+    data class UserId(override val id: Long) : SearchQueryTarget
 }
 
 private val ILLUST_URL_REGEX = Regex("""(?:artworks/|illust_id=|pixiv://illusts?/)(\d+)""", RegexOption.IGNORE_CASE)
@@ -470,18 +470,18 @@ internal fun parseSearchQueryTarget(rawQuery: String): SearchQueryTarget? {
     if (trimmed.isEmpty()) return null
 
     if (trimmed.all { it.isDigit() }) {
-        val numeric = trimmed.toIntOrNull()
+        val numeric = trimmed.toLongOrNull()
         if (numeric != null && numeric > 0) {
             return SearchQueryTarget.NumericId(numeric)
         }
         return null
     }
 
-    ILLUST_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 }?.let {
+    ILLUST_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toLongOrNull()?.takeIf { it > 0 }?.let {
         return SearchQueryTarget.IllustId(it)
     }
 
-    USER_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 }?.let {
+    USER_URL_REGEX.find(trimmed)?.groupValues?.getOrNull(1)?.toLongOrNull()?.takeIf { it > 0 }?.let {
         return SearchQueryTarget.UserId(it)
     }
 

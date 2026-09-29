@@ -70,8 +70,8 @@ internal fun IllustDetailInfoCard(
     onToast: (ToastData?) -> Unit,
     onDownloadingChange: (Boolean) -> Unit,
     onBookmarkedChange: (Boolean) -> Unit,
-    onUserClick: (Int) -> Unit,
-    onIllustSeriesClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(12.dp))
     Card(
@@ -248,7 +248,7 @@ private fun IllustDetailMetricsRow(
 private fun IllustDetailArtistRow(
     illust: Illust,
     strings: AppStrings,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -295,10 +295,10 @@ private fun IllustDetailArtistRow(
 internal fun IllustDetailCaptionCard(
     illust: Illust,
     strings: AppStrings,
-    onUserClick: (Int) -> Unit,
-    onIllustClick: ((Int) -> Unit)?,
-    onIllustSeriesClick: (Int) -> Unit,
-    onNovelClick: ((Int) -> Unit)?,
+    onUserClick: (Long) -> Unit,
+    onIllustClick: ((Long) -> Unit)?,
+    onIllustSeriesClick: (Long) -> Unit,
+    onNovelClick: ((Long) -> Unit)?,
     onTagClick: (String) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
@@ -383,8 +383,8 @@ internal fun IllustDetailTagsCard(
 internal fun IllustDetailInteractionCard(
     illust: Illust,
     strings: AppStrings,
-    onCommentsClick: (Int) -> Unit,
-    onRelatedIllustsClick: (Int) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
     Card(

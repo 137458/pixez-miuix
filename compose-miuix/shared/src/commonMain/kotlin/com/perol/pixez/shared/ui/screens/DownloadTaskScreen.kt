@@ -86,7 +86,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun DownloadTaskScreen(
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     downloadRepository: DownloadRepository,
     downloadHistoryRepository: DownloadHistoryRepository,
 ) {

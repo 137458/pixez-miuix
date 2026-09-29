@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.Dp
  * @param illustId 卡片的作品 ID，与详情页配置一一对应；为 null 或非正数时不登记。
  * @param cornerRadius 卡片自身视觉圆角，转场收回终点圆角按它做像素级对齐。
  */
-internal fun Modifier.illustTransitionBounds(illustId: Int?, cornerRadius: Dp): Modifier = composed {
+internal fun Modifier.illustTransitionBounds(illustId: Long?, cornerRadius: Dp): Modifier = composed {
     val registry = LocalSharedBoundsRegistry.current
     val currentIllustId by rememberUpdatedState(illustId)
     val currentCornerRadius by rememberUpdatedState(cornerRadius)

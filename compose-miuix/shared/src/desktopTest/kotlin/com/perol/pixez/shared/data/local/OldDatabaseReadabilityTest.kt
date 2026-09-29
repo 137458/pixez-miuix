@@ -22,7 +22,7 @@ class OldDatabaseReadabilityTest {
         AccountDatabase.Schema.create(driver)
 
         AccountDatabase(driver).accountQueries.insertOrReplace(
-            id = 1,
+            id = 1L,
             access_token = "access",
             refresh_token = "refresh",
             device_token = "device",
@@ -48,9 +48,9 @@ class OldDatabaseReadabilityTest {
         GlanceIllustPersistDatabase.Schema.create(driver)
 
         GlanceIllustPersistDatabase(driver).glanceIllustPersistQueries.insertOrReplace(
-            id = 1,
-            illust_id = 98765432,
-            user_id = 12345,
+            id = 1L,
+            illust_id = 98765432L,
+            user_id = 12345L,
             picture_url = "https://i.pximg.net/c/360x360_70/img-master/img/1.jpg",
             title = "title",
             user_name = "artist",
@@ -73,13 +73,13 @@ class OldDatabaseReadabilityTest {
         TaskDatabase.Schema.create(driver)
 
         TaskDatabase(driver).taskQueries.insertOrReplace(
-            id = 1,
+            id = 1L,
             title = "title",
             user_name = "artist",
             url = "https://i.pximg.net/img-original/img/1.jpg",
             sanity_level = 2,
-            illust_id = 98765432,
-            user_id = 12345,
+            illust_id = 98765432L,
+            user_id = 12345L,
             status = 0,
             file_name = "1.jpg",
             medium = "https://i.pximg.net/c/540x540_70/img-master/img/1.jpg",

@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable
 data class Illust(
-    val id: Int,
+    val id: Long,
     val title: String,
     val type: String,
     @SerialName("image_urls") val imageUrls: ImageUrls,
@@ -50,7 +50,7 @@ data class ImageUrls(
 @Immutable
 @Serializable
 data class IllustUser(
-    val id: Int,
+    val id: Long,
     val name: String,
     val account: String,
     @SerialName("profile_image_urls") val profileImageUrls: IllustProfileImageUrls,
@@ -91,7 +91,7 @@ data class MetaPageImageUrls(
 
 @Serializable
 data class IllustSeries(
-    val id: Int,
+    val id: Long,
     val title: String? = null,
 )
 

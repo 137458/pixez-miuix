@@ -160,13 +160,13 @@ internal class UgoiraReadySession(
  */
 internal object UgoiraSessionCache {
     private const val MAX_ENTRIES = 2
-    private val map = LinkedHashMap<Int, UgoiraReadySession>()
+    private val map = LinkedHashMap<Long, UgoiraReadySession>()
 
     @Synchronized
-    fun get(illustId: Int): UgoiraReadySession? = map[illustId]
+    fun get(illustId: Long): UgoiraReadySession? = map[illustId]
 
     @Synchronized
-    fun put(illustId: Int, session: UgoiraReadySession) {
+    fun put(illustId: Long, session: UgoiraReadySession) {
         map[illustId] = session
         while (map.size > MAX_ENTRIES) {
             val eldestKey = map.entries.firstOrNull()?.key ?: break
@@ -200,7 +200,7 @@ internal object UgoiraSessionCache {
  * @return 就绪会话；元数据无有效帧时返回 null。
  */
 internal suspend fun loadUgoiraSession(
-    illustId: Int,
+    illustId: Long,
     illustRepository: IllustRepository,
     onStage: (ugoiraStage: UgoiraLoadStage) -> Unit,
 ): UgoiraReadySession? {
@@ -263,7 +263,7 @@ internal suspend fun loadUgoiraSession(
  * 删除一次失败的 ugoira 加载留下的临时 zip 与帧目录；路径可能不存在，尽力清理即可。
  * 同作品的并发加载可能已成功入缓存并开始播放，此时帧目录仍在被读取，须保留。
  */
-private fun cleanupUgoiraLoadFailure(illustId: Int, tempZipPath: Path?, framesDir: Path) {
+private fun cleanupUgoiraLoadFailure(illustId: Long, tempZipPath: Path?, framesDir: Path) {
     tempZipPath?.let { runCatching { FileSystem.SYSTEM.delete(it) } }
     if (UgoiraSessionCache.get(illustId) == null) {
         runCatching { FileSystem.SYSTEM.deleteRecursively(framesDir) }

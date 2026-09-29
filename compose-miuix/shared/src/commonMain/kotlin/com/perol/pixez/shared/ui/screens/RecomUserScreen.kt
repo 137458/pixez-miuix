@@ -69,7 +69,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun RecomUserScreen(
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     repository: UserRepository,
 ) {
     var retryCount by rememberSaveable { mutableIntStateOf(0) }

@@ -85,8 +85,8 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit = {},
-    onUserBookmarksClick: (Int) -> Unit = {},
+    onUserClick: (Long) -> Unit = {},
+    onUserBookmarksClick: (Long) -> Unit = {},
     onAboutClick: () -> Unit,
     onShieldClick: () -> Unit,
     onLoginClick: () -> Unit,
@@ -226,7 +226,7 @@ fun SettingsScreen(
                         strings = strings,
                     )
                     if (currentAccount != null) {
-                        val currentUserId = currentAccount?.userId?.toIntOrNull()
+                        val currentUserId = currentAccount?.userId?.toLongOrNull()
                         if (currentUserId != null) {
                             ArrowPreference(
                                 title = strings.settingMyProfileAndBookmarks,
@@ -473,7 +473,7 @@ private fun AccountSection(
     isLoggingOut: Boolean,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     strings: com.perol.pixez.shared.ui.i18n.AppStrings,
     modifier: Modifier = Modifier,
 ) {
@@ -484,7 +484,7 @@ private fun AccountSection(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (account != null) {
-            val targetUserId = account.userId.toIntOrNull()
+            val targetUserId = account.userId.toLongOrNull()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

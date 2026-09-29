@@ -27,9 +27,9 @@ class DownloadFileNameTest {
     }
 
     private fun createDummyIllust(
-        id: Int = 123456,
+        id: Long = 123456L,
         title: String = "Test Artwork",
-        userId: Int = 7890,
+        userId: Long = 7890,
         userName: String = "TestArtist",
         createDate: String = "2026-03-29T12:00:00+09:00",
         width: Int = 1920,
@@ -75,7 +75,7 @@ class DownloadFileNameTest {
 
     @Test
     fun testDefaultFormat() {
-        val illust = createDummyIllust(id = 999888)
+        val illust = createDummyIllust(id = 999888L)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -87,7 +87,7 @@ class DownloadFileNameTest {
     @Test
     fun testIllustIdPlaceholder() {
         settingsRepository.format = "illust_{illust_id}"
-        val illust = createDummyIllust(id = 123456)
+        val illust = createDummyIllust(id = 123456L)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -111,7 +111,7 @@ class DownloadFileNameTest {
     @Test
     fun testUserIdPlaceholder() {
         settingsRepository.format = "user_{user_id}"
-        val illust = createDummyIllust(userId = 8888)
+        val illust = createDummyIllust(userId = 8888L)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -147,7 +147,7 @@ class DownloadFileNameTest {
     @Test
     fun testPartPlaceholder() {
         settingsRepository.format = "{illust_id}_page_{part}"
-        val illust = createDummyIllust(id = 123456, pageCount = 3)
+        val illust = createDummyIllust(id = 123456L, pageCount = 3)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 2,
@@ -159,7 +159,7 @@ class DownloadFileNameTest {
     @Test
     fun testCreateDatePlaceholder() {
         settingsRepository.format = "{create_date}_{illust_id}"
-        val illust = createDummyIllust(id = 123456, createDate = "2026-03-29T12:34:56+09:00")
+        val illust = createDummyIllust(id = 123456L, createDate = "2026-03-29T12:34:56+09:00")
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -171,7 +171,7 @@ class DownloadFileNameTest {
     @Test
     fun testWidthAndHeightPlaceholders() {
         settingsRepository.format = "{illust_id}_w{width}_h{height}"
-        val illust = createDummyIllust(id = 123456, width = 3840, height = 2160)
+        val illust = createDummyIllust(id = 123456L, width = 3840, height = 2160)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -183,7 +183,7 @@ class DownloadFileNameTest {
     @Test
     fun testWidthXHeightPlaceholder() {
         settingsRepository.format = "{illust_id}_{width}x{height}"
-        val illust = createDummyIllust(id = 123456, width = 1920, height = 1080)
+        val illust = createDummyIllust(id = 123456L, width = 1920, height = 1080)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -196,9 +196,9 @@ class DownloadFileNameTest {
     fun testCombinedAllPlaceholders() {
         settingsRepository.format = "{illust_id}_{title}_{user_id}_{user_name}_{author}_{part}_{create_date}_{width}x{height}_{width}_{height}"
         val illust = createDummyIllust(
-            id = 100,
+            id = 100L,
             title = "Masterpiece",
-            userId = 200,
+            userId = 200L,
             userName = "Painter",
             createDate = "2026-03-29T00:00:00Z",
             width = 1920,
@@ -216,7 +216,7 @@ class DownloadFileNameTest {
     @Test
     fun testMultiPageWithoutPartAppendsPart() {
         settingsRepository.format = "{illust_id}_{title}"
-        val illust = createDummyIllust(id = 555, title = "MultiPageArt", pageCount = 3)
+        val illust = createDummyIllust(id = 555L, title = "MultiPageArt", pageCount = 3)
         val fileName = downloadRepository.buildFileName(
             illust = illust,
             pageIndex = 1,

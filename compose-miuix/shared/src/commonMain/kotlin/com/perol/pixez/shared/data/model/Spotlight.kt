@@ -11,7 +11,7 @@ data class SpotlightResponse(
 
 @Serializable
 data class SpotlightArticle(
-    val id: Int,
+    val id: Long,
     val title: String,
     @SerialName("pure_title") val pureTitle: String,
     val thumbnail: String,

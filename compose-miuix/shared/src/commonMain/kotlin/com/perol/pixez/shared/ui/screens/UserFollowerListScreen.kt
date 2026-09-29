@@ -65,9 +65,9 @@ import com.perol.pixez.shared.data.model.UserPreviewsResponse
  */
 @Composable
 fun UserFollowerListScreen(
-    userId: Int,
+    userId: Long,
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     repository: UserRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()

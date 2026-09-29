@@ -553,7 +553,7 @@ internal fun renderHistory(
         onBack = component::onBack,
         // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
         // 导航层仍使用 Int，在此处做类型转换。
-        onIllustClick = { component.onIllustClicked(it.toInt()) },
+        onIllustClick = { component.onIllustClicked(it) },
     )
 }
 

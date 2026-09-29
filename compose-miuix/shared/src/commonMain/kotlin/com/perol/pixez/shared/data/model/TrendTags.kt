@@ -17,6 +17,6 @@ data class TrendTag(
 
 @Serializable
 data class TrendTagIllust(
-    val id: Int,
+    val id: Long,
     @SerialName("image_urls") val imageUrls: ImageUrls,
 )

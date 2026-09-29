@@ -45,8 +45,8 @@ class BanRepositoryTest {
     }
 
     private fun createMockIllust(
-        id: Int,
-        userId: Int = 100,
+        id: Long,
+        userId: Long = 100L,
         tags: List<String> = emptyList(),
         isAi: Boolean = false,
         xRestrict: Int = 0,
@@ -90,7 +90,7 @@ class BanRepositoryTest {
 
         repository.insertBanIllust(10001, "Test Work")
         assertTrue(repository.isBanIllust(10001))
-        assertEquals(setOf(10001), repository.getBannedIllustIds())
+        assertEquals(setOf(10001L), repository.getBannedIllustIds())
 
         // Cached hit
         assertTrue(repository.isBanIllust(10001))
@@ -104,7 +104,7 @@ class BanRepositoryTest {
     fun `test ban user id`() = runBlocking {
         repository.insertBanUser(20002, "Banned User")
         assertTrue(repository.isBanUser(20002))
-        assertEquals(setOf(20002), repository.getBannedUserIds())
+        assertEquals(setOf(20002L), repository.getBannedUserIds())
 
         val allUsers = repository.getAllBanUsers()
         assertEquals(1, allUsers.size)
@@ -137,22 +137,22 @@ class BanRepositoryTest {
         repository.insertBanTag("spoiler", "Spoiler Tag")
 
         val illusts = listOf(
-            createMockIllust(id = 1, userId = 100), // Banned illust id
-            createMockIllust(id = 2, userId = 999), // Banned user id
-            createMockIllust(id = 3, userId = 100, tags = listOf("guro_art")), // Banned by regex tag
-            createMockIllust(id = 4, userId = 100, tags = listOf("spoiler")), // Banned by literal tag
-            createMockIllust(id = 5, userId = 100, isAi = true), // AI illust
-            createMockIllust(id = 6, userId = 100, xRestrict = 1), // R18 illust
-            createMockIllust(id = 7, userId = 100, tags = listOf("safe", "landscape")), // Safe
+            createMockIllust(id = 1L, userId = 100L), // Banned illust id
+            createMockIllust(id = 2L, userId = 999L), // Banned user id
+            createMockIllust(id = 3L, userId = 100L, tags = listOf("guro_art")), // Banned by regex tag
+            createMockIllust(id = 4L, userId = 100L, tags = listOf("spoiler")), // Banned by literal tag
+            createMockIllust(id = 5L, userId = 100L, isAi = true), // AI illust
+            createMockIllust(id = 6L, userId = 100L, xRestrict = 1), // R18 illust
+            createMockIllust(id = 7L, userId = 100L, tags = listOf("safe", "landscape")), // Safe
         )
 
         // Filter without banAI or hideR18
         val result1 = repository.filterIllusts(illusts, banAIIllust = false, hideR18 = false)
-        assertEquals(listOf(5, 6, 7), result1.map { it.id })
+        assertEquals(listOf(5L, 6L, 7L), result1.map { it.id })
 
         // Filter with banAI and hideR18
         val result2 = repository.filterIllusts(illusts, banAIIllust = true, hideR18 = true)
-        assertEquals(listOf(7), result2.map { it.id })
+        assertEquals(listOf(7L), result2.map { it.id })
     }
 
     private fun assertNotNull(value: Any?) {

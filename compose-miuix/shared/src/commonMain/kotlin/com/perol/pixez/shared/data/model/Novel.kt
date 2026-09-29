@@ -13,7 +13,7 @@ data class NovelRecomResponse(
 @Immutable
 @Serializable
 data class Novel(
-    val id: Int,
+    val id: Long,
     val title: String,
     // caption/total_* 为 pixiv 可返回 null 的展示字段（参照 Illust.totalComments 先例），给默认值防单条脏数据毒化整页。
     val caption: String = "",
@@ -50,7 +50,7 @@ data class NovelImageUrls(
 @Immutable
 @Serializable
 data class NovelSeries(
-    val id: Int? = null,
+    val id: Long? = null,
     val title: String? = null,
 )
 
@@ -65,7 +65,7 @@ data class NovelTag(
 @Immutable
 @Serializable
 data class NovelUser(
-    val id: Int,
+    val id: Long,
     val name: String,
     val account: String,
     @SerialName("profile_image_urls") val profileImageUrls: NovelProfileImageUrls,
@@ -79,7 +79,7 @@ data class NovelProfileImageUrls(
 
 @Serializable
 data class NovelSeriesSeries(
-    val id: Int,
+    val id: Long,
     val title: String,
 )
 
@@ -92,7 +92,7 @@ data class NovelSeriesNovelTag(
 
 @Serializable
 data class NovelSeriesNovel(
-    val id: Int,
+    val id: Long,
     val title: String,
     val caption: String? = null,
     val restrict: Int,
@@ -118,7 +118,7 @@ data class NovelSeriesNovel(
 
 @Serializable
  data class NovelSeriesDetail(
-    val id: Int,
+    val id: Long,
     val title: String,
     val caption: String? = null,
     @SerialName("is_original") val isOriginal: Boolean,
@@ -133,7 +133,7 @@ data class NovelSeriesNovel(
 
 @Serializable
  data class NovelSeriesUser(
-    val id: Int,
+    val id: Long,
     val name: String,
     val account: String,
     @SerialName("profile_image_urls") val profileImageUrls: NovelSeriesProfileImageUrls,
@@ -148,7 +148,7 @@ data class NovelSeriesNovel(
 
 @Serializable
  data class NovelSeriesFirstNovel(
-    val id: Int,
+    val id: Long,
     val title: String,
     // caption/total_* 为 pixiv 可返回 null 的展示字段，给默认值防单条脏数据毒化整页。
     val caption: String = "",
@@ -205,7 +205,7 @@ data class NovelMarker(
 
 @Serializable
 data class TextNovel(
-    val id: Int? = null,
+    val id: Long? = null,
     val title: String? = null,
 )
 
@@ -217,19 +217,19 @@ data class NovelWatchListModel(
 
 @Serializable
 data class NovelWatchListSeries(
-    val id: Int,
+    val id: Long,
     val title: String,
     val url: String? = null,
     @SerialName("mask_text") val maskText: String? = null,
     @SerialName("published_content_count") val publishedContentCount: Int,
     @SerialName("last_published_content_datetime") val lastPublishedContentDatetime: String,
-    @SerialName("latest_content_id") val latestContentId: Int,
+    @SerialName("latest_content_id") val latestContentId: Long,
     val user: NovelWatchListSeriesUser? = null,
 )
 
 @Serializable
 data class NovelWatchListSeriesUser(
-    val id: Int,
+    val id: Long,
     val name: String,
     val account: String,
     @SerialName("profile_image_urls") val profileImageUrls: NovelWatchListSeriesProfileImageUrls? = null,

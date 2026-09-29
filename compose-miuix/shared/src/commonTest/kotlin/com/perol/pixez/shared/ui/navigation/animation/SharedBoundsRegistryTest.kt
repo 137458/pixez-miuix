@@ -20,7 +20,7 @@ class SharedBoundsRegistryTest {
     fun `登记后可按作品 ID 取回矩形`() {
         val registry = SharedBoundsRegistry()
 
-        registry.put(illustId = 42, rect = card)
+        registry.put(illustId = 42L, rect = card)
 
         assertEquals(card, registry.get(42))
     }
@@ -37,8 +37,8 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val moved = Rect(left = 300f, top = 400f, right = 500f, bottom = 700f)
 
-        registry.put(illustId = 42, rect = card)
-        registry.put(illustId = 42, rect = moved)
+        registry.put(illustId = 42L, rect = card)
+        registry.put(illustId = 42L, rect = moved)
 
         assertEquals(moved, registry.get(42))
     }
@@ -46,9 +46,9 @@ class SharedBoundsRegistryTest {
     @Test
     fun `登记空矩形等价于注销`() {
         val registry = SharedBoundsRegistry()
-        registry.put(illustId = 42, rect = card)
+        registry.put(illustId = 42L, rect = card)
 
-        registry.put(illustId = 42, rect = null)
+        registry.put(illustId = 42L, rect = null)
 
         assertNull(registry.get(42))
     }
@@ -57,7 +57,7 @@ class SharedBoundsRegistryTest {
     fun `零尺寸矩形视为无效并不予登记`() {
         val registry = SharedBoundsRegistry()
 
-        registry.put(illustId = 42, rect = Rect(left = 5f, top = 5f, right = 5f, bottom = 5f))
+        registry.put(illustId = 42L, rect = Rect(left = 5f, top = 5f, right = 5f, bottom = 5f))
 
         assertNull(registry.get(42))
     }
@@ -65,8 +65,8 @@ class SharedBoundsRegistryTest {
     @Test
     fun `注销只影响目标作品不影响其他登记`() {
         val registry = SharedBoundsRegistry()
-        registry.put(illustId = 1, rect = card)
-        registry.put(illustId = 2, rect = card)
+        registry.put(illustId = 1L, rect = card)
+        registry.put(illustId = 2L, rect = card)
 
         registry.remove(1)
 
@@ -77,8 +77,8 @@ class SharedBoundsRegistryTest {
     @Test
     fun `清空移除全部登记`() {
         val registry = SharedBoundsRegistry()
-        registry.put(illustId = 1, rect = card)
-        registry.put(illustId = 2, rect = card)
+        registry.put(illustId = 1L, rect = card)
+        registry.put(illustId = 2L, rect = card)
 
         registry.clear()
 
@@ -105,8 +105,8 @@ class SharedBoundsRegistryTest {
         // 绝大部分已滚出容器顶部的卡片（仅露出底部 20px，总高 600px，可见占比 < 5%）
         val mostlyScrolledOutCard = Rect(left = 16f, top = -580f, right = 520f, bottom = 20f)
 
-        registry.put(illustId = 1, rect = visibleCard)
-        registry.put(illustId = 2, rect = mostlyScrolledOutCard)
+        registry.put(illustId = 1L, rect = visibleCard)
+        registry.put(illustId = 2L, rect = mostlyScrolledOutCard)
 
         assertEquals(visibleCard, registry.getVisibleInContainer(1, container)?.rect)
         assertNull(registry.getVisibleInContainer(2, container))
@@ -118,18 +118,18 @@ class SharedBoundsRegistryTest {
         val stationaryBounds = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
         val shrunkBoundsFromBackdrop = Rect(left = 38f, top = 320f, right = 518f, bottom = 944f)
 
-        registry.put(illustId = 42, rect = stationaryBounds)
+        registry.put(illustId = 42L, rect = stationaryBounds)
         // 转场开始（expansion = 0.6f），底层列表被 0.96x 缩放触发 onGloballyPositioned
-        registry.updateTransitionState(illustId = 42, expansion = 0.6f)
-        registry.put(illustId = 42, rect = shrunkBoundsFromBackdrop)
+        registry.updateTransitionState(illustId = 42L, expansion = 0.6f)
+        registry.put(illustId = 42L, rect = shrunkBoundsFromBackdrop)
 
         // 取出退出终点坐标时，必须保持未缩放的静止态真实坐标 stationaryBounds
         assertEquals(stationaryBounds, registry.get(42))
 
         // 转场结束后（expansion = 0f），允许正常列表滚动更新坐标
-        registry.updateTransitionState(illustId = 42, expansion = 0f)
+        registry.updateTransitionState(illustId = 42L, expansion = 0f)
         val scrolledBounds = Rect(left = 24f, top = 180f, right = 524f, bottom = 830f)
-        registry.put(illustId = 42, rect = scrolledBounds)
+        registry.put(illustId = 42L, rect = scrolledBounds)
         assertEquals(scrolledBounds, registry.get(42))
     }
 
@@ -139,7 +139,7 @@ class SharedBoundsRegistryTest {
         // 侧滑期间底层列表整体左移 250px（25% 视差），卡片上报的是平移后的瞬时坐标
         registry.updateListTranslation(-250f)
 
-        registry.put(illustId = 7, rect = Rect(left = 90f, top = 500f, right = 490f, bottom = 900f))
+        registry.put(illustId = 7L, rect = Rect(left = 90f, top = 500f, right = 490f, bottom = 900f))
 
         assertEquals(
             Rect(left = 340f, top = 500f, right = 740f, bottom = 900f),
@@ -150,7 +150,7 @@ class SharedBoundsRegistryTest {
         // 位移植零（底层回到静止态）后恢复正常登记
         registry.updateListTranslation(0f)
         val stationary = Rect(left = 20f, top = 100f, right = 420f, bottom = 500f)
-        registry.put(illustId = 8, rect = stationary)
+        registry.put(illustId = 8L, rect = stationary)
         assertEquals(stationary, registry.get(8))
     }
 
@@ -158,10 +158,10 @@ class SharedBoundsRegistryTest {
     fun `侧滑期间已登记卡片的静止态坐标不被瞬时坐标覆盖`() {
         val registry = SharedBoundsRegistry()
         val stationary = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        registry.put(illustId = 7, rect = stationary)
+        registry.put(illustId = 7L, rect = stationary)
 
         registry.updateListTranslation(-250f)
-        registry.put(illustId = 7, rect = Rect(left = -150f, top = 400f, right = 250f, bottom = 800f))
+        registry.put(illustId = 7L, rect = Rect(left = -150f, top = 400f, right = 250f, bottom = 800f))
 
         assertEquals(stationary, registry.get(7))
     }
@@ -172,19 +172,19 @@ class SharedBoundsRegistryTest {
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
         val displayedCard = Rect(left = 16f, top = 200f, right = 520f, bottom = 800f)
         val openedCard = Rect(left = 560f, top = 1200f, right = 1064f, bottom = 1800f)
-        registry.put(illustId = 99, rect = displayedCard, cornerRadiusDp = 16f)
-        registry.put(illustId = 42, rect = openedCard, cornerRadiusDp = 12f)
+        registry.put(illustId = 99L, rect = displayedCard, cornerRadiusDp = 16f)
+        registry.put(illustId = 42L, rect = openedCard, cornerRadiusDp = 12f)
 
         // 详情页内滑到作品 99：其卡片在列表里，优先收回它
         registry.activeDetailIllustId = 99
         val displayedAnchor = registry.resolveAnchor(listOf(99, 42), container)
-        assertEquals(99, displayedAnchor?.illustId)
+        assertEquals(99L, displayedAnchor?.illustId)
         assertEquals(displayedCard, displayedAnchor?.card?.rect)
 
         // 滑到的作品不在列表（未登记）时，退回本次打开的作品 42
         registry.activeDetailIllustId = 88
         val fallbackAnchor = registry.resolveAnchor(listOf(88, 42), container)
-        assertEquals(42, fallbackAnchor?.illustId)
+        assertEquals(42L, fallbackAnchor?.illustId)
         assertEquals(openedCard, fallbackAnchor?.card?.rect)
         assertEquals(12f, fallbackAnchor?.card?.cornerRadiusDp, "退回锚点必须带上该卡片自身的圆角")
     }
@@ -194,7 +194,7 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
         // 已滚出容器：可见高度占比不足阈值
-        registry.put(illustId = 42, rect = Rect(left = 16f, top = -580f, right = 520f, bottom = 20f))
+        registry.put(illustId = 42L, rect = Rect(left = 16f, top = -580f, right = 520f, bottom = 20f))
 
         assertNull(registry.resolveAnchor(listOf(88, 42), container))
         assertNull(registry.resolveAnchor(listOf(null, null), container))
@@ -205,10 +205,10 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val landscapeContainer = Rect(left = 0f, top = 0f, right = 1600f, bottom = 1000f)
         val portraitCard = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f)
-        registry.put(illustId = 42, rect = portraitCard)
+        registry.put(illustId = 42L, rect = portraitCard)
 
         val anchor = registry.resolveAnchor(listOf(42), landscapeContainer)
-        assertEquals(42, anchor?.illustId)
+        assertEquals(42L, anchor?.illustId)
         assertEquals(portraitCard, anchor?.card?.rect)
     }
 
@@ -217,7 +217,7 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
 
-        registry.put(illustId = 42, rect = card, cornerRadiusDp = 12f)
+        registry.put(illustId = 42L, rect = card, cornerRadiusDp = 12f)
 
         val visible = registry.getVisibleInContainer(42, container)
         assertEquals(12f, visible?.cornerRadiusDp, "转场终点圆角必须取卡片自身圆角（如历史卡 12dp）")
@@ -229,16 +229,16 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
         val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        registry.put(illustId = 42, rect = sourceCard)
+        registry.put(illustId = 42L, rect = sourceCard)
         registry.updateTransitionState(
-            illustId = 42,
+            illustId = 42L,
             expansion = 0.5f,
             sourceBounds = sourceCard,
             containerBounds = container,
         )
 
         val newCard = Rect(left = 200f, top = 500f, right = 600f, bottom = 900f)
-        registry.put(illustId = 7, rect = newCard, cornerRadiusDp = 12f)
+        registry.put(illustId = 7L, rect = newCard, cornerRadiusDp = 12f)
         assertEquals(
             newCard,
             registry.get(7),
@@ -247,7 +247,7 @@ class SharedBoundsRegistryTest {
 
         // 快速进出期间用户在上一张 (42) 收回尚未结束时滚动列表并点击另一张已登记卡片 (7)，该卡片的新坐标必须实时刷新而非丢弃
         val scrolledCard = Rect(left = 200f, top = 260f, right = 600f, bottom = 660f)
-        registry.put(illustId = 7, rect = scrolledCard)
+        registry.put(illustId = 7L, rect = scrolledCard)
         assertEquals(scrolledCard, registry.get(7))
     }
 
@@ -256,11 +256,11 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1000f, bottom = 2000f)
         val sourceCard = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        registry.updateTransitionState(illustId = 42, expansion = 0.5f, sourceBounds = sourceCard, containerBounds = container)
+        registry.updateTransitionState(illustId = 42L, expansion = 0.5f, sourceBounds = sourceCard, containerBounds = container)
         registry.updateTransitionState(illustId = null, expansion = 0f)
 
         val stationary = Rect(left = 202f, top = 502f, right = 594f, bottom = 894f)
-        registry.put(illustId = 7, rect = stationary)
+        registry.put(illustId = 7L, rect = stationary)
 
         assertEquals(stationary, registry.get(7))
     }
@@ -291,7 +291,7 @@ class SharedBoundsRegistryTest {
         val registry = SharedBoundsRegistry()
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
         val openedCard = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
-        registry.put(illustId = 42, rect = openedCard, cornerRadiusDp = 16f)
+        registry.put(illustId = 42L, rect = openedCard, cornerRadiusDp = 16f)
 
         // 1. 从列表点击作品 42 进入详情页
         registry.syncActiveRouteIllustId(42)
@@ -307,8 +307,8 @@ class SharedBoundsRegistryTest {
         val frontAnchor = registry.resolveAnchor(frontCandidates, container)
         val backAnchor = registry.resolveAnchor(backCandidates, container)
 
-        assertEquals(42, frontAnchor?.illustId, "顶层 EXIT_FRONT 应回退到打开时的卡片 42")
-        assertEquals(42, backAnchor?.illustId, "底层 ENTER_BACK (rawIllustId=null) 也必须一致回退到卡片 42，防止底层误走侧滑")
+        assertEquals(42L, frontAnchor?.illustId, "顶层 EXIT_FRONT 应回退到打开时的卡片 42")
+        assertEquals(42L, backAnchor?.illustId, "底层 ENTER_BACK (rawIllustId=null) 也必须一致回退到卡片 42，防止底层误走侧滑")
     }
 
     @Test
@@ -317,8 +317,8 @@ class SharedBoundsRegistryTest {
         val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
         val cardA = Rect(left = 24f, top = 200f, right = 524f, bottom = 800f)
         val cardB = Rect(left = 556f, top = 200f, right = 1056f, bottom = 800f)
-        registry.put(illustId = 101, rect = cardA)
-        registry.put(illustId = 202, rect = cardB)
+        registry.put(illustId = 101L, rect = cardA)
+        registry.put(illustId = 202L, rect = cardB)
 
         // 1. 打开作品 A (101)
         registry.syncActiveRouteIllustId(101)
@@ -329,12 +329,12 @@ class SharedBoundsRegistryTest {
 
         // 3. 在 101 尚未销毁前，用户立即点击打开作品 B (202)
         registry.syncActiveRouteIllustId(202)
-        registry.updateTransitionState(illustId = 202, expansion = 0.4f, sourceBounds = cardB, containerBounds = container)
+        registry.updateTransitionState(illustId = 202L, expansion = 0.4f, sourceBounds = cardB, containerBounds = container)
 
         // 4. 此时旧页面 101 的异步关联列表或 DisposableEffect.onDispose 延迟触发，甚至其收尾帧上报 expansion = 0f
         registry.updateDisplayedIllustId(originIllustId = 101, displayedIllustId = 101)
         registry.onDetailDisposed(originIllustId = 101)
-        registry.updateTransitionState(illustId = 101, expansion = 0f)
+        registry.updateTransitionState(illustId = 101L, expansion = 0f)
 
         // 断言：202 的激活态不得被旧页面 101 的收尾帧清空
         assertEquals(202, registry.activeTransitionIllustId, "旧页面 101 的收尾帧不得清空当前正在展开的 202")
@@ -352,7 +352,7 @@ class SharedBoundsRegistryTest {
     fun `视差侧滑到达起点或终点时自动归零位移以防后续页面卡片坐标冻结或偏移`() {
         val registry = SharedBoundsRegistry()
         val initialRect = Rect(left = 24f, top = 300f, right = 524f, bottom = 950f)
-        registry.put(illustId = 42, rect = initialRect)
+        registry.put(illustId = 42L, rect = initialRect)
 
         // 侧滑中段（fraction = 0.5）记录视差位移
         registry.updateSlideParallax(widthPx = 1000f, fraction = 0.5f)
@@ -361,11 +361,11 @@ class SharedBoundsRegistryTest {
 
         // 释放后在二级页新登记的卡片不得被叠加视差偏移，已有卡片滚动后也必须能正常刷新坐标
         val newCardRect = Rect(left = 100f, top = 200f, right = 500f, bottom = 600f)
-        registry.put(illustId = 88, rect = newCardRect)
+        registry.put(illustId = 88L, rect = newCardRect)
         assertEquals(newCardRect, registry.get(88), "侧滑入栈结束后新卡片不得被叠加陈旧视差偏移")
 
         val scrolledRect = Rect(left = 24f, top = 120f, right = 524f, bottom = 770f)
-        registry.put(illustId = 42, rect = scrolledRect)
+        registry.put(illustId = 42L, rect = scrolledRect)
         assertEquals(scrolledRect, registry.get(42), "侧滑结束后已登记卡片在滚动时必须允许更新坐标")
     }
 

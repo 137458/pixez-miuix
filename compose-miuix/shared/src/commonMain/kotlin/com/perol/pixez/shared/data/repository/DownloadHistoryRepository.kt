@@ -41,8 +41,8 @@ class DownloadHistoryRepository(
                 user_name = task.userName,
                 url = task.remoteUrl,
                 sanity_level = task.sanityLevel?.toLong(),
-                illust_id = task.illustId.toLong(),
-                user_id = task.userId.toLong(),
+                illust_id = task.illustId,
+                user_id = task.userId,
                 status = task.status.toDbValue(),
                 file_name = task.fileName,
                 medium = task.medium,
@@ -57,8 +57,8 @@ class DownloadHistoryRepository(
                     user_name = task.userName,
                     url = task.remoteUrl,
                     sanity_level = task.sanityLevel?.toLong(),
-                    illust_id = task.illustId.toLong(),
-                    user_id = task.userId.toLong(),
+                    illust_id = task.illustId,
+                    user_id = task.userId,
                     status = task.status.toDbValue(),
                     file_name = task.fileName,
                     medium = task.medium,
@@ -139,7 +139,7 @@ class DownloadHistoryRepository(
      */
     private fun Task.toHistory(): DownloadTaskHistory = DownloadTaskHistory(
         id = id,
-        illustId = illust_id.toInt(),
+        illustId = illust_id,
         pageIndex = parsePageIndexFromFileName(file_name),
         title = title,
         userName = user_name,
@@ -147,7 +147,7 @@ class DownloadHistoryRepository(
         fileName = file_name,
         status = status.toDownloadStatus(),
         sanityLevel = sanity_level?.toInt(),
-        userId = user_id.toInt(),
+        userId = user_id,
         medium = medium,
     )
 

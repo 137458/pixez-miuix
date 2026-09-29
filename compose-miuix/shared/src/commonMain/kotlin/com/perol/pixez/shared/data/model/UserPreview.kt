@@ -19,7 +19,7 @@ data class UserPreview(
 
 @Serializable
 data class UserPreviewNovel(
-    val id: Int,
+    val id: Long,
     val title: String,
     val caption: String? = null,
     @SerialName("image_urls") val imageUrls: ImageUrls,

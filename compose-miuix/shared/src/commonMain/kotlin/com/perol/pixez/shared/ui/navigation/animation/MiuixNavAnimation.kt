@@ -78,7 +78,7 @@ fun miuixCardExpandStackAnimation(
 fun miuixCardExpandPredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     registry: SharedBoundsRegistry,
-    illustId: Int?,
+    illustId: Long?,
     containerWidthPx: Float,
     containerBounds: Rect,
     deviceCornerRadius: Dp = 0.dp,

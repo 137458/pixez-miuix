@@ -187,13 +187,13 @@ class DriverFactoryMigrationTest {
 
         // 可向 medium 列写入数据
         queries.insertOrReplace(
-            id = 2,
+            id = 2L,
             title = "title2",
             user_name = "artist2",
             url = "https://i.pximg.net/img-original/img/2.jpg",
             sanity_level = 0,
-            illust_id = 98765433,
-            user_id = 12346,
+            illust_id = 98765433L,
+            user_id = 12346L,
             status = 0,
             file_name = "2.jpg",
             medium = "https://i.pximg.net/c/540x540_70/img-master/img/2.jpg",
@@ -312,13 +312,13 @@ class DriverFactoryMigrationTest {
 
         // 空文件应被重新初始化为当前 schema，可以正常写入
         queries.insertOrReplace(
-            id = 1,
+            id = 1L,
             title = "title",
             user_name = "artist",
             url = "https://i.pximg.net/img-original/img/1.jpg",
             sanity_level = 0,
-            illust_id = 98765432,
-            user_id = 12345,
+            illust_id = 98765432L,
+            user_id = 12345L,
             status = 0,
             file_name = "1.jpg",
             medium = null,

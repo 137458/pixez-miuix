@@ -57,9 +57,9 @@ class DownloadRepositoryTest {
     }
 
     private fun createDummyIllust(
-        id: Int = 123456,
+        id: Long = 123456L,
         title: String = "Test Artwork",
-        userId: Int = 7890,
+        userId: Long = 7890,
         userName: String = "ArtistA",
     ): Illust {
         return Illust(
@@ -103,7 +103,7 @@ class DownloadRepositoryTest {
 
     @Test
     fun `buildFileName with default format produces correct name`() {
-        val illust = createDummyIllust(id = 999888, title = "Hello World")
+        val illust = createDummyIllust(id = 999888L, title = "Hello World")
         val fileName = downloadRepo.buildFileName(
             illust = illust,
             pageIndex = 0,
@@ -116,9 +116,9 @@ class DownloadRepositoryTest {
     fun `buildFileName with custom template replaces all placeholders`() {
         settingsRepo.format = "{user_name}_{user_id}_{title}_{illust_id}_p{part}"
         val illust = createDummyIllust(
-            id = 555666,
+            id = 555666L,
             title = "My Masterpiece",
-            userId = 1234,
+            userId = 1234L,
             userName = "Painter",
         )
         val fileName = downloadRepo.buildFileName(
@@ -146,7 +146,7 @@ class DownloadRepositoryTest {
 
     @Test
     fun `saveUgoiraZip saves to disk and creates history record`() = runBlocking {
-        val illust = createDummyIllust(id = 888999, title = "Animated Ugoira")
+        val illust = createDummyIllust(id = 888999L, title = "Animated Ugoira")
         val dummyZipBytes = "PK_DUMMY_ZIP_DATA".encodeToByteArray()
 
         val savedPath = downloadRepo.saveUgoiraZip(
@@ -159,7 +159,7 @@ class DownloadRepositoryTest {
         assertEquals("PK_DUMMY_ZIP_DATA", File(savedPath).readText())
 
         val historyTasks = historyRepo.getAllTasks()
-        val recordedTask = historyTasks.firstOrNull { it.illustId == 888999 }
+        val recordedTask = historyTasks.firstOrNull { it.illustId == 888999L }
         assertTrue(recordedTask != null, "History must contain the ugoira task")
         assertEquals(DownloadStatus.Success, recordedTask.status)
         assertEquals("888999_ugoira.zip", recordedTask.fileName)
@@ -168,7 +168,7 @@ class DownloadRepositoryTest {
     @Test
     fun `saveUgoiraZip with singleFolder false creates artist subfolder`() = runBlocking {
         settingsRepo.singleFolder = false
-        val illust = createDummyIllust(id = 777111, title = "Subdir Ugoira", userId = 4321, userName = "SubdirArtist")
+        val illust = createDummyIllust(id = 777111L, title = "Subdir Ugoira", userId = 4321L, userName = "SubdirArtist")
         val dummyZipBytes = "PK_SUBDIR_ZIP_DATA".encodeToByteArray()
 
         val savedPath = downloadRepo.saveUgoiraZip(

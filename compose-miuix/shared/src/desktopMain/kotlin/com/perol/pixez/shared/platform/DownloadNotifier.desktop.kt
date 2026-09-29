@@ -8,11 +8,11 @@ import java.awt.TrayIcon
  * Desktop(JVM) 平台下载通知实现：通过系统托盘气泡弹出下载完成通知。
  */
 actual class DownloadNotifier {
-    actual fun notifyProgress(id: Int, title: String, current: Int, total: Int) {
+    actual fun notifyProgress(id: Long, title: String, current: Int, total: Int) {
         // Desktop 进度通过任务页面实时展示，不频繁触发系统气泡打扰用户
     }
 
-    actual fun notifyFinished(id: Int, title: String, successCount: Int, failedCount: Int) {
+    actual fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int) {
         try {
             if (SystemTray.isSupported()) {
                 val systemTray = SystemTray.getSystemTray()
@@ -30,6 +30,6 @@ actual class DownloadNotifier {
         }
     }
 
-    actual fun cancel(id: Int) {}
+    actual fun cancel(id: Long) {}
 }
 

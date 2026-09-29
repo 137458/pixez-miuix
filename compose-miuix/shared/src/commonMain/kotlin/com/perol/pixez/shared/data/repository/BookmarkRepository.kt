@@ -21,7 +21,7 @@ class BookmarkRepository(
      * @param tags 可选收藏标签，逗号分隔；为空时不传。
      */
     suspend fun addBookmark(
-        illustId: Int,
+        illustId: Long,
         isPrivate: Boolean = false,
         tags: String? = null,
     ) = networkCall("收藏作品失败 illustId=$illustId") {
@@ -44,7 +44,7 @@ class BookmarkRepository(
     /**
      * 取消收藏作品。
      */
-    suspend fun deleteBookmark(illustId: Int) = networkCall("取消收藏失败 illustId=$illustId") {
+    suspend fun deleteBookmark(illustId: Long) = networkCall("取消收藏失败 illustId=$illustId") {
         apiClient.post("/v1/illust/bookmark/delete") {
             header("Content-Type", "application/x-www-form-urlencoded")
             setBody(
@@ -64,7 +64,7 @@ class BookmarkRepository(
      * @param isPrivate 是否私密关注。
      */
     suspend fun followUser(
-        userId: Int,
+        userId: Long,
         isPrivate: Boolean = false,
     ) = networkCall("关注用户失败 userId=$userId") {
         apiClient.post("/v1/user/follow/add") {
@@ -83,7 +83,7 @@ class BookmarkRepository(
     /**
      * 取消关注用户。
      */
-    suspend fun unfollowUser(userId: Int) = networkCall("取消关注失败 userId=$userId") {
+    suspend fun unfollowUser(userId: Long) = networkCall("取消关注失败 userId=$userId") {
         apiClient.post("/v1/user/follow/delete") {
             header("Content-Type", "application/x-www-form-urlencoded")
             setBody(

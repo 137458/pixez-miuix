@@ -64,9 +64,9 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  */
 @Composable
 fun UserFollowListScreen(
-    userId: Int,
+    userId: Long,
     onBack: () -> Unit,
-    onUserClick: (Int) -> Unit,
+    onUserClick: (Long) -> Unit,
     repository: UserRepository,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }

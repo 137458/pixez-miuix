@@ -12,8 +12,8 @@ data class WatchlistMangaModel(
 @Serializable
 data class WatchlistMangaSeries(
     @SerialName("mask_text") val maskText: String? = null,
-    @SerialName("latest_content_id") val latestContentId: Int,
-    val id: Int,
+    @SerialName("latest_content_id") val latestContentId: Long,
+    val id: Long,
     val user: WatchlistMangaSeriesUser? = null,
     val title: String,
     @SerialName("last_published_content_datetime") val lastPublishedContentDatetime: String? = null,
@@ -23,7 +23,7 @@ data class WatchlistMangaSeries(
 
 @Serializable
 data class WatchlistMangaSeriesUser(
-    val id: Int,
+    val id: Long,
     val account: String? = null,
     val name: String? = null,
     val profileImageUrls: WatchlistMangaSeriesProfileImageUrls? = null,

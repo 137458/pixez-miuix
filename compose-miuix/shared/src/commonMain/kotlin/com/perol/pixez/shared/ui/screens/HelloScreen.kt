@@ -70,8 +70,8 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  */
 @Composable
 fun HelloScreen(
-    onIllustClick: (Int) -> Unit,
-    onUserClick: (Int) -> Unit = {},
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit = {},
     onSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
     onRecomUserClick: () -> Unit,
@@ -268,7 +268,7 @@ fun HelloScreen(
                                 )
                             }
                             val currentUser = user
-                            val targetUserId = currentUser?.userId?.toIntOrNull()
+                            val targetUserId = currentUser?.userId?.toLongOrNull()
                             if (currentUser != null && targetUserId != null) {
                                 IconButton(
                                     onClick = { onUserClick(targetUserId) },

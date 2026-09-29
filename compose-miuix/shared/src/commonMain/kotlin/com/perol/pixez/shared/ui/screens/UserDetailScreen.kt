@@ -71,11 +71,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun UserDetailScreen(
-    userId: Int,
+    userId: Long,
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
-    onFollowListClick: (Int) -> Unit,
-    onFollowerListClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onFollowListClick: (Long) -> Unit,
+    onFollowerListClick: (Long) -> Unit,
     repository: UserRepository,
     bookmarkRepository: BookmarkRepository,
     banRepository: BanRepository,
@@ -96,7 +96,7 @@ fun UserDetailScreen(
         }
     }
     val isCurrentUser = remember(currentAccountState.value, userId) {
-        val currentId = currentAccountState.value?.userId?.toIntOrNull()
+        val currentId = currentAccountState.value?.userId?.toLongOrNull()
         currentId != null && currentId == userId
     }
 
@@ -328,7 +328,7 @@ private fun UserDetailTopAppBar(
  */
 @Composable
 private fun UserDetailContent(
-    userId: Int,
+    userId: Long,
     result: Result<UserDetail>?,
     userDetail: UserDetail?,
     isCurrentUser: Boolean,
@@ -344,9 +344,9 @@ private fun UserDetailContent(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
     onFollowToggle: (UserDetail) -> Unit,
-    onFollowListClick: (Int) -> Unit,
-    onFollowerListClick: (Int) -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onFollowListClick: (Long) -> Unit,
+    onFollowerListClick: (Long) -> Unit,
+    onIllustClick: (Long) -> Unit,
     onRefresh: () -> Unit,
     toastMessage: ToastData?,
     onToastDismiss: () -> Unit,
@@ -405,7 +405,7 @@ private fun UserDetailContent(
  */
 @Composable
 private fun UserDetailTabContent(
-    userId: Int,
+    userId: Long,
     userDetail: UserDetail,
     isCurrentUser: Boolean,
     isFollowed: Boolean,
@@ -413,7 +413,7 @@ private fun UserDetailTabContent(
     onFollowClick: () -> Unit,
     onFollowListClick: () -> Unit,
     onFollowerListClick: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
@@ -544,7 +544,7 @@ private fun UserDetailTabHeader(
     onFollowClick: () -> Unit,
     onFollowListClick: () -> Unit,
     onFollowerListClick: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     tabs: List<String>,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,

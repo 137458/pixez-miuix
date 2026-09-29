@@ -253,7 +253,7 @@ object PixivisionParser {
     }
 
     private fun extractSubArticles(html: String, rawUrl: String): List<SpotlightArticle> {
-        val currentArticleId = Regex("""/a/(\d+)""").find(rawUrl)?.groupValues?.get(1)?.toIntOrNull()
+        val currentArticleId = Regex("""/a/(\d+)""").find(rawUrl)?.groupValues?.get(1)?.toLongOrNull()
 
         // 仅在明确的合集卡片容器 (_feature-article-body__article_card) 中提取子特辑
         val cardItemRegex = Regex(
@@ -263,7 +263,7 @@ object PixivisionParser {
         val cardItemMatches = cardItemRegex.findAll(html).toList()
 
         val subArticles = mutableListOf<SpotlightArticle>()
-        val seenIds = mutableSetOf<Int>()
+        val seenIds = mutableSetOf<Long>()
 
         val blocks = if (cardItemMatches.isNotEmpty()) {
             cardItemMatches.map { it.groupValues[1] }
@@ -281,7 +281,7 @@ object PixivisionParser {
         for (block in blocks) {
             val linkMatch = Regex("""href=["']([^"']*(?:/zh|/en|/ja|/ko|/zh-tw)?/a/(\d+)[^"']*)["']""", RegexOption.IGNORE_CASE).find(block) ?: continue
             val relOrAbsUrl = linkMatch.groupValues[1]
-            val id = linkMatch.groupValues[2].toIntOrNull() ?: continue
+            val id = linkMatch.groupValues[2].toLongOrNull() ?: continue
 
             if (id == currentArticleId || !seenIds.add(id)) {
                 continue

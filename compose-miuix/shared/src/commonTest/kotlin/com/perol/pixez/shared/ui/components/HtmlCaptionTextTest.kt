@@ -80,10 +80,10 @@ class HtmlCaptionTextTest {
 
     @Test
     fun testHandleCaptionLinkDispatch() {
-        var clickedUserId: Int? = null
-        var clickedIllustId: Int? = null
-        var clickedSeriesId: Int? = null
-        var clickedNovelId: Int? = null
+        var clickedUserId: Long? = null
+        var clickedIllustId: Long? = null
+        var clickedSeriesId: Long? = null
+        var clickedNovelId: Long? = null
         var clickedTag: String? = null
         var clickedWebUrl: String? = null
 

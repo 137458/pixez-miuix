@@ -73,7 +73,7 @@ private enum class NovelBrowseTab {
 fun NovelScreen(
     novelRepository: NovelRepository,
     onBack: () -> Unit,
-    onNovelClick: (Int) -> Unit,
+    onNovelClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current

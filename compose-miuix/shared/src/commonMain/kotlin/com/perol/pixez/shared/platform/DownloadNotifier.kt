@@ -7,7 +7,7 @@ package com.perol.pixez.shared.platform
  * 状态栏自动呈现实时动态微胶囊。
  */
 expect class DownloadNotifier() {
-    fun notifyProgress(id: Int, title: String, current: Int, total: Int)
-    fun notifyFinished(id: Int, title: String, successCount: Int, failedCount: Int)
-    fun cancel(id: Int)
+    fun notifyProgress(id: Long, title: String, current: Int, total: Int)
+    fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int)
+    fun cancel(id: Long)
 }

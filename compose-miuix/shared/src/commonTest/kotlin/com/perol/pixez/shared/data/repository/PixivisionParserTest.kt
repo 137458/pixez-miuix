@@ -59,16 +59,16 @@ class PixivisionParserTest {
         val firstWork = detail.works[0]
         assertEquals("晴空与少女", firstWork.title)
         assertEquals("画师小明", firstWork.user)
-        assertEquals(12345678, firstWork.illustId)
-        assertEquals(87654321, firstWork.userId)
+        assertEquals(12345678L, firstWork.illustId)
+        assertEquals(87654321L, firstWork.userId)
         assertNotNull(firstWork.showImage)
         assertTrue(firstWork.showImage?.contains("12345678") == true)
 
         val secondWork = detail.works[1]
         assertEquals("云端之上", secondWork.title)
         assertEquals("画师小红", secondWork.user)
-        assertEquals(99887766, secondWork.illustId)
-        assertEquals(11223344, secondWork.userId)
+        assertEquals(99887766L, secondWork.illustId)
+        assertEquals(11223344L, secondWork.userId)
     }
 
     @Test
@@ -112,8 +112,8 @@ class PixivisionParserTest {
         val work = detail.works[0]
         assertEquals("日落余晖", work.title)
         assertEquals("黄昏画家", work.user)
-        assertEquals(77889900, work.illustId)
-        assertEquals(556677, work.userId)
+        assertEquals(77889900L, work.illustId)
+        assertEquals(556677L, work.userId)
         assertEquals("https://embed.pixiv.net/spotlight.php?id=77889900", work.showImage)
         assertEquals("https://i.pximg.net/user-profile/avatar3.jpg", work.userImage)
     }
@@ -154,8 +154,8 @@ class PixivisionParserTest {
         val work = detail.works[0]
         assertEquals("银河漫游", work.title)
         assertEquals("星空旅人", work.user)
-        assertEquals(10101010, work.illustId)
-        assertEquals(998877, work.userId)
+        assertEquals(10101010L, work.illustId)
+        assertEquals(998877L, work.userId)
         assertEquals("https://i.pximg.net/c/600x1200_90/img-master/img/2024/03/03/00/00/00/10101010_p0_master1200.jpg", work.showImage)
     }
 

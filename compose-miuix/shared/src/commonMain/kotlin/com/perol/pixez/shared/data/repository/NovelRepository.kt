@@ -39,7 +39,7 @@ class NovelRepository(
     /**
      * 获取小说正文内容与标记信息。
      */
-    suspend fun getNovelText(novelId: Int): NovelTextResponse =
+    suspend fun getNovelText(novelId: Long): NovelTextResponse =
         networkCall("获取小说正文失败 novelId=$novelId") {
             apiClient.get("/v1/novel/text") {
                 parameter("novel_id", novelId)

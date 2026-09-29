@@ -170,8 +170,8 @@ class IllustRepositoryTest {
     fun `postComment 表单参数完整且回复时携带父评论 ID`() = runBlocking {
         apiResponseBody = "{}"
 
-        repository.postComment(illustId = 7, comment = "好看")
-        repository.postComment(illustId = 7, comment = "回复", parentCommentId = 99)
+        repository.postComment(illustId = 7L, comment = "好看")
+        repository.postComment(illustId = 7L, comment = "回复", parentCommentId = 99)
 
         assertEquals("/v1/illust/comment/add", apiCaptured[0].path)
         assertEquals("/v1/illust/comment/add", apiCaptured[1].path)

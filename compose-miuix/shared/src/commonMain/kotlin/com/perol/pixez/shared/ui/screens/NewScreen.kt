@@ -73,8 +73,8 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
  */
 @Composable
 fun NewScreen(
-    onIllustClick: (Int) -> Unit,
-    onUserClick: (Int) -> Unit = {},
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit = {},
     onLoginClick: () -> Unit,
     repository: IllustRepository,
     accountRepository: AccountRepository,
@@ -281,7 +281,7 @@ fun NewScreen(
                             }
                             if (isLoggedIn == true) {
                                 val account = currentAccount
-                                val targetUserId = account?.userId?.toIntOrNull()
+                                val targetUserId = account?.userId?.toLongOrNull()
                                 if (account != null && targetUserId != null) {
                                     IconButton(
                                         onClick = { onUserClick(targetUserId) },

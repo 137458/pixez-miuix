@@ -51,8 +51,8 @@ data class BanUserIdPersist(
 @Serializable
 data class GlanceIllustPersist(
     val id: Int? = null,
-    @SerialName("illust_id") val illustId: Int,
-    @SerialName("user_id") val userId: Int,
+    @SerialName("illust_id") val illustId: Long,
+    @SerialName("user_id") val userId: Long,
     @SerialName("picture_url") val pictureUrl: String,
     val title: String? = null,
     @SerialName("user_name") val userName: String? = null,
@@ -65,8 +65,8 @@ data class GlanceIllustPersist(
 @Serializable
 data class IllustPersist(
     val id: Int? = null,
-    @SerialName("illust_id") val illustId: Int,
-    @SerialName("user_id") val userId: Int,
+    @SerialName("illust_id") val illustId: Long,
+    @SerialName("user_id") val userId: Long,
     @SerialName("picture_url") val pictureUrl: String,
     @SerialName("user_name") val userName: String? = null,
     val title: String? = null,
@@ -84,8 +84,8 @@ data class KVPair(
 @Serializable
 data class NovelPersist(
     val id: Int? = null,
-    @SerialName("novel_id") val novelId: Int,
-    @SerialName("user_id") val userId: Int,
+    @SerialName("novel_id") val novelId: Long,
+    @SerialName("user_id") val userId: Long,
     @SerialName("picture_url") val pictureUrl: String,
     val time: Int,
     val title: String,
@@ -95,7 +95,7 @@ data class NovelPersist(
 @Serializable
 data class NovelViewerPersist(
     val id: Int? = null,
-    @SerialName("novel_id") val novelId: Int,
+    @SerialName("novel_id") val novelId: Long,
     val offset: Double,
 )
 
@@ -107,8 +107,8 @@ data class TaskPersist(
     val title: String,
     val url: String,
     val medium: String? = null,
-    @SerialName("user_id") val userId: Int,
-    @SerialName("illust_id") val illustId: Int,
+    @SerialName("user_id") val userId: Long,
+    @SerialName("illust_id") val illustId: Long,
     // 旧 Flutter task 表中的 sanity_level 列为 INTEGER（可空），保持可空以避免读取旧数据时崩溃。
     @SerialName("sanity_level") val sanityLevel: Int? = null,
     val status: Int,

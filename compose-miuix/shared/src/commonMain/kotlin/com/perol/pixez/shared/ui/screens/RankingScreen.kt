@@ -72,7 +72,7 @@ import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
  */
 @Composable
 fun RankingScreen(
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: IllustRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,

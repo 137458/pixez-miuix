@@ -42,7 +42,7 @@ internal fun UserProfileHeader(
     onFollowListClick: () -> Unit,
     onFollowerListClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onIllustClick: (Int) -> Unit = {},
+    onIllustClick: (Long) -> Unit = {},
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 

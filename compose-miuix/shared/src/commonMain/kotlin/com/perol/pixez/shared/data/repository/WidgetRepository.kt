@@ -53,8 +53,8 @@ class WidgetRepository(
                     fetchedList.forEach { illust ->
                         glanceDatabase.glanceIllustPersistQueries.insertOrReplace(
                             id = null,
-                            illust_id = illust.id.toLong(),
-                            user_id = illust.user.id.toLong(),
+                            illust_id = illust.id,
+                            user_id = illust.user.id,
                             picture_url = illust.imageUrls.medium.ifBlank { illust.imageUrls.large },
                             title = illust.title,
                             user_name = illust.user.name,

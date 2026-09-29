@@ -57,7 +57,7 @@ class BookmarkRepositoryTest {
 
     @Test
     fun `addBookmark 公开收藏不带 tags`() = runBlocking {
-        repository.addBookmark(illustId = 42)
+        repository.addBookmark(illustId = 42L)
 
         val request = captured.single()
         assertEquals("/v2/illust/bookmark/add", request.path)
@@ -68,7 +68,7 @@ class BookmarkRepositoryTest {
 
     @Test
     fun `addBookmark 私密收藏与 tags 一并提交`() = runBlocking {
-        repository.addBookmark(illustId = 42, isPrivate = true, tags = "R-18,風景")
+        repository.addBookmark(illustId = 42L, isPrivate = true, tags = "R-18,風景")
 
         val request = captured.single()
         assertEquals("42", request.params["illust_id"])
@@ -78,7 +78,7 @@ class BookmarkRepositoryTest {
 
     @Test
     fun `addBookmark 空白 tags 不提交该字段`() = runBlocking {
-        repository.addBookmark(illustId = 1, tags = "   ")
+        repository.addBookmark(illustId = 1L, tags = "   ")
 
         val request = captured.single()
         assertEquals(null, request.params["tags"], "空白 tags 视为未传")

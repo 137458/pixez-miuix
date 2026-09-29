@@ -68,7 +68,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 @Composable
 fun DownloadHistoryScreen(
     onBack: () -> Unit,
-    onIllustClick: (Int) -> Unit,
+    onIllustClick: (Long) -> Unit,
     repository: DownloadHistoryRepository,
 ) {
     val listState = rememberLazyListState()

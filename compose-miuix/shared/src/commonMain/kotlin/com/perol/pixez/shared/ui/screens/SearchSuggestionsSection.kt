@@ -57,8 +57,8 @@ internal fun SearchSuggestions(
     onClearHistory: () -> Unit,
     onRetryTrend: () -> Unit,
     queryTarget: SearchQueryTarget? = null,
-    onIllustIdClick: (Int) -> Unit = {},
-    onUserIdClick: (Int) -> Unit = {},
+    onIllustIdClick: (Long) -> Unit = {},
+    onUserIdClick: (Long) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues? = null,
 ) {

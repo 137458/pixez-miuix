@@ -32,10 +32,10 @@ class HistoryRepository(
             ?: ""
         val now = Clock.System.now().toEpochMilliseconds()
         queries.transaction {
-            queries.deleteByIllustId(illust.id.toLong())
+            queries.deleteByIllustId(illust.id)
             queries.insertHistory(
-                illust_id = illust.id.toLong(),
-                user_id = illust.user.id.toLong(),
+                illust_id = illust.id,
+                user_id = illust.user.id,
                 picture_url = pictureUrl,
                 title = illust.title,
                 user_name = illust.user.name,

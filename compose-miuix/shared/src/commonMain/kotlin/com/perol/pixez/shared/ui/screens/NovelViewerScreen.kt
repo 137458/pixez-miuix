@@ -69,10 +69,10 @@ private sealed interface NovelViewState {
  */
 @Composable
 fun NovelViewerScreen(
-    novelId: Int,
+    novelId: Long,
     novelRepository: NovelRepository,
     onBack: () -> Unit,
-    onNovelClick: (Int) -> Unit = {},
+    onNovelClick: (Long) -> Unit = {},
 ) {
     val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
