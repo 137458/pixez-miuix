@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -28,12 +29,14 @@ fun CommentEmojiText(
         PixivEmojis.parseEmojiAnnotatedString(text, emojiSize)
     }
 
-    BasicText(
-        text = annotatedString,
-        modifier = modifier,
-        style = style.copy(color = color),
-        inlineContent = inlineContent,
-        maxLines = maxLines,
-        overflow = overflow,
-    )
+    // SelectionContainer：桌面用户习惯选中复制评论文本（与 HtmlCaptionText 行为对齐）
+    SelectionContainer(modifier = modifier) {
+        BasicText(
+            text = annotatedString,
+            style = style.copy(color = color),
+            inlineContent = inlineContent,
+            maxLines = maxLines,
+            overflow = overflow,
+        )
+    }
 }

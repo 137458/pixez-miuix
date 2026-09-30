@@ -84,7 +84,7 @@ internal class SingleInstanceCoordinator private constructor(
         private const val MaxArguments = 32
         private const val MaxArgumentLength = 8_192
         private const val Header = "PIXEZ_LAUNCH_V1"
-        private const val ForwardAttempts = 5
+        private const val ForwardAttempts = 12
 
         fun acquireOrForward(
             arguments: List<String>,
@@ -159,7 +159,7 @@ internal class SingleInstanceCoordinator private constructor(
                     }
                 }.getOrDefault(false)
                 if (forwarded) return true
-                if (attempt < ForwardAttempts - 1) Thread.sleep(150)
+                if (attempt < ForwardAttempts - 1) Thread.sleep(250)
             }
             return false
         }
