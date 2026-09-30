@@ -79,33 +79,6 @@ fun DataExportScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-        // 执行一次导出/导入：IO 调度器执行文件与仓库操作，结果回主线程以 Toast 呈现
-        suspend fun performOperation(operation: PendingOperation, path: String) {
-                            isProcessing = true
-                            try {
-                                val result = withContext(Dispatchers.Default) {
-                                    if (operation.action == Action.Export) {
-                                        performExport(
-                                            operation.type,
-                                            path,
-                                            settingsRepository,
-                                            historyRepository,
-                                            novelHistoryRepository,
-                                            muteRepository,
-                                            json,
-                                        )
-                                    } else {
-                                        performImport(
-                                            operation.type,
-                                            path,
-                                            settingsRepository,
-                                            historyRepository,
-                                            novelHistoryRepository,
-                                            muteRepository,
-                                            json,
-                                        )
-        }
-
     // 导入侧须宽松解析：含未知字段的新版本/手工编辑导出文件不应导入失败（配置同 PixivHttpClient）。
     val json = remember {
         Json {
@@ -138,6 +111,47 @@ fun DataExportScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
+
+    // 执行一次导出/导入：IO 调度器执行文件与仓库操作，结果回主线程以 Toast 呈现
+    suspend fun performOperation(operation: PendingOperation, path: String) {
+        isProcessing = true
+        try {
+            val result = withContext(Dispatchers.Default) {
+                if (operation.action == Action.Export) {
+                    performExport(
+                        operation.type,
+                        path,
+                        settingsRepository,
+                        historyRepository,
+                        novelHistoryRepository,
+                        muteRepository,
+                        json,
+                    )
+                } else {
+                    performImport(
+                        operation.type,
+                        path,
+                        settingsRepository,
+                        historyRepository,
+                        novelHistoryRepository,
+                        muteRepository,
+                        json,
+                    )
+                }
+            }
+            val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+            val typeStr = operation.type.title(strings)
+            if (result.isSuccess) {
+                toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
+            } else {
+                val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
+                toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
+            }
+        } finally {
+            // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
+            isProcessing = false
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -215,21 +229,6 @@ fun DataExportScreen(
                 }
             }
         }
-
-                        }
-                        val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
-                        val typeStr = operation.type.title(strings)
-                        if (result.isSuccess) {
-                            toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
-                        } else {
-                            val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
-                            toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
-                        }
-                    } finally {
-                        // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
-                        isProcessing = false
-                    }
-                }
 
         // 路径输入对话框：平台文件选择器未就绪时，先以文本路径作为兜底方案。
         PathInputDialog(

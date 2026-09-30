@@ -1,4 +1,4 @@
-﻿package com.perol.pixez.shared.platform
+package com.perol.pixez.shared.platform
 
 import android.content.Intent
 import android.net.Uri
@@ -71,12 +71,14 @@ class PhotoPickerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        } catch (e: Exception) {
-            Napier.e("Failed to launch PickVisualMedia", e, tag = "PhotoPicker")
-            PhotoPickerRegistry.claimCallback()?.invoke(null, null)
-            finish()
+        if (savedInstanceState == null) {
+            try {
+                pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            } catch (e: Exception) {
+                Napier.e("Failed to launch PickVisualMedia", e, tag = "PhotoPicker")
+                PhotoPickerRegistry.claimCallback()?.invoke(null, null)
+                finish()
+            }
         }
     }
 }

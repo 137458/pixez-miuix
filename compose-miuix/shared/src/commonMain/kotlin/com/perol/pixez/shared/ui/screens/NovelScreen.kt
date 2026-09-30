@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,8 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Novel
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.NovelRankingMode
 import com.perol.pixez.shared.data.repository.NovelRepository
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -136,43 +138,47 @@ fun NovelScreen(
 
     val listState = rememberLazyListState()
 
-    // 触底自动加载更多
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val totalItems = listState.layoutInfo.totalItemsCount
-            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisibleItem >= totalItems - 3 && !isLoadingMore && !nextUrl.isNullOrBlank()
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore && !nextUrl.isNullOrBlank() && !isLoadingMore) {
-            val url = nextUrl ?: return@LaunchedEffect
-            val generation = requestGeneration
-            val tab = currentTab
-            val mode = rankingMode
+    fun loadMore() {
+        val currentNextUrl = nextUrl ?: return
+        if (isLoadingMore) return
+        val generation = requestGeneration
+        val tab = currentTab
+        val mode = rankingMode
+        coroutineScope.launch {
             isLoadingMore = true
             suspendRunCatchingNonCancel {
                 when (tab) {
-                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = url)
-                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = url)
+                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = currentNextUrl)
+                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = currentNextUrl)
                 }
             }.fold(
                 onSuccess = { response ->
                     if (generation == requestGeneration) {
-                        val currentList = novels.orEmpty()
-                        val existingIds = currentList.map { it.id }.toSet()
-                        novels = currentList + response.novels.filter { it.id !in existingIds }
+                        novels = (novels.orEmpty()).appendDistinct(response.novels)
                         nextUrl = response.nextUrl
-                        isLoadingMore = false
                     }
                 },
                 onFailure = {
-                    if (generation == requestGeneration) {
-                        isLoadingMore = false
-                    }
+                    // 保留现有列表，网络失败后允许再次触发
                 },
             )
+            if (generation == requestGeneration) {
+                isLoadingMore = false
+            }
+        }
+    }
+
+    // 触底自动加载更多：使用 snapshotFlow 监听滚动可视项位置，消除原 LaunchedEffect key 翻转导致的协程取消与分页死锁
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            totalItems > 0 && lastVisibleItem >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
+        }.collect { shouldLoad ->
+            if (shouldLoad && !isLoadingMore && !nextUrl.isNullOrBlank()) {
+                loadMore()
+            }
         }
     }
 

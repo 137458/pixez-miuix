@@ -253,4 +253,16 @@ fun Novel.isR18(): Boolean {
     return tags.any { isSensitiveTag(it.name, it.translatedName) }
 }
 
+/**
+ * 基于小说作品 ID 幂等合并列表，过滤重复项，避免刷新与分页并发时出现重复卡片。
+ */
+fun List<Novel>.appendDistinct(newItems: List<Novel>): List<Novel> {
+    if (newItems.isEmpty()) return this
+    if (this.isEmpty()) return newItems
+    val existingIds = mapTo(HashSet(size + newItems.size)) { it.id }
+    val uniqueNew = newItems.filter { existingIds.add(it.id) }
+    return this + uniqueNew
+}
+
+
 

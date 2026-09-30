@@ -17,6 +17,10 @@
 
 ### 修复
 
+- 修复了小说列表触底加载由于 `LaunchedEffect` 观察值在启动时翻转导致请求协程被即时取消、分页状态永久死锁的问题：重构为独立的 `loadMore` 执行体并通过 `snapshotFlow` 监听列表滚动位置，触底阈值收敛至 `AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS`，并新增 `Novel.appendDistinct` 幂等合并去重。
+- 修复了 `stableNotificationId` 任务 ID 到通知 ID 折叠算法忽视高 32 位的缺陷：重构为 64 位混淆折叠与符号位清除掩码，保留 0..Int.MAX_VALUE 一对一映射的同时消除跨 2^32 周期 100% 碰撞与负数返回风险，补齐三角验证单测。
+- 修复了 Android 图片选择器 `PhotoPickerActivity` 在配置变更重建时重复拉起系统的隐患（增加 `savedInstanceState == null` 状态保护）。
+- 修复了数据导出页 `DataExportScreen` 与交互设置页 `InteractionSettingScreen` 存在的结构括号错位与 Miuix Text 导入遗漏。
 - 修复了深链与剪贴板解析对任意来源的 OAuth 授权码放行的问题：仅当链接来自 `pixez://`/`pixiv://` 的登录页或 Pixiv 官方回调路径时才触发登录交换，阻断恶意应用注入授权码的路径；纯数字 ID 识别同时拒绝符号前缀与全零串。
 - 修复了 Windows 桌面端双开应用时，主窗口尚未完成首帧期间第二次启动的参数被静默丢弃的问题（现在会正确反馈未送达）；修复了桌面端启动期的协议注册与旧设置迁移阻塞 UI 线程、下载设置「打开所在文件夹」失败无任何反馈的问题。
 - 修复了小组件深链在作品 ID 超过 21 亿后指向错误作品的截断残留，以及动图预解码线程与播放路径并发读取帧缓存的数据竞争、转场注册表在重组被丢弃时的锚点状态污染。

@@ -38,6 +38,25 @@ class StableNotificationIdTest {
         for (id in listOf(-1L, Long.MIN_VALUE, Long.MAX_VALUE)) {
             val derived = stableNotificationId(id)
             assertEquals(derived, stableNotificationId(id))
+            kotlin.test.assertTrue(derived >= 0, "通知 ID 必须为非负整数: $id -> $derived")
         }
+    }
+
+    @Test
+    fun `跨 2^32 周期的高位递增 ID 派生值不同（防高位截断碰撞）`() {
+        val baseId = 42L
+        val upperCycleId = 42L + (1L shl 32)
+        assertNotEquals(
+            stableNotificationId(baseId),
+            stableNotificationId(upperCycleId),
+            "跨 2^32 递增的任务 ID 不应由于低 32 位截断导致 100% 碰撞",
+        )
+    }
+
+    @Test
+    fun `超 2^31 未满 2^32 的大数任务 ID 折叠为非负数`() {
+        val bigId = 3_000_000_000L
+        val derived = stableNotificationId(bigId)
+        kotlin.test.assertTrue(derived >= 0, "大于 2^31 的任务 ID 折叠后必须为非负整数，当前为: $derived")
     }
 }

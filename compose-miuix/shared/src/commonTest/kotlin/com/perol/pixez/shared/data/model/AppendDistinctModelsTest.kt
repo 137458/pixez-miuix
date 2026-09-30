@@ -62,4 +62,41 @@ class AppendDistinctModelsTest {
         // 追加到空列表等价于新列表本身
         assertEquals(listOf(userPreview(10)), emptyList<UserPreview>().appendDistinct(listOf(userPreview(10))))
     }
+
+    // ---------- Novel ----------
+
+    private fun novel(id: Long) = Novel(
+        id = id,
+        title = "title$id",
+        restrict = 0,
+        xRestrict = 0,
+        isOriginal = false,
+        imageUrls = NovelImageUrls("", "", ""),
+        createDate = "",
+        tags = emptyList(),
+        pageCount = 1,
+        textLength = 100,
+        user = NovelUser(id = 1L, name = "u", account = "a", profileImageUrls = NovelProfileImageUrls(""), isFollowed = false),
+        isBookmarked = false,
+        visible = true,
+        isMuted = false,
+        isMypixivOnly = false,
+        isXRestricted = false,
+        novelAIType = 0,
+    )
+
+    @Test
+    fun `novel append filters duplicates by id and keeps order`() {
+        val existing = listOf(novel(100), novel(200))
+        val newItems = listOf(novel(200), novel(300))
+        val merged = existing.appendDistinct(newItems)
+        assertEquals(listOf(100L, 200L, 300L), merged.map { it.id })
+    }
+
+    @Test
+    fun `novel append with empty inputs returns original references`() {
+        val existing = listOf(novel(100))
+        assertEquals(existing, existing.appendDistinct(emptyList()))
+        assertEquals(listOf(novel(100)), emptyList<Novel>().appendDistinct(listOf(novel(100))))
+    }
 }
