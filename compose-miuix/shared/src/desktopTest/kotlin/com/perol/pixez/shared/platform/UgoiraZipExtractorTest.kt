@@ -79,6 +79,32 @@ class UgoiraZipExtractorTest {
     }
 
     @Test
+    fun `反斜杠路径穿越条目被拒绝且不写出目标目录`() {
+        val zipPath = zipOf(
+            "..\\..\\evil.png" to byteArrayOf(1),
+            "frames\\000000.jpg" to byteArrayOf(2),
+        )
+        val dir = framesDir()
+
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
+
+        // 所有条目剥离目录分隔符（含 Windows 反斜杠）后写入 framesDir，绝不出目录
+        assertEquals(setOf("evil.png", "000000.jpg"), frames.map { it.name }.toSet())
+        assertEquals(1, (dir / "evil.png".toPath()).toFile().readBytes()[0].toInt())
+    }
+
+    @Test
+    fun `超上限条目被跳过不致内存耗尽`() {
+        // 单条目声明超过 64MB 上限：应被跳过而非整体 OOM
+        val zipPath = zipOf("big.bin" to ByteArray(65 * 1024 * 1024), "000000.jpg" to byteArrayOf(3))
+        val dir = framesDir()
+
+        val frames = UgoiraZipExtractor().extractFrames(zipPath, dir)
+
+        assertEquals(setOf("000000.jpg"), frames.map { it.name }.toSet())
+    }
+
+    @Test
     fun `空 zip 返回空列表`() {
         val zipPath = zipOf()
         val dir = framesDir()

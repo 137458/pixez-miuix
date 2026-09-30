@@ -123,6 +123,11 @@ android {
 }
 
 
+// 开发运行（gradlew :composeApp:run）开启桌面调试日志；jpackage 发布包不带该属性
+tasks.matching { it.name == "run" }.configureEach {
+    (this as? JavaExec)?.jvmArgs("-Dpixez.debug=true")
+}
+
 compose.desktop {
     application {
         mainClass = "com.perol.pixez.desktop.MainKt"

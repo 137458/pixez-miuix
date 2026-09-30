@@ -14,16 +14,25 @@ actual class DownloadNotifier {
 
     actual fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int) {
         try {
-            if (SystemTray.isSupported()) {
-                val systemTray = SystemTray.getSystemTray()
-                val trayIcon = systemTray.trayIcons.firstOrNull()
-                val message = if (failedCount > 0) {
-                    "下载完成：$successCount 项成功，$failedCount 项失败"
-                } else {
-                    "下载完成：共 $successCount 项"
-                }
-                val msgType = if (failedCount > 0) TrayIcon.MessageType.WARNING else TrayIcon.MessageType.INFO
-                trayIcon?.displayMessage(title.ifBlank { "PixEz 下载管理器" }, message, msgType)
+            if (!SystemTray.isSupported()) {
+                Napier.w("系统托盘不可用，下载完成气泡通知跳过", tag = "DownloadNotifier")
+                return
+            }
+            val trayIcon = SystemTray.getSystemTray().trayIcons.firstOrNull()
+            if (trayIcon == null) {
+                // 用户移除托盘图标（trayIcons 为空）时同样无法气泡提示
+                Napier.w("托盘图标未注册，下载完成气泡通知跳过", tag = "DownloadNotifier")
+                return
+            }
+            val message = if (failedCount > 0) {
+                "下载完成：$successCount 项成功，$failedCount 项失败"
+            } else {
+                "下载完成：共 $successCount 项"
+            }
+            val msgType = if (failedCount > 0) TrayIcon.MessageType.WARNING else TrayIcon.MessageType.INFO
+            // TrayIcon 非线程安全，displayMessage 须在 EDT 调用
+            java.awt.EventQueue.invokeLater {
+                trayIcon.displayMessage(title.ifBlank { "PixEz 下载管理器" }, message, msgType)
             }
         } catch (e: Exception) {
             Napier.w("Desktop 弹出下载通知失败", e)
