@@ -5,6 +5,7 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.awt.EventQueue
 import java.awt.FileDialog
@@ -17,8 +18,11 @@ import java.io.FilenameFilter
  * 采用系统原生 [FileDialog] 选择图片并读取字节内容。
  */
 actual class PlatformPhotoPicker {
+    // 共享作用域：每次调用裸建 CoroutineScope 无法集中管理在途任务
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     actual fun pickPhoto(onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
+        ioScope.launch {
             try {
                 var selectedFile: File? = null
                 val langNum = AppDependencies.orNull()?.settingsRepository?.languageNum ?: 0

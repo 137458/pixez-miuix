@@ -51,9 +51,12 @@ internal class SingleInstanceCoordinator private constructor(
             val arguments = readPayload(reader)
             if (arguments == null) {
                 writer.write("INVALID\n")
-            } else {
+            } else if (listeners.isNotEmpty()) {
                 listeners.forEach { listener -> runCatching { listener(arguments) } }
                 writer.write("OK\n")
+            } else {
+                // 主实例尚未完成首帧组合（监听器未注册）：回 BUSY 让次实例感知未送达而非误以为成功
+                writer.write("BUSY\n")
             }
             writer.flush()
         }

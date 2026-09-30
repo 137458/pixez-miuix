@@ -59,6 +59,7 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -115,7 +116,6 @@ fun DownloadTaskScreen(
     val state = produceState<Result<List<DownloadTaskHistory>>?>(
         initialValue = null,
         downloadHistoryRepository,
-        selectedFilter,
         refreshToken,
         retryCount,
     ) {
@@ -139,7 +139,8 @@ fun DownloadTaskScreen(
 
     // P-5：收集下载仓库的任务状态变更事件驱动刷新，替代秒级全表轮询。
     LaunchedEffect(downloadRepository) {
-        downloadRepository.taskEventFlow.collect { refreshToken++ }
+        // conflate：多页并发下载事件密集，合并为至多一次刷新，避免事件风暴反复全表重查
+        downloadRepository.taskEventFlow.conflate().collect { refreshToken++ }
     }
 
     val scrollBehavior = MiuixScrollBehavior()
