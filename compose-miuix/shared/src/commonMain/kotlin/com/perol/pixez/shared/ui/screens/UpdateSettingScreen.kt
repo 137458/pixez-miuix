@@ -254,6 +254,7 @@ fun UpdateSettingScreen(
                                         val result = com.perol.pixez.shared.platform.AppUpdateDownloader().download(
                                             downloadUrl = downloadUrl,
                                             fileName = fileName,
+                                            sha256Digest = releaseInfo?.digest,
                                             onProgress = { progress, downloaded, total ->
                                                 downloadProgress = progress
                                                 downloadedBytes = downloaded

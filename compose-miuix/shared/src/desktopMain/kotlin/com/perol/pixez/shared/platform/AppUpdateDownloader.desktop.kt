@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.platform
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.network.verifyFileDigest
 import com.perol.pixez.shared.ui.AppInfo
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -18,6 +19,7 @@ actual class AppUpdateDownloader actual constructor() {
         downloadUrl: String,
         fileName: String,
         onProgress: (progress: Float, downloadedBytes: Long, totalBytes: Long) -> Unit,
+        sha256Digest: String?,
     ): Result<String> = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         var tempFile: File? = null
@@ -79,6 +81,10 @@ actual class AppUpdateDownloader actual constructor() {
             // 连接提前 EOF 时 totalBytes 已知却不等：截断的安装包不得转正
             require(totalBytes <= 0L || downloadedBytes == totalBytes) {
                 "更新包下载不完整: $downloadedBytes / $totalBytes"
+            }
+            // GitHub release digest（sha256）可用时强校验，防截断/被替换包进入安装
+            if (sha256Digest != null && !verifyFileDigest(targetFile, sha256Digest)) {
+                throw IllegalStateException("更新包 SHA-256 校验失败，安装包可能被篡改或损坏")
             }
             java.nio.file.Files.move(
                 tempFile.toPath(),

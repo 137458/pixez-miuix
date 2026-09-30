@@ -104,6 +104,7 @@ fun UpdateDialog(
             val result = AppUpdateDownloader().download(
                 downloadUrl = downloadUrl,
                 fileName = fileName,
+                sha256Digest = releaseInfo.digest,
                 onProgress = { progress, downloaded, total ->
                     val currentTime = Clock.System.now().toEpochMilliseconds()
                     val timeDiff = currentTime - lastTime

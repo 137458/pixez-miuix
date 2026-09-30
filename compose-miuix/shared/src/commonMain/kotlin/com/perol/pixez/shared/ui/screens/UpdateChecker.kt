@@ -28,6 +28,8 @@ internal data class GitHubReleaseAsset(
     val name: String? = null,
     val browser_download_url: String? = null,
     val size: Long? = null,
+    // GitHub 返回形如 "sha256:<hex>"，用于安装包完整性校验
+    val digest: String? = null,
 )
 
 /**
@@ -86,6 +88,7 @@ data class ReleaseInfo(
     val downloadUrl: String? = null,
     val fileName: String? = null,
     val fileSize: Long? = null,
+    val digest: String? = null,
 )
 
 /**
@@ -175,6 +178,7 @@ suspend fun fetchLatestReleaseInfo(
             downloadUrl = downloadUrl,
             fileName = fileName,
             fileSize = fileSize,
+            digest = matchedAsset?.digest,
         )
         Result.success(releaseInfo)
     } catch (e: CancellationException) {

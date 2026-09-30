@@ -19,6 +19,7 @@ actual class AppUpdateDownloader actual constructor() {
         downloadUrl: String,
         fileName: String,
         onProgress: (progress: Float, downloadedBytes: Long, totalBytes: Long) -> Unit,
+        sha256Digest: String?,
     ): Result<String> = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         var tempFile: File? = null
