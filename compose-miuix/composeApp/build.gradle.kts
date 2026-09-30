@@ -76,8 +76,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010092
-        versionName = "0.9.109.2-miuix"
+        versionCode = 10010093
+        versionName = "0.9.109.3-miuix"
     }
 
     buildTypes {
@@ -131,6 +131,16 @@ tasks.matching { it.name == "run" }.configureEach {
 compose.desktop {
     application {
         mainClass = "com.perol.pixez.desktop.MainKt"
+        val jpackageJdk = listOf(
+            System.getenv("PACKAGE_JAVA_HOME"),
+            "I:\\Program Files\\Java\\jdk-26.0.1",
+            "C:\\Program Files\\Java\\latest\\jdk-26",
+            "C:\\Program Files\\Java\\jdk-17",
+            "C:\\Program Files\\Eclipse Adoptium\\jdk-17",
+        ).filterNotNull().firstOrNull { file(it).resolve("bin/jpackage.exe").exists() }
+        if (jpackageJdk != null) {
+            javaHome = jpackageJdk
+        }
 
         nativeDistributions {
             targetFormats(
