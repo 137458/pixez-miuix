@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -141,10 +143,49 @@ fun InteractionSettingScreen(
                                     com.perol.pixez.shared.platform.PlatformAutoStart.setEnabled(checked)
                                 },
                             )
+
+                            // 桌面快捷键速查（动作名复用对应页面标题键，键位与 main.kt onKeyEvent 一致）
+                            ShortcutHintRow("Esc", strings.back)
+                            ShortcutHintRow("Ctrl+F", strings.tabSearch)
+                            ShortcutHintRow("Ctrl+1", strings.tabRecommend)
+                            ShortcutHintRow("Ctrl+2", strings.tabSearch)
+                            ShortcutHintRow("Ctrl+3", strings.tabRanking)
+                            ShortcutHintRow("Ctrl+4", strings.tabNew)
+                            ShortcutHintRow("Ctrl+5", strings.tabSpotlight)
+                            ShortcutHintRow("Ctrl+J / Ctrl+D", strings.settingDownloadTask)
+                            ShortcutHintRow("Ctrl+H", strings.settingHistory)
+                            ShortcutHintRow("Ctrl+B", strings.settingBookTags)
+                            ShortcutHintRow("Ctrl+N", strings.novelBrowseTitle)
+                            ShortcutHintRow("Ctrl+R / F5", strings.refresh)
+                            ShortcutHintRow("Ctrl+,", strings.settingsTitle)
+                            ShortcutHintRow("Ctrl+W", strings.interactionSettingCloseToTray)
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** 单行快捷键速查：键位 + 动作名（桌面交互设置页底部展示）。 */
+@Composable
+private fun ShortcutHintRow(keys: String, action: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = keys,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.primary,
+        )
+        Text(
+            text = action,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        )
     }
 }
