@@ -365,6 +365,9 @@ interface AppStrings {
     val interactionSettingSwipeChangeSummaryOn: String
     val interactionSettingSwipeChangeSummaryOff: String
     val interactionSettingCloseToTray: String
+    val interactionSettingLaunchOnStartup: String
+    val interactionSettingLaunchOnStartupSummaryOn: String
+    val interactionSettingLaunchOnStartupSummaryOff: String
     val interactionSettingCloseToTraySummaryOn: String
     val interactionSettingCloseToTraySummaryOff: String
     val platformSettingSectionPicker: String
@@ -762,6 +765,9 @@ object ZhCnStrings : AppStrings {
     override val interactionSettingCloseToTray = "关闭窗口时最小化到托盘"
     override val interactionSettingCloseToTraySummaryOn = "关闭主窗口后继续在系统托盘中运行"
     override val interactionSettingCloseToTraySummaryOff = "关闭主窗口时退出应用"
+    override val interactionSettingLaunchOnStartup = "开机自动启动"
+    override val interactionSettingLaunchOnStartupSummaryOn = "登录 Windows 时自动在后台启动"
+    override val interactionSettingLaunchOnStartupSummaryOff = "需要手动启动应用"
     override val platformSettingSectionPicker = "选择器"
     override val platformSettingPhotoPicker = "使用系统图片选择器"
     override val platformSettingPhotoPickerSummaryOn = "使用 Photo Picker"
@@ -1393,6 +1399,9 @@ object ZhTwStrings : AppStrings {
     override val interactionSettingCloseToTray = "關閉視窗時最小化至系統匣"
     override val interactionSettingCloseToTraySummaryOn = "關閉主視窗後繼續在系統匣中執行"
     override val interactionSettingCloseToTraySummaryOff = "關閉主視窗時結束應用程式"
+    override val interactionSettingLaunchOnStartup = "開機自動啟動"
+    override val interactionSettingLaunchOnStartupSummaryOn = "登入 Windows 時自動在背景啟動"
+    override val interactionSettingLaunchOnStartupSummaryOff = "需要手動啟動應用程式"
     override val platformSettingSectionPicker = "選擇器"
     override val platformSettingPhotoPicker = "使用系統圖片選擇器"
     override val platformSettingPhotoPickerSummaryOn = "使用 Photo Picker"
@@ -2055,6 +2064,9 @@ object EnStrings : AppStrings {
     override val interactionSettingCloseToTray = "Minimize to Tray on Close"
     override val interactionSettingCloseToTraySummaryOn = "Keep running in the system tray when the main window closes"
     override val interactionSettingCloseToTraySummaryOff = "Exit the app when the main window closes"
+    override val interactionSettingLaunchOnStartup = "Launch at startup"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Start automatically in the background when you sign in to Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Start the app manually"
     override val platformSettingSectionPicker = "Picker"
     override val platformSettingPhotoPicker = "Use System Photo Picker"
     override val platformSettingPhotoPickerSummaryOn = "Using Photo Picker"
@@ -2744,6 +2756,9 @@ object JaStrings : AppStrings {
     override val interactionSettingCloseToTray = "閉じるときにトレイへ最小化"
     override val interactionSettingCloseToTraySummaryOn = "メインウィンドウを閉じてもシステムトレイで実行を続けます"
     override val interactionSettingCloseToTraySummaryOff = "メインウィンドウを閉じるとアプリを終了します"
+    override val interactionSettingLaunchOnStartup = "起動時に自動で開始"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Windows にサインインしたときにバックグラウンドで自動起動します"
+    override val interactionSettingLaunchOnStartupSummaryOff = "アプリを手動で起動します"
     override val platformSettingSectionPicker = "ピッカー"
     override val platformSettingPhotoPicker = "システム写真ピッカーを使用"
     override val platformSettingPhotoPickerSummaryOn = "Photo Picker を使用中"
@@ -3420,6 +3435,9 @@ object KoStrings : AppStrings {
     override val interactionSettingCloseToTray = "창을 닫을 때 트레이로 최소화"
     override val interactionSettingCloseToTraySummaryOn = "기본 창을 닫아도 시스템 트레이에서 계속 실행합니다"
     override val interactionSettingCloseToTraySummaryOff = "기본 창을 닫으면 앱을 종료합니다"
+    override val interactionSettingLaunchOnStartup = "시작 시 자동 실행"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Windows에 로그인하면 백그라운드에서 자동 시작합니다"
+    override val interactionSettingLaunchOnStartupSummaryOff = "앱을 수동으로 시작합니다"
     override val platformSettingSectionPicker = "선택기"
     override val platformSettingPhotoPicker = "시스템 사진 선택기 사용"
     override val platformSettingPhotoPickerSummaryOn = "Photo Picker 사용 중"
@@ -4078,6 +4096,9 @@ object RuStrings : AppStrings {
     override val interactionSettingCloseToTray = "Сворачивать в трей при закрытии"
     override val interactionSettingCloseToTraySummaryOn = "После закрытия главного окна приложение продолжит работу в системном трее"
     override val interactionSettingCloseToTraySummaryOff = "Закрытие главного окна завершает работу приложения"
+    override val interactionSettingLaunchOnStartup = "Автозапуск при входе"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Автоматически запускать в фоне при входе в Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Запускать приложение вручную"
     override val platformSettingSectionPicker = "Выбор файлов"
     override val platformSettingPhotoPicker = "Использовать системный выбор фото"
     override val platformSettingPhotoPickerSummaryOn = "Используется Photo Picker"
@@ -4738,6 +4759,9 @@ object EsStrings : AppStrings {
     override val interactionSettingCloseToTray = "Minimizar a la bandeja al cerrar"
     override val interactionSettingCloseToTraySummaryOn = "Seguir ejecutándose en la bandeja del sistema al cerrar la ventana principal"
     override val interactionSettingCloseToTraySummaryOff = "Salir de la aplicación al cerrar la ventana principal"
+    override val interactionSettingLaunchOnStartup = "Iniciar al arrancar"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Iniciar automáticamente en segundo plano al iniciar sesión en Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Iniciar la aplicación manualmente"
     override val platformSettingSectionPicker = "Selector"
     override val platformSettingPhotoPicker = "Usar selector de fotos del sistema"
     override val platformSettingPhotoPickerSummaryOn = "Usando Photo Picker"
@@ -5396,6 +5420,9 @@ object TrStrings : AppStrings {
     override val interactionSettingCloseToTray = "Kapatırken sistem tepsisine küçült"
     override val interactionSettingCloseToTraySummaryOn = "Ana pencere kapandığında sistem tepsisinde çalışmaya devam et"
     override val interactionSettingCloseToTraySummaryOff = "Ana pencere kapandığında uygulamadan çık"
+    override val interactionSettingLaunchOnStartup = "Açılışta otomatik başlat"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Windows'ta oturum açıldığında arka planda otomatik başlat"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Uygulamayı elle başlat"
     override val platformSettingSectionPicker = "Seçici"
     override val platformSettingPhotoPicker = "Sistem Fotoğraf Seçicisini Kullan"
     override val platformSettingPhotoPickerSummaryOn = "Photo Picker kullanılıyor"
@@ -6056,6 +6083,9 @@ object IdStrings : AppStrings {
     override val interactionSettingCloseToTray = "Minimalkan ke baki sistem saat ditutup"
     override val interactionSettingCloseToTraySummaryOn = "Tetap berjalan di baki sistem saat jendela utama ditutup"
     override val interactionSettingCloseToTraySummaryOff = "Keluar dari aplikasi saat jendela utama ditutup"
+    override val interactionSettingLaunchOnStartup = "Jalankan saat mulai"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Mulai otomatis di latar belakang saat masuk ke Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Jalankan aplikasi secara manual"
     override val platformSettingSectionPicker = "Pemilih"
     override val platformSettingPhotoPicker = "Gunakan Pemilih Foto Sistem"
     override val platformSettingPhotoPickerSummaryOn = "Menggunakan Photo Picker"
@@ -6715,6 +6745,9 @@ object FilStrings : AppStrings {
     override val interactionSettingCloseToTray = "I-minimize sa tray kapag isinara"
     override val interactionSettingCloseToTraySummaryOn = "Patuloy na tumakbo sa system tray kapag isinara ang pangunahing window"
     override val interactionSettingCloseToTraySummaryOff = "Lumabas sa app kapag isinara ang pangunahing window"
+    override val interactionSettingLaunchOnStartup = "Awtomatikong buksan kapag nag-start"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Awtomatikong magsisimula sa background kapag naka-sign in sa Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Manwalang buksan ang app"
     override val platformSettingSectionPicker = "Tagapili"
     override val platformSettingPhotoPicker = "Gamitin ang System Photo Picker"
     override val platformSettingPhotoPickerSummaryOn = "Gamit ang Photo Picker"
@@ -7374,6 +7407,9 @@ object DeStrings : AppStrings {
     override val interactionSettingCloseToTray = "Beim Schließen in die Taskleiste minimieren"
     override val interactionSettingCloseToTraySummaryOn = "Beim Schließen des Hauptfensters weiter in der Taskleiste ausführen"
     override val interactionSettingCloseToTraySummaryOff = "App beim Schließen des Hauptfensters beenden"
+    override val interactionSettingLaunchOnStartup = "Beim Start automatisch ausführen"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Bei Windows-Anmeldung automatisch im Hintergrund starten"
+    override val interactionSettingLaunchOnStartupSummaryOff = "App manuell starten"
     override val platformSettingSectionPicker = "Dateiauswahl"
     override val platformSettingPhotoPicker = "System-Fotoauswahl verwenden"
     override val platformSettingPhotoPickerSummaryOn = "Photo Picker wird verwendet"
@@ -7929,6 +7965,9 @@ object DeStrings : AppStrings {
  * 完整实现全部字符串，不再委托 EnStrings。属性顺序与 EnStrings 保持一致，便于对照补译。
  */
 object ViStrings : AppStrings {
+    override val interactionSettingLaunchOnStartup = "Tự động khởi chạy khi bật máy"
+    override val interactionSettingLaunchOnStartupSummaryOn = "Tự động khởi chạy trong nền khi đăng nhập Windows"
+    override val interactionSettingLaunchOnStartupSummaryOff = "Mở ứng dụng thủ công"
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
     override val novelPrevChapter: String get() = "Chương trước"
     override val novelNextChapter: String get() = "Chương sau"

@@ -414,6 +414,13 @@ class SettingsRepository(
     /**
      * 插画详情页左右滑动切换作品。
      */
+    var launchOnStartup: Boolean
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.LAUNCH_ON_STARTUP, false)
+        set(value) {
+            settings[SettingsKeys.LAUNCH_ON_STARTUP] = value
+            notifyChanged()
+        }
+
     var swipeChangeArtwork: Boolean
         get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.SWIPE_CHANGE_ARTWORK,

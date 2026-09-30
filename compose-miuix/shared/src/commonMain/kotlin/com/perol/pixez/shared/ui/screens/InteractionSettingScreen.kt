@@ -54,6 +54,7 @@ fun InteractionSettingScreen(
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
     var closeToTray by remember { mutableStateOf(settingsRepository.closeToTray) }
+    var launchOnStartup by remember { mutableStateOf(settingsRepository.launchOnStartup) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -128,6 +129,16 @@ fun InteractionSettingScreen(
                                 onCheckedChange = { checked ->
                                     closeToTray = checked
                                     settingsRepository.closeToTray = checked
+                                },
+                            )
+                            SwitchPreference(
+                                title = strings.interactionSettingLaunchOnStartup,
+                                summary = if (launchOnStartup) strings.interactionSettingLaunchOnStartupSummaryOn else strings.interactionSettingLaunchOnStartupSummaryOff,
+                                checked = launchOnStartup,
+                                onCheckedChange = { checked ->
+                                    launchOnStartup = checked
+                                    settingsRepository.launchOnStartup = checked
+                                    com.perol.pixez.shared.platform.PlatformAutoStart.setEnabled(checked)
                                 },
                             )
                         }
