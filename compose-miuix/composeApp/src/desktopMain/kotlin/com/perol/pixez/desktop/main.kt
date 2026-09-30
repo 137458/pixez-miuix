@@ -45,6 +45,8 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 import java.awt.Dimension
 import java.awt.SystemTray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -202,8 +204,11 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
     }
 
     LaunchedEffect(dependencies) {
-        WindowsProtocolRegistrar.registerIfNeeded()
-        dependencies.settingsFactory.migrateIfNeeded()
+        // 注册表写入与旧设置文件迁移均为阻塞 I/O，切至 IO 调度器避免卡 UI（见 SettingsFactory 注释）
+        withContext(Dispatchers.IO) {
+            WindowsProtocolRegistrar.registerIfNeeded()
+            dependencies.settingsFactory.migrateIfNeeded()
+        }
         dependencies.settingsRepository.notifyChanged()
         dependencies.warmupAsync(scope)
     }

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import io.github.aakira.napier.Napier
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
@@ -189,7 +190,7 @@ fun DownloadSettingScreen(
                                         with(okio.Path) { effectiveStorePath.toPath() },
                                     )
                                     com.perol.pixez.shared.platform.FileLocator().showInFileManager(effectiveStorePath)
-                                }
+                                }.onFailure { Napier.e("打开所在文件夹失败 storePath=$effectiveStorePath", it) }
                             },
                         )
                         SwitchPreference(
