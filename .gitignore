@@ -12,6 +12,7 @@
 .agents/
 .trae/
 .zcode/
+.zcodeignore
 release/
 misc/
 msic

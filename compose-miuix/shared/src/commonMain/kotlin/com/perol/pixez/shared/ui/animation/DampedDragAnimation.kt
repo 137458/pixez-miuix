@@ -47,10 +47,11 @@ internal class DampedDragAnimation(
 ) {
 
     private val valueAnimationSpec = spring(1f, 1000f, visibilityThreshold)
+    private val tabSwitchAnimationSpec = spring(0.85f, 800f, visibilityThreshold)
     private val velocityAnimationSpec = spring(0.5f, 300f, visibilityThreshold * 10f)
     private val pressProgressAnimationSpec = spring(1f, 1000f, 0.001f)
-    private val scaleXAnimationSpec = spring(0.6f, 250f, 0.001f)
-    private val scaleYAnimationSpec = spring(0.7f, 250f, 0.001f)
+    private val scaleXAnimationSpec = spring(0.6f, 400f, 0.001f)
+    private val scaleYAnimationSpec = spring(0.7f, 400f, 0.001f)
 
     private val valueAnimation = Animatable(initialValue, visibilityThreshold)
     private val velocityAnimation = Animatable(0f, 5f)
@@ -62,6 +63,7 @@ internal class DampedDragAnimation(
 
     private var pressJob: Job? = null
     private var releaseJob: Job? = null
+    private var snapJob: Job? = null
 
     private val velocityTracker = VelocityTracker()
 
@@ -113,11 +115,6 @@ internal class DampedDragAnimation(
     fun release() {
         releaseJob?.cancel()
         releaseJob = animationScope.launch {
-            withFrameMillis { }
-            if (value != targetValue) {
-                val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
-                snapshotFlow { valueAnimation.value }.first { abs(it - valueAnimation.targetValue) < threshold }
-            }
             launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
             launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
             launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
@@ -125,23 +122,30 @@ internal class DampedDragAnimation(
     }
 
     fun updateValue(value: Float) {
-        val targetValue = value.coerceIn(valueRange)
-        animationScope.launch {
-            valueAnimation.snapTo(targetValue)
+        val target = value.coerceIn(valueRange)
+        snapJob?.cancel()
+        snapJob = animationScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            valueAnimation.snapTo(target)
             updateVelocity()
         }
     }
 
-    fun animateToValue(value: Float) {
+    fun animateToValue(value: Float, pressed: Boolean = false) {
         animationScope.launch {
             mutatorMutex.mutate {
-                press()
-                val targetValue = value.coerceIn(valueRange)
-                launch { valueAnimation.animateTo(targetValue, valueAnimationSpec) }
+                if (pressed) {
+                    press()
+                }
+                val target = value.coerceIn(valueRange)
+                val spec = if (pressed) valueAnimationSpec else tabSwitchAnimationSpec
+                val animJob = launch { valueAnimation.animateTo(target, spec) }
                 if (velocity != 0f) {
                     launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
                 }
-                release()
+                animJob.join()
+                if (pressed) {
+                    release()
+                }
             }
         }
     }
@@ -163,17 +167,21 @@ internal suspend fun PointerInputScope.inspectDragGestures(
     onDrag: (change: PointerInputChange, dragAmount: Offset) -> Unit,
 ) {
     awaitEachGesture {
-        val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
-        val down = awaitFirstDown(false)
+        val down = awaitFirstDown(requireUnconsumed = false)
         onDragStart(down)
-        onDrag(initialDown, Offset.Zero)
+        onDrag(down, Offset.Zero)
         val upEvent = drag(
-            pointerId = initialDown.id,
-            onDrag = { onDrag(it, it.positionChange()) },
+            pointerId = down.id,
+            onDrag = { change ->
+                val dragDelta = change.positionChange()
+                change.consume()
+                onDrag(change, dragDelta)
+            },
         )
         if (upEvent == null) {
             onDragCancel()
         } else {
+            upEvent.consume()
             onDragEnd(upEvent)
         }
     }
@@ -188,7 +196,6 @@ private suspend inline fun AwaitPointerEventScope.drag(
     var pointer = pointerId
     while (true) {
         val change = awaitDragOrUp(pointer) ?: return null
-        if (change.isConsumed) return null
         if (change.changedToUpIgnoreConsumed()) return change
         onDrag(change)
         pointer = change.id

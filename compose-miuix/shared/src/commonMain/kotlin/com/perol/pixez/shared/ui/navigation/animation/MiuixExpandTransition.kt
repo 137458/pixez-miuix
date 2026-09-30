@@ -136,6 +136,7 @@ internal fun cardExpandStackAnimator(
                 expansion = frame.expansion,
                 sourceBounds = activeSourceBounds,
                 containerBounds = containerBounds,
+                isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK,
             )
             content(
                 if (frame.isTopLayer) {

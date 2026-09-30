@@ -99,6 +99,10 @@ class SharedBoundsRegistry {
     var activeTransitionExpansion: Float by mutableFloatStateOf(0f)
         private set
 
+    /** 当前转场是否为出栈退场（pop/返回列表）。退场期列表源卡片保持可见，避免退场动画中途卡片隐身。 */
+    var isExitingTransition: Boolean by mutableStateOf(false)
+        private set
+
     /** 转场激活期底层纵深缩放的窗口坐标锚点（= 源卡片中心）。 */
     private var backdropPivot = Offset.Zero
 
@@ -276,6 +280,7 @@ class SharedBoundsRegistry {
         expansion: Float,
         sourceBounds: Rect? = null,
         containerBounds: Rect = Rect.Zero,
+        isExiting: Boolean = false,
     ) {
         val clamped = expansion.coerceIn(0f, 1f)
         val expectedOwner = currentRouteIllustId
@@ -286,6 +291,7 @@ class SharedBoundsRegistry {
             if (illustId == null || activeTransitionIllustId == null || activeTransitionIllustId == illustId) {
                 activeTransitionIllustId = null
                 activeTransitionExpansion = 0f
+                isExitingTransition = false
                 backdropScale = 1f
             }
         } else {
@@ -299,6 +305,7 @@ class SharedBoundsRegistry {
             }
             activeTransitionIllustId = illustId
             activeTransitionExpansion = clamped
+            isExitingTransition = isExiting
             listTranslationX = 0f
             if (sourceBounds != null && containerBounds.width > 0f && containerBounds.height > 0f) {
                 backdropPivot = sourceBounds.center
@@ -357,6 +364,7 @@ class SharedBoundsRegistry {
         exitingOriginRouteIllustId = null
         activeTransitionIllustId = null
         activeTransitionExpansion = 0f
+        isExitingTransition = false
         backdropScale = 1f
         listTranslationX = 0f
     }

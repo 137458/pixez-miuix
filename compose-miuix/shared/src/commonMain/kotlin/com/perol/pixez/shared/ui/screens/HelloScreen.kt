@@ -119,9 +119,9 @@ fun HelloScreen(
             hideR18 = settingsRepository.hIsNotAllow,
         )
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
+    // 统一 UI 状态机（单向数据流 UDF），首帧优先取内存缓存，防止退出详情页返回时白屏闪烁与列表位置重置
+    var illustsState by remember { mutableStateOf<List<Illust>?>(repository.activeRecommendedIllusts) }
+    var nextUrl by remember { mutableStateOf<String?>(repository.activeRecommendedNextUrl) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
@@ -133,6 +133,9 @@ fun HelloScreen(
     LaunchedEffect(isLoggedIn, retryCount, settingsRepository.filterChangeVersion) {
         val loggedIn = isLoggedIn ?: return@LaunchedEffect
         val force = isManualRefreshing
+        if (!force && illustsState != null && initialError == null) {
+            return@LaunchedEffect
+        }
         if (illustsState == null) {
             initialError = null
         }
@@ -147,6 +150,8 @@ fun HelloScreen(
             val filtered = filterBanned(rawIllusts)
             illustsState = filtered
             nextUrl = initialNextUrl
+            repository.activeRecommendedIllusts = filtered
+            repository.activeRecommendedNextUrl = initialNextUrl
             initialError = null
             loadMoreError = null
             if (force && gridState.firstVisibleItemIndex > 0) {
@@ -182,8 +187,11 @@ fun HelloScreen(
             }
             nextResult.onSuccess { response ->
                 val filtered = filterBanned(response.illusts)
-                illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
+                val combined = (illustsState.orEmpty()).appendDistinct(filtered)
+                illustsState = combined
                 nextUrl = response.nextUrl
+                repository.activeRecommendedIllusts = combined
+                repository.activeRecommendedNextUrl = response.nextUrl
             }.onFailure { error ->
                 loadMoreError = error
             }

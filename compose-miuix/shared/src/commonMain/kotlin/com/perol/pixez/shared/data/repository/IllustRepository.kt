@@ -44,6 +44,18 @@ class IllustRepository(
     private var cachedWalkthroughResponse: Walkthrough? = null
     private val illustsCache = ThreadSafeLruCache<Long, Illust>(500)
 
+    var activeRecommendedIllusts: List<Illust>? = null
+    var activeRecommendedNextUrl: String? = null
+    val activeRankingIllusts = mutableMapOf<String, Pair<List<Illust>, String?>>()
+
+    fun clearMemoryCache() {
+        cachedRecommendedResponse = null
+        cachedWalkthroughResponse = null
+        activeRecommendedIllusts = null
+        activeRecommendedNextUrl = null
+        activeRankingIllusts.clear()
+    }
+
     /**
      * 将单个插画作品存入内存缓存（LRU 策略，最大 500 条）。
      */

@@ -248,6 +248,7 @@ fun FloatingBottomBar(
     val holder = remember { DampedDragAnimationHolder() }
     var totalDragPx by remember { mutableFloatStateOf(0f) }
     val touchSlopPx = with(density) { 8.dp.toPx() }
+    var currentDragValue by remember { mutableFloatStateOf(selectedIndex().toFloat()) }
 
     val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
@@ -273,13 +274,14 @@ fun FloatingBottomBar(
             },
             onDragStarted = {
                 totalDragPx = 0f
+                currentDragValue = value
             },
             onDragStopped = {
                 val dropIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
                 val isTapOnSameTab = (dropIndex == currentSelectedIndex()) && (totalDragPx < touchSlopPx)
                 val isSwitched = dropIndex != currentSelectedIndex()
 
-                animateToValue(dropIndex.toFloat())
+                animateToValue(dropIndex.toFloat(), pressed = true)
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -290,10 +292,9 @@ fun FloatingBottomBar(
             onDrag = { _, dragAmount ->
                 totalDragPx += abs(dragAmount.x)
                 if (tabWidthPx > 0f) {
-                    updateValue(
-                        (targetValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
-                            .fastCoerceIn(0f, (tabsCount - 1).toFloat()),
-                    )
+                    currentDragValue = (currentDragValue + dragAmount.x / tabWidthPx * if (isLtr) 1f else -1f)
+                        .fastCoerceIn(0f, (tabsCount - 1).toFloat())
+                    updateValue(currentDragValue)
                     animationScope.launch {
                         offsetAnimation.snapTo(offsetAnimation.value + dragAmount.x)
                     }
@@ -306,7 +307,7 @@ fun FloatingBottomBar(
         snapshotFlow { currentSelectedIndex() }.collectLatest { index ->
             val coercedIndex = index.coerceIn(0, tabsCount - 1)
             if (abs(dampedDragAnimation.value - coercedIndex.toFloat()) > 0.001f) {
-                dampedDragAnimation.animateToValue(coercedIndex.toFloat())
+                dampedDragAnimation.animateToValue(coercedIndex.toFloat(), pressed = false)
             }
         }
     }

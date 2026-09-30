@@ -94,9 +94,10 @@ fun RankingScreen(
             hideR18 = settingsRepository.hIsNotAllow,
         )
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
+    val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
+    val cachedRanking = repository.activeRankingIllusts[rankingCacheKey]
+    var illustsState by remember(selectedMode, selectedDate) { mutableStateOf<List<Illust>?>(cachedRanking?.first) }
+    var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(cachedRanking?.second) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
@@ -108,9 +109,13 @@ fun RankingScreen(
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
         val generation = ++requestGeneration
         val force = isManualRefreshing
-        illustsState = null
-        nextUrl = null
-        initialError = null
+        val currentCached = repository.activeRankingIllusts[rankingCacheKey]
+        if (!force && illustsState != null && initialError == null) {
+            return@LaunchedEffect
+        }
+        if (illustsState == null) {
+            initialError = null
+        }
         loadMoreError = null
         isLoadingMore = false
         val rankingResult = suspendRunCatchingNonCancel {
@@ -122,8 +127,10 @@ fun RankingScreen(
         isManualRefreshing = false
         rankingResult.onSuccess { response ->
             if (generation == requestGeneration) {
-                illustsState = filterBanned(response.illusts)
+                val filtered = filterBanned(response.illusts)
+                illustsState = filtered
                 nextUrl = response.nextUrl
+                repository.activeRankingIllusts[rankingCacheKey] = filtered to response.nextUrl
                 initialError = null
                 loadMoreError = null
                 if (force && gridState.firstVisibleItemIndex > 0) {
@@ -132,7 +139,9 @@ fun RankingScreen(
             }
         }.onFailure { error ->
             if (generation == requestGeneration) {
-                initialError = error
+                if (illustsState == null) {
+                    initialError = error
+                }
             }
         }
     }
@@ -153,8 +162,10 @@ fun RankingScreen(
             }.onSuccess { response ->
                 if (generation == requestGeneration) {
                     val filtered = filterBanned(response.illusts)
-                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
+                    val combined = (illustsState.orEmpty()).appendDistinct(filtered)
+                    illustsState = combined
                     nextUrl = response.nextUrl
+                    repository.activeRankingIllusts[rankingCacheKey] = combined to response.nextUrl
                 }
             }.onFailure { error ->
                 if (generation == requestGeneration) {

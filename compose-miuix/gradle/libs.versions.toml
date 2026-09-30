@@ -114,6 +114,7 @@ navigationevent-compose = { module = "androidx.navigationevent:navigationevent-c
 napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 
 # Test
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

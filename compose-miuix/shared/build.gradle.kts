@@ -87,6 +87,7 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.junit)
             implementation(libs.ktor.client.mock)
+            implementation(libs.kotlinx.coroutines.test)
         }
 
         androidMain.dependencies {

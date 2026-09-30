@@ -39,6 +39,7 @@ import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -221,12 +222,20 @@ fun RootContent(
 
                 // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                val stackAnimation = remember(sharedBounds, containerGeometry) {
-                    miuixCardExpandStackAnimation(
-                        registry = sharedBounds,
-                        containerBounds = containerGeometry.bounds,
-                        containerCornerRadius = containerGeometry.cornerRadius,
-                    )
+                val stackAnimation = remember(sharedBounds, containerGeometry, isWideScreen) {
+                    if (isWideScreen) {
+                        miuixDefaultStackAnimation(
+                            registry = sharedBounds,
+                            containerBounds = containerGeometry.bounds,
+                            containerCornerRadius = containerGeometry.cornerRadius,
+                        )
+                    } else {
+                        miuixCardExpandStackAnimation(
+                            registry = sharedBounds,
+                            containerBounds = containerGeometry.bounds,
+                            containerCornerRadius = containerGeometry.cornerRadius,
+                        )
+                    }
                 }
 
                 Box(

@@ -142,16 +142,22 @@ class MainActivity : ComponentActivity() {
                 windowManager.defaultDisplay
             }
             val modes = display?.supportedModes.orEmpty()
-            val targetMode = when (dependencies.settingsRepository.displayMode) {
-                // 与 SettingsRepository.displayMode 的取值映射：1 = 限制 60Hz，2 = 高刷新率
-                DISPLAY_MODE_LIMIT_60HZ ->
-                    modes.filter { it.refreshRate in REFRESH_RATE_60HZ_RANGE }.maxByOrNull { it.physicalWidth * it.physicalHeight }
-                DISPLAY_MODE_HIGH_REFRESH ->
-                    modes.filter { it.refreshRate >= REFRESH_RATE_HIGH_MIN }.maxByOrNull { it.refreshRate }
-                else -> null
+            val maxMode = modes.maxByOrNull { it.refreshRate }
+            val maxRefreshRate = maxMode?.refreshRate ?: 60f
+            val isLimit60 = dependencies.settingsRepository.displayMode == DISPLAY_MODE_LIMIT_60HZ
+
+            val targetMode = if (isLimit60) {
+                modes.filter { it.refreshRate in REFRESH_RATE_60HZ_RANGE }.maxByOrNull { it.physicalWidth * it.physicalHeight }
+            } else {
+                // 跟随系统（模式 0）或高刷档位（模式 2）：主动向 Window 请求高刷新率管道，避免 Xiaomi HyperOS 等系统默认将其限制在 60Hz 导致动画割裂
+                modes.filter { it.refreshRate >= REFRESH_RATE_HIGH_MIN }.maxByOrNull { it.refreshRate } ?: maxMode
             }
+
             val layoutParams = window.attributes
             layoutParams.preferredDisplayModeId = targetMode?.modeId ?: 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                layoutParams.preferredRefreshRate = if (isLimit60) 60f else maxRefreshRate
+            }
             window.attributes = layoutParams
         }
     }

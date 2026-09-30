@@ -56,6 +56,24 @@ fun miuixCardExpandStackAnimation(
     }
 
 /**
+ * 构造 MIUIX / HyperOS 默认全宽侧滑出入栈转场（适用于宽屏横向窗口，避免卡片展开横纵比畸变）。
+ */
+@OptIn(ExperimentalDecomposeApi::class)
+fun miuixDefaultStackAnimation(
+    registry: SharedBoundsRegistry,
+    containerBounds: Rect,
+    containerCornerRadius: Dp,
+): StackAnimation<RootComponent.Config, RootComponent.Child> =
+    stackAnimation { _ ->
+        cardExpandStackAnimator(
+            rawIllustId = null,
+            containerBounds = containerBounds,
+            containerCornerRadius = containerCornerRadius,
+            registry = registry,
+        )
+    }
+
+/**
  * 创建 MIUIX / HyperOS「卡片收回」预测性返回动画。
  *
  * 手势拖拽期间，顶层详情页随手指进度从整屏收缩回列表卡片位置，

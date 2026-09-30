@@ -35,7 +35,7 @@ internal fun Modifier.illustTransitionBounds(illustId: Long?, cornerRadius: Dp):
                 }
             }
             .graphicsLayer {
-                this.alpha = if (registry.activeTransitionIllustId == currentIllustId) {
+                this.alpha = if (registry.activeTransitionIllustId == currentIllustId && !registry.isExitingTransition) {
                     cardExpandSourceCardAlpha(registry.activeTransitionExpansion)
                 } else {
                     1f

@@ -25,20 +25,60 @@ private val sharedDispatcher = Dispatcher().apply {
     maxRequestsPerHost = AppConstants.Network.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
 }
 
-private class RobustDohDns(private val doh: Dns, private val fallback: Dns = Dns.SYSTEM) : Dns {
+internal fun detectSystemHasProxy(): Boolean {
+    if (!System.getProperty("http.proxyHost").isNullOrBlank() ||
+        !System.getProperty("https.proxyHost").isNullOrBlank() ||
+        !System.getProperty("socksProxyHost").isNullOrBlank()
+    ) {
+        return true
+    }
+    if (!System.getenv("HTTP_PROXY").isNullOrBlank() ||
+        !System.getenv("http_proxy").isNullOrBlank() ||
+        !System.getenv("HTTPS_PROXY").isNullOrBlank() ||
+        !System.getenv("https_proxy").isNullOrBlank() ||
+        !System.getenv("ALL_PROXY").isNullOrBlank() ||
+        !System.getenv("all_proxy").isNullOrBlank()
+    ) {
+        return true
+    }
+    return try {
+        val proxies = java.net.ProxySelector.getDefault()?.select(java.net.URI("https://app-api.pixiv.net/"))
+        proxies?.any { it.type() != java.net.Proxy.Type.DIRECT } == true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+internal class RobustDohDns(
+    private val doh: Dns,
+    private val fallback: Dns = Dns.SYSTEM,
+    private val hasProxyProvider: () -> Boolean = ::detectSystemHasProxy,
+    private val circuitBreakerDurationMillis: Long = 5 * 60 * 1000L,
+) : Dns {
+    private var circuitOpenUntil = 0L
+
+    val isCircuitOpen: Boolean
+        get() = System.currentTimeMillis() < circuitOpenUntil
+
     override fun lookup(hostname: String): List<InetAddress> {
         val settings = AppDependencies.orNull()?.settingsRepository
         val isOauthHost = hostname.contains("oauth", ignoreCase = true) ||
             hostname.contains("accounts.pixiv.net", ignoreCase = true)
         val mode = if (isOauthHost) settings?.oauthNetworkMode else settings?.apiNetworkMode
-        if (mode == AppConstants.Network.MODE_STANDARD) {
+        // 1. 若配置为 standard 模式，或检测到当前系统有活跃代理（Windows 注册表/环境变量/JVM 代理），直接走系统 DNS（远端由代理节点解析），跳过 DoH 避免阻塞
+        if (mode == AppConstants.Network.MODE_STANDARD || hasProxyProvider()) {
+            return fallback.lookup(hostname)
+        }
+        // 2. 检查熔断状态：若 DoH 处于熔断冷却中，直接回退系统 DNS，防止并发请求逐个卡死 5 秒超时
+        if (isCircuitOpen) {
             return fallback.lookup(hostname)
         }
         return try {
             val addresses = doh.lookup(hostname)
             if (addresses.isNotEmpty()) addresses else fallback.lookup(hostname)
         } catch (e: Throwable) {
-            Napier.w("Desktop DoH 解析域名失败: $hostname，回退至系统 DNS", e, tag = "RobustDohDns")
+            circuitOpenUntil = System.currentTimeMillis() + circuitBreakerDurationMillis
+            Napier.w("Desktop DoH 解析域名失败: $hostname，触发熔断（${circuitBreakerDurationMillis / 1000}秒），回退至系统 DNS", e, tag = "RobustDohDns")
             fallback.lookup(hostname)
         }
     }
