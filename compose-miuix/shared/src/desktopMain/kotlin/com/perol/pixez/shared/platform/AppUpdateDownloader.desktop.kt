@@ -76,6 +76,10 @@ actual class AppUpdateDownloader actual constructor() {
                 }
             }
             require(tempFile.length() > 0L) { "更新包为空" }
+            // 连接提前 EOF 时 totalBytes 已知却不等：截断的安装包不得转正
+            require(totalBytes <= 0L || downloadedBytes == totalBytes) {
+                "更新包下载不完整: $downloadedBytes / $totalBytes"
+            }
             java.nio.file.Files.move(
                 tempFile.toPath(),
                 targetFile.toPath(),

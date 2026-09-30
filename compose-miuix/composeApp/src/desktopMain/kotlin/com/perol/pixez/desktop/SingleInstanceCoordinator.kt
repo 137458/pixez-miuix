@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 internal class SingleInstanceCoordinator private constructor(
     private val lockChannel: FileChannel,
     private val lock: FileLock,
-    private val serverSocket: ServerSocket,
+    private val serverSocket: ServerSocket?,
     private val executor: ExecutorService,
 ) : Closeable {
     private val listeners = CopyOnWriteArrayList<(List<String>) -> Unit>()
@@ -35,9 +35,10 @@ internal class SingleInstanceCoordinator private constructor(
     }
 
     private fun startListening() {
+        val socket = serverSocket ?: return  // 降级模式（端口被占用）：不启动转发监听
         executor.execute {
-            while (!serverSocket.isClosed) {
-                val client = runCatching { serverSocket.accept() }.getOrNull() ?: continue
+            while (!socket.isClosed) {
+                val client = runCatching { socket.accept() }.getOrNull() ?: continue
                 runCatching { handleClient(client) }
             }
         }
@@ -63,7 +64,7 @@ internal class SingleInstanceCoordinator private constructor(
     }
 
     override fun close() {
-        runCatching { serverSocket.close() }
+        runCatching { serverSocket?.close() }
         executor.shutdownNow()
         runCatching { executor.awaitTermination(1, TimeUnit.SECONDS) }
         runCatching { lock.release() }
@@ -111,9 +112,18 @@ internal class SingleInstanceCoordinator private constructor(
                     bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
                 }
             }.getOrElse {
+                // 文件锁已证明本进程是唯一实例；端口被第三方占用（如 Hyper-V 保留段）时
+                // 不应阻断启动——降级为“无转发 Primary”模式，仅牺牲二次启动参数转发能力。
                 lock.release()
                 channel.close()
-                return Acquisition.Unavailable("Unable to open the local launch listener.")
+                io.github.aakira.napier.Napier.w("单实例监听端口被占用，降级启动（禁用二次启动参数转发）")
+                val degraded = SingleInstanceCoordinator(
+                    lockChannel = channel,
+                    lock = lock,
+                    serverSocket = null,
+                    executor = Executors.newSingleThreadExecutor { r -> Thread(r, "pixez-launch-listener").apply { isDaemon = true } },
+                )
+                return Acquisition.Primary(degraded)
             }
             val coordinator = SingleInstanceCoordinator(
                 lockChannel = channel,

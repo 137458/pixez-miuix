@@ -93,9 +93,9 @@ class DesktopProxySelector(
                     if (pair.size == 2) pair[0].trim().lowercase() to pair[1].trim() else "" to ""
                 }
                 if (isHttps) {
-                    map["https"] ?: map["http"] ?: map["socks"] ?: map[""]
+                    map["https"] ?: map["http"] ?: map["socks"]?.let { forceSocks(it) } ?: map[""]
                 } else {
-                    map["http"] ?: map["socks"] ?: map[""]
+                    map["http"] ?: map["socks"]?.let { forceSocks(it) } ?: map[""]
                 }
             } else {
                 proxyServer
@@ -108,6 +108,9 @@ class DesktopProxySelector(
             null
         }
     }
+
+    /** 注册表 socks= 条目无 scheme 前缀，必须显式标记为 SOCKS，否则会被误判为 HTTP 代理导致连接失败。 */
+    private fun forceSocks(raw: String): String = if (raw.startsWith("socks://", true) || raw.startsWith("socks5://", true)) raw else "socks5://$raw"
 
     private fun parseProxyAddress(raw: String): Proxy? {
         return try {

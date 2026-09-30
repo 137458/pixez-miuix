@@ -70,6 +70,17 @@ private object PixEzTrayPainter : Painter() {
  * Desktop(JVM) 应用入口，集成系统代理、单实例回调转发、托盘与 Windows 11 Mica 材质。
  */
 fun main(args: Array<String>) {
+    // 顶层未捕获异常兜底：jpackage 发布版无控制台，崩溃信息写日志文件避免静默丢失
+    Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        runCatching {
+            java.nio.file.Files.createDirectories(java.nio.file.Path.of(System.getProperty("user.home"), ".pixez", "logs"))
+            java.nio.file.Files.writeString(
+                java.nio.file.Path.of(System.getProperty("user.home"), ".pixez", "logs", "crash-" + System.currentTimeMillis() + ".log"),
+                "Thread: " + thread.name + "\n" + throwable.stackTraceToString(),
+            )
+        }
+        System.err.println("Uncaught exception on ${thread.name}: ${throwable.stackTraceToString()}")
+    }
     System.setProperty("skiko.fps", "0")
     System.setProperty("skiko.vsync.enabled", "true")
     System.setProperty("skiko.hardwareAcceleration", "true")
@@ -175,14 +186,20 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
     }
 
     fun checkClipboardOnFocus() {
-        val text = com.perol.pixez.shared.platform.IllustClipboard().getText()?.trim()
-        if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
+        // Windows 剪贴板读取是 OLE 操作，被其它进程占用时可阻塞 EDT 约 1s：切 IO 线程读取，结果回主线程分发
+        scope.launch(Dispatchers.IO) {
+            val text = runCatching { com.perol.pixez.shared.platform.IllustClipboard().getText()?.trim() }.getOrNull()
+            if (text.isNullOrBlank() || text == lastHandledClipboardText) return@launch
             val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
             val hasUser = text.contains("users/")
-            val hasScheme = text.startsWith("pixiv://", ignoreCase = true) || text.startsWith("pixez://", ignoreCase = true)
-            if (hasIllust || hasUser || hasScheme) {
-                lastHandledClipboardText = text
-                dispatchDeepLinkText(text)
+            val hasScheme = text.startsWith("pixiv://", true) || text.startsWith("pixez://", true)
+            if (!hasIllust && !hasUser && !hasScheme) return@launch
+            withContext(Dispatchers.Main) {
+                // 二次核对：IO 期间剪贴板可能已变化
+                if (text != lastHandledClipboardText) {
+                    lastHandledClipboardText = text
+                    dispatchDeepLinkText(text)
+                }
             }
         }
     }

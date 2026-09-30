@@ -62,6 +62,10 @@ actual class DriverFactory {
                 schema.migrate(driver, currentVersion, targetVersion)
                 driver.execute(null, "PRAGMA user_version = $targetVersion", 0, null)
             }
+            // 数据库由更新版本的应用创建（降级打开）：静默继续会随机 no such column，显式报错
+            currentVersion > targetVersion -> error(
+                "数据库 $fileName 由更新版本的应用创建（v$currentVersion > v$targetVersion），请升级应用后再使用。",
+            )
         }
 
         return driver
