@@ -67,7 +67,7 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
                 val targetType = settings.widgetIllustType.ifBlank { "recom" }
                 val cached = widgetRepository.getOrFetchWidgetIllust(targetType)
 
-                val illustId = cached?.illust_id?.toInt() ?: 0
+                val illustId = cached?.illust_id ?: 0L
                 val title = cached?.title ?: "PixEz"
                 val author = cached?.user_name ?: "Pixiv"
                 val rawPreviewUrl = cached?.large_url?.ifBlank { cached.picture_url } ?: cached?.picture_url.orEmpty()

@@ -55,11 +55,12 @@ internal class UgoiraFrameProvider(
     fun requestPreload(index: Int) {
         if (frames.isEmpty()) return
         val nextIdx = (index + 1) % frames.size
-        val shouldStart = synchronized(inFlightPreload) {
-            if (cache.containsKey(nextIdx) || inFlightPreload.contains(nextIdx)) {
+        val shouldStart = synchronized(cache) {
+            // cache 的读必须在 cache 锁内（LinkedHashMap 非线程安全）；判重写回 inFlightPreload 锁
+            if (cache.containsKey(nextIdx)) {
                 false
             } else {
-                inFlightPreload.add(nextIdx)
+                synchronized(inFlightPreload) { inFlightPreload.add(nextIdx) }
             }
         }
         if (!shouldStart) return

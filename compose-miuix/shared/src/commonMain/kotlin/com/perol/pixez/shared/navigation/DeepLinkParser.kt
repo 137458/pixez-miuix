@@ -22,6 +22,9 @@ object DeepLinkParser {
     private val ILLUST_REGEX = Regex("""(?:artworks/|illust_id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val USER_REGEX = Regex("""(?:users/|member\.php\?id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val CODE_PARAM_REGEX = Regex("""(?:[?&]|^)code=([^&#\s]+)""")
+    private val TRUSTED_OAUTH_LINK_REGEX = Regex(
+        """(?i)(?:pixez|pixiv)://(?:account|oauth)\b|pixiv\.net/users/auth/pixiv/callback""",
+    )
 
     /**
      * 解析启动参数、URI Scheme (`pixiv://`, `pixez://`)、网页链接或剪贴板文本。
@@ -33,9 +36,12 @@ object DeepLinkParser {
         // 1. 尝试解析标准或自定义 URI (pixiv://, pixez://, https://...)
         parseStructuredUri(text)?.let { return it }
 
-        // 2. 尝试从混排文本（如分享文案、剪贴板内容）中提取 OAuth code 或作品/画师链接
-        CODE_PARAM_REGEX.find(text)?.groupValues?.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { code ->
-            return ParsedDeepLink.OAuthLogin(decodeComponentSafe(code))
+        // 2. 尝试从混排文本（如分享文案、剪贴板内容）中提取 OAuth code 或作品/画师链接。
+        //    仅当文本携带可信 OAuth 链接特征时才提取 code，防止注入任意 code 触发登录。
+        if (TRUSTED_OAUTH_LINK_REGEX.containsMatchIn(text)) {
+            CODE_PARAM_REGEX.find(text)?.groupValues?.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { code ->
+                return ParsedDeepLink.OAuthLogin(decodeComponentSafe(code))
+            }
         }
 
         ILLUST_REGEX.find(text)?.groupValues?.getOrNull(1)?.toLongOrNull()?.let { id ->
@@ -46,9 +52,9 @@ object DeepLinkParser {
             return ParsedDeepLink.UserDetail(id)
         }
 
-        // 3. 纯 6~10 位数字视为插画 ID
+        // 3. 纯 6~10 位数字（不允许符号与非数字字符，且须为正数）视为插画 ID
         val pureId = text.toLongOrNull()
-        if (pureId != null && text.length in 6..10) {
+        if (pureId != null && pureId > 0 && text.all { it.isDigit() } && text.length in 6..10) {
             return ParsedDeepLink.IllustDetail(pureId)
         }
 
