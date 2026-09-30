@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
 import java.io.File
 import java.io.IOException
@@ -61,6 +63,9 @@ private fun validateExportPath(path: String): String {
     if (!path.endsWith(".json", ignoreCase = true)) {
         throw DataExportException(DataExportErrorCode.PathUnsupportedExtension, path)
     }
+    val raw = File(path)
+    // 原生文件选择器返回的绝对路径为用户明确所选，仅归一化后放行
+    if (raw.isAbsolute) return raw.canonicalPath
     val baseDir = File(getExportBaseDirectory()).canonicalPath
     val targetFile = File(baseDir, path).canonicalFile
     val targetPath = targetFile.canonicalPath
@@ -69,3 +74,32 @@ private fun validateExportPath(path: String): String {
     }
     return targetPath
 }
+
+/**
+ * 桌面端原生文件选择器：导出用 AWT FileDialog(SAVE)，导入用 FileDialog(LOAD)。
+ * 选择器在 IO 线程经 invokeAndWait 阻塞展示（模态），选择结果经 CompletableFuture 交还调用方协程。
+ */
+internal actual suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String? =
+    withContext(Dispatchers.IO) {
+        val future = java.util.concurrent.CompletableFuture<String?>()
+        java.awt.EventQueue.invokeAndWait {
+            runCatching {
+                val frame = java.awt.Frame.getFrames().firstOrNull { it.isVisible }
+                val dialog = java.awt.FileDialog(
+                    frame,
+                    if (forSave) "选择导出位置" else "选择要导入的文件",
+                    if (forSave) java.awt.FileDialog.SAVE else java.awt.FileDialog.LOAD,
+                ).apply {
+                    directory = getExportBaseDirectory() + File.separator
+                    if (forSave) file = suggestedName
+                }
+                dialog.isVisible = true
+                val chosen = dialog.file?.let { file ->
+                    val dir = dialog.directory.orEmpty()
+                    if (dir.endsWith(File.separator)) dir + file else dir + File.separator + file
+                }
+                future.complete(chosen)
+            }.onFailure { future.complete(null) }
+        }
+        future.get()
+    }

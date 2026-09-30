@@ -71,3 +71,8 @@ private fun validateExportPath(path: String): String {
     }
     return targetPath
 }
+
+/**
+ * Android 无桌面式文件选择器接入（SAF 另行排期）：返回 null 保持现有手输路径流程。
+ */
+internal actual suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String? = null

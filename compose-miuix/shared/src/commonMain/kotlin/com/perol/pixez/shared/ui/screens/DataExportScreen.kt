@@ -150,6 +150,47 @@ fun DataExportScreen(
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
                 item {
+                    // 执行一次导出/导入：IO 调度器执行文件与仓库操作，结果回主线程以 Toast 呈现
+                    suspend fun performOperation(operation: PendingOperation, path: String) {
+                        isProcessing = true
+                        try {
+                            val result = withContext(Dispatchers.Default) {
+                                if (operation.action == Action.Export) {
+                                    performExport(
+                                        operation.type,
+                                        path,
+                                        settingsRepository,
+                                        historyRepository,
+                                        novelHistoryRepository,
+                                        muteRepository,
+                                        json,
+                                    )
+                                } else {
+                                    performImport(
+                                        operation.type,
+                                        path,
+                                        settingsRepository,
+                                        historyRepository,
+                                        novelHistoryRepository,
+                                        muteRepository,
+                                        json,
+                                    )
+                                }
+                            }
+                            val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
+                            val typeStr = operation.type.title(strings)
+                            if (result.isSuccess) {
+                                toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
+                            } else {
+                                val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
+                                toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
+                            }
+                        } finally {
+                            // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
+                            isProcessing = false
+                        }
+                    }
+
                     SmallTitle(text = strings.settingDataExport)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         DataType.entries.forEach { type ->
@@ -158,12 +199,27 @@ fun DataExportScreen(
                                 onExportClick = {
                                     dialogKey++
                                     pendingOperation = PendingOperation(type, Action.Export)
-                                    showPathDialog = true
+                                    coroutineScope.launch {
+                                        // 原生保存对话框优先；取消或平台未实现时回退手输路径
+                                        val picked = pickExportFilePath(exportDefaultFileName(type), forSave = true)
+                                        if (picked != null) {
+                                            performOperation(PendingOperation(type, Action.Export), picked)
+                                        } else {
+                                            showPathDialog = true
+                                        }
+                                    }
                                 },
                                 onImportClick = {
                                     dialogKey++
                                     pendingOperation = PendingOperation(type, Action.Import)
-                                    showPathDialog = true
+                                    coroutineScope.launch {
+                                        val picked = pickExportFilePath(exportDefaultFileName(type), forSave = false)
+                                        if (picked != null) {
+                                            performOperation(PendingOperation(type, Action.Import), picked)
+                                        } else {
+                                            showPathDialog = true
+                                        }
+                                    }
                                 },
                             )
                         }
@@ -183,45 +239,7 @@ fun DataExportScreen(
                 val operation = pendingOperation ?: return@PathInputDialog
                 showPathDialog = false
                 coroutineScope.launch {
-                    isProcessing = true
-                    try {
-                        // 文件读写与仓库操作属于阻塞或数据库操作，切到 IO 调度器执行，
-                        // 结果回到主线程更新 UI 状态。
-                        val result = withContext(Dispatchers.Default) {
-                            if (operation.action == Action.Export) {
-                                performExport(
-                                    operation.type,
-                                    path,
-                                    settingsRepository,
-                                    historyRepository,
-                                    novelHistoryRepository,
-                                    muteRepository,
-                                    json,
-                                )
-                            } else {
-                                performImport(
-                                    operation.type,
-                                    path,
-                                    settingsRepository,
-                                    historyRepository,
-                                    novelHistoryRepository,
-                                    muteRepository,
-                                    json,
-                                )
-                            }
-                        }
-                        val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
-                        val typeStr = operation.type.title(strings)
-                        if (result.isSuccess) {
-                            toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
-                        } else {
-                            val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
-                            toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
-                        }
-                    } finally {
-                        // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
-                        isProcessing = false
-                    }
+                    performOperation(operation, path)
                 }
             },
         )
@@ -386,3 +404,13 @@ private data class PendingOperation(
     val type: DataType,
     val action: Action,
 )
+
+/** 各数据类型的导出文件默认名（原生保存对话框与手输路径共用）。 */
+private fun exportDefaultFileName(type: DataType?): String = when (type) {
+    DataType.SearchTagHistory -> "pixez_search_tags.json"
+    DataType.BookTags -> "pixez_book_tags.json"
+    DataType.IllustHistory -> "pixez_illust_history.json"
+    DataType.NovelHistory -> "pixez_novel_history.json"
+    DataType.MuteData -> "pixez_mute_data.json"
+    null -> ""
+}

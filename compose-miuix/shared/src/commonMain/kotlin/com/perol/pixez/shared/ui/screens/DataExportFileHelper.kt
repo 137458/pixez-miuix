@@ -44,6 +44,15 @@ internal const val MAX_IMPORT_FILE_BYTES: Long = 8L * 1024 * 1024
 internal expect fun readExportFile(path: String): Result<String>
 
 /**
+ * 弹出平台原生文件选择器。
+ *
+ * @param suggestedName 保存时的建议文件名（导入时忽略）。
+ * @param forSave true 为导出保存对话框，false 为导入打开对话框。
+ * @return 用户选中的绝对路径；取消或平台未实现时返回 null（调用方回退手输路径）。
+ */
+internal expect suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String?
+
+/**
  * 返回当前平台允许导出/导入的根目录。
  *
  * Android 使用应用外部私有目录下的 `export` 子目录；

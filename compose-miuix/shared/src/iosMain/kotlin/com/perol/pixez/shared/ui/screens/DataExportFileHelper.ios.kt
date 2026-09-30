@@ -39,3 +39,5 @@ internal actual fun getExportBaseDirectory(): String {
     val docs = (paths.firstOrNull() as? String) ?: ""
     return (docs as NSString).stringByAppendingPathComponent("PixEz/export")
 }
+
+internal actual suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String? = null

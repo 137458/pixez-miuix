@@ -26,7 +26,7 @@ actual object PlatformAutoStart {
                 return
             }
             if (enabled) {
-                val command = "\\"$exePath\\""
+                val command = "\"$exePath\""
                 Advapi32Util.registrySetStringValue(WinReg.HKEY_CURRENT_USER, RUN_KEY, VALUE_NAME, command)
                 Napier.i("已启用开机自启: $command", tag = "AutoStart")
             } else {
