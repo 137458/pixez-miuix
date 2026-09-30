@@ -68,6 +68,8 @@ class SharedBoundsRegistry {
         if (currentRouteIllustId == originIllustId) {
             _activeDetailIllustId = null
         }
+        // 同步清理 origin→displayed 映射，长会话反复进出详情页不再无界增长
+        displayedIllustIdByOrigin.remove(originIllustId)
     }
 
     /** 最近一次在作品详情页内确认展示的作品 ID（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */

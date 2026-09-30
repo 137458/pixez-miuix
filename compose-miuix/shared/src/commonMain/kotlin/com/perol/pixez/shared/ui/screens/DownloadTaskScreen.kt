@@ -81,7 +81,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 支持点击跳转作品详情、重试失败任务、删除单条任务、清空已完成任务。
  *
  * 运行中任务列表每秒自动刷新，以跟踪下载状态变化。
- * 为避免筛选切换或轮询导致全量重组，所有任务只加载一次，再通过 [derivedStateOf] 按筛选条件派生子列表。
+ * 为避免筛选切换或事件刷新导致全量重组，任务按当前标签加载一次，再通过 [derivedStateOf] 按筛选条件派生子列表。
  */
 @Composable
 fun DownloadTaskScreen(
@@ -111,7 +111,7 @@ fun DownloadTaskScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // 一次性加载全部任务；运行中标签通过 refreshToken 轮询触发重新加载。
+    // 按当前标签加载任务（运行中标签仅查运行中/待处理任务）；刷新由下载仓库的任务事件流触发。
     val state = produceState<Result<List<DownloadTaskHistory>>?>(
         initialValue = null,
         downloadHistoryRepository,
@@ -120,7 +120,7 @@ fun DownloadTaskScreen(
         retryCount,
     ) {
         // 在 IO 线程执行数据库查询，避免主线程被 SQLite 阻塞。
-        // 运行中 Tab 的秒级轮询只查运行中/待处理任务，缩小查询面（对应 TaskFilter.Running.matches）。
+        // 运行中 Tab 仅查运行中/待处理任务，缩小查询面（对应 TaskFilter.Running.matches）。
         value = suspendRunCatchingNonCancel {
             withContext(Dispatchers.Default) {
                 if (selectedFilter == TaskFilter.Running) {
