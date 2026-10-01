@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Rect
 import com.arkivanov.decompose.extensions.compose.stack.Children
-import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -40,6 +39,7 @@ import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -59,6 +59,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import io.ktor.client.HttpClient
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
@@ -201,7 +202,7 @@ fun RootContent(
                     .fillMaxSize()
                     .background(MiuixTheme.colorScheme.surface),
             ) {
-                val isWideScreen = maxWidth >= 600.dp
+                val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
                 val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
                 val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
                 val activeTab by component.selectedTab.collectAsState()
@@ -252,7 +253,7 @@ fun RootContent(
                     Children(
                         stack = component.stack,
                         modifier = Modifier.fillMaxSize(),
-                        animation = predictiveBackAnimation(
+                        animation = miuixPredictiveBackAnimation(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->
@@ -699,13 +700,14 @@ private fun buildThemeController(
         onSurfaceSecondary = Color(0xFF888888),
     )
 
-    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，并确保前景色为高对比度浅色。
+    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，确保前景色为高对比度浅色；
+    // surfaceContainer 保持极暗灰而非纯黑，避免卡片容器与页面背景同色导致卡片边界消失、彼此粘连。
     val darkColors = if (isAmoled) {
         darkColorScheme(
             background = Color.Black,
             surface = Color.Black,
             surfaceVariant = Color(0xFF121212),
-            surfaceContainer = Color.Black,
+            surfaceContainer = Color(0xFF121212),
             surfaceContainerHigh = Color(0xFF1E1E1E),
             surfaceContainerHighest = Color(0xFF2C2C2C),
             onBackground = Color(0xFFF3F4F6),

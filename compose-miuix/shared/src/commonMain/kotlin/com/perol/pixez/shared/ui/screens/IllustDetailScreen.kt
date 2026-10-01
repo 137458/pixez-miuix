@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.ToastData
@@ -281,12 +283,18 @@ private fun IllustDetailSingleContent(
         1f
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(MiuixTheme.colorScheme.surface),
         contentAlignment = Alignment.TopCenter,
     ) {
+        // 视口约束快照：大屏下图片收进内容列并限制显示高度（详见 resolveIllustDetailImageWidthPx）。
+        val detailViewport = IllustDetailViewport(
+            isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
+            containerWidthPx = constraints.maxWidth.toFloat(),
+            containerHeightPx = constraints.maxHeight.toFloat(),
+        )
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
             result.isSuccess && illust != null -> when {
@@ -307,6 +315,7 @@ private fun IllustDetailSingleContent(
                     IllustDetailContentList(
                         illust = illust,
                         illustAspectRatio = illustAspectRatio,
+                        viewport = detailViewport,
                         settings = settings,
                         listState = listState,
                         nestedScrollConnection = detailNestedScrollConnection,
@@ -425,6 +434,7 @@ private fun IllustDetailSingleContent(
 private fun IllustDetailContentList(
     illust: Illust,
     illustAspectRatio: Float?,
+    viewport: IllustDetailViewport,
     settings: SettingsRepository?,
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection,
@@ -473,6 +483,7 @@ private fun IllustDetailContentList(
                     pageIndex = pageIndex,
                     page = illust.metaPages[pageIndex],
                     illustAspectRatio = illustAspectRatio,
+                    viewport = viewport,
                     settings = settings,
                     downloadRepository = downloadRepository,
                     coroutineScope = coroutineScope,
@@ -486,6 +497,7 @@ private fun IllustDetailContentList(
                 IllustDetailSinglePageImage(
                     illust = illust,
                     illustAspectRatio = illustAspectRatio,
+                    viewport = viewport,
                     settings = settings,
                     repository = repository,
                     downloadRepository = downloadRepository,
