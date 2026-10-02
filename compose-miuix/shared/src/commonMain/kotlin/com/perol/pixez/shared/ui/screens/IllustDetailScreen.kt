@@ -292,10 +292,14 @@ private fun IllustDetailSingleContent(
         1f
     }
 
+    // 转场期间页面根背景随落定比例透明化：收缩全程窗口内只呈现作品图像（下方信息卡已随 chrome 淡出，
+    // 页面底色若不透明会以「整个详情页缩小」的观感出现），落定时背景恢复不透明。
+    val pageBackgroundAlpha = if (isCardTransitionActive) heroSettleFraction else 1f
+
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface),
+            .background(MiuixTheme.colorScheme.surface.copy(alpha = pageBackgroundAlpha)),
         contentAlignment = Alignment.TopCenter,
     ) {
         // 视口约束快照：大屏下图片收进内容列并限制显示高度（详见 resolveIllustDetailImageWidthPx）。
