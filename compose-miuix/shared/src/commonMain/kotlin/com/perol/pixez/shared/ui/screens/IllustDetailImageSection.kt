@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
@@ -35,6 +38,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
@@ -63,6 +67,64 @@ private fun resolveIllustQuality(illust: Illust, settings: SettingsRepository?):
     }
 
 /**
+ * 详情页视口约束快照：大屏判定与容器物理像素尺寸，作为图片显示尺寸限制的依据。
+ * 由页面外层容器（BoxWithConstraints）测得后下发给各图片项。
+ */
+internal data class IllustDetailViewport(
+    val isWideScreen: Boolean,
+    val containerWidthPx: Float,
+    val containerHeightPx: Float,
+)
+
+/**
+ * 计算详情页单张图片的显示宽度。
+ *
+ * 窄屏保持既有全出血行为（宽度即容器宽）；大屏（宽屏容器）下图片收进内容列，
+ * 与底部卡片同列对齐，且当按列宽渲染的高度超过视口高度上限时（典型为竖屏图片），
+ * 按高度上限收缩宽度，避免图片纵向占满整屏。所有入参单位一致（物理像素或任意统一单位）。
+ */
+internal fun resolveIllustDetailImageWidthPx(
+    containerWidthPx: Float,
+    containerHeightPx: Float,
+    illustAspectRatio: Float?,
+    isWideScreen: Boolean,
+    contentMaxWidthPx: Float,
+    imageHorizontalPaddingPx: Float,
+    maxHeightFraction: Float,
+): Float {
+    if (!isWideScreen) return containerWidthPx
+    val columnWidthPx = (minOf(containerWidthPx, contentMaxWidthPx) - imageHorizontalPaddingPx * 2).coerceAtLeast(0f)
+    val aspectRatio = illustAspectRatio?.takeIf { it > 0f } ?: return columnWidthPx
+    val maxHeightPx = (containerHeightPx * maxHeightFraction).takeIf { it > 0f } ?: return columnWidthPx
+    val heightAtColumnWidth = columnWidthPx / aspectRatio
+    return if (heightAtColumnWidth > maxHeightPx) maxHeightPx * aspectRatio else columnWidthPx
+}
+
+/**
+ * 按视口约束计算详情页大图的显示宽度（大屏收进内容列并限制高度，窄屏保持全出血）。
+ */
+@Composable
+private fun rememberDetailImageWidthDp(
+    viewport: IllustDetailViewport,
+    illustAspectRatio: Float?,
+): Dp {
+    val density = LocalDensity.current
+    return remember(viewport, illustAspectRatio, density) {
+        with(density) {
+            resolveIllustDetailImageWidthPx(
+                containerWidthPx = viewport.containerWidthPx,
+                containerHeightPx = viewport.containerHeightPx,
+                illustAspectRatio = illustAspectRatio,
+                isWideScreen = viewport.isWideScreen,
+                contentMaxWidthPx = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp.toPx(),
+                imageHorizontalPaddingPx = 12.dp.toPx(),
+                maxHeightFraction = AppConstants.Layout.DETAIL_IMAGE_MAX_HEIGHT_FRACTION,
+            ).toDp()
+        }
+    }
+}
+
+/**
  * 多页作品中的单个图片项：铺满宽度的图片 + 右下角下载按钮。
  */
 @Composable
@@ -71,6 +133,7 @@ internal fun IllustDetailImagePage(
     pageIndex: Int,
     page: MetaPage,
     illustAspectRatio: Float?,
+    viewport: IllustDetailViewport,
     settings: SettingsRepository?,
     downloadRepository: DownloadRepository,
     coroutineScope: CoroutineScope,
@@ -120,45 +183,54 @@ internal fun IllustDetailImagePage(
             indication = null,
         ) { onPageClick(pageIndex) }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        PixivAsyncImage(
-            model = pageUrl,
-            thumbnailUrl = thumbnailUrl,
-            contentDescription = "${illust.title} ($pageIndex)",
-            contentScale = ContentScale.FillWidth,
-            modifier = pageModifier,
-            onSuccess = { pageLoaded = true },
-        )
+    // 大屏下图片收进内容列并与卡片同列对齐；下载按钮贴图片边缘而非容器边缘。
+    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio)
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(6.dp)
-                .accessibleTouchTarget(48.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.55f))
-                .clickable {
-                    coroutineScope.launch {
-                        val pageNumber = pageIndex + 1
-                        onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
-                        val task = downloadRepository.download(illust, pageIndex = pageIndex)
-                        onToast(
-                            when (task.status) {
-                                DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
-                                DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}", ToastType.Error)
-                                else -> null
-                            },
-                        )
-                    }
-                },
-            contentAlignment = Alignment.Center,
+            modifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth(),
         ) {
-            Icon(
-                imageVector = MiuixIcons.Download,
-                contentDescription = "${strings.download} P${pageIndex + 1}",
-                tint = Color.White,
-                modifier = Modifier.size(18.dp),
+            PixivAsyncImage(
+                model = pageUrl,
+                thumbnailUrl = thumbnailUrl,
+                contentDescription = "${illust.title} ($pageIndex)",
+                contentScale = ContentScale.FillWidth,
+                modifier = pageModifier,
+                onSuccess = { pageLoaded = true },
             )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+                    .accessibleTouchTarget(48.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable {
+                        coroutineScope.launch {
+                            val pageNumber = pageIndex + 1
+                            onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
+                            val task = downloadRepository.download(illust, pageIndex = pageIndex)
+                            onToast(
+                                when (task.status) {
+                                    DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
+                                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}", ToastType.Error)
+                                    else -> null
+                                },
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Download,
+                    contentDescription = "${strings.download} P${pageIndex + 1}",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
     if (pageIndex < illust.metaPages.lastIndex) {
@@ -173,6 +245,7 @@ internal fun IllustDetailImagePage(
 internal fun IllustDetailSinglePageImage(
     illust: Illust,
     illustAspectRatio: Float?,
+    viewport: IllustDetailViewport,
     settings: SettingsRepository?,
     repository: IllustRepository,
     downloadRepository: DownloadRepository,
@@ -180,13 +253,20 @@ internal fun IllustDetailSinglePageImage(
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
+    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio)
+    val sizedModifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth()
     if (IllustType.isUgoira(illust.type)) {
-        UgoiraPlayer(
-            illust = illust,
-            illustRepository = repository,
-            onClick = { onPageClick(0) },
+        Box(
             modifier = Modifier.fillMaxWidth(),
-        )
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            UgoiraPlayer(
+                illust = illust,
+                illustRepository = repository,
+                onClick = { onPageClick(0) },
+                modifier = sizedModifier,
+            )
+        }
     } else {
         val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
             resolveIllustQuality(illust, settings)
@@ -225,13 +305,22 @@ internal fun IllustDetailSinglePageImage(
                 indication = null,
             ) { onPageClick(0) }
 
-        PixivAsyncImage(
-            model = singleUrl,
-            thumbnailUrl = thumbnailUrl,
-            contentDescription = illust.title,
-            contentScale = ContentScale.FillWidth,
-            modifier = singleModifier,
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Box(
+                modifier = sizedModifier,
+            ) {
+                PixivAsyncImage(
+                    model = singleUrl,
+                    thumbnailUrl = thumbnailUrl,
+                    contentDescription = illust.title,
+                    contentScale = ContentScale.FillWidth,
+                    modifier = singleModifier,
+                )
+            }
+        }
     }
 }
 

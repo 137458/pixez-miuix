@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.ToastData
@@ -281,12 +283,18 @@ private fun IllustDetailSingleContent(
         1f
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(MiuixTheme.colorScheme.surface),
         contentAlignment = Alignment.TopCenter,
     ) {
+        // 视口约束快照：大屏下图片收进内容列并限制显示高度（详见 resolveIllustDetailImageWidthPx）。
+        val detailViewport = IllustDetailViewport(
+            isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
+            containerWidthPx = constraints.maxWidth.toFloat(),
+            containerHeightPx = constraints.maxHeight.toFloat(),
+        )
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
             result.isSuccess && illust != null -> when {
@@ -307,6 +315,7 @@ private fun IllustDetailSingleContent(
                     IllustDetailContentList(
                         illust = illust,
                         illustAspectRatio = illustAspectRatio,
+                        viewport = detailViewport,
                         settings = settings,
                         listState = listState,
                         nestedScrollConnection = detailNestedScrollConnection,
@@ -425,6 +434,7 @@ private fun IllustDetailSingleContent(
 private fun IllustDetailContentList(
     illust: Illust,
     illustAspectRatio: Float?,
+    viewport: IllustDetailViewport,
     settings: SettingsRepository?,
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection,
@@ -473,6 +483,7 @@ private fun IllustDetailContentList(
                     pageIndex = pageIndex,
                     page = illust.metaPages[pageIndex],
                     illustAspectRatio = illustAspectRatio,
+                    viewport = viewport,
                     settings = settings,
                     downloadRepository = downloadRepository,
                     coroutineScope = coroutineScope,
@@ -486,6 +497,7 @@ private fun IllustDetailContentList(
                 IllustDetailSinglePageImage(
                     illust = illust,
                     illustAspectRatio = illustAspectRatio,
+                    viewport = viewport,
                     settings = settings,
                     repository = repository,
                     downloadRepository = downloadRepository,
@@ -497,8 +509,9 @@ private fun IllustDetailContentList(
         }
 
         // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
+        // 注意用 Column 而非 Box：卡片组件以「前置 Spacer + Card」平铺输出，Box 会把二者叠放导致卡片间距失效。
         item(key = "illust_info_card", contentType = "info_card") {
-            Box(modifier = chromeModifier) {
+            Column(modifier = chromeModifier) {
                 IllustDetailInfoCard(
                     illust = illust,
                     isDownloading = isDownloading,
@@ -520,7 +533,7 @@ private fun IllustDetailContentList(
         // 3. 简介与文案卡片
         if (illust.caption.isNotBlank()) {
             item {
-                Box(modifier = chromeModifier) {
+                Column(modifier = chromeModifier) {
                     IllustDetailCaptionCard(
                         illust = illust,
                         strings = strings,
@@ -537,7 +550,7 @@ private fun IllustDetailContentList(
         // 4. 标签卡片与胶囊包裹（Capsule Chips）
         if (illust.tags.isNotEmpty()) {
             item {
-                Box(modifier = chromeModifier) {
+                Column(modifier = chromeModifier) {
                     IllustDetailTagsCard(
                         tags = illust.tags,
                         strings = strings,
@@ -549,7 +562,7 @@ private fun IllustDetailContentList(
 
         // 5. 互动操作卡片（评论与相关作品）
         item {
-            Box(modifier = chromeModifier) {
+            Column(modifier = chromeModifier) {
                 IllustDetailInteractionCard(
                     illust = illust,
                     strings = strings,
