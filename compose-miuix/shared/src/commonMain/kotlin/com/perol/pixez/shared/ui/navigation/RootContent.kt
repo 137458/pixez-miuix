@@ -38,7 +38,6 @@ import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
-import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -223,20 +222,13 @@ fun RootContent(
 
                 // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                val stackAnimation = remember(sharedBounds, containerGeometry, isWideScreen) {
-                    if (isWideScreen) {
-                        miuixDefaultStackAnimation(
-                            registry = sharedBounds,
-                            containerBounds = containerGeometry.bounds,
-                            containerCornerRadius = containerGeometry.cornerRadius,
-                        )
-                    } else {
-                        miuixCardExpandStackAnimation(
-                            registry = sharedBounds,
-                            containerBounds = containerGeometry.bounds,
-                            containerCornerRadius = containerGeometry.cornerRadius,
-                        )
-                    }
+                // 卡片展开转场对所有容器尺寸统一启用：无卡片几何或无法落点时动画器内部自行回退默认侧滑。
+                val stackAnimation = remember(sharedBounds, containerGeometry) {
+                    miuixCardExpandStackAnimation(
+                        registry = sharedBounds,
+                        containerBounds = containerGeometry.bounds,
+                        containerCornerRadius = containerGeometry.cornerRadius,
+                    )
                 }
 
                 Box(
@@ -700,14 +692,13 @@ private fun buildThemeController(
         onSurfaceSecondary = Color(0xFF888888),
     )
 
-    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，确保前景色为高对比度浅色；
-    // surfaceContainer 保持极暗灰而非纯黑，避免卡片容器与页面背景同色导致卡片边界消失、彼此粘连。
+    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，并确保前景色为高对比度浅色。
     val darkColors = if (isAmoled) {
         darkColorScheme(
             background = Color.Black,
             surface = Color.Black,
             surfaceVariant = Color(0xFF121212),
-            surfaceContainer = Color(0xFF121212),
+            surfaceContainer = Color.Black,
             surfaceContainerHigh = Color(0xFF1E1E1E),
             surfaceContainerHighest = Color(0xFF2C2C2C),
             onBackground = Color(0xFFF3F4F6),

@@ -509,8 +509,9 @@ private fun IllustDetailContentList(
         }
 
         // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
+        // 注意用 Column 而非 Box：卡片组件以「前置 Spacer + Card」平铺输出，Box 会把二者叠放导致卡片间距失效。
         item(key = "illust_info_card", contentType = "info_card") {
-            Box(modifier = chromeModifier) {
+            Column(modifier = chromeModifier) {
                 IllustDetailInfoCard(
                     illust = illust,
                     isDownloading = isDownloading,
@@ -532,7 +533,7 @@ private fun IllustDetailContentList(
         // 3. 简介与文案卡片
         if (illust.caption.isNotBlank()) {
             item {
-                Box(modifier = chromeModifier) {
+                Column(modifier = chromeModifier) {
                     IllustDetailCaptionCard(
                         illust = illust,
                         strings = strings,
@@ -549,7 +550,7 @@ private fun IllustDetailContentList(
         // 4. 标签卡片与胶囊包裹（Capsule Chips）
         if (illust.tags.isNotEmpty()) {
             item {
-                Box(modifier = chromeModifier) {
+                Column(modifier = chromeModifier) {
                     IllustDetailTagsCard(
                         tags = illust.tags,
                         strings = strings,
@@ -561,7 +562,7 @@ private fun IllustDetailContentList(
 
         // 5. 互动操作卡片（评论与相关作品）
         item {
-            Box(modifier = chromeModifier) {
+            Column(modifier = chromeModifier) {
                 IllustDetailInteractionCard(
                     illust = illust,
                     strings = strings,
