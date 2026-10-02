@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
-import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -116,9 +115,10 @@ fun miuixCardExpandPredictiveBackAnimatable(
     }
     val sourceCard = anchor.card
 
-    return predictiveBackAnimatable(
+    // 进度按弹簧平滑驱动：系统进度派发稀疏/跳变（澎湃 / MIUI）时页面不再瞬间跳位。
+    return MiuixSmoothedPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
-        exitModifier = { progress, _ ->
+        getExitModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             registry.updateTransitionState(
                 illustId = anchor.illustId,
@@ -134,7 +134,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
                 containerCornerRadius = deviceCornerRadius,
             )
         },
-        enterModifier = { progress, _ ->
+        getEnterModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             Modifier.cardExpandScrim(
                 alpha = cardExpandScrimAlpha(expansion),
@@ -171,9 +171,9 @@ fun miuixSlidePredictiveBackAnimatable(
     deviceCornerRadius: Dp = 0.dp,
     registry: SharedBoundsRegistry? = null,
 ): PredictiveBackAnimatable {
-    return predictiveBackAnimatable(
+    return MiuixSmoothedPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
-        exitModifier = { progress, _ ->
+        getExitModifier = { progress, _ ->
             Modifier.miuixDefaultSlideLayer(
                 isTopLayer = true,
                 fraction = progress,
@@ -182,7 +182,7 @@ fun miuixSlidePredictiveBackAnimatable(
                 registry = registry,
             )
         },
-        enterModifier = { progress, _ ->
+        getEnterModifier = { progress, _ ->
             val coveredFraction = (1f - progress).coerceIn(0f, 1f)
             Modifier.miuixDefaultSlideLayer(
                 isTopLayer = false,

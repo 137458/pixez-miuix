@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Rect
 import com.arkivanov.decompose.extensions.compose.stack.Children
-import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -40,6 +39,7 @@ import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -252,7 +252,7 @@ fun RootContent(
                     Children(
                         stack = component.stack,
                         modifier = Modifier.fillMaxSize(),
-                        animation = predictiveBackAnimation(
+                        animation = miuixPredictiveBackAnimation(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->
