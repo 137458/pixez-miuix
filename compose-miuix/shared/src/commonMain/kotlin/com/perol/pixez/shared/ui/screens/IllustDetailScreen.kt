@@ -275,9 +275,18 @@ private fun IllustDetailSingleContent(
 
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
     val isCardTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
+    val activeTransitionExpansion = sharedBoundsRegistry.activeTransitionExpansion
     val detailChromeAlpha = if (isCardTransitionActive) {
         com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha(
-            sharedBoundsRegistry.activeTransitionExpansion,
+            activeTransitionExpansion,
+        )
+    } else {
+        1f
+    }
+    // 大图落定比例：转场全程全幅贴合源卡片图像，落定后收进内容列，消除返回落点的内容横向错位。
+    val heroSettleFraction = if (isCardTransitionActive) {
+        com.perol.pixez.shared.ui.navigation.animation.cardExpandHeroSettleFraction(
+            activeTransitionExpansion,
         )
     } else {
         1f
@@ -316,6 +325,7 @@ private fun IllustDetailSingleContent(
                         illust = illust,
                         illustAspectRatio = illustAspectRatio,
                         viewport = detailViewport,
+                        heroSettleFraction = heroSettleFraction,
                         settings = settings,
                         listState = listState,
                         nestedScrollConnection = detailNestedScrollConnection,
@@ -435,6 +445,7 @@ private fun IllustDetailContentList(
     illust: Illust,
     illustAspectRatio: Float?,
     viewport: IllustDetailViewport,
+    heroSettleFraction: Float,
     settings: SettingsRepository?,
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection,
@@ -484,6 +495,7 @@ private fun IllustDetailContentList(
                     page = illust.metaPages[pageIndex],
                     illustAspectRatio = illustAspectRatio,
                     viewport = viewport,
+                    heroSettleFraction = heroSettleFraction,
                     settings = settings,
                     downloadRepository = downloadRepository,
                     coroutineScope = coroutineScope,
@@ -498,6 +510,7 @@ private fun IllustDetailContentList(
                     illust = illust,
                     illustAspectRatio = illustAspectRatio,
                     viewport = viewport,
+                    heroSettleFraction = heroSettleFraction,
                     settings = settings,
                     repository = repository,
                     downloadRepository = downloadRepository,

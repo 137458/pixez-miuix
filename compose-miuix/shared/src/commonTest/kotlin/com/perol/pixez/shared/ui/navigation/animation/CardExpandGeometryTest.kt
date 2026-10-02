@@ -270,6 +270,27 @@ class CardExpandGeometryTest {
     }
 
     @Test
+    fun `大图落定比例在收缩态为全幅、展开态为内容列`() {
+        // 收缩态（expansion 接近 0）：大图必须保持全幅宽度，与列表卡片图像对齐；
+        // 展开态（expansion 接近 1）：大图收进内容列，与底部信息卡片同列。
+        assertClose(0f, cardExpandHeroSettleFraction(0f))
+        assertClose(0f, cardExpandHeroSettleFraction(0.4f))
+        assertClose(1f, cardExpandHeroSettleFraction(1f))
+    }
+
+    @Test
+    fun `大图落定比例在中间展开度单调过渡且越界钳制`() {
+        val mid = cardExpandHeroSettleFraction(0.7f)
+        assertTrue(mid > 0f && mid < 1f, "中间展开度的落定比例应处于开区间，实际=$mid")
+        assertTrue(
+            cardExpandHeroSettleFraction(0.6f) < cardExpandHeroSettleFraction(0.8f),
+            "落定比例应随展开度单调递增",
+        )
+        assertClose(0f, cardExpandHeroSettleFraction(-0.5f))
+        assertClose(1f, cardExpandHeroSettleFraction(1.5f))
+    }
+
+    @Test
     fun `方形容器与超长竖图卡片均判定为可落点并精确覆盖卡片全高`() {
         val squareContainer = Rect(left = 0f, top = 0f, right = 1000f, bottom = 1000f)
         val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 850f)

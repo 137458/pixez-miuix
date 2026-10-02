@@ -101,17 +101,21 @@ internal fun resolveIllustDetailImageWidthPx(
 }
 
 /**
- * 按视口约束计算详情页大图的显示宽度（大屏收进内容列并限制高度，窄屏保持全出血）。
+ * 按视口约束与转场落定比例计算详情页大图的显示宽度。
+ *
+ * 窄屏保持既有全出血行为；宽屏下大图在转场全程保持全幅（与列表卡片图像逐像素对齐，
+ * 消除收回终点的横向错位），随展开落定渐变收进内容列（[heroSettleFraction] 0→1）。
  */
 @Composable
 private fun rememberDetailImageWidthDp(
     viewport: IllustDetailViewport,
     illustAspectRatio: Float?,
+    heroSettleFraction: Float,
 ): Dp {
     val density = LocalDensity.current
-    return remember(viewport, illustAspectRatio, density) {
+    return remember(viewport, illustAspectRatio, heroSettleFraction, density) {
         with(density) {
-            resolveIllustDetailImageWidthPx(
+            val columnWidthPx = resolveIllustDetailImageWidthPx(
                 containerWidthPx = viewport.containerWidthPx,
                 containerHeightPx = viewport.containerHeightPx,
                 illustAspectRatio = illustAspectRatio,
@@ -119,7 +123,13 @@ private fun rememberDetailImageWidthDp(
                 contentMaxWidthPx = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp.toPx(),
                 imageHorizontalPaddingPx = 12.dp.toPx(),
                 maxHeightFraction = AppConstants.Layout.DETAIL_IMAGE_MAX_HEIGHT_FRACTION,
-            ).toDp()
+            )
+            if (!viewport.isWideScreen) {
+                columnWidthPx.toDp()
+            } else {
+                // 全幅（转场收缩态，与卡片图像对齐）与内容列（落定态）之间的容器变换式过渡。
+                lerp(viewport.containerWidthPx, columnWidthPx, heroSettleFraction).toDp()
+            }
         }
     }
 }
@@ -134,6 +144,7 @@ internal fun IllustDetailImagePage(
     page: MetaPage,
     illustAspectRatio: Float?,
     viewport: IllustDetailViewport,
+    heroSettleFraction: Float,
     settings: SettingsRepository?,
     downloadRepository: DownloadRepository,
     coroutineScope: CoroutineScope,
@@ -183,8 +194,8 @@ internal fun IllustDetailImagePage(
             indication = null,
         ) { onPageClick(pageIndex) }
 
-    // 大屏下图片收进内容列并与卡片同列对齐；下载按钮贴图片边缘而非容器边缘。
-    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio)
+    // 大屏下转场全程全幅贴合卡片、落定后收进内容列；下载按钮贴图片边缘而非容器边缘。
+    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio, heroSettleFraction)
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.TopCenter,
@@ -246,6 +257,7 @@ internal fun IllustDetailSinglePageImage(
     illust: Illust,
     illustAspectRatio: Float?,
     viewport: IllustDetailViewport,
+    heroSettleFraction: Float,
     settings: SettingsRepository?,
     repository: IllustRepository,
     downloadRepository: DownloadRepository,
@@ -253,7 +265,7 @@ internal fun IllustDetailSinglePageImage(
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
-    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio)
+    val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio, heroSettleFraction)
     val sizedModifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth()
     if (IllustType.isUgoira(illust.type)) {
         Box(
@@ -387,3 +399,6 @@ internal fun IllustDetailFullScreenOverlay(
         detailBackdrop = detailBackdrop,
     )
 }
+/** 线性插值。 */
+private fun lerp(start: Float, stop: Float, fraction: Float): Float =
+    start + (stop - start) * fraction
