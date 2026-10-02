@@ -44,13 +44,16 @@ class SharedBoundsRegistryTest {
     }
 
     @Test
-    fun `登记空矩形等价于注销`() {
+    fun `零尺寸矩形上报不注销既有登记`() {
         val registry = SharedBoundsRegistry()
         registry.put(illustId = 42L, rect = card)
 
+        // 详情页稳态期间底层列表被回收，卡片销毁前的最后一次布局回调会迟到零尺寸矩形；
+        // 这是组合噪声而非卡片失效，若据此注销会让返回转场丢失锚点而退化侧滑。
         registry.put(illustId = 42L, rect = null)
+        registry.put(illustId = 42L, rect = Rect.Zero)
 
-        assertNull(registry.get(42))
+        assertEquals(card, registry.get(42))
     }
 
     @Test

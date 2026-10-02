@@ -117,7 +117,9 @@ class SharedBoundsRegistry {
      */
     fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
-            bounds.remove(illustId)
+            NavTransitionLog.d("registry") { "put IGNORE zero/null id=$illustId rect=$rect" }
+            // 零尺寸矩形来自 LazyGrid item 被回收（详情页稳态期间底层列表销毁）前的最后一次布局回调，
+            // 属于组合噪声而非「卡片已失效」；据此清除登记会让返回转场丢失锚点而退化侧滑，故仅忽略本次上报。
             return
         }
         // 正在执行展开/收回动画的目标卡片自身锁定静止态坐标，确保单次动画全程终点锚点恒定不漂移。
@@ -145,10 +147,14 @@ class SharedBoundsRegistry {
      * 若卡片大部分（超过 75%）已滚出容器可视范围则返回 null，使转场优雅回退为视差侧滑。
      */
     fun getVisibleInContainer(illustId: Long, containerBounds: Rect): IllustCardBounds? {
-        val card = bounds[illustId] ?: return null
+        val card = bounds[illustId] ?: run {
+            return null
+        }
         val rect = card.rect
         if (rect.width <= 0f || rect.height <= 0f) return null
-        if (containerBounds.width <= 0f || containerBounds.height <= 0f) return card
+        if (containerBounds.width <= 0f || containerBounds.height <= 0f) {
+            return card
+        }
 
         val intersectLeft = maxOf(rect.left, containerBounds.left)
         val intersectTop = maxOf(rect.top, containerBounds.top)
@@ -161,7 +167,10 @@ class SharedBoundsRegistry {
         val widthVisibleRatio = visibleWidth / rect.width
         val heightVisibleRatio = visibleHeight / rect.height
 
-        return card.takeIf { widthVisibleRatio >= MIN_VISIBLE_RATIO && heightVisibleRatio >= MIN_VISIBLE_RATIO }
+        return card.takeIf {
+            val ok = widthVisibleRatio >= MIN_VISIBLE_RATIO && heightVisibleRatio >= MIN_VISIBLE_RATIO
+            ok
+        }
     }
 
     /**
@@ -282,6 +291,7 @@ class SharedBoundsRegistry {
         containerBounds: Rect = Rect.Zero,
         isExiting: Boolean = false,
     ) {
+        NavTransitionLog.d("registry") { "updateTransition id=$illustId expansion=$expansion isExiting=$isExiting active=$activeTransitionIllustId route=$currentRouteIllustId" }
         val clamped = expansion.coerceIn(0f, 1f)
         val expectedOwner = currentRouteIllustId
             ?.let { displayedIllustIdByOrigin[it] ?: it }
@@ -289,6 +299,8 @@ class SharedBoundsRegistry {
 
         if (illustId == null || clamped <= 0.001f || clamped >= 0.999f) {
             if (illustId == null || activeTransitionIllustId == null || activeTransitionIllustId == illustId) {
+                if (activeTransitionIllustId != null) {
+                }
                 activeTransitionIllustId = null
                 activeTransitionExpansion = 0f
                 isExitingTransition = false
@@ -302,6 +314,8 @@ class SharedBoundsRegistry {
                 illustId != currentRouteIllustId
             ) {
                 return
+            }
+            if (activeTransitionIllustId != illustId) {
             }
             activeTransitionIllustId = illustId
             activeTransitionExpansion = clamped

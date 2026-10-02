@@ -90,6 +90,11 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
 /**
  * 构造针对 OEM 进度派发缺陷加固的预测性返回动画（移植自 Decompose `predictiveBackAnimation`）。
  *
+ * 手势激活条件与上游严格一致：仅当先收到 [BackCallback.onBackStarted] 后的进度事件才激活
+ * 双层结构。系统随后乱序补发的进度 / 起始事件（澎湃 / HyperOS 在确认返回后仍会补发）一律忽略；
+ * 若放宽为「任意进度事件都激活」，杂散事件会在常规转场或稳态下凭空启动假手势，
+ * 双层渲染与转场争抢 movableContent，导致重影、返回样式错乱与列表绘制空白。
+ *
  * 相比 Decompose 内置实现的两处行为修正：
  * 1. **取消动画期间收到确认返回时连续收起**：内置实现在 `onBackCancelled` 时立即把双层页面
  *    重置回单层，若系统随后才补发确认返回（澎湃 / MIUI 常见的乱序派发），页面会先回弹到全屏
@@ -129,6 +134,7 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
         val activeKeys = remember { HashSet<Any>() }
         val handler = rememberHandler(stack = stack, isGestureEnabled = { activeKeys.size == 1 })
         val anim = animation
+        NavTransitionLog.d("invoke") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] items=${handler.items.size} animHash=${anim.hashCode()} handlerHash=${handler.hashCode()}" }
 
         val childContent =
             remember(content) {
@@ -137,8 +143,12 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
                         content(child)
 
                         DisposableEffect(Unit) {
+                            NavTransitionLog.d("invoke") { "activeKeys + ${child.key} -> ${activeKeys.size + 1}" }
                             activeKeys += child.key
-                            onDispose { activeKeys -= child.key }
+                            onDispose {
+                                NavTransitionLog.d("invoke") { "activeKeys - ${child.key} -> ${activeKeys.size - 1}" }
+                                activeKeys -= child.key
+                            }
                         }
                     }
                 }
@@ -225,15 +235,30 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     private var initialBackEvent: BackEvent? = null
     private var cancelAnimationJob: Job? = null
 
+    /**
+     * 本次返回是否已被确认（[onBack] 已触发）。
+     *
+     * 部分系统（澎湃 / MIUI / HyperOS）在返回确认后仍会乱序补发 [onBackStarted] / [onBackProgressed]，
+     * 若不拦截，状态机会把补发进度误判为一次新手势，在出栈转场进行中强行叠加预测性返回双层渲染，
+     * 与回退转场争抢 movableContent，导致页面重影与返回后列表绘制空白。
+     */
+    private var isBackConfirmed = false
+
     override fun onBackStarted(backEvent: BackEvent) {
+        NavTransitionLog.d("gesture") { "onBackStarted progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null}" }
+        if (isBackConfirmed) return
         initialBackEvent = backEvent
     }
 
     override fun onBackProgressed(backEvent: BackEvent) {
-        if (animatable == null) {
+        NavTransitionLog.d("gesture") { "onBackProgressed progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null} gestureEnabled=${isGestureEnabled()}" }
+        if (isBackConfirmed) return
+        val initial = initialBackEvent
+        if (initial != null && animatable == null) {
             if (!isGestureEnabled()) return
-            // 部分系统（澎湃 / MIUI）可能跳过 Started 事件只派发进度：以首个进度事件兜底作为起始事件。
-            val initial = initialBackEvent ?: backEvent
+            // 与上游 Decompose 一致：必须先收到 Started 才激活双层结构。
+            // 杂散/乱序进度事件（澎湃 / HyperOS 确认返回后的补发等）不得凭空启动假手势，
+            // 否则双层渲染会与常规转场争抢 movableContent，导致重影与列表绘制空白。
             initialBackEvent = null
             val created = selector(initial, stack.active, stack.backStack.last())
             animatable = created
@@ -242,6 +267,7 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
                     MiuixPredictiveBackGestureItem(stack = stack.dropLast(), key = key + 1, modifier = created::enterModifier),
                     MiuixPredictiveBackGestureItem(stack = stack, key = key, modifier = created::exitModifier),
                 )
+            NavTransitionLog.d("gesture") { "ENGAGE handlerKey=$key exit=${stack.active.configuration} enter=${stack.backStack.last().configuration}" }
             scope.launch { created.animate(backEvent) }
         } else {
             // 取消动画进行中手势被重新推进：终止回弹，复用同一动画器继续贴合手指。
@@ -255,6 +281,8 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         ChildStack(active = backStack.last(), backStack = backStack.dropLast(1))
 
     override fun onBack() {
+        NavTransitionLog.d("gesture") { "onBack confirmed (was=$isBackConfirmed) animatable=${animatable != null}" }
+        isBackConfirmed = true
         val current = animatable
         if (current == null) {
             onBack.invoke()
@@ -270,6 +298,10 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     }
 
     override fun onBackCancelled() {
+        NavTransitionLog.d("gesture") { "onBackCancelled confirmed=$isBackConfirmed animatable=${animatable != null}" }
+        if (isBackConfirmed) return
+        // 手势生命周期已终止：丢弃尚未消费的起始事件，防止取消后杂散进度凭空激活假手势。
+        initialBackEvent = null
         val current = animatable ?: return
         cancelAnimationJob?.cancel()
         // 等回弹动画完成后再重置回单层：期间若系统乱序补发确认返回（onBack），

@@ -107,10 +107,49 @@ class MiuixPredictiveBackGestureHandlerTest {
     }
 
     @Test
-    fun testProgressWithoutStartedEngagesWithProgressEventAsInitial() = runFixture {
+    fun testProgressWithoutStartedIsIgnored() = runFixture {
+        // 对齐上游 Decompose：必须先收到 onBackStarted 才激活预测性返回双层结构。
+        // 乱序/杂散进度事件（澎湃 / HyperOS 转场期间或稳态下的补发）不得凭空启动假手势，
+        // 否则双层渲染会与常规转场争抢页面层级，导致重影、侧滑样式错乱与列表绘制损坏。
         handler.onBackProgressed(event(0.3f))
         scope.advanceUntilIdle()
+        assertTrue(animatables.isEmpty(), "selector must not run without a preceding onBackStarted")
+        assertEquals(1, handler.items.size)
+    }
+
+    @Test
+    fun testProgressAfterCancelledGestureDoesNotReactivateWithoutNewStarted() = runFixture {
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.5f))
+        scope.advanceUntilIdle()
         assertEquals(1, animatables.size)
+
+        handler.onBackCancelled()
+        scope.advanceUntilIdle()
+        assertEquals(1, handler.items.size)
+
+        // 取消后手势生命周期已终止：后续杂散进度事件不得重新激活假手势。
+        handler.onBackProgressed(event(0.6f))
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.size, "cancelled gesture must not reactivate from a stray progress event")
+        assertEquals(1, handler.items.size)
+    }
+
+    @Test
+    fun testNewStartedAfterCancelledGestureEngagesFreshly() = runFixture {
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.5f))
+        scope.advanceUntilIdle()
+        handler.onBackCancelled()
+        scope.advanceUntilIdle()
+
+        // 用户重新发起返回手势：系统重新派发 Started，随后进度正常激活新手势。
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.4f))
+        scope.advanceUntilIdle()
+
+        assertEquals(2, animatables.size)
         assertEquals(2, handler.items.size)
     }
 
@@ -189,5 +228,46 @@ class MiuixPredictiveBackGestureHandlerTest {
         assertSame(first, animatables.single())
         assertEquals(listOf(0.5f, 0.7f), first.animated)
         assertEquals(2, handler.items.size)
+    }
+
+    @Test
+    fun testLateProgressAfterConfirmedBackIsIgnored() = runFixture {
+        // 模拟澎湃 / HyperOS 乱序派发：确认返回（onBack）已触发 pop，系统随后才补发进度事件。
+        // 状态机必须忽略补发进度，否则会在出栈转场进行中误启动新手势，叠加双层渲染导致重影与列表绘制损坏。
+        handler.onBack()
+        scope.advanceUntilIdle()
+
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.6f))
+        handler.onBackProgressed(event(0.9f))
+        scope.advanceUntilIdle()
+
+        assertTrue(animatables.isEmpty(), "selector must not run after back is confirmed")
+        assertEquals(1, handler.items.size, "items must stay single-layer after back is confirmed")
+    }
+
+    @Test
+    fun testLateEventsAfterConfirmedBackWithEngagedGestureDoNotReactivate() = runFixture {
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.4f))
+        scope.advanceUntilIdle()
+        val engaged = animatables.single()
+
+        handler.onBack()
+        scope.advanceUntilIdle()
+        val finishCountAfterBack = engaged.finishCount
+        assertEquals(1, finishCountAfterBack)
+
+        // 确认后补发的进度/起始事件不得复活动画器或重建双层结构。
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.8f))
+        handler.onBackCancelled()
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.size)
+        assertSame(engaged, animatables.single())
+        assertEquals(listOf(0.4f), engaged.animated)
+        assertEquals(finishCountAfterBack, engaged.finishCount)
+        assertEquals(0, engaged.cancelCount)
     }
 }

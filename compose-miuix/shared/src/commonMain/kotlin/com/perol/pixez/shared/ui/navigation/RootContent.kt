@@ -34,12 +34,14 @@ import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.theme.darkAppExtraColors
 import com.perol.pixez.shared.ui.theme.lightAppExtraColors
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.NavTransitionLog
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAnimatable
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -141,6 +143,7 @@ fun RootContent(
     val sharedBounds = remember { SharedBoundsRegistry() }
     // SideEffect：成功应用后再同步路由锚点；被丢弃的重组不会污染不可回滚的注册表字段
     SideEffect {
+        NavTransitionLog.d("root") { "syncRoute ${(stack.active.configuration as? RootComponent.Config.IllustDetail)?.illustId}" }
         sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? RootComponent.Config.IllustDetail)?.illustId)
     }
     val bottomBarVisible = remember { mutableStateOf(true) }
@@ -222,18 +225,18 @@ fun RootContent(
 
                 // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                val stackAnimation = remember(sharedBounds, containerGeometry, isWideScreen) {
+                // 几何以即时读取源传入：Decompose 会按 child 缓存动画器实例，
+                // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
+                val stackAnimation = remember(sharedBounds, isWideScreen) {
                     if (isWideScreen) {
                         miuixDefaultStackAnimation(
                             registry = sharedBounds,
-                            containerBounds = containerGeometry.bounds,
-                            containerCornerRadius = containerGeometry.cornerRadius,
+                            containerGeometry = { containerGeometry },
                         )
                     } else {
                         miuixCardExpandStackAnimation(
                             registry = sharedBounds,
-                            containerBounds = containerGeometry.bounds,
-                            containerCornerRadius = containerGeometry.cornerRadius,
+                            containerGeometry = { containerGeometry },
                         )
                     }
                 }
@@ -245,10 +248,12 @@ fun RootContent(
                         .onGloballyPositioned { coordinates ->
                             val newBounds = coordinates.boundsInWindow()
                             if (newBounds != containerGeometry.bounds) {
+                                NavTransitionLog.d("root") { "containerGeometry bounds=$newBounds" }
                                 containerGeometry = containerGeometry.withBounds(newBounds)
                             }
                         },
                 ) {
+                    NavTransitionLog.d("root") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] recompose" }
                     Children(
                         stack = component.stack,
                         modifier = Modifier.fillMaxSize(),
@@ -256,15 +261,23 @@ fun RootContent(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->
-                                // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
-                                miuixCardExpandPredictiveBackAnimatable(
-                                    initialBackEvent = initialBackEvent,
-                                    registry = sharedBounds,
-                                    illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
-                                    containerWidthPx = containerGeometry.widthPx,
-                                    containerBounds = containerGeometry.bounds,
-                                    deviceCornerRadius = containerGeometry.cornerRadius,
-                                )
+                                if (isWideScreen) {
+                                    // 宽屏统一侧滑：卡片展开在横向窗口会纵横比畸变，
+                                    // 手势预览与常规转场共用同一侧滑样式，避免结尾两层样式跳变。
+                                    miuixSlidePredictiveBackAnimatable(
+                                        initialBackEvent = initialBackEvent,
+                                        containerGeometry = { containerGeometry },
+                                        registry = sharedBounds,
+                                    )
+                                } else {
+                                    // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
+                                    miuixCardExpandPredictiveBackAnimatable(
+                                        initialBackEvent = initialBackEvent,
+                                        registry = sharedBounds,
+                                        illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
+                                        containerGeometry = { containerGeometry },
+                                    )
+                                }
                             },
                             onBack = { component.onBack() },
                         ),
