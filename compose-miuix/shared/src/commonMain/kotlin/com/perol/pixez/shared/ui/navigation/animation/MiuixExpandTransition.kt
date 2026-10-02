@@ -92,9 +92,6 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
  * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用 Miuix 默认全宽侧滑。
  * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp），收回终点按它做像素级对齐。
  * @param containerGeometry 页面容器几何的即时读取源，用于归一化卡片几何。
- * @param forceSlidePath 强制两层都走 Miuix 默认侧滑路径（宽屏用）：宽屏容器纵横比与卡片差距大，
- *   卡片展开会畸变；若只让顶层走侧滑而底层仍按锚点走卡片遮罩，两层路径混用会出现
- *   底层纵深缩放与顶层全宽平移互相矛盾的渲染。registry 仍保留用于底层视差位移登记。
  * @return 可直接交给 stackAnimation 使用的 [StackAnimator]。
  */
 internal fun cardExpandStackAnimator(
@@ -103,7 +100,6 @@ internal fun cardExpandStackAnimator(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
-    forceSlidePath: Boolean = false,
 ): StackAnimator {
     val duration: FiniteAnimationSpec<Float> = tween(
         durationMillis = TRANSITION_DURATION_MILLIS,
@@ -111,18 +107,14 @@ internal fun cardExpandStackAnimator(
     )
     return stackAnimator(animationSpec = duration) { factor, direction, content ->
         val containerBounds = containerGeometry().bounds
-        val candidates = if (forceSlidePath) {
-            emptyList()
-        } else {
-            registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
-        }
+        val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
         // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
         // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
-        val anchor = if (forceSlidePath) null else registry?.resolveAnchor(candidates, containerBounds)
+        val anchor = registry?.resolveAnchor(candidates, containerBounds)
         // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
         // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
         val activeSourceBounds = anchor?.card?.rect
-            ?: sourceBounds?.takeIf { !forceSlidePath && isCardExpandLandable(it, containerBounds) }
+            ?: sourceBounds?.takeIf { isCardExpandLandable(it, containerBounds) }
         val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
         NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
 

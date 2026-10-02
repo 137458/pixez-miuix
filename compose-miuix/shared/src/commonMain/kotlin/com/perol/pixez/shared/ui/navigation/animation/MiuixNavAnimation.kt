@@ -1,14 +1,7 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
@@ -53,26 +46,6 @@ fun miuixCardExpandStackAnimation(
             rawIllustId = rawIllustId,
             containerGeometry = containerGeometry,
             registry = registry,
-        )
-    }
-
-/**
- * 构造 MIUIX / HyperOS 默认全宽侧滑出入栈转场（适用于宽屏横向窗口，避免卡片展开横纵比畸变）。
- * 两层页面强制同走侧滑路径：宽屏下卡片锚点即使可解析也不启用卡片展开/遮罩，
- * 防止顶层侧滑与底层卡片遮罩混用导致的双层渲染矛盾。
- * [containerGeometry] 即时读取源的意义同 [miuixCardExpandStackAnimation]。
- */
-@OptIn(ExperimentalDecomposeApi::class)
-fun miuixDefaultStackAnimation(
-    registry: SharedBoundsRegistry,
-    containerGeometry: () -> PageContainerGeometry,
-): StackAnimation<RootComponent.Config, RootComponent.Child> =
-    stackAnimation { _ ->
-        cardExpandStackAnimator(
-            rawIllustId = null,
-            containerGeometry = containerGeometry,
-            registry = registry,
-            forceSlidePath = true,
         )
     }
 

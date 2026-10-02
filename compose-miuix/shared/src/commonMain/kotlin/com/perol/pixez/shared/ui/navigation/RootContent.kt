@@ -39,9 +39,7 @@ import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
-import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
-import com.perol.pixez.shared.ui.navigation.animation.miuixSlidePredictiveBackAnimatable
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -227,18 +225,13 @@ fun RootContent(
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
                 // 几何以即时读取源传入：Decompose 会按 child 缓存动画器实例，
                 // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
-                val stackAnimation = remember(sharedBounds, isWideScreen) {
-                    if (isWideScreen) {
-                        miuixDefaultStackAnimation(
-                            registry = sharedBounds,
-                            containerGeometry = { containerGeometry },
-                        )
-                    } else {
-                        miuixCardExpandStackAnimation(
-                            registry = sharedBounds,
-                            containerGeometry = { containerGeometry },
-                        )
-                    }
+                // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
+                // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
+                val stackAnimation = remember(sharedBounds) {
+                    miuixCardExpandStackAnimation(
+                        registry = sharedBounds,
+                        containerGeometry = { containerGeometry },
+                    )
                 }
 
                 Box(
@@ -261,23 +254,14 @@ fun RootContent(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->
-                                if (isWideScreen) {
-                                    // 宽屏统一侧滑：卡片展开在横向窗口会纵横比畸变，
-                                    // 手势预览与常规转场共用同一侧滑样式，避免结尾两层样式跳变。
-                                    miuixSlidePredictiveBackAnimatable(
-                                        initialBackEvent = initialBackEvent,
-                                        containerGeometry = { containerGeometry },
-                                        registry = sharedBounds,
-                                    )
-                                } else {
-                                    // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
-                                    miuixCardExpandPredictiveBackAnimatable(
-                                        initialBackEvent = initialBackEvent,
-                                        registry = sharedBounds,
-                                        illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
-                                        containerGeometry = { containerGeometry },
-                                    )
-                                }
+                                // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
+                                // 手势预览与常规转场共用同一锚点解析：能落点则按卡片收回，否则回退侧滑。
+                                miuixCardExpandPredictiveBackAnimatable(
+                                    initialBackEvent = initialBackEvent,
+                                    registry = sharedBounds,
+                                    illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
+                                    containerGeometry = { containerGeometry },
+                                )
                             },
                             onBack = { component.onBack() },
                         ),
