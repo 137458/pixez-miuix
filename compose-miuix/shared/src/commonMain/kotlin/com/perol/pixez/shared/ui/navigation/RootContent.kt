@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Rect
 import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -38,7 +39,7 @@ import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
-import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixDefaultStackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -58,7 +59,6 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import io.ktor.client.HttpClient
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
@@ -201,7 +201,7 @@ fun RootContent(
                     .fillMaxSize()
                     .background(MiuixTheme.colorScheme.surface),
             ) {
-                val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
+                val isWideScreen = maxWidth >= 600.dp
                 val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
                 val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
                 val activeTab by component.selectedTab.collectAsState()
@@ -222,13 +222,20 @@ fun RootContent(
 
                 // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
                 // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                // 卡片展开转场对所有容器尺寸统一启用：无卡片几何或无法落点时动画器内部自行回退默认侧滑。
-                val stackAnimation = remember(sharedBounds, containerGeometry) {
-                    miuixCardExpandStackAnimation(
-                        registry = sharedBounds,
-                        containerBounds = containerGeometry.bounds,
-                        containerCornerRadius = containerGeometry.cornerRadius,
-                    )
+                val stackAnimation = remember(sharedBounds, containerGeometry, isWideScreen) {
+                    if (isWideScreen) {
+                        miuixDefaultStackAnimation(
+                            registry = sharedBounds,
+                            containerBounds = containerGeometry.bounds,
+                            containerCornerRadius = containerGeometry.cornerRadius,
+                        )
+                    } else {
+                        miuixCardExpandStackAnimation(
+                            registry = sharedBounds,
+                            containerBounds = containerGeometry.bounds,
+                            containerCornerRadius = containerGeometry.cornerRadius,
+                        )
+                    }
                 }
 
                 Box(
@@ -245,7 +252,7 @@ fun RootContent(
                     Children(
                         stack = component.stack,
                         modifier = Modifier.fillMaxSize(),
-                        animation = miuixPredictiveBackAnimation(
+                        animation = predictiveBackAnimation(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->

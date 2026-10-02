@@ -180,12 +180,6 @@ object AppConstants {
         const val TABLET_CONTENT_MAX_WIDTH_DP = 760
         const val GRID_CARD_MIN_WIDTH_DP = 180
 
-        /** 宽屏断点（dp）：容器达到该宽度即视为大屏，详情页图片收进内容列并限制显示高度。 */
-        const val WIDE_SCREEN_MIN_WIDTH_DP = 600
-
-        /** 详情页大图高度占视口比例上限：竖图在大屏上按该比例收缩宽度，避免纵向占满整屏。 */
-        const val DETAIL_IMAGE_MAX_HEIGHT_FRACTION = 0.8f
-
         /** 作品卡片视觉圆角（dp），与 MIUIX Card 默认圆角一致，卡片展开转场按登记值对齐收回终点。 */
         const val ILLUST_CARD_CORNER_RADIUS_DP = 16
 

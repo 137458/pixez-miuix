@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimatable
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -48,6 +49,24 @@ fun miuixCardExpandStackAnimation(
         val rawIllustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
         cardExpandStackAnimator(
             rawIllustId = rawIllustId,
+            containerBounds = containerBounds,
+            containerCornerRadius = containerCornerRadius,
+            registry = registry,
+        )
+    }
+
+/**
+ * 构造 MIUIX / HyperOS 默认全宽侧滑出入栈转场（适用于宽屏横向窗口，避免卡片展开横纵比畸变）。
+ */
+@OptIn(ExperimentalDecomposeApi::class)
+fun miuixDefaultStackAnimation(
+    registry: SharedBoundsRegistry,
+    containerBounds: Rect,
+    containerCornerRadius: Dp,
+): StackAnimation<RootComponent.Config, RootComponent.Child> =
+    stackAnimation { _ ->
+        cardExpandStackAnimator(
+            rawIllustId = null,
             containerBounds = containerBounds,
             containerCornerRadius = containerCornerRadius,
             registry = registry,
@@ -97,10 +116,9 @@ fun miuixCardExpandPredictiveBackAnimatable(
     }
     val sourceCard = anchor.card
 
-    // 进度按弹簧平滑驱动：系统进度派发稀疏/跳变（澎湃 / MIUI）时页面不再瞬间跳位。
-    return MiuixSmoothedPredictiveBackAnimatable(
+    return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
-        getExitModifier = { progress, _ ->
+        exitModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             registry.updateTransitionState(
                 illustId = anchor.illustId,
@@ -116,7 +134,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
                 containerCornerRadius = deviceCornerRadius,
             )
         },
-        getEnterModifier = { progress, _ ->
+        enterModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             Modifier.cardExpandScrim(
                 alpha = cardExpandScrimAlpha(expansion),
@@ -153,9 +171,9 @@ fun miuixSlidePredictiveBackAnimatable(
     deviceCornerRadius: Dp = 0.dp,
     registry: SharedBoundsRegistry? = null,
 ): PredictiveBackAnimatable {
-    return MiuixSmoothedPredictiveBackAnimatable(
+    return predictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
-        getExitModifier = { progress, _ ->
+        exitModifier = { progress, _ ->
             Modifier.miuixDefaultSlideLayer(
                 isTopLayer = true,
                 fraction = progress,
@@ -164,7 +182,7 @@ fun miuixSlidePredictiveBackAnimatable(
                 registry = registry,
             )
         },
-        getEnterModifier = { progress, _ ->
+        enterModifier = { progress, _ ->
             val coveredFraction = (1f - progress).coerceIn(0f, 1f)
             Modifier.miuixDefaultSlideLayer(
                 isTopLayer = false,

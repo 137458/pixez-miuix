@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,7 +46,6 @@ import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.ToastData
@@ -275,39 +273,20 @@ private fun IllustDetailSingleContent(
 
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
     val isCardTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
-    val activeTransitionExpansion = sharedBoundsRegistry.activeTransitionExpansion
     val detailChromeAlpha = if (isCardTransitionActive) {
         com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha(
-            activeTransitionExpansion,
-        )
-    } else {
-        1f
-    }
-    // 大图落定比例：转场全程全幅贴合源卡片图像，落定后收进内容列，消除返回落点的内容横向错位。
-    val heroSettleFraction = if (isCardTransitionActive) {
-        com.perol.pixez.shared.ui.navigation.animation.cardExpandHeroSettleFraction(
-            activeTransitionExpansion,
+            sharedBoundsRegistry.activeTransitionExpansion,
         )
     } else {
         1f
     }
 
-    // 转场期间页面根背景随落定比例透明化：收缩全程窗口内只呈现作品图像（下方信息卡已随 chrome 淡出，
-    // 页面底色若不透明会以「整个详情页缩小」的观感出现），落定时背景恢复不透明。
-    val pageBackgroundAlpha = if (isCardTransitionActive) heroSettleFraction else 1f
-
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface.copy(alpha = pageBackgroundAlpha)),
+            .background(MiuixTheme.colorScheme.surface),
         contentAlignment = Alignment.TopCenter,
     ) {
-        // 视口约束快照：大屏下图片收进内容列并限制显示高度（详见 resolveIllustDetailImageWidthPx）。
-        val detailViewport = IllustDetailViewport(
-            isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
-            containerWidthPx = constraints.maxWidth.toFloat(),
-            containerHeightPx = constraints.maxHeight.toFloat(),
-        )
         when {
             result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
             result.isSuccess && illust != null -> when {
@@ -328,8 +307,6 @@ private fun IllustDetailSingleContent(
                     IllustDetailContentList(
                         illust = illust,
                         illustAspectRatio = illustAspectRatio,
-                        viewport = detailViewport,
-                        heroSettleFraction = heroSettleFraction,
                         settings = settings,
                         listState = listState,
                         nestedScrollConnection = detailNestedScrollConnection,
@@ -448,8 +425,6 @@ private fun IllustDetailSingleContent(
 private fun IllustDetailContentList(
     illust: Illust,
     illustAspectRatio: Float?,
-    viewport: IllustDetailViewport,
-    heroSettleFraction: Float,
     settings: SettingsRepository?,
     listState: LazyListState,
     nestedScrollConnection: NestedScrollConnection,
@@ -498,8 +473,6 @@ private fun IllustDetailContentList(
                     pageIndex = pageIndex,
                     page = illust.metaPages[pageIndex],
                     illustAspectRatio = illustAspectRatio,
-                    viewport = viewport,
-                    heroSettleFraction = heroSettleFraction,
                     settings = settings,
                     downloadRepository = downloadRepository,
                     coroutineScope = coroutineScope,
@@ -513,8 +486,6 @@ private fun IllustDetailContentList(
                 IllustDetailSinglePageImage(
                     illust = illust,
                     illustAspectRatio = illustAspectRatio,
-                    viewport = viewport,
-                    heroSettleFraction = heroSettleFraction,
                     settings = settings,
                     repository = repository,
                     downloadRepository = downloadRepository,
@@ -526,9 +497,8 @@ private fun IllustDetailContentList(
         }
 
         // 2. 作品信息与画师卡片（单一清晰大标题、数据指标、画师头像名称与下载全部/系列入口）
-        // 注意用 Column 而非 Box：卡片组件以「前置 Spacer + Card」平铺输出，Box 会把二者叠放导致卡片间距失效。
         item(key = "illust_info_card", contentType = "info_card") {
-            Column(modifier = chromeModifier) {
+            Box(modifier = chromeModifier) {
                 IllustDetailInfoCard(
                     illust = illust,
                     isDownloading = isDownloading,
@@ -550,7 +520,7 @@ private fun IllustDetailContentList(
         // 3. 简介与文案卡片
         if (illust.caption.isNotBlank()) {
             item {
-                Column(modifier = chromeModifier) {
+                Box(modifier = chromeModifier) {
                     IllustDetailCaptionCard(
                         illust = illust,
                         strings = strings,
@@ -567,7 +537,7 @@ private fun IllustDetailContentList(
         // 4. 标签卡片与胶囊包裹（Capsule Chips）
         if (illust.tags.isNotEmpty()) {
             item {
-                Column(modifier = chromeModifier) {
+                Box(modifier = chromeModifier) {
                     IllustDetailTagsCard(
                         tags = illust.tags,
                         strings = strings,
@@ -579,7 +549,7 @@ private fun IllustDetailContentList(
 
         // 5. 互动操作卡片（评论与相关作品）
         item {
-            Column(modifier = chromeModifier) {
+            Box(modifier = chromeModifier) {
                 IllustDetailInteractionCard(
                     illust = illust,
                     strings = strings,

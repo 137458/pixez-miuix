@@ -200,12 +200,6 @@ private const val SOURCE_CARD_HIDE_THRESHOLD = 0.10f
 /** 详情页非图片附属控件（悬浮顶栏与图片下方信息/标签卡片）开始淡入、完成淡出的展开度阈值。 */
 private const val DETAIL_CHROME_FADE_START = 0.65f
 
-/** 详情页大图由全幅宽度渐变收进内容列的开始展开度。 */
-internal const val HERO_SETTLE_START = 0.5f
-
-/** 详情页大图由全幅宽度渐变收进内容列的完成展开度。 */
-internal const val HERO_SETTLE_END = 0.95f
-
 /**
  * 计算顶层页面在给定展开度 [expansion] 下的不透明度。
  */
@@ -213,16 +207,6 @@ internal fun cardExpandContentAlpha(expansion: Float): Float {
     val progress = expansion.coerceIn(0f, 1f)
     return (progress / CONTENT_FADE_THRESHOLD).coerceIn(0f, 1f)
 }
-
-/**
- * 计算卡片转场期间详情页大图的落定比例（0f = 全幅宽度，1f = 内容列宽度）。
- *
- * 收缩态（expansion → 0）时大图必须保持全幅，与列表卡片图像逐像素对齐，
- * 否则收回终点处页面内容与卡片图像错位，视觉上表现为「落点偏移」；
- * 展开落定后大图收进内容列与底部信息卡片同列。比例随展开度单调过渡。
- */
-internal fun cardExpandHeroSettleFraction(expansion: Float): Float =
-    ((expansion - HERO_SETTLE_START) / (HERO_SETTLE_END - HERO_SETTLE_START)).coerceIn(0f, 1f)
 
 /**
  * 计算卡片转场期间详情页非图片附属控件（悬浮液态玻璃顶栏与大图下方的详情卡片）的不透明度。
