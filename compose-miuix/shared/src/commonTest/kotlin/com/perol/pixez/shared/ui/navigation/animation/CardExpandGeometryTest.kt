@@ -95,9 +95,11 @@ class CardExpandGeometryTest {
             containerBounds = container,
         )
 
+        // 缩放抬升到下限，可见窗口保持最小尺寸且仍落在卡片原点，页面不会消失或飞出屏幕外。
         assertClose(0.05f, state?.uniformScale)
-        assertClose(0f, state?.transX)
-        assertClose(0f, state?.transY)
+        val window = windowRect(assertNotNull(state), container)
+        assertClose(0f, window.left, epsilon = RECT_EPSILON)
+        assertClose(0f, window.top, epsilon = RECT_EPSILON)
     }
 
     @Test
@@ -164,10 +166,10 @@ class CardExpandGeometryTest {
         val window = windowRect(state, container)
 
         // 退出结束位置（expansion = 0）以 max(scaleX, scaleY) = 0.55 等比缩放，并由 visibleWidthFraction 裁切宽度，
-        // 保证可见窗口四边与卡片 (30, 200, 490, 1300) 100% 像素级重合。
+        // 裁切窗口在页面内居中（transX 含反向补偿），可见窗口四边与卡片 (30, 200, 490, 1300) 100% 像素级重合。
         assertClose(0.55f, state.uniformScale)
-        assertClose(30f, state.transX)
-        assertClose(200f, state.transY)
+        assertClose(tallCard.left, window.left, epsilon = RECT_EPSILON)
+        assertClose(tallCard.top, window.top, epsilon = RECT_EPSILON)
         assertClose(tallCard.width, window.width, epsilon = RECT_EPSILON)
         assertClose(tallCard.height, window.height, epsilon = RECT_EPSILON)
     }
@@ -270,6 +272,50 @@ class CardExpandGeometryTest {
     }
 
     @Test
+    fun `水平裁切窗口在页面内对称居中收窄避免居中大图被单侧裁出画面`() {
+        // 平板横屏：容器 2400x1080，竖图卡片 300x570 -> scaleY(0.528) > scaleX(0.125)，
+        // 收回时可见窗口水平方向裁切。宽屏详情页大图与手机端全宽大图都以页面水平中心呈现，
+        // 裁切窗口必须围绕页面中心对称收窄（bias = 0.5），否则居中内容会被锚定左缘的窗口裁出画面。
+        val landscapeContainer = Rect(left = 0f, top = 0f, right = 2400f, bottom = 1080f)
+        val card = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f)
+
+        for (step in 0..10) {
+            val expansion = step / 10f
+            val state = assertNotNull(
+                resolveCardExpandTransform(expansion = expansion, sourceBounds = card, containerBounds = landscapeContainer),
+                "expansion = $expansion 必须能解析出变换状态",
+            )
+            if (state.visibleWidthFraction >= 1f) continue
+            assertClose(
+                0.5f,
+                state.windowHorizontalBias,
+                name = "expansion = $expansion 时水平裁切窗口应居中",
+            )
+
+            // 页面坐标系下的可见窗口中心必须始终等于页面水平中心。
+            val clippedWidth = state.visibleWidthFraction * landscapeContainer.width
+            val windowPageCenter = (landscapeContainer.width - clippedWidth) * state.windowHorizontalBias +
+                clippedWidth / 2f
+            assertClose(
+                landscapeContainer.width / 2f,
+                windowPageCenter,
+                epsilon = RECT_EPSILON,
+                name = "expansion = $expansion 时窗口页面中心",
+            )
+        }
+    }
+
+    @Test
+    fun `宽度驱动卡片窗口贴左无水平偏置保持竖屏既有行为`() {
+        // 竖屏容器：窗口宽度方向不裁切（宽度驱动），左上角锚定行为保持不变。
+        val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 900f)
+        val state = assertNotNull(
+            resolveCardExpandTransform(expansion = 0f, sourceBounds = card, containerBounds = container),
+        )
+        assertClose(0f, state.windowHorizontalBias)
+    }
+
+    @Test
     fun `方形容器与超长竖图卡片均判定为可落点并精确覆盖卡片全高`() {
         val squareContainer = Rect(left = 0f, top = 0f, right = 1000f, bottom = 1000f)
         val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 850f)
@@ -303,17 +349,20 @@ class CardExpandGeometryTest {
 
     /**
      * 顶层可见窗口：裁切形状按 [CardExpandTransformState.visibleWidthFraction] 裁宽、
-     * 按 [CardExpandTransformState.visibleHeightFraction] 裁高，
-     * 再经 `graphicsLayer` 以左上角为原点等比缩放并按 (transX, transY) 平移所得。
+     * 按 [CardExpandTransformState.visibleHeightFraction] 裁高并按 [CardExpandTransformState.windowHorizontalBias]
+     * 在页面内水平偏移，再经 `graphicsLayer` 以左上角为原点等比缩放并按 (transX, transY) 平移所得。
      */
     private fun windowRect(state: CardExpandTransformState, containerBounds: Rect): Rect {
-        val left = containerBounds.left + state.transX
+        val clippedWidth = state.visibleWidthFraction * containerBounds.width
+        val clippedHeight = state.visibleHeightFraction * containerBounds.height
+        val shapeLeft = (containerBounds.width - clippedWidth) * state.windowHorizontalBias
+        val left = containerBounds.left + state.transX + shapeLeft * state.uniformScale
         val top = containerBounds.top + state.transY
         return Rect(
             left = left,
             top = top,
-            right = left + state.uniformScale * state.visibleWidthFraction * containerBounds.width,
-            bottom = top + state.uniformScale * state.visibleHeightFraction * containerBounds.height,
+            right = left + clippedWidth * state.uniformScale,
+            bottom = top + clippedHeight * state.uniformScale,
         )
     }
 

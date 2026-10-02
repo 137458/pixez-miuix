@@ -21,6 +21,7 @@ internal data class CardExpandTransformState(
     val transY: Float,
     val visibleWidthFraction: Float = 1f,
     val visibleHeightFraction: Float,
+    val windowHorizontalBias: Float = 0f,
     val localCornerRadiusDp: Float,
     val contentAlpha: Float,
     val shadowElevation: Float,
@@ -78,7 +79,14 @@ internal fun resolveCardExpandTransform(
 
     val startTransX = liveLeft - containerBounds.left
     val startTransY = liveTop - containerBounds.top
-    val transX = lerp(startTransX, 0f, progress)
+
+    // 水平方向发生视口裁切（高度驱动）时，裁切窗口改为在页面内水平居中：
+    // 宽屏详情页大图以页面水平中心呈现，窗口若锚定页面左缘，收回时居中的作品会被单侧
+    // 裁出画面；居中后窗口围绕页面中心对称收窄，平移同步反向补偿，落点仍严格等于卡片矩形。
+    val windowHorizontalBias = if (visibleWidthFraction < 1f) 0.5f else 0f
+    val clippedPageWidth = visibleWidthFraction * containerBounds.width
+    val shapeLeftPage = (containerBounds.width - clippedPageWidth) * windowHorizontalBias
+    val transX = lerp(startTransX, 0f, progress) - uniformScale * shapeLeftPage
     val transY = lerp(startTransY, 0f, progress)
 
     // 屏幕物理圆角由卡片自身圆角平滑插值到设备屏幕物理圆角；
@@ -92,6 +100,7 @@ internal fun resolveCardExpandTransform(
         transY = transY,
         visibleWidthFraction = visibleWidthFraction,
         visibleHeightFraction = visibleHeightFraction,
+        windowHorizontalBias = windowHorizontalBias,
         localCornerRadiusDp = localCornerRadiusDp,
         contentAlpha = cardExpandContentAlpha(progress),
         shadowElevation = lerp(EXPAND_SHADOW_ELEVATION, 0f, progress),
@@ -261,6 +270,7 @@ internal fun Modifier.cardExpandLayer(
             shape = ClippedContainerShape(
                 widthFraction = state.visibleWidthFraction,
                 heightFraction = state.visibleHeightFraction,
+                horizontalBias = state.windowHorizontalBias,
                 cornerRadius = state.localCornerRadiusDp.dp,
             )
             clip = true
@@ -273,10 +283,13 @@ internal fun Modifier.cardExpandLayer(
  * 支持水平与垂直双向比例裁切的圆角矩形 Shape。
  *
  * 用于在等比缩放下将顶层页面容器裁切至卡片当前对应的真实宽高并保留补偿后的圆角。
+ * 水平裁切时窗口按 [horizontalBias] 在页面内偏移（0 贴左缘、0.5 居中），
+ * 居中收窄保证宽屏下以页面中心呈现的大图在收回全程不被单侧裁出画面。
  */
 private data class ClippedContainerShape(
     val widthFraction: Float = 1f,
     val heightFraction: Float,
+    val horizontalBias: Float = 0f,
     val cornerRadius: Dp,
 ) : androidx.compose.ui.graphics.Shape {
     override fun createOutline(
@@ -291,9 +304,9 @@ private data class ClippedContainerShape(
         val clippedHeight = (size.height * clampedHeightFraction).coerceAtMost(size.height)
         return androidx.compose.ui.graphics.Outline.Rounded(
             androidx.compose.ui.geometry.RoundRect(
-                left = 0f,
+                left = (size.width - clippedWidth) * horizontalBias.coerceIn(0f, 1f),
                 top = 0f,
-                right = clippedWidth,
+                right = (size.width - clippedWidth) * horizontalBias.coerceIn(0f, 1f) + clippedWidth,
                 bottom = clippedHeight,
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(radiusPx, radiusPx),
             ),
