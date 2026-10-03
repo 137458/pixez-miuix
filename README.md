@@ -22,7 +22,6 @@
 
 - [项目简介](#项目简介)
 - [核心特性](#核心特性)
-- [文档中心](#文档中心)
 - [下载与安装](#下载与安装)
 - [使用说明](#使用说明)
 - [工程架构](#工程架构)
@@ -65,16 +64,6 @@
 - **全自动鉴权与免代理直连**：
   - OAuth2 PKCE 认证流程与 Token 自动无感刷新。
   - 内置免代理 SNI 混淆直连与防盗链图片管线。
-
-***
-
-## 文档中心
-
-本项目建立了完善的工程与设计规范文档库，欢迎查阅：
-
-- [Code Wiki (架构全景手册)](Code_Wiki.md)：详细记录项目分层架构、目录结构、模块职责、数据流调用链与关键类说明。
-- [MIUIX Spec (UI 架构与设计规范)](MIUIX_Spec.md)：详细规定 MIUIX 组件选型、Liquid Glass 渲染、响应式断点与大屏适配准则。
-- [Global TODO (全局待办与路线图)](Global_TODO.md)：统一汇总各模块演进清单、优先级与交付状态。
 
 ***
 
@@ -133,7 +122,7 @@ pixez-flutter-MIUIX/
 │               ├── data/              # 数据模型、数据库驱动与 14 个核心 Repository
 │               ├── network/           # Ktor HTTP 客户端、OAuth 认证与 Token 刷新插件
 │               ├── platform/          # 跨平台 Expect 抽象 (相册、剪贴板、分享)
-│               └── ui/                # 46 个业务界面、MIUIX 组件与液态玻璃动效
+│               └── ui/                # 42 个业务界面、MIUIX 组件与液态玻璃动效
 ├── Code_Wiki.md                       # 架构全景手册
 ├── MIUIX_Spec.md                      # UI 设计与组件规范
 └── Global_TODO.md                     # 全局待办与路线图
@@ -191,9 +180,6 @@ cd compose-miuix
 
 特别鸣谢 [pixez-flutter](https://github.com/Notsfsssf/pixez-flutter) 社区提供的优秀 Flutter 跨平台客户端。
 特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) 社区提供的优秀 Compose MIUIX 跨平台组件库。
-
-
-。
 
 ***
 

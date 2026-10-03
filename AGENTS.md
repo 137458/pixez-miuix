@@ -25,7 +25,7 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 ./gradlew :shared:compileKotlinDesktop :shared:desktopTest :composeApp:compileKotlinDesktop :composeApp:desktopTest :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
 ```
 
-工具链基线：JDK 17（与 CI 一致）、Kotlin 2.4.10、Compose Multiplatform 1.12.0、Coil 3.6.0、Gradle 8.14.4。
+工具链基线：JDK 17、Kotlin 2.4.10、Compose Multiplatform 1.12.0、Coil 3.6.3、Gradle 8.14.4。
 
 ## UI 规范
 
