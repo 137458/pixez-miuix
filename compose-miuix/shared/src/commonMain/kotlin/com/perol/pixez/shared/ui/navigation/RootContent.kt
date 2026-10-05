@@ -38,7 +38,7 @@ import com.perol.pixez.shared.ui.navigation.animation.NavTransitionLog
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
-import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandStackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.miuixSeekableStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -228,7 +228,7 @@ fun RootContent(
                 // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
                 // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
                 val stackAnimation = remember(sharedBounds) {
-                    miuixCardExpandStackAnimation(
+                    miuixSeekableStackAnimation(
                         registry = sharedBounds,
                         containerGeometry = { containerGeometry },
                     )

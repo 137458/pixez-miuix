@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.navigation.animation
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.runtime.Composable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -12,9 +13,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
-import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
-import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
 
 /** Miuix 默认转场：被覆盖页面朝前缘的视差位移比例（相对于容器宽度）。 */
 internal const val MIUIX_DEFAULT_COVER_PARALLAX_FRACTION = 0.25f
@@ -51,7 +50,7 @@ internal data class MiuixDefaultSlideFrame(
 /**
  * 把 Decompose 的转场帧换算为 Miuix 默认侧滑帧数据。
  *
- * 与 [resolveCardExpandFrame] 同一套 factor 区间（见 `StackAnimator.kt` 文档），
+ * 与 [resolveCardExpandFrame] 同一套 factor 区间（Decompose StackAnimator factor 语义），
  * 映射自 miuix-nav `NavTransitions.MiuixDefault` 的 d -> visual 关系：
  * - 进/出栈顶（d <= 0）：全宽滑动，fraction = -d；
  * - 被覆盖（d > 0）：25% 视差 + 轻微淡出，fraction = d。
@@ -65,95 +64,83 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
         MiuixDefaultSlideFrame(isTopLayer = false, fraction = (-factor).coerceIn(0f, 1f))
     }
 
+/** 单层页面的转场帧渲染闭包：按 factor 与方向产出该层的视觉修饰符。 */
+internal typealias MiuixTransitionFrame =
+    @Composable (factor: Float, direction: Direction, content: @Composable (Modifier) -> Unit) -> Unit
+
 /**
- * 构造 MIUIX / HyperOS 统一的二级页面转场动画器。
+ * 构造 MIUIX / HyperOS「卡片展开 / Miuix 默认侧滑」的帧渲染闭包。
  *
- * 顶层页面被视为一张从作品列表卡片「生长」出来的容器：打开详情页时按卡片矩形
- * 的尺寸与位置等比展开并平滑淡入，关闭时反向收缩归位；圆角由卡片圆角
- * 渐变到设备屏幕物理圆角 [containerCornerRadius]，形成连贯的空间连续性。
+ * 帧渲染与动画驱动解耦：闭包只负责把 (factor, direction) 映射为视觉修饰符，
+ * 并把转场状态上报 [SharedBoundsRegistry]；动画驱动（Decompose stackAnimator 或
+ * 自研 [SeekableStackAnimation]）各自负责 factor 的产生节奏。
  *
- * [sourceBounds] 为 null 时（画师页、设置页这类本就没有来源卡片的二级页面，
- * 以及分享链接直达、进程重建恢复等入口），或卡片几何在当前容器下无法落点
- * （见 [isCardExpandLandable]：横向窗口里的竖图卡片等比缩放后盖不住卡片全高）
- * 逐层复刻 Miuix 官方默认转场 `NavTransitions.MiuixDefault`：顶层页面全宽滑入/滑出
- * （滑动中贴合设备屏幕物理圆角裁切），被覆盖页面 25% 视差左移、轻微淡出并叠加线性加深的暗色遮罩，
- * 驱动弹簧为 [MiuixTransitionSpec]。
- *
- * [containerGeometry] 为即时读取源：Decompose 的 `MovableStackAnimation` 按 child 缓存动画器实例，
- * 几何以快照捕获会被过期缓存固化（冷启动首帧 bounds 未回填时创建的动画器一直持有 `Rect.Zero`），
- * 必须每帧即时读取。
- *
- * @param sourceBounds 发起转场的卡片窗口矩形，为 null 时使用 Miuix 默认全宽侧滑。
- * @param cardCornerRadiusDp 源卡片自身视觉圆角（dp），收回终点按它做像素级对齐。
- * @param containerGeometry 页面容器几何的即时读取源，用于归一化卡片几何。
- * @return 可直接交给 stackAnimation 使用的 [StackAnimator]。
+ * 锚点解析、几何即时读取与回退规则见 [miuixSeekableStackAnimation] 文档。
  */
-internal fun cardExpandStackAnimator(
+internal fun cardExpandFrame(
     rawIllustId: Long? = null,
     sourceBounds: Rect? = null,
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
-): StackAnimator {
-    return stackAnimator(animationSpec = MiuixTransitionSpec) { factor, direction, content ->
-        val containerBounds = containerGeometry().bounds
-        val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
-        // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
-        // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
-        val anchor = registry?.resolveAnchor(candidates, containerBounds)
-        // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
-        // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
-        val activeSourceBounds = anchor?.card?.rect
-            ?: sourceBounds?.takeIf { isCardExpandLandable(it, containerBounds) }
-        val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
-        NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
+): MiuixTransitionFrame = { factor, direction, content ->
+    val containerBounds = containerGeometry().bounds
+    val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
+    // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
+    // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
+    val anchor = registry?.resolveAnchor(candidates, containerBounds)
+    // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
+    // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
+    val activeSourceBounds = anchor?.card?.rect
+        ?: sourceBounds?.takeIf { isCardExpandLandable(it, containerBounds) }
+    val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
+    NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
 
-        if (activeSourceBounds == null) {
-            val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
-            if (frame.isTopLayer) {
-                registry?.updateTransitionState(null, 0f)
-            }
-            val geometry = containerGeometry()
-            val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
-            content(
-                Modifier.miuixDefaultSlideLayer(
-                    isTopLayer = frame.isTopLayer,
-                    fraction = frame.fraction,
-                    widthPx = widthPx,
-                    cornerRadius = geometry.cornerRadius,
-                    registry = registry,
-                ),
-            )
-        } else {
-            val geometry = containerGeometry()
-            val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
-            registry?.updateTransitionState(
-                illustId = anchor?.illustId ?: candidates.firstOrNull { it != null },
-                expansion = frame.expansion,
-                sourceBounds = activeSourceBounds,
-                containerBounds = geometry.bounds,
-                isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK,
-            )
-            content(
-                if (frame.isTopLayer) {
-                    Modifier.cardExpandLayer(
-                        expansion = frame.expansion,
-                        sourceBounds = activeSourceBounds,
-                        cardCornerRadiusDp = activeCornerRadiusDp,
-                        containerBounds = geometry.bounds,
-                        containerCornerRadius = geometry.cornerRadius,
-                    )
-                } else {
-                    Modifier.cardExpandScrim(
-                        alpha = cardExpandScrimAlpha(frame.expansion),
-                        expansion = frame.expansion,
-                        sourceBounds = activeSourceBounds,
-                        containerBounds = geometry.bounds,
-                        containerCornerRadius = geometry.cornerRadius,
-                    )
-                },
-            )
+    if (activeSourceBounds == null) {
+        val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
+        if (frame.isTopLayer) {
+            registry?.updateTransitionState(null, 0f)
         }
+        val geometry = containerGeometry()
+        val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
+        content(
+            Modifier.miuixDefaultSlideLayer(
+                isTopLayer = frame.isTopLayer,
+                fraction = frame.fraction,
+                widthPx = widthPx,
+                cornerRadius = geometry.cornerRadius,
+                registry = registry,
+            ),
+        )
+    } else {
+        val geometry = containerGeometry()
+        val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
+        registry?.updateTransitionState(
+            illustId = anchor?.illustId ?: candidates.firstOrNull { it != null },
+            expansion = frame.expansion,
+            sourceBounds = activeSourceBounds,
+            containerBounds = geometry.bounds,
+            isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK,
+        )
+        content(
+            if (frame.isTopLayer) {
+                Modifier.cardExpandLayer(
+                    expansion = frame.expansion,
+                    sourceBounds = activeSourceBounds,
+                    cardCornerRadiusDp = activeCornerRadiusDp,
+                    containerBounds = geometry.bounds,
+                    containerCornerRadius = geometry.cornerRadius,
+                )
+            } else {
+                Modifier.cardExpandScrim(
+                    alpha = cardExpandScrimAlpha(frame.expansion),
+                    expansion = frame.expansion,
+                    sourceBounds = activeSourceBounds,
+                    containerBounds = geometry.bounds,
+                    containerCornerRadius = geometry.cornerRadius,
+                )
+            },
+        )
     }
 }
 

@@ -5,7 +5,6 @@ import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
-import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.RootComponent
 
@@ -16,33 +15,34 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 
 /**
- * 构造 MIUIX / HyperOS「卡片展开」出入栈转场。
+ * 构造 MIUIX / HyperOS「卡片展开」出入栈转场（可打断版）。
  *
- * 动画器按「本次转场涉及的两个页面配置」解析来源卡片矩形：
- * - push（[Direction.ENTER_FRONT]）：以新入场的详情页配置为键，取出对应列表卡片矩形。
- * - pop（[Direction.EXIT_FRONT]）：以即将离场的详情页配置为键，取出对应列表卡片矩形。
+ * 转场调度为自研 [SeekableStackAnimation]：push 转场中反向返回时两层方向互换、
+ * 从当前位置连续转向，不再排队重播；其余转场中事件保持排队语义。
+ * 帧渲染复用 [cardExpandFrame]，动画器按「本次转场涉及的两个页面配置」解析来源卡片矩形：
+ * - push（ENTER_FRONT）：以新入场的详情页配置为键，取出对应列表卡片矩形。
+ * - pop（EXIT_FRONT）：以即将离场的详情页配置为键，取出对应列表卡片矩形。
  *
  * 前层不是作品详情页、或解析不到卡片矩形时（分享链接直达、进程重建恢复、由非列表入口进入），
  * 转场回退为逐层复刻 miuix-nav `NavTransitions.MiuixDefault` 的默认全宽侧滑，
  * 保证除「列表 -> 作品详情」外的所有页面都与 Miuix 官方导航默认行为一致。
  *
- * [containerGeometry] 为页面容器几何的即时读取源：Decompose 的 `MovableStackAnimation` 会按
- * child 缓存动画器实例（remember key 不含外部几何），容器几何若以快照捕获会被过期缓存固化
- * （冷启动首帧 bounds 尚未回填时创建的动画器会一直持有 `Rect.Zero`），导致列表层锚点解析
- * 永远失败；因此几何必须每帧即时读取。
+ * [containerGeometry] 为页面容器几何的即时读取源：渲染闭包可能被长期持有，
+ * 容器几何若以快照捕获会被过期缓存固化（冷启动首帧 bounds 尚未回填时创建的闭包
+ * 会一直持有 `Rect.Zero`），导致列表层锚点解析永远失败；因此几何必须每帧即时读取。
  *
  * @param registry 卡片几何信息源，由 [LocalSharedBoundsRegistry] 提供。
  * @param containerGeometry 页面容器几何的即时读取源。
  * @return 可直接交给 Children(animation = ...) 使用的 [StackAnimation]。
  */
 @OptIn(ExperimentalDecomposeApi::class)
-fun miuixCardExpandStackAnimation(
+fun miuixSeekableStackAnimation(
     registry: SharedBoundsRegistry,
     containerGeometry: () -> PageContainerGeometry,
 ): StackAnimation<RootComponent.Config, RootComponent.Child> =
-    stackAnimation { child ->
+    SeekableStackAnimation { child ->
         val rawIllustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
-        cardExpandStackAnimator(
+        cardExpandFrame(
             rawIllustId = rawIllustId,
             containerGeometry = containerGeometry,
             registry = registry,
