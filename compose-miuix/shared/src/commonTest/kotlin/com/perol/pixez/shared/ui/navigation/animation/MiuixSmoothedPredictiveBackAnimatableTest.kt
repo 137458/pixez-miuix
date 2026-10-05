@@ -176,4 +176,19 @@ class MiuixSmoothedPredictiveBackAnimatableTest {
         animatable.exitModifier
         assertEquals(BackEvent.SwipeEdge.LEFT, observedEdge)
     }
+
+    @Test
+    fun testSnapUpdatesProgressImmediatelyWithoutTweenFrames() = runTest {
+        val clock = BroadcastFrameClock()
+        val seen = mutableListOf<Float>()
+        val animatable = recorderAnimatable { progress -> seen += progress }
+        launch(StandardTestDispatcher(testScheduler) + clock) {
+            animatable.snap(BackEvent(progress = 0.4f))
+        }
+        testScheduler.runCurrent()
+        animatable.exitModifier
+        // snap 直驱（应用内拖拽跟手）：进度 1:1 立即落位，无弹簧补间。
+        assertEquals(0.4f, seen.last(), 1e-4f)
+        assertTrue(seen.none { it in 0.01f..0.39f }, "snap must not tween through intermediate values, seen=$seen")
+    }
 }

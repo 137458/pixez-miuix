@@ -26,6 +26,7 @@ import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.essenty.backhandler.BackCallback
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.arkivanov.essenty.backhandler.BackHandler
+import com.perol.pixez.shared.platform.rememberDragBackGestureEnabled
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -47,6 +48,16 @@ private val PredictiveFinishSpec = tween<Float>(durationMillis = 240, easing = H
 private val PredictiveCancelSpec = tween<Float>(durationMillis = 200, easing = HyperOSDecelerateEasing)
 
 /**
+ * 支持跟手直驱（snap）的预测性返回动画器：应用内拖拽路径用 [snap] 1:1 贴合手指，
+ * 系统手势路径仍走 [animate] 弹簧跟随。
+ */
+@ExperimentalDecomposeApi
+internal interface MiuixSnapBackAnimatable : PredictiveBackAnimatable {
+    /** 手势跟手期直驱：进度立即落位，无补间。 */
+    suspend fun snap(event: BackEvent)
+}
+
+/**
  * 进度平滑的 [PredictiveBackAnimatable]：替代 Decompose 内置实现中的 snapTo 语义。
  *
  * Decompose 默认实现按系统事件原样跳变进度，在进度派发被系统阉割或稀疏的设备上
@@ -62,7 +73,7 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     private val getExitModifier: (progress: Float, edge: BackEvent.SwipeEdge) -> Modifier,
     private val getEnterModifier: (progress: Float, edge: BackEvent.SwipeEdge) -> Modifier,
-) : PredictiveBackAnimatable {
+) : MiuixSnapBackAnimatable {
 
     private val progressAnimatable = Animatable(initialValue = initialBackEvent.progress)
     private var swipeEdge by mutableStateOf(initialBackEvent.swipeEdge)
@@ -76,6 +87,11 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
     override suspend fun animate(event: BackEvent) {
         swipeEdge = event.swipeEdge
         progressAnimatable.animateTo(targetValue = event.progress, animationSpec = PredictiveFollowSpec)
+    }
+
+    override suspend fun snap(event: BackEvent) {
+        swipeEdge = event.swipeEdge
+        progressAnimatable.snapTo(event.progress)
     }
 
     override suspend fun finish() {
@@ -106,6 +122,8 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
  * @param fallbackAnimation 常规出入栈转场（手势无进度事件直接确认时使用）。
  * @param selector 手势开始时选择 [PredictiveBackAnimatable]。
  * @param onBack 转场完成后回调（执行真正出栈）。
+ * @param dragBackEligible 应用内拖拽返回的页面判定：非 null 且平台开关开启、当前稳态单层的
+ *   active 页面命中时，挂载左缘拖拽手势（事件经 [MiuixPredictiveBackGestureHandler] 与系统流互斥）。
  */
 @ExperimentalDecomposeApi
 fun <C : Any, T : Any> miuixPredictiveBackAnimation(
@@ -113,12 +131,14 @@ fun <C : Any, T : Any> miuixPredictiveBackAnimation(
     fallbackAnimation: StackAnimation<C, T>,
     selector: (initialBackEvent: BackEvent, exitChild: Child.Created<C, T>, enterChild: Child.Created<C, T>) -> PredictiveBackAnimatable,
     onBack: () -> Unit,
+    dragBackEligible: ((T) -> Boolean)? = null,
 ): StackAnimation<C, T> =
     MiuixPredictiveBackAnimation(
         backHandler = backHandler,
         animation = fallbackAnimation,
         selector = selector,
         onBack = onBack,
+        dragBackEligible = dragBackEligible,
     )
 
 @OptIn(ExperimentalDecomposeApi::class, com.arkivanov.decompose.InternalDecomposeApi::class)
@@ -127,6 +147,7 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
     private val animation: StackAnimation<C, T>,
     private val selector: (BackEvent, exitChild: Child.Created<C, T>, enterChild: Child.Created<C, T>) -> PredictiveBackAnimatable,
     private val onBack: () -> Unit,
+    private val dragBackEligible: ((T) -> Boolean)? = null,
 ) : StackAnimation<C, T> {
 
     @Composable
@@ -154,7 +175,28 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
                 }
             }
 
-        Box(modifier = modifier) {
+        // 应用内拖拽返回：挂在最外层 Box（手势会话中 handler.items 变双层，
+        // 若挂在内层会被组合移除而中断手势事件流）。激活判定只在按下阶段进行。
+        val dragBackActive = dragBackEligible != null &&
+            rememberDragBackGestureEnabled() &&
+            handler.items.size == 1 &&
+            dragBackEligible.invoke(handler.items.single().stack.active.instance)
+
+        Box(
+            modifier = if (dragBackActive) {
+                modifier.then(
+                    Modifier.miuixDragBackGesture(
+                        isEligible = { true },
+                        onStart = handler::onDragStarted,
+                        onProgress = handler::onDragProgressed,
+                        onCommit = handler::onDragCommit,
+                        onCancel = handler::onDragCancel,
+                    ),
+                )
+            } else {
+                modifier
+            },
+        ) {
             handler.items.forEach { item ->
                 key(item.key) {
                     anim(
@@ -244,19 +286,66 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
      */
     private var isBackConfirmed = false
 
+    /** 应用内拖拽会话进行中：与系统手势流互斥（一方激活时另一方的事件被忽略）。 */
+    private var isDragSession = false
+
     override fun onBackStarted(backEvent: BackEvent) {
         NavTransitionLog.d("gesture") { "onBackStarted progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null}" }
         if (isBackConfirmed) return
+        if (isDragSession) return
         initialBackEvent = backEvent
+    }
+
+    /** 应用内拖拽起始（[Modifier.miuixDragBackGesture] 边缘起手时调用）。 */
+    fun onDragStarted(backEvent: BackEvent) {
+        NavTransitionLog.d("gesture") { "onDragStarted progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null}" }
+        if (isBackConfirmed) return
+        if (isDragSession) return
+        // 系统手势流已持有起始事件（Started 已到、尚未激活）时拖拽不得接管，避免双事件源争抢。
+        if (initialBackEvent != null) return
+        initialBackEvent = backEvent
+        isDragSession = true
+    }
+
+    /** 应用内拖拽推进（跟手期 snap 直驱）。 */
+    fun onDragProgressed(backEvent: BackEvent) {
+        NavTransitionLog.d("gesture") { "onDragProgressed progress=${backEvent.progress} confirmed=$isBackConfirmed drag=$isDragSession animatable=${animatable != null}" }
+        if (isBackConfirmed) return
+        if (!isDragSession) return
+        progressed(backEvent, snapToFollow = true)
+    }
+
+    /** 应用内拖拽确认（位移/速度越阈值松手）：与 [onBack] 同路径收尾并出栈。 */
+    fun onDragCommit() {
+        onBack()
+    }
+
+    /** 应用内拖拽取消（未达阈值松手）：与 [onBackCancelled] 同路径回弹。 */
+    fun onDragCancel() {
+        onBackCancelled()
     }
 
     override fun onBackProgressed(backEvent: BackEvent) {
         NavTransitionLog.d("gesture") { "onBackProgressed progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null} gestureEnabled=${isGestureEnabled()}" }
         if (isBackConfirmed) return
+        if (isDragSession) return
+        progressed(backEvent, snapToFollow = false)
+    }
+
+    /**
+     * 手势进度共用路径：未激活时以 [initialBackEvent] 激活双层结构，已激活时继续贴合。
+     * 系统手势流用弹簧跟随（OEM 进度稀疏时平滑追赶），拖拽会话用 snap 1:1 直驱。
+     */
+    private fun progressed(backEvent: BackEvent, snapToFollow: Boolean) {
         val initial = initialBackEvent
         if (initial != null && animatable == null) {
-            if (!isGestureEnabled()) return
-            // 与上游 Decompose 一致：必须先收到 Started 才激活双层结构。
+            if (!isGestureEnabled()) {
+                // 激活失败（转场中/非稳态）：丢弃会话，防止门闩卡死后续手势。
+                initialBackEvent = null
+                isDragSession = false
+                return
+            }
+            // 与上游 Decompose 一致：必须先收到 Started（或拖拽 Start）才激活双层结构。
             // 杂散/乱序进度事件（澎湃 / HyperOS 确认返回后的补发等）不得凭空启动假手势，
             // 否则双层渲染会与常规转场争抢 movableContent，导致重影与列表绘制空白。
             initialBackEvent = null
@@ -267,13 +356,20 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
                     MiuixPredictiveBackGestureItem(stack = stack.dropLast(), key = key + 1, modifier = created::enterModifier),
                     MiuixPredictiveBackGestureItem(stack = stack, key = key, modifier = created::exitModifier),
                 )
-            NavTransitionLog.d("gesture") { "ENGAGE handlerKey=$key exit=${stack.active.configuration} enter=${stack.backStack.last().configuration}" }
-            scope.launch { created.animate(backEvent) }
+            NavTransitionLog.d("gesture") { "ENGAGE snap=$snapToFollow handlerKey=$key exit=${stack.active.configuration} enter=${stack.backStack.last().configuration}" }
+            scope.launch {
+                val snapped = created as? MiuixSnapBackAnimatable
+                if (snapToFollow && snapped != null) snapped.snap(backEvent) else created.animate(backEvent)
+            }
         } else {
             // 取消动画进行中手势被重新推进：终止回弹，复用同一动画器继续贴合手指。
             cancelAnimationJob?.cancel()
             cancelAnimationJob = null
-            scope.launch { animatable?.animate(backEvent) }
+            val current = animatable
+            scope.launch {
+                val snapped = current as? MiuixSnapBackAnimatable
+                if (snapToFollow && snapped != null) snapped.snap(backEvent) else current?.animate(backEvent)
+            }
         }
     }
 
@@ -281,8 +377,9 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         ChildStack(active = backStack.last(), backStack = backStack.dropLast(1))
 
     override fun onBack() {
-        NavTransitionLog.d("gesture") { "onBack confirmed (was=$isBackConfirmed) animatable=${animatable != null}" }
+        NavTransitionLog.d("gesture") { "onBack confirmed (was=$isBackConfirmed) animatable=${animatable != null} drag=$isDragSession" }
         isBackConfirmed = true
+        isDragSession = false
         val current = animatable
         if (current == null) {
             onBack.invoke()
@@ -298,10 +395,11 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     }
 
     override fun onBackCancelled() {
-        NavTransitionLog.d("gesture") { "onBackCancelled confirmed=$isBackConfirmed animatable=${animatable != null}" }
+        NavTransitionLog.d("gesture") { "onBackCancelled confirmed=$isBackConfirmed animatable=${animatable != null} drag=$isDragSession" }
         if (isBackConfirmed) return
         // 手势生命周期已终止：丢弃尚未消费的起始事件，防止取消后杂散进度凭空激活假手势。
         initialBackEvent = null
+        isDragSession = false
         val current = animatable ?: return
         cancelAnimationJob?.cancel()
         // 等回弹动画完成后再重置回单层：期间若系统乱序补发确认返回（onBack），

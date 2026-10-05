@@ -21,8 +21,9 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalDecomposeApi::class)
 class MiuixPredictiveBackGestureHandlerTest {
 
-    private class FakePredictiveBackAnimatable : PredictiveBackAnimatable {
+    private class FakePredictiveBackAnimatable : MiuixSnapBackAnimatable {
         val animated = mutableListOf<Float>()
+        val snapLog = mutableListOf<Float>()
         var finishCount = 0
         var cancelCount = 0
         var cancelGate: CompletableDeferred<Unit>? = null
@@ -32,6 +33,10 @@ class MiuixPredictiveBackGestureHandlerTest {
 
         override suspend fun animate(event: BackEvent) {
             animated += event.progress
+        }
+
+        override suspend fun snap(event: BackEvent) {
+            snapLog += event.progress
         }
 
         override suspend fun finish() {
@@ -49,12 +54,14 @@ class MiuixPredictiveBackGestureHandlerTest {
         val stack: ChildStack<String, String>,
         val handler: MiuixPredictiveBackGestureHandler<String, String>,
         val animatables: MutableList<FakePredictiveBackAnimatable>,
+        val backInvoked: MutableList<Int>,
     )
 
     private fun runFixture(gestureEnabled: Boolean = true, block: suspend Fixture.() -> Unit) = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val scope = TestScope(dispatcher)
         val animatables = mutableListOf<FakePredictiveBackAnimatable>()
+        val backInvoked = mutableListOf<Int>()
         val stack = ChildStack(
             active = Child.Created(configuration = "detail", instance = "detail-instance", key = "detail"),
             backStack = listOf(Child.Created(configuration = "main", instance = "main-instance", key = "main")),
@@ -67,9 +74,9 @@ class MiuixPredictiveBackGestureHandlerTest {
             selector = { _, _, _ ->
                 FakePredictiveBackAnimatable().also { animatables += it }
             },
-            onBack = {},
+            onBack = { backInvoked += 1 },
         )
-        Fixture(scope, stack, handler, animatables).block()
+        Fixture(scope, stack, handler, animatables, backInvoked).block()
     }
 
     private fun event(progress: Float): BackEvent = BackEvent(progress = progress, swipeEdge = BackEvent.SwipeEdge.LEFT)
@@ -269,5 +276,114 @@ class MiuixPredictiveBackGestureHandlerTest {
         assertEquals(listOf(0.4f), engaged.animated)
         assertEquals(finishCountAfterBack, engaged.finishCount)
         assertEquals(0, engaged.cancelCount)
+    }
+
+    // ---- 应用内拖拽返回（批次 2）：与系统手势流互斥，跟手期 snap 直驱 ----
+
+    @Test
+    fun testDragStartedAndProgressedEngageItemsWithSnapFollow() = runFixture {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.4f))
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.size)
+        assertEquals(listOf(0.4f), animatables.single().snapLog, "drag follow must drive progress via snap (1:1)")
+        assertEquals(2, handler.items.size)
+    }
+
+    @Test
+    fun testDragIsIgnoredWhileSystemGestureIsPending() = runFixture {
+        // 系统手势流已持有起始事件（onBackStarted 已到、尚未激活）时，拖拽不得接管。
+        handler.onBackStarted(event(0f))
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.5f))
+        scope.advanceUntilIdle()
+
+        assertTrue(animatables.isEmpty(), "drag must not take over while a system gesture start event is pending")
+        assertEquals(1, handler.items.size)
+    }
+
+    @Test
+    fun testSystemEventsAreIgnoredDuringDragSession() = runFixture {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.4f))
+        scope.advanceUntilIdle()
+        val engaged = animatables.single()
+
+        // 模拟澎湃乱序补发：拖拽会话中系统手势事件不得重复激活或干扰跟手动画。
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.9f))
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.size)
+        assertSame(engaged, animatables.single())
+        assertEquals(listOf(0.4f), engaged.snapLog)
+        assertEquals(2, handler.items.size)
+    }
+
+    @Test
+    fun testDragCommitFinishesAndPops() = runFixture {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.6f))
+        scope.advanceUntilIdle()
+        handler.onDragCommit()
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.single().finishCount)
+        assertEquals(listOf(1), backInvoked)
+
+        // 确认后系统补发事件被门闩拦截，不得复活动画器。
+        handler.onBackStarted(event(0f))
+        handler.onBackProgressed(event(0.9f))
+        scope.advanceUntilIdle()
+        assertEquals(1, animatables.size)
+    }
+
+    @Test
+    fun testDragCancelResetsToSingleLayerAfterCancelAnimation() = runFixture {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.5f))
+        scope.advanceUntilIdle()
+        handler.onDragCancel()
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.single().cancelCount)
+        assertEquals(1, handler.items.size)
+    }
+
+    @Test
+    fun testDragProgressDuringCancelResumesSnapFollow() = runFixture {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.5f))
+        scope.advanceUntilIdle()
+        val first = animatables.single()
+
+        val gate = CompletableDeferred<Unit>()
+        first.cancelGate = gate
+        handler.onDragCancel()
+        scope.runCurrent()
+
+        // 回弹动画进行中用户重新按压边缘拖拽（新拖拽会话）：
+        // 复用仍在渲染双层的同一动画器继续 snap 跟手，不重新选择、不提前重置。
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.8f))
+        scope.advanceUntilIdle()
+        gate.complete(Unit)
+        scope.advanceUntilIdle()
+
+        assertEquals(1, animatables.size)
+        assertSame(first, animatables.single())
+        assertEquals(listOf(0.5f, 0.8f), first.snapLog)
+        assertEquals(2, handler.items.size)
+    }
+
+    @Test
+    fun testDragGestureDisabledBlocksEngagement() = runFixture(gestureEnabled = false) {
+        handler.onDragStarted(event(0f))
+        handler.onDragProgressed(event(0.4f))
+        scope.advanceUntilIdle()
+
+        assertTrue(animatables.isEmpty())
+        assertEquals(1, handler.items.size)
     }
 }

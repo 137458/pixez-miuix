@@ -264,6 +264,8 @@ fun RootContent(
                                 )
                             },
                             onBack = { component.onBack() },
+                            // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
+                            dragBackEligible = { it is Child.IllustDetail },
                         ),
                     ) { child ->
                         RootChildContent(
