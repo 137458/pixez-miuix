@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.navigation.animation
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -17,11 +16,6 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimator
 import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
 
-/**
- * MIUIX / HyperOS「卡片展开」二级页面转场的统一时长（毫秒）。
- */
-private const val TRANSITION_DURATION_MILLIS = 340
-
 /** Miuix 默认转场：被覆盖页面朝前缘的视差位移比例（相对于容器宽度）。 */
 internal const val MIUIX_DEFAULT_COVER_PARALLAX_FRACTION = 0.25f
 
@@ -32,13 +26,13 @@ internal const val MIUIX_DEFAULT_COVER_ALPHA_FALLOFF = 0.1f
 internal const val MIUIX_DEFAULT_DIM_MAX_ALPHA = 0.5f
 
 /**
- * Miuix 默认转场的收敛弹簧，参数取自 miuix-nav `NavDriverSpec` 默认值：
- * 临界阻尼（不回弹）+ 低刚度（深度轴 146），单步进/出栈约 500ms 收敛，
- * 与官方导航「既定手感」一致。
+ * Miuix / HyperOS 统一出入栈转场的收敛弹簧：临界阻尼（不回弹），
+ * 收敛至可见阈值约 340ms，与原固定时长转场的观感对齐；
+ * 相比 tween 的优势是转场被打断时能携带当前速度平滑转向（速度连续）。
  */
-internal val MiuixDefaultSlideSpec: FiniteAnimationSpec<Float> = spring(
+internal val MiuixTransitionSpec: FiniteAnimationSpec<Float> = spring(
     dampingRatio = Spring.DampingRatioNoBouncy,
-    stiffness = 146f,
+    stiffness = 450f,
     visibilityThreshold = 0.0025f,
 )
 
@@ -83,7 +77,7 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
  * （见 [isCardExpandLandable]：横向窗口里的竖图卡片等比缩放后盖不住卡片全高）
  * 逐层复刻 Miuix 官方默认转场 `NavTransitions.MiuixDefault`：顶层页面全宽滑入/滑出
  * （滑动中贴合设备屏幕物理圆角裁切），被覆盖页面 25% 视差左移、轻微淡出并叠加线性加深的暗色遮罩，
- * 驱动弹簧取 miuix-nav `NavDriverSpec` 默认参数。
+ * 驱动弹簧为 [MiuixTransitionSpec]。
  *
  * [containerGeometry] 为即时读取源：Decompose 的 `MovableStackAnimation` 按 child 缓存动画器实例，
  * 几何以快照捕获会被过期缓存固化（冷启动首帧 bounds 未回填时创建的动画器一直持有 `Rect.Zero`），
@@ -101,11 +95,7 @@ internal fun cardExpandStackAnimator(
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
 ): StackAnimator {
-    val duration: FiniteAnimationSpec<Float> = tween(
-        durationMillis = TRANSITION_DURATION_MILLIS,
-        easing = HyperOSDecelerateEasing,
-    )
-    return stackAnimator(animationSpec = duration) { factor, direction, content ->
+    return stackAnimator(animationSpec = MiuixTransitionSpec) { factor, direction, content ->
         val containerBounds = containerGeometry().bounds
         val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
         // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
