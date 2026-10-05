@@ -33,8 +33,10 @@ private class TransitionJobRef {
  * 与 Decompose 的差异：
  * 1. **方向翻转连续**：push 转场中收到返回（pop 回转场底层），两层方向互换、
  *    视觉进度换算 1-p 后从当前位置连续反向，不排队、不从头重播（[StackTransitionScheduler.Flip]）。
- * 2. **其余转场中事件**显式排队（[StackTransitionScheduler.Defer]，队列长度 1、新事件覆盖），
- *    转场完成后立即消费，行为与 Decompose 排队一致。
+ * 2. **push 链推进 / 外来重置立即换目标**：新页从边界展开，不再排队等旧转场播完
+ *    （[StackTransitionScheduler.Start] 在转场中到达时同样生效）。
+ * 3. **pop 链显式排队**（[StackTransitionScheduler.Defer]，队列长度 1、新事件覆盖），
+ *    转场完成后立即消费——pop 链中断无法视觉连续，顺序播放是正确行为。
  *
  * 驱动模型：全局单个 [Animatable] 持有视觉进度 p ∈ [0,1]（1=转场起始，0=稳态完成），
  * 各层 factor 由 (direction, p) 换算且两层严格同相（|factor| 互补）：

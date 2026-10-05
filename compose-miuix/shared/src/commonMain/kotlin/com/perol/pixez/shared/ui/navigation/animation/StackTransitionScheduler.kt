@@ -48,8 +48,9 @@ internal sealed interface StackTransitionDecision<out C : Any, out T : Any> {
  *
  * 与 Decompose `AbstractStackAnimation` 的差异（本类存在的目的）：
  * 1. 转场中反向操作不再排队重播，而是 [StackTransitionDecision.Flip] 连续翻转；
- * 2. 排队语义显式化为 [StackTransitionDecision.Defer]，由组合层在转场完成后重新 resolve；
- * 3. 排队长度恒为 1（新事件覆盖旧 pending），与用户最新意图一致。
+ * 2. push 链推进 / 外来重置立即换目标（[StackTransitionDecision.Start]），不再排队等旧转场播完；
+ * 3. 仅 pop 链（返回 stable 链更浅祖先）保持排队（[StackTransitionDecision.Defer]，
+ *    队列长度 1、新事件覆盖）——pop 链中断无法视觉连续，顺序播放是正确行为。
  *
  * pop 判定与 Decompose `getAnimationItems` 一致：
  * 新栈更浅且新 active 在旧栈 backStack 中。
@@ -109,7 +110,19 @@ internal object StackTransitionScheduler {
                 startProgress = 1f - progress.coerceIn(0f, 1f),
             )
         }
-        return StackTransitionDecision.Defer(newStack)
+        if (stableStack.backStack.any { it.key == newStack.active.key }) {
+            // 返回 stable 链的更浅祖先（连环 pop / 重置回退）：pop 链中断无法视觉连续
+            // （被露出页从「左缘视差揭示」翻到「右缘滑出」必然跳位），保持排队顺序播放。
+            return StackTransitionDecision.Defer(newStack)
+        }
+        // push 链推进 / 外来重置：立即换目标。被替换的入场页（原 target.active）先落稳态
+        // （EXIT_BACK 起点 = 全屏），新页从边界展开——用一次可接受的落位换掉排队延迟。
+        return StackTransitionDecision.Start(
+            listOf(
+                StackLayer(targetStack.active, Direction.EXIT_BACK),
+                StackLayer(newStack.active, Direction.ENTER_FRONT),
+            ),
+        )
     }
 
     private fun <C : Any, T : Any> isSameStack(left: ChildStack<C, T>, right: ChildStack<C, T>): Boolean =

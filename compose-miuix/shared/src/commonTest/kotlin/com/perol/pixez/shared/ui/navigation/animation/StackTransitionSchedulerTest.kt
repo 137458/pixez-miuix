@@ -138,7 +138,7 @@ class StackTransitionSchedulerTest {
     }
 
     @Test
-    fun testPushDuringPushTransitionDefers() {
+    fun testPushDuringPushTransitionReplacesImmediately() {
         val decision = StackTransitionScheduler.resolve(
             stableStack = stackOf("main"),
             targetStack = stackOf("main", "detail"),
@@ -146,12 +146,32 @@ class StackTransitionSchedulerTest {
             progress = 0.4f,
             newStack = stackOf("main", "detail", "other"),
         )
-        val defer = decision as StackTransitionDecision.Defer<String, String>
-        assertEquals(listOf("main", "detail", "other"), defer.pendingStack.items.map { it.configuration })
+        val start = decision as StackTransitionDecision.Start<String, String>
+        // push 链推进立即换目标：被替换的入场页（detail）转 EXIT_BACK 先落稳态，新页立即展开。
+        assertEquals("detail", activeKey(start.layers[0]))
+        assertEquals(Direction.EXIT_BACK, start.layers[0].direction)
+        assertEquals("other", activeKey(start.layers[1]))
+        assertEquals(Direction.ENTER_FRONT, start.layers[1].direction)
     }
 
     @Test
-    fun testPushDuringPopTransitionDefers() {
+    fun testForeignResetDuringPushTransitionReplacesImmediately() {
+        val decision = StackTransitionScheduler.resolve(
+            stableStack = stackOf("main"),
+            targetStack = stackOf("main", "detail"),
+            isTransitioning = true,
+            progress = 0.4f,
+            newStack = stackOf("settings"),
+        )
+        val start = decision as StackTransitionDecision.Start<String, String>
+        assertEquals("detail", activeKey(start.layers[0]))
+        assertEquals(Direction.EXIT_BACK, start.layers[0].direction)
+        assertEquals("settings", activeKey(start.layers[1]))
+        assertEquals(Direction.ENTER_FRONT, start.layers[1].direction)
+    }
+
+    @Test
+    fun testPushDuringPopTransitionReplacesImmediately() {
         val decision = StackTransitionScheduler.resolve(
             stableStack = stackOf("root", "main"),
             targetStack = stackOf("root", "main", "detail"),
@@ -159,14 +179,31 @@ class StackTransitionSchedulerTest {
             progress = 0.4f,
             newStack = stackOf("root", "main", "detail", "other"),
         )
-        assertEquals(StackTransitionDecision.Defer<String, String>(stackOf("root", "main", "detail", "other")), decision)
+        val start = decision as StackTransitionDecision.Start<String, String>
+        assertEquals("detail", activeKey(start.layers[0]))
+        assertEquals(Direction.EXIT_BACK, start.layers[0].direction)
+        assertEquals("other", activeKey(start.layers[1]))
+        assertEquals(Direction.ENTER_FRONT, start.layers[1].direction)
+    }
+
+    @Test
+    fun testDoubleBackDuringPushTransitionDefersToPopChain() {
+        val decision = StackTransitionScheduler.resolve(
+            stableStack = stackOf("root", "main"),
+            targetStack = stackOf("root", "main", "detail"),
+            isTransitioning = true,
+            progress = 0.4f,
+            newStack = stackOf("root"),
+        )
+        // 返回到 stable 链的更浅祖先（连环 pop）：pop 链中断无法视觉连续，保持排队顺序播放。
+        assertEquals(StackTransitionDecision.Defer<String, String>(stackOf("root")), decision)
     }
 
     @Test
     fun testPopDuringPopTransitionDefers() {
         val decision = StackTransitionScheduler.resolve(
-            stableStack = stackOf("root", "main"),
-            targetStack = stackOf("root", "main", "detail"),
+            stableStack = stackOf("root", "main", "detail"),
+            targetStack = stackOf("root", "main"),
             isTransitioning = true,
             progress = 0.4f,
             newStack = stackOf("root"),
@@ -175,14 +212,14 @@ class StackTransitionSchedulerTest {
     }
 
     @Test
-    fun testResetToForeignStackDuringTransitionDefers() {
+    fun testAncestorNavigationDuringPopTransitionDefers() {
         val decision = StackTransitionScheduler.resolve(
-            stableStack = stackOf("main"),
-            targetStack = stackOf("main", "detail"),
+            stableStack = stackOf("a", "b", "c"),
+            targetStack = stackOf("a", "b"),
             isTransitioning = true,
             progress = 0.4f,
-            newStack = stackOf("settings"),
+            newStack = stackOf("a"),
         )
-        assertEquals(StackTransitionDecision.Defer<String, String>(stackOf("settings")), decision)
+        assertEquals(StackTransitionDecision.Defer<String, String>(stackOf("a")), decision)
     }
 }
