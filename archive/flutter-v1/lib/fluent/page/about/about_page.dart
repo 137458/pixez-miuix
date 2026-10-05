@@ -326,7 +326,7 @@ class _AboutPageState extends State<AboutPage> {
           ListTile(
             leading: Icon(FluentIcons.favorite_star),
             title: Text(I18n.of(context).thanks),
-            subtitle: Text('感谢帮助我测试的弹幕委员会群友们\n感谢pixiv cat站主提供的图床'),
+            subtitle: Text('感谢帮助我测试的弹幕委员会群友们\n感谢 pixiv cat 站主提供的图床'),
             onPressed: () {
               Leader.push(
                 context,

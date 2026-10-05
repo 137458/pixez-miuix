@@ -239,6 +239,7 @@ class _CommentPageState extends State<CommentPage> {
                                               .profileImageUrls
                                               .medium,
                                           id: comments[index].user!.id!,
+                                          size: Size(36, 36),
                                         ),
                                       ),
                                       Expanded(
@@ -257,6 +258,7 @@ class _CommentPageState extends State<CommentPage> {
                                                   comment.user!.name,
                                                   maxLines: 1,
                                                   style: TextStyle(
+                                                      fontSize: 12,
                                                       color: Theme.of(context)
                                                           .colorScheme
                                                           .secondary,
@@ -318,7 +320,7 @@ class _CommentPageState extends State<CommentPage> {
                                                     .toShortTime(),
                                                 style: Theme.of(context)
                                                     .textTheme
-                                                    .bodySmall,
+                                                    .bodySmall?.copyWith(color: Theme.of(context).colorScheme.secondary),
                                               ),
                                             )
                                           ],
@@ -342,7 +344,7 @@ class _CommentPageState extends State<CommentPage> {
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0),
-                                  child: Divider(),
+                                  child: Divider(thickness: 0.5),
                                 );
                               },
                             )
@@ -363,6 +365,7 @@ class _CommentPageState extends State<CommentPage> {
                 child: Column(
                   children: [
                     Container(
+                      color: Theme.of(context).colorScheme.surfaceContainer, // TODO: edge to edge
                       child: Row(
                         children: <Widget>[
                           IconButton(
@@ -409,10 +412,10 @@ class _CommentPageState extends State<CommentPage> {
                                   },
                                   decoration: InputDecoration(
                                       labelText:
-                                          "${I18n.of(context).reply_to} ${parentCommentName == null ? "illust" : parentCommentName} (${_commentText.length}/140)",
+                                          "${I18n.of(context).reply_to} ${parentCommentName == null ? "illust" : parentCommentName}",
                                       suffixIcon: IconButton(
                                           icon: Icon(
-                                            Icons.reply,
+                                            Icons.send,
                                           ),
                                           onPressed: () async {
                                             final client = apiClient;
@@ -496,7 +499,7 @@ class _CommentPageState extends State<CommentPage> {
             },
             child: Text(
               widget.isReplay ? "" : I18n.of(context).reply,
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontSize: 12),
             )),
         if (!widget.isReplay)
           Padding(
@@ -538,7 +541,7 @@ class _CommentPageState extends State<CommentPage> {
                         );
                       });
                 },
-                child: Icon(Icons.more_horiz)),
+                child: Icon(Icons.more_horiz, color: Theme.of(context).colorScheme.secondary)),
           )
       ],
     );
