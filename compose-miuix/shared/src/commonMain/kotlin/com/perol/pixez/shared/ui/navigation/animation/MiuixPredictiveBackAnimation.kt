@@ -175,18 +175,20 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
                 }
             }
 
-        // 应用内拖拽返回：挂在最外层 Box（手势会话中 handler.items 变双层，
-        // 若挂在内层会被组合移除而中断手势事件流）。激活判定只在按下阶段进行。
-        val dragBackActive = dragBackEligible != null &&
+        // 应用内拖拽返回：修饰符在整个页面存续期保持挂载——手势会话中 handler.items 变双层，
+        // 若按 items 数量决定挂载，重组会卸载修饰符并取消 awaitEachGesture 事件流，
+        // 松手的 commit/cancel 回调随之丢失，双层结构卡死。激活时机改由 isEligible
+        // （稳态单页，同 isGestureEnabled 判定）在按下阶段检查；与系统手势流的互斥由
+        // handler 状态机的 isDragSession 门闩保证。
+        val dragBackMounted = dragBackEligible != null &&
             rememberDragBackGestureEnabled() &&
-            handler.items.size == 1 &&
-            dragBackEligible.invoke(handler.items.single().stack.active.instance)
+            dragBackEligible.invoke(handler.items.last().stack.active.instance)
 
         Box(
-            modifier = if (dragBackActive) {
+            modifier = if (dragBackMounted) {
                 modifier.then(
                     Modifier.miuixDragBackGesture(
-                        isEligible = { true },
+                        isEligible = { activeKeys.size == 1 },
                         onStart = handler::onDragStarted,
                         onProgress = handler::onDragProgressed,
                         onCommit = handler::onDragCommit,
@@ -337,6 +339,12 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
      * 系统手势流用弹簧跟随（OEM 进度稀疏时平滑追赶），拖拽会话用 snap 1:1 直驱。
      */
     private fun progressed(backEvent: BackEvent, snapToFollow: Boolean) {
+        fun launchFollow(current: PredictiveBackAnimatable) {
+            scope.launch {
+                val snapped = current as? MiuixSnapBackAnimatable
+                if (snapToFollow && snapped != null) snapped.snap(backEvent) else current.animate(backEvent)
+            }
+        }
         val initial = initialBackEvent
         if (initial != null && animatable == null) {
             if (!isGestureEnabled()) {
@@ -357,19 +365,12 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
                     MiuixPredictiveBackGestureItem(stack = stack, key = key, modifier = created::exitModifier),
                 )
             NavTransitionLog.d("gesture") { "ENGAGE snap=$snapToFollow handlerKey=$key exit=${stack.active.configuration} enter=${stack.backStack.last().configuration}" }
-            scope.launch {
-                val snapped = created as? MiuixSnapBackAnimatable
-                if (snapToFollow && snapped != null) snapped.snap(backEvent) else created.animate(backEvent)
-            }
+            launchFollow(created)
         } else {
             // 取消动画进行中手势被重新推进：终止回弹，复用同一动画器继续贴合手指。
             cancelAnimationJob?.cancel()
             cancelAnimationJob = null
-            val current = animatable
-            scope.launch {
-                val snapped = current as? MiuixSnapBackAnimatable
-                if (snapToFollow && snapped != null) snapped.snap(backEvent) else current?.animate(backEvent)
-            }
+            animatable?.let(::launchFollow)
         }
     }
 

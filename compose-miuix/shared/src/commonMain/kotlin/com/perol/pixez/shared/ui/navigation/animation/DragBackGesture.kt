@@ -5,7 +5,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -61,7 +63,11 @@ internal fun Modifier.miuixDragBackGesture(
     onCancel: () -> Unit,
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
+        // 全程 Initial pass：父层先于子层（pager/列表）看到事件。激活后消费事件即可
+        // 拦截子层手势（Main pass 的 requireUnconsumed 检测会失败）；激活前不消费，
+        // 列表滚动与 pager 翻页不受任何影响。若走 Main pass，父层晚于子层处理，
+        // 无法抢占已开始的 pager 翻页。
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         if (!isEligible()) return@awaitEachGesture
         val edgeZonePx = DRAG_BACK_EDGE_ZONE.toPx()
         if (down.position.x > edgeZonePx) return@awaitEachGesture
@@ -70,7 +76,7 @@ internal fun Modifier.miuixDragBackGesture(
         tracker.addPosition(down.uptimeMillis, down.position)
         var activated = false
         while (true) {
-            val event = awaitPointerEvent()
+            val event = awaitPointerEvent(PointerEventPass.Initial)
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             if (!change.pressed) {
                 if (activated) {
@@ -108,13 +114,13 @@ internal fun Modifier.miuixDragBackGesture(
     }
 }
 
-private fun isVerticalIntent(downPosition: androidx.compose.ui.geometry.Offset, currentPosition: androidx.compose.ui.geometry.Offset, touchSlop: Float): Boolean {
+private fun isVerticalIntent(downPosition: Offset, currentPosition: Offset, touchSlop: Float): Boolean {
     val dx = abs(currentPosition.x - downPosition.x)
     val dy = abs(currentPosition.y - downPosition.y)
     return dy > dx && dy > touchSlop
 }
 
-private fun draggedProgress(downPosition: androidx.compose.ui.geometry.Offset, currentPosition: androidx.compose.ui.geometry.Offset, scope: AwaitPointerEventScope): Float {
+private fun draggedProgress(downPosition: Offset, currentPosition: Offset, scope: AwaitPointerEventScope): Float {
     val width = scope.size.width.toFloat().takeIf { it > 0f } ?: 1f
     return ((currentPosition.x - downPosition.x) / width).coerceIn(0f, 1f)
 }
