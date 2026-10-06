@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.network
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.model.OAuthProfileImageUrls

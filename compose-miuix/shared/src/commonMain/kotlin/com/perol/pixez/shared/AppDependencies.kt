@@ -2,6 +2,7 @@ package com.perol.pixez.shared
 
 import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.DriverFactory
+import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
 import com.perol.pixez.shared.data.local.novelpersist.NovelPersistDatabase
@@ -21,7 +22,6 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
-import com.perol.pixez.shared.network.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.IllustSaver
 import io.ktor.client.HttpClient
