@@ -80,6 +80,7 @@ internal fun ErrorPlaceholder(
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val errorKey = PixivApiErrorFormatter.resolve(error)
     Box(
         modifier = modifier.fillMaxSize().padding(24.dp),
         contentAlignment = Alignment.Center,
@@ -94,7 +95,12 @@ internal fun ErrorPlaceholder(
                 tint = MiuixTheme.colorScheme.error,
             )
             Text(
-                text = strings.loadFailed,
+                text = when (errorKey) {
+                    PixivApiErrorKey.FORBIDDEN -> strings.loadFailedForbidden
+                    PixivApiErrorKey.RATE_LIMITED -> strings.loadFailedRateLimited
+                    PixivApiErrorKey.NOT_FOUND -> strings.loadFailedNotFound
+                    null -> strings.loadFailed
+                },
                 style = MiuixTheme.textStyles.body1,
                 color = MiuixTheme.colorScheme.onSurface,
             )
