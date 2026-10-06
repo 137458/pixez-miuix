@@ -9,6 +9,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlin.concurrent.Volatile
 
+/** 公告板数据源：GitHub Raw 主源 + jsdelivr CDN 双镜像，按序重试。 */
+private val BOARD_URLS = listOf(
+    "https://raw.githubusercontent.com/137458/pixez-miuix/refs/heads/master/.github/board/android.json",
+    "https://fastly.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
+    "https://cdn.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
+)
+
 /**
  * 公告板仓库：从原 Flutter 项目托管在 GitHub Raw / CDN 镜像上的 JSON 拉取公告列表。
  *
@@ -33,7 +40,7 @@ class BoardRepository(
     suspend fun loadBoardList(): List<BoardInfo> = networkCall("加载公告板失败") {
         val cached = memoryCache
         var lastError: Throwable? = null
-        for (url in com.perol.pixez.shared.ui.AppConstants.Urls.BOARD_URLS) {
+        for (url in BOARD_URLS) {
             try {
                 val text = client.get(url).bodyAsText()
                 val list = json.decodeFromString<List<BoardInfo>>(text)

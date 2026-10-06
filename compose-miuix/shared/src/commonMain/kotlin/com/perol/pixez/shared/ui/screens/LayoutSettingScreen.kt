@@ -299,7 +299,7 @@ private fun AdapterWidthSlider(
                 onValueChange = { sliderValue = it },
                 title = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
                 valueText = "${sliderValue.toInt()} dp",
-                valueRange = AppConstants.CrossAdapter.WIDTH_MIN.toFloat()..AppConstants.CrossAdapter.WIDTH_MAX.toFloat(),
+                valueRange = SettingsRepository.CROSS_ADAPTER_WIDTH_MIN.toFloat()..SettingsRepository.CROSS_ADAPTER_WIDTH_MAX.toFloat(),
                 onValueChangeFinished = {
                     onWidthChangeFinished(sliderValue.toInt())
                 },

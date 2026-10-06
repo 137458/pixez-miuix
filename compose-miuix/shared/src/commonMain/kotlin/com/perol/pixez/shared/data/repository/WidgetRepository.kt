@@ -9,9 +9,11 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
-import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
+
+/** 小组件缓存有效期（毫秒），超时后视为过期触发重新拉取（默认 24 小时）。 */
+private const val CACHE_EXPIRY_MILLIS = 24L * 60 * 60 * 1000
 
 /**
  * 桌面小组件专用的数据加载与持久化仓库。
@@ -76,11 +78,11 @@ class WidgetRepository(
     }
 
     /**
-     * 判断缓存行是否已超过有效期（[AppConstants.Widget.CACHE_EXPIRY_MILLIS]，默认 24 小时）。
+     * 判断缓存行是否已超过有效期（[CACHE_EXPIRY_MILLIS]，默认 24 小时）。
      */
     private fun isCacheExpired(ctime: Long): Boolean {
         val now = Clock.System.now().toEpochMilliseconds()
-        return now - ctime >= AppConstants.Widget.CACHE_EXPIRY_MILLIS
+        return now - ctime >= CACHE_EXPIRY_MILLIS
     }
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {

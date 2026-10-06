@@ -252,5 +252,5 @@ private fun insertTextAtSelection(
 /**
  * 默认分享格式模板，与原 Flutter 版保持一致。
  */
-private const val DEFAULT_COPY_TEXT_FORMAT = AppConstants.Share.DEFAULT_COPY_TEXT_FORMAT
+private const val DEFAULT_COPY_TEXT_FORMAT = SettingsRepository.DEFAULT_COPY_TEXT_FORMAT
 

@@ -69,7 +69,6 @@ object AppConstants {
      * 分享与复制信息模板
      */
     object Share {
-        const val DEFAULT_COPY_TEXT_FORMAT = "title:{title}\npainter:{user_name}\nillust id:{illust_id}"
         const val ARTWORK_URL_PLACEHOLDER = "https://www.pixiv.net/artworks/{illust_id}"
         const val USER_URL_PLACEHOLDER = "https://www.pixiv.net/users/{user_id}"
     }
@@ -98,11 +97,6 @@ object AppConstants {
         const val AUTHOR_ROSEMARY = "https://github.com/137458"
         const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
         const val FEEDBACK_MAILTO = "mailto:PxezFeedBack@outlook.com"
-        val BOARD_URLS = listOf(
-            "https://raw.githubusercontent.com/137458/pixez-miuix/refs/heads/master/.github/board/android.json",
-            "https://fastly.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
-            "https://cdn.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
-        )
     }
 
     /**
@@ -162,8 +156,6 @@ object AppConstants {
      */
     object CrossAdapter {
         const val WIDTH_DEFAULT = 180
-        const val WIDTH_MIN = 50
-        const val WIDTH_MAX = 2160
         const val PREVIEW_ITEM_COUNT = 20
     }
 
@@ -231,14 +223,6 @@ object AppConstants {
 
         /** 判断该作品类型是否为 Ugoira 动图。 */
         fun isUgoira(type: String): Boolean = type == UGOIRA
-    }
-
-    /**
-     * 桌面小组件缓存策略。
-     */
-    object Widget {
-        /** 小组件缓存有效期（毫秒），超时后视为过期触发重新拉取（默认 24 小时）。 */
-        const val CACHE_EXPIRY_MILLIS = 24L * 60 * 60 * 1000
     }
 }
 

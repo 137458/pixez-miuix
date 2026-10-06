@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
@@ -86,7 +87,7 @@ fun IllustStaggeredGrid(
                 val adapt = settings?.hCrossAdapt ?: true
                 if (adapt) {
                     val minWidth = (settings?.hCrossAdapterWidth ?: defaultCardWidth).coerceIn(
-                        AppConstants.CrossAdapter.WIDTH_MIN,
+                        SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
                         1000,
                     )
                     StaggeredGridCells.Adaptive(minWidth.dp)
@@ -98,7 +99,7 @@ fun IllustStaggeredGrid(
                 val adapt = settings?.crossAdapt ?: true
                 if (adapt) {
                     val minWidth = (settings?.crossAdapterWidth ?: defaultCardWidth).coerceIn(
-                        AppConstants.CrossAdapter.WIDTH_MIN,
+                        SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
                         1000,
                     )
                     StaggeredGridCells.Adaptive(minWidth.dp)
