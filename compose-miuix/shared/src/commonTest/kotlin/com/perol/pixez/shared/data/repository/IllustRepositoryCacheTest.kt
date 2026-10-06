@@ -54,8 +54,7 @@ class IllustRepositoryCacheTest {
         assertNull(repo.activeRecommendedNextUrl)
 
         val list = listOf(createSampleIllust(101L), createSampleIllust(102L))
-        repo.activeRecommendedIllusts = list
-        repo.activeRecommendedNextUrl = "https://app-api.pixiv.net/v1/illust/recommended?max_bookmark_id=102"
+        repo.updateRecommendedFeed(list, "https://app-api.pixiv.net/v1/illust/recommended?max_bookmark_id=102")
 
         assertEquals(2, repo.activeRecommendedIllusts?.size)
         assertEquals(101L, repo.activeRecommendedIllusts?.first()?.id)
@@ -63,16 +62,51 @@ class IllustRepositoryCacheTest {
     }
 
     @Test
+    fun testRecommendedFeedUpdateOverwrites() {
+        val repo = createRepository()
+        repo.updateRecommendedFeed(listOf(createSampleIllust(101L)), "firstNext")
+
+        // 边界：二次写入覆盖旧值，且 nextUrl 允许为 null（最后一页）
+        repo.updateRecommendedFeed(listOf(createSampleIllust(202L)), null)
+
+        assertEquals(1, repo.activeRecommendedIllusts?.size)
+        assertEquals(202L, repo.activeRecommendedIllusts?.first()?.id)
+        assertNull(repo.activeRecommendedNextUrl)
+    }
+
+    @Test
+    fun testRankingPageCachePersistence() {
+        val repo = createRepository()
+        assertNull(repo.getCachedRankingPage("day_"))
+
+        val list = listOf(createSampleIllust(301L), createSampleIllust(302L))
+        repo.updateRankingPage("day_", list, "rankingNext")
+
+        val cached = repo.getCachedRankingPage("day_")
+        assertEquals(2, cached?.first?.size)
+        assertEquals(301L, cached?.first?.first()?.id)
+        assertEquals("rankingNext", cached?.second)
+        // 未写入的 key 读回为 null
+        assertNull(repo.getCachedRankingPage("week_"))
+
+        // 边界：同 key 二次写入覆盖，且 nextUrl 允许为 null
+        repo.updateRankingPage("day_", listOf(createSampleIllust(303L)), null)
+        val overwritten = repo.getCachedRankingPage("day_")
+        assertEquals(1, overwritten?.first?.size)
+        assertEquals(303L, overwritten?.first?.first()?.id)
+        assertNull(overwritten?.second)
+    }
+
+    @Test
     fun testClearActiveCache() {
         val repo = createRepository()
-        repo.activeRecommendedIllusts = listOf(createSampleIllust(201L))
-        repo.activeRecommendedNextUrl = "nextUrl"
-        repo.activeRankingIllusts["day"] = listOf(createSampleIllust(301L)) to "rankingNext"
+        repo.updateRecommendedFeed(listOf(createSampleIllust(201L)), "nextUrl")
+        repo.updateRankingPage("day", listOf(createSampleIllust(301L)), "rankingNext")
 
         repo.clearMemoryCache()
 
         assertNull(repo.activeRecommendedIllusts)
         assertNull(repo.activeRecommendedNextUrl)
-        assertEquals(0, repo.activeRankingIllusts.size)
+        assertNull(repo.getCachedRankingPage("day"))
     }
 }

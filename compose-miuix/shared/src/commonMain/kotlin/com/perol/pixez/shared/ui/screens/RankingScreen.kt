@@ -95,7 +95,7 @@ fun RankingScreen(
         )
 
     val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
-    val cachedRanking = repository.activeRankingIllusts[rankingCacheKey]
+    val cachedRanking = repository.getCachedRankingPage(rankingCacheKey)
     var illustsState by remember(selectedMode, selectedDate) { mutableStateOf<List<Illust>?>(cachedRanking?.first) }
     var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(cachedRanking?.second) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
@@ -109,7 +109,7 @@ fun RankingScreen(
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
         val generation = ++requestGeneration
         val force = isManualRefreshing
-        val currentCached = repository.activeRankingIllusts[rankingCacheKey]
+        val currentCached = repository.getCachedRankingPage(rankingCacheKey)
         if (!force && illustsState != null && initialError == null) {
             return@LaunchedEffect
         }
@@ -130,7 +130,7 @@ fun RankingScreen(
                 val filtered = filterBanned(response.illusts)
                 illustsState = filtered
                 nextUrl = response.nextUrl
-                repository.activeRankingIllusts[rankingCacheKey] = filtered to response.nextUrl
+                repository.updateRankingPage(rankingCacheKey, filtered, response.nextUrl)
                 initialError = null
                 loadMoreError = null
                 if (force && gridState.firstVisibleItemIndex > 0) {
@@ -165,7 +165,7 @@ fun RankingScreen(
                     val combined = (illustsState.orEmpty()).appendDistinct(filtered)
                     illustsState = combined
                     nextUrl = response.nextUrl
-                    repository.activeRankingIllusts[rankingCacheKey] = combined to response.nextUrl
+                    repository.updateRankingPage(rankingCacheKey, combined, response.nextUrl)
                 }
             }.onFailure { error ->
                 if (generation == requestGeneration) {

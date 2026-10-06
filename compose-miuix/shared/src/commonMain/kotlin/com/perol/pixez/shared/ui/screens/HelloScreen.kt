@@ -150,8 +150,7 @@ fun HelloScreen(
             val filtered = filterBanned(rawIllusts)
             illustsState = filtered
             nextUrl = initialNextUrl
-            repository.activeRecommendedIllusts = filtered
-            repository.activeRecommendedNextUrl = initialNextUrl
+            repository.updateRecommendedFeed(filtered, initialNextUrl)
             initialError = null
             loadMoreError = null
             if (force && gridState.firstVisibleItemIndex > 0) {
@@ -190,8 +189,7 @@ fun HelloScreen(
                 val combined = (illustsState.orEmpty()).appendDistinct(filtered)
                 illustsState = combined
                 nextUrl = response.nextUrl
-                repository.activeRecommendedIllusts = combined
-                repository.activeRecommendedNextUrl = response.nextUrl
+                repository.updateRecommendedFeed(combined, response.nextUrl)
             }.onFailure { error ->
                 loadMoreError = error
             }

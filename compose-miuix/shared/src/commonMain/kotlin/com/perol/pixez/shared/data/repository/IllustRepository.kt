@@ -28,6 +28,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
+import kotlin.concurrent.Volatile
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -40,20 +42,56 @@ class IllustRepository(
     private val downloadClient: HttpClient = webClient,
     private val settingsRepository: SettingsRepository? = null,
 ) {
+    @Volatile
     private var cachedRecommendedResponse: Recommend? = null
+
+    @Volatile
     private var cachedWalkthroughResponse: Walkthrough? = null
+
     private val illustsCache = ThreadSafeLruCache<Long, Illust>(500)
 
-    var activeRecommendedIllusts: List<Illust>? = null
-    var activeRecommendedNextUrl: String? = null
-    val activeRankingIllusts = mutableMapOf<String, Pair<List<Illust>, String?>>()
+    /** 跨页恢复的视图数据：UI 过滤后的作品列表与下一页 URL。 */
+    private data class ActiveFeed(
+        val illusts: List<Illust>,
+        val nextUrl: String?,
+    )
+
+    private val activeRecommendedFeed = MutableStateFlow<ActiveFeed?>(null)
+    private val activeRankingPages = MutableStateFlow<Map<String, ActiveFeed>>(emptyMap())
+
+    /** 推荐页跨页恢复列表快照（UI 过滤后），未记录时为 null。 */
+    val activeRecommendedIllusts: List<Illust>?
+        get() = activeRecommendedFeed.value?.illusts
+
+    /** 推荐页跨页恢复下一页 URL 快照，未记录时为 null。 */
+    val activeRecommendedNextUrl: String?
+        get() = activeRecommendedFeed.value?.nextUrl
+
+    /**
+     * 记录推荐页跨页恢复数据（UI 过滤后的列表与下一页 URL）。
+     */
+    fun updateRecommendedFeed(filtered: List<Illust>, nextUrl: String?) {
+        activeRecommendedFeed.value = ActiveFeed(filtered, nextUrl)
+    }
+
+    /**
+     * 获取指定 key（mode_date）的排行页跨页恢复快照，未记录时为 null。
+     */
+    fun getCachedRankingPage(key: String): Pair<List<Illust>, String?>? =
+        activeRankingPages.value[key]?.let { it.illusts to it.nextUrl }
+
+    /**
+     * 记录指定 key（mode_date）的排行页跨页恢复数据。
+     */
+    fun updateRankingPage(key: String, list: List<Illust>, nextUrl: String?) {
+        activeRankingPages.value = activeRankingPages.value + (key to ActiveFeed(list, nextUrl))
+    }
 
     fun clearMemoryCache() {
         cachedRecommendedResponse = null
         cachedWalkthroughResponse = null
-        activeRecommendedIllusts = null
-        activeRecommendedNextUrl = null
-        activeRankingIllusts.clear()
+        activeRecommendedFeed.value = null
+        activeRankingPages.value = emptyMap()
     }
 
     /**
