@@ -59,6 +59,11 @@ class IllustRepository(
     private val activeRecommendedFeed = MutableStateFlow<ActiveFeed?>(null)
     private val activeRankingPages = MutableStateFlow<Map<String, ActiveFeed>>(emptyMap())
 
+    /** 排行跨页缓存的 key 容量上限，超出按 LRU 淘汰最久未用 key，防内存无界增长。 */
+    private companion object {
+        const val RANKING_CACHE_MAX_KEYS = 8
+    }
+
     /** 推荐页跨页恢复列表快照（UI 过滤后），未记录时为 null。 */
     val activeRecommendedIllusts: List<Illust>?
         get() = activeRecommendedFeed.value?.illusts
@@ -81,10 +86,27 @@ class IllustRepository(
         activeRankingPages.value[key]?.let { it.illusts to it.nextUrl }
 
     /**
-     * 记录指定 key（mode_date）的排行页跨页恢复数据。
+     * 记录指定 key（mode_date）的排行页跨页恢复数据；
+     * 同 key 重写视为最近使用，缓存超过 [RANKING_CACHE_MAX_KEYS] 个 key 时淘汰最久未用的 key。
      */
     fun updateRankingPage(key: String, list: List<Illust>, nextUrl: String?) {
-        activeRankingPages.value = activeRankingPages.value + (key to ActiveFeed(list, nextUrl))
+        activeRankingPages.value =
+            activeRankingPages.value.putRankingEntry(key, ActiveFeed(list, nextUrl))
+    }
+
+    /** 以写入序 LRU 语义返回插入后的新快照：重复 key 提升到最新，超限淘汰最旧 key。 */
+    private fun Map<String, ActiveFeed>.putRankingEntry(key: String, feed: ActiveFeed): Map<String, ActiveFeed> {
+        val next = LinkedHashMap<String, ActiveFeed>(size)
+        for ((existingKey, value) in this) {
+            if (existingKey != key) {
+                next[existingKey] = value
+            }
+        }
+        next[key] = feed
+        while (next.size > RANKING_CACHE_MAX_KEYS) {
+            next.remove(next.keys.first())
+        }
+        return next
     }
 
     fun clearMemoryCache() {

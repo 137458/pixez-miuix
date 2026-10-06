@@ -98,6 +98,32 @@ class IllustRepositoryCacheTest {
     }
 
     @Test
+    fun testRankingCacheLruEviction() {
+        val repo = createRepository()
+
+        // 常规：写入 9 个不同 key，超过容量上限（8）后最久未用的 key_0 被淘汰
+        repeat(9) { index ->
+            repo.updateRankingPage("key_$index", listOf(createSampleIllust(index.toLong() + 1)), null)
+        }
+        assertNull(repo.getCachedRankingPage("key_0"), "超出容量后最久未用 key 应被淘汰")
+        for (index in 1..8) {
+            assertEquals(1, repo.getCachedRankingPage("key_$index")?.first?.size, "key_$index 应仍在缓存")
+        }
+
+        // 边界：同 key 重写视为最近使用，被提升到最新，不再是最早淘汰对象
+        repo.updateRankingPage("key_1", listOf(createSampleIllust(999L)), "refreshed")
+        repo.updateRankingPage("key_9", listOf(createSampleIllust(1000L)), null)
+
+        val promoted = repo.getCachedRankingPage("key_1")
+        assertEquals(1, promoted?.first?.size, "重写后的 key_1 应保留")
+        assertEquals(999L, promoted?.first?.first()?.id)
+        assertEquals("refreshed", promoted?.second)
+        assertNull(repo.getCachedRankingPage("key_2"), "key_1 被提升后，key_2 成为最久未用，应被新写入淘汰")
+        assertEquals(1, repo.getCachedRankingPage("key_3")?.first?.size, "key_3 应仍在缓存")
+        assertEquals(1, repo.getCachedRankingPage("key_9")?.first?.size, "最近写入的 key_9 应仍在缓存")
+    }
+
+    @Test
     fun testClearActiveCache() {
         val repo = createRepository()
         repo.updateRecommendedFeed(listOf(createSampleIllust(201L)), "nextUrl")
