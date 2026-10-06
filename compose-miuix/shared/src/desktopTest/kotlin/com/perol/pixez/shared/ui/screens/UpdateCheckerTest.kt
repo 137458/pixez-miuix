@@ -1,6 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.MarkdownBlock
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration

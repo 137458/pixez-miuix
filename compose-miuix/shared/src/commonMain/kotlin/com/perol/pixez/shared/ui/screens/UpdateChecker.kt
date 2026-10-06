@@ -1,7 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient

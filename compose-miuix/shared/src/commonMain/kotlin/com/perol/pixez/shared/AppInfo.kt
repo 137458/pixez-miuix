@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui
+package com.perol.pixez.shared
 
 /**
  * 应用级静态信息，避免版本号、名称等散落在多个屏幕中。
@@ -22,4 +22,3 @@ object AppInfo {
         - 修复了宽屏（横屏平板 / 桌面宽窗口）下返回转场路径不一致与居中大图被裁出画面的问题，各尺寸设备统一卡片展开/收回转场，落点精准归位源卡片。
     """.trimIndent()
 }
-

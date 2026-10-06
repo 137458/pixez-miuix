@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType

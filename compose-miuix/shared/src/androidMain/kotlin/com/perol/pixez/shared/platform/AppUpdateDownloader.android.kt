@@ -2,7 +2,7 @@ package com.perol.pixez.shared.platform
 
 import android.os.Build
 import com.perol.pixez.shared.network.TrustedUrlPolicy
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.AppUpdateDownloader
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.i18n.formatFileSize

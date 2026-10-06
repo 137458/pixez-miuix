@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.CONTRIBUTORS
 import com.perol.pixez.shared.data.model.Contributor
 import com.perol.pixez.shared.ui.utils.openSafeUrl
-import com.perol.pixez.shared.ui.AppInfo
+import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
