@@ -40,7 +40,7 @@ class IllustRepository(
     private val apiClient: HttpClient,
     private val webClient: HttpClient = HttpClient(),
     private val downloadClient: HttpClient = webClient,
-    private val settingsRepository: SettingsRepository? = null,
+    private val settingsRepository: SettingsRepository,
 ) {
     @Volatile
     private var cachedRecommendedResponse: Recommend? = null
@@ -464,7 +464,7 @@ class IllustRepository(
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            val mirrorHost = (settingsRepository ?: com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository)?.pictureSource
+            val mirrorHost = settingsRepository.pictureSource
             val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
             val verifiedUrl = TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
             downloadClient.get(verifiedUrl) {

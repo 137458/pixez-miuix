@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -52,6 +53,7 @@ class IllustRepositoryTest {
             apiClient = client,
             webClient = downloadClient,
             downloadClient = downloadClient,
+            settingsRepository = SettingsRepository(InMemorySettings()),
         )
     }
 

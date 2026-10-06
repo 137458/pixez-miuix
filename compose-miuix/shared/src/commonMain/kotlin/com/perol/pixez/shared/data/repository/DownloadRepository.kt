@@ -53,7 +53,7 @@ class DownloadRepository(
     private val saver: IllustSaver = IllustSaver(),
     private val historyRepository: DownloadHistoryRepository? = null,
     private val notifier: DownloadNotifier = DownloadNotifier(),
-    private val settingsRepository: SettingsRepository? = null,
+    private val settingsRepository: SettingsRepository,
 ) {
     // P-5：任务状态变更事件（下载中/成功/失败写入历史后发出）。
     // UI 层收集后触发列表刷新，替代秒级全表轮询；tryEmit 无订阅者时丢弃（刷新非关键路径）。
@@ -156,7 +156,7 @@ class DownloadRepository(
     suspend fun downloadAllPages(
         illust: Illust,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null,
-        maxConcurrency: Int = settingsRepository?.maxRunningTask ?: 3,
+        maxConcurrency: Int = settingsRepository.maxRunningTask,
     ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
         if (total <= 0) return@coroutineScope emptyList()
@@ -267,7 +267,7 @@ class DownloadRepository(
      * 流式下载图片至应用缓存临时文件，配合 64KB 缓冲区边拉取边落盘，避免大图或动图占用 JVM 堆内存。
      */
     private suspend fun downloadToTempFile(url: String, tempFileName: String): Path {
-        val mirrorHost = settingsRepository?.pictureSource
+        val mirrorHost = settingsRepository.pictureSource
         val mappedUrl = url.mapToPictureSource(mirrorHost)
         val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
         val cacheDir = getAppCacheDirectory()
@@ -321,7 +321,7 @@ class DownloadRepository(
      */
     fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
-        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: DEFAULT_NAME_FORMAT
+        val template = settingsRepository.format.trim().takeUnless { it.isBlank() } ?: DEFAULT_NAME_FORMAT
         var name = template
             .replace("{illust_id}", illust.id.toString())
             .replace("{title}", FileNamePolicy.sanitizeSegment(illust.title))
@@ -348,17 +348,17 @@ class DownloadRepository(
         sanityLevel: Int?,
         xRestrict: Int = 0,
     ): Pair<String?, String?> {
-        val authorSegment = if (settingsRepository?.singleFolder == false && userName.isNotBlank() && userId > 0) {
+        val authorSegment = if (settingsRepository.singleFolder == false && userName.isNotBlank() && userId > 0) {
             "${FileNamePolicy.sanitizeSegment(userName)}_${userId}"
         } else null
-        val isNsfw = settingsRepository?.overSanityLevelFolder == true &&
+        val isNsfw = settingsRepository.overSanityLevelFolder == true &&
             ((sanityLevel ?: 0) > 4 || xRestrict > 0)
         val subDir = when {
             isNsfw && authorSegment != null -> "NSFW_${authorSegment}"
             isNsfw -> "NSFW"
             else -> authorSegment
         }
-        val customBasePath = settingsRepository?.storePath?.takeUnless { it.isBlank() }
+        val customBasePath = settingsRepository.storePath?.takeUnless { it.isBlank() }
         return subDir to customBasePath
     }
 

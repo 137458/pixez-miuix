@@ -93,7 +93,7 @@ class WidgetRepository(
             languageProvider = { "zh-CN" },
         )
         return try {
-            val illustRepo = IllustRepository(pixivHttpClient.apiClient)
+            val illustRepo = IllustRepository(pixivHttpClient.apiClient, settingsRepository = settingsRepository)
             try {
                 when (type) {
                     "day", "rank" -> illustRepo.getRanking(mode = "day")
