@@ -5,13 +5,15 @@ import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.platform.PlatformTokenCipher
-import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+
+/** 旧 Flutter 表沿用的无密码占位值，保持非空约束兼容。 */
+private const val DEFAULT_PASSWORD_PLACEHOLDER = "no more"
 
 /**
  * 当前登录账号与 Token 的持久化存储。
@@ -31,7 +33,7 @@ interface AuthTokenStorage {
 
     suspend fun saveAccount(
         account: AccountResponse,
-        password: String = AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER,
+        password: String = DEFAULT_PASSWORD_PLACEHOLDER,
         deviceToken: String = "",
     )
 
@@ -301,14 +303,14 @@ class SqlDelightAuthTokenStorage(
     private fun boolToLong(value: Boolean): Long = if (value) 1L else 0L
 
     private fun encryptPassword(password: String): String =
-        if (password.isNotBlank() && password != AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER) {
+        if (password.isNotBlank() && password != DEFAULT_PASSWORD_PLACEHOLDER) {
             PlatformTokenCipher.encrypt(password)
         } else {
             password
         }
 
     private fun decryptPassword(password: String): String =
-        if (password.isNotBlank() && password != AppConstants.Auth.DEFAULT_PASSWORD_PLACEHOLDER) {
+        if (password.isNotBlank() && password != DEFAULT_PASSWORD_PLACEHOLDER) {
             PlatformTokenCipher.decrypt(password)
         } else {
             password

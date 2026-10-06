@@ -5,11 +5,11 @@ import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.platform.mapToPictureSource
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
@@ -38,6 +38,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+
+/** 用户未自定义命名模板时的默认文件名格式。 */
+private const val DEFAULT_NAME_FORMAT = "{illust_id}_p{part}"
 
 /**
  * 插画下载仓库：负责解析原图 URL、下载图片字节并调用平台保存，
@@ -271,7 +274,7 @@ class DownloadRepository(
         val tempPath = cacheDir / tempFileName
 
         httpClient.prepareGet(trustedUrl) {
-            header("Referer", AppConstants.Urls.PIXIV_APP_API)
+            header("Referer", PixivHosts.PIXIV_APP_API)
         }.execute { response ->
             val channel: ByteReadChannel = response.bodyAsChannel()
             // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方（UI 主协程）线程。
@@ -318,7 +321,7 @@ class DownloadRepository(
      */
     fun buildFileName(illust: Illust, pageIndex: Int, remoteUrl: String): String {
         val ext = extractExtension(remoteUrl)
-        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: AppConstants.Download.DEFAULT_NAME_FORMAT
+        val template = settingsRepository?.format?.trim().takeUnless { it.isNullOrBlank() } ?: DEFAULT_NAME_FORMAT
         var name = template
             .replace("{illust_id}", illust.id.toString())
             .replace("{title}", FileNamePolicy.sanitizeSegment(illust.title))

@@ -1,9 +1,9 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.platform.mapToPictureSource
-import com.perol.pixez.shared.ui.AppConstants
 
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.FollowIllusts
@@ -278,7 +278,7 @@ class IllustRepository(
         return networkCall("获取 Spotlight 特辑详情失败 url=$articleUrl") {
             val response: String = webClient.get(TrustedUrlPolicy.spotlightUrl(articleUrl)) {
                 headers {
-                    append("Referer", AppConstants.Network.REFERER_PIXIVISION_ZH)
+                    append("Referer", PixivHosts.REFERER_PIXIVISION_ZH)
                     append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/85.0.564.13")
                     append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7")
                 }
@@ -408,7 +408,7 @@ class IllustRepository(
             val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
             val verifiedUrl = TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
             downloadClient.get(verifiedUrl) {
-                header("Referer", AppConstants.Urls.PIXIV_APP_API)
+                header("Referer", PixivHosts.PIXIV_APP_API)
             }.body()
         }
 }

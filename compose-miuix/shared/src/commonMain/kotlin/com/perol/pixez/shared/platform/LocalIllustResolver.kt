@@ -8,9 +8,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import com.perol.pixez.shared.ui.AppConstants
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.network.PixivHosts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -170,6 +170,6 @@ fun rememberOptimizedImageModel(
  * 图源未配置、为空白或就是默认 i.pximg.net 时原样返回；仅替换 host 部分。
  */
 fun String.mapToPictureSource(pictureSource: String?): String {
-    if (pictureSource.isNullOrBlank() || pictureSource == AppConstants.Network.HOST_PXIMG) return this
-    return replace("://${AppConstants.Network.HOST_PXIMG}", "://$pictureSource")
+    if (pictureSource.isNullOrBlank() || pictureSource == PixivHosts.HOST_PXIMG) return this
+    return replace("://${PixivHosts.HOST_PXIMG}", "://$pictureSource")
 }

@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.network
 
-import com.perol.pixez.shared.ui.AppConstants
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 
@@ -10,12 +9,12 @@ import io.ktor.http.Url
  */
 object TrustedUrlPolicy {
     private const val API_HOST = "app-api.pixiv.net"
-    private const val IMAGE_HOST = AppConstants.Network.HOST_PXIMG
+    private const val IMAGE_HOST = PixivHosts.HOST_PXIMG
     private const val IMAGE_STATIC_HOST = "s.pximg.net"
     private const val SPOTLIGHT_HOST = "www.pixivision.net"
 
     /** 内置可信图片 host：pximg 官方系域名 + 应用预置镜像。 */
-    private val IMAGE_HOSTS = setOf(IMAGE_HOST, IMAGE_STATIC_HOST, AppConstants.Network.HOST_PIXIV_RE)
+    private val IMAGE_HOSTS = setOf(IMAGE_HOST, IMAGE_STATIC_HOST, PixivHosts.HOST_PIXIV_RE)
     private val RELEASE_HOSTS = setOf(
         "github.com",
         "objects.githubusercontent.com",

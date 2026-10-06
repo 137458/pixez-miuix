@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.navigation
 
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import io.ktor.http.Url
 import io.ktor.http.decodeURLQueryComponent
@@ -19,6 +18,7 @@ sealed interface ParsedDeepLink {
 }
 
 object DeepLinkParser {
+    private const val SCHEME_PIXEZ = "pixez"
     private val ILLUST_REGEX = Regex("""(?:artworks/|illust_id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val USER_REGEX = Regex("""(?:users/|member\.php\?id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val CODE_PARAM_REGEX = Regex("""(?:[?&]|^)code=([^&#\s]+)""")
@@ -95,7 +95,7 @@ object DeepLinkParser {
         val path = "/" + pathSegments.joinToString("/")
 
         when {
-            scheme == AppConstants.Scheme.SCHEME_PIXEZ || scheme == "pixiv" -> {
+            scheme == SCHEME_PIXEZ || scheme == "pixiv" -> {
                 when (host) {
                     "account", "oauth" -> {
                         val code = url.parameters["code"]?.trim().orEmpty()

@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui
 
+import com.perol.pixez.shared.network.PixivHosts
+
 /**
  * 应用级全局常量定义，集中管理外部 URL、常用占位符模板与预设档位，消除散落的魔法值。
  */
@@ -9,8 +11,9 @@ object AppConstants {
      * 网络与图片源域名
      */
     object Network {
-        const val HOST_PXIMG = "i.pximg.net"
-        const val HOST_PIXIV_RE = "i.pixiv.re"
+        // 过渡委托：正名已外迁至 network/PixivHosts.kt（UI 与测试仍经由处引用），随全量移包清理。
+        const val HOST_PXIMG = PixivHosts.HOST_PXIMG
+        const val HOST_PIXIV_RE = PixivHosts.HOST_PIXIV_RE
         const val MODE_STANDARD = "standard"
 
         const val HTTP_POOL_MAX_IDLE_CONNECTIONS = 32
@@ -27,9 +30,6 @@ object AppConstants {
          * Pixivision 页面 Referer（Pixivision 域名下的图片同样启用防盗链校验）。
          */
         const val REFERER_PIXIVISION = "https://www.pixivision.net/"
-
-        /** Pixivision 中文站点 Referer：作品图源抓取走 /zh/ 路径以匹配文章语言。 */
-        const val REFERER_PIXIVISION_ZH = "https://www.pixivision.net/zh/"
 
         /**
          * 图片请求统一使用的浏览器 User-Agent。
@@ -54,7 +54,6 @@ object AppConstants {
      * 账号与凭据安全常量
      */
     object Auth {
-        const val DEFAULT_PASSWORD_PLACEHOLDER = "no more"
         const val TOKEN_ENCRYPTION_PREFIX = "enc_v1:"
         const val KEYSTORE_ALIAS = "PixEzTokenMasterKey"
     }
@@ -63,7 +62,6 @@ object AppConstants {
      * 深度链接与快捷跳转协议
      */
     object Scheme {
-        const val SCHEME_PIXEZ = "pixez"
         const val URI_QUICK_SEARCH = "pixez://search"
     }
 
@@ -80,10 +78,10 @@ object AppConstants {
      * 外部链接与社群地址
      */
     object Urls {
-        const val PIXIV_APP_API = "https://app-api.pixiv.net/"
-        const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
+        // 过渡委托：正名已外迁至 network/PixivHosts.kt（UI 与测试仍经由处引用），随全量移包清理。
+        const val PIXIV_APP_API = PixivHosts.PIXIV_APP_API
         const val PIXIV_USER_PREFIX = "https://www.pixiv.net/users/"
-        fun pixivArtworkUrl(id: Long): String = "$PIXIV_ARTWORK_PREFIX$id"
+        fun pixivArtworkUrl(id: Long): String = PixivHosts.PIXIV_ARTWORK_PREFIX + id
         fun pixivUserUrl(userId: Long): String = "$PIXIV_USER_PREFIX$userId"
         fun pixivUserUrl(userId: String): String = "$PIXIV_USER_PREFIX$userId"
         const val PIXIV_NOVEL_PREFIX = "https://www.pixiv.net/novel/show.php?id="
@@ -111,8 +109,6 @@ object AppConstants {
      * 下载相关预设与占位符
      */
     object Download {
-        const val DEFAULT_NAME_FORMAT = "{illust_id}_p{part}"
-
         val FORMAT_PLACEHOLDERS = listOf(
             "{illust_id}",
             "{user_id}",
