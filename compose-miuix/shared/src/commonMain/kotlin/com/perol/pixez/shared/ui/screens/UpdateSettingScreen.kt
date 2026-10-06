@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.defaultUpdateCheckClient
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo

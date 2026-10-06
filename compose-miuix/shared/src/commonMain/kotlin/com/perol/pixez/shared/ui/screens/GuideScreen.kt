@@ -53,6 +53,7 @@ import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CheckIndicator
+import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
 import org.jetbrains.compose.resources.painterResource

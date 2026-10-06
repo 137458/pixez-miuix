@@ -1,6 +1,6 @@
 package com.perol.pixez.shared.platform
 
-import com.perol.pixez.shared.ui.screens.LANGUAGE_OPTIONS
+import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

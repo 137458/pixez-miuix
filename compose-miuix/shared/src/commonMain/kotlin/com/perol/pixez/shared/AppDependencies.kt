@@ -29,7 +29,7 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import com.perol.pixez.shared.ui.screens.createUpdateCheckClient
+import com.perol.pixez.shared.network.createUpdateCheckClient
 import com.perol.pixez.shared.platform.isDebugBuild
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
@@ -157,7 +157,7 @@ class AppDependencies(
             tokenStorage = tokenStorage,
             languageProvider = {
                 val num = settingsRepository.languageNum
-                com.perol.pixez.shared.ui.screens.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
+                com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
             },
             enableLogging = false,
         )

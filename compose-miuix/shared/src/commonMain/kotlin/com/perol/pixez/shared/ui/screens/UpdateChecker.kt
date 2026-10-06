@@ -1,22 +1,19 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.network.createUpdateCheckClient
+import com.perol.pixez.shared.network.defaultUpdateCheckClient
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.isSuccess
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
-import com.perol.pixez.shared.network.createPlatformHttpClient
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.isDesktopPlatform
 
@@ -92,26 +89,6 @@ data class ReleaseInfo(
 )
 
 /**
- * 创建用于检查 GitHub Release 的 HttpClient，复用平台网络引擎（含 DoH / 代理支持）。
- */
-internal fun createUpdateCheckClient(): HttpClient = createPlatformHttpClient {
-    install(ContentNegotiation) {
-        json(
-            Json {
-                ignoreUnknownKeys = true
-                coerceInputValues = true
-                isLenient = true
-            },
-        )
-    }
-    install(HttpTimeout) {
-        requestTimeoutMillis = 15_000
-        connectTimeoutMillis = 10_000
-        socketTimeoutMillis = 10_000
-    }
-}
-
-/**
  * 获取当前已安装版本的本地结构化信息，提供秒开体验与离线兜底。
  */
 fun getLocalReleaseInfo(): ReleaseInfo = ReleaseInfo(
@@ -126,13 +103,6 @@ fun getLocalReleaseInfo(): ReleaseInfo = ReleaseInfo(
     fileName = null,
     fileSize = null,
 )
-
-/**
- * 复用的 GitHub API HttpClient。
- */
-internal val defaultUpdateCheckClient: HttpClient by lazy {
-    createUpdateCheckClient()
-}
 
 /**
  * 从 GitHub Release API 获取完整版本发布信息。
