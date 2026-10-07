@@ -19,7 +19,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.saveUgoiraIllust
 import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

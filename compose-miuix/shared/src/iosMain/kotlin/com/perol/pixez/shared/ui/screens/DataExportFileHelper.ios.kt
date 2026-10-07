@@ -1,6 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.utils.runCatchingNonCancel
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager

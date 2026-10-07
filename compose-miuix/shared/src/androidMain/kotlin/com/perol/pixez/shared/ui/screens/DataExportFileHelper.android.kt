@@ -1,7 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.platform.BrowserLauncherContext
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.utils.runCatchingNonCancel
 import java.io.File
 import java.io.IOException
 

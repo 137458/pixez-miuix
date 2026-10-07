@@ -1,4 +1,4 @@
-package com.perol.pixez.shared.ui.utils
+package com.perol.pixez.shared.utils
 
 import kotlinx.coroutines.CancellationException
 

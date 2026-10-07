@@ -10,7 +10,7 @@ import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.platform.mapToPictureSource
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get

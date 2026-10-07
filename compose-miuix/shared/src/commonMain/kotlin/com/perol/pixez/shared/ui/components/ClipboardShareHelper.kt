@@ -14,8 +14,8 @@
  */
 package com.perol.pixez.shared.ui.components
 
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.utils.runCatchingNonCancel
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 
 /**
  * 执行同步的复制 / 分享动作（剪贴板写入、系统分享面板），并把结果回调为 [ToastData]。

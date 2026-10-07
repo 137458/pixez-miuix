@@ -48,7 +48,7 @@ import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource

@@ -28,7 +28,7 @@ import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
-import com.perol.pixez.shared.ui.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

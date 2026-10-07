@@ -2,7 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.perol.pixez.shared.ui.utils.runCatchingNonCancel
+import com.perol.pixez.shared.utils.runCatchingNonCancel
 import java.io.File
 import java.io.IOException
 
