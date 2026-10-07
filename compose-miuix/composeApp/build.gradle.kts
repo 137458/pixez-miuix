@@ -76,8 +76,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010094
-        versionName = "0.9.109.4-miuix"
+        versionCode = 10010095
+        versionName = "0.9.109.5-miuix"
     }
 
     buildTypes {
