@@ -96,24 +96,22 @@ internal fun cardExpandFrame(
     val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
     NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
 
+    val geometry = containerGeometry()
+    val layerModifier: Modifier
     if (activeSourceBounds == null) {
         val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
         if (frame.isTopLayer) {
             registry?.updateTransitionState(null, 0f)
         }
-        val geometry = containerGeometry()
         val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
-        content(
-            Modifier.miuixDefaultSlideLayer(
-                isTopLayer = frame.isTopLayer,
-                fraction = frame.fraction,
-                widthPx = widthPx,
-                cornerRadius = geometry.cornerRadius,
-                registry = registry,
-            ),
+        layerModifier = Modifier.miuixDefaultSlideLayer(
+            isTopLayer = frame.isTopLayer,
+            fraction = frame.fraction,
+            widthPx = widthPx,
+            cornerRadius = geometry.cornerRadius,
+            registry = registry,
         )
     } else {
-        val geometry = containerGeometry()
         val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
         registry?.updateTransitionState(
             illustId = anchor?.illustId ?: candidates.firstOrNull { it != null },
@@ -122,26 +120,29 @@ internal fun cardExpandFrame(
             containerBounds = geometry.bounds,
             isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK,
         )
-        content(
-            if (frame.isTopLayer) {
-                Modifier.cardExpandLayer(
-                    expansion = frame.expansion,
-                    sourceBounds = activeSourceBounds,
-                    cardCornerRadiusDp = activeCornerRadiusDp,
-                    containerBounds = geometry.bounds,
-                    containerCornerRadius = geometry.cornerRadius,
-                )
-            } else {
-                Modifier.cardExpandScrim(
-                    alpha = cardExpandScrimAlpha(frame.expansion),
-                    expansion = frame.expansion,
-                    sourceBounds = activeSourceBounds,
-                    containerBounds = geometry.bounds,
-                    containerCornerRadius = geometry.cornerRadius,
-                )
-            },
-        )
+        layerModifier = if (frame.isTopLayer) {
+            Modifier.cardExpandLayer(
+                expansion = frame.expansion,
+                sourceBounds = activeSourceBounds,
+                cardCornerRadiusDp = activeCornerRadiusDp,
+                containerBounds = geometry.bounds,
+                containerCornerRadius = geometry.cornerRadius,
+            )
+        } else {
+            Modifier.cardExpandScrim(
+                alpha = cardExpandScrimAlpha(frame.expansion),
+                expansion = frame.expansion,
+                sourceBounds = activeSourceBounds,
+                containerBounds = geometry.bounds,
+                containerCornerRadius = geometry.cornerRadius,
+            )
+        }
     }
+    // content 必须保持单一调用点：content 内部承载 movableContent 包裹的页面内容，
+    // 若按「有无卡片几何」分支在两个调用点之间切换，锚点出现/消失（如转场收尾帧
+    // 底层从卡片展开分支落回默认侧滑）会让 movable 在同帧经历销毁重建，
+    // 连同层表另一层的移除叠加后触发 SaveableStateProvider 的「Key used multiple times」崩溃。
+    content(layerModifier)
 }
 
 /**

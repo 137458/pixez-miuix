@@ -162,7 +162,8 @@ internal fun IllustDetailImagePage(
     )
     val thumbnailUrl = remember(page, pageIndex, illust, settings?.feedPreviewQuality, settings?.changeVersion) {
         if (pageIndex == 0) {
-            resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality)
+            // 详情页容器按作品真实比例布局，禁用方图占位档，避免竖图容器露出正方形预览图。
+            resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality, allowSquare = false)
         } else {
             page.imageUrls?.medium ?: page.imageUrls?.squareMedium ?: illust.imageUrls.medium
         }
@@ -288,7 +289,8 @@ internal fun IllustDetailSinglePageImage(
             pictureSource = settings?.pictureSource,
         )
         val thumbnailUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
-            resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality)
+            // 同上：详情页占位禁用方图档，保持与容器真实比例一致。
+            resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality, allowSquare = false)
         }
         val singleModifier = Modifier
             .fillMaxWidth()

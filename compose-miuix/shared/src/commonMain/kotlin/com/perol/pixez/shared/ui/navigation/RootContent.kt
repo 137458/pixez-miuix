@@ -179,6 +179,7 @@ fun RootContent(
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
             LocalAppExtraColors provides appExtraColors,
+            LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
         ) {
             val updateInfo = appReleaseInfo
             if (showAppUpdateDialog && updateInfo != null) {

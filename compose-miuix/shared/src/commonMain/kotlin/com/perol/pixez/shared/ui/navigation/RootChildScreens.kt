@@ -7,7 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -103,16 +106,36 @@ internal fun MainContent(
     )
     val selectedTab by component.selectedTab.collectAsState()
 
+    // 点击/外部触发的滚动期间不回传手势位置，底栏滑块保持 spring 动画手感。
+    var programmaticScroll by remember { mutableStateOf(false) }
+    val tabGesturePosition = LocalTabGesturePosition.current
+
     // 响应外部或底部导航栏点击驱动 Pager 平滑滚动
     LaunchedEffect(selectedTab) {
         val targetIndex = RootComponent.MAIN_TAB_ORDER.indexOf(selectedTab)
         if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
-            if (kotlin.math.abs(pagerState.currentPage - targetIndex) > 1) {
-                pagerState.scrollToPage(targetIndex)
-            } else {
-                pagerState.animateScrollToPage(targetIndex)
+            programmaticScroll = true
+            try {
+                if (kotlin.math.abs(pagerState.currentPage - targetIndex) > 1) {
+                    pagerState.scrollToPage(targetIndex)
+                } else {
+                    pagerState.animateScrollToPage(targetIndex)
+                }
+            } finally {
+                programmaticScroll = false
             }
         }
+    }
+
+    // 手势翻页全程回传连续位置：底栏滑块逐帧跟手（松手落位后回写 null，滑块切回 spring 值）。
+    LaunchedEffect(pagerState) {
+        snapshotFlow {
+            if (pagerState.isScrollInProgress && !programmaticScroll) {
+                pagerState.currentPage + pagerState.currentPageOffsetFraction
+            } else {
+                null
+            }
+        }.collect { position -> tabGesturePosition.value = position }
     }
 
     // 响应用户手势滑动 Pager 同步组件状态
@@ -125,6 +148,8 @@ internal fun MainContent(
 
     HorizontalPager(
         state = pagerState,
+        // 5 个 tab 全部保组合：切 tab 零加载延迟是硬要求。保组合数量降低会让目标页
+        // 在滚动时才组合+拉数据，表现为「切换反应慢」，属可感知回归。
         beyondViewportPageCount = 4,
         modifier = Modifier.fillMaxSize(),
     ) { page ->

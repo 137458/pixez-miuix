@@ -76,12 +76,26 @@ internal class SeekableStackAnimation<C : Any, T : Any>(
             }
         }
 
+        // 决策层与当前渲染层的 child 实例对齐：同 key 且组件实例相同（Decompose 每次 navigation
+        // 都新建 Child.Created 对象）时复用现引用。movableContent 的状态键含参数（Child.Created），
+        // 引用变化即视为不同内容，会让页面组合在换层帧销毁重建，叠加同帧其他层的移除后触发
+        // SaveableStateProvider「Key used multiple times」崩溃；同 key 不同 instance 是真实重建，
+        // 必须换新引用，不可复用。
+        fun List<StackLayer<C, T>>.alignChildInstances(): List<StackLayer<C, T>> = map { layer ->
+            val existing = layers.lastOrNull { it.child.key == layer.child.key }?.child
+            if (existing != null && existing.instance == layer.child.instance) layer.copy(child = existing) else layer
+        }
+
         // 单次转场的执行与收尾：收敛稳态层后消费排队栈（存在则递归启动下一段转场）。
         suspend fun runTransitionAndDrain(newLayers: List<StackLayer<C, T>>, startProgress: Float) {
-            layers = newLayers
+            val alignedLayers = newLayers.alignChildInstances()
+            layers = alignedLayers
             progress.snapTo(startProgress)
             progress.animateTo(0f, MiuixTransitionSpec)
-            layers = listOf(StackLayer(targetStack.active, Direction.ENTER_FRONT))
+            // 稳态层必须复用转场层里已有的同 key child 实例（原因同上）；转场层没有对应层时
+            // （Defer 消费等场景）才落回 targetStack.active。
+            val activeChild = alignedLayers.lastOrNull { it.child.key == targetStack.active.key }?.child ?: targetStack.active
+            layers = listOf(StackLayer(activeChild, Direction.ENTER_FRONT))
             stableStack = targetStack
             val pending = pendingStack ?: return
             pendingStack = null
@@ -94,7 +108,7 @@ internal class SeekableStackAnimation<C : Any, T : Any>(
                 is StackTransitionDecision.Settle -> {
                     targetStack = pending
                     stableStack = pending
-                    layers = decision.layers
+                    layers = decision.layers.alignChildInstances()
                 }
                 else -> Unit
             }
@@ -129,7 +143,7 @@ internal class SeekableStackAnimation<C : Any, T : Any>(
                     transitionJob.value = null
                     targetStack = stack
                     stableStack = stack
-                    layers = decision.layers
+                    layers = decision.layers.alignChildInstances()
                 }
                 is StackTransitionDecision.Defer -> pendingStack = decision.pendingStack
                 StackTransitionDecision.Idle -> Unit
