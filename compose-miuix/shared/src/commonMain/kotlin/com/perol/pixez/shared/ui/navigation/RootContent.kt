@@ -43,22 +43,16 @@ import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimati
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.LocalBanRepository
+import com.perol.pixez.shared.LocalDownloadRepository
+import com.perol.pixez.shared.LocalHistoryRepository
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.BoardRepository
-import com.perol.pixez.shared.data.repository.BookmarkRepository
-import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
-import com.perol.pixez.shared.data.repository.DownloadRepository
-import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
-import com.perol.pixez.shared.data.repository.MuteRepository
-import com.perol.pixez.shared.data.repository.NovelHistoryRepository
-import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
-import io.ktor.client.HttpClient
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
@@ -86,23 +80,10 @@ import top.yukonga.miuix.kmp.theme.lightColorScheme
 @Composable
 fun RootContent(
     component: RootComponent,
-    illustRepository: IllustRepository,
-    searchRepository: SearchRepository,
-    userRepository: UserRepository,
-    accountRepository: AccountRepository,
-    bookmarkRepository: BookmarkRepository,
-    downloadRepository: DownloadRepository,
-    downloadHistoryRepository: DownloadHistoryRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
-    boardRepository: BoardRepository,
-    historyRepository: HistoryRepository,
-    novelHistoryRepository: NovelHistoryRepository,
-    muteRepository: MuteRepository,
-    updateCheckClient: HttpClient,
-    novelRepository: NovelRepository? = null,
+    registry: RepositoryRegistry,
     modifier: Modifier = Modifier,
 ) {
+    val settingsRepository = registry.settingsRepository
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
     // 监听 changeVersion 响应式自增，确保 ThemeSettingScreen 修改后即时全局重绘。
     val changeVersion = settingsRepository.changeVersion
@@ -175,6 +156,9 @@ fun RootContent(
     MiuixTheme(controller = themeController) {
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
+            LocalHistoryRepository provides registry.historyRepository,
+            LocalDownloadRepository provides registry.downloadRepository,
+            LocalBanRepository provides registry.banRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
@@ -277,21 +261,7 @@ fun RootContent(
                             showNavigationRailInMain = showNavigationRailInMain,
                             bottomBarVisible = bottomBarVisible,
                             floatingBackdrop = floatingBackdrop,
-                            illustRepository = illustRepository,
-                            searchRepository = searchRepository,
-                            userRepository = userRepository,
-                            accountRepository = accountRepository,
-                            bookmarkRepository = bookmarkRepository,
-                            downloadRepository = downloadRepository,
-                            downloadHistoryRepository = downloadHistoryRepository,
-                            banRepository = banRepository,
-                            settingsRepository = settingsRepository,
-                            boardRepository = boardRepository,
-                            historyRepository = historyRepository,
-                            novelHistoryRepository = novelHistoryRepository,
-                            muteRepository = muteRepository,
-                            updateCheckClient = updateCheckClient,
-                            novelRepository = novelRepository,
+                            registry = registry,
                         )
                     }
                 }
@@ -314,21 +284,7 @@ private fun RootChildContent(
     showNavigationRailInMain: Boolean,
     bottomBarVisible: MutableState<Boolean>,
     floatingBackdrop: LayerBackdrop?,
-    illustRepository: IllustRepository,
-    searchRepository: SearchRepository,
-    userRepository: UserRepository,
-    accountRepository: AccountRepository,
-    bookmarkRepository: BookmarkRepository,
-    downloadRepository: DownloadRepository,
-    downloadHistoryRepository: DownloadHistoryRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
-    boardRepository: BoardRepository,
-    historyRepository: HistoryRepository,
-    novelHistoryRepository: NovelHistoryRepository,
-    muteRepository: MuteRepository,
-    updateCheckClient: HttpClient,
-    novelRepository: NovelRepository?,
+    registry: RepositoryRegistry,
 ) {
     when (instance) {
         is Child.Main -> MainChildSection(
@@ -340,192 +296,170 @@ private fun RootChildContent(
             isWideScreen = isWideScreen,
             useFloatingBottomBar = useFloatingBottomBar,
             floatingBackdrop = floatingBackdrop,
-            illustRepository = illustRepository,
-            searchRepository = searchRepository,
-            userRepository = userRepository,
-            accountRepository = accountRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
+            illustRepository = registry.illustRepository,
+            searchRepository = registry.searchRepository,
+            userRepository = registry.userRepository,
+            accountRepository = registry.accountRepository,
+            banRepository = registry.banRepository,
+            settingsRepository = registry.settingsRepository,
         )
 
         is Child.IllustDetail -> renderIllustDetail(
             instance = instance,
             component = component,
-            illustRepository = illustRepository,
-            bookmarkRepository = bookmarkRepository,
-            downloadRepository = downloadRepository,
-            banRepository = banRepository,
-            historyRepository = historyRepository,
+            registry = registry,
         )
 
         is Child.UserDetail -> renderUserDetail(
             instance = instance,
             component = component,
-            userRepository = userRepository,
-            bookmarkRepository = bookmarkRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         Child.Login -> renderLogin(
             component = component,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         is Child.Comments -> renderComments(
             instance = instance,
             component = component,
-            illustRepository = illustRepository,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         is Child.RelatedIllusts -> renderRelatedIllusts(
             instance = instance,
             component = component,
-            illustRepository = illustRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
+            registry = registry,
         )
 
         is Child.IllustSeries -> renderIllustSeries(
             instance = instance,
             component = component,
-            illustRepository = illustRepository,
-            banRepository = banRepository,
-            settingsRepository = settingsRepository,
+            registry = registry,
         )
 
         is Child.UserFollowList -> renderUserFollowList(
             instance = instance,
             component = component,
-            userRepository = userRepository,
+            registry = registry,
         )
 
         is Child.UserFollowerList -> renderUserFollowerList(
             instance = instance,
             component = component,
-            userRepository = userRepository,
+            registry = registry,
         )
 
         Child.RecomUserList -> renderRecomUserList(
             component = component,
-            userRepository = userRepository,
+            registry = registry,
         )
 
         Child.Settings -> renderSettingsPage(
             component = component,
-            accountRepository = accountRepository,
-            boardRepository = boardRepository,
+            registry = registry,
         )
 
         is Child.Search -> renderSearch(
             instance = instance,
             component = component,
-            searchRepository = searchRepository,
-            settingsRepository = settingsRepository,
-            banRepository = banRepository,
+            registry = registry,
         )
 
         Child.DownloadHistory -> renderDownloadHistory(
             component = component,
-            downloadHistoryRepository = downloadHistoryRepository,
+            registry = registry,
         )
 
         Child.Shield -> renderShield(
             component = component,
-            settingsRepository = settingsRepository,
-            banRepository = banRepository,
-            userRepository = userRepository,
+            registry = registry,
         )
 
         is Child.AISetting -> renderAISetting(
             instance = instance,
             component = component,
-            userRepository = userRepository,
+            registry = registry,
         )
 
         Child.ThemeSetting -> renderThemeSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.NetworkSetting -> renderNetworkSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.DownloadSetting -> renderDownloadSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.LayoutSetting -> renderLayoutSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.LanguageSetting -> renderLanguageSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.WidgetRecommendSetting -> renderWidgetRecommendSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.InteractionSetting -> renderInteractionSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.UpdateSetting -> renderUpdateSetting(
-            settingsRepository = settingsRepository,
-            updateCheckClient = updateCheckClient,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.AccountEdit -> renderAccountEdit(
             component = component,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         Child.History -> renderHistory(
             component = component,
+            registry = registry,
         )
 
         Child.DownloadTask -> renderDownloadTask(
             component = component,
-            downloadRepository = downloadRepository,
-            downloadHistoryRepository = downloadHistoryRepository,
+            registry = registry,
         )
 
         Child.DataExport -> renderDataExport(
             component = component,
-            settingsRepository = settingsRepository,
-            historyRepository = historyRepository,
-            novelHistoryRepository = novelHistoryRepository,
-            muteRepository = muteRepository,
+            registry = registry,
         )
 
         Child.Board -> renderBoard(
             component = component,
-            boardRepository = boardRepository,
+            registry = registry,
         )
 
         Child.QualitySetting -> renderQualitySetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.CopyTextSetting -> renderCopyTextSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
         Child.WelcomePageSetting -> renderWelcomePageSetting(
-            settingsRepository = settingsRepository,
+            registry = registry,
             onBack = component::onBack,
         )
 
@@ -535,7 +469,7 @@ private fun RootChildContent(
 
         Child.BookTag -> renderBookTag(
             component = component,
-            settingsRepository = settingsRepository,
+            registry = registry,
         )
 
         Child.Thanks -> renderThanks(
@@ -545,29 +479,28 @@ private fun RootChildContent(
         is Child.SpotlightDetail -> renderSpotlightDetail(
             instance = instance,
             component = component,
-            illustRepository = illustRepository,
+            registry = registry,
         )
 
         Child.Guide -> renderGuide(
             component = component,
-            settingsRepository = settingsRepository,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         Child.AccountManage -> renderAccountManage(
             component = component,
-            accountRepository = accountRepository,
+            registry = registry,
         )
 
         Child.Novel -> renderNovel(
             component = component,
-            novelRepository = novelRepository,
+            registry = registry,
         )
 
         is Child.NovelViewer -> renderNovelViewer(
             instance = instance,
             component = component,
-            novelRepository = novelRepository,
+            registry = registry,
         )
     }
 }

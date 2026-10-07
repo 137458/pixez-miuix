@@ -20,11 +20,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.HistoryRepository
+import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.navigation.RootContent
 
 /**
- * 历史页通过该 CompositionLocal 获取 [HistoryRepository]，避免修改 RootContent 的签名。
+ * 由 RootContent 从 [RepositoryRegistry] 统一 provide 的 [HistoryRepository] 注入点。
  */
 val LocalHistoryRepository = compositionLocalOf<HistoryRepository> {
     error("LocalHistoryRepository not provided")
@@ -80,14 +81,8 @@ fun App(
 
     val component = rootComponent ?: rememberRootComponent(dependencies)
     val navigationEventDispatcherOwner = rememberNavigationEventDispatcherOwner(parent = null)
-    CompositionLocalProvider(
-        LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
-        LocalHistoryRepository provides dependencies.historyRepository,
-        LocalDownloadRepository provides dependencies.downloadRepository,
-        LocalBanRepository provides dependencies.banRepository,
-    ) {
-        RootContent(
-            component = component,
+    val registry = remember(dependencies) {
+        RepositoryRegistry(
             illustRepository = dependencies.illustRepository,
             searchRepository = dependencies.searchRepository,
             userRepository = dependencies.userRepository,
@@ -100,9 +95,17 @@ fun App(
             boardRepository = dependencies.boardRepository,
             historyRepository = dependencies.historyRepository,
             novelHistoryRepository = dependencies.novelHistoryRepository,
-            novelRepository = dependencies.novelRepository,
             muteRepository = dependencies.muteRepository,
+            novelRepository = dependencies.novelRepository,
             updateCheckClient = dependencies.updateCheckClient,
+        )
+    }
+    CompositionLocalProvider(
+        LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
+    ) {
+        RootContent(
+            component = component,
+            registry = registry,
         )
     }
 }
