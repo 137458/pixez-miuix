@@ -181,4 +181,12 @@ class IllustRepositoryCacheTest {
         assertNull(repo.activeRecommendedNextUrl)
         assertNull(repo.getCachedRankingPage("day"))
     }
+
+    @Test
+    fun testSpotlightArticlesCacheAndClear() {
+        val repo = createRepository()
+        assertNull(repo.getCachedSpotlightArticles("novel"))
+        repo.clearMemoryCache()
+        assertNull(repo.getCachedSpotlightArticles("novel"))
+    }
 }

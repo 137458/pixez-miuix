@@ -283,7 +283,26 @@ class IllustRepository(
             }
         }
         return networkCall("获取 Spotlight 失败 category=$category") {
-            val response: SpotlightResponse = if (nextUrl != null && nextUrl.isNotBlank()) {
+            val isNovelCategory = category.equals("novel", ignoreCase = true) || category.equals("novels", ignoreCase = true)
+            val response: SpotlightResponse = if (isNovelCategory) {
+                if (nextUrl != null && nextUrl.isNotBlank()) {
+                    SpotlightResponse(spotlightArticles = emptyList(), nextUrl = null)
+                } else {
+                    val lang = getPixivisionLanguagePath()
+                    val targetUrl = "https://www.pixivision.net/$lang/c/novels"
+                    val html: String = webClient.get(TrustedUrlPolicy.spotlightUrl(targetUrl)) {
+                        headers {
+                            append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            append("Referer", "https://www.pixivision.net/")
+                        }
+                    }.body()
+                    val articles = PixivisionParser.parseArticleList(html)
+                    SpotlightResponse(
+                        spotlightArticles = articles,
+                        nextUrl = null,
+                    )
+                }
+            } else if (nextUrl != null && nextUrl.isNotBlank()) {
                 apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
             } else {
                 apiClient.get("/v1/spotlight/articles") {
@@ -471,5 +490,13 @@ class IllustRepository(
                 header("Referer", PixivHosts.PIXIV_APP_API)
             }.body()
         }
+
+    private fun getPixivisionLanguagePath(): String = when (settingsRepository.languageNum) {
+        1 -> "zh"
+        2 -> "zh-tw"
+        3 -> "ja"
+        4 -> "ko"
+        else -> "en"
+    }
 }
 

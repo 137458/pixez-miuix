@@ -347,8 +347,71 @@ object PixivisionParser {
             .replace("&quot;", "\"")
             .replace("&#039;", "'")
             .replace("&apos;", "'")
-            .replace("&nbsp;", " ")
             .replace("&#39;", "'")
             .trim()
     }
+
+    /**
+     * 从 Pixivision 分类列表页（例如 /zh/c/novels 等）HTML 中提取特辑文章列表。
+     */
+    fun parseArticleList(html: String): List<SpotlightArticle> {
+        val cleanHtml = html
+            .substringBefore("<div class=\"_related-articles")
+            .substringBefore("<div class=\"_ranking-articles")
+            .substringBefore("<div class=\"_recommend")
+            .substringBefore("<footer")
+
+        val cardMatches = Regex(
+            """<article\b[^>]*class=["'][^"']*_article-card[^"']*["'][^>]*>([\s\S]*?)</article>""",
+            RegexOption.IGNORE_CASE,
+        ).findAll(cleanHtml).map { it.groupValues[1] }.toList()
+
+        val articles = mutableListOf<SpotlightArticle>()
+        val seenIds = mutableSetOf<Long>()
+
+        for (block in cardMatches) {
+            val linkMatch = Regex(
+                """href=["']([^"']*(?:/zh|/en|/ja|/ko|/zh-tw)?/a/(\d+)[^"']*)["']""",
+                RegexOption.IGNORE_CASE,
+            ).find(block) ?: continue
+            val relOrAbsUrl = linkMatch.groupValues[1]
+            val id = linkMatch.groupValues[2].toLongOrNull() ?: continue
+
+            if (!seenIds.add(id)) {
+                continue
+            }
+
+            val articleUrl = if (relOrAbsUrl.startsWith("http")) relOrAbsUrl else "https://www.pixivision.net${if (relOrAbsUrl.startsWith("/")) "" else "/"}$relOrAbsUrl"
+
+            val titleMatch = Regex("""<h[1-4][^>]*class=["'][^"']*arc__title[^"']*["'][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)</a></h[1-4]>""", RegexOption.IGNORE_CASE).find(block)
+                ?: Regex("""<h[1-4][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)</a></h[1-4]>""", RegexOption.IGNORE_CASE).find(block)
+                ?: Regex("""<a[^>]*title=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
+
+            val rawTitle = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "特辑 $id"
+
+            val bgMatch = Regex("""url\(\s*["']?([^"')]+)["']?\s*\)""", RegexOption.IGNORE_CASE).find(block)
+            val imgMatch = Regex("""<img\b[^>]*(?:data-src|src)=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
+            val thumbnail = bgMatch?.groupValues?.get(1)?.trim()
+                ?: imgMatch?.groupValues?.get(1)?.trim()
+                ?: ""
+
+            val dateMatch = Regex("""<time[^>]*datetime=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
+                ?: Regex("""<time[^>]*>([\s\S]*?)</time>""", RegexOption.IGNORE_CASE).find(block)
+            val publishDate = dateMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }.orEmpty()
+
+            articles.add(
+                SpotlightArticle(
+                    id = id,
+                    title = rawTitle,
+                    pureTitle = cleanTitle(rawTitle),
+                    thumbnail = thumbnail,
+                    articleUrl = articleUrl,
+                    publishDate = publishDate,
+                ),
+            )
+        }
+
+        return articles
+    }
 }
+

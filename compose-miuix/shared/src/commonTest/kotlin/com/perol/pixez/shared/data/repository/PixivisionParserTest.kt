@@ -233,5 +233,103 @@ class PixivisionParserTest {
         assertEquals("https://i.pximg.net/c/1200x630/136033906_p0.jpg", secondSub.thumbnail)
         assertEquals("2025-12-04", secondSub.publishDate)
     }
+
+    @Test
+    fun testParseNovelsArticleList() {
+        val sampleNovelsHtml = """
+            <!DOCTYPE html>
+            <html>
+            <body>
+                <div class="_article-list">
+                    <article class="_article-card spotlight">
+                        <div class="arc__thumbnail-container">
+                            <a href="/zh/a/539">
+                                <div class="_thumbnail" style="background-image: url(https://i.pximg.net/c/1200x630/48951843_p0.jpg)"></div>
+                            </a>
+                        </div>
+                        <div class="arc__title-container">
+                            <h2 class="arc__title"><a href="/zh/a/539">【小说封面】想看这样的封面【特辑 第2弹】</a></h2>
+                        </div>
+                        <div class="arc__footer-date-pr">
+                            <time datetime="2015-07-05">2015.07.05</time>
+                        </div>
+                    </article>
+                    <article class="_article-card spotlight">
+                        <div class="arc__thumbnail-container">
+                            <a href="/zh/a/501">
+                                <div class="_thumbnail" style="background-image: url(https://i.pximg.net/c/1200x630/42164725_p0.png)"></div>
+                            </a>
+                        </div>
+                        <div class="arc__title-container">
+                            <h2 class="arc__title"><a href="/zh/a/501">【小说素材】特辑</a></h2>
+                        </div>
+                        <div class="arc__footer-date-pr">
+                            <time datetime="2015-07-03">2015.07.03</time>
+                        </div>
+                    </article>
+                    <article class="_article-card spotlight">
+                        <div class="arc__thumbnail-container">
+                            <a href="/zh/a/502">
+                                <div class="_thumbnail" style="background-image: url(https://i.pximg.net/c/1200x630/49171226_p0.png)"></div>
+                            </a>
+                        </div>
+                        <div class="arc__title-container">
+                            <h2 class="arc__title"><a href="/zh/a/502">【小说素材】笔记本风特辑</a></h2>
+                        </div>
+                        <div class="arc__footer-date-pr">
+                            <time datetime="2015-06-19">2015.06.19</time>
+                        </div>
+                    </article>
+                    <article class="_article-card spotlight">
+                        <div class="arc__thumbnail-container">
+                            <a href="/zh/a/428">
+                                <div class="_thumbnail" style="background-image: url(https://i.pximg.net/c/1200x630/35194440_p0.jpg)"></div>
+                            </a>
+                        </div>
+                        <div class="arc__title-container">
+                            <h2 class="arc__title"><a href="/zh/a/428">【小说素材】古装特辑</a></h2>
+                        </div>
+                        <div class="arc__footer-date-pr">
+                            <time datetime="2015-05-10">2015.05.10</time>
+                        </div>
+                    </article>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val articles = PixivisionParser.parseArticleList(sampleNovelsHtml)
+
+        assertEquals(4, articles.size)
+
+        val first = articles[0]
+        assertEquals(539L, first.id)
+        assertEquals("【小说封面】想看这样的封面【特辑 第2弹】", first.title)
+        assertEquals("想看这样的封面", first.pureTitle)
+        assertEquals("https://www.pixivision.net/zh/a/539", first.articleUrl)
+        assertEquals("https://i.pximg.net/c/1200x630/48951843_p0.jpg", first.thumbnail)
+        assertEquals("2015-07-05", first.publishDate)
+
+        val second = articles[1]
+        assertEquals(501L, second.id)
+        assertEquals("【小说素材】特辑", second.title)
+        assertEquals("特辑", second.pureTitle)
+
+        val third = articles[2]
+        assertEquals(502L, third.id)
+        assertEquals("【小说素材】笔记本风特辑", third.title)
+
+        val fourth = articles[3]
+        assertEquals(428L, fourth.id)
+        assertEquals("【小说素材】古装特辑", fourth.title)
+    }
+
+    @Test
+    fun testParseEmptyArticleList() {
+        val emptyHtml = "<html><body><div>没有文章</div></body></html>"
+        val articles = PixivisionParser.parseArticleList(emptyHtml)
+        assertTrue(articles.isEmpty())
+    }
 }
+
 
