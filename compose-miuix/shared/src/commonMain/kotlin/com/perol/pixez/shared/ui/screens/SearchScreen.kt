@@ -333,14 +333,12 @@ fun SearchScreen(
         },
     ) { paddingValues ->
         val contentTopPadding = paddingValues.calculateTopPadding() + 8.dp
-        val effectiveContentPadding = remember(paddingValues) {
-            PaddingValues(
-                start = 8.dp,
-                top = contentTopPadding,
-                end = 8.dp,
-                bottom = bottomBarPadding,
-            )
-        }
+        val effectiveContentPadding = PaddingValues(
+            start = 8.dp,
+            top = contentTopPadding,
+            end = 8.dp,
+            bottom = bottomBarPadding,
+        )
 
         Box(
             modifier = Modifier

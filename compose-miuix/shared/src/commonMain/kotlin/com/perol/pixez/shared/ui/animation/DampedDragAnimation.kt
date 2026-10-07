@@ -47,7 +47,6 @@ internal class DampedDragAnimation(
 ) {
 
     private val valueAnimationSpec = spring(1f, 1000f, visibilityThreshold)
-    private val tabSwitchAnimationSpec = spring(0.85f, 800f, visibilityThreshold)
     private val velocityAnimationSpec = spring(0.5f, 300f, visibilityThreshold * 10f)
     private val pressProgressAnimationSpec = spring(1f, 1000f, 0.001f)
     private val scaleXAnimationSpec = spring(0.6f, 400f, 0.001f)
@@ -115,6 +114,11 @@ internal class DampedDragAnimation(
     fun release() {
         releaseJob?.cancel()
         releaseJob = animationScope.launch {
+            withFrameMillis { }
+            if (value != targetValue) {
+                val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
+                snapshotFlow { valueAnimation.value }.first { abs(it - valueAnimation.targetValue) < threshold }
+            }
             launch { pressProgressAnimation.animateTo(0f, pressProgressAnimationSpec) }
             launch { scaleXAnimation.animateTo(initialScale, scaleXAnimationSpec) }
             launch { scaleYAnimation.animateTo(initialScale, scaleYAnimationSpec) }
@@ -130,22 +134,16 @@ internal class DampedDragAnimation(
         }
     }
 
-    fun animateToValue(value: Float, pressed: Boolean = false) {
+    fun animateToValue(value: Float) {
         animationScope.launch {
             mutatorMutex.mutate {
-                if (pressed) {
-                    press()
-                }
+                press()
                 val target = value.coerceIn(valueRange)
-                val spec = if (pressed) valueAnimationSpec else tabSwitchAnimationSpec
-                val animJob = launch { valueAnimation.animateTo(target, spec) }
+                launch { valueAnimation.animateTo(target, valueAnimationSpec) }
                 if (velocity != 0f) {
                     launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
                 }
-                animJob.join()
-                if (pressed) {
-                    release()
-                }
+                release()
             }
         }
     }

@@ -299,7 +299,7 @@ fun FloatingBottomBar(
                 val isTapOnSameTab = (dropIndex == currentSelectedIndex()) && (totalDragPx < touchSlopPx)
                 val isSwitched = dropIndex != currentSelectedIndex()
 
-                animateToValue(dropIndex.toFloat(), pressed = true)
+                animateToValue(dropIndex.toFloat())
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -325,7 +325,7 @@ fun FloatingBottomBar(
         snapshotFlow { currentSelectedIndex() }.collectLatest { index ->
             val coercedIndex = index.coerceIn(0, tabsCount - 1)
             if (abs(dampedDragAnimation.value - coercedIndex.toFloat()) > 0.001f) {
-                dampedDragAnimation.animateToValue(coercedIndex.toFloat(), pressed = false)
+                dampedDragAnimation.animateToValue(coercedIndex.toFloat())
             }
         }
     }
@@ -367,7 +367,7 @@ fun FloatingBottomBar(
     // 注册点击直驱：组合期把内部弹簧动画器交给外部 holder，点击处同步调用
     if (directSelector != null) {
         directSelector.select = { index ->
-            dampedDragAnimation.animateToValue(index.toFloat(), pressed = false)
+            dampedDragAnimation.animateToValue(index.toFloat())
         }
     }
 

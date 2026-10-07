@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.animation
 
 import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -24,6 +25,7 @@ class DampedDragAnimationTest {
         repeat(frames) {
             time += deltaNanos
             clock.sendFrame(time)
+            Snapshot.sendApplyNotifications()
             testScheduler.advanceTimeBy(16)
             testScheduler.runCurrent()
         }
@@ -59,7 +61,7 @@ class DampedDragAnimationTest {
     }
 
     @Test
-    fun testTabSwitchAnimationDoesNotTriggerPressLag() = runTest {
+    fun testTabSwitchAnimationTriggersScaleAndRestores() = runTest {
         val clock = BroadcastFrameClock()
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val scope = TestScope(testDispatcher + clock)
@@ -77,14 +79,16 @@ class DampedDragAnimationTest {
                 onDrag = { _, _ -> },
             )
 
-            // 点击选项切换时指示器不应该膨胀变形（按压形变导致严重滞后）
-            anim.animateToValue(2f, pressed = false)
-            assertEquals(0f, anim.pressProgress, 0.001f)
-            assertEquals(1f, anim.scaleX, 0.001f)
+            // 切换 tab 时指示器应该先膨胀放大（呼吸弹性质感），并在到位后平滑恢复
+            anim.animateToValue(2f)
+            stepFrames(clock, frames = 10)
+            assertTrue(anim.pressProgress > 0.5f, "起步阶段 pressProgress 应当放大生效")
+            assertTrue(anim.scaleX > 1.2f, "起步阶段 scaleX 应当放大")
 
-            stepFrames(clock, frames = 80)
+            stepFrames(clock, frames = 100)
             assertEquals(2f, anim.value, 0.05f)
-            assertEquals(0f, anim.pressProgress, 0.001f)
+            assertEquals(0f, anim.pressProgress, 0.05f)
+            assertEquals(1f, anim.scaleX, 0.05f)
         }
     }
 

@@ -221,11 +221,17 @@ internal fun SearchIllustResultGrid(
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val currentIllusts = illustsState
     when {
-        currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        currentIllusts == null && initialError == null -> LoadingPlaceholder(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
+        )
         currentIllusts == null && initialError != null -> ErrorPlaceholder(
             error = initialError,
             onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
         )
         currentIllusts != null -> {
             val filteredIllusts = remember(currentIllusts, ugoiraFilter, ratioFilter) {
@@ -237,7 +243,9 @@ internal fun SearchIllustResultGrid(
                         loadMore()
                     }
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(effectiveContentPadding),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -253,7 +261,9 @@ internal fun SearchIllustResultGrid(
                 } else {
                     EmptyPlaceholder(
                         message = strings.searchEmptyIllust,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(effectiveContentPadding),
                     )
                 }
             } else {
@@ -369,17 +379,25 @@ internal fun SearchUserResultList(
     }
 
     when {
-        currentPreviews == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+        currentPreviews == null && initialError == null -> LoadingPlaceholder(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
+        )
         currentPreviews == null && initialError != null -> ErrorPlaceholder(
             error = initialError,
             onRetry = { retryCount++ },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
         )
         currentPreviews != null -> {
             if (currentPreviews.isEmpty()) {
                 EmptyPlaceholder(
                     message = strings.searchEmptyUser,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(effectiveContentPadding),
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
