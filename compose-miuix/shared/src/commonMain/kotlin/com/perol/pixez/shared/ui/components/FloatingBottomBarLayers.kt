@@ -217,7 +217,6 @@ internal fun BottomBarIndicatorLayer(
     isLiquidGlassMode: Boolean,
     combinedBackdrop: Backdrop?,
     dampedDragAnimation: DampedDragAnimation,
-    gesturePosition: State<Float?>,
     panelOffsetState: State<Float>,
     interactiveHighlight: InteractiveHighlight?,
     pillHighlight: State<Highlight>,
@@ -234,8 +233,7 @@ internal fun BottomBarIndicatorLayer(
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
                     .graphicsLayer {
-                        // 手势翻页期间直驱跟手，点击切换回落到 spring 动画值
-                        val progressOffset = (gesturePosition.value ?: dampedDragAnimation.value) * tabWidthPx
+                        val progressOffset = dampedDragAnimation.value * tabWidthPx
                         translationX = if (isLtr) progressOffset + panelOffsetState.value else -progressOffset + panelOffsetState.value
                     }
                     .then(interactiveHighlight?.gestureModifier ?: Modifier)
@@ -285,7 +283,7 @@ internal fun BottomBarIndicatorLayer(
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
                     .graphicsLayer {
-                        val progressOffset = (gesturePosition.value ?: dampedDragAnimation.value) * tabWidthPx
+                        val progressOffset = dampedDragAnimation.value * tabWidthPx
                         translationX = if (isLtr) progressOffset + panelOffsetState.value else -progressOffset + panelOffsetState.value
                     }
                     .then(dampedDragAnimation.modifier)
@@ -303,7 +301,7 @@ internal fun BottomBarIndicatorLayer(
                             .requiredWidth(with(density) { (totalWidthPx - 8.dp.toPx()).toDp() })
                             .height(56.dp)
                             .graphicsLayer {
-                                val progressOffset = (gesturePosition.value ?: dampedDragAnimation.value) * tabWidthPx
+                                val progressOffset = dampedDragAnimation.value * tabWidthPx
                                 translationX = if (isLtr) -progressOffset else progressOffset
                             },
                         verticalAlignment = Alignment.CenterVertically,

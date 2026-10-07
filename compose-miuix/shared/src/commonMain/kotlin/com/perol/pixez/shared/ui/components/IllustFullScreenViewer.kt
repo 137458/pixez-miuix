@@ -376,7 +376,11 @@ private fun ViewerPagesSection(
                                 .memoryCachePolicy(CachePolicy.DISABLED)
                                 .diskCachePolicy(CachePolicy.ENABLED)
                                 .build()
-                            imageLoader.enqueue(req)
+                            imageLoader.execute(req)
+                            // 不用 enqueue：其内部固定经 Dispatchers.Main 启动协程，而桌面 JVM 没有
+                            // kotlinx-coroutines 的 Main dispatcher 实现，会反复抛「Module with the Main
+                            // dispatcher is missing」且未捕获异常直接打在 AWT 事件线程上；execute 在
+                            // 调用者上下文挂起（此处已在 IO 线程），预加载仅为写磁盘缓存，顺序执行无感。
                         }
                     }
                 }

@@ -25,13 +25,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 val LocalBottomBarVisibility = compositionLocalOf { mutableStateOf(true) }
 
 /**
- * 主页 Pager 手势翻页期间的连续标签位置（currentPage + currentPageOffsetFraction）；
- * 非手势滚动时为 null。底栏滑块在 draw 阶段读取：非 null 时直驱滑块实现零延迟跟手，
- * 点击切换仍走 DampedDragAnimation 的 spring 动画，两者互不打断。
- */
-val LocalTabGesturePosition = compositionLocalOf { mutableStateOf<Float?>(null) }
-
-/**
  * 底部 5 标签导航栏。
  * - 悬浮模式 (isFloating = true)：与 InstallerX-Revived / compose-miuix-ui 对齐的 Liquid Glass 液态玻璃悬浮导航栏。
  * - 标准模式 (isFloating = false)：使用原生 MIUIX NavigationBar + 背景毛玻璃模糊。
@@ -89,8 +82,7 @@ fun MainBottomBar(
             },
         )
     } else {
-        // 标准固定底栏：应用 Backdrop Blur 毛玻璃与顶部分割线。
-        // 96% 不透明 tint 下模糊纹理几乎不可见，半径从 20dp 降到 12dp 换取滚动帧率。
+        // 标准固定底栏：应用 Backdrop Blur 96% 高密度毛玻璃与顶部分割线
         val bottomBarModifier = if (backdrop != null) {
             modifier
                 .fillMaxWidth()
@@ -98,7 +90,7 @@ fun MainBottomBar(
                     backdrop = backdrop,
                     tintColor = colorScheme.surface,
                     tintAlpha = 0.96f,
-                    blurRadius = 12.dp,
+                    blurRadius = 20.dp,
                 )
                 .drawBehind {
                     drawLine(
