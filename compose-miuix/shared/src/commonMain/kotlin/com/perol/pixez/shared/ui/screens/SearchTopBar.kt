@@ -14,18 +14,24 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LiquidFilterChip
+import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -167,70 +173,103 @@ internal fun SearchResultFilterBar(
             ),
         ) + fadeOut(),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // 搜索类型切换：作品 / 画师
-            TabRow(
-                tabs = searchTypes,
-                selectedTabIndex = searchTypeIndex,
-                onTabSelected = onSearchTypeSelected,
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-
-            if (searchTypeIndex == 0) {
-                val sortLabel = when (sort) {
-                    "date_asc" -> strings.searchSortOldest
-                    "popular_desc" -> strings.searchSortPopular
-                    else -> strings.searchSortLatest
-                }
-
-                Row(
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth(),
+            ) {
+                // 搜索类型切换：作品 / 画师
+                TabRow(
+                    tabs = searchTypes,
+                    selectedTabIndex = searchTypeIndex,
+                    onTabSelected = onSearchTypeSelected,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    LiquidFilterChip(
-                        text = strings.searchSortLabel.format(sortLabel),
-                        selected = sort != "date_desc",
-                        backdrop = backdrop,
-                        textStyle = MiuixTheme.textStyles.footnote1,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                        onClick = onSortClick,
-                    )
+                    colors = TabRowDefaults.tabRowColors(
+                        backgroundColor = Color.Transparent,
+                    ),
+                )
 
-                    LiquidFilterChip(
-                        text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
-                        selected = searchAiType != 0,
-                        backdrop = backdrop,
-                        textStyle = MiuixTheme.textStyles.footnote1,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                        onClick = onAiTypeClick,
-                    )
-
-                    if (bookmarkThreshold > 0) {
-                        LiquidFilterChip(
-                            text = "${bookmarkThreshold}+ ✕",
-                            selected = true,
-                            backdrop = backdrop,
-                            textStyle = MiuixTheme.textStyles.footnote1,
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                            onClick = onClearBookmarkThreshold,
-                        )
+                if (searchTypeIndex == 0) {
+                    val sortLabel = when (sort) {
+                        "date_asc" -> strings.searchSortOldest
+                        "popular_desc" -> strings.searchSortPopular
+                        else -> strings.searchSortLatest
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    val filterListState = rememberLazyListState()
+                    LazyRow(
+                        state = filterListState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInput(filterListState) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        if (event.type == PointerEventType.Scroll) {
+                                            val delta = event.changes.firstOrNull()?.scrollDelta
+                                            if (delta != null && delta.y != 0f && delta.x == 0f) {
+                                                filterListState.dispatchRawDelta(delta.y * 64f)
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        item(key = "sort") {
+                            LiquidFilterChip(
+                                text = strings.searchSortLabel.format(sortLabel),
+                                selected = sort != "date_desc",
+                                backdrop = backdrop,
+                                textStyle = MiuixTheme.textStyles.footnote1,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+                                onClick = onSortClick,
+                            )
+                        }
 
-                    LiquidFilterChip(
-                        text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
-                        selected = hasActiveFilters,
-                        backdrop = backdrop,
-                        textStyle = MiuixTheme.textStyles.footnote1,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                        onClick = onOpenFilter,
-                    )
+                        item(key = "ai") {
+                            LiquidFilterChip(
+                                text = if (searchAiType == 0) strings.searchAiInclude else strings.searchAiExclude,
+                                selected = searchAiType != 0,
+                                backdrop = backdrop,
+                                textStyle = MiuixTheme.textStyles.footnote1,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+                                onClick = onAiTypeClick,
+                            )
+                        }
+
+                        if (bookmarkThreshold > 0) {
+                            item(key = "bookmark") {
+                                LiquidFilterChip(
+                                    text = "${bookmarkThreshold}+ ✕",
+                                    selected = true,
+                                    backdrop = backdrop,
+                                    textStyle = MiuixTheme.textStyles.footnote1,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+                                    onClick = onClearBookmarkThreshold,
+                                )
+                            }
+                        }
+
+                        item(key = "filter") {
+                            LiquidFilterChip(
+                                text = if (hasActiveFilters) strings.searchFilterHasSelected else strings.searchFilter,
+                                selected = hasActiveFilters,
+                                backdrop = backdrop,
+                                textStyle = MiuixTheme.textStyles.footnote1,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+                                onClick = onOpenFilter,
+                            )
+                        }
+                    }
                 }
             }
         }

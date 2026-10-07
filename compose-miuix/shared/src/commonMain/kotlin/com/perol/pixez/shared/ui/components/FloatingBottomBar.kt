@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -59,6 +60,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.animation.DampedDragAnimation
 import com.perol.pixez.shared.ui.animation.InteractiveHighlight
 import com.perol.pixez.shared.ui.libs.liquid.rememberCombinedBackdrop
+import com.perol.pixez.shared.ui.navigation.LocalTabGesturePosition
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BadgedBox
@@ -84,6 +86,19 @@ import kotlin.math.sin
 
 val LocalFloatingBottomBarContentColor = staticCompositionLocalOf { Color.Unspecified }
 val LocalFloatingBottomBarTabScale = staticCompositionLocalOf { { 1f } }
+
+/**
+ * 点击 tab 时直驱指示器弹簧动画的入口，由调用方创建并传入 [FloatingBottomBar]；
+ * 组合期 FloatingBottomBar 注册内部动画器，item 点击处同步调用即零环回延迟起步。
+ * StateFlow 环回路径因目标值已达（差值检查）自动跳过，不会重复驱动。
+ */
+@Stable
+class FloatingBottomBarDirectSelector {
+    internal var select: ((Int) -> Unit)? = null
+    operator fun invoke(index: Int) {
+        select?.invoke(index)
+    }
+}
 
 @Immutable
 class FloatingBottomBarColors(
@@ -209,10 +224,13 @@ fun FloatingBottomBar(
     modifier: Modifier = Modifier,
     mode: FloatingBottomBarMode = if (isRuntimeShaderSupported() && backdrop != null) FloatingBottomBarMode.LiquidGlass else FloatingBottomBarMode.Blur,
     colors: FloatingBottomBarColors = FloatingBottomBarDefaults.colors(),
+    directSelector: FloatingBottomBarDirectSelector? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val isDark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
     val pillShape = remember { CircleShape }
+    // 主页 Pager 手势翻页的连续位置；null = 非手势滚动，滑块走 damped spring 动画值
+    val gesturePosition = LocalTabGesturePosition.current
     val isLiquidGlassMode = mode == FloatingBottomBarMode.LiquidGlass && backdrop != null && isRuntimeShaderSupported()
     val isBlurMode = mode == FloatingBottomBarMode.Blur && backdrop != null
     val containerColor = if (isLiquidGlassMode) colors.containerColor.copy(alpha = 0.4f) else colors.containerColor
@@ -312,15 +330,26 @@ fun FloatingBottomBar(
         }
     }
 
+    // 手势翻页期间把 pager 连续位置同步进 damped 动画基准：松手落位切回 spring 值时无跳变
+    // （snap 会打断进行中的 animateToValue，落位后二者目标一致，行为正确）。
+    LaunchedEffect(dampedDragAnimation, gesturePosition) {
+        snapshotFlow { gesturePosition.value }.collectLatest { position ->
+            if (position != null) {
+                dampedDragAnimation.updateValue(position)
+            }
+        }
+    }
+
     val interactiveHighlight =
         if (isLiquidGlassMode) {
-            remember(animationScope, tabWidthPx, isLtr) {
+            remember(animationScope, tabWidthPx, isLtr, gesturePosition) {
                 InteractiveHighlight(
                     animationScope = animationScope,
                     position = { size, _ ->
+                        val progress = gesturePosition.value ?: dampedDragAnimation.value
                         Offset(
-                            if (isLtr) (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffsetState.value
-                            else size.width - (dampedDragAnimation.value + 0.5f) * tabWidthPx + panelOffsetState.value,
+                            if (isLtr) (progress + 0.5f) * tabWidthPx + panelOffsetState.value
+                            else size.width - (progress + 0.5f) * tabWidthPx + panelOffsetState.value,
                             size.height / 2f,
                         )
                     },
@@ -334,6 +363,13 @@ fun FloatingBottomBar(
     val pillHighlight = rememberGravityRotatedHighlight(iosIndicatorSpecular, extraDegrees = 90f)
 
     val combinedBackdrop = backdrop?.let { rememberCombinedBackdrop(it, tabsBackdrop) }
+
+    // 注册点击直驱：组合期把内部弹簧动画器交给外部 holder，点击处同步调用
+    if (directSelector != null) {
+        directSelector.select = { index ->
+            dampedDragAnimation.animateToValue(index.toFloat(), pressed = false)
+        }
+    }
 
     Box(
         modifier = modifier.width(IntrinsicSize.Min),
@@ -382,6 +418,7 @@ fun FloatingBottomBar(
             isLiquidGlassMode = isLiquidGlassMode,
             combinedBackdrop = combinedBackdrop,
             dampedDragAnimation = dampedDragAnimation,
+            gesturePosition = gesturePosition,
             panelOffsetState = panelOffsetState,
             interactiveHighlight = interactiveHighlight,
             pillHighlight = pillHighlight,
@@ -410,6 +447,7 @@ fun IosLiquidGlassNavigationBar(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val onItemClickUpdated by rememberUpdatedState(onItemClick)
+    val directSelector = remember { FloatingBottomBarDirectSelector() }
 
     val navBarBottomPadding = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     val bottomPaddingValue = if (navBarBottomPadding != 0.dp) 8.dp + navBarBottomPadding else 20.dp
@@ -439,11 +477,14 @@ fun IosLiquidGlassNavigationBar(
                 tabsCount = items.size,
                 mode = mode,
                 colors = colors,
+                directSelector = directSelector,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 items.forEachIndexed { index, item ->
                     FloatingBottomBarItem(
                         onClick = {
+                            // 点击瞬间直驱指示器弹簧（零环回延迟），StateFlow 环回因值已达自动跳过。
+                            directSelector(index)
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             onItemClickUpdated(index)
                         },

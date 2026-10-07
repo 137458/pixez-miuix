@@ -25,6 +25,13 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 val LocalBottomBarVisibility = compositionLocalOf { mutableStateOf(true) }
 
 /**
+ * 主页 Pager 手势翻页期间的连续标签位置（currentPage + currentPageOffsetFraction）；
+ * 非手势滚动时为 null。底栏滑块在 draw 阶段读取：非 null 时直驱滑块实现零延迟跟手，
+ * 点击切换仍走 DampedDragAnimation 的 spring 动画，两者互不打断。
+ */
+val LocalTabGesturePosition = compositionLocalOf { mutableStateOf<Float?>(null) }
+
+/**
  * 底部 5 标签导航栏。
  * - 悬浮模式 (isFloating = true)：与 InstallerX-Revived / compose-miuix-ui 对齐的 Liquid Glass 液态玻璃悬浮导航栏。
  * - 标准模式 (isFloating = false)：使用原生 MIUIX NavigationBar + 背景毛玻璃模糊。
