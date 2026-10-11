@@ -19,6 +19,17 @@ data class SpotlightArticle(
     @SerialName("publish_date") val publishDate: String,
 )
 
+/**
+ * 基于特辑文章 ID 幂等合并列表，过滤重复项，避免 Compose LazyLayout 因重复 key 闪退。
+ */
+fun List<SpotlightArticle>.appendDistinct(newItems: List<SpotlightArticle>): List<SpotlightArticle> {
+    if (newItems.isEmpty()) return this
+    if (this.isEmpty()) return newItems
+    val existingIds = mapTo(HashSet(size + newItems.size)) { it.id }
+    val uniqueNew = newItems.filter { existingIds.add(it.id) }
+    return this + uniqueNew
+}
+
 @Serializable
 data class SpotlightDetail(
     val title: String,

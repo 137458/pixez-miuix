@@ -12,7 +12,6 @@ import com.perol.pixez.shared.data.model.IllustDetailResponse
 import com.perol.pixez.shared.data.model.IllustSeriesWithIdModel
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
-import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.model.UgoiraMetadataResponse
@@ -207,12 +206,15 @@ class IllustRepository(
     private val spotlightArticlesCache = ThreadSafeLruCache<String, SpotlightResponse>(20)
 
     /**
-     * 获取指定分类已缓存的 Spotlight 列表，若无缓存返回 null。
+     * 获取指定分类已缓存的 Spotlight 首页快照，若无缓存返回 null。
      */
     fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesCache.get(category)
 
     /**
-     * 获取 Spotlight 精选文章列表，支持按分类与分页加载，内置内存级缓存。
+     * 获取 Spotlight 精选文章列表，支持按分类与分页加载。
+     *
+     * 仓库只作当页数据源：首页响应写入 LRU 缓存（仅存最近首页快照，供分类切换/重进页面恢复），
+     * 翻页原样返回当页响应、不回写缓存——累积与去重由 UI 层共享列表状态单点负责（架构审查 中-8）。
      *
      * @param category 分类，如 all、illust、manga、novel 等。
      * @param nextUrl 分页加载下一页时传入的完整 URL；为空时请求首页数据。
@@ -260,19 +262,6 @@ class IllustRepository(
 
             if (nextUrl == null) {
                 spotlightArticlesCache.put(category, response)
-            } else {
-                val cached = spotlightArticlesCache.get(category)
-                if (cached != null) {
-                    val existingIds = cached.spotlightArticles.map { it.id }.toSet()
-                    val merged = cached.spotlightArticles + response.spotlightArticles.filter { it.id !in existingIds }
-                    spotlightArticlesCache.put(
-                        category,
-                        SpotlightResponse(
-                            spotlightArticles = merged,
-                            nextUrl = response.nextUrl,
-                        ),
-                    )
-                }
             }
             response
         }

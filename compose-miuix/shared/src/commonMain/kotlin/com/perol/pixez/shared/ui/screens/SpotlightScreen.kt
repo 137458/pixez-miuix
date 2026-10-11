@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -188,9 +189,8 @@ fun SpotlightScreen(
                     repository.getSpotlightArticles(category = category.code, nextUrl = nextUrl)
                 }
                 result.onSuccess { response ->
-                    val existingIds = targetState.articles.map { it.id }.toSet()
-                    val newArticles = response.spotlightArticles.filter { it.id !in existingIds }
-                    targetState.articles = targetState.articles + newArticles
+                    // 累积与去重收敛到 UI 层单点（架构审查 中-8）：仓库只返回当页响应
+                    targetState.articles = targetState.articles.appendDistinct(response.spotlightArticles)
                     targetState.nextUrl = response.nextUrl
                 }
                 targetState.isLoadingMore = false

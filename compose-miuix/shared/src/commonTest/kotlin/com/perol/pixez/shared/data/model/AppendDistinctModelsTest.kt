@@ -99,4 +99,38 @@ class AppendDistinctModelsTest {
         assertEquals(existing, existing.appendDistinct(emptyList()))
         assertEquals(listOf(novel(100)), emptyList<Novel>().appendDistinct(listOf(novel(100))))
     }
+
+    // ---------- SpotlightArticle ----------
+
+    private fun spotlightArticle(id: Long) = SpotlightArticle(
+        id = id,
+        title = "特辑$id",
+        pureTitle = "特辑$id",
+        thumbnail = "https://s.pximg.net/t$id",
+        articleUrl = "https://www.pixivision.net/zh/a/$id",
+        publishDate = "2026-01-01",
+    )
+
+    @Test
+    fun `spotlight append filters duplicates by id and keeps order`() {
+        val existing = listOf(spotlightArticle(1), spotlightArticle(2))
+        val newItems = listOf(spotlightArticle(2), spotlightArticle(3))
+        val merged = existing.appendDistinct(newItems)
+        assertEquals(listOf(1L, 2L, 3L), merged.map { it.id })
+    }
+
+    @Test
+    fun `spotlight append is idempotent when the same page is replayed`() {
+        val existing = listOf(spotlightArticle(1), spotlightArticle(2))
+        val samePage = listOf(spotlightArticle(1), spotlightArticle(2))
+        // 翻页回调重复投递同一页时列表不得增长
+        assertEquals(listOf(1L, 2L), existing.appendDistinct(samePage).map { it.id })
+    }
+
+    @Test
+    fun `spotlight append with empty inputs returns original references`() {
+        val existing = listOf(spotlightArticle(1))
+        assertEquals(existing, existing.appendDistinct(emptyList()))
+        assertEquals(listOf(spotlightArticle(1)), emptyList<SpotlightArticle>().appendDistinct(listOf(spotlightArticle(1))))
+    }
 }
