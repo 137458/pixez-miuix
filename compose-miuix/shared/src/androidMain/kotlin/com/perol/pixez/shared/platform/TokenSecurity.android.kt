@@ -64,15 +64,22 @@ actual object PlatformTokenCipher {
             val secretKey = getOrCreateSecretKey()
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            val iv = cipher.iv ?: return plainText
+            val iv = cipher.iv ?: throw TokenCipherException(
+                TokenCipherException.STAGE_ENCRYPT,
+                "Android Cipher 未返回 IV",
+            )
             val encryptedBytes = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
             val combined = ByteArray(iv.size + encryptedBytes.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
             System.arraycopy(encryptedBytes, 0, combined, iv.size, encryptedBytes.size)
             PREFIX + Base64.encodeToString(combined, Base64.NO_WRAP)
+        } catch (e: TokenCipherException) {
+            throw e
         } catch (e: Throwable) {
-            Napier.w("凭证硬件加密失败，安全降级保持原样", e)
-            plainText
+            // 中-17 fail-fast：Keystore 异常（系统升级/恢复出厂后密钥丢失）时上抛中断保存，
+            // 明文凭证不得静默落库；存储层捕获 TokenCipherException 后按凭证失效清理。
+            Napier.e("凭证硬件加密失败，中断保存（fail-fast）", e)
+            throw TokenCipherException(TokenCipherException.STAGE_ENCRYPT, "Android Keystore 凭证加密失败", e)
         }
     }
 
@@ -84,7 +91,12 @@ actual object PlatformTokenCipher {
         return try {
             val base64Payload = cipherText.removePrefix(PREFIX)
             val combined = Base64.decode(base64Payload, Base64.NO_WRAP)
-            if (combined.size <= IV_LENGTH) return cipherText
+            if (combined.size <= IV_LENGTH) {
+                throw TokenCipherException(
+                    TokenCipherException.STAGE_DECRYPT,
+                    "密文长度不足（${combined.size} <= $IV_LENGTH），密文已损坏",
+                )
+            }
 
             val iv = ByteArray(IV_LENGTH)
             val encryptedBytes = ByteArray(combined.size - IV_LENGTH)
@@ -97,9 +109,13 @@ actual object PlatformTokenCipher {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
             val decryptedBytes = cipher.doFinal(encryptedBytes)
             String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: TokenCipherException) {
+            throw e
         } catch (e: Throwable) {
-            Napier.w("凭据解密失败，回退返回原始数据", e)
-            cipherText
+            // 中-17 fail-fast：密文损坏或密钥丢失时上抛，密文不得被当作凭证原样返回；
+            // 存储层捕获后按「凭证失效」清理该账号并引导重新登录。
+            Napier.e("凭据解密失败，按凭证失效处理（fail-fast）", e)
+            throw TokenCipherException(TokenCipherException.STAGE_DECRYPT, "Android Keystore 凭证解密失败", e)
         }
     }
 }

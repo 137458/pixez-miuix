@@ -6,6 +6,7 @@ import com.perol.pixez.shared.data.local.account.AccountDatabase
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.platform.PlatformTokenCipher
+import com.perol.pixez.shared.platform.TokenCipherException
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -25,11 +26,16 @@ private const val DEFAULT_PASSWORD_PLACEHOLDER = "no more"
  */
 /**
  * 默认实现：SQLDelight 持久化 + PlatformTokenCipher 加解密 + 内存缓存。
+ *
+ * @param encryptFn / decryptFn 平台加解密注入缝，生产使用默认 [PlatformTokenCipher]；
+ *   desktopTest 注入故障以验证「加密失败不得明文落库」等 fail-fast 行为（中-17）。
  */
 class SqlDelightAuthTokenStorage(
     driver: SqlDriver,
     private val getActiveUserId: (() -> String?)? = null,
     private val setActiveUserId: ((String?) -> Unit)? = null,
+    private val encryptFn: (String) -> String = { PlatformTokenCipher.encrypt(it) },
+    private val decryptFn: (String) -> String = { PlatformTokenCipher.decrypt(it) },
 ) : AuthTokenStorage {
     private val database = AccountDatabase(driver)
     private val queries = database.accountQueries
@@ -50,7 +56,8 @@ class SqlDelightAuthTokenStorage(
      *
      * 优先匹配当前保存的 activeUserId，若不存在则回退至第一条已登录账号。
      * 内部使用内存缓存，优先从缓存返回，避免首屏频繁查询 SQLite 阻塞。
-     * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏。
+     * 若数据库为空则返回 null；读取异常会向上抛出，避免静默掩盖数据库损坏；
+     * 凭证解密失败不在此列——按「凭证失效」清理后返回仅含账号轮廓的记录（见 [decrypted]）。
      */
     override suspend fun getCurrentAccount(): Account? = withContext(Dispatchers.IO) {
         if (isCacheInitialized) return@withContext cachedAccount
@@ -97,8 +104,8 @@ class SqlDelightAuthTokenStorage(
             val existing = queries.selectByUserId(user.id).executeAsList().firstOrNull()
             queries.insertOrReplace(
                 id = existing?.id,
-                access_token = PlatformTokenCipher.encrypt(account.accessToken),
-                refresh_token = PlatformTokenCipher.encrypt(account.refreshToken),
+                access_token = encryptFn(account.accessToken),
+                refresh_token = encryptFn(account.refreshToken),
                 device_token = deviceToken,
                 user_id = user.id,
                 user_image = user.profileImageUrls.px170x170,
@@ -195,8 +202,8 @@ class SqlDelightAuthTokenStorage(
             } else {
                 queries.selectAll().executeAsList().firstOrNull()
             } ?: throw IllegalStateException("没有登录账号，无法更新 token")
-            val encAccess = PlatformTokenCipher.encrypt(accessToken)
-            val encRefresh = PlatformTokenCipher.encrypt(refreshToken)
+            val encAccess = encryptFn(accessToken)
+            val encRefresh = encryptFn(refreshToken)
             queries.insertOrReplace(
                 id = current.id,
                 access_token = encAccess,
@@ -275,30 +282,70 @@ class SqlDelightAuthTokenStorage(
 
     private fun encryptPassword(password: String): String =
         if (password.isNotBlank() && password != DEFAULT_PASSWORD_PLACEHOLDER) {
-            PlatformTokenCipher.encrypt(password)
+            encryptFn(password)
         } else {
             password
         }
 
     private fun decryptPassword(password: String): String =
         if (password.isNotBlank() && password != DEFAULT_PASSWORD_PLACEHOLDER) {
-            PlatformTokenCipher.decrypt(password)
+            decryptFn(password)
         } else {
             password
         }
 
+    /**
+     * 解密账号凭证字段；解密失败（[TokenCipherException]，平台密钥丢失或密文损坏）时
+     * 按「凭证失效」清理该账号（中-17 fail-fast）：清空 token 与密码、保留账号轮廓并落库，
+     * 密文不再被当作凭证原样返回给网络层，UI 侧可凭空 token 引导重新登录。
+     * 必须在持有 [mutex] 的上下文中调用（清理需要写库）。
+     */
     private fun Account.decrypted(): Account {
-        val decAccess = PlatformTokenCipher.decrypt(access_token)
-        val decRefresh = PlatformTokenCipher.decrypt(refresh_token)
-        val decPass = decryptPassword(password)
-        if (decAccess == access_token && decRefresh == refresh_token && decPass == password) {
-            return this
+        return try {
+            val decAccess = decryptFn(access_token)
+            val decRefresh = decryptFn(refresh_token)
+            val decPass = decryptPassword(password)
+            if (decAccess == access_token && decRefresh == refresh_token && decPass == password) {
+                this
+            } else {
+                this.copy(
+                    access_token = decAccess,
+                    refresh_token = decRefresh,
+                    password = decPass,
+                )
+            }
+        } catch (e: TokenCipherException) {
+            Napier.e("账号($user_id)凭证解密失败，按凭证失效清理：清空 token 并保留账号轮廓，等待重新登录", e)
+            invalidateCredentials()
         }
-        return this.copy(
-            access_token = decAccess,
-            refresh_token = decRefresh,
-            password = decPass,
+    }
+
+    /**
+     * 将当前账号的凭证字段清空并落库（access/refresh token 置空、密码恢复占位值），
+     * 返回清理后的账号对象；调用方持有 [mutex]，后续读取不再触发解密失败。
+     */
+    private fun Account.invalidateCredentials(): Account {
+        val sanitized = this.copy(
+            access_token = "",
+            refresh_token = "",
+            password = DEFAULT_PASSWORD_PLACEHOLDER,
         )
+        queries.insertOrReplace(
+            id = sanitized.id,
+            access_token = sanitized.access_token,
+            refresh_token = sanitized.refresh_token,
+            device_token = sanitized.device_token,
+            user_id = sanitized.user_id,
+            user_image = sanitized.user_image,
+            name = sanitized.name,
+            password = sanitized.password,
+            account = sanitized.account,
+            mail_address = sanitized.mail_address,
+            is_premium = sanitized.is_premium,
+            x_restrict = sanitized.x_restrict,
+            is_mail_authorized = sanitized.is_mail_authorized,
+        )
+        return sanitized
     }
 
     private fun Account.encrypted(): Account {

@@ -4,14 +4,16 @@ import com.perol.pixez.shared.ui.AppConstants
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * 桌面端凭据加解密测试（S-2）：Windows 走系统 DPAPI（CryptProtectData），
+ * 桌面端凭据加解密测试（S-2 / 中-17）：Windows 走系统 DPAPI（CryptProtectData），
  * 密文以 [AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX] 前缀标识，与 Android Keystore 实现共用同一套
  * 前缀协议——无前缀视为历史明文原样返回，下次写回时自动升级为密文。
  *
- * 非 Windows JVM（macOS / Linux 桌面）没有 DPAPI，约定回退明文且不抛异常。
+ * 失败语义（中-17 fail-fast）：带前缀密文解密失败（损坏/平台无 DPAPI）抛出 [TokenCipherException]，
+ * 密文不再被原样当凭证返回；非 Windows 加密回退明文直通不抛异常（平台无加密服务，非加密失败）。
  */
 class PlatformTokenCipherDesktopTest {
 
@@ -55,13 +57,14 @@ class PlatformTokenCipherDesktopTest {
     }
 
     @Test
-    fun `损坏密文解密回退原样返回且不抛异常`() {
+    fun `损坏密文解密 fail-fast 抛出 TokenCipherException 而非原样返回`() {
         listOf(
             "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}@@not-valid-base64@@",
             AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
             "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}AAAA",
         ).forEach { broken ->
-            assertEquals(broken, PlatformTokenCipher.decrypt(broken), "损坏密文应原样返回: $broken")
+            val thrown = assertFailsWith<TokenCipherException> { PlatformTokenCipher.decrypt(broken) }
+            assertEquals(TokenCipherException.STAGE_DECRYPT, thrown.stage, "失败环节应标识为解密: $broken")
         }
     }
 
@@ -70,6 +73,31 @@ class PlatformTokenCipherDesktopTest {
         if (isWindows) return
         assertEquals(PLAIN, PlatformTokenCipher.encrypt(PLAIN))
         assertEquals(PLAIN, PlatformTokenCipher.decrypt(PLAIN))
+    }
+
+    @Test
+    fun `DPAPI 加密失败应抛 TokenCipherException 而非返回明文`() {
+        if (!isWindows) return
+        val cipher = DpapiTokenCipher(
+            prefix = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
+            protect = { error("模拟 DPAPI 加密故障") },
+        )
+
+        assertFailsWith<TokenCipherException> { cipher.encrypt(PLAIN) }
+    }
+
+    @Test
+    fun `DPAPI 解密失败应抛 TokenCipherException 而非返回密文`() {
+        if (!isWindows) return
+        val cipher = DpapiTokenCipher(
+            prefix = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
+            unprotect = { error("模拟 DPAPI 解密故障") },
+        )
+
+        val thrown = assertFailsWith<TokenCipherException> {
+            cipher.decrypt("${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}AAAA")
+        }
+        assertEquals(TokenCipherException.STAGE_DECRYPT, thrown.stage)
     }
 
     private companion object {
