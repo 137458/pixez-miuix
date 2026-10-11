@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
+import com.perol.pixez.shared.LocalBanRepository
 import com.perol.pixez.shared.LocalDownloadRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.mapToPictureSource
@@ -96,7 +97,7 @@ fun IllustCard(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
     val downloadRepository = LocalDownloadRepository.current
-    val banRepository = com.perol.pixez.shared.LocalBanRepository.current
+    val banRepository = LocalBanRepository.current
 
     // 长按菜单宿主（信息流网格）没有 Toast 承载容器，接入门槛是把 onToast 逐层上抛到每个列表页。
     // 故此处只统一异常捕获与取消语义，提示仍与抽取前一样保持静默。
@@ -163,8 +164,7 @@ fun IllustCard(
                 showActionMenu = false
                 coroutineScope.launch {
                     suspendRunCatchingNonCancel {
-                        val repo = banRepository ?: com.perol.pixez.shared.AppDependencies.orNull()?.banRepository
-                        repo?.insertBanIllust(
+                        banRepository.insertBanIllust(
                             illustId = illust.id,
                             name = illust.title,
                         )

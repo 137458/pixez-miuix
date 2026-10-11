@@ -38,8 +38,13 @@ val LocalDownloadRepository = staticCompositionLocalOf<DownloadRepository?> { nu
 
 /**
  * 卡片与轻量组件通过该 CompositionLocal 获取 [BanRepository] 执行快捷屏蔽。
+ *
+ * 与 [LocalHistoryRepository] 一致采用快速失败语义：未提供时读取即抛出，
+ * 装配缺失首帧即暴露，禁止回退 AppDependencies 全局单例（中-20）。
  */
-val LocalBanRepository = staticCompositionLocalOf<BanRepository?> { null }
+val LocalBanRepository = staticCompositionLocalOf<BanRepository> {
+    error("LocalBanRepository not provided")
+}
 
 /**
  * 共享的 Compose 应用入口。
