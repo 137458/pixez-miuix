@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.components
 
 import com.perol.pixez.shared.network.PixivApiException
+import com.perol.pixez.shared.ui.i18n.AppStrings
 
 /**
  * PixivApiException 的差异化错误文案语义键。
@@ -29,5 +30,18 @@ object PixivApiErrorFormatter {
         error.statusCode == 429 -> PixivApiErrorKey.RATE_LIMITED
         error.statusCode == 404 -> PixivApiErrorKey.NOT_FOUND
         else -> null
+    }
+
+    /**
+     * 将任意错误归一为可直接展示的本地化错误文案：
+     * PixivApiException 的 403/429/404 走差异化语义文案（与 ErrorPlaceholder 同口径），
+     * 未收录状态码、网络错误、解析失败、取消等其余情况一律回退 strings.loadFailed。
+     * 原始异常消息（含内部技术细节）不进入返回值，仅供日志使用。
+     */
+    fun format(error: Throwable?, strings: AppStrings): String = when (resolve(error)) {
+        PixivApiErrorKey.FORBIDDEN -> strings.loadFailedForbidden
+        PixivApiErrorKey.RATE_LIMITED -> strings.loadFailedRateLimited
+        PixivApiErrorKey.NOT_FOUND -> strings.loadFailedNotFound
+        null -> strings.loadFailed
     }
 }
