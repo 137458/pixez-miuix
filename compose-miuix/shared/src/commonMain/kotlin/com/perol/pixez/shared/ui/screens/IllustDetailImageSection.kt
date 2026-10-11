@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -142,7 +143,8 @@ internal fun IllustDetailImagePage(
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
 ) {
-    val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, changeVersion) {
         resolveIllustQuality(illust, settings)
     }
     val rawPageUrl = remember(page, effectiveQuality) {
@@ -161,7 +163,7 @@ internal fun IllustDetailImagePage(
         customBasePath = settings?.storePath,
         pictureSource = settings?.pictureSource,
     )
-    val thumbnailUrl = remember(page, pageIndex, illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+    val thumbnailUrl = remember(page, pageIndex, illust, settings?.feedPreviewQuality, changeVersion) {
         if (pageIndex == 0) {
             // 详情页容器按作品真实比例布局，禁用方图占位档，避免竖图容器露出正方形预览图。
             resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality, allowSquare = false)
@@ -270,7 +272,8 @@ internal fun IllustDetailSinglePageImage(
             )
         }
     } else {
-        val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, settings?.changeVersion) {
+        val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, changeVersion) {
             resolveIllustQuality(illust, settings)
         }
         val rawSingleUrl = remember(illust, effectiveQuality) {
@@ -289,7 +292,7 @@ internal fun IllustDetailSinglePageImage(
             customBasePath = settings?.storePath,
             pictureSource = settings?.pictureSource,
         )
-        val thumbnailUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+        val thumbnailUrl = remember(illust, settings?.feedPreviewQuality, changeVersion) {
             // 同上：详情页占位禁用方图档，保持与容器真实比例一致。
             resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality, allowSquare = false)
         }

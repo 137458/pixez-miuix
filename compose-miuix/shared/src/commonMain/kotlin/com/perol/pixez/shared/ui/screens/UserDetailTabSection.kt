@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -76,14 +77,15 @@ internal fun UserWorksTab(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
     val coroutineScope = rememberCoroutineScope()
 
     // retryCount 自增走强制刷新（等价原 produceState 重跑总是重新请求）；tab 保持组合复用与
     // 首次进入时 loadFirst 缓存早退不重拉；filterChangeVersion 变化仅本地重过滤（高-3 语义）。
-    LaunchedEffect(userId, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(userId, retryCount, filterChangeVersion) {
         if (listState.refilterIfChanged()) return@LaunchedEffect
         listState.loadFirst(force = retryCount > 0)
     }
@@ -156,7 +158,7 @@ internal fun UserBookmarksTab(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
     var privateRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -167,14 +169,15 @@ internal fun UserBookmarksTab(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
 
     // 仅加载当前选中 tab（未选中保持空，lazy）；切回已加载 tab 时 loadFirst 缓存早退；
     // 各自 retryCount 自增走强制刷新（等价原 produceState 重跑）；filterChangeVersion 变化时
     // 当前 tab 本地重过滤（高-3 语义），未选中 tab 在下次选中时经 refilterIfChanged 补上。
-    LaunchedEffect(selectedRestrictIndex, publicRetryCount, privateRetryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion2 = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(selectedRestrictIndex, publicRetryCount, privateRetryCount, filterChangeVersion2) {
         val isPublic = selectedRestrictIndex == 0
         val activeState = if (isPublic) publicState else privateState
         val activeRetryCount = if (isPublic) publicRetryCount else privateRetryCount

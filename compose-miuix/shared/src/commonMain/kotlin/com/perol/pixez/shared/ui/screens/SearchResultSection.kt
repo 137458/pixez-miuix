@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -156,11 +157,12 @@ internal fun SearchIllustResultGrid(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { raw -> banRepository.filterIllustsBySettings(raw, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
     val coroutineScope = rememberCoroutineScope()
 
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
     LaunchedEffect(
         searchWord,
         sort,
@@ -169,7 +171,7 @@ internal fun SearchIllustResultGrid(
         effectiveStartDate,
         effectiveEndDate,
         retryCount,
-        settingsRepository.filterChangeVersion,
+        filterChangeVersion,
     ) {
         // 过滤条件变化且已持有原始列表时仅本地重过滤（高-3 语义，零网络，替代原实现的全量重请求）；
         // 查询条件变化时状态机已随 remember key 重建，此处走首屏加载；retryCount 变化时走重试。
@@ -276,7 +278,8 @@ internal fun SearchUserResultList(
     var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(query, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion2 = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(query, retryCount, filterChangeVersion2) {
         requestGeneration++
         val generation = requestGeneration
         previewsState = null

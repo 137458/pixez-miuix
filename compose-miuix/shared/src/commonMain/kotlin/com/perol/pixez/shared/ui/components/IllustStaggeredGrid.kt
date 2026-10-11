@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -59,6 +60,7 @@ fun IllustStaggeredGrid(
     onRetryLoadMore: (() -> Unit)? = onLoadMore,
 ) {
     val settings = LocalSettingsRepository.current
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -79,7 +81,7 @@ fun IllustStaggeredGrid(
             settings?.hCrossAdapt,
             settings?.hCrossAdapterWidth,
             settings?.hCrossCount,
-            settings?.changeVersion,
+            changeVersion,
         ) {
             if (columns != null) {
                 columns

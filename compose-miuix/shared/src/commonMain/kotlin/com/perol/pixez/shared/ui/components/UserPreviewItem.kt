@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,8 +35,9 @@ internal fun UserPreviewItem(
     val settings = LocalSettingsRepository.current
     val hIsNotAllow = settings?.hIsNotAllow ?: false
     val banAIIllust = settings?.banAIIllust ?: false
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
 
-    val displayIllusts = remember(preview.illusts, hIsNotAllow, banAIIllust, settings?.changeVersion) {
+    val displayIllusts = remember(preview.illusts, hIsNotAllow, banAIIllust, changeVersion) {
         preview.illusts.filter { illust ->
             (!hIsNotAllow || !illust.isR18()) &&
                 (!banAIIllust || illust.illustAIType != 2)

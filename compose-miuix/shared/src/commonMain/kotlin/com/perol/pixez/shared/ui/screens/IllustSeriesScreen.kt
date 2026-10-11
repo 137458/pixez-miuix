@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -81,14 +82,15 @@ fun IllustSeriesScreen(
                 IllustPagedPage(response.illusts.orEmpty(), response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 系列 ID 变更、重试或手动刷新时重新加载作品；过滤条件变化仅本地重过滤（高-3）。
-    LaunchedEffect(seriesId, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(seriesId, retryCount, filterChangeVersion) {
         val force = isManualRefreshing
         if (!force && listState.refilterIfChanged()) return@LaunchedEffect
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {

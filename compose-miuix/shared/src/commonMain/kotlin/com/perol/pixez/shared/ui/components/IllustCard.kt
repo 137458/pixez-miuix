@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -72,7 +73,8 @@ fun IllustCard(
     modifier: Modifier = Modifier,
 ) {
     val settings = LocalSettingsRepository.current
-    val previewUrl = remember(illust, settings?.feedPreviewQuality, settings?.changeVersion) {
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val previewUrl = remember(illust, settings?.feedPreviewQuality, changeVersion) {
         resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality)
     }
 
@@ -80,7 +82,7 @@ fun IllustCard(
     val showAIBadge = remember(isAI, settings?.feedAIBadge) { (settings?.feedAIBadge != false) && isAI }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val isNsfw = remember(illust, settings?.nsfwMask, settings?.changeVersion) {
+    val isNsfw = remember(illust, settings?.nsfwMask, changeVersion) {
         (settings?.nsfwMask == true) && illust.isR18()
     }
 

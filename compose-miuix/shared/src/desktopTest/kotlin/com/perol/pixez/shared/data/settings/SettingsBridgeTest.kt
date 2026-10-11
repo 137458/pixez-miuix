@@ -156,16 +156,16 @@ class SettingsBridgeTest {
         val node = Preferences.userRoot().node("com/perol/pixez/test/h_is_not_allow")
         node.clear()
         val repo = SettingsRepository(PreferencesSettings(node))
-        val initialVersion = repo.changeVersion
+        val initialVersion = repo.changeVersion.value
 
         assertFalse(repo.hIsNotAllow)
         repo.hIsNotAllow = true
-        assertEquals(initialVersion + 1, repo.changeVersion)
+        assertEquals(initialVersion + 1, repo.changeVersion.value)
         assertTrue(repo.hIsNotAllow)
         assertTrue(node.getBoolean("h_is_not_allow", false))
 
         repo.hIsNotAllow = false
-        assertEquals(initialVersion + 2, repo.changeVersion)
+        assertEquals(initialVersion + 2, repo.changeVersion.value)
         assertFalse(repo.hIsNotAllow)
         assertFalse(node.getBoolean("h_is_not_allow", true))
     }
@@ -175,14 +175,14 @@ class SettingsBridgeTest {
         val node = Preferences.userRoot().node("com/perol/pixez/test/close_to_tray")
         node.clear()
         val repo = SettingsRepository(PreferencesSettings(node))
-        val initialVersion = repo.changeVersion
+        val initialVersion = repo.changeVersion.value
 
         assertFalse(repo.closeToTray)
         repo.closeToTray = true
 
         assertTrue(repo.closeToTray)
         assertTrue(node.getBoolean("desktop_close_to_tray", false))
-        assertEquals(initialVersion + 1, repo.changeVersion)
+        assertEquals(initialVersion + 1, repo.changeVersion.value)
     }
 
     @Test
@@ -190,19 +190,53 @@ class SettingsBridgeTest {
         val node = Preferences.userRoot().node("com/perol/pixez/test/filter_settings")
         node.clear()
         val repo = SettingsRepository(PreferencesSettings(node))
-        val initialVersion = repo.changeVersion
+        val initialVersion = repo.changeVersion.value
 
         repo.banAIIllust = true
-        assertEquals(initialVersion + 1, repo.changeVersion)
+        assertEquals(initialVersion + 1, repo.changeVersion.value)
         assertTrue(repo.banAIIllust)
 
         repo.nsfwMask = true
-        assertEquals(initialVersion + 2, repo.changeVersion)
+        assertEquals(initialVersion + 2, repo.changeVersion.value)
         assertTrue(repo.nsfwMask)
 
         repo.feedAIBadge = false
-        assertEquals(initialVersion + 3, repo.changeVersion)
+        assertEquals(initialVersion + 3, repo.changeVersion.value)
         assertFalse(repo.feedAIBadge)
+    }
+
+    @Test
+    fun `non filter write bumps changeVersion but not filterChangeVersion`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/version_semantics_global")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        assertEquals(0, repo.changeVersion.value)
+        assertEquals(0, repo.filterChangeVersion.value)
+
+        // 普通设置写入只走全局版本号，过滤版本号必须保持不动
+        repo.closeToTray = true
+
+        assertEquals(1, repo.changeVersion.value)
+        assertEquals(0, repo.filterChangeVersion.value)
+    }
+
+    @Test
+    fun `filter write bumps both filterChangeVersion and changeVersion`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/version_semantics_filter")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        // 过滤事件是全局事件子集：过滤版本号自增时全局版本号连带自增
+        repo.banAIIllust = true
+
+        assertEquals(1, repo.filterChangeVersion.value)
+        assertEquals(1, repo.changeVersion.value)
+
+        repo.nsfwMask = true
+
+        assertEquals(2, repo.filterChangeVersion.value)
+        assertEquals(2, repo.changeVersion.value)
     }
 
     @Test

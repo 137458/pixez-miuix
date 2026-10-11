@@ -91,7 +91,7 @@ fun RootContent(
     val settingsRepository = registry.settingsRepository
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
     // 监听 changeVersion 响应式自增，确保 ThemeSettingScreen 修改后即时全局重绘。
-    val changeVersion = settingsRepository.changeVersion
+    val changeVersion = settingsRepository.changeVersion.collectAsState().value
     val themeMode = settingsRepository.themeMode
     val isAmoled = settingsRepository.isAmoled
     val useDynamicColor = settingsRepository.useDynamicColor
@@ -132,7 +132,7 @@ fun RootContent(
     }
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
-    val strings = remember(currentLanguageNum, settingsRepository.changeVersion) {
+    val strings = remember(currentLanguageNum, changeVersion) {
         AppStrings.fromLanguageNum(currentLanguageNum)
     }
 
@@ -544,7 +544,7 @@ private fun MainChildSection(
     settingsRepository: SettingsRepository,
 ) {
     // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
-    val mainChangeVersion = settingsRepository.changeVersion
+    val mainChangeVersion = settingsRepository.changeVersion.collectAsState().value
     // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
     // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
     // 回落为 CompositionLocal 默认值 16.dp。

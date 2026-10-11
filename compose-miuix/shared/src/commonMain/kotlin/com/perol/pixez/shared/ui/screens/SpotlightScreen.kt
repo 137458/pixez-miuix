@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -414,7 +415,8 @@ internal fun SpotlightArticleCard(
 @Composable
 internal fun rememberSpotlightGridColumns(): StaggeredGridCells {
     val settings = LocalSettingsRepository.current
-    return remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, settings?.changeVersion) {
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    return remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, changeVersion) {
         if (settings?.crossAdapt == true) {
             val minWidth = (settings.crossAdapterWidth * 1.2f).toInt()
                 .coerceIn(SPOTLIGHT_CARD_MIN_WIDTH_DP, SPOTLIGHT_CARD_MAX_WIDTH_DP)

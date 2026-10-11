@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -189,6 +190,7 @@ private fun IllustDetailSingleContent(
 ) {
     val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
+    val changeVersion = settings?.changeVersion?.collectAsState()?.value
 
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -270,7 +272,7 @@ private fun IllustDetailSingleContent(
         }
     }
 
-    val isRestricted = remember(illust, isBanned, settings?.hIsNotAllow, settings?.changeVersion) {
+    val isRestricted = remember(illust, isBanned, settings?.hIsNotAllow, changeVersion) {
         isBanned || (settings?.hIsNotAllow == true && illust?.isR18() == true)
     }
 

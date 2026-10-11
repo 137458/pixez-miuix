@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -107,7 +108,7 @@ fun RankingScreen(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         ).also { state ->
             cachedRanking?.let { snapshot ->
                 val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
@@ -121,7 +122,8 @@ fun RankingScreen(
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 模式、日期切换或重试时自动重新加载；过滤条件变化时仅对原始列表本地重过滤（高-3）。
-    LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(selectedMode, selectedDate, retryCount, filterChangeVersion) {
         val force = isManualRefreshing
         if (!force && listState.refilterIfChanged()) {
             // 本地重过滤不改变原始列表与下一页 URL，恢复快照无需更新。

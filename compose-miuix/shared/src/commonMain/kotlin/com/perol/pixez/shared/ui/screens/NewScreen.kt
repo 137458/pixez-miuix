@@ -18,6 +18,7 @@ import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -131,14 +132,15 @@ fun NewScreen(
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         )
     }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, filterChangeVersion) {
         // 未登录（false）时 UI 层展示登录占位，状态机保持空；登录态未检测完成（null）不发起加载。
         if (isLoggedIn != true) return@LaunchedEffect
         val force = isManualRefreshing

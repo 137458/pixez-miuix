@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -139,7 +140,7 @@ fun HelloScreen(
                 }
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion },
+            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
         ).also { state ->
             feedRestore.snapshot?.let { snapshot ->
                 val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
@@ -154,7 +155,8 @@ fun HelloScreen(
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 加载或刷新推荐插画数据
-    LaunchedEffect(isLoggedIn, retryCount, settingsRepository.filterChangeVersion) {
+    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    LaunchedEffect(isLoggedIn, retryCount, filterChangeVersion) {
         // 登录态未检测完成（null）时不发起加载；登录分支在 fetch 闭包内动态读取。
         if (isLoggedIn == null) return@LaunchedEffect
         val force = isManualRefreshing

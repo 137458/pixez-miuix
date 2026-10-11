@@ -7,6 +7,10 @@ import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -25,25 +29,28 @@ class SettingsRepository(
     // 任何写入（notifyChanged）递增 revision 触发订阅方重组，未在组合中读取时为普通读。
     private var settingsRevision by mutableIntStateOf(0)
 
-    /**
-     * 全局设置版本号：任何设置写入（[notifyChanged]）自增，供 UI 订阅全局重组（主题、画质、语言等）。
-     * [notifyFilterChanged] 会连带自增本版本号——过滤事件是全局事件子集。
-     */
-    var changeVersion by mutableIntStateOf(0)
-        private set
+    private val _changeVersion = MutableStateFlow(0)
 
     /**
-     * 过滤条件版本号：仅过滤口径变化时经 [notifyFilterChanged] 自增
+     * 全局设置版本号（[StateFlow]）：任何设置写入（[notifyChanged]）自增，供 UI 订阅全局重组（主题、画质、语言等）。
+     * [notifyFilterChanged] 会连带自增本版本号——过滤事件是全局事件子集。
+     * UI 消费点经 collectAsState 订阅；非组合环境（过滤状态机、单测）直读 [StateFlow.value]。
+     */
+    val changeVersion: StateFlow<Int> = _changeVersion.asStateFlow()
+
+    private val _filterChangeVersion = MutableStateFlow(0)
+
+    /**
+     * 过滤条件版本号（[StateFlow]）：仅过滤口径变化时经 [notifyFilterChanged] 自增
      * （R-18/AI 过滤开关、长按屏蔽作品/画师、屏蔽标签）。
      * 语义与 [changeVersion] 分层为「全局版 + 过滤版」：列表页（Hello/Ranking 等）监听本版本号，
      * 对已持有的原始列表本地重过滤（FilterableIllustListState.refilterIfChanged），零网络成本。
      */
-    var filterChangeVersion by mutableIntStateOf(0)
-        private set
+    val filterChangeVersion: StateFlow<Int> = _filterChangeVersion.asStateFlow()
 
     fun notifyChanged() {
         settingsRevision++
-        changeVersion++
+        _changeVersion.update { it + 1 }
     }
 
     /** 供 getter 经此读取底层设置：在组合中调用时建立对 [settingsRevision] 的快照订阅。 */
@@ -53,7 +60,7 @@ class SettingsRepository(
     }
 
     fun notifyFilterChanged() {
-        filterChangeVersion++
+        _filterChangeVersion.update { it + 1 }
         notifyChanged()
     }
 
