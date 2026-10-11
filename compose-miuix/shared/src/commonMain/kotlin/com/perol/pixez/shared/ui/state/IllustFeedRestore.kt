@@ -32,10 +32,10 @@ class MainFeedRestore(
 
 /**
  * 推荐页跨页恢复缓存（高-5）：承接自仓库 ActiveFeed 的恢复态。实例随 Main child 的
- * InstanceKeeper 存活——Main 为栈底 child，正常会话期间与进程同生命周期，仅在登录成功
- * 栈重置（RootComponent.onLoginSuccess）或进程死亡时随 child 释放；stateKeeper 序列化
- * 快照仅用于进程死亡恢复。相比仓库版不再滞留「过期过滤结果」：快照只存原始 ID，
- * 恢复后由 restoreRaw 强制按当前设置重过滤，账号切换时另有 clearMemoryCache 兜底。
+ * InstanceKeeper 存活——Main 为栈底 child，正常会话期间与进程同生命周期，仅在异配置
+ * 栈重置或进程死亡时随 child 释放（Decompose 对等配置重置复用既有 child，容器保留）；
+ * stateKeeper 序列化快照仅用于进程死亡恢复。相比仓库版不再滞留「过期过滤结果」：快照
+ * 只存原始 ID，恢复后由 restoreRaw 强制按当前设置重过滤，账号切换时另有 clearMemoryCache 兜底。
  */
 class IllustFeedRestoreCache(initial: IllustFeedSnapshot? = null) {
     var snapshot: IllustFeedSnapshot? = initial

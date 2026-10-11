@@ -19,7 +19,6 @@ import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
@@ -65,7 +64,7 @@ import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
 
 /**
- * [RootContent] 中各导航子页面（[Child]）的渲染函数集合。
+ * [RootContent] 中各导航子页面（[Config]）的渲染函数集合。
  *
  * 这些函数由原 `RootContent.kt` 中巨型 `when (child.instance)` 的各个分支原样抽取而来，
  * 每个函数负责将某一类子页面映射到对应的 Screen 调用（参数与抽取前完全一致）。
@@ -204,7 +203,7 @@ internal fun MainContent(
 
 @Composable
 internal fun renderIllustDetail(
-    instance: Child.IllustDetail,
+    instance: Config.IllustDetail,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -228,7 +227,7 @@ internal fun renderIllustDetail(
 
 @Composable
 internal fun renderUserDetail(
-    instance: Child.UserDetail,
+    instance: Config.UserDetail,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -262,7 +261,7 @@ internal fun renderLogin(
 
 @Composable
 internal fun renderComments(
-    instance: Child.Comments,
+    instance: Config.Comments,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -277,7 +276,7 @@ internal fun renderComments(
 
 @Composable
 internal fun renderRelatedIllusts(
-    instance: Child.RelatedIllusts,
+    instance: Config.RelatedIllusts,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -293,7 +292,7 @@ internal fun renderRelatedIllusts(
 
 @Composable
 internal fun renderIllustSeries(
-    instance: Child.IllustSeries,
+    instance: Config.IllustSeries,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -309,7 +308,7 @@ internal fun renderIllustSeries(
 
 @Composable
 internal fun renderUserFollowList(
-    instance: Child.UserFollowList,
+    instance: Config.UserFollowList,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -323,7 +322,7 @@ internal fun renderUserFollowList(
 
 @Composable
 internal fun renderUserFollowerList(
-    instance: Child.UserFollowerList,
+    instance: Config.UserFollowerList,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -388,7 +387,7 @@ internal fun renderSettingsPage(
 
 @Composable
 internal fun renderSearch(
-    instance: Child.Search,
+    instance: Config.Search,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -430,7 +429,7 @@ internal fun renderShield(
 
 @Composable
 internal fun renderAISetting(
-    instance: Child.AISetting,
+    instance: Config.AISetting,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -660,7 +659,7 @@ internal fun renderThanks(
 
 @Composable
 internal fun renderSpotlightDetail(
-    instance: Child.SpotlightDetail,
+    instance: Config.SpotlightDetail,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {
@@ -715,7 +714,7 @@ internal fun renderNovel(
 
 @Composable
 internal fun renderNovelViewer(
-    instance: Child.NovelViewer,
+    instance: Config.NovelViewer,
     component: RootComponent,
     registry: RepositoryRegistry,
 ) {

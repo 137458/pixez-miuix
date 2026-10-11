@@ -55,7 +55,7 @@ import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.navigation.RootComponent.Child
+import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -78,7 +78,7 @@ import top.yukonga.miuix.kmp.theme.lightColorScheme
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
  *
  * 本函数只负责：主题/语言等状态声明、更新检查副作用、Scaffold 容器骨架，
- * 以及对 [Child] 的分发编排（具体页面渲染见同包 RootChildScreens.kt 中的 render* 函数）。
+ * 以及对 [Config] 的分发编排（具体页面渲染见同包 RootChildScreens.kt 中的 render* 函数）。
  */
 @OptIn(com.arkivanov.decompose.ExperimentalDecomposeApi::class)
 @Composable
@@ -126,8 +126,8 @@ fun RootContent(
     val sharedBounds = remember { SharedBoundsRegistry() }
     // SideEffect：成功应用后再同步路由锚点；被丢弃的重组不会污染不可回滚的注册表字段
     SideEffect {
-        NavTransitionLog.d("root") { "syncRoute ${(stack.active.configuration as? RootComponent.Config.IllustDetail)?.illustId}" }
-        sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? RootComponent.Config.IllustDetail)?.illustId)
+        NavTransitionLog.d("root") { "syncRoute ${(stack.active.configuration as? Config.IllustDetail)?.illustId}" }
+        sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? Config.IllustDetail)?.illustId)
     }
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
@@ -252,13 +252,13 @@ fun RootContent(
                                 miuixCardExpandPredictiveBackAnimatable(
                                     initialBackEvent = initialBackEvent,
                                     registry = sharedBounds,
-                                    illustId = (exitChild.instance as? Child.IllustDetail)?.illustId,
+                                    illustId = (exitChild.instance as? Config.IllustDetail)?.illustId,
                                     containerGeometry = { containerGeometry },
                                 )
                             },
                             onBack = { component.onBack() },
                             // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
-                            dragBackEligible = { it is Child.IllustDetail },
+                            dragBackEligible = { it is Config.IllustDetail },
                         ),
                     ) { child ->
                         RootChildContent(
@@ -286,12 +286,12 @@ fun RootContent(
 }
 
 /**
- * Decompose 栈顶页面的分发：按 [Child] 类型路由到对应 render* 页面。
+ * Decompose 栈顶页面的分发：按 [Config] 类型路由到对应 render* 页面。
  * 一级页面（Main）见 [MainChildSection]，其余二级页面渲染见同包 RootChildScreens.kt。
  */
 @Composable
 private fun RootChildContent(
-    instance: Child,
+    instance: Config,
     component: RootComponent,
     activeTab: RootComponent.MainTab,
     isWideScreen: Boolean,
@@ -302,8 +302,9 @@ private fun RootChildContent(
     registry: RepositoryRegistry,
 ) {
     when (instance) {
-        is Child.Main -> MainChildSection(
-            instance = instance,
+        is Config.Main -> MainChildSection(
+            tab = instance.tab,
+            feedRestore = component.mainFeedRestore,
             component = component,
             activeTab = activeTab,
             showNavigationRailInMain = showNavigationRailInMain,
@@ -320,200 +321,200 @@ private fun RootChildContent(
             settingsRepository = registry.settingsRepository,
         )
 
-        is Child.IllustDetail -> renderIllustDetail(
+        is Config.IllustDetail -> renderIllustDetail(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        is Child.UserDetail -> renderUserDetail(
+        is Config.UserDetail -> renderUserDetail(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        Child.Login -> renderLogin(
+        Config.Login -> renderLogin(
             component = component,
             registry = registry,
         )
 
-        is Child.Comments -> renderComments(
+        is Config.Comments -> renderComments(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        is Child.RelatedIllusts -> renderRelatedIllusts(
+        is Config.RelatedIllusts -> renderRelatedIllusts(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        is Child.IllustSeries -> renderIllustSeries(
+        is Config.IllustSeries -> renderIllustSeries(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        is Child.UserFollowList -> renderUserFollowList(
+        is Config.UserFollowList -> renderUserFollowList(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        is Child.UserFollowerList -> renderUserFollowerList(
+        is Config.UserFollowerList -> renderUserFollowerList(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        Child.RecomUserList -> renderRecomUserList(
+        Config.RecomUserList -> renderRecomUserList(
             component = component,
             registry = registry,
         )
 
-        Child.Settings -> renderSettingsPage(
+        Config.Settings -> renderSettingsPage(
             component = component,
             registry = registry,
         )
 
-        is Child.Search -> renderSearch(
+        is Config.Search -> renderSearch(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        Child.DownloadHistory -> renderDownloadHistory(
+        Config.DownloadHistory -> renderDownloadHistory(
             component = component,
             registry = registry,
         )
 
-        Child.Shield -> renderShield(
+        Config.Shield -> renderShield(
             component = component,
             registry = registry,
         )
 
-        is Child.AISetting -> renderAISetting(
+        is Config.AISetting -> renderAISetting(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        Child.ThemeSetting -> renderThemeSetting(
+        Config.ThemeSetting -> renderThemeSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.NetworkSetting -> renderNetworkSetting(
+        Config.NetworkSetting -> renderNetworkSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.DownloadSetting -> renderDownloadSetting(
+        Config.DownloadSetting -> renderDownloadSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.LayoutSetting -> renderLayoutSetting(
+        Config.LayoutSetting -> renderLayoutSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.LanguageSetting -> renderLanguageSetting(
+        Config.LanguageSetting -> renderLanguageSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.WidgetRecommendSetting -> renderWidgetRecommendSetting(
+        Config.WidgetRecommendSetting -> renderWidgetRecommendSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.InteractionSetting -> renderInteractionSetting(
+        Config.InteractionSetting -> renderInteractionSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.UpdateSetting -> renderUpdateSetting(
+        Config.UpdateSetting -> renderUpdateSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.AccountEdit -> renderAccountEdit(
+        Config.AccountEdit -> renderAccountEdit(
             component = component,
             registry = registry,
         )
 
-        Child.History -> renderHistory(
+        Config.History -> renderHistory(
             component = component,
             registry = registry,
         )
 
-        Child.DownloadTask -> renderDownloadTask(
+        Config.DownloadTask -> renderDownloadTask(
             component = component,
             registry = registry,
         )
 
-        Child.DataExport -> renderDataExport(
+        Config.DataExport -> renderDataExport(
             component = component,
             registry = registry,
         )
 
-        Child.Board -> renderBoard(
+        Config.Board -> renderBoard(
             component = component,
             registry = registry,
         )
 
-        Child.QualitySetting -> renderQualitySetting(
+        Config.QualitySetting -> renderQualitySetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.CopyTextSetting -> renderCopyTextSetting(
+        Config.CopyTextSetting -> renderCopyTextSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.WelcomePageSetting -> renderWelcomePageSetting(
+        Config.WelcomePageSetting -> renderWelcomePageSetting(
             registry = registry,
             onBack = component::onBack,
         )
 
-        Child.About -> renderAbout(
+        Config.About -> renderAbout(
             component = component,
         )
 
-        Child.BookTag -> renderBookTag(
+        Config.BookTag -> renderBookTag(
             component = component,
             registry = registry,
         )
 
-        Child.Thanks -> renderThanks(
+        Config.Thanks -> renderThanks(
             component = component,
         )
 
-        is Child.SpotlightDetail -> renderSpotlightDetail(
+        is Config.SpotlightDetail -> renderSpotlightDetail(
             instance = instance,
             component = component,
             registry = registry,
         )
 
-        Child.Guide -> renderGuide(
+        Config.Guide -> renderGuide(
             component = component,
             registry = registry,
         )
 
-        Child.AccountManage -> renderAccountManage(
+        Config.AccountManage -> renderAccountManage(
             component = component,
             registry = registry,
         )
 
-        Child.Novel -> renderNovel(
+        Config.Novel -> renderNovel(
             component = component,
             registry = registry,
         )
 
-        is Child.NovelViewer -> renderNovelViewer(
+        is Config.NovelViewer -> renderNovelViewer(
             instance = instance,
             component = component,
             registry = registry,
@@ -523,10 +524,14 @@ private fun RootChildContent(
 
 /**
  * 一级页面（Main）区块：可选侧边导航栏 + MainContent + 底部导航栏。
+ *
+ * 中-6a 起 Child 镜像已删除：tab 取自栈顶 [Config.Main]，跨页恢复容器（高-5）经
+ * [component.mainFeedRestore] 读取（由 RootComponent.createChild 在 Main child 创建时接线）。
  */
 @Composable
 private fun MainChildSection(
-    instance: Child.Main,
+    tab: RootComponent.MainTab,
+    feedRestore: MainFeedRestore,
     component: RootComponent,
     activeTab: RootComponent.MainTab,
     showNavigationRailInMain: Boolean,
@@ -572,9 +577,9 @@ private fun MainChildSection(
                         .blurBackdropSource(floatingBackdrop),
                 ) {
                     MainContent(
-                        initialTab = instance.tab,
+                        initialTab = tab,
                         component = component,
-                        feedRestore = instance.feedRestore,
+                        feedRestore = feedRestore,
                         illustRepository = illustRepository,
                         pixivisionRepository = pixivisionRepository,
                         searchRepository = searchRepository,

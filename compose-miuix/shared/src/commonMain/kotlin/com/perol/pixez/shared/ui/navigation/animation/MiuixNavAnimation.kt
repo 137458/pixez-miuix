@@ -6,7 +6,7 @@ import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.essenty.backhandler.BackEvent
-import com.perol.pixez.shared.ui.navigation.RootComponent
+import com.perol.pixez.shared.ui.navigation.Config
 
 /**
  * Xiaomi HyperOS / MIUIX 核心动效曲线：
@@ -39,9 +39,9 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 fun miuixSeekableStackAnimation(
     registry: SharedBoundsRegistry,
     containerGeometry: () -> PageContainerGeometry,
-): StackAnimation<RootComponent.Config, RootComponent.Child> =
+): StackAnimation<Config, Config> =
     SeekableStackAnimation { child ->
-        val rawIllustId = (child.configuration as? RootComponent.Config.IllustDetail)?.illustId
+        val rawIllustId = (child.configuration as? Config.IllustDetail)?.illustId
         cardExpandFrame(
             rawIllustId = rawIllustId,
             containerGeometry = containerGeometry,

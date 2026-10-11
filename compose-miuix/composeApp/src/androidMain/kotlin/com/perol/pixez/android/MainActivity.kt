@@ -14,6 +14,7 @@ import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.platform.BrowserLauncherContext
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.launch
 
@@ -101,7 +102,7 @@ class MainActivity : ComponentActivity() {
         val callback = exitCallback ?: return
         if (!::rootComponent.isInitialized || !::dependencies.isInitialized) return
         val childStack = rootComponent.stack.value
-        val isAtRoot = childStack.backStack.isEmpty() && childStack.active.instance is RootComponent.Child.Main
+        val isAtRoot = childStack.backStack.isEmpty() && childStack.active.instance is Config.Main
         callback.isEnabled = isAtRoot && dependencies.settingsRepository.isReturnAgainToExit
     }
 

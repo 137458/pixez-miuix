@@ -19,7 +19,6 @@ import com.perol.pixez.shared.ui.state.IllustFeedSnapshot
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingFeedSnapshot
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 
 /**
@@ -37,7 +36,20 @@ class RootComponent(
 
     private val navigation = StackNavigation<Config>()
 
-    val stack: Value<ChildStack<Config, Child>> = childStack(
+    /**
+     * Main child 跨页恢复容器（高-5）。Child 镜像删除（中-6a）后 childStack 的 child 实例
+     * 即可序列化的 [Config]，无法承载运行时对象，改由 [createChild] 在 Main child 创建时
+     * 经 [createMainFeedRestore] 接线到此字段；栈内同一时刻至多一个 Main child，且实例
+     * 先于其组合出现，组合层（MainChildSection）直接读取本字段。
+     *
+     * 实例随 Main child 的 InstanceKeeper 存活整个会话；Decompose 对等配置的栈重置
+     * （onLoginSuccess/onGuideFinished）复用既有 back-stack child，工厂不再调用、
+     * 恢复容器实例保留（desktopTest 有守护），仅异配置重置或进程死亡时随 child 重建。
+     */
+    lateinit var mainFeedRestore: MainFeedRestore
+        private set
+
+    val stack: Value<ChildStack<Config, Config>> = childStack(
         source = navigation,
         serializer = Config.serializer(),
         initialConfiguration = resolveWelcomePageConfig(settingsRepository),
@@ -97,13 +109,13 @@ class RootComponent(
             settingsRepository.hasUnreadFeedBadge = false
         }
         val active = stack.value.active.instance
-        if (active !is Child.Main) {
+        if (active !is Config.Main) {
             navigation.navigate { currentStack ->
                 val mainConfig = currentStack.firstOrNull { it is Config.Main } ?: Config.Main(tab)
                 listOf(mainConfig)
             }
         }
-        if (_selectedTab.value == tab && active is Child.Main) {
+        if (_selectedTab.value == tab && active is Config.Main) {
             onTabReselected(tab)
         } else {
             _selectedTab.value = tab
@@ -123,13 +135,13 @@ class RootComponent(
     /**
      * 返回上一级页面。
      *
-     * 当栈顶为一级主页面（[Child.Main]）时不消费返回事件，交由系统处理
+     * 当栈顶为一级主页面（[Config.Main]）时不消费返回事件，交由系统处理
      * （退出应用或触发「再次返回退出」）；在二级页面时执行 [navigation.pop] 并返回 true。
      */
     fun onBack(): Boolean {
         val active = stack.value.active.instance
         // 一级页面不拦截返回事件，让系统决定是否退出应用。
-        if (active is Child.Main) return false
+        if (active is Config.Main) return false
         // 二级页面消费返回事件，执行出栈。
         navigation.pop()
         return true
@@ -430,55 +442,22 @@ class RootComponent(
         }
     }
 
+    /**
+     * childStack 工厂（中-6a）：Child 镜像删除后 child 实例即路由配置本身，直接透传；
+     * 仅保留 Main 分支的跨页恢复接线（高-5）——consume/register 必须在 child 的
+     * ComponentContext 上执行且只执行一次（重复 register 同 key 会抛 IllegalStateException）。
+     */
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
-    ): Child = when (config) {
-        is Config.Main -> Child.Main(
-            tab = config.tab,
-            feedRestore = createMainFeedRestore(
+    ): Config {
+        if (config is Config.Main) {
+            mainFeedRestore = createMainFeedRestore(
                 stateKeeper = componentContext.stateKeeper,
                 instanceKeeper = componentContext.instanceKeeper,
-            ),
-        )
-        is Config.IllustDetail -> Child.IllustDetail(config.illustId)
-        is Config.UserDetail -> Child.UserDetail(config.userId, config.initialTab)
-        is Config.SpotlightDetail -> Child.SpotlightDetail(config.article)
-        Config.Guide -> Child.Guide
-        is Config.Comments -> Child.Comments(config.illustId)
-        is Config.RelatedIllusts -> Child.RelatedIllusts(config.illustId)
-        is Config.IllustSeries -> Child.IllustSeries(config.seriesId)
-        is Config.UserFollowList -> Child.UserFollowList(config.userId)
-        is Config.UserFollowerList -> Child.UserFollowerList(config.userId)
-        is Config.Search -> Child.Search(config.query)
-        Config.RecomUserList -> Child.RecomUserList
-        Config.DownloadHistory -> Child.DownloadHistory
-        Config.Settings -> Child.Settings
-        Config.Shield -> Child.Shield
-        is Config.AISetting -> Child.AISetting(config.showAI)
-        Config.ThemeSetting -> Child.ThemeSetting
-        Config.NetworkSetting -> Child.NetworkSetting
-        Config.DownloadSetting -> Child.DownloadSetting
-        Config.LayoutSetting -> Child.LayoutSetting
-        Config.LanguageSetting -> Child.LanguageSetting
-        Config.WidgetRecommendSetting -> Child.WidgetRecommendSetting
-        Config.InteractionSetting -> Child.InteractionSetting
-        Config.UpdateSetting -> Child.UpdateSetting
-        Config.AccountEdit -> Child.AccountEdit
-        Config.History -> Child.History
-        Config.DownloadTask -> Child.DownloadTask
-        Config.DataExport -> Child.DataExport
-        Config.Board -> Child.Board
-        Config.QualitySetting -> Child.QualitySetting
-        Config.CopyTextSetting -> Child.CopyTextSetting
-        Config.WelcomePageSetting -> Child.WelcomePageSetting
-        Config.About -> Child.About
-        Config.BookTag -> Child.BookTag
-        Config.Thanks -> Child.Thanks
-        Config.Login -> Child.Login
-        Config.AccountManage -> Child.AccountManage
-        Config.Novel -> Child.Novel
-        is Config.NovelViewer -> Child.NovelViewer(config.novelId)
+            )
+        }
+        return config
     }
 
     /**
@@ -490,176 +469,6 @@ class RootComponent(
         Ranking,
         New,
         Spotlight,
-    }
-
-    /**
-     * 路由配置，可序列化以支持状态保存。
-     */
-    @Serializable
-    sealed class Config {
-        @Serializable
-        data class Main(val tab: MainTab) : Config()
-
-        @Serializable
-        data class IllustDetail(val illustId: Long) : Config()
-
-        @Serializable
-        data class UserDetail(val userId: Long, val initialTab: Int = 0) : Config()
-
-        @Serializable
-        data class SpotlightDetail(val article: SpotlightArticle) : Config()
-
-        @Serializable
-        data object Guide : Config()
-
-        @Serializable
-        data object Settings : Config()
-
-        @Serializable
-        data object About : Config()
-
-        @Serializable
-        data object BookTag : Config()
-
-        @Serializable
-        data object Thanks : Config()
-
-        @Serializable
-        data object Login : Config()
-
-        @Serializable
-        data class Comments(val illustId: Long) : Config()
-
-        @Serializable
-        data class RelatedIllusts(val illustId: Long) : Config()
-
-        @Serializable
-        data class IllustSeries(val seriesId: Long) : Config()
-
-        @Serializable
-        data class UserFollowList(val userId: Long) : Config()
-
-        @Serializable
-        data class UserFollowerList(val userId: Long) : Config()
-
-        @Serializable
-        data object RecomUserList : Config()
-
-        @Serializable
-        data class Search(val query: String) : Config()
-
-        @Serializable
-        data object DownloadHistory : Config()
-
-        @Serializable
-        data object Shield : Config()
-
-        @Serializable
-        data class AISetting(val showAI: Boolean) : Config()
-
-        @Serializable
-        data object ThemeSetting : Config()
-
-        @Serializable
-        data object NetworkSetting : Config()
-
-        @Serializable
-        data object DownloadSetting : Config()
-
-        @Serializable
-        data object LayoutSetting : Config()
-
-        @Serializable
-        data object LanguageSetting : Config()
-
-        @Serializable
-        data object WidgetRecommendSetting : Config()
-
-        @Serializable
-        data object InteractionSetting : Config()
-
-        @Serializable
-        data object UpdateSetting : Config()
-
-        @Serializable
-        data object AccountEdit : Config()
-
-        @Serializable
-        data object History : Config()
-
-        @Serializable
-        data object DownloadTask : Config()
-
-        @Serializable
-        data object DataExport : Config()
-
-        @Serializable
-        data object Board : Config()
-
-        @Serializable
-        data object QualitySetting : Config()
-
-        @Serializable
-        data object CopyTextSetting : Config()
-
-        @Serializable
-        data object WelcomePageSetting : Config()
-
-        @Serializable
-        data object AccountManage : Config()
-
-        @Serializable
-        data object Novel : Config()
-
-        @Serializable
-        data class NovelViewer(val novelId: Long) : Config()
-    }
-
-    sealed class Child {
-        /**
-         * 主页 child。高-5 起持有跨页恢复容器 [feedRestore]，在组件初始化（[createChild] 的
-         * 本分支）经 [createMainFeedRestore] 接线；Main 为栈底 child，实例随 child 的
-         * InstanceKeeper 存活整个会话（仅 onLoginSuccess 栈重置或进程死亡时随 child 释放）。
-         */
-        data class Main(val tab: MainTab, val feedRestore: MainFeedRestore) : Child()
-        data class IllustDetail(val illustId: Long) : Child()
-        data class UserDetail(val userId: Long, val initialTab: Int = 0) : Child()
-        data class SpotlightDetail(val article: SpotlightArticle) : Child()
-        data object Guide : Child()
-        data object Settings : Child()
-        data object About : Child()
-        data object BookTag : Child()
-        data object Thanks : Child()
-        data object Login : Child()
-        data class Comments(val illustId: Long) : Child()
-        data class RelatedIllusts(val illustId: Long) : Child()
-        data class IllustSeries(val seriesId: Long) : Child()
-        data class UserFollowList(val userId: Long) : Child()
-        data class UserFollowerList(val userId: Long) : Child()
-        data object RecomUserList : Child()
-        data class Search(val query: String) : Child()
-        data object DownloadHistory : Child()
-        data object Shield : Child()
-        data class AISetting(val showAI: Boolean) : Child()
-        data object ThemeSetting : Child()
-        data object NetworkSetting : Child()
-        data object DownloadSetting : Child()
-        data object LayoutSetting : Child()
-        data object LanguageSetting : Child()
-        data object WidgetRecommendSetting : Child()
-        data object InteractionSetting : Child()
-        data object UpdateSetting : Child()
-        data object AccountEdit : Child()
-        data object History : Child()
-        data object DownloadTask : Child()
-        data object DataExport : Child()
-        data object Board : Child()
-        data object QualitySetting : Child()
-        data object CopyTextSetting : Child()
-        data object WelcomePageSetting : Child()
-        data object AccountManage : Child()
-        data object Novel : Child()
-        data class NovelViewer(val novelId: Long) : Child()
     }
 
     companion object {
@@ -677,16 +486,16 @@ class RootComponent(
  * 根据保存的欢迎页类型与首次启动状态解析初始路由配置。
  * 若尚未完成初次启动向导，优先进入向导页；其余情况按欢迎页设置启动。
  */
-private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): RootComponent.Config {
+private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): Config {
     if (!settingsRepository.hasCompletedGuide) {
-        return RootComponent.Config.Guide
+        return Config.Guide
     }
     return when (settingsRepository.welcomePageType) {
-        "rank" -> RootComponent.Config.Main(RootComponent.MainTab.Ranking)
-        "quick_view" -> RootComponent.Config.Main(RootComponent.MainTab.New)
-        "search" -> RootComponent.Config.Main(RootComponent.MainTab.Search)
-        "setting" -> RootComponent.Config.Settings
-        else -> RootComponent.Config.Main(RootComponent.MainTab.Hello)
+        "rank" -> Config.Main(RootComponent.MainTab.Ranking)
+        "quick_view" -> Config.Main(RootComponent.MainTab.New)
+        "search" -> Config.Main(RootComponent.MainTab.Search)
+        "setting" -> Config.Settings
+        else -> Config.Main(RootComponent.MainTab.Hello)
     }
 }
 
