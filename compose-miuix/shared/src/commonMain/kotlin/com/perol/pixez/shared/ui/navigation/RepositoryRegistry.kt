@@ -11,6 +11,7 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -27,6 +28,7 @@ import io.ktor.client.HttpClient
  */
 data class RepositoryRegistry(
     val illustRepository: IllustRepository,
+    val pixivisionRepository: PixivisionRepository,
     val searchRepository: SearchRepository,
     val userRepository: UserRepository,
     val accountRepository: AccountRepository,

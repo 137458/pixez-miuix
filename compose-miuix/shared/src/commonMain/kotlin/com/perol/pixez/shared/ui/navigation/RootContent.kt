@@ -50,6 +50,7 @@ import com.perol.pixez.shared.LocalHistoryRepository
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -299,6 +300,7 @@ private fun RootChildContent(
             useFloatingBottomBar = useFloatingBottomBar,
             floatingBackdrop = floatingBackdrop,
             illustRepository = registry.illustRepository,
+            pixivisionRepository = registry.pixivisionRepository,
             searchRepository = registry.searchRepository,
             userRepository = registry.userRepository,
             accountRepository = registry.accountRepository,
@@ -521,6 +523,7 @@ private fun MainChildSection(
     useFloatingBottomBar: Boolean,
     floatingBackdrop: LayerBackdrop?,
     illustRepository: IllustRepository,
+    pixivisionRepository: PixivisionRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
     accountRepository: AccountRepository,
@@ -561,6 +564,7 @@ private fun MainChildSection(
                         component = component,
                         feedRestore = instance.feedRestore,
                         illustRepository = illustRepository,
+                        pixivisionRepository = pixivisionRepository,
                         searchRepository = searchRepository,
                         userRepository = userRepository,
                         accountRepository = accountRepository,

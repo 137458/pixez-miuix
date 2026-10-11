@@ -26,6 +26,7 @@ class AccountRepository(
     private val tokenStorage: AuthTokenStorage,
     private val accountClient: HttpClient,
     private val illustRepository: IllustRepository,
+    private val pixivisionRepository: PixivisionRepository,
 ) {
     private val _loginEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val loginEventFlow: SharedFlow<Unit> = _loginEventFlow.asSharedFlow()
@@ -127,8 +128,9 @@ class AccountRepository(
     suspend fun switchAccount(userId: String) {
         tokenStorage.switchAccount(userId)
         // 高-5 缓存清理缺失修复：账号身份变化必须失效作品内存缓存（含按账号状态缓存的收藏标记），
-        // 防止新账号读到旧账号的缓存数据。
+        // 防止新账号读到旧账号的缓存数据；Spotlight 缓存随中-7 拆分同步失效。
         illustRepository.clearMemoryCache()
+        pixivisionRepository.clearMemoryCache()
         _loginEventFlow.tryEmit(Unit)
     }
 
@@ -145,8 +147,10 @@ class AccountRepository(
      */
     suspend fun logout() {
         tokenStorage.clear()
-        // 高-5 缓存清理缺失修复：登出同时失效作品内存缓存（原因同 switchAccount）。
+        // 高-5 缓存清理缺失修复：登出同时失效作品内存缓存（原因同 switchAccount）；
+        // Spotlight 缓存随中-7 拆分同步失效。
         illustRepository.clearMemoryCache()
+        pixivisionRepository.clearMemoryCache()
         _loginEventFlow.tryEmit(Unit)
     }
 

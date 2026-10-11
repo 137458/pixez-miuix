@@ -142,6 +142,8 @@ class AccountRepositoryTest {
     private lateinit var storage: FakeTokenStorage
     private lateinit var repository: AccountRepository
     private lateinit var illustRepository: IllustRepository
+    private lateinit var pixivisionRepository: PixivisionRepository
+    private lateinit var pixivisionWebClient: HttpClient
 
     private var capturedPath: String? = null
     private var editResponseBody: String = """{"error":false,"message":"","body":{"is_succeed":true,"validation_errors":{}}}"""
@@ -173,10 +175,32 @@ class AccountRepositoryTest {
             apiClient = HttpClient(),
             settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
         )
-        repository = AccountRepository(oauth, storage, accountClient, illustRepository)
+        // 中-7：Spotlight 特辑缓存随拆分迁至 PixivisionRepository，
+        // 用 MockEngine 打桩网页抓取以验证登出/切换账号时的缓存失效。
+        pixivisionWebClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    respond(
+                        """<html><head><meta property="og:title" content="t"></head><body></body></html>""",
+                        HttpStatusCode.OK,
+                        headersOf("Content-Type", ContentType.Text.Html.toString()),
+                    )
+                }
+            }
+        }
+        pixivisionRepository = PixivisionRepository(
+            apiClient = HttpClient(),
+            webClient = pixivisionWebClient,
+            settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
+        )
+        repository = AccountRepository(oauth, storage, accountClient, illustRepository, pixivisionRepository)
     }
 
     private var capturedForm: Map<String, String> = emptyMap()
+
+    private companion object {
+        const val SPOTLIGHT_DETAIL_URL = "https://www.pixivision.net/zh/a/9001"
+    }
 
     private fun oauthEnvelope(userId: String = "100") = Account(
         response = AccountResponse(
@@ -298,10 +322,16 @@ class AccountRepositoryTest {
     @Test
     fun `logout 清理作品内存缓存`() = runBlocking {
         illustRepository.cacheIllust(cachedIllustFixture(301L))
+        pixivisionRepository.getSpotlightArticleDetail(SPOTLIGHT_DETAIL_URL)
+        assertEquals("t", pixivisionRepository.getCachedSpotlightDetail(SPOTLIGHT_DETAIL_URL)?.title)
 
         repository.logout()
 
         assertNull(illustRepository.getCachedIllust(301L), "登出必须失效作品内存缓存（高-5 缓存清理缺失修复）")
+        assertNull(
+            pixivisionRepository.getCachedSpotlightDetail(SPOTLIGHT_DETAIL_URL),
+            "登出必须失效 Spotlight 特辑缓存（中-7 拆分后保持原清缓存语义）",
+        )
     }
 
     @Test
@@ -310,10 +340,15 @@ class AccountRepositoryTest {
         storage.rows.add(rowFixture("2"))
         storage.activeUserId = "1"
         illustRepository.cacheIllust(cachedIllustFixture(302L))
+        pixivisionRepository.getSpotlightArticleDetail(SPOTLIGHT_DETAIL_URL)
 
         repository.switchAccount("2")
 
         assertNull(illustRepository.getCachedIllust(302L), "切换账号必须失效作品内存缓存，防止跨账号读到旧收藏状态")
+        assertNull(
+            pixivisionRepository.getCachedSpotlightDetail(SPOTLIGHT_DETAIL_URL),
+            "切换账号必须失效 Spotlight 特辑缓存（中-7 拆分后保持原清缓存语义）",
+        )
     }
 
     private fun cachedIllustFixture(id: Long): com.perol.pixez.shared.data.model.Illust =

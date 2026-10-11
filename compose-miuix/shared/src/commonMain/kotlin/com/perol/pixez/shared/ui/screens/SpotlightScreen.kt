@@ -43,7 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.LiquidFilterBar
@@ -112,7 +112,7 @@ private class CategoryState {
  */
 @Composable
 fun SpotlightScreen(
-    repository: IllustRepository,
+    repository: PixivisionRepository,
     onArticleClick: (SpotlightArticle) -> Unit,
     modifier: Modifier = Modifier,
 ) {

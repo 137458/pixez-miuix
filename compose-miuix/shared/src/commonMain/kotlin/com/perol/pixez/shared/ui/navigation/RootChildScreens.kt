@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -88,6 +89,7 @@ internal fun MainContent(
     // 只执行一次）；快照存原始 ID 列表，恢复经仓库 illustsCache 回查。
     feedRestore: MainFeedRestore,
     illustRepository: IllustRepository,
+    pixivisionRepository: PixivisionRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
     accountRepository: AccountRepository,
@@ -193,7 +195,7 @@ internal fun MainContent(
             )
 
             RootComponent.MainTab.Spotlight -> SpotlightScreen(
-                repository = illustRepository,
+                repository = pixivisionRepository,
                 onArticleClick = component::onSpotlightArticleClicked,
             )
         }
@@ -667,7 +669,7 @@ internal fun renderSpotlightDetail(
         onIllustClick = component::onIllustClicked,
         onUserClick = component::onUserClicked,
         onArticleClick = component::onSpotlightArticleClicked,
-        repository = registry.illustRepository,
+        repository = registry.pixivisionRepository,
     )
 }
 

@@ -50,8 +50,9 @@ internal class InMemorySettings : Settings {
 }
 
 /**
- * 高-5 后的仓库内存缓存测试：仓库只存原始数据缓存（作品 LRU / 推荐响应 / Spotlight），
- * 跨页恢复快照已移至 ui/state 的恢复缓存（见 IllustFeedRestoreCacheTest / RankingFeedRestoreCacheTest）。
+ * 高-5 后的仓库内存缓存测试：仓库只存原始数据缓存（作品 LRU / 推荐响应），
+ * 跨页恢复快照已移至 ui/state 的恢复缓存（见 IllustFeedRestoreCacheTest / RankingFeedRestoreCacheTest）；
+ * Spotlight 缓存随中-7 拆分迁至 PixivisionRepositoryTest。
  */
 class IllustRepositoryCacheTest {
 
@@ -59,7 +60,6 @@ class IllustRepositoryCacheTest {
         val dummyClient = HttpClient()
         return IllustRepository(
             apiClient = dummyClient,
-            webClient = dummyClient,
             settingsRepository = SettingsRepository(InMemorySettings()),
         )
     }
@@ -118,13 +118,5 @@ class IllustRepositoryCacheTest {
         repo.clearMemoryCache()
 
         assertNull(repo.getCachedIllust(201L), "清内存缓存必须连插画 LRU 一并失效（缓存清理缺失修复）")
-    }
-
-    @Test
-    fun testSpotlightArticlesCacheAndClear() = runTest {
-        val repo = createRepository()
-        assertNull(repo.getCachedSpotlightArticles("novel"))
-        repo.clearMemoryCache()
-        assertNull(repo.getCachedSpotlightArticles("novel"))
     }
 }

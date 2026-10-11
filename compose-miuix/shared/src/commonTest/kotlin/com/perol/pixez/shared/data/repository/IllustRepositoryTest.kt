@@ -24,6 +24,7 @@ import kotlin.test.fail
 /**
  * 插画仓库测试：用 Ktor MockEngine 打桩外部网络，
  * 验证内存缓存语义（推荐/匿名推荐的 forceRefresh）、端点参数、评论表单与动图 Zip 下载的安全校验。
+ * Spotlight/特辑链路测试见 PixivisionRepositoryTest（中-7 拆分）。
  */
 class IllustRepositoryTest {
 
@@ -51,7 +52,6 @@ class IllustRepositoryTest {
         downloadClient = mockClient(downloadCaptured, isDownload = true)
         repository = IllustRepository(
             apiClient = client,
-            webClient = downloadClient,
             downloadClient = downloadClient,
             settingsRepository = SettingsRepository(InMemorySettings()),
         )
@@ -166,47 +166,6 @@ class IllustRepositoryTest {
 
         assertEquals(2, apiCaptured.size)
         assertEquals("/v1/walkthrough/illusts", apiCaptured.last().path)
-    }
-
-    private fun spotlightJson(ids: List<Long>, nextUrl: String?): String {
-        val articles = ids.joinToString(",") { id ->
-            """{"id":$id,"title":"特辑$id","pure_title":"特辑$id","thumbnail":"https://s.pximg.net/t$id","article_url":"https://www.pixivision.net/zh/a/$id","publish_date":"2026-01-01"}"""
-        }
-        return """{"spotlight_articles":[$articles],"next_url":${if (nextUrl == null) "null" else "\"$nextUrl\""}}"""
-    }
-
-    @Test
-    fun `Spotlight 首页响应写入缓存且 forceRefresh 覆盖旧快照`() = runBlocking {
-        apiResponseBody = spotlightJson(listOf(1, 2), nextUrl = null)
-
-        repository.getSpotlightArticles("all")
-        assertEquals(listOf(1L, 2L), repository.getCachedSpotlightArticles("all")?.spotlightArticles?.map { it.id })
-
-        apiResponseBody = spotlightJson(listOf(3), nextUrl = null)
-        repository.getSpotlightArticles("all", forceRefresh = true)
-
-        assertEquals(
-            listOf(3L),
-            repository.getCachedSpotlightArticles("all")?.spotlightArticles?.map { it.id },
-            "forceRefresh 首页应以覆盖而非合并写入缓存",
-        )
-    }
-
-    @Test
-    fun `Spotlight 翻页只返回当页响应且不合并进仓库缓存`() = runBlocking {
-        val nextPageUrl = "https://app-api.pixiv.net/v1/spotlight/articles?offset=30"
-        apiResponseBody = spotlightJson(listOf(1, 2), nextUrl = nextPageUrl)
-        repository.getSpotlightArticles("all")
-
-        apiResponseBody = spotlightJson(listOf(2, 3), nextUrl = null)
-        val page2 = repository.getSpotlightArticles("all", nextUrl = nextPageUrl)
-
-        assertEquals(listOf(2L, 3L), page2.spotlightArticles.map { it.id }, "翻页应原样返回当页响应，累积与去重由 UI 层单点负责")
-        assertEquals(
-            listOf(1L, 2L),
-            repository.getCachedSpotlightArticles("all")?.spotlightArticles?.map { it.id },
-            "仓库缓存只存最近首页快照，翻页不得把当页合并回缓存",
-        )
     }
 
     @Test

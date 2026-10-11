@@ -12,8 +12,6 @@ import com.perol.pixez.shared.data.model.IllustDetailResponse
 import com.perol.pixez.shared.data.model.IllustSeriesWithIdModel
 import com.perol.pixez.shared.data.model.Ranking
 import com.perol.pixez.shared.data.model.Recommend
-import com.perol.pixez.shared.data.model.SpotlightDetail
-import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.model.UgoiraMetadataResponse
 import com.perol.pixez.shared.data.model.Walkthrough
 import io.ktor.client.HttpClient
@@ -21,23 +19,21 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * 插画作品仓库：推荐、排行榜、作品详情等业务接口。
+ * 插画作品仓库：推荐、排行榜、作品详情等 app-api 业务接口。
+ * Pixivision 特辑抓取/解析已拆分至 [PixivisionRepository]（架构审查 中-7）。
  */
 class IllustRepository(
     private val apiClient: HttpClient,
-    private val webClient: HttpClient = HttpClient(),
-    private val downloadClient: HttpClient = webClient,
+    private val downloadClient: HttpClient = HttpClient(),
     private val settingsRepository: SettingsRepository,
 ) {
     @Volatile
@@ -49,17 +45,15 @@ class IllustRepository(
     private val illustsCache = ThreadSafeLruCache<Long, Illust>(500)
 
     /**
-     * 清空全部内存缓存（高-5 缓存清理缺失修复）：推荐/匿名推荐响应、插画 LRU、
-     * Spotlight 列表与详情 LRU 一并失效；跨页恢复快照自本版本起由 UI 层
-     * 恢复缓存承载（ui/state IllustFeedRestore / RankingFeedRestore），不再归仓库管理。
-     * 生产接入点为账号身份变化（AccountRepository.logout / switchAccount）。
+     * 清空全部内存缓存（高-5 缓存清理缺失修复）：推荐/匿名推荐响应与插画 LRU 一并失效；
+     * Spotlight 列表与详情 LRU 随中-7 拆分迁至 [PixivisionRepository.clearMemoryCache]，
+     * 跨页恢复快照自本版本起由 UI 层恢复缓存承载（ui/state IllustFeedRestore / RankingFeedRestore），
+     * 不再归仓库管理。生产接入点为账号身份变化（AccountRepository.logout / switchAccount）。
      */
     suspend fun clearMemoryCache() {
         cachedRecommendedResponse = null
         cachedWalkthroughResponse = null
         illustsCache.clear()
-        spotlightArticlesCache.clear()
-        spotlightDetailCache.clear()
     }
 
     /**
@@ -203,107 +197,6 @@ class IllustRepository(
     suspend fun getFollowIllusts(restrict: String = "all"): List<Illust> =
         getFollowIllustsResponse(restrict = restrict).illusts
 
-    private val spotlightArticlesCache = ThreadSafeLruCache<String, SpotlightResponse>(20)
-
-    /**
-     * 获取指定分类已缓存的 Spotlight 首页快照，若无缓存返回 null。
-     */
-    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesCache.get(category)
-
-    /**
-     * 获取 Spotlight 精选文章列表，支持按分类与分页加载。
-     *
-     * 仓库只作当页数据源：首页响应写入 LRU 缓存（仅存最近首页快照，供分类切换/重进页面恢复），
-     * 翻页原样返回当页响应、不回写缓存——累积与去重由 UI 层共享列表状态单点负责（架构审查 中-8）。
-     *
-     * @param category 分类，如 all、illust、manga、novel 等。
-     * @param nextUrl 分页加载下一页时传入的完整 URL；为空时请求首页数据。
-     * @param forceRefresh 是否强制发起网络请求刷新。
-     */
-    suspend fun getSpotlightArticles(
-        category: String = "all",
-        nextUrl: String? = null,
-        forceRefresh: Boolean = false,
-    ): SpotlightResponse {
-        if (nextUrl == null && !forceRefresh) {
-            val cached = spotlightArticlesCache.get(category)
-            if (cached != null) {
-                return cached
-            }
-        }
-        return networkCall("获取 Spotlight 失败 category=$category") {
-            val isNovelCategory = category.equals("novel", ignoreCase = true) || category.equals("novels", ignoreCase = true)
-            val response: SpotlightResponse = if (isNovelCategory) {
-                if (nextUrl != null && nextUrl.isNotBlank()) {
-                    SpotlightResponse(spotlightArticles = emptyList(), nextUrl = null)
-                } else {
-                    val lang = getPixivisionLanguagePath()
-                    val targetUrl = "https://www.pixivision.net/$lang/c/novels"
-                    val html: String = webClient.get(TrustedUrlPolicy.spotlightUrl(targetUrl)) {
-                        headers {
-                            append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                            append("Referer", "https://www.pixivision.net/")
-                        }
-                    }.body()
-                    val articles = PixivisionParser.parseArticleList(html)
-                    SpotlightResponse(
-                        spotlightArticles = articles,
-                        nextUrl = null,
-                    )
-                }
-            } else if (nextUrl != null && nextUrl.isNotBlank()) {
-                apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-            } else {
-                apiClient.get("/v1/spotlight/articles") {
-                    parameter("filter", "for_android")
-                    parameter("category", category)
-                }.body()
-            }
-
-            if (nextUrl == null) {
-                spotlightArticlesCache.put(category, response)
-            }
-            response
-        }
-    }
-
-    private val spotlightDetailCache = ThreadSafeLruCache<String, SpotlightDetail>(50)
-
-    /**
-     * 获取缓存的 Spotlight 特辑详情，若无缓存返回 null。
-     */
-    fun getCachedSpotlightDetail(articleUrl: String): SpotlightDetail? = spotlightDetailCache.get(articleUrl)
-
-    /**
-     * 请求并解析 Pixivision 特辑文章详情（包含正文导语与画作列表，支持内存缓存与强制刷新）。
-     *
-     * @param articleUrl 特辑文章 URL。
-     * @param forceRefresh 是否强制发起网络请求刷新。
-     */
-    suspend fun getSpotlightArticleDetail(
-        articleUrl: String,
-        forceRefresh: Boolean = false,
-    ): SpotlightDetail {
-        if (!forceRefresh) {
-            val cached = spotlightDetailCache.get(articleUrl)
-            if (cached != null) {
-                return cached
-            }
-        }
-        return networkCall("获取 Spotlight 特辑详情失败 url=$articleUrl") {
-            val response: String = webClient.get(TrustedUrlPolicy.spotlightUrl(articleUrl)) {
-                headers {
-                    append("Referer", PixivHosts.REFERER_PIXIVISION_ZH)
-                    append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/85.0.564.13")
-                    append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7")
-                }
-            }.bodyAsText()
-            val detail = PixivisionParser.parse(response, articleUrl)
-            spotlightDetailCache.put(articleUrl, detail)
-            detail
-        }
-    }
-
     /**
      * 获取作品详情。
      */
@@ -426,13 +319,5 @@ class IllustRepository(
                 header("Referer", PixivHosts.PIXIV_APP_API)
             }.body()
         }
-
-    private fun getPixivisionLanguagePath(): String = when (settingsRepository.languageNum) {
-        1 -> "zh"
-        2 -> "zh-tw"
-        3 -> "ja"
-        4 -> "ko"
-        else -> "en"
-    }
 }
 

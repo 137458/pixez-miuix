@@ -49,7 +49,7 @@ import com.perol.pixez.shared.data.model.AmWork
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -84,7 +84,7 @@ fun SpotlightDetailScreen(
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
     onArticleClick: (SpotlightArticle) -> Unit,
-    repository: IllustRepository,
+    repository: PixivisionRepository,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current

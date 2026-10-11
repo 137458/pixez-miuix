@@ -17,6 +17,7 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
+import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
@@ -200,14 +201,26 @@ class AppDependencies(
             accountClient = httpClient.accountClient,
             // 高-5：账号身份变化（登出/切换账号）时清理作品内存缓存，防止跨账号读到旧缓存数据。
             illustRepository = illustRepository,
+            pixivisionRepository = pixivisionRepository,
         )
     }
 
     val illustRepository: IllustRepository by lazy {
         IllustRepository(
             apiClient = httpClient.apiClient,
-            webClient = webClient,
             downloadClient = httpClient.downloadClient,
+            settingsRepository = settingsRepository,
+        )
+    }
+
+    /**
+     * Pixivision 特辑仓库：Spotlight 列表与特辑详情（网页抓取/HTML 解析），
+     * 自 IllustRepository 拆分（架构审查 中-7）。
+     */
+    val pixivisionRepository: PixivisionRepository by lazy {
+        PixivisionRepository(
+            apiClient = httpClient.apiClient,
+            webClient = webClient,
             settingsRepository = settingsRepository,
         )
     }

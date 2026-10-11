@@ -89,6 +89,7 @@ fun App(
     val registry = remember(dependencies) {
         RepositoryRegistry(
             illustRepository = dependencies.illustRepository,
+            pixivisionRepository = dependencies.pixivisionRepository,
             searchRepository = dependencies.searchRepository,
             userRepository = dependencies.userRepository,
             accountRepository = dependencies.accountRepository,
