@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.isR18
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

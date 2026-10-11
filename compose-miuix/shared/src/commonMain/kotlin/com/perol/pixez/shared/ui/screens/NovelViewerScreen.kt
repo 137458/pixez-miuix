@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.data.repository.NovelRepository
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter

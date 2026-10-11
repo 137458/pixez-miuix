@@ -50,7 +50,7 @@ import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.repository.PixivisionRepository
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage

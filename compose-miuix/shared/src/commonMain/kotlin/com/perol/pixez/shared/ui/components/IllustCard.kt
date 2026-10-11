@@ -55,7 +55,7 @@ import top.yukonga.miuix.kmp.squircle.squircleClip
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.model.isR18
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme

@@ -3,7 +3,7 @@ package com.perol.pixez.shared.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import java.io.File
 import javax.swing.JFileChooser

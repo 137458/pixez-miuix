@@ -3,7 +3,6 @@ package com.perol.pixez.shared.data.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -11,8 +10,6 @@ import io.github.aakira.napier.Napier
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
-
-val LocalSettingsRepository = staticCompositionLocalOf<SettingsRepository?> { null }
 
 /**
  * 用户设置仓库，桥接旧 Flutter 应用的 SharedPreferences / NSUserDefaults。

@@ -29,7 +29,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Dimension
 import coil3.size.Precision
-import com.perol.pixez.shared.data.settings.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants

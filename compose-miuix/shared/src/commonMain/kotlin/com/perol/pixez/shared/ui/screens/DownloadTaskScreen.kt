@@ -466,7 +466,7 @@ private fun DownloadTaskItem(
     onDelete: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val settingsRepository = com.perol.pixez.shared.data.settings.LocalSettingsRepository.current
+    val settingsRepository = com.perol.pixez.shared.ui.LocalSettingsRepository.current
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
