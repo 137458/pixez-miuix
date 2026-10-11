@@ -28,12 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.state.FilterableIllustListState
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -44,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -89,95 +88,60 @@ fun RankingScreen(
 
     val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
     val cachedRanking = repository.getCachedRankingPage(rankingCacheKey)
-    // 高-3：拆「原始列表 / 过滤后列表」双状态，过滤为展示期派生，filterChangeVersion 变化时仅本地重过滤。
+    // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
+    // 过滤链仍为高-3「原始/过滤」双列表本地重过滤。状态机以榜单模式与日期为 remember key：
+    // 切换时整体重建（等价原实现的清空重载），并从仓库排行缓存恢复首屏快照与下一页 URL。
     val listState = remember(selectedMode, selectedDate) {
-        FilterableIllustListState(
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getRankingResponse(
+                    mode = selectedMode.code,
+                    date = selectedDate,
+                    nextUrl = nextUrl,
+                )
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            initialFilterVersion = settingsRepository.filterChangeVersion,
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
         ).also { state ->
-            cachedRanking?.let { state.restore(it.first) }
+            cachedRanking?.let { cached -> state.restore(cached.first, cached.second) }
         }
     }
-    var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(cachedRanking?.second) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
     // 模式、日期切换或重试时自动重新加载；过滤条件变化时仅对原始列表本地重过滤（高-3）。
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
-        val generation = ++requestGeneration
         val force = isManualRefreshing
-        if (!force &&
-            initialError == null &&
-            listState.refilterIfChanged(settingsRepository.filterChangeVersion)
-        ) {
-            repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), nextUrl)
+        if (!force && listState.refilterIfChanged()) {
+            repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), listState.nextUrl)
             return@LaunchedEffect
         }
-        if (!force && listState.filteredIllusts != null && initialError == null) {
+        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        if (listState.filteredIllusts == null) {
-            initialError = null
-        }
-        loadMoreError = null
-        isLoadingMore = false
-        val rankingResult = suspendRunCatchingNonCancel {
-            repository.getRankingResponse(
-                mode = selectedMode.code,
-                date = selectedDate,
-            )
-        }
+        val previous = listState.filteredIllusts
+        listState.loadFirst(force = force)
         isManualRefreshing = false
-        rankingResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                listState.replace(response.illusts, settingsRepository.filterChangeVersion)
-                nextUrl = response.nextUrl
-                repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), response.nextUrl)
-                initialError = null
-                loadMoreError = null
-                if (force && gridState.firstVisibleItemIndex > 0) {
-                    gridState.scrollToItem(0)
-                }
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration) {
-                if (listState.filteredIllusts == null) {
-                    initialError = error
-                }
+        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；
+        // 成功才同步跨页缓存并复位滚动位置。
+        val current = listState.filteredIllusts
+        if (current != null && current !== previous) {
+            repository.updateRankingPage(rankingCacheKey, current, listState.nextUrl)
+            if (force && gridState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(0)
             }
         }
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        val generation = requestGeneration
-        if (isLoadingMore) return
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel {
-                repository.getRankingResponse(
-                    mode = selectedMode.code,
-                    date = selectedDate,
-                    nextUrl = currentNextUrl,
-                )
-            }.onSuccess { response ->
-                if (generation == requestGeneration) {
-                    listState.append(response.illusts, settingsRepository.filterChangeVersion)
-                    nextUrl = response.nextUrl
-                    repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), response.nextUrl)
-                }
-            }.onFailure { error ->
-                if (generation == requestGeneration) {
-                    loadMoreError = error
-                }
-            }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
+            val previous = listState.filteredIllusts
+            listState.loadMore()
+            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写跨页缓存。
+            val current = listState.filteredIllusts
+            if (current != null && current !== previous) {
+                repository.updateRankingPage(rankingCacheKey, current, listState.nextUrl)
             }
         }
     }
@@ -283,13 +247,13 @@ fun RankingScreen(
         ) {
             val currentIllusts = listState.filteredIllusts
             when {
-                currentIllusts == null && initialError == null -> LoadingPlaceholder(
+                currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                currentIllusts == null && initialError != null -> ErrorPlaceholder(
-                    error = initialError,
+                currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+                    error = listState.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -323,9 +287,9 @@ fun RankingScreen(
                                     end = 8.dp,
                                     bottom = LocalBottomBarContentPadding.current,
                                 ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
+                                hasMore = listState.nextUrl != null,
+                                isLoadingMore = listState.isLoadingMore,
+                                loadMoreError = listState.loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
                         }
