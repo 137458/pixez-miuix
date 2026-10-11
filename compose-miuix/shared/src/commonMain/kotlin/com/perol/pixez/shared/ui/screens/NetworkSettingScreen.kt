@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -52,14 +52,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 网络设置页：提供 OAuth / API 服务网络模式切换与图片源选择。
  *
- * @param settingsRepository 设置仓库，用于读写网络相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun NetworkSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前网络设置。
     var oauthNetworkMode by remember { mutableStateOf(settingsRepository.oauthNetworkMode) }
     var apiNetworkMode by remember { mutableStateOf(settingsRepository.apiNetworkMode) }

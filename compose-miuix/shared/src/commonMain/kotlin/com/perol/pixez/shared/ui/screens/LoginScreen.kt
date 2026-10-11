@@ -43,9 +43,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
@@ -89,9 +89,10 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 fun LoginScreen(
     onBack: () -> Unit,
     onLoginSuccess: () -> Unit,
-    accountRepository: AccountRepository,
     onNetworkSettingClick: (() -> Unit)? = null,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val accountRepository = LocalAccountRepository.current
     var tokenInput by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
     var isLoading by rememberSaveable { mutableStateOf(false) }

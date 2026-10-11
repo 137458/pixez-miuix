@@ -43,8 +43,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.repository.AccountRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -97,9 +97,10 @@ fun CommentsScreen(
     illustId: Long,
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
-    repository: IllustRepository,
-    accountRepository: AccountRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalIllustRepository.current
+    val accountRepository = LocalAccountRepository.current
     // retryCount 作为 produceState 的 key，点击重试或发表评论后自增触发重新加载。
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }

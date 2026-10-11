@@ -29,10 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
@@ -74,11 +74,12 @@ import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 @Composable
 fun RankingScreen(
     onIllustClick: (Long) -> Unit,
-    repository: IllustRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
     feedRestore: RankingFeedRestoreCache,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalIllustRepository.current
+    val banRepository = LocalBanRepository.current
+    val settingsRepository = LocalSettingsRepository.current
     // 保存用户选择的排行榜模式，进程重建后恢复。
     var selectedMode by rememberSaveable { mutableStateOf(RankingMode.DAY) }
     // 日期输入原始值，格式 YYYY-MM-DD；空字符串表示未选择。

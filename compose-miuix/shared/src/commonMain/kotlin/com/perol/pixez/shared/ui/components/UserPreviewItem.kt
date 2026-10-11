@@ -33,9 +33,9 @@ internal fun UserPreviewItem(
     onClick: () -> Unit,
 ) {
     val settings = LocalSettingsRepository.current
-    val hIsNotAllow = settings?.hIsNotAllow ?: false
-    val banAIIllust = settings?.banAIIllust ?: false
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val hIsNotAllow = settings.hIsNotAllow
+    val banAIIllust = settings.banAIIllust
+    val changeVersion = settings.changeVersion.collectAsState().value
 
     val displayIllusts = remember(preview.illusts, hIsNotAllow, banAIIllust, changeVersion) {
         preview.illusts.filter { illust ->

@@ -42,7 +42,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
-import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
+import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -69,8 +69,9 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 fun DownloadHistoryScreen(
     onBack: () -> Unit,
     onIllustClick: (Long) -> Unit,
-    repository: DownloadHistoryRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalDownloadHistoryRepository.current
     val listState = rememberLazyListState()
     // retryCount 用于触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }

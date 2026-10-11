@@ -42,8 +42,6 @@ import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.BoardInfo
-import com.perol.pixez.shared.data.repository.AccountRepository
-import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
@@ -53,6 +51,9 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalBoardRepository
+import com.perol.pixez.shared.ui.LocalUpdateRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -113,10 +114,11 @@ fun SettingsScreen(
     onDataExportClick: () -> Unit,
     onBoardClick: () -> Unit,
     onGuideClick: () -> Unit,
-    accountRepository: AccountRepository,
-    boardRepository: BoardRepository,
-    updateRepository: com.perol.pixez.shared.data.repository.UpdateRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val accountRepository = LocalAccountRepository.current
+    val boardRepository = LocalBoardRepository.current
+    val updateRepository = LocalUpdateRepository.current
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
 

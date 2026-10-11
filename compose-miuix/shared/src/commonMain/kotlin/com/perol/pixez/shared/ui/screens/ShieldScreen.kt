@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -81,10 +84,11 @@ private sealed class DeleteTarget {
 fun ShieldScreen(
     onBack: () -> Unit,
     onAISettingClick: (showAI: Boolean) -> Unit,
-    settingsRepository: SettingsRepository,
-    banRepository: BanRepository,
-    userRepository: UserRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
+    val banRepository = LocalBanRepository.current
+    val userRepository = LocalUserRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     // 敏感内容过滤与 AI 开关状态。

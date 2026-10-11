@@ -30,9 +30,9 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.data.model.TrendTag
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.SearchRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalSearchRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
@@ -53,11 +53,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun SearchScreen(
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
-    repository: SearchRepository,
-    settingsRepository: SettingsRepository,
-    banRepository: BanRepository,
     initialQuery: String = "",
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalSearchRepository.current
+    val settingsRepository = LocalSettingsRepository.current
+    val banRepository = LocalBanRepository.current
     val strings = LocalStrings.current
     val bottomBarPadding = LocalBottomBarContentPadding.current
     var query by rememberSaveable { mutableStateOf(initialQuery) }

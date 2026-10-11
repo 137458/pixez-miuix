@@ -44,21 +44,26 @@ import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimati
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.LocalBanRepository
-import com.perol.pixez.shared.LocalDownloadRepository
-import com.perol.pixez.shared.LocalHistoryRepository
-import com.perol.pixez.shared.data.repository.AccountRepository
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
-import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.data.repository.SearchRepository
-import com.perol.pixez.shared.data.repository.UserRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalBoardRepository
+import com.perol.pixez.shared.ui.LocalBookmarkRepository
+import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalHistoryRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
+import com.perol.pixez.shared.ui.LocalMuteRepository
+import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
+import com.perol.pixez.shared.ui.LocalNovelRepository
+import com.perol.pixez.shared.ui.LocalPixivisionRepository
+import com.perol.pixez.shared.ui.LocalSearchRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalUpdateRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
-import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -162,9 +167,21 @@ fun RootContent(
     MiuixTheme(controller = themeController) {
         CompositionLocalProvider(
             LocalSettingsRepository provides settingsRepository,
+            LocalIllustRepository provides registry.illustRepository,
+            LocalPixivisionRepository provides registry.pixivisionRepository,
+            LocalSearchRepository provides registry.searchRepository,
+            LocalUserRepository provides registry.userRepository,
+            LocalAccountRepository provides registry.accountRepository,
+            LocalBookmarkRepository provides registry.bookmarkRepository,
             LocalHistoryRepository provides registry.historyRepository,
             LocalDownloadRepository provides registry.downloadRepository,
+            LocalDownloadHistoryRepository provides registry.downloadHistoryRepository,
             LocalBanRepository provides registry.banRepository,
+            LocalBoardRepository provides registry.boardRepository,
+            LocalNovelHistoryRepository provides registry.novelHistoryRepository,
+            LocalMuteRepository provides registry.muteRepository,
+            LocalNovelRepository provides registry.novelRepository,
+            LocalUpdateRepository provides registry.updateRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,
@@ -272,7 +289,6 @@ fun RootContent(
                             showNavigationRailInMain = showNavigationRailInMain,
                             bottomBarVisible = bottomBarVisible,
                             floatingBackdrop = floatingBackdrop,
-                            registry = registry,
                         )
                     }
                 }
@@ -302,13 +318,11 @@ private fun RootChildContent(
     showNavigationRailInMain: Boolean,
     bottomBarVisible: MutableState<Boolean>,
     floatingBackdrop: LayerBackdrop?,
-    registry: RepositoryRegistry,
 ) {
     when (instance) {
         // 中-6b 试点：作品详情页 child 实例为子组件，渲染参数与跳转回调经组件透传。
         is IllustDetailComponent -> renderIllustDetail(
             component = instance,
-            registry = registry,
         )
 
         is Config.Main -> MainChildSection(
@@ -319,167 +333,131 @@ private fun RootChildContent(
             showNavigationRailInMain = showNavigationRailInMain,
             bottomBarVisible = bottomBarVisible,
             isWideScreen = isWideScreen,
-            useFloatingBottomBar = useFloatingBottomBar,
-            floatingBackdrop = floatingBackdrop,
-            illustRepository = registry.illustRepository,
-            pixivisionRepository = registry.pixivisionRepository,
-            searchRepository = registry.searchRepository,
-            userRepository = registry.userRepository,
-            accountRepository = registry.accountRepository,
-            banRepository = registry.banRepository,
-            settingsRepository = registry.settingsRepository,
-        )
+                            useFloatingBottomBar = useFloatingBottomBar,
+                            floatingBackdrop = floatingBackdrop,
+                        )
 
         is Config.UserDetail -> renderUserDetail(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         Config.Login -> renderLogin(
             component = component,
-            registry = registry,
         )
 
         is Config.Comments -> renderComments(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         is Config.RelatedIllusts -> renderRelatedIllusts(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         is Config.IllustSeries -> renderIllustSeries(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         is Config.UserFollowList -> renderUserFollowList(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         is Config.UserFollowerList -> renderUserFollowerList(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         Config.RecomUserList -> renderRecomUserList(
             component = component,
-            registry = registry,
         )
 
         Config.Settings -> renderSettingsPage(
             component = component,
-            registry = registry,
         )
 
         is Config.Search -> renderSearch(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         Config.DownloadHistory -> renderDownloadHistory(
             component = component,
-            registry = registry,
         )
 
         Config.Shield -> renderShield(
             component = component,
-            registry = registry,
         )
 
         is Config.AISetting -> renderAISetting(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         Config.ThemeSetting -> renderThemeSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.NetworkSetting -> renderNetworkSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.DownloadSetting -> renderDownloadSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.LayoutSetting -> renderLayoutSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.LanguageSetting -> renderLanguageSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.WidgetRecommendSetting -> renderWidgetRecommendSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.InteractionSetting -> renderInteractionSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.UpdateSetting -> renderUpdateSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.AccountEdit -> renderAccountEdit(
             component = component,
-            registry = registry,
         )
 
         Config.History -> renderHistory(
             component = component,
-            registry = registry,
         )
 
         Config.DownloadTask -> renderDownloadTask(
             component = component,
-            registry = registry,
         )
 
         Config.DataExport -> renderDataExport(
             component = component,
-            registry = registry,
         )
 
         Config.Board -> renderBoard(
             component = component,
-            registry = registry,
         )
 
         Config.QualitySetting -> renderQualitySetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.CopyTextSetting -> renderCopyTextSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
         Config.WelcomePageSetting -> renderWelcomePageSetting(
-            registry = registry,
             onBack = component::onBack,
         )
 
@@ -489,7 +467,6 @@ private fun RootChildContent(
 
         Config.BookTag -> renderBookTag(
             component = component,
-            registry = registry,
         )
 
         Config.Thanks -> renderThanks(
@@ -499,28 +476,23 @@ private fun RootChildContent(
         is Config.SpotlightDetail -> renderSpotlightDetail(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         Config.Guide -> renderGuide(
             component = component,
-            registry = registry,
         )
 
         Config.AccountManage -> renderAccountManage(
             component = component,
-            registry = registry,
         )
 
         Config.Novel -> renderNovel(
             component = component,
-            registry = registry,
         )
 
         is Config.NovelViewer -> renderNovelViewer(
             instance = instance,
             component = component,
-            registry = registry,
         )
 
         // 分发主体改为 Any 后失去密封 Config 的编译期穷举校验，以此兜底：
@@ -546,15 +518,10 @@ private fun MainChildSection(
     isWideScreen: Boolean,
     useFloatingBottomBar: Boolean,
     floatingBackdrop: LayerBackdrop?,
-    illustRepository: IllustRepository,
-    pixivisionRepository: PixivisionRepository,
-    searchRepository: SearchRepository,
-    userRepository: UserRepository,
-    accountRepository: AccountRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
 ) {
     // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
+    // 中-9：设置仓储经 LocalSettingsRepository 读取（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     val mainChangeVersion = settingsRepository.changeVersion.collectAsState().value
     // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
     // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
@@ -587,13 +554,6 @@ private fun MainChildSection(
                         initialTab = tab,
                         component = component,
                         feedRestore = feedRestore,
-                        illustRepository = illustRepository,
-                        pixivisionRepository = pixivisionRepository,
-                        searchRepository = searchRepository,
-                        userRepository = userRepository,
-                        accountRepository = accountRepository,
-                        banRepository = banRepository,
-                        settingsRepository = settingsRepository,
                     )
                 }
                 if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {

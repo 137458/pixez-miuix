@@ -18,7 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
@@ -43,17 +43,17 @@ import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 /**
  * 欢迎页设置页：选择应用启动后默认进入的页面。
  *
- * 选项沿用旧 Flutter 版的字符串编码，写入 [SettingsRepository.welcomePageType]，
+ * 选项沿用旧 Flutter 版的字符串编码，写入 [com.perol.pixez.shared.data.settings.SettingsRepository.welcomePageType]，
  * 由 [RootComponent] 在启动时解析为初始路由。
  *
- * @param settingsRepository 设置仓库，用于读写欢迎页类型。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun WelcomePageSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前欢迎页类型。
     var selectedType by remember { mutableStateOf(settingsRepository.welcomePageType) }
 

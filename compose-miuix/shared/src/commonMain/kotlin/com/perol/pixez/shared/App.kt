@@ -3,7 +3,6 @@ package com.perol.pixez.shared
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
@@ -16,35 +15,9 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
-import androidx.compose.runtime.staticCompositionLocalOf
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.DownloadRepository
-import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.navigation.RootContent
-
-/**
- * 由 RootContent 从 [RepositoryRegistry] 统一 provide 的 [HistoryRepository] 注入点。
- */
-val LocalHistoryRepository = compositionLocalOf<HistoryRepository> {
-    error("LocalHistoryRepository not provided")
-}
-
-/**
- * 卡片与轻量组件通过该 CompositionLocal 获取 [DownloadRepository] 执行单页快捷下载。
- */
-val LocalDownloadRepository = staticCompositionLocalOf<DownloadRepository?> { null }
-
-/**
- * 卡片与轻量组件通过该 CompositionLocal 获取 [BanRepository] 执行快捷屏蔽。
- *
- * 与 [LocalHistoryRepository] 一致采用快速失败语义：未提供时读取即抛出，
- * 装配缺失首帧即暴露，禁止回退 AppDependencies 全局单例（中-20）。
- */
-val LocalBanRepository = staticCompositionLocalOf<BanRepository> {
-    error("LocalBanRepository not provided")
-}
 
 /**
  * 共享的 Compose 应用入口。

@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.AccountPersist
-import com.perol.pixez.shared.data.repository.AccountRepository
+import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -64,10 +64,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun AccountManageScreen(
-    accountRepository: AccountRepository,
     onBack: () -> Unit,
     onAddAccount: () -> Unit,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val accountRepository = LocalAccountRepository.current
     val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
     var accounts by remember { mutableStateOf<List<AccountPersist>>(emptyList()) }

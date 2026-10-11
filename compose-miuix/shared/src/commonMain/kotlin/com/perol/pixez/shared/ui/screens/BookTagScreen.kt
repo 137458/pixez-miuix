@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -50,16 +50,16 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 收藏标签管理页：展示用户收藏的标签列表，支持添加、删除与点击搜索。
  *
- * @param settingsRepository 设置仓库，用于读写 `book_tag_list`。
  * @param onBack 返回上一级页面。
  * @param onTagSearch 跳转搜索指定标签。
  */
 @Composable
 fun BookTagScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
     onTagSearch: (String) -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 当前标签列表，变更后同步写回设置。
     var bookTags by remember { mutableStateOf(settingsRepository.bookTagList) }
     val updateTags: (List<String>) -> Unit = { newTags ->

@@ -44,6 +44,11 @@ import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalBookmarkRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalHistoryRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
@@ -82,16 +87,17 @@ fun IllustDetailScreen(
     onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
-    repository: IllustRepository,
-    bookmarkRepository: BookmarkRepository,
-    downloadRepository: DownloadRepository,
-    banRepository: BanRepository,
-    historyRepository: HistoryRepository? = null,
     onIllustClick: ((Long) -> Unit)? = null,
     onNovelClick: ((Long) -> Unit)? = null,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalIllustRepository.current
+    val bookmarkRepository = LocalBookmarkRepository.current
+    val downloadRepository = LocalDownloadRepository.current
+    val banRepository = LocalBanRepository.current
+    val historyRepository = LocalHistoryRepository.current
     val settings = LocalSettingsRepository.current
-    val swipeChangeArtwork = settings?.swipeChangeArtwork == true
+    val swipeChangeArtwork = settings.swipeChangeArtwork
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
 
     DisposableEffect(sharedBoundsRegistry, illustId) {
@@ -184,13 +190,13 @@ private fun IllustDetailSingleContent(
     bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     banRepository: BanRepository,
-    historyRepository: HistoryRepository? = null,
+    historyRepository: HistoryRepository,
     onIllustClick: ((Long) -> Unit)? = null,
     onNovelClick: ((Long) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val changeVersion = settings.changeVersion.collectAsState().value
 
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
@@ -211,7 +217,7 @@ private fun IllustDetailSingleContent(
 
     // 成功加载插画详情时，自动异步写入本地浏览历史（仅当前展示页写入，避免预加载污染历史）
     LaunchedEffect(illust, isCurrentPage) {
-        if (illust != null && isCurrentPage && historyRepository != null) {
+        if (illust != null && isCurrentPage) {
             suspendRunCatchingNonCancel {
                 historyRepository.insert(illust)
             }
@@ -272,8 +278,8 @@ private fun IllustDetailSingleContent(
         }
     }
 
-    val isRestricted = remember(illust, isBanned, settings?.hIsNotAllow, changeVersion) {
-        isBanned || (settings?.hIsNotAllow == true && illust?.isR18() == true)
+    val isRestricted = remember(illust, isBanned, settings.hIsNotAllow, changeVersion) {
+        isBanned || (settings.hIsNotAllow == true && illust?.isR18() == true)
     }
 
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current

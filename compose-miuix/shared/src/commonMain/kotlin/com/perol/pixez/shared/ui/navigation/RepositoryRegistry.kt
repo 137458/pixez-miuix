@@ -39,6 +39,8 @@ data class RepositoryRegistry(
     val historyRepository: HistoryRepository,
     val novelHistoryRepository: NovelHistoryRepository,
     val muteRepository: MuteRepository,
-    val novelRepository: NovelRepository?,
+    // 中-9：AppDependencies.novelRepository 为非空 by lazy，唯一构造点传非空值，
+    // 可空标注为历史遗留；LocalNovelRepository 快速失败语义要求非空类型。
+    val novelRepository: NovelRepository,
     val updateRepository: UpdateRepository,
 )

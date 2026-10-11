@@ -30,11 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.isR18
-import com.perol.pixez.shared.data.repository.AccountRepository
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -78,12 +78,13 @@ fun NewScreen(
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit = {},
     onLoginClick: () -> Unit,
-    repository: IllustRepository,
-    accountRepository: AccountRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
     reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalIllustRepository.current
+    val accountRepository = LocalAccountRepository.current
+    val banRepository = LocalBanRepository.current
+    val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
     // 登录状态：页面进入时检测一次，未登录显示登录入口。
     var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }

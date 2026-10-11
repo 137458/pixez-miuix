@@ -336,7 +336,7 @@ private fun ViewerPagesSection(
             )
         } else if (pageCount > 1) {
             // 多 P 相邻页静默预加载（前后各 1 页）
-            LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings?.pictureSource) {
+            LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings.pictureSource) {
                 val imageLoader = SingletonImageLoader.get(context)
                 val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
                     .filter { it in 0 until pageCount }
@@ -356,11 +356,11 @@ private fun ViewerPagesSection(
                             pageIndex = pIndex,
                             targetUrl = rawTarget,
                             originalUrl = p.imageUrls?.original,
-                            customBasePath = settings?.storePath,
-                            pictureSource = settings?.pictureSource,
+                            customBasePath = settings.storePath,
+                            pictureSource = settings.pictureSource,
                         )
                         if (optModel.isNotBlank() && !optModel.startsWith("file:")) {
-                            val transformed = if (settings?.pictureSource != null && settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
+                            val transformed = if (settings.pictureSource != AppConstants.Network.HOST_PXIMG) {
                                 optModel.replace("://${AppConstants.Network.HOST_PXIMG}", "://${settings.pictureSource}")
                             } else optModel
                             // 预加载只用于写入磁盘缓存（Coil 在解码前落盘），解码结果随即丢弃，
@@ -783,8 +783,8 @@ private fun ViewerPageItem(
         pageIndex = pageIndex,
         targetUrl = rawZoomUrl,
         originalUrl = page?.imageUrls?.original ?: illust.metaSinglePage?.originalImageUrl,
-        customBasePath = settings?.storePath,
-        pictureSource = settings?.pictureSource,
+        customBasePath = settings.storePath,
+        pictureSource = settings.pictureSource,
     )
     val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
         if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
@@ -898,7 +898,7 @@ private fun ZoomableImage(
                         delay(RETRY_CACHE_PROBE_DELAY_MILLIS)
                         // 磁盘缓存探测属于阻塞 IO，切到 IO 线程执行
                         val cached = modelStr != null && withContext(Dispatchers.IO) {
-                            com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings?.pictureSource)
+                            com.perol.pixez.shared.platform.isUrlInCoilCache(context, modelStr, settings.pictureSource)
                         }
                         if (cached) {
                             reloadTrigger++

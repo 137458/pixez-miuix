@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -67,8 +67,9 @@ fun UserFollowListScreen(
     userId: Long,
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
-    repository: UserRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalUserRepository.current
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
 

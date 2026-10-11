@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Card
@@ -45,14 +45,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 画质与保存偏好设置页：
  * 管理 Feed 预览、插画详情、漫画详情、大图缩放等各页面画质偏好，以及收藏与保存的联动开关。
  *
- * @param settingsRepository 设置仓库，用于读写画质与保存相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun QualitySettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前画质设置。
     var feedPreviewQuality by remember {
         mutableIntStateOf(settingsRepository.feedPreviewQuality)

@@ -26,7 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import coil3.compose.AsyncImage
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.Sponsor
 import top.yukonga.miuix.kmp.basic.Icon
@@ -55,14 +55,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 选中后写入 [SettingsRepository.languageNum]。
  * 本次仅持久化语言索引，不触发应用内实时切换语言或刷新 UI 文案。
  *
- * @param settingsRepository 设置仓库，用于读写语言索引。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun LanguageSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var selectedIndex by remember(settingsRepository.languageNum) {
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))

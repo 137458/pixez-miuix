@@ -24,10 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
-import com.perol.pixez.shared.data.repository.HistoryRepository
-import com.perol.pixez.shared.data.repository.MuteRepository
-import com.perol.pixez.shared.data.repository.NovelHistoryRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalHistoryRepository
+import com.perol.pixez.shared.ui.LocalMuteRepository
+import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -64,19 +64,16 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 提供导出/导入入口，操作结果通过 [ToastMessage] 提示。
  *
  * @param onBack 返回上一级页面。
- * @param settingsRepository 设置仓库，用于读写搜索历史与收藏标签。
- * @param historyRepository 插画浏览历史仓库。
- * @param novelHistoryRepository 小说浏览历史仓库。
- * @param muteRepository 屏蔽数据仓库。
  */
 @Composable
 fun DataExportScreen(
     onBack: () -> Unit,
-    settingsRepository: SettingsRepository,
-    historyRepository: HistoryRepository,
-    novelHistoryRepository: NovelHistoryRepository,
-    muteRepository: MuteRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
+    val historyRepository = LocalHistoryRepository.current
+    val novelHistoryRepository = LocalNovelHistoryRepository.current
+    val muteRepository = LocalMuteRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     // 导入侧须宽松解析：含未知字段的新版本/手工编辑导出文件不应导入失败（配置同 PixivHttpClient）。

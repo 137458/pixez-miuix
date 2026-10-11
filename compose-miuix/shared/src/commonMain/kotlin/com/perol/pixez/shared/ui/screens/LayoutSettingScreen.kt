@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -60,14 +61,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
  *
- * @param settingsRepository 设置仓库，用于读写布局相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun LayoutSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前布局设置，用于驱动组件显示与回写。
     var crossCount by remember { mutableStateOf(settingsRepository.crossCount) }
     var hCrossCount by remember { mutableStateOf(settingsRepository.hCrossCount) }

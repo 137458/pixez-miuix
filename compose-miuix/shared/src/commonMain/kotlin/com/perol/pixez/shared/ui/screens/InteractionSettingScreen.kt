@@ -25,7 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.Card
@@ -45,14 +45,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 交互设置页：管理异形屏适配、H 内容过滤、再次返回退出、滑动切换作品等开关。
  *
- * @param settingsRepository 设置仓库，用于读写交互相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun InteractionSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前交互相关设置，用于驱动 Switch 的显示与回写。
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }

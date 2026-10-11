@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.UserPreviewsResponse
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -70,8 +70,9 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 fun RecomUserScreen(
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
-    repository: UserRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalUserRepository.current
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 

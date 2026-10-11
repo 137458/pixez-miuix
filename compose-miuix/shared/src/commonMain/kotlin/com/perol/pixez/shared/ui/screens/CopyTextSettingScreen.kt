@@ -24,6 +24,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -47,14 +48,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 分享格式设置页：编辑复制到剪贴板时的作品信息模板。
  *
- * @param settingsRepository 设置仓库，用于读写分享格式模板。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun CopyTextSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     // 使用 TextFieldValue 以便跟踪和操控光标/选区。

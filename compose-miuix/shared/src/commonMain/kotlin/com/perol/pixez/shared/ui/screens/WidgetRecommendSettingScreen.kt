@@ -18,7 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -43,14 +43,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 桌面小组件推荐类型与图源设置页：
  * 支持独立配置小组件展示的内容来源（推荐、日榜、周榜、月榜、最新、关注等）以及独立的图片 CDN 代理源。
  *
- * @param settingsRepository 设置仓库，用于读写小组件推荐类型与图源。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun WidgetRecommendSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前小组件推荐类型与独立图源。
     var selectedType by remember { mutableStateOf(settingsRepository.widgetIllustType) }
     var selectedPictureSource by remember { mutableStateOf(settingsRepository.widgetPictureSource) }

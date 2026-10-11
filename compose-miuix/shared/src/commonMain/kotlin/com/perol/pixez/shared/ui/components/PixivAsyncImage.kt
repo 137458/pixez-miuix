@@ -155,14 +155,14 @@ fun PixivAsyncImage(
 ) {
     val context = LocalPlatformContext.current
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val changeVersion = settings.changeVersion.collectAsState().value
 
-    val transformedModel = remember(model, settings?.pictureSource, changeVersion) {
-        (model as? String)?.mapToPictureSource(settings?.pictureSource) ?: model
+    val transformedModel = remember(model, settings.pictureSource, changeVersion) {
+        (model as? String)?.mapToPictureSource(settings.pictureSource) ?: model
     }
 
-    val transformedThumbnailCacheKey = remember(thumbnailUrl, settings?.pictureSource, changeVersion) {
-        (thumbnailUrl as? String)?.mapToPictureSource(settings?.pictureSource) ?: thumbnailUrl
+    val transformedThumbnailCacheKey = remember(thumbnailUrl, settings.pictureSource, changeVersion) {
+        (thumbnailUrl as? String)?.mapToPictureSource(settings.pictureSource) ?: thumbnailUrl
     }
 
     val hasThumbnail = transformedThumbnailCacheKey != null &&

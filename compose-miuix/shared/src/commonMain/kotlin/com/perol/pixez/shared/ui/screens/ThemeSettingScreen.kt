@@ -31,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.ColorPicker
@@ -55,6 +54,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
@@ -65,14 +65,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 主题设置页：切换日间/夜间模式、AMOLED 纯黑、动态取色与自定义主题色。
  *
- * @param settingsRepository 设置仓库，用于读写主题相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun ThemeSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     // 页面状态：从 SettingsRepository 读取当前主题设置，用于驱动组件显示与回写。
     var themeMode by remember { mutableStateOf(settingsRepository.themeMode) }
     var isAmoled by remember { mutableStateOf(settingsRepository.isAmoled) }

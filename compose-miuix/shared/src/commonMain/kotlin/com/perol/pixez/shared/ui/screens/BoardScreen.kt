@@ -36,7 +36,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.BoardInfo
-import com.perol.pixez.shared.data.repository.BoardRepository
+import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -61,13 +61,13 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 公告板页：展示官方公告列表，支持标题与 HTML 内容渲染、链接点击与刷新。
  *
  * @param onBack 返回上一级页面。
- * @param boardRepository 公告板仓库，由调用方注入，避免设置页与公告页重复请求。
  */
 @Composable
 fun BoardScreen(
     onBack: () -> Unit,
-    boardRepository: BoardRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val boardRepository = LocalBoardRepository.current
     val coroutineScope = rememberCoroutineScope()
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 

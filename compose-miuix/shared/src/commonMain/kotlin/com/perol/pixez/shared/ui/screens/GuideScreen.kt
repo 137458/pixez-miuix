@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
@@ -87,12 +89,13 @@ private const val GUIDE_PAGE_TRANSITION_MILLIS = 300
  */
 @Composable
 fun GuideScreen(
-    settingsRepository: SettingsRepository,
-    accountRepository: AccountRepository,
     onLoginClick: () -> Unit,
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
+    val accountRepository = LocalAccountRepository.current
     val strings = LocalStrings.current
     var currentStep by remember { mutableIntStateOf(0) }
     val backdrop = rememberBlurBackdrop()

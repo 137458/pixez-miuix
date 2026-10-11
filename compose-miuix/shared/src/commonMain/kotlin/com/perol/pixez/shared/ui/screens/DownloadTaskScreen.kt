@@ -49,7 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
-import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -89,9 +90,10 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 fun DownloadTaskScreen(
     onBack: () -> Unit,
     onIllustClick: (Long) -> Unit,
-    downloadRepository: DownloadRepository,
-    downloadHistoryRepository: DownloadHistoryRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val downloadRepository = LocalDownloadRepository.current
+    val downloadHistoryRepository = LocalDownloadHistoryRepository.current
     val strings = LocalStrings.current
     // 当前选中的筛选标签，使用 enum + Saver 保证类型安全与进程恢复。
     var selectedFilter by rememberSaveable(stateSaver = TaskFilterSaver) { mutableStateOf(TaskFilter.All) }
@@ -504,10 +506,10 @@ private fun DownloadTaskItem(
                 IconButton(
                     onClick = {
                         val settings = settingsRepository
-                        val storePath = settings?.storePath
+                        val storePath = settings.storePath
                         val basePath = storePath?.takeIf { it.isNotBlank() }
                             ?: getDefaultPictureDirectory()
-                        val subDir = if (settings?.singleFolder == false && task.userName.isNotBlank() && task.userId > 0) {
+                        val subDir = if (settings.singleFolder == false && task.userName.isNotBlank() && task.userId > 0) {
                             "${FileNamePolicy.sanitizeSegment(task.userName)}_${task.userId}"
                         } else null
                         val fullDir = if (subDir != null) "$basePath/$subDir" else basePath

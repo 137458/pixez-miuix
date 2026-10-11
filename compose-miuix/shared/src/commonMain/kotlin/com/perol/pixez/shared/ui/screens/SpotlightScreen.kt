@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.repository.PixivisionRepository
+import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.LiquidFilterBar
@@ -113,10 +113,11 @@ private class CategoryState {
  */
 @Composable
 fun SpotlightScreen(
-    repository: PixivisionRepository,
     onArticleClick: (SpotlightArticle) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalPixivisionRepository.current
     val strings = LocalStrings.current
     var selectedCategory by rememberSaveable { mutableStateOf(SpotlightCategory.ALL) }
     val coroutineScope = rememberCoroutineScope()
@@ -415,14 +416,14 @@ internal fun SpotlightArticleCard(
 @Composable
 internal fun rememberSpotlightGridColumns(): StaggeredGridCells {
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
-    return remember(settings?.crossAdapt, settings?.crossAdapterWidth, settings?.crossCount, changeVersion) {
-        if (settings?.crossAdapt == true) {
+    val changeVersion = settings.changeVersion.collectAsState().value
+    return remember(settings.crossAdapt, settings.crossAdapterWidth, settings.crossCount, changeVersion) {
+        if (settings.crossAdapt == true) {
             val minWidth = (settings.crossAdapterWidth * 1.2f).toInt()
                 .coerceIn(SPOTLIGHT_CARD_MIN_WIDTH_DP, SPOTLIGHT_CARD_MAX_WIDTH_DP)
             StaggeredGridCells.Adaptive(minWidth.dp)
         } else {
-            val configuredCols = settings?.crossCount ?: 2
+            val configuredCols = settings.crossCount
             if (configuredCols == 2) {
                 StaggeredGridCells.Adaptive(SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP.dp)
             } else {

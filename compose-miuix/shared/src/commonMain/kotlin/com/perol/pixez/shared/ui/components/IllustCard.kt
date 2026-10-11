@@ -23,8 +23,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
-import com.perol.pixez.shared.LocalBanRepository
-import com.perol.pixez.shared.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.platform.IllustShare
@@ -73,17 +73,17 @@ fun IllustCard(
     modifier: Modifier = Modifier,
 ) {
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
-    val previewUrl = remember(illust, settings?.feedPreviewQuality, changeVersion) {
-        resolveIllustCoverUrl(illust.imageUrls, settings?.feedPreviewQuality)
+    val changeVersion = settings.changeVersion.collectAsState().value
+    val previewUrl = remember(illust, settings.feedPreviewQuality, changeVersion) {
+        resolveIllustCoverUrl(illust.imageUrls, settings.feedPreviewQuality)
     }
 
     val isAI = remember(illust.illustAIType) { illust.illustAIType == 2 }
-    val showAIBadge = remember(isAI, settings?.feedAIBadge) { (settings?.feedAIBadge != false) && isAI }
+    val showAIBadge = remember(isAI, settings.feedAIBadge) { (settings.feedAIBadge != false) && isAI }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val isNsfw = remember(illust, settings?.nsfwMask, changeVersion) {
-        (settings?.nsfwMask == true) && illust.isR18()
+    val isNsfw = remember(illust, settings.nsfwMask, changeVersion) {
+        (settings.nsfwMask == true) && illust.isR18()
     }
 
     val ratio = remember(illust.width, illust.height) {
@@ -110,16 +110,14 @@ fun IllustCard(
             show = showActionMenu,
             showBan = true,
             onDismissRequest = { showActionMenu = false },
-            onDownload = if (downloadRepository != null) {
-                {
-                    showActionMenu = false
-                    coroutineScope.launch {
-                        suspendRunCatchingNonCancel {
-                            downloadRepository.download(illust, pageIndex = 0)
-                        }
+            onDownload = {
+                showActionMenu = false
+                coroutineScope.launch {
+                    suspendRunCatchingNonCancel {
+                        downloadRepository.download(illust, pageIndex = 0)
                     }
                 }
-            } else null,
+            },
             onCopyInfo = {
                 showActionMenu = false
                 runClipboardShare(
@@ -138,7 +136,7 @@ fun IllustCard(
                         onToast = silentToastSink,
                     ) {
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
-                        val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings?.pictureSource) }
+                        val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings.pictureSource) }
                         withContext(Dispatchers.IO) {
                             val bytes = extractCachedImageBytes(context, transformedUrls)
                             bytes?.let { IllustClipboard().copyImage(it) }
@@ -170,7 +168,7 @@ fun IllustCard(
                             illustId = illust.id,
                             name = illust.title,
                         )
-                        settings?.notifyFilterChanged()
+                        settings.notifyFilterChanged()
                     }
                 }
             },

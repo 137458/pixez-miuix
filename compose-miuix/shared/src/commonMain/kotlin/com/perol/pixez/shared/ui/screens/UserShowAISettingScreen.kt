@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -54,14 +54,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  *
  * @param showAI 页面进入时的初始设置值。
  * @param onBack 返回上一级页面回调。
- * @param userRepository 用户仓库，用于调用 AI 显示设置接口。
  */
 @Composable
 fun UserShowAISettingScreen(
     showAI: Boolean,
     onBack: () -> Unit,
-    userRepository: UserRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val userRepository = LocalUserRepository.current
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
 

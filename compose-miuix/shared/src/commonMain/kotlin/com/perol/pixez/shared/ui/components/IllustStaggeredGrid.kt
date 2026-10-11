@@ -60,7 +60,7 @@ fun IllustStaggeredGrid(
     onRetryLoadMore: (() -> Unit)? = onLoadMore,
 ) {
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings?.changeVersion?.collectAsState()?.value
+    val changeVersion = settings.changeVersion.collectAsState().value
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -75,20 +75,20 @@ fun IllustStaggeredGrid(
         val effectiveColumns = remember(
             columns,
             isLandscape,
-            settings?.crossAdapt,
-            settings?.crossAdapterWidth,
-            settings?.crossCount,
-            settings?.hCrossAdapt,
-            settings?.hCrossAdapterWidth,
-            settings?.hCrossCount,
+            settings.crossAdapt,
+            settings.crossAdapterWidth,
+            settings.crossCount,
+            settings.hCrossAdapt,
+            settings.hCrossAdapterWidth,
+            settings.hCrossCount,
             changeVersion,
         ) {
             if (columns != null) {
                 columns
             } else if (isLandscape) {
-                val adapt = settings?.hCrossAdapt ?: true
+                val adapt = settings.hCrossAdapt
                 if (adapt) {
-                    val minWidth = (settings?.hCrossAdapterWidth ?: defaultCardWidth).coerceIn(
+                    val minWidth = settings.hCrossAdapterWidth.coerceIn(
                         SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
                         1000,
                     )
@@ -98,9 +98,9 @@ fun IllustStaggeredGrid(
                     StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
                 }
             } else {
-                val adapt = settings?.crossAdapt ?: true
+                val adapt = settings.crossAdapt
                 if (adapt) {
-                    val minWidth = (settings?.crossAdapterWidth ?: defaultCardWidth).coerceIn(
+                    val minWidth = settings.crossAdapterWidth.coerceIn(
                         SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
                         1000,
                     )

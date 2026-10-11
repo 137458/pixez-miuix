@@ -22,10 +22,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -56,10 +56,11 @@ fun RelatedIllustsScreen(
     illustId: Long,
     onBack: () -> Unit,
     onIllustClick: (Long) -> Unit,
-    repository: IllustRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalIllustRepository.current
+    val banRepository = LocalBanRepository.current
+    val settingsRepository = LocalSettingsRepository.current
     // retryCount 作为 produceState 的 key，点击重试时自增触发重新加载。
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }

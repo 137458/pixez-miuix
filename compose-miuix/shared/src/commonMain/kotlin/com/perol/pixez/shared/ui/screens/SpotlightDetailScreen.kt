@@ -49,8 +49,7 @@ import com.perol.pixez.shared.data.model.AmWork
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.data.repository.PixivisionRepository
-import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -87,9 +86,10 @@ fun SpotlightDetailScreen(
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
     onArticleClick: (SpotlightArticle) -> Unit,
-    repository: PixivisionRepository,
     modifier: Modifier = Modifier,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalPixivisionRepository.current
     val strings = LocalStrings.current
     var retryKey by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }

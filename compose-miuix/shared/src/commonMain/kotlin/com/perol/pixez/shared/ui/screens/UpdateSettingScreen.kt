@@ -38,11 +38,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
-import com.perol.pixez.shared.data.repository.UpdateRepository
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalUpdateRepository
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -85,10 +85,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  */
 @Composable
 fun UpdateSettingScreen(
-    settingsRepository: SettingsRepository,
-    updateRepository: UpdateRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
+    val updateRepository = LocalUpdateRepository.current
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
     val topAppBarScrollBehavior = MiuixScrollBehavior()

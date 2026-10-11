@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.components.CheckIndicator
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -67,14 +67,14 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  * 下载设置页：管理保存路径、保存模式、保存格式、脚本文件名、
  * Sanity 文件夹、同时下载任务数、单文件夹模式。
  *
- * @param settingsRepository 设置仓库，用于读写下载相关偏好。
  * @param onBack 返回上一级页面。
  */
 @Composable
 fun DownloadSettingScreen(
-    settingsRepository: SettingsRepository,
     onBack: () -> Unit,
 ) {
+    // 中-9：设置仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
 
     // 页面状态：从 SettingsRepository 读取当前各项下载设置。

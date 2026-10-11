@@ -12,13 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import com.perol.pixez.shared.data.repository.AccountRepository
-import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.IllustRepository
-import com.perol.pixez.shared.data.repository.PixivisionRepository
-import com.perol.pixez.shared.data.repository.SearchRepository
-import com.perol.pixez.shared.data.repository.UserRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
@@ -67,8 +60,11 @@ import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
  * [RootContent] 中各导航子页面（[Config]）的渲染函数集合。
  *
  * 这些函数由原 `RootContent.kt` 中巨型 `when (child.instance)` 的各个分支原样抽取而来，
- * 每个函数负责将某一类子页面映射到对应的 Screen 调用（参数与抽取前完全一致）。
+ * 每个函数负责将某一类子页面映射到对应的 Screen 调用。
  * 分发编排仍保留在 [RootContent] 内，此处仅承载「渲染哪一个页面」的具体实现。
+ *
+ * 中-9 注入单通道：render* 只传路由参数与导航回调，数据仓储一律由各 Screen 内部
+ * 从 `LocalXxxRepository` 读取（RootContent 组合根统一 provide），不再逐层穿参。
  */
 
 /**
@@ -87,13 +83,6 @@ internal fun MainContent(
     // 高-5：跨页恢复容器，由 createChild 在 Main child 组件初始化时接线（consume/register
     // 只执行一次）；快照存原始 ID 列表，恢复经仓库 illustsCache 回查。
     feedRestore: MainFeedRestore,
-    illustRepository: IllustRepository,
-    pixivisionRepository: PixivisionRepository,
-    searchRepository: SearchRepository,
-    userRepository: UserRepository,
-    accountRepository: AccountRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
 ) {
     val initialIndex = remember { RootComponent.MAIN_TAB_ORDER.indexOf(initialTab).coerceAtLeast(0) }
     val pagerState = rememberPagerState(
@@ -154,10 +143,6 @@ internal fun MainContent(
                 onSettingsClick = component::onSettingsClicked,
                 onLoginClick = component::onLoginClicked,
                 onRecomUserClick = component::onRecomUserListClicked,
-                repository = illustRepository,
-                accountRepository = accountRepository,
-                banRepository = banRepository,
-                settingsRepository = settingsRepository,
                 feedRestore = feedRestore.hello,
                 reselectFlow = remember(component) {
                     component.reselectFlowOf(RootComponent.MainTab.Hello)
@@ -167,16 +152,10 @@ internal fun MainContent(
             RootComponent.MainTab.Search -> SearchScreen(
                 onIllustClick = component::onIllustClicked,
                 onUserClick = component::onUserClicked,
-                repository = searchRepository,
-                settingsRepository = settingsRepository,
-                banRepository = banRepository,
             )
 
             RootComponent.MainTab.Ranking -> RankingScreen(
                 onIllustClick = component::onIllustClicked,
-                repository = illustRepository,
-                banRepository = banRepository,
-                settingsRepository = settingsRepository,
                 feedRestore = feedRestore.ranking,
             )
 
@@ -184,17 +163,12 @@ internal fun MainContent(
                 onIllustClick = component::onIllustClicked,
                 onUserClick = component::onUserClicked,
                 onLoginClick = component::onLoginClicked,
-                repository = illustRepository,
-                accountRepository = accountRepository,
-                banRepository = banRepository,
-                settingsRepository = settingsRepository,
                 reselectFlow = remember(component) {
                     component.reselectFlowOf(RootComponent.MainTab.New)
                 },
             )
 
             RootComponent.MainTab.Spotlight -> SpotlightScreen(
-                repository = pixivisionRepository,
                 onArticleClick = component::onSpotlightArticleClicked,
             )
         }
@@ -204,7 +178,6 @@ internal fun MainContent(
 @Composable
 internal fun renderIllustDetail(
     component: IllustDetailComponent,
-    registry: RepositoryRegistry,
 ) {
     IllustDetailScreen(
         illustId = component.illustId,
@@ -215,11 +188,6 @@ internal fun renderIllustDetail(
         onRelatedIllustsClick = component.onRelatedIllustsClick,
         onIllustSeriesClick = component.onIllustSeriesClick,
         onTagClick = component.onTagClick,
-        repository = registry.illustRepository,
-        bookmarkRepository = registry.bookmarkRepository,
-        downloadRepository = registry.downloadRepository,
-        banRepository = registry.banRepository,
-        historyRepository = registry.historyRepository,
         onIllustClick = component.onIllustClick,
         onNovelClick = component.onNovelClick,
     )
@@ -229,7 +197,6 @@ internal fun renderIllustDetail(
 internal fun renderUserDetail(
     instance: Config.UserDetail,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     UserDetailScreen(
         userId = instance.userId,
@@ -237,11 +204,6 @@ internal fun renderUserDetail(
         onIllustClick = component::onIllustClicked,
         onFollowListClick = component::onUserFollowListClicked,
         onFollowerListClick = component::onUserFollowerListClicked,
-        repository = registry.userRepository,
-        bookmarkRepository = registry.bookmarkRepository,
-        banRepository = registry.banRepository,
-        settingsRepository = registry.settingsRepository,
-        accountRepository = registry.accountRepository,
         initialTab = instance.initialTab,
     )
 }
@@ -249,13 +211,11 @@ internal fun renderUserDetail(
 @Composable
 internal fun renderLogin(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     LoginScreen(
         onBack = component::onBack,
         onLoginSuccess = component::onLoginSuccess,
         onNetworkSettingClick = component::onNetworkSettingClicked,
-        accountRepository = registry.accountRepository,
     )
 }
 
@@ -263,14 +223,11 @@ internal fun renderLogin(
 internal fun renderComments(
     instance: Config.Comments,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     CommentsScreen(
         illustId = instance.illustId,
         onBack = component::onBack,
         onUserClick = component::onUserClicked,
-        repository = registry.illustRepository,
-        accountRepository = registry.accountRepository,
     )
 }
 
@@ -278,15 +235,11 @@ internal fun renderComments(
 internal fun renderRelatedIllusts(
     instance: Config.RelatedIllusts,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     RelatedIllustsScreen(
         illustId = instance.illustId,
         onBack = component::onBack,
         onIllustClick = component::onIllustClicked,
-        repository = registry.illustRepository,
-        banRepository = registry.banRepository,
-        settingsRepository = registry.settingsRepository,
     )
 }
 
@@ -294,15 +247,11 @@ internal fun renderRelatedIllusts(
 internal fun renderIllustSeries(
     instance: Config.IllustSeries,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     IllustSeriesScreen(
         seriesId = instance.seriesId,
         onBack = component::onBack,
         onIllustClick = component::onIllustClicked,
-        repository = registry.illustRepository,
-        banRepository = registry.banRepository,
-        settingsRepository = registry.settingsRepository,
     )
 }
 
@@ -310,13 +259,11 @@ internal fun renderIllustSeries(
 internal fun renderUserFollowList(
     instance: Config.UserFollowList,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     UserFollowListScreen(
         userId = instance.userId,
         onBack = component::onBack,
         onUserClick = component::onUserClicked,
-        repository = registry.userRepository,
     )
 }
 
@@ -324,32 +271,27 @@ internal fun renderUserFollowList(
 internal fun renderUserFollowerList(
     instance: Config.UserFollowerList,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     UserFollowerListScreen(
         userId = instance.userId,
         onBack = component::onBack,
         onUserClick = component::onUserClicked,
-        repository = registry.userRepository,
     )
 }
 
 @Composable
 internal fun renderRecomUserList(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     RecomUserScreen(
         onBack = component::onBack,
         onUserClick = component::onUserClicked,
-        repository = registry.userRepository,
     )
 }
 
 @Composable
 internal fun renderSettingsPage(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     SettingsScreen(
         onBack = component::onBack,
@@ -379,9 +321,6 @@ internal fun renderSettingsPage(
         onDataExportClick = component::onDataExportClicked,
         onBoardClick = component::onBoardClicked,
         onGuideClick = component::onGuideClicked,
-        accountRepository = registry.accountRepository,
-        boardRepository = registry.boardRepository,
-        updateRepository = registry.updateRepository,
     )
 }
 
@@ -389,14 +328,10 @@ internal fun renderSettingsPage(
 internal fun renderSearch(
     instance: Config.Search,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     SearchScreen(
         onIllustClick = component::onIllustClicked,
         onUserClick = component::onUserClicked,
-        repository = registry.searchRepository,
-        settingsRepository = registry.settingsRepository,
-        banRepository = registry.banRepository,
         initialQuery = instance.query,
     )
 }
@@ -404,26 +339,20 @@ internal fun renderSearch(
 @Composable
 internal fun renderDownloadHistory(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     DownloadHistoryScreen(
         onBack = component::onBack,
         onIllustClick = component::onIllustClicked,
-        repository = registry.downloadHistoryRepository,
     )
 }
 
 @Composable
 internal fun renderShield(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     ShieldScreen(
         onBack = component::onBack,
         onAISettingClick = component::onAISettingClicked,
-        settingsRepository = registry.settingsRepository,
-        banRepository = registry.banRepository,
-        userRepository = registry.userRepository,
     )
 }
 
@@ -431,100 +360,81 @@ internal fun renderShield(
 internal fun renderAISetting(
     instance: Config.AISetting,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     UserShowAISettingScreen(
         showAI = instance.showAI,
         onBack = component::onBack,
-        userRepository = registry.userRepository,
     )
 }
 
 @Composable
 internal fun renderThemeSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     ThemeSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderNetworkSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     NetworkSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderDownloadSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     DownloadSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderLayoutSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     LayoutSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderLanguageSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     LanguageSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderWidgetRecommendSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     WidgetRecommendSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderInteractionSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     InteractionSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderUpdateSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     UpdateSettingScreen(
-        settingsRepository = registry.settingsRepository,
-        updateRepository = registry.updateRepository,
         onBack = onBack,
     )
 }
@@ -532,95 +442,75 @@ internal fun renderUpdateSetting(
 @Composable
 internal fun renderAccountEdit(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     AccountEditScreen(
         onBack = component::onBack,
-        accountRepository = registry.accountRepository,
     )
 }
 
 @Composable
 internal fun renderHistory(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     HistoryScreen(
         onBack = component::onBack,
         // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
         // 导航层仍使用 Int，在此处做类型转换。
         onIllustClick = { component.onIllustClicked(it) },
-        repository = registry.historyRepository,
     )
 }
 
 @Composable
 internal fun renderDownloadTask(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     DownloadTaskScreen(
         onBack = component::onBack,
         onIllustClick = component::onIllustClicked,
-        downloadRepository = registry.downloadRepository,
-        downloadHistoryRepository = registry.downloadHistoryRepository,
     )
 }
 
 @Composable
 internal fun renderDataExport(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     DataExportScreen(
         onBack = component::onBack,
-        settingsRepository = registry.settingsRepository,
-        historyRepository = registry.historyRepository,
-        novelHistoryRepository = registry.novelHistoryRepository,
-        muteRepository = registry.muteRepository,
     )
 }
 
 @Composable
 internal fun renderBoard(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     BoardScreen(
         onBack = component::onBack,
-        boardRepository = registry.boardRepository,
     )
 }
 
 @Composable
 internal fun renderQualitySetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     QualitySettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderCopyTextSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     CopyTextSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
 
 @Composable
 internal fun renderWelcomePageSetting(
-    registry: RepositoryRegistry,
     onBack: () -> Unit,
 ) {
     WelcomePageSettingScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = onBack,
     )
 }
@@ -639,10 +529,8 @@ internal fun renderAbout(
 @Composable
 internal fun renderBookTag(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     BookTagScreen(
-        settingsRepository = registry.settingsRepository,
         onBack = component::onBack,
         onTagSearch = component::onSearchClicked,
     )
@@ -661,7 +549,6 @@ internal fun renderThanks(
 internal fun renderSpotlightDetail(
     instance: Config.SpotlightDetail,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     SpotlightDetailScreen(
         article = instance.article,
@@ -669,18 +556,14 @@ internal fun renderSpotlightDetail(
         onIllustClick = component::onIllustClicked,
         onUserClick = component::onUserClicked,
         onArticleClick = component::onSpotlightArticleClicked,
-        repository = registry.pixivisionRepository,
     )
 }
 
 @Composable
 internal fun renderGuide(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     GuideScreen(
-        settingsRepository = registry.settingsRepository,
-        accountRepository = registry.accountRepository,
         onLoginClick = component::onLoginClicked,
         onFinish = component::onGuideFinished,
     )
@@ -689,10 +572,8 @@ internal fun renderGuide(
 @Composable
 internal fun renderAccountManage(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
     AccountManageScreen(
-        accountRepository = registry.accountRepository,
         onBack = component::onBack,
         onAddAccount = component::onLoginClicked,
     )
@@ -701,29 +582,21 @@ internal fun renderAccountManage(
 @Composable
 internal fun renderNovel(
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
-    registry.novelRepository?.let { repo ->
-        NovelScreen(
-            novelRepository = repo,
-            onBack = component::onBack,
-            onNovelClick = component::onNovelClicked,
-        )
-    }
+    NovelScreen(
+        onBack = component::onBack,
+        onNovelClick = component::onNovelClicked,
+    )
 }
 
 @Composable
 internal fun renderNovelViewer(
     instance: Config.NovelViewer,
     component: RootComponent,
-    registry: RepositoryRegistry,
 ) {
-    registry.novelRepository?.let { repo ->
-        NovelViewerScreen(
-            novelId = instance.novelId,
-            novelRepository = repo,
-            onBack = component::onBack,
-            onNovelClick = component::onNovelClicked,
-        )
-    }
+    NovelViewerScreen(
+        novelId = instance.novelId,
+        onBack = component::onBack,
+        onNovelClick = component::onNovelClicked,
+    )
 }

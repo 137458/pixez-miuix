@@ -10,7 +10,7 @@ import com.arkivanov.decompose.ComponentContext
  *   stateKeeper 反序列化配置后由 childFactory 以恢复值重建本组件。
  * - 跳转回调由 [RootComponent.createChild] 注入根导航方法引用，组件自身不感知栈实现，
  *   可脱离 RootComponent 独立实例化测试（desktopTest 有覆盖）。
- * - 数据仓储仍由渲染层从 [RepositoryRegistry] 取值传入 Screen，页面内状态仍在组合层持有；
+ * - 数据仓储由 Screen 内部经 CompositionLocal 读取（中-9 单通道，RootContent 组合根 provide），页面内状态仍在组合层持有；
  *   后续新页面按本范式接入，旧页面维持 Config 即 child 实例的现状逐步迁移。
  */
 class IllustDetailComponent(

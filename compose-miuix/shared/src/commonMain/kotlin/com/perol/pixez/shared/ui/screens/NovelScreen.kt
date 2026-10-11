@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.NovelRankingMode
-import com.perol.pixez.shared.data.repository.NovelRepository
+import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -73,11 +73,12 @@ private enum class NovelBrowseTab {
  */
 @Composable
 fun NovelScreen(
-    novelRepository: NovelRepository,
     onBack: () -> Unit,
     onNovelClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val novelRepository = LocalNovelRepository.current
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
     val backdrop = rememberBlurBackdrop()

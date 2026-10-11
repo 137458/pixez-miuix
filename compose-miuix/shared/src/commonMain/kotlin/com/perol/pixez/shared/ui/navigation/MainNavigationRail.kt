@@ -33,7 +33,7 @@ fun MainNavigationRail(
     }
 
     val settingsRepository = com.perol.pixez.shared.ui.LocalSettingsRepository.current
-    val hasUnreadBadge = (settingsRepository?.hasUnreadFeedBadge == true) && activeTab != RootComponent.MainTab.New
+    val hasUnreadBadge = settingsRepository.hasUnreadFeedBadge && activeTab != RootComponent.MainTab.New
 
     NavigationRail(
         modifier = modifier.fillMaxHeight(),

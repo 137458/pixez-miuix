@@ -34,8 +34,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
-import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ToastData
@@ -74,13 +74,13 @@ private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}
  * 支持查看当前账号、修改邮箱与密码、复制 Refresh Token、跳转账号注销页面。
  *
  * @param onBack 返回上一级页面。
- * @param accountRepository 账号仓库，用于读取与编辑账号信息。
  */
 @Composable
 fun AccountEditScreen(
     onBack: () -> Unit,
-    accountRepository: AccountRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val accountRepository = LocalAccountRepository.current
     val coroutineScope = rememberCoroutineScope()
     val clipboard = remember { IllustClipboard() }
 

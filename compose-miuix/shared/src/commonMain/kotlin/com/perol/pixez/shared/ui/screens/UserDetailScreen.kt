@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.UserDetail
-import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -36,6 +35,11 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalBookmarkRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -77,23 +81,22 @@ fun UserDetailScreen(
     onIllustClick: (Long) -> Unit,
     onFollowListClick: (Long) -> Unit,
     onFollowerListClick: (Long) -> Unit,
-    repository: UserRepository,
-    bookmarkRepository: BookmarkRepository,
-    banRepository: BanRepository,
-    settingsRepository: SettingsRepository,
-    accountRepository: AccountRepository? = null,
     initialTab: Int = 0,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalUserRepository.current
+    val bookmarkRepository = LocalBookmarkRepository.current
+    val banRepository = LocalBanRepository.current
+    val settingsRepository = LocalSettingsRepository.current
+    val accountRepository = LocalAccountRepository.current
     // 重试计数，作为 produceState 的 key 触发用户资料重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     val strings = LocalStrings.current
 
     val currentAccountState = produceState<AccountPersist?>(initialValue = null, accountRepository) {
-        accountRepository?.let { repo ->
-            value = suspendRunCatchingNonCancel { repo.currentAccount() }.getOrNull()
-            repo.loginEventFlow.collect {
-                value = suspendRunCatchingNonCancel { repo.currentAccount() }.getOrNull()
-            }
+        value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        accountRepository.loginEventFlow.collect {
+            value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
         }
     }
     val isCurrentUser = remember(currentAccountState.value, userId) {

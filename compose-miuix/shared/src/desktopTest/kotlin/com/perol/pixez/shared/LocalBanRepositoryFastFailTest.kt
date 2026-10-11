@@ -11,6 +11,7 @@ import com.perol.pixez.shared.data.local.banillustid.BanIllustIdDatabase
 import com.perol.pixez.shared.data.local.bantag.BanTagDatabase
 import com.perol.pixez.shared.data.local.banuserid.BanUserIdDatabase
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.ui.LocalBanRepository
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

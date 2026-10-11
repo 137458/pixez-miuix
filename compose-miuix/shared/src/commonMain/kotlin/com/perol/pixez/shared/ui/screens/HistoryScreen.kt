@@ -46,7 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.HistoryItem
-import com.perol.pixez.shared.data.repository.HistoryRepository
+import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -75,15 +75,15 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
  *
  * @param onBack 返回上一级页面。
  * @param onIllustClick 点击作品时传入作品 ID。
- * @param repository 浏览历史仓库，由导航层从 RepositoryRegistry 显式传入。
  */
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
     // 历史记录中的 illust_id 以 Long 保存，避免数据库大 ID 转 Int 溢出。
     onIllustClick: (Long) -> Unit,
-    repository: HistoryRepository,
 ) {
+    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
+    val repository = LocalHistoryRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     // 搜索关键词；使用 rememberSaveable 在配置变更后保留。
