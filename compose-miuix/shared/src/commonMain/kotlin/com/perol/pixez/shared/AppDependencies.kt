@@ -319,5 +319,10 @@ class AppDependencies(
         runCatching { driverFactory.closeDriver(banTagDriver) }
         runCatching { driverFactory.closeDriver(illustPersistDriver) }
         runCatching { driverFactory.closeDriver(novelPersistDriver) }
+        // close 后清理静态单例引用，避免进程存活期间残留悬空容器；
+        // 仅当 currentInstance 仍指向本实例时清空，防止旧容器关闭误清新容器的引用。
+        if (currentInstance === this) {
+            currentInstance = null
+        }
     }
 }
