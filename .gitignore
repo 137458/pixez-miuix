@@ -18,6 +18,9 @@ misc/
 msic
 *.pfx
 
+# Local Python toolchain runtime (e.g. Windows Python Install Manager)
+Python/
+
 # Compose / Gradle mainline
 .gradle/
 **/.gradle/
