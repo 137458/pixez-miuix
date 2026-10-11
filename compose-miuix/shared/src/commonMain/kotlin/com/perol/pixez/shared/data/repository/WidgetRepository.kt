@@ -91,6 +91,10 @@ class WidgetRepository(
         val pixivHttpClient = PixivHttpClient(
             tokenStorage = tokenStorage,
             languageProvider = { "zh-CN" },
+            // 小组件进程无 AppDependencies 可反查，DoH 模式改由本仓库持有的设置仓库注入（架构审查高-2）。
+            modeProvider = { isOauthHost ->
+                if (isOauthHost) settingsRepository.oauthNetworkMode else settingsRepository.apiNetworkMode
+            },
         )
         return try {
             val illustRepo = IllustRepository(pixivHttpClient.apiClient, settingsRepository = settingsRepository)

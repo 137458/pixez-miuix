@@ -32,11 +32,12 @@ class PixivHttpClient(
     tokenStorage: AuthTokenStorage,
     languageProvider: () -> String = { "zh-CN" },
     enableLogging: Boolean = false,
+    private val modeProvider: (isOauthHost: Boolean) -> String? = { null },
 ) {
     /**
      * 用于 OAuth 登录/刷新 token 的基础客户端，不带 TokenRefreshPlugin。
      */
-    private val baseOAuthClient: HttpClient = createBaseOAuthClient(languageProvider, enableLogging)
+    private val baseOAuthClient: HttpClient = createBaseOAuthClient(languageProvider, enableLogging, modeProvider)
 
     /**
      * OAuth 业务封装，外部可用它构建登录 URL 或手动刷新 token。
@@ -52,6 +53,7 @@ class PixivHttpClient(
         oAuthClient = oAuthClient,
         languageProvider = languageProvider,
         enableLogging = enableLogging,
+        modeProvider = modeProvider,
     )
 
     /**
@@ -63,6 +65,7 @@ class PixivHttpClient(
         oAuthClient = oAuthClient,
         languageProvider = languageProvider,
         enableLogging = enableLogging,
+        modeProvider = modeProvider,
     )
 
     /**
@@ -71,7 +74,7 @@ class PixivHttpClient(
      * 不使用 TokenRefreshPlugin，避免图片 401 时触发 OAuth 刷新逻辑；
      * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
      */
-    val downloadClient: HttpClient = createPlatformHttpClient {
+    val downloadClient: HttpClient = createPlatformHttpClient(modeProvider) {
         install(HttpTimeout) {
             requestTimeoutMillis = 30_000
             connectTimeoutMillis = 10_000
@@ -148,7 +151,8 @@ class PixivHttpClient(
         private fun createBaseOAuthClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
-        ): HttpClient = createPlatformHttpClient {
+            modeProvider: (isOauthHost: Boolean) -> String?,
+        ): HttpClient = createPlatformHttpClient(modeProvider) {
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 10_000
@@ -221,7 +225,8 @@ class PixivHttpClient(
             oAuthClient: OAuthClient,
             languageProvider: () -> String,
             enableLogging: Boolean,
-        ): HttpClient = createPlatformHttpClient {
+            modeProvider: (isOauthHost: Boolean) -> String?,
+        ): HttpClient = createPlatformHttpClient(modeProvider) {
             install(HttpTimeout) {
                 requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 10_000

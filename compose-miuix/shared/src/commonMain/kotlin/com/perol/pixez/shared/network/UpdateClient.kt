@@ -8,8 +8,13 @@ import kotlinx.serialization.json.Json
 
 /**
  * 创建用于检查 GitHub Release 的 HttpClient，复用平台网络引擎（含 DoH / 代理支持）。
+ *
+ * @param modeProvider DoH 网络模式提供者，语义见 [createPlatformHttpClient]；
+ *   由 AppDependencies 注入，独立惰性单例 [defaultUpdateCheckClient] 无容器可达、走默认策略。
  */
-internal fun createUpdateCheckClient(): HttpClient = createPlatformHttpClient {
+internal fun createUpdateCheckClient(
+    modeProvider: (isOauthHost: Boolean) -> String? = { null },
+): HttpClient = createPlatformHttpClient(modeProvider) {
     install(ContentNegotiation) {
         json(
             Json {

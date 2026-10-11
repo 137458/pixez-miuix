@@ -150,6 +150,14 @@ class AppDependencies(
     }
 
     /**
+     * DoH 网络模式提供者：按请求主机是否为 OAuth 域读取对应用户设置。
+     * 注入全部 HttpClient 的 DoH 策略，取代 network 层对本容器的静态反查（架构审查高-2）。
+     */
+    private val dnsModeProvider: (isOauthHost: Boolean) -> String? = { isOauthHost ->
+        if (isOauthHost) settingsRepository.oauthNetworkMode else settingsRepository.apiNetworkMode
+    }
+
+    /**
      * 网络客户端，包含业务 API 与 OAuth 客户端。
      * 默认关闭网络日志，防止在 release 构建中泄露 Authorization token。
      */
@@ -161,6 +169,7 @@ class AppDependencies(
                 com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
             },
             enableLogging = false,
+            modeProvider = dnsModeProvider,
         )
     }
 
@@ -168,14 +177,14 @@ class AppDependencies(
      * 更新检查专用 HttpClient，生命周期由应用容器统一管理。
      */
     val updateCheckClient: HttpClient by lazy {
-        createUpdateCheckClient()
+        createUpdateCheckClient(modeProvider = dnsModeProvider)
     }
 
     /**
      * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
      */
     val webClient: HttpClient by lazy {
-        com.perol.pixez.shared.network.createPlatformHttpClient {
+        com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
             install(HttpTimeout) {
                 requestTimeoutMillis = 15_000
                 connectTimeoutMillis = 10_000
@@ -222,7 +231,7 @@ class AppDependencies(
      * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
      */
     private val boardHttpClient: HttpClient by lazy {
-        com.perol.pixez.shared.network.createPlatformHttpClient {
+        com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
             install(ContentNegotiation) {
                 json(boardJson)
             }

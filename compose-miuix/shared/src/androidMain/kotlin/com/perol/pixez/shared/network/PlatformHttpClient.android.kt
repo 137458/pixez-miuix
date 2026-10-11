@@ -24,12 +24,15 @@ private val sharedDispatcher = Dispatcher().apply {
     maxRequestsPerHost = AppConstants.Network.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
 }
 
-private class RobustDohDns(private val doh: Dns, private val fallback: Dns = Dns.SYSTEM) : Dns {
+private class RobustDohDns(
+    private val doh: Dns,
+    private val fallback: Dns = Dns.SYSTEM,
+    private val modeProvider: (isOauthHost: Boolean) -> String? = { null },
+) : Dns {
     override fun lookup(hostname: String): List<InetAddress> {
-        val settings = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository
         val isOauthHost = hostname.contains("oauth", ignoreCase = true) ||
             hostname.contains("accounts.pixiv.net", ignoreCase = true)
-        val mode = if (isOauthHost) settings?.oauthNetworkMode else settings?.apiNetworkMode
+        val mode = modeProvider(isOauthHost)
         if (mode == AppConstants.Network.MODE_STANDARD) {
             return fallback.lookup(hostname)
         }
@@ -43,7 +46,8 @@ private class RobustDohDns(private val doh: Dns, private val fallback: Dns = Dns
     }
 }
 
-private val robustDns: Dns by lazy {
+/** 底层 DoH 解析器（初始化失败回退系统 DNS），全部 client 共用；网络模式由各 client 的 modeProvider 决定。 */
+private val dohResolver: Dns by lazy {
     try {
         val bootstrapClient = OkHttpClient.Builder()
             .connectionPool(sharedConnectionPool)
@@ -52,26 +56,28 @@ private val robustDns: Dns by lazy {
             .build()
 
         val bootstrapIps = AppConstants.Network.DOH_BOOTSTRAP_HOSTS.map { InetAddress.getByName(it) }
-        val doh = DnsOverHttps.Builder()
+        DnsOverHttps.Builder()
             .client(bootstrapClient)
             .url(AppConstants.Network.DOH_URL.toHttpUrl())
             .bootstrapDnsHosts(bootstrapIps)
             .includeIPv6(false)
             .build()
-        RobustDohDns(doh, Dns.SYSTEM)
     } catch (e: Throwable) {
         Napier.w("初始化 DoH 客户端失败，回退至系统 DNS", e, tag = "RobustDohDns")
         Dns.SYSTEM
     }
 }
 
-actual fun createPlatformHttpClient(block: HttpClientConfig<*>.() -> Unit): HttpClient =
+actual fun createPlatformHttpClient(
+    modeProvider: (isOauthHost: Boolean) -> String?,
+    block: HttpClientConfig<*>.() -> Unit,
+): HttpClient =
     HttpClient(OkHttp) {
         engine {
             config {
                 connectionPool(sharedConnectionPool)
                 dispatcher(sharedDispatcher)
-                dns(robustDns)
+                dns(RobustDohDns(doh = dohResolver, fallback = Dns.SYSTEM, modeProvider = modeProvider))
                 followRedirects(true)
                 retryOnConnectionFailure(true)
             }
