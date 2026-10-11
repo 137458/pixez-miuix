@@ -29,11 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.FilterableIllustListState
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -96,7 +95,15 @@ fun RankingScreen(
 
     val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
     val cachedRanking = repository.getCachedRankingPage(rankingCacheKey)
-    var illustsState by remember(selectedMode, selectedDate) { mutableStateOf<List<Illust>?>(cachedRanking?.first) }
+    // 高-3：拆「原始列表 / 过滤后列表」双状态，过滤为展示期派生，filterChangeVersion 变化时仅本地重过滤。
+    val listState = remember(selectedMode, selectedDate) {
+        FilterableIllustListState(
+            filter = { rawIllusts -> filterBanned(rawIllusts) },
+            initialFilterVersion = settingsRepository.filterChangeVersion,
+        ).also { state ->
+            cachedRanking?.let { state.restore(it.first) }
+        }
+    }
     var nextUrl by remember(selectedMode, selectedDate) { mutableStateOf<String?>(cachedRanking?.second) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
@@ -105,15 +112,21 @@ fun RankingScreen(
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
-    // 模式、日期切换或重试时自动重新加载；加载完成后过滤掉被屏蔽作品。
+    // 模式、日期切换或重试时自动重新加载；过滤条件变化时仅对原始列表本地重过滤（高-3）。
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
         val generation = ++requestGeneration
         val force = isManualRefreshing
-        val currentCached = repository.getCachedRankingPage(rankingCacheKey)
-        if (!force && illustsState != null && initialError == null) {
+        if (!force &&
+            initialError == null &&
+            listState.refilterIfChanged(settingsRepository.filterChangeVersion)
+        ) {
+            repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), nextUrl)
             return@LaunchedEffect
         }
-        if (illustsState == null) {
+        if (!force && listState.filteredIllusts != null && initialError == null) {
+            return@LaunchedEffect
+        }
+        if (listState.filteredIllusts == null) {
             initialError = null
         }
         loadMoreError = null
@@ -127,10 +140,9 @@ fun RankingScreen(
         isManualRefreshing = false
         rankingResult.onSuccess { response ->
             if (generation == requestGeneration) {
-                val filtered = filterBanned(response.illusts)
-                illustsState = filtered
+                listState.replace(response.illusts, settingsRepository.filterChangeVersion)
                 nextUrl = response.nextUrl
-                repository.updateRankingPage(rankingCacheKey, filtered, response.nextUrl)
+                repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), response.nextUrl)
                 initialError = null
                 loadMoreError = null
                 if (force && gridState.firstVisibleItemIndex > 0) {
@@ -139,7 +151,7 @@ fun RankingScreen(
             }
         }.onFailure { error ->
             if (generation == requestGeneration) {
-                if (illustsState == null) {
+                if (listState.filteredIllusts == null) {
                     initialError = error
                 }
             }
@@ -161,11 +173,9 @@ fun RankingScreen(
                 )
             }.onSuccess { response ->
                 if (generation == requestGeneration) {
-                    val filtered = filterBanned(response.illusts)
-                    val combined = (illustsState.orEmpty()).appendDistinct(filtered)
-                    illustsState = combined
+                    listState.append(response.illusts, settingsRepository.filterChangeVersion)
                     nextUrl = response.nextUrl
-                    repository.updateRankingPage(rankingCacheKey, combined, response.nextUrl)
+                    repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), response.nextUrl)
                 }
             }.onFailure { error ->
                 if (generation == requestGeneration) {
@@ -277,7 +287,7 @@ fun RankingScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val currentIllusts = illustsState
+            val currentIllusts = listState.filteredIllusts
             when {
                 currentIllusts == null && initialError == null -> LoadingPlaceholder(
                     modifier = Modifier

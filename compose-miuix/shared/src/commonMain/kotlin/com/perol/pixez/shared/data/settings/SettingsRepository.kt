@@ -28,9 +28,19 @@ class SettingsRepository(
     // 任何写入（notifyChanged）递增 revision 触发订阅方重组，未在组合中读取时为普通读。
     private var settingsRevision by mutableIntStateOf(0)
 
+    /**
+     * 全局设置版本号：任何设置写入（[notifyChanged]）自增，供 UI 订阅全局重组（主题、画质、语言等）。
+     * [notifyFilterChanged] 会连带自增本版本号——过滤事件是全局事件子集。
+     */
     var changeVersion by mutableIntStateOf(0)
         private set
 
+    /**
+     * 过滤条件版本号：仅过滤口径变化时经 [notifyFilterChanged] 自增
+     * （R-18/AI 过滤开关、长按屏蔽作品/画师、屏蔽标签）。
+     * 语义与 [changeVersion] 分层为「全局版 + 过滤版」：列表页（Hello/Ranking 等）监听本版本号，
+     * 对已持有的原始列表本地重过滤（FilterableIllustListState.refilterIfChanged），零网络成本。
+     */
     var filterChangeVersion by mutableIntStateOf(0)
         private set
 

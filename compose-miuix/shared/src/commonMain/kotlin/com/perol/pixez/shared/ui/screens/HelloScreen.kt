@@ -24,12 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.FilterableIllustListState
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -119,8 +118,16 @@ fun HelloScreen(
             hideR18 = settingsRepository.hIsNotAllow,
         )
 
-    // 统一 UI 状态机（单向数据流 UDF），首帧优先取内存缓存，防止退出详情页返回时白屏闪烁与列表位置重置
-    var illustsState by remember { mutableStateOf<List<Illust>?>(repository.activeRecommendedIllusts) }
+    // 统一 UI 状态机（单向数据流 UDF），首帧优先取内存缓存，防止退出详情页返回时白屏闪烁与列表位置重置。
+    // 高-3：拆「原始列表 / 过滤后列表」双状态，过滤为展示期派生，filterChangeVersion 变化时仅本地重过滤。
+    val listState = remember {
+        FilterableIllustListState(
+            filter = { rawIllusts -> filterBanned(rawIllusts) },
+            initialFilterVersion = settingsRepository.filterChangeVersion,
+        ).also { state ->
+            repository.activeRecommendedIllusts?.let(state::restore)
+        }
+    }
     var nextUrl by remember { mutableStateOf<String?>(repository.activeRecommendedNextUrl) }
     var initialError by remember { mutableStateOf<Throwable?>(null) }
     var isLoadingMore by remember { mutableStateOf(false) }
@@ -133,10 +140,18 @@ fun HelloScreen(
     LaunchedEffect(isLoggedIn, retryCount, settingsRepository.filterChangeVersion) {
         val loggedIn = isLoggedIn ?: return@LaunchedEffect
         val force = isManualRefreshing
-        if (!force && illustsState != null && initialError == null) {
+        // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
+        if (!force &&
+            initialError == null &&
+            listState.refilterIfChanged(settingsRepository.filterChangeVersion)
+        ) {
+            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), nextUrl)
             return@LaunchedEffect
         }
-        if (illustsState == null) {
+        if (!force && listState.filteredIllusts != null && initialError == null) {
+            return@LaunchedEffect
+        }
+        if (listState.filteredIllusts == null) {
             initialError = null
         }
         val responseResult = when (loggedIn) {
@@ -147,17 +162,16 @@ fun HelloScreen(
         }
         isManualRefreshing = false
         responseResult.onSuccess { (rawIllusts, initialNextUrl) ->
-            val filtered = filterBanned(rawIllusts)
-            illustsState = filtered
+            listState.replace(rawIllusts, settingsRepository.filterChangeVersion)
             nextUrl = initialNextUrl
-            repository.updateRecommendedFeed(filtered, initialNextUrl)
+            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), initialNextUrl)
             initialError = null
             loadMoreError = null
             if (force && gridState.firstVisibleItemIndex > 0) {
                 gridState.scrollToItem(0)
             }
         }.onFailure { error ->
-            if (illustsState == null) {
+            if (listState.filteredIllusts == null) {
                 initialError = error
             }
         }
@@ -185,11 +199,9 @@ fun HelloScreen(
                 repository.getRecommendedResponse(nextUrl = currentNextUrl)
             }
             nextResult.onSuccess { response ->
-                val filtered = filterBanned(response.illusts)
-                val combined = (illustsState.orEmpty()).appendDistinct(filtered)
-                illustsState = combined
+                listState.append(response.illusts, settingsRepository.filterChangeVersion)
                 nextUrl = response.nextUrl
-                repository.updateRecommendedFeed(combined, response.nextUrl)
+                repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), response.nextUrl)
             }.onFailure { error ->
                 loadMoreError = error
             }
@@ -309,7 +321,7 @@ fun HelloScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val currentIllusts = illustsState
+            val currentIllusts = listState.filteredIllusts
             when {
                 currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
                 currentIllusts == null && initialError != null -> ErrorPlaceholder(
