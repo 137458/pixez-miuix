@@ -10,11 +10,9 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-import com.perol.pixez.shared.ui.AppConstants
-
 actual object PlatformTokenCipher {
-    private const val PREFIX = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX
-    private const val KEY_ALIAS = AppConstants.Auth.KEYSTORE_ALIAS
+    private const val PREFIX = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX
+    private const val KEY_ALIAS = TokenCipherDefaults.KEYSTORE_ALIAS
     private const val ANDROID_KEY_STORE = "AndroidKeyStore"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val GCM_TAG_LENGTH = 128

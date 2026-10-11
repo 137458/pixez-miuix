@@ -1,6 +1,9 @@
 package com.perol.pixez.shared.ui
 
+import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
+import com.perol.pixez.shared.platform.DownloadPlatformDefaults
+import com.perol.pixez.shared.platform.TokenCipherDefaults
 
 /**
  * 应用级全局常量定义，集中管理外部 URL、常用占位符模板与预设档位，消除散落的魔法值。
@@ -14,12 +17,13 @@ object AppConstants {
         // 过渡委托：正名已外迁至 network/PixivHosts.kt（UI 与测试仍经由处引用），随全量移包清理。
         const val HOST_PXIMG = PixivHosts.HOST_PXIMG
         const val HOST_PIXIV_RE = PixivHosts.HOST_PIXIV_RE
-        const val MODE_STANDARD = "standard"
 
-        const val HTTP_POOL_MAX_IDLE_CONNECTIONS = 32
-        const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = 5L
-        const val HTTP_DISPATCHER_MAX_REQUESTS = 128
-        const val HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST = 32
+        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 与测试仍经由处引用），随全量移包清理。
+        const val MODE_STANDARD = HttpEngineDefaults.MODE_STANDARD
+        const val HTTP_POOL_MAX_IDLE_CONNECTIONS = HttpEngineDefaults.HTTP_POOL_MAX_IDLE_CONNECTIONS
+        const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = HttpEngineDefaults.HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES
+        const val HTTP_DISPATCHER_MAX_REQUESTS = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS
+        const val HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
 
         const val IMAGE_MAX_DECODE_DIMENSION = 4096
 
@@ -31,11 +35,8 @@ object AppConstants {
          */
         const val REFERER_PIXIVISION = "https://www.pixivision.net/"
 
-        /**
-         * 图片请求统一使用的浏览器 User-Agent。
-         */
-        const val IMAGE_REQUEST_USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 仍经由处引用），随全量移包清理。
+        const val IMAGE_REQUEST_USER_AGENT = HttpEngineDefaults.IMAGE_REQUEST_USER_AGENT
 
         /**
          * 相邻页预加载的解码边长上限（px）。
@@ -45,17 +46,19 @@ object AppConstants {
          */
         const val IMAGE_PRELOAD_DECODE_DIMENSION = 192
 
-        const val DOH_URL = "https://cloudflare-dns.com/dns-query"
-        const val DOH_TIMEOUT_SECONDS = 5L
-        val DOH_BOOTSTRAP_HOSTS = listOf("1.1.1.1", "1.0.0.1")
+        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 与测试仍经由处引用），随全量移包清理。
+        const val DOH_URL = HttpEngineDefaults.DOH_URL
+        const val DOH_TIMEOUT_SECONDS = HttpEngineDefaults.DOH_TIMEOUT_SECONDS
+        val DOH_BOOTSTRAP_HOSTS = HttpEngineDefaults.DOH_BOOTSTRAP_HOSTS
     }
 
     /**
      * 账号与凭据安全常量
      */
     object Auth {
-        const val TOKEN_ENCRYPTION_PREFIX = "enc_v1:"
-        const val KEYSTORE_ALIAS = "PixEzTokenMasterKey"
+        // 过渡委托：正名已外迁至 platform/TokenCipherDefaults.kt（platform 层直引，测试仍经由处引用），随全量移包清理。
+        const val TOKEN_ENCRYPTION_PREFIX = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX
+        const val KEYSTORE_ALIAS = TokenCipherDefaults.KEYSTORE_ALIAS
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.platform
 
-import com.perol.pixez.shared.ui.AppConstants
 import com.sun.jna.platform.win32.Crypt32Util
 import com.sun.jna.platform.win32.WinCrypt
 import io.github.aakira.napier.Napier
@@ -9,7 +8,7 @@ import kotlin.concurrent.Volatile
 
 /**
  * 桌面端凭据加解密：Windows 使用系统 DPAPI（CryptProtectData，密钥由当前登录用户凭据派生），
- * 密文以 [AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX] 前缀标识，与 Android 的 Keystore AES-GCM
+ * 密文以 [TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX] 前缀标识，与 Android 的 Keystore AES-GCM
  * 实现共用同一套前缀协议。
  *
  * 无前缀的历史明文原样返回，账号下一次写库时即自动升级为密文；
@@ -19,7 +18,7 @@ import kotlin.concurrent.Volatile
  * [TokenCipherException]，由存储层按「账号凭证失效」清理，密文/明文不再被静默当作凭证返回。
  */
 actual object PlatformTokenCipher {
-    private const val PREFIX = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX
+    private const val PREFIX = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX
 
     @Volatile
     private var fallbackLogged = false

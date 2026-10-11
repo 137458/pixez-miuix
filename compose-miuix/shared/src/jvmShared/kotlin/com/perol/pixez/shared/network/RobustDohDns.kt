@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.network
 
-import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import okhttp3.Dns
 import java.net.InetAddress
@@ -42,7 +41,7 @@ internal class RobustDohDns(
             hostname.contains("accounts.pixiv.net", ignoreCase = true)
         val mode = modeProvider(isOauthHost)
         // 1. 若配置为 standard 模式，或平台注入的代理策略命中，直接走系统 DNS（远端由代理节点解析），跳过 DoH 避免阻塞
-        if (mode == AppConstants.Network.MODE_STANDARD || hasProxyProvider()) {
+        if (mode == HttpEngineDefaults.MODE_STANDARD || hasProxyProvider()) {
             return fallback.lookup(hostname)
         }
         // 2. 检查熔断状态：若 DoH 处于熔断冷却中，直接回退系统 DNS，防止并发请求逐个卡死 5 秒超时

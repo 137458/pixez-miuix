@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.network
 
-import com.perol.pixez.shared.ui.AppConstants
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
@@ -15,13 +14,13 @@ import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 private val sharedConnectionPool = ConnectionPool(
-    AppConstants.Network.HTTP_POOL_MAX_IDLE_CONNECTIONS,
-    AppConstants.Network.HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES,
+    HttpEngineDefaults.HTTP_POOL_MAX_IDLE_CONNECTIONS,
+    HttpEngineDefaults.HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES,
     TimeUnit.MINUTES,
 )
 private val sharedDispatcher = Dispatcher().apply {
-    maxRequests = AppConstants.Network.HTTP_DISPATCHER_MAX_REQUESTS
-    maxRequestsPerHost = AppConstants.Network.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
+    maxRequests = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS
+    maxRequestsPerHost = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
 }
 
 /** 底层 DoH 解析器（初始化失败回退系统 DNS），全部 client 共用；网络模式由各 client 的 modeProvider 决定。 */
@@ -29,14 +28,14 @@ private val dohResolver: Dns by lazy {
     try {
         val bootstrapClient = OkHttpClient.Builder()
             .connectionPool(sharedConnectionPool)
-            .connectTimeout(AppConstants.Network.DOH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(AppConstants.Network.DOH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .connectTimeout(HttpEngineDefaults.DOH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HttpEngineDefaults.DOH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
-        val bootstrapIps = AppConstants.Network.DOH_BOOTSTRAP_HOSTS.map { InetAddress.getByName(it) }
+        val bootstrapIps = HttpEngineDefaults.DOH_BOOTSTRAP_HOSTS.map { InetAddress.getByName(it) }
         DnsOverHttps.Builder()
             .client(bootstrapClient)
-            .url(AppConstants.Network.DOH_URL.toHttpUrl())
+            .url(HttpEngineDefaults.DOH_URL.toHttpUrl())
             .bootstrapDnsHosts(bootstrapIps)
             .includeIPv6(false)
             .build()

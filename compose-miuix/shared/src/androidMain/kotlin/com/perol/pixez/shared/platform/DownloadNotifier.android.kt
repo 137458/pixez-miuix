@@ -94,33 +94,33 @@ actual class DownloadNotifier {
             .setContentIntent(pendingIntent)
             .addExtras(android.os.Bundle().apply {
                 // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications / Live Status)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_STATUS, true)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE, true)
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_SUBST_NAME, "PixEz")
-                putCharSequence(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TITLE, progressTitle)
+                putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_STATUS, true)
+                putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE, true)
+                putString(DownloadPlatformDefaults.EXTRA_ANDROID_SUBST_NAME, "PixEz")
+                putCharSequence(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TITLE, progressTitle)
                 putCharSequence(
-                    com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_TEXT,
+                    DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TEXT,
                     localized.getString(R.string.download_live_text, current, total, percent),
                 )
-                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_ANDROID_LIVE_PROGRESS, percent)
+                putInt(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_PROGRESS, percent)
 
                 // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FOCUS, true)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE, true)
-                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_LIVE_TYPE, 1)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_ENABLE_FLOAT, true)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_FLOAT, true)
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_CATEGORY, "download")
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_SUBTEXT, percentText)
-                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS, percent)
-                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_MIUI_PROGRESS_MAX, 100)
+                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FOCUS, true)
+                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_LIVE, true)
+                putInt(DownloadPlatformDefaults.EXTRA_MIUI_LIVE_TYPE, 1)
+                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_ENABLE_FLOAT, true)
+                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FLOAT, true)
+                putString(DownloadPlatformDefaults.EXTRA_MIUI_CATEGORY, "download")
+                putString(DownloadPlatformDefaults.EXTRA_MIUI_SUBTEXT, percentText)
+                putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS, percent)
+                putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS_MAX, 100)
 
                 // OPLUS / ColorOS / OxygenOS 智慧胶囊与流体云协议支持
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE, true)
-                putBoolean(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_ONGOING, true)
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TITLE, progressTitle)
-                putString(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_TEXT, percentText)
-                putInt(com.perol.pixez.shared.ui.AppConstants.Download.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
+                putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE, true)
+                putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_ONGOING, true)
+                putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TITLE, progressTitle)
+                putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TEXT, percentText)
+                putInt(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
             })
 
         val notification = notificationBuilder.build()
