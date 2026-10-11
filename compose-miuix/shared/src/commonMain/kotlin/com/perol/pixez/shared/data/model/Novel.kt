@@ -182,15 +182,6 @@ data class NovelSeriesImageUrls(
 )
 
 @Serializable
-data class NovelSeriesResponse(
-    @SerialName("novel_series_detail") val novelSeriesDetail: NovelSeriesDetail,
-    @SerialName("novel_series_first_novel") val novelSeriesFirstNovel: NovelSeriesFirstNovel,
-    @SerialName("novel_series_latest_novel") val novelSeriesLatestNovel: NovelSeriesFirstNovel? = null,
-    val novels: List<Novel>,
-    @SerialName("next_url") val nextUrl: String? = null,
-)
-
-@Serializable
 data class NovelTextResponse(
     @SerialName("novel_marker") val novelMarker: NovelMarker,
     @SerialName("novel_text") val novelText: String,
@@ -207,38 +198,6 @@ data class NovelMarker(
 data class TextNovel(
     val id: Long? = null,
     val title: String? = null,
-)
-
-@Serializable
-data class NovelWatchListModel(
-    val series: List<NovelWatchListSeries>,
-    @SerialName("next_url") val nextUrl: String? = null,
-)
-
-@Serializable
-data class NovelWatchListSeries(
-    val id: Long,
-    val title: String,
-    val url: String? = null,
-    @SerialName("mask_text") val maskText: String? = null,
-    @SerialName("published_content_count") val publishedContentCount: Int,
-    @SerialName("last_published_content_datetime") val lastPublishedContentDatetime: String,
-    @SerialName("latest_content_id") val latestContentId: Long,
-    val user: NovelWatchListSeriesUser? = null,
-)
-
-@Serializable
-data class NovelWatchListSeriesUser(
-    val id: Long,
-    val name: String,
-    val account: String,
-    @SerialName("profile_image_urls") val profileImageUrls: NovelWatchListSeriesProfileImageUrls? = null,
-    @SerialName("is_accept_request") val isAcceptRequest: Boolean,
-)
-
-@Serializable
-data class NovelWatchListSeriesProfileImageUrls(
-    val medium: String? = null,
 )
 
 /**
