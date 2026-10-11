@@ -49,3 +49,14 @@ fun languageTagForNum(languageNum: Int): String? = when (languageNum) {
     11 -> "vi"
     else -> null
 }
+
+/**
+ * 按应用内语言序号（`SettingsRepository.languageNum`）解析 Pixiv 协议语言码（Accept-Language），
+ * 越界序号回退既有默认 "zh-CN"。
+ *
+ * 装配层 [com.perol.pixez.shared.AppDependencies] 与小组件后台拉取（WidgetRepository）共用
+ * 此入口（架构审查 中-14），保证 App 内与小组件请求语言一致；与 [languageTagForNum] 的取值
+ * 差异仅在序号 0：协议沿用完整码 "en-US"，平台资源覆盖用基础标签 "en"。
+ */
+internal fun languageCodeForNum(languageNum: Int): String =
+    APP_LANGUAGE_CODES.getOrNull(languageNum) ?: "zh-CN"

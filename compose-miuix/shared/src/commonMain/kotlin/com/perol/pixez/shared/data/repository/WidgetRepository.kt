@@ -9,6 +9,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
+import com.perol.pixez.shared.platform.languageCodeForNum
 import io.github.aakira.napier.Napier
 import kotlinx.datetime.Clock
 
@@ -90,7 +91,8 @@ class WidgetRepository(
         val tokenStorage = SqlDelightAuthTokenStorage(accountDriver)
         val pixivHttpClient = PixivHttpClient(
             tokenStorage = tokenStorage,
-            languageProvider = { "zh-CN" },
+            // 语言码经共享解析函数取自用户设置（架构审查 中-14），小组件请求语言与 App 内一致。
+            languageProvider = { languageCodeForNum(settingsRepository.languageNum) },
             // 小组件进程无 AppDependencies 可反查，DoH 模式改由本仓库持有的设置仓库注入（架构审查高-2）。
             modeProvider = { isOauthHost ->
                 if (isOauthHost) settingsRepository.oauthNetworkMode else settingsRepository.apiNetworkMode

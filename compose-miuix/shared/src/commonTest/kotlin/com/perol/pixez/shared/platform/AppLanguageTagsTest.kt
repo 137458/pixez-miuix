@@ -13,6 +13,8 @@ import kotlin.test.assertTrue
  *
  * 另覆盖下沉后的语言码有序表 [APP_LANGUAGE_CODES]（架构审查 中-1）：它是 Accept-Language
  * （AppDependencies 注入）与 ui.i18n 语言选择列表的单点数据源，兜底锁定其序号语义与同源引用。
+ * 协议语言码解析 [languageCodeForNum]（架构审查 中-14）为装配层与小组件后台拉取的共用入口，
+ * 一并锁定取表与越界回退语义。
  */
 class AppLanguageTagsTest {
 
@@ -78,5 +80,24 @@ class AppLanguageTagsTest {
             }
         }
         assertNull(languageTagForNum(APP_LANGUAGE_CODES.size), "越界序号必须返回 null")
+    }
+
+    /**
+     * 协议语言码解析（中-14）：小组件后台拉取与装配层共用同一入口。
+     * 有效序号逐项取语言码表，越界序号回退沿用既有默认 zh-CN；
+     * 序号 0 必须解析出 en-US，防止实现退化成硬编码 zh-CN（小组件旧缺陷）。
+     */
+    @Test
+    fun `协议语言码有效序号逐项取表且越界回退zh-CN`() {
+        assertEquals("en-US", languageCodeForNum(0), "序号 0 应解析为英文完整码")
+        assertEquals("zh-CN", languageCodeForNum(1))
+        assertEquals("ja", languageCodeForNum(3))
+        assertEquals("vi", languageCodeForNum(11))
+        APP_LANGUAGE_CODES.forEachIndexed { index, code ->
+            assertEquals(code, languageCodeForNum(index), "序号 $index 未按语言码表解析")
+        }
+        assertEquals("zh-CN", languageCodeForNum(-1), "负序号应回退默认 zh-CN")
+        assertEquals("zh-CN", languageCodeForNum(APP_LANGUAGE_CODES.size), "越界序号应回退默认 zh-CN")
+        assertEquals("zh-CN", languageCodeForNum(Int.MAX_VALUE), "极端越界应回退默认 zh-CN")
     }
 }
