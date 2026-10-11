@@ -2,21 +2,17 @@ package com.perol.pixez.shared.network
 
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpResponseValidator
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.head
 import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
 
 /**
  * Pixiv API 与 OAuth 的 Ktor HttpClient 工厂。
@@ -75,21 +71,11 @@ class PixivHttpClient(
      * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
      */
     val downloadClient: HttpClient = createPlatformHttpClient(modeProvider) {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 15_000
-        }
-        install(HttpRequestRetry) {
-            retryOnExceptionOrServerErrors(maxRetries = 2)
-        }
+        apiTimeouts()
+        defaultRetry()
         if (enableLogging) {
             install(Logging) {
-                logger = object : Logger {
-                    override fun log(message: String) {
-                        Napier.d(message, tag = "PixivDownload")
-                    }
-                }
+                logger = HttpClientDefaults.napierLogger("PixivDownload")
                 level = LogLevel.INFO
             }
         }
@@ -140,12 +126,6 @@ class PixivHttpClient(
         private const val OAUTH_HOST = "oauth.secure.pixiv.net"
         private const val ACCOUNTS_HOST = "accounts.pixiv.net"
 
-        private val defaultJson = Json {
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-            isLenient = true
-        }
-
         /**
          * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。
          */
@@ -154,11 +134,7 @@ class PixivHttpClient(
             enableLogging: Boolean,
             modeProvider: (isOauthHost: Boolean) -> String?,
         ): HttpClient = createPlatformHttpClient(modeProvider) {
-            install(HttpTimeout) {
-                requestTimeoutMillis = 30_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
-            }
+            apiTimeouts()
             defaultRequest {
                 url {
                     protocol = URLProtocol.HTTPS
@@ -169,22 +145,16 @@ class PixivHttpClient(
                 }
             }
             install(ContentNegotiation) {
-                json(defaultJson)
+                json(HttpClientDefaults.commonJson)
             }
             if (enableLogging) {
                 install(Logging) {
-                    logger = object : Logger {
-                        override fun log(message: String) {
-                            Napier.d(message, tag = "PixivOAuth")
-                        }
-                    }
+                    logger = HttpClientDefaults.napierLogger("PixivOAuth")
                     // 避免打印 Authorization 头或 token 响应体。
                     level = LogLevel.INFO
                 }
             }
-            install(HttpRequestRetry) {
-                retryOnExceptionOrServerErrors(maxRetries = 2)
-            }
+            defaultRetry()
             HttpResponseValidator {
                 validateResponse { response: HttpResponse ->
                     if (response.status.value >= 400) {
@@ -192,7 +162,7 @@ class PixivHttpClient(
                             val body = response.bodyAsText()
                             if (body.isNotBlank()) {
                                 try {
-                                    val parsed = defaultJson
+                                    val parsed = HttpClientDefaults.commonJson
                                         .decodeFromString<com.perol.pixez.shared.data.model.LoginErrorResponse>(body)
                                     parsed.errors.system.message
                                 } catch (_: Exception) {
@@ -228,11 +198,7 @@ class PixivHttpClient(
             enableLogging: Boolean,
             modeProvider: (isOauthHost: Boolean) -> String?,
         ): HttpClient = createPlatformHttpClient(modeProvider) {
-            install(HttpTimeout) {
-                requestTimeoutMillis = 30_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
-            }
+            apiTimeouts()
 
             // 统一使用 HTTPS 与固定 Host。
             defaultRequest {
@@ -247,23 +213,13 @@ class PixivHttpClient(
 
             // JSON 序列化：忽略未知字段，宽松解析。
             install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        coerceInputValues = true
-                        isLenient = true
-                    },
-                )
+                json(HttpClientDefaults.commonJson)
             }
 
             // 日志：仅打印请求方法与 URL，避免泄露 Authorization 头。
             if (enableLogging) {
                 install(Logging) {
-                    logger = object : Logger {
-                        override fun log(message: String) {
-                            Napier.d(message, tag = "PixivHttp")
-                        }
-                    }
+                    logger = HttpClientDefaults.napierLogger("PixivHttp")
                     level = LogLevel.INFO
                 }
             }
@@ -271,9 +227,7 @@ class PixivHttpClient(
             // 网络层通用重试：连接失败时最多重试 2 次。
             // 先安装 HttpRequestRetry，再安装 TokenRefreshPlugin，确保 401 刷新逻辑在外层，
             // 避免刷新失败时被外层重试反复触发。
-            install(HttpRequestRetry) {
-                retryOnExceptionOrServerErrors(maxRetries = 2)
-            }
+            defaultRetry()
 
             // Token 注入与刷新。
             install(TokenRefreshPlugin) {

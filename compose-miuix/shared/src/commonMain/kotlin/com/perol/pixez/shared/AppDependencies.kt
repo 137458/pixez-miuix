@@ -23,13 +23,13 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
+import com.perol.pixez.shared.network.HttpClientDefaults
 import com.perol.pixez.shared.network.PixivHttpClient
+import com.perol.pixez.shared.network.webTimeouts
 import com.perol.pixez.shared.platform.IllustSaver
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
 import com.perol.pixez.shared.network.createUpdateCheckClient
 import com.perol.pixez.shared.platform.isDebugBuild
 import io.github.aakira.napier.DebugAntilog
@@ -186,11 +186,7 @@ class AppDependencies(
      */
     val webClient: HttpClient by lazy {
         com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
-            install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 10_000
-            }
+            webTimeouts()
         }
     }
 
@@ -234,27 +230,14 @@ class AppDependencies(
     }
 
     /**
-     * 公告板专用 JSON 解析器，允许未知键、宽松输入并强制非空默认值。
-     */
-    private val boardJson = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        coerceInputValues = true
-    }
-
-    /**
      * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
      */
     private val boardHttpClient: HttpClient by lazy {
         com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
             install(ContentNegotiation) {
-                json(boardJson)
+                json(HttpClientDefaults.commonJson)
             }
-            install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 10_000
-            }
+            webTimeouts()
         }
     }
 
