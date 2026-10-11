@@ -3,10 +3,9 @@ package com.perol.pixez.shared.ui.screens
 import com.perol.pixez.shared.platform.FileLocator
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.getDefaultPictureDirectory
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
-import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -71,9 +70,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -150,36 +147,20 @@ fun DownloadTaskScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
+        title = strings.settingDownloadTask,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            IconButton(
+                onClick = { showBatchMenu = true },
+                enabled = !isBatchProcessing,
             ) {
-                TopAppBar(
-                    title = strings.settingDownloadTask,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { showBatchMenu = true },
-                            enabled = !isBatchProcessing,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.More,
-                                contentDescription = strings.menuMoreActions,
-                            )
-                        }
-                    },
+                Icon(
+                    imageVector = MiuixIcons.More,
+                    contentDescription = strings.menuMoreActions,
                 )
             }
         },

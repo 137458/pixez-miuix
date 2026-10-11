@@ -1,10 +1,10 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
-import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -50,9 +50,7 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -106,41 +104,25 @@ fun BoardScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
+        title = strings.boardTitle,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            // 顶部刷新按钮：Compose Multiplatform 通用的刷新入口，
+            // 与 PRD 中允许的手动刷新按钮方案一致。
+            IconButton(
+                onClick = {
+                    if (isRefreshing) return@IconButton
+                    coroutineScope.launch { loadBoardList() }
+                },
+                enabled = !isRefreshing,
             ) {
-                TopAppBar(
-                    title = strings.boardTitle,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        // 顶部刷新按钮：Compose Multiplatform 通用的刷新入口，
-                        // 与 PRD 中允许的手动刷新按钮方案一致。
-                        IconButton(
-                            onClick = {
-                                if (isRefreshing) return@IconButton
-                                coroutineScope.launch { loadBoardList() }
-                            },
-                            enabled = !isRefreshing,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                    },
+                Icon(
+                    imageVector = MiuixIcons.Refresh,
+                    contentDescription = strings.refresh,
                 )
             }
         },

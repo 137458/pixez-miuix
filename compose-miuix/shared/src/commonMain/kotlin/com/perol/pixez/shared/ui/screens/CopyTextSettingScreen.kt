@@ -1,9 +1,8 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
-import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -29,10 +28,8 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.layout.Box
@@ -90,53 +87,37 @@ fun CopyTextSettingScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
+        title = strings.copyTextFormatTitle,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            // 重置为默认模板。
+            IconButton(
+                onClick = {
+                    textFieldValue = TextFieldValue(
+                        text = DEFAULT_COPY_TEXT_FORMAT,
+                        selection = TextRange(DEFAULT_COPY_TEXT_FORMAT.length),
+                    )
+                }
             ) {
-                TopAppBar(
-                    title = strings.copyTextFormatTitle,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        // 重置为默认模板。
-                        IconButton(
-                            onClick = {
-                                textFieldValue = TextFieldValue(
-                                    text = DEFAULT_COPY_TEXT_FORMAT,
-                                    selection = TextRange(DEFAULT_COPY_TEXT_FORMAT.length),
-                                )
-                            }
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.copyTextFormatReset,
-                            )
-                        }
-                        // 保存并返回。
-                        IconButton(
-                            onClick = {
-                                settingsRepository.copyInfoText = textFieldValue.text
-                                onBack()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Ok, // 保存：MIUIX 无 Save，用 Ok 语义最接近
-                                contentDescription = strings.complete,
-                            )
-                        }
-                    },
+                Icon(
+                    imageVector = MiuixIcons.Refresh,
+                    contentDescription = strings.copyTextFormatReset,
+                )
+            }
+            // 保存并返回。
+            IconButton(
+                onClick = {
+                    settingsRepository.copyInfoText = textFieldValue.text
+                    onBack()
+                }
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Ok, // 保存：MIUIX 无 Save，用 Ok 语义最接近
+                    contentDescription = strings.complete,
                 )
             }
         },

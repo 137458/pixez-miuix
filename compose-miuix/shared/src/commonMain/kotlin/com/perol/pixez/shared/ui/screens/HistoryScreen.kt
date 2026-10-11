@@ -1,10 +1,9 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
-import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -60,11 +59,9 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -136,40 +133,24 @@ fun HistoryScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
+        title = strings.settingHistory,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            IconButton(
+                onClick = { showClearConfirm = true },
+                enabled = hasHistory,
             ) {
-                TopAppBar(
-                    title = strings.settingHistory,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { showClearConfirm = true },
-                            enabled = hasHistory,
-                        ) {
-                            Text(
-                                text = strings.actionClear,
-                                style = MiuixTheme.textStyles.body1,
-                                color = if (hasHistory) {
-                                    MiuixTheme.colorScheme.primary
-                                } else {
-                                    MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                },
-                            )
-                        }
+                Text(
+                    text = strings.actionClear,
+                    style = MiuixTheme.textStyles.body1,
+                    color = if (hasHistory) {
+                        MiuixTheme.colorScheme.primary
+                    } else {
+                        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
                 )
             }
