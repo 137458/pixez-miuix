@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,8 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -121,49 +121,39 @@ fun NewScreen(
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    // 请求代次守卫：切可见性/刷新后，在途旧请求的结果不得写回新数据源（写法同 RankingScreen）。
-    var requestGeneration by remember { mutableIntStateOf(0) }
+    // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
+    // 过滤链为高-3「原始/过滤」双列表本地重过滤。状态机以可见性筛选为 remember key：
+    // all/public/private 切换时整体重建（等价原实现的清空重拉），retryCount 重试复用同一实例。
+    val listState = remember(currentRestrict) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getFollowIllustsResponse(restrict = currentRestrict, nextUrl = nextUrl)
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
+    }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     LaunchedEffect(isLoggedIn, currentRestrict, retryCount, settingsRepository.filterChangeVersion) {
-        val loggedIn = isLoggedIn ?: return@LaunchedEffect
-        if (!loggedIn) {
-            illustsState = emptyList()
-            nextUrl = null
-            initialError = null
+        // 未登录（false）时 UI 层展示登录占位，状态机保持空；登录态未检测完成（null）不发起加载。
+        if (isLoggedIn != true) return@LaunchedEffect
+        val force = isManualRefreshing
+        // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
+        if (!force && listState.refilterIfChanged()) return@LaunchedEffect
+        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        val generation = ++requestGeneration
-        val force = isManualRefreshing
-        // 使在途旧 loadMore 的结果失配后被拒绝；复位加载态避免其卡死阻塞新列表分页。
-        isLoadingMore = false
-        if (illustsState == null) {
-            initialError = null
-        }
-        val followResult = suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(currentRestrict) }
+        val previous = listState.filteredIllusts
+        listState.loadFirst(force = force)
         isManualRefreshing = false
-        followResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                illustsState = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-                if (force && gridState.firstVisibleItemIndex > 0) {
-                    gridState.scrollToItem(0)
-                }
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration && illustsState == null) {
-                initialError = error
-            }
+        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；force 刷新成功后滚回顶部。
+        val current = listState.filteredIllusts
+        if (current != null && current !== previous && force && gridState.firstVisibleItemIndex > 0) {
+            gridState.scrollToItem(0)
         }
     }
 
@@ -180,29 +170,9 @@ fun NewScreen(
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
-        val restrict = currentRestrict
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getFollowIllustsResponse(restrict = restrict, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                        illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
+            listState.loadMore()
         }
     }
 
@@ -331,15 +301,15 @@ fun NewScreen(
                 )
 
                 true -> {
-                    val currentIllusts = illustsState
+                    val currentIllusts = listState.filteredIllusts
                     when {
-                        currentIllusts == null && initialError == null -> LoadingPlaceholder(
+                        currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(paddingValues),
                         )
-                        currentIllusts == null && initialError != null -> ErrorPlaceholder(
-                            error = initialError,
+                        currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+                            error = listState.initialError,
                             onRetry = { triggerManualRefresh() },
                             modifier = Modifier
                                 .fillMaxSize()
@@ -374,9 +344,9 @@ fun NewScreen(
                                             end = 8.dp,
                                             bottom = LocalBottomBarContentPadding.current,
                                         ),
-                                        hasMore = nextUrl != null,
-                                        isLoadingMore = isLoadingMore,
-                                        loadMoreError = loadMoreError,
+                                        hasMore = listState.nextUrl != null,
+                                        isLoadingMore = listState.isLoadingMore,
+                                        loadMoreError = listState.loadMoreError,
                                         onLoadMore = ::loadMore,
                                     )
                                 }
