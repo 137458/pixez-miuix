@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.i18n
 
+import com.perol.pixez.shared.platform.APP_LANGUAGE_CODES
+
 /**
  * Sponsor 数据：名称、头像 URL、个人主页 URL。
  */
@@ -22,10 +24,12 @@ internal data class LanguageOption(
 /**
  * 可选语言列表，顺序与旧 Flutter 版 `languages.dart` 保持一致。
  * languageNum 0 对应 `en-US`，后续按此顺序递增。
+ * 语言码单点取自 platform 层 [APP_LANGUAGE_CODES]（架构审查 中-1），
+ * 本列表只补充展示名与 Sponsor 数据，禁止在此另写语言码字面量。
  */
 internal val LANGUAGE_OPTIONS = listOf(
     LanguageOption(
-        code = "en-US",
+        code = APP_LANGUAGE_CODES[0],
         displayName = "English (US)",
         nativeName = "English",
         sponsors = listOf(
@@ -42,7 +46,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "zh-CN",
+        code = APP_LANGUAGE_CODES[1],
         displayName = "简体中文",
         nativeName = "中文 (简体)",
         sponsors = listOf(
@@ -54,7 +58,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "zh-TW",
+        code = APP_LANGUAGE_CODES[2],
         displayName = "繁體中文",
         nativeName = "中文 (繁體)",
         sponsors = listOf(
@@ -66,7 +70,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "ja",
+        code = APP_LANGUAGE_CODES[3],
         displayName = "日本語",
         nativeName = "日本語",
         sponsors = listOf(
@@ -83,7 +87,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "ko",
+        code = APP_LANGUAGE_CODES[4],
         displayName = "한국어",
         nativeName = "한국어",
         sponsors = listOf(
@@ -95,7 +99,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "ru",
+        code = APP_LANGUAGE_CODES[5],
         displayName = "Русский",
         nativeName = "Русский язык",
         sponsors = listOf(
@@ -107,7 +111,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "es",
+        code = APP_LANGUAGE_CODES[6],
         displayName = "Español",
         nativeName = "Español",
         sponsors = listOf(
@@ -119,7 +123,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "tr",
+        code = APP_LANGUAGE_CODES[7],
         displayName = "Türkçe",
         nativeName = "Türkçe",
         sponsors = listOf(
@@ -131,7 +135,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "id",
+        code = APP_LANGUAGE_CODES[8],
         displayName = "Bahasa Indonesia",
         nativeName = "Bahasa Indonesia",
         sponsors = listOf(
@@ -143,7 +147,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "fil",
+        code = APP_LANGUAGE_CODES[9],
         displayName = "Filipino",
         nativeName = "Wikang Filipino",
         sponsors = listOf(
@@ -155,7 +159,7 @@ internal val LANGUAGE_OPTIONS = listOf(
         ),
     ),
     LanguageOption(
-        code = "de",
+        code = APP_LANGUAGE_CODES[10],
         displayName = "Deutsch",
         nativeName = "Deutsch",
         sponsors = listOf(
@@ -170,7 +174,7 @@ internal val LANGUAGE_OPTIONS = listOf(
     // languageNum=11 的存量用户会被 coerce 到末位（德语）显示，界面文案却走 ViStrings。
     // 译文为机器翻译，未经母语者校对，故标注 beta。
     LanguageOption(
-        code = "vi",
+        code = APP_LANGUAGE_CODES[11],
         displayName = "Vietnamese (machine translated, beta)",
         nativeName = "Tiếng Việt",
     ),

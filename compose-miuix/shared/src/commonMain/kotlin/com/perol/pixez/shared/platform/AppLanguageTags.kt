@@ -1,11 +1,37 @@
 package com.perol.pixez.shared.platform
 
 /**
+ * 应用内语言序号（`SettingsRepository.languageNum`）到语言码的有序表。
+ *
+ * 顺序与旧 Flutter 版 `languages.dart` 锁定：languageNum 语义依赖序号，存量用户设置按序号
+ * 存取，禁止调整顺序（架构审查 中-1）。语言码是网络协议（PixivHeaders 的 Accept-Language，
+ * 装配层 [com.perol.pixez.shared.AppDependencies] 注入）与 ui.i18n 语言选择列表
+ * `LANGUAGE_OPTIONS` 的单点数据源，避免双表漂移。
+ *
+ * 与 [languageTagForNum] 的取值差异仅在序号 0：协议与展示沿用旧版完整码 "en-US"，
+ * 平台层资源覆盖用基础标签 "en"，其余序号两侧同值。
+ */
+internal val APP_LANGUAGE_CODES = listOf(
+    "en-US",
+    "zh-CN",
+    "zh-TW",
+    "ja",
+    "ko",
+    "ru",
+    "es",
+    "tr",
+    "id",
+    "fil",
+    "de",
+    "vi",
+)
+
+/**
  * 应用内语言序号（`SettingsRepository.languageNum`）到 BCP-47 语言标签的映射。
  *
  * 供 Android 平台层按用户设定的界面语言覆盖 `Configuration`，使通知、系统分享面板、Toast
  * 这类走系统资源解析的文案与应用内 `AppStrings` 语言保持一致。
- * 序号语义与 `AppStrings.fromLanguageNum` 与 `LANGUAGE_OPTIONS` 下标双方对齐：
+ * 序号语义与 `AppStrings.fromLanguageNum` 与 [APP_LANGUAGE_CODES] 下标双方对齐：
  * 本项目没有「跟随系统」取值，0 就是英文；越界序号返回 null，表示不做任何覆盖。
  */
 fun languageTagForNum(languageNum: Int): String? = when (languageNum) {

@@ -26,6 +26,7 @@ import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.HttpClientDefaults
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.network.webTimeouts
+import com.perol.pixez.shared.platform.APP_LANGUAGE_CODES
 import com.perol.pixez.shared.platform.IllustSaver
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -167,13 +168,15 @@ class AppDependencies(
     /**
      * 网络客户端，包含业务 API 与 OAuth 客户端。
      * 默认关闭网络日志，防止在 release 构建中泄露 Authorization token。
+     * Accept-Language 取自 platform 层语言码表（架构审查 中-1），
+     * 装配层不再反向引用 ui.i18n。
      */
     val httpClient: PixivHttpClient by lazy {
         PixivHttpClient(
             tokenStorage = tokenStorage,
             languageProvider = {
                 val num = settingsRepository.languageNum
-                com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS.getOrNull(num)?.code ?: "zh-CN"
+                APP_LANGUAGE_CODES.getOrNull(num) ?: "zh-CN"
             },
             enableLogging = false,
             modeProvider = dnsModeProvider,
