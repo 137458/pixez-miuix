@@ -191,6 +191,14 @@ class AppDependencies(
     }
 
     /**
+     * 更新检查仓库：GitHub Release 拉取与版本比较（架构审查 中-4 收编），
+     * 复用容器管理的 [updateCheckClient]，UI 三处调用点统一经 registry 取用。
+     */
+    val updateRepository: com.perol.pixez.shared.data.repository.UpdateRepository by lazy {
+        com.perol.pixez.shared.data.repository.UpdateRepository(updateCheckClient)
+    }
+
+    /**
      * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
      */
     val webClient: HttpClient by lazy {

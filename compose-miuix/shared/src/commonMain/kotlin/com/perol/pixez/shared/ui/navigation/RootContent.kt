@@ -51,6 +51,7 @@ import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.PixivisionRepository
+import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -63,8 +64,6 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.screens.ReleaseInfo
-import com.perol.pixez.shared.ui.screens.fetchLatestReleaseInfo
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
@@ -143,7 +142,7 @@ fun RootContent(
 
     LaunchedEffect(Unit) {
         if (settingsRepository.autoCheckUpdate) {
-            fetchLatestReleaseInfo().onSuccess { info ->
+            registry.updateRepository.fetchLatestReleaseInfo().onSuccess { info ->
                 if (info.isNew && info.versionName != settingsRepository.ignoreUpdateVersion) {
                     appReleaseInfo = info
                     showAppUpdateDialog = true

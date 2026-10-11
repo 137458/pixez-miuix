@@ -1,12 +1,12 @@
 package com.perol.pixez.shared.parity
 
+import com.perol.pixez.shared.data.repository.GitHubReleaseAsset
+import com.perol.pixez.shared.data.repository.selectPlatformReleaseAsset
 import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.navigation.ParsedDeepLink
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.platform.DesktopBackDispatcher
 import com.perol.pixez.shared.ui.navigation.RootComponent
-import com.perol.pixez.shared.ui.screens.GitHubReleaseAsset
-import com.perol.pixez.shared.ui.screens.selectPlatformReleaseAsset
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

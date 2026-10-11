@@ -103,7 +103,7 @@ fun App(
             novelHistoryRepository = dependencies.novelHistoryRepository,
             muteRepository = dependencies.muteRepository,
             novelRepository = dependencies.novelRepository,
-            updateCheckClient = dependencies.updateCheckClient,
+            updateRepository = dependencies.updateRepository,
         )
     }
     CompositionLocalProvider(

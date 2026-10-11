@@ -382,6 +382,7 @@ internal fun renderSettingsPage(
         onGuideClick = component::onGuideClicked,
         accountRepository = registry.accountRepository,
         boardRepository = registry.boardRepository,
+        updateRepository = registry.updateRepository,
     )
 }
 
@@ -524,7 +525,7 @@ internal fun renderUpdateSetting(
 ) {
     UpdateSettingScreen(
         settingsRepository = registry.settingsRepository,
-        updateCheckClient = registry.updateCheckClient,
+        updateRepository = registry.updateRepository,
         onBack = onBack,
     )
 }

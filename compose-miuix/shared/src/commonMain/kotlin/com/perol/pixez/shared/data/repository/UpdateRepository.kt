@@ -1,10 +1,10 @@
-package com.perol.pixez.shared.ui.screens
+package com.perol.pixez.shared.data.repository
 
-import com.perol.pixez.shared.network.TrustedUrlPolicy
-import com.perol.pixez.shared.network.createUpdateCheckClient
-import com.perol.pixez.shared.network.defaultUpdateCheckClient
 import com.perol.pixez.shared.AppInfo
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.network.GitHubReleaseEndpoints
+import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.platform.isAndroidPlatform
+import com.perol.pixez.shared.platform.isDesktopPlatform
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -13,9 +13,6 @@ import io.ktor.client.request.header
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
-
-import com.perol.pixez.shared.platform.isAndroidPlatform
-import com.perol.pixez.shared.platform.isDesktopPlatform
 
 /**
  * GitHub Release Asset 信息。
@@ -96,68 +93,13 @@ fun getLocalReleaseInfo(): ReleaseInfo = ReleaseInfo(
     versionName = AppInfo.VERSION_NAME,
     title = "PixEz MIUIX v${AppInfo.VERSION_NAME}",
     changelog = AppInfo.CURRENT_CHANGELOG,
-    releaseUrl = com.perol.pixez.shared.ui.AppConstants.Urls.GITHUB_RELEASES,
+    releaseUrl = GitHubReleaseEndpoints.RELEASES_PAGE,
     publishedAt = null,
     isNew = false,
     downloadUrl = null,
     fileName = null,
     fileSize = null,
 )
-
-/**
- * 从 GitHub Release API 获取完整版本发布信息。
- */
-suspend fun fetchLatestReleaseInfo(
-    client: HttpClient = defaultUpdateCheckClient,
-): Result<ReleaseInfo> {
-    return try {
-        val response = client
-            .get(AppConstants.Urls.GITHUB_RELEASES_LATEST_API) {
-                header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
-            }
-        if (!response.status.isSuccess()) {
-            throw IllegalStateException("GitHub Release 请求异常: HTTP ${response.status.value}")
-        }
-        val release: GitHubRelease = response.body()
-        val tag = release.tag_name
-        if (tag.isNullOrBlank()) {
-            throw IllegalStateException("GitHub Release 响应缺少有效 tag_name，可能触发未认证速率限制")
-        }
-        val versionName = tag.removePrefix("v").ifBlank { "unknown" }
-        val isNew = hasNewVersion(versionName)
-
-        val matchedAsset = selectPlatformReleaseAsset(release.assets)
-        val downloadUrl = matchedAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
-        val fileName = matchedAsset?.name?.let {
-            com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
-        }
-        val fileSize = matchedAsset?.size
-
-        // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
-        val changelog = release.body?.takeIf { it.isNotBlank() }
-            ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
-
-        val releaseInfo = ReleaseInfo(
-            tagName = tag,
-            versionName = versionName,
-            title = release.name ?: "PixEz MIUIX $tag",
-            changelog = changelog,
-            releaseUrl = release.html_url ?: "https://github.com/137458/pixez-miuix/releases",
-            publishedAt = release.published_at,
-            isNew = isNew,
-            downloadUrl = downloadUrl,
-            fileName = fileName,
-            fileSize = fileSize,
-            digest = matchedAsset?.digest,
-        )
-        Result.success(releaseInfo)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Napier.e("获取 Release 信息失败", e)
-        Result.failure(e)
-    }
-}
 
 /**
  * 判断 [latest] 是否比当前应用版本新。
@@ -197,4 +139,68 @@ private fun compareVersion(v1: String, v2: String): Int {
         if (p1 != p2) return p1.compareTo(p2)
     }
     return 0
+}
+
+/**
+ * 更新检查仓库：从 GitHub Release API 获取最新版本发布信息。
+ *
+ * 网络请求逻辑自 ui 层 UpdateChecker.kt 收编（架构审查 中-4），
+ * [client] 由调用方注入并管理生命周期（AppDependencies.close()），
+ * 取代 UI 直连的独立全局 client 与容器裸 HttpClient 双通道。
+ */
+class UpdateRepository(
+    private val client: HttpClient,
+) {
+    /**
+     * 从 GitHub Release API 获取完整版本发布信息。
+     */
+    suspend fun fetchLatestReleaseInfo(): Result<ReleaseInfo> {
+        return try {
+            val response = client
+                .get(GitHubReleaseEndpoints.LATEST_API) {
+                    header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
+                }
+            if (!response.status.isSuccess()) {
+                throw IllegalStateException("GitHub Release 请求异常: HTTP ${response.status.value}")
+            }
+            val release: GitHubRelease = response.body()
+            val tag = release.tag_name
+            if (tag.isNullOrBlank()) {
+                throw IllegalStateException("GitHub Release 响应缺少有效 tag_name，可能触发未认证速率限制")
+            }
+            val versionName = tag.removePrefix("v").ifBlank { "unknown" }
+            val isNew = hasNewVersion(versionName)
+
+            val matchedAsset = selectPlatformReleaseAsset(release.assets)
+            val downloadUrl = matchedAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
+            val fileName = matchedAsset?.name?.let {
+                com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
+            }
+            val fileSize = matchedAsset?.size
+
+            // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
+            val changelog = release.body?.takeIf { it.isNotBlank() }
+                ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
+
+            val releaseInfo = ReleaseInfo(
+                tagName = tag,
+                versionName = versionName,
+                title = release.name ?: "PixEz MIUIX $tag",
+                changelog = changelog,
+                releaseUrl = release.html_url ?: GitHubReleaseEndpoints.RELEASES_PAGE,
+                publishedAt = release.published_at,
+                isNew = isNew,
+                downloadUrl = downloadUrl,
+                fileName = fileName,
+                fileSize = fileSize,
+                digest = matchedAsset?.digest,
+            )
+            Result.success(releaseInfo)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Napier.e("获取 Release 信息失败", e)
+            Result.failure(e)
+        }
+    }
 }

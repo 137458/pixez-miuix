@@ -38,8 +38,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import com.perol.pixez.shared.data.repository.UpdateRepository
+import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
+import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.network.defaultUpdateCheckClient
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.ToastData
@@ -55,7 +57,6 @@ import com.perol.pixez.shared.ui.effect.isRuntimeShaderSupported
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.formatFileSize
 import com.perol.pixez.shared.ui.utils.openSafeUrl
-import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,7 +86,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun UpdateSettingScreen(
     settingsRepository: SettingsRepository,
-    updateCheckClient: HttpClient = defaultUpdateCheckClient,
+    updateRepository: UpdateRepository,
     onBack: () -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -118,7 +119,7 @@ fun UpdateSettingScreen(
         if (isChecking) return
         try {
             isChecking = true
-            val result = fetchLatestReleaseInfo(updateCheckClient)
+            val result = updateRepository.fetchLatestReleaseInfo()
             result
                 .onSuccess { info ->
                     releaseInfo = info

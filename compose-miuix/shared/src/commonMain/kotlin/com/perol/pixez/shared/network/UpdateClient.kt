@@ -8,7 +8,7 @@ import io.ktor.serialization.kotlinx.json.json
  * 创建用于检查 GitHub Release 的 HttpClient，复用平台网络引擎（含 DoH / 代理支持）。
  *
  * @param modeProvider DoH 网络模式提供者，语义见 [createPlatformHttpClient]；
- *   由 AppDependencies 注入，独立惰性单例 [defaultUpdateCheckClient] 无容器可达、走默认策略。
+ *   由 AppDependencies 注入用户策略，产出客户端交由容器 [com.perol.pixez.shared.AppDependencies.close] 统一关闭。
  */
 internal fun createUpdateCheckClient(
     modeProvider: (isOauthHost: Boolean) -> String? = { null },
@@ -17,11 +17,4 @@ internal fun createUpdateCheckClient(
         json(HttpClientDefaults.commonJson)
     }
     webTimeouts()
-}
-
-/**
- * 复用的 GitHub API HttpClient。
- */
-internal val defaultUpdateCheckClient: HttpClient by lazy {
-    createUpdateCheckClient()
 }

@@ -34,8 +34,8 @@ import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.AppUpdateDownloader
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo
+import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.i18n.formatFileSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job

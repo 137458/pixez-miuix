@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui
 
+import com.perol.pixez.shared.network.GitHubReleaseEndpoints
 import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.platform.DownloadPlatformDefaults
@@ -90,8 +91,10 @@ object AppConstants {
         fun pixivNovelUrl(id: Long): String = "$PIXIV_NOVEL_PREFIX$id"
         fun pixivNovelUrl(id: Int): String = "$PIXIV_NOVEL_PREFIX$id"
         const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
-        const val GITHUB_RELEASES = "https://github.com/137458/pixez-miuix/releases"
-        const val GITHUB_RELEASES_LATEST_API = "https://api.github.com/repos/137458/pixez-miuix/releases/latest"
+
+        // 过渡委托：正名已外迁至 network/GitHubReleaseEndpoints.kt（data 层 UpdateRepository 直引），随全量移包清理。
+        const val GITHUB_RELEASES = GitHubReleaseEndpoints.RELEASES_PAGE
+        const val GITHUB_RELEASES_LATEST_API = GitHubReleaseEndpoints.LATEST_API
         const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
         const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
         const val PIXIV_LEAVE_ACCOUNT = "https://www.pixiv.net/leave_pixiv.php"

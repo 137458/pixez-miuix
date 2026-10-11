@@ -44,6 +44,7 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
+import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.AppInfo
@@ -114,6 +115,7 @@ fun SettingsScreen(
     onGuideClick: () -> Unit,
     accountRepository: AccountRepository,
     boardRepository: BoardRepository,
+    updateRepository: com.perol.pixez.shared.data.repository.UpdateRepository,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
@@ -151,7 +153,7 @@ fun SettingsScreen(
         boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
     }
     LaunchedEffect(Unit) {
-        fetchLatestReleaseInfo().onSuccess { info ->
+        updateRepository.fetchLatestReleaseInfo().onSuccess { info ->
             releaseInfo = info
         }
     }
