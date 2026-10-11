@@ -54,6 +54,7 @@ import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.LocalUpdateRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -145,7 +146,9 @@ fun SettingsScreen(
 
     // 页面进入时异步加载公告列表与最新版本信息。
     LaunchedEffect(boardRepository) {
-        boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }.getOrNull()
+        boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }
+            .onFailure { Napier.w(tag = "BoardList", throwable = it) { "加载公告板列表失败(SettingsScreen)" } }
+            .getOrNull()
     }
     LaunchedEffect(Unit) {
         updateRepository.fetchLatestReleaseInfo().onSuccess { info ->

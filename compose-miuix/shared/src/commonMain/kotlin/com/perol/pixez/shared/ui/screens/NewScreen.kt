@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import io.github.aakira.napier.Napier
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -95,10 +96,14 @@ fun NewScreen(
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         settingsRepository.hasUnreadFeedBadge = false
-        currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
+            .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "加载当前账号失败(NewScreen)" } }
+            .getOrNull()
         isLoggedIn = currentAccount != null
         accountRepository.loginEventFlow.collect {
-            currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
+                .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "登录事件后加载当前账号失败(NewScreen)" } }
+                .getOrNull()
             isLoggedIn = currentAccount != null
         }
     }

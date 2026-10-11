@@ -54,6 +54,7 @@ import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -94,9 +95,13 @@ fun UserDetailScreen(
     val strings = LocalStrings.current
 
     val currentAccountState = produceState<AccountPersist?>(initialValue = null, accountRepository) {
-        value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
+            .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "加载当前账号失败(UserDetailScreen)" } }
+            .getOrNull()
         accountRepository.loginEventFlow.collect {
-            value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            value = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
+                .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "登录事件后加载当前账号失败(UserDetailScreen)" } }
+                .getOrNull()
         }
     }
     val isCurrentUser = remember(currentAccountState.value, userId) {

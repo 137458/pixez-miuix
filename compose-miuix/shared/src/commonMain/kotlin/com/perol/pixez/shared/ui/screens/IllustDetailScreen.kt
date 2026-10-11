@@ -67,6 +67,7 @@ import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Text
@@ -108,7 +109,9 @@ fun IllustDetailScreen(
 
     if (swipeChangeArtwork) {
         val relatedState = produceState<List<Long>>(initialValue = emptyList(), illustId) {
-            val list = suspendRunCatchingNonCancel { repository.getIllustRelated(illustId) }.getOrNull().orEmpty()
+            val list = suspendRunCatchingNonCancel { repository.getIllustRelated(illustId) }
+                .onFailure { Napier.w(tag = "IllustRelated", throwable = it) { "加载相关作品失败 illustId=$illustId" } }
+                .getOrNull().orEmpty()
             value = list.map { it.id }.filter { it != illustId }
         }
         val idList = remember(illustId, relatedState.value) {
