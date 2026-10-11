@@ -26,6 +26,7 @@ import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -64,13 +65,6 @@ fun RelatedIllustsScreen(
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
     // 统一 UI 状态机（单向数据流 UDF）
     var illustsState by remember(illustId) { mutableStateOf<List<Illust>?>(null) }
     var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
@@ -88,7 +82,7 @@ fun RelatedIllustsScreen(
         val illustsResult = suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId) }
         isManualRefreshing = false
         illustsResult.onSuccess { response ->
-            illustsState = filterBanned(response.illusts)
+            illustsState = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
             nextUrl = response.nextUrl
             initialError = null
             loadMoreError = null
@@ -110,7 +104,7 @@ fun RelatedIllustsScreen(
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    val filtered = filterBanned(response.illusts)
+                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                     illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }

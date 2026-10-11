@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -67,13 +68,6 @@ internal fun UserWorksTab(
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
     val state = produceState<Result<Pair<List<Illust>, String?>>?>(
         initialValue = null,
         userId,
@@ -82,7 +76,7 @@ internal fun UserWorksTab(
         settingsRepository.filterChangeVersion,
     ) {
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId) }
-        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
     }
 
     var illusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
@@ -108,7 +102,7 @@ internal fun UserWorksTab(
             loadMoreError = null
             suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId, nextUrl = currentNextUrl) }
                 .onSuccess { response ->
-                    val filtered = filterBanned(response.illusts)
+                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                     illusts = illusts.appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }
@@ -168,13 +162,6 @@ internal fun UserBookmarksTab(
     var selectedRestrictIndex by rememberSaveable(userId) { mutableIntStateOf(0) }
     val restrictTabs = listOf(strings.userPublicRestrict, strings.userPrivateRestrict)
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
     val coroutineScope = rememberCoroutineScope()
 
     // 公开收藏状态缓存
@@ -193,7 +180,7 @@ internal fun UserBookmarksTab(
     ) {
         if (!publicLoadedOnce) return@produceState
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public") }
-        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
     }
     var publicIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
     var publicNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
@@ -225,7 +212,7 @@ internal fun UserBookmarksTab(
     ) {
         if (!privateLoadedOnce) return@produceState
         val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private") }
-        value = illustsResult.map { filterBanned(it.illusts) to it.nextUrl }
+        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
     }
     var privateIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
     var privateNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
@@ -250,7 +237,7 @@ internal fun UserBookmarksTab(
                 publicLoadMoreError = null
                 suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public", nextUrl = currentNextUrl) }
                     .onSuccess { response ->
-                        val filtered = filterBanned(response.illusts)
+                        val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                         publicIllusts = publicIllusts.appendDistinct(filtered)
                         publicNextUrl = response.nextUrl
                     }
@@ -267,7 +254,7 @@ internal fun UserBookmarksTab(
                 privateLoadMoreError = null
                 suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private", nextUrl = currentNextUrl) }
                     .onSuccess { response ->
-                        val filtered = filterBanned(response.illusts)
+                        val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                         privateIllusts = privateIllusts.appendDistinct(filtered)
                         privateNextUrl = response.nextUrl
                     }

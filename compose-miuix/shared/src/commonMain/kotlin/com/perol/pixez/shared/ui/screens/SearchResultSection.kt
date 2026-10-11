@@ -45,6 +45,7 @@ import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
+import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
@@ -112,13 +113,6 @@ internal fun SearchIllustResultGrid(
     val effectiveStartDate = debouncedSearchDate(startDate)
     val effectiveEndDate = debouncedSearchDate(endDate)
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
     fun applyClientFilters(list: List<Illust>, ugoira: Int, ratio: Int): List<Illust> {
         var res = when (ugoira) {
             1 -> list.filter { IllustType.isUgoira(it.type) }
@@ -172,7 +166,7 @@ internal fun SearchIllustResultGrid(
         }
         searchResult.onSuccess { response ->
             if (generation == requestGeneration) {
-                illustsState = filterBanned(response.illusts)
+                illustsState = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                 nextUrl = response.nextUrl
                 initialError = null
                 loadMoreError = null
@@ -203,7 +197,7 @@ internal fun SearchIllustResultGrid(
                 )
             }.onSuccess { response ->
                 if (generation == requestGeneration) {
-                    val filtered = filterBanned(response.illusts)
+                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
                     illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
                     nextUrl = response.nextUrl
                 }

@@ -9,7 +9,10 @@ import com.perol.pixez.shared.data.model.IllustProfileImageUrls
 import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.model.IllustUser
 import com.perol.pixez.shared.data.model.ImageUrls
+import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.russhwolf.settings.PreferencesSettings
 import kotlinx.coroutines.runBlocking
+import java.util.prefs.Preferences
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -153,6 +156,61 @@ class BanRepositoryTest {
         // Filter with banAI and hideR18
         val result2 = repository.filterIllusts(illusts, banAIIllust = true, hideR18 = true)
         assertEquals(listOf(7L), result2.map { it.id })
+    }
+
+    private fun createSettingsRepository(nodePath: String): SettingsRepository {
+        val node = Preferences.userRoot().node(nodePath)
+        node.clear()
+        return SettingsRepository(PreferencesSettings(node))
+    }
+
+    @Test
+    fun `test filterIllustsBySettings applies AI filter when banAIIllust enabled`() = runBlocking {
+        // AI 开、R18 关：仅 AI 作品被滤除，R18 作品保留。
+        val settings = createSettingsRepository("com/perol/pixez/test/banfilter/ai")
+        settings.banAIIllust = true
+        settings.hIsNotAllow = false
+
+        val illusts = listOf(
+            createMockIllust(id = 1L, isAi = true), // AI 生成（illustAIType == 2）
+            createMockIllust(id = 2L, isAi = false),
+            createMockIllust(id = 3L, xRestrict = 1), // R18，不受 AI 开关影响
+        )
+
+        val filtered = repository.filterIllustsBySettings(illusts, settings)
+        assertEquals(listOf(2L, 3L), filtered.map { it.id })
+    }
+
+    @Test
+    fun `test filterIllustsBySettings applies R18 filter when hIsNotAllow enabled`() = runBlocking {
+        // AI 关、R18 开：仅 R18 作品被滤除，AI 作品保留。
+        val settings = createSettingsRepository("com/perol/pixez/test/banfilter/r18")
+        settings.banAIIllust = false
+        settings.hIsNotAllow = true
+
+        val illusts = listOf(
+            createMockIllust(id = 1L, isAi = true), // AI，不受 R18 开关影响
+            createMockIllust(id = 2L, xRestrict = 1), // R18
+        )
+
+        val filtered = repository.filterIllustsBySettings(illusts, settings)
+        assertEquals(listOf(1L), filtered.map { it.id })
+    }
+
+    @Test
+    fun `test filterIllustsBySettings keeps all when both switches disabled`() = runBlocking {
+        // 两开关均关：不过滤任何作品（等价 filterIllusts 默认参数行为）。
+        val settings = createSettingsRepository("com/perol/pixez/test/banfilter/off")
+        settings.banAIIllust = false
+        settings.hIsNotAllow = false
+
+        val illusts = listOf(
+            createMockIllust(id = 1L, isAi = true),
+            createMockIllust(id = 2L, xRestrict = 1),
+        )
+
+        val filtered = repository.filterIllustsBySettings(illusts, settings)
+        assertEquals(listOf(1L, 2L), filtered.map { it.id })
     }
 
     private fun assertNotNull(value: Any?) {

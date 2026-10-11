@@ -6,6 +6,7 @@ import com.perol.pixez.shared.data.local.bantag.BanTagDatabase
 import com.perol.pixez.shared.data.local.banuserid.BanUserIdDatabase
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isR18
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -416,3 +417,16 @@ class BanRepository(
         }
     }
 }
+
+/**
+ * 按用户屏蔽设置统一过滤插画：读取 [SettingsRepository] 的 AI 过滤与 R-18 隐藏开关后转调 [BanRepository.filterIllusts]。
+ * 每次调用实时读取设置项，与列表页随设置变更即时重过滤的口径保持一致。
+ */
+suspend fun BanRepository.filterIllustsBySettings(
+    rawIllusts: List<Illust>,
+    settings: SettingsRepository,
+): List<Illust> = filterIllusts(
+    rawIllusts = rawIllusts,
+    banAIIllust = settings.banAIIllust,
+    hideR18 = settings.hIsNotAllow,
+)

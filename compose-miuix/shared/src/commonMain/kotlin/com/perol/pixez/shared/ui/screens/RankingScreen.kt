@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.FilterableIllustListState
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -86,19 +87,12 @@ fun RankingScreen(
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    suspend fun filterBanned(rawIllusts: List<Illust>): List<Illust> =
-        banRepository.filterIllusts(
-            rawIllusts = rawIllusts,
-            banAIIllust = settingsRepository.banAIIllust,
-            hideR18 = settingsRepository.hIsNotAllow,
-        )
-
     val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
     val cachedRanking = repository.getCachedRankingPage(rankingCacheKey)
     // 高-3：拆「原始列表 / 过滤后列表」双状态，过滤为展示期派生，filterChangeVersion 变化时仅本地重过滤。
     val listState = remember(selectedMode, selectedDate) {
         FilterableIllustListState(
-            filter = { rawIllusts -> filterBanned(rawIllusts) },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             initialFilterVersion = settingsRepository.filterChangeVersion,
         ).also { state ->
             cachedRanking?.let { state.restore(it.first) }
