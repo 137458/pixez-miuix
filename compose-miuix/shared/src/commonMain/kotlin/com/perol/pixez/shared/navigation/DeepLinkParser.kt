@@ -18,13 +18,43 @@ sealed interface ParsedDeepLink {
 }
 
 object DeepLinkParser {
+    private const val SCHEME_PIXIV = "pixiv"
     private const val SCHEME_PIXEZ = "pixez"
+    private val LINK_SCHEMES = listOf(SCHEME_PIXIV, SCHEME_PIXEZ)
     private val ILLUST_REGEX = Regex("""(?:artworks/|illust_id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val USER_REGEX = Regex("""(?:users/|member\.php\?id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val CODE_PARAM_REGEX = Regex("""(?:[?&]|^)code=([^&#\s]+)""")
     private val TRUSTED_OAUTH_LINK_REGEX = Regex(
         """(?i)(?:pixez|pixiv)://(?:account|oauth)\b|pixiv\.net/users/auth/pixiv/callback""",
     )
+
+    /**
+     * 剪贴板/分享文本预筛：判断 [raw] 是否「值得跑一次 [parse]」。
+     *
+     * 与 parse 复用同一组特征（scheme 前缀、可信 OAuth 链接、作品/画师正则），
+     * 保证壳层预筛放行的判断与 parse 的识别能力单点同步——新增链接形态只改这里，
+     * Android/Desktop 壳层不再各自维护特征串。
+     */
+    fun looksLikeLink(raw: String?): Boolean {
+        val text = raw?.trim().orEmpty()
+        if (text.isEmpty()) return false
+        if (LINK_SCHEMES.any { text.startsWith("$it://", ignoreCase = true) }) return true
+        return TRUSTED_OAUTH_LINK_REGEX.containsMatchIn(text) ||
+            ILLUST_REGEX.containsMatchIn(text) ||
+            USER_REGEX.containsMatchIn(text)
+    }
+
+    /**
+     * [parse] + [dispatch] 的便捷包装：文本无法解析时静默忽略。
+     */
+    fun dispatchText(
+        raw: String?,
+        rootComponent: RootComponent,
+        onOAuthCode: (String) -> Unit,
+    ) {
+        val parsed = parse(raw) ?: return
+        dispatch(parsed, rootComponent, onOAuthCode)
+    }
 
     /**
      * 解析启动参数、URI Scheme (`pixiv://`, `pixez://`)、网页链接或剪贴板文本。
@@ -95,7 +125,7 @@ object DeepLinkParser {
         val path = "/" + pathSegments.joinToString("/")
 
         when {
-            scheme == SCHEME_PIXEZ || scheme == "pixiv" -> {
+            scheme == SCHEME_PIXEZ || scheme == SCHEME_PIXIV -> {
                 when (host) {
                     "account", "oauth" -> {
                         val code = url.parameters["code"]?.trim().orEmpty()

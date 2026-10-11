@@ -13,6 +13,7 @@ import com.arkivanov.decompose.defaultComponentContext
 import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.platform.BrowserLauncherContext
+import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -120,14 +121,9 @@ class MainActivity : ComponentActivity() {
     private fun checkClipboard() {
         val clipboard = com.perol.pixez.shared.platform.IllustClipboard()
         val text = clipboard.getText()?.trim()
-        if (!text.isNullOrBlank() && text != lastHandledClipboardText) {
-            val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
-            val hasUser = text.contains("users/")
-            val hasScheme = text.startsWith("pixiv://", ignoreCase = true) || text.startsWith("pixez://", ignoreCase = true)
-            if (hasIllust || hasUser || hasScheme) {
-                lastHandledClipboardText = text
-                parseAndNavigateUrlOrId(text)
-            }
+        if (!text.isNullOrBlank() && text != lastHandledClipboardText && DeepLinkParser.looksLikeLink(text)) {
+            lastHandledClipboardText = text
+            parseAndNavigateUrlOrId(text)
         }
     }
 
@@ -182,9 +178,8 @@ class MainActivity : ComponentActivity() {
     private fun parseAndNavigateUrlOrId(text: String?) {
         if (text.isNullOrBlank()) return
         try {
-            val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(text) ?: return
-            com.perol.pixez.shared.navigation.DeepLinkParser.dispatch(
-                parsed = parsed,
+            DeepLinkParser.dispatchText(
+                raw = text,
                 rootComponent = rootComponent,
                 onOAuthCode = { code ->
                     lifecycleScope.launch {

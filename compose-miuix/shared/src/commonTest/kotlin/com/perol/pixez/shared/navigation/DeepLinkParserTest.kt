@@ -2,8 +2,10 @@ package com.perol.pixez.shared.navigation
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /**
  * 跨平台 DeepLink 解析测试：可信 OAuth 回调、任意 URL 的 code 注入拒绝、
@@ -95,6 +97,52 @@ class DeepLinkParserTest {
         val parsed = DeepLinkParser.parse("pixez://illust/9999999999")
         assertIs<ParsedDeepLink.IllustDetail>(parsed)
         assertEquals(9999999999L, parsed.illustId)
+    }
+
+    // ---------- looksLikeLink：壳层剪贴板预筛（中-5） ----------
+
+    @Test
+    fun `artworks illust_id users member php 链接判定为深链`() {
+        assertTrue(DeepLinkParser.looksLikeLink("https://www.pixiv.net/artworks/123456"))
+        assertTrue(DeepLinkParser.looksLikeLink("https://www.pixiv.net/member_illust.php?illust_id=123456"))
+        assertTrue(DeepLinkParser.looksLikeLink("https://www.pixiv.net/users/114514"))
+        assertTrue(DeepLinkParser.looksLikeLink("https://www.pixiv.net/member.php?id=114514"))
+    }
+
+    @Test
+    fun `scheme 前缀判定大小写不敏感`() {
+        assertTrue(DeepLinkParser.looksLikeLink("pixiv://users/1"))
+        assertTrue(DeepLinkParser.looksLikeLink("PIXEZ://ranking"))
+        assertTrue(DeepLinkParser.looksLikeLink("Pixiv://illust/42"))
+    }
+
+    @Test
+    fun `混排文本中的链接特征判定为深链`() {
+        assertTrue(DeepLinkParser.looksLikeLink("快看这张图 https://www.pixiv.net/artworks/987654 很棒"))
+        // 与 parse 的 IGNORE_CASE 正则保持一致：大小写变体同样放行
+        assertTrue(DeepLinkParser.looksLikeLink("看看 Artworks/123 这张图"))
+    }
+
+    @Test
+    fun `可信 OAuth 回调链接判定为深链`() {
+        assertTrue(DeepLinkParser.looksLikeLink("https://www.pixiv.net/users/auth/pixiv/callback?code=xyz"))
+    }
+
+    @Test
+    fun `纯数字与任意文本不判定为深链`() {
+        // 纯数字作品 ID 不在剪贴板预筛范围（否则任意数字复制都会触发跳转）
+        assertFalse(DeepLinkParser.looksLikeLink("123456"))
+        assertFalse(DeepLinkParser.looksLikeLink("随便复制的一段话"))
+        assertFalse(DeepLinkParser.looksLikeLink("   "))
+        assertFalse(DeepLinkParser.looksLikeLink(""))
+        assertFalse(DeepLinkParser.looksLikeLink(null))
+    }
+
+    @Test
+    fun `无数字的链接特征不判定为深链`() {
+        // 语义为「值得跑一次 parse」：这些文本 parse 返回 null，预筛不放行
+        assertFalse(DeepLinkParser.looksLikeLink("https://www.pixiv.net/artworks/"))
+        assertFalse(DeepLinkParser.looksLikeLink("https://www.pixiv.net/users/"))
     }
 
 }

@@ -40,6 +40,7 @@ import com.perol.pixez.desktop.platform.WindowsMica
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
+import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
@@ -157,9 +158,8 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
     var lastHandledClipboardText by remember { mutableStateOf<String?>(null) }
 
     fun dispatchDeepLinkText(rawText: String?) {
-        val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(rawText) ?: return
-        com.perol.pixez.shared.navigation.DeepLinkParser.dispatch(
-            parsed = parsed,
+        DeepLinkParser.dispatchText(
+            raw = rawText,
             rootComponent = rootComponent,
             onOAuthCode = { code ->
                 scope.launch {
@@ -189,11 +189,7 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         // Windows 剪贴板读取是 OLE 操作，被其它进程占用时可阻塞 EDT 约 1s：切 IO 线程读取，结果回主线程分发
         scope.launch(Dispatchers.IO) {
             val text = runCatching { com.perol.pixez.shared.platform.IllustClipboard().getText()?.trim() }.getOrNull()
-            if (text.isNullOrBlank() || text == lastHandledClipboardText) return@launch
-            val hasIllust = text.contains("artworks/") || text.contains("illust_id=")
-            val hasUser = text.contains("users/")
-            val hasScheme = text.startsWith("pixiv://", true) || text.startsWith("pixez://", true)
-            if (!hasIllust && !hasUser && !hasScheme) return@launch
+            if (text.isNullOrBlank() || text == lastHandledClipboardText || !DeepLinkParser.looksLikeLink(text)) return@launch
             withContext(Dispatchers.Main) {
                 // 二次核对：IO 期间剪贴板可能已变化
                 if (text != lastHandledClipboardText) {
