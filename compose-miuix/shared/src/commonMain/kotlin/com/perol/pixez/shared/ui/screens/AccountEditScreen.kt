@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
@@ -120,7 +121,7 @@ fun AccountEditScreen(
             }
             .onFailure { e ->
                 Napier.e("加载账号信息失败", e)
-                toastMessage = ToastData("${strings.loadFailed}: ${e.message}", ToastType.Error)
+                toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
             }
     }
 
@@ -260,7 +261,7 @@ fun AccountEditScreen(
                                                 currentPassword = ""
                                                 newPassword = ""
                                             }.onFailure { e ->
-                                                toastMessage = ToastData("${strings.accountEditSaveFailed}：${e.message}", ToastType.Error)
+                                                toastMessage = ToastData("${strings.accountEditSaveFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
                                                 Napier.e("保存账号信息失败", e)
                                             }
                                         } finally {
@@ -327,7 +328,7 @@ fun AccountEditScreen(
                         try {
                             openBrowser(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT)
                         } catch (e: Exception) {
-                            toastMessage = ToastData("${strings.loadFailed}：${e.message}", ToastType.Error)
+                            toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
                             Napier.e("打开账号注销页面失败", e)
                         }
                     },

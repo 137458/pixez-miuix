@@ -40,7 +40,7 @@ class TokenRefreshPlugin(
         val staleAccessToken = tokenStorage.getCurrentAccount()?.access_token
         mutex.withLock {
             val currentAccount = tokenStorage.getCurrentAccount()
-                ?: throw IllegalStateException("没有登录账号，无法刷新 token")
+                ?: throw IllegalStateException("No logged-in account to refresh token")
             if (currentAccount.access_token != staleAccessToken && currentAccount.access_token.isNotBlank()) {
                 Napier.i("检测到 Token 已由前置并发请求完成刷新，复用最新凭证")
                 return@withLock
@@ -118,16 +118,18 @@ class TokenRefreshPlugin(
                         if (retryStatus == HttpStatusCode.Unauthorized) {
                             call = call.save()
                             val retryBody = runCatching { call.response.bodyAsText() }.getOrDefault("")
+                            // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                             throw PixivApiException(
                                 statusCode = retryStatus.value,
-                                message = "刷新 Token 后重试仍未授权: $retryStatus, body=$retryBody",
+                                message = "Still unauthorized after token refresh: $retryStatus, body=$retryBody",
                             )
                         }
                     } else if (status == HttpStatusCode.Unauthorized) {
                         // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
+                        // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                         throw PixivApiException(
                             statusCode = call.response.status.value,
-                            message = "请求未授权: ${call.response.status}, body=$bodyText",
+                            message = "Request unauthorized: ${call.response.status}, body=$bodyText",
                         )
                     }
                 }

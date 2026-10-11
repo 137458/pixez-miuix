@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
@@ -252,7 +253,7 @@ fun LoginScreen(
                                     openBrowser(accountRepository.loginUrl())
                                     errorMessage = ""
                                 } catch (e: Exception) {
-                                    errorMessage = "${strings.openInBrowser}: ${e.message ?: ""}"
+                                    errorMessage = "${strings.openInBrowser}: ${PixivApiErrorFormatter.format(e, strings)}"
                                     Napier.e("打开登录浏览器失败", e)
                                 }
                             },
@@ -272,7 +273,7 @@ fun LoginScreen(
                                     openBrowser(accountRepository.loginUrl(create = true))
                                     errorMessage = ""
                                 } catch (e: Exception) {
-                                    errorMessage = "${strings.openInBrowser}: ${e.message ?: ""}"
+                                    errorMessage = "${strings.openInBrowser}: ${PixivApiErrorFormatter.format(e, strings)}"
                                     Napier.e("打开创建账号浏览器失败", e)
                                 }
                             },
@@ -361,7 +362,7 @@ fun LoginScreen(
                                             suspendRunCatchingNonCancel {
                                                 accountRepository.login(tokenInput.trim())
                                             }.onFailure { e ->
-                                                errorMessage = "${strings.loadFailed}: ${e.message ?: strings.clearFailed}"
+                                                errorMessage = PixivApiErrorFormatter.format(e, strings)
                                                 Napier.e("登录失败", e)
                                             }
                                         } finally {

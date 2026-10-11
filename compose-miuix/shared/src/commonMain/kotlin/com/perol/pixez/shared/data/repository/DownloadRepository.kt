@@ -5,6 +5,8 @@ import com.perol.pixez.shared.data.model.DownloadTask
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.AppErrorKind
+import com.perol.pixez.shared.network.PixivApiException
 import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
@@ -120,7 +122,8 @@ class DownloadRepository(
             Napier.e("下载失败 illustId=${illust.id} page=$pageIndex", e)
             val failedTask = pendingTask.copy(
                 status = DownloadStatus.Failed,
-                error = e.message ?: "下载失败",
+                // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
+                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.DOWNLOAD_FAILED.code,
             )
             if (illust.pageCount <= 1) {
                 notifier.notifyFinished(illust.id, illust.title, 0, 1)
@@ -249,7 +252,8 @@ class DownloadRepository(
             Napier.e("重试下载失败 illustId=${history.illustId}", e)
             val failedTask = pendingTask.copy(
                 status = DownloadStatus.Failed,
-                error = e.message ?: "下载失败",
+                // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
+                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.DOWNLOAD_FAILED.code,
             )
             // 历史记录已存在时尽力回写失败状态；回写失败则记录日志并将异常附加到原始异常，避免状态不一致被静默吞掉。
             suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Failed)) }
@@ -407,7 +411,8 @@ class DownloadRepository(
             Napier.e("动图 Zip 保存失败 illustId=${illust.id}", e)
             val failedTask = pendingTask.copy(
                 status = DownloadStatus.Failed,
-                error = e.message ?: "动图保存失败",
+                // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
+                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.UGOIRA_SAVE_FAILED.code,
             )
             notifier.notifyFinished(illust.id, illust.title, 0, 1)
             if (historyId > 0 && historyRepository != null) {

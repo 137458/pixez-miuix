@@ -41,6 +41,7 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -90,7 +91,7 @@ fun BoardScreen(
             .onFailure { error ->
                 loadError = error
                 if (boardList.isEmpty()) {
-                    toastMessage = ToastData("${strings.loadFailed}: ${error.message ?: ""}", ToastType.Error)
+                    toastMessage = ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error)
                 }
             }
         isRefreshing = false

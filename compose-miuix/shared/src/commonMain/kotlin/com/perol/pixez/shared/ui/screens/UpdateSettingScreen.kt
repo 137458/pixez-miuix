@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.effect.BgEffectBackground
@@ -129,8 +130,7 @@ fun UpdateSettingScreen(
                 }
                 .onFailure { error ->
                     if (userInitiated) {
-                        val message = error.message ?: strings.loadFailed
-                        toastMessage = ToastData("${strings.loadFailed}: $message", ToastType.Error)
+                        toastMessage = ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error)
                     }
                 }
         } finally {
@@ -266,7 +266,8 @@ fun UpdateSettingScreen(
                                             downloadedFilePath = path
                                             com.perol.pixez.shared.platform.AppInstaller().install(path)
                                         }.onFailure { error ->
-                                            toastMessage = ToastData(error.message ?: strings.updateDownloadFailed, ToastType.Error)
+                                            // 更新包下载失败不透出内部异常细节，直接给本地化固定文案。
+                                            toastMessage = ToastData(strings.updateDownloadFailed, ToastType.Error)
                                         }
                                     } finally {
                                         // 取消或异常时同样复位，避免下载按钮被永久禁用。

@@ -53,6 +53,7 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -246,7 +247,10 @@ fun DownloadTaskScreen(
                                                             toastMessage = ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = ToastData(strings.downloadTaskRetryFailed.format(it.message ?: ""), ToastType.Error)
+                                                            toastMessage = ToastData(
+                                                                strings.downloadTaskRetryFailed.format(PixivApiErrorFormatter.format(it, strings)),
+                                                                ToastType.Error,
+                                                            )
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -266,7 +270,7 @@ fun DownloadTaskScreen(
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${it.message}", ToastType.Error)
+                                                            toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -331,7 +335,7 @@ fun DownloadTaskScreen(
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = ToastData("${strings.downloadTaskRetryFailed}: ${e.message}", ToastType.Error)
+                                toastMessage = ToastData("${strings.downloadTaskRetryFailed}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -378,7 +382,7 @@ fun DownloadTaskScreen(
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = ToastData("${strings.btnDelete}: ${e.message}", ToastType.Error)
+                                toastMessage = ToastData("${strings.btnDelete}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
                             } finally {
                                 isBatchProcessing = false
                             }

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import com.perol.pixez.shared.network.AppErrorKind
 import com.perol.pixez.shared.network.PixivApiException
 import com.perol.pixez.shared.ui.i18n.AppStrings
 
@@ -44,4 +45,33 @@ object PixivApiErrorFormatter {
         PixivApiErrorKey.NOT_FOUND -> strings.loadFailedNotFound
         null -> strings.loadFailed
     }
+
+    /**
+     * 把任意异常归一为稳定错误类型：PixivApiException 按状态码映射，
+     * 其余异常与 null 一律回退 [AppErrorKind.UNKNOWN]。
+     */
+    fun kindOf(error: Throwable?): AppErrorKind = AppErrorKind.forThrowable(error)
+
+    /**
+     * 把稳定错误类型翻译为可直接展示的本地化文案：
+     * 403/429/404 与下载类错误走差异化语义文案（与 ErrorPlaceholder 同口径），
+     * API_ERROR / UNKNOWN 等其余情况一律回退 strings.loadFailed。
+     */
+    fun format(kind: AppErrorKind, strings: AppStrings): String = when (kind) {
+        AppErrorKind.FORBIDDEN -> strings.loadFailedForbidden
+        AppErrorKind.RATE_LIMITED -> strings.loadFailedRateLimited
+        AppErrorKind.NOT_FOUND -> strings.loadFailedNotFound
+        AppErrorKind.DOWNLOAD_FAILED -> strings.downloadFailed
+        AppErrorKind.UGOIRA_SAVE_FAILED -> strings.ugoiraSaveFailed
+        AppErrorKind.API_ERROR, AppErrorKind.UNKNOWN -> strings.loadFailed
+    }
 }
+
+/**
+ * 把持久化的任务错误字段（[AppErrorKind.code] 或历史遗留自由文本）翻译为本地化文案。
+ * 已知错误码走差异化文案；遗留数据中的旧中文兜底词与异常消息一律回退
+ * strings.loadFailed，避免内部技术细节直透 UI。
+ */
+fun String?.toLocalizedDownloadError(strings: AppStrings): String =
+    this?.let { code -> AppErrorKind.fromCode(code) }?.let { PixivApiErrorFormatter.format(it, strings) }
+        ?: strings.loadFailed

@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -263,7 +264,7 @@ fun HistoryScreen(
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {
-                                        toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${it.message}", ToastType.Error)
+                                        toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                     }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
@@ -295,7 +296,7 @@ fun HistoryScreen(
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {
-                                        toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${it.message}", ToastType.Error)
+                                        toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                     }
                             } finally {
                                 // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。

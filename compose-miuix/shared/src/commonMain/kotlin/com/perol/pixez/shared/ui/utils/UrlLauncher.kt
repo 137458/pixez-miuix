@@ -1,6 +1,7 @@
 ﻿package com.perol.pixez.shared.ui.utils
 
 import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 
@@ -24,6 +25,6 @@ fun openSafeUrl(
         openBrowser(url)
     } catch (e: Exception) {
         Napier.w(tag = "UrlLauncher", throwable = e) { "Failed to open url: $url" }
-        onError("${strings.loadFailed}: ${e.message ?: strings.loadFailed}")
+        onError(PixivApiErrorFormatter.format(e, strings))
     }
 }

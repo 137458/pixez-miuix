@@ -49,6 +49,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -267,7 +268,7 @@ fun CommentsScreen(
                             // 重新刷新评论列表以显示最新评论
                             triggerManualRefresh()
                         }.onFailure { e ->
-                            sendError = e.message ?: strings.commentsPostFailed
+                            sendError = PixivApiErrorFormatter.format(e, strings)
                         }
                         isSending = false
                     }

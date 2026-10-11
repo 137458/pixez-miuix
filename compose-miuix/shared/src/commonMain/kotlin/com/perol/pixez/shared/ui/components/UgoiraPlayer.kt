@@ -119,7 +119,7 @@ private fun rememberUgoiraPlayback(
                 throw e
             } catch (e: Throwable) {
                 Napier.e("加载动图失败 illustId=$illustId", e, tag = "UgoiraPlayer")
-                state = UgoiraState.Error(e.message ?: strings.ugoiraLoadFailed)
+                state = UgoiraState.Error(PixivApiErrorFormatter.format(e, strings))
                 onError(e)
             }
         }

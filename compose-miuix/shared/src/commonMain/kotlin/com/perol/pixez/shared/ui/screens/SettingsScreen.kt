@@ -47,6 +47,7 @@ import com.perol.pixez.shared.data.repository.BoardRepository
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.AppInfo
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -402,7 +403,7 @@ fun SettingsScreen(
                                 toastMessage = if (result.isSuccess) {
                                     ToastData(strings.cacheCleared, ToastType.Success)
                                 } else {
-                                    ToastData("${strings.clearFailed}: ${result.exceptionOrNull()?.message}", ToastType.Error)
+                                    ToastData(PixivApiErrorFormatter.format(result.exceptionOrNull(), strings), ToastType.Error)
                                 }
                             }
                         },

@@ -139,9 +139,10 @@ fun UpdateDialog(
                 }
                 .onFailure { error ->
                     if (error !is CancellationException) {
+                        // 更新包下载失败不透出内部异常细节，直接给本地化固定文案。
                         downloadState = downloadState.copy(
                             isDownloading = false,
-                            error = error.message ?: strings.updateDownloadFailed,
+                            error = strings.updateDownloadFailed,
                         )
                     }
                 }

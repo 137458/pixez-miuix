@@ -183,7 +183,7 @@ fun IllustFullScreenViewer(
                     },
                     onFailure = { e ->
                         performHapticFeedback(HapticType.Reject)
-                        onToast(ToastData("${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}", ToastType.Error))
+                        onToast(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
                     },
                 )
             } else {
@@ -191,7 +191,7 @@ fun IllustFullScreenViewer(
                 val task = downloadRepository.download(illust, pageIndex = currentPage)
                 val toast = when (task.status) {
                     DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
-                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}", ToastType.Error)
+                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)
                     else -> null
                 }
                 if (toast != null) onToast(toast)

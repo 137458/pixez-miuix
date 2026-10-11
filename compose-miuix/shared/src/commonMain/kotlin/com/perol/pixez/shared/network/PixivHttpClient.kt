@@ -100,9 +100,10 @@ class PixivHttpClient(
         HttpResponseValidator {
             validateResponse { response: HttpResponse ->
                 if (response.status.value >= 400) {
+                    // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                     throw PixivApiException(
                         statusCode = response.status.value,
-                        message = "下载请求失败: ${response.status}",
+                        message = "Download request failed: ${response.status}",
                     )
                 }
             }
@@ -205,9 +206,9 @@ class PixivHttpClient(
                         }
 
                         val message = if (!errorDetail.isNullOrBlank()) {
-                            "OAuth 认证失败: $errorDetail (${response.status})"
+                            "OAuth authentication failed: $errorDetail (${response.status})"
                         } else {
-                            "OAuth 请求失败: ${response.status}"
+                            "OAuth request failed: ${response.status}"
                         }
 
                         throw PixivApiException(
@@ -293,9 +294,10 @@ class PixivHttpClient(
                             bodyText
                         }
                         Napier.e("Pixiv API 请求失败 status=${response.status}, url=${response.call.request.url}, body=$sanitized")
+                        // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                         throw PixivApiException(
                             statusCode = response.status.value,
-                            message = if (sanitized.isNotBlank()) "请求失败: ${response.status} ($sanitized)" else "请求失败: ${response.status}",
+                            message = if (sanitized.isNotBlank()) "Request failed: ${response.status} ($sanitized)" else "Request failed: ${response.status}",
                         )
                     }
                 }
@@ -306,8 +308,15 @@ class PixivHttpClient(
 
 /**
  * Pixiv API 返回的非 2xx 响应异常。
+ *
+ * @param statusCode HTTP 状态码
+ * @param message 技术细节（仅供日志），不进入用户可见文案；用户文案由
+ * [com.perol.pixez.shared.ui.components.PixivApiErrorFormatter] 按 [errorKind] 本地化产出。
  */
 class PixivApiException(
     val statusCode: Int,
     override val message: String,
-) : Exception(message)
+) : Exception(message) {
+    /** 稳定错误类型：由 HTTP 状态码映射，供 task.error 等持久化与 UI 本地化使用。 */
+    val errorKind: AppErrorKind = AppErrorKind.fromStatusCode(statusCode)
+}

@@ -333,7 +333,7 @@ internal fun IllustDetailMoreMenuShareActions(
                             onBanSuccess()
                             onToast(ToastData(strings.menuBanWork, ToastType.Success))
                         },
-                        onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${e.message}", ToastType.Error)) },
+                        onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
                     )
                 }
             },

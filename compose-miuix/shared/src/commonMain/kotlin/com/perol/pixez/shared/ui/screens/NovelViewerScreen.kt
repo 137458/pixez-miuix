@@ -35,6 +35,7 @@ import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -101,7 +102,7 @@ fun NovelViewerScreen(
                 state = NovelViewState.Success(data)
             }.onFailure { err ->
                 Napier.e("加载小说正文失败 novelId=$novelId", err, tag = "NovelViewer")
-                state = NovelViewState.Error(err.message ?: strings.loadFailed)
+                state = NovelViewState.Error(PixivApiErrorFormatter.format(err, strings))
             }
         }
     }

@@ -1,7 +1,9 @@
 package com.perol.pixez.shared.ui.components
 
+import com.perol.pixez.shared.network.AppErrorKind
 import com.perol.pixez.shared.network.PixivApiException
 import com.perol.pixez.shared.ui.i18n.EnStrings
+import com.perol.pixez.shared.ui.i18n.JaStrings
 import com.perol.pixez.shared.ui.i18n.ZhCnStrings
 import io.ktor.client.network.sockets.SocketTimeoutException
 import kotlinx.coroutines.CancellationException
@@ -10,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 
 /**
  * PixivApiException.statusCode → 差异化错误文案语义键 的映射测试：
@@ -140,5 +143,111 @@ class PixivApiErrorFormatterTest {
     @Test
     fun `format error 为 null 时回退 loadFailed`() {
         assertEquals(ZhCnStrings.loadFailed, PixivApiErrorFormatter.format(null, ZhCnStrings))
+    }
+
+    // ---------- AppErrorKind：PixivApiException.errorKind 稳定映射 ----------
+
+    @Test
+    fun `PixivApiException 403 的 errorKind 为 FORBIDDEN`() {
+        assertSame(AppErrorKind.FORBIDDEN, PixivApiException(statusCode = 403, message = "f").errorKind)
+    }
+
+    @Test
+    fun `PixivApiException 429 的 errorKind 为 RATE_LIMITED`() {
+        assertSame(AppErrorKind.RATE_LIMITED, PixivApiException(statusCode = 429, message = "r").errorKind)
+    }
+
+    @Test
+    fun `PixivApiException 404 的 errorKind 为 NOT_FOUND`() {
+        assertSame(AppErrorKind.NOT_FOUND, PixivApiException(statusCode = 404, message = "n").errorKind)
+    }
+
+    @Test
+    fun `PixivApiException 未收录状态码的 errorKind 为 API_ERROR`() {
+        assertSame(AppErrorKind.API_ERROR, PixivApiException(statusCode = 500, message = "5").errorKind)
+        assertSame(AppErrorKind.API_ERROR, PixivApiException(statusCode = 401, message = "u").errorKind)
+        assertSame(AppErrorKind.API_ERROR, PixivApiException(statusCode = 0, message = "0").errorKind)
+    }
+
+    @Test
+    fun `kindOf 按异常类型归一：PixivApiException 取 errorKind 其余为 UNKNOWN`() {
+        assertSame(AppErrorKind.FORBIDDEN, PixivApiErrorFormatter.kindOf(PixivApiException(statusCode = 403, message = "f")))
+        assertSame(AppErrorKind.UNKNOWN, PixivApiErrorFormatter.kindOf(IllegalStateException("io")))
+        assertSame(AppErrorKind.UNKNOWN, PixivApiErrorFormatter.kindOf(null))
+    }
+
+    // ---------- format(AppErrorKind)：错误码到本地化文案的差异化映射 ----------
+
+    @Test
+    fun `format FORBIDDEN 返回差异化文案且随语言变化`() {
+        assertEquals(EnStrings.loadFailedForbidden, PixivApiErrorFormatter.format(AppErrorKind.FORBIDDEN, EnStrings))
+        assertEquals(ZhCnStrings.loadFailedForbidden, PixivApiErrorFormatter.format(AppErrorKind.FORBIDDEN, ZhCnStrings))
+    }
+
+    @Test
+    fun `format RATE_LIMITED 返回限流文案`() {
+        assertEquals(EnStrings.loadFailedRateLimited, PixivApiErrorFormatter.format(AppErrorKind.RATE_LIMITED, EnStrings))
+        assertEquals(ZhCnStrings.loadFailedRateLimited, PixivApiErrorFormatter.format(AppErrorKind.RATE_LIMITED, ZhCnStrings))
+    }
+
+    @Test
+    fun `format NOT_FOUND 返回不存在文案`() {
+        assertEquals(EnStrings.loadFailedNotFound, PixivApiErrorFormatter.format(AppErrorKind.NOT_FOUND, EnStrings))
+        assertEquals(ZhCnStrings.loadFailedNotFound, PixivApiErrorFormatter.format(AppErrorKind.NOT_FOUND, ZhCnStrings))
+    }
+
+    @Test
+    fun `format DOWNLOAD_FAILED 返回下载失败文案`() {
+        assertEquals(EnStrings.downloadFailed, PixivApiErrorFormatter.format(AppErrorKind.DOWNLOAD_FAILED, EnStrings))
+        assertEquals(ZhCnStrings.downloadFailed, PixivApiErrorFormatter.format(AppErrorKind.DOWNLOAD_FAILED, ZhCnStrings))
+        assertEquals(JaStrings.downloadFailed, PixivApiErrorFormatter.format(AppErrorKind.DOWNLOAD_FAILED, JaStrings))
+    }
+
+    @Test
+    fun `format UGOIRA_SAVE_FAILED 返回动图保存失败文案`() {
+        assertEquals(EnStrings.ugoiraSaveFailed, PixivApiErrorFormatter.format(AppErrorKind.UGOIRA_SAVE_FAILED, EnStrings))
+        assertEquals(ZhCnStrings.ugoiraSaveFailed, PixivApiErrorFormatter.format(AppErrorKind.UGOIRA_SAVE_FAILED, ZhCnStrings))
+        assertEquals(JaStrings.ugoiraSaveFailed, PixivApiErrorFormatter.format(AppErrorKind.UGOIRA_SAVE_FAILED, JaStrings))
+    }
+
+    @Test
+    fun `format API_ERROR 与 UNKNOWN 回退 loadFailed`() {
+        assertEquals(EnStrings.loadFailed, PixivApiErrorFormatter.format(AppErrorKind.API_ERROR, EnStrings))
+        assertEquals(ZhCnStrings.loadFailed, PixivApiErrorFormatter.format(AppErrorKind.UNKNOWN, ZhCnStrings))
+    }
+
+    // ---------- format(Throwable) 与 AppErrorKind 通道口径一致 ----------
+
+    @Test
+    fun `format Throwable 与对应 errorKind 的文案一致`() {
+        val error = PixivApiException(statusCode = 429, message = "请求失败: 429")
+        assertEquals(
+            PixivApiErrorFormatter.format(AppErrorKind.RATE_LIMITED, EnStrings),
+            PixivApiErrorFormatter.format(error, EnStrings),
+        )
+    }
+
+    // ---------- toLocalizedDownloadError：task.error 错误码（含遗留数据）解码 ----------
+
+    @Test
+    fun `task error 错误码解码为本地化文案`() {
+        assertEquals(EnStrings.downloadFailed, "download_failed".toLocalizedDownloadError(EnStrings))
+        assertEquals(ZhCnStrings.loadFailedForbidden, "forbidden".toLocalizedDownloadError(ZhCnStrings))
+        assertEquals(ZhCnStrings.ugoiraSaveFailed, "ugoira_save_failed".toLocalizedDownloadError(ZhCnStrings))
+        assertEquals(ZhCnStrings.loadFailedRateLimited, "rate_limited".toLocalizedDownloadError(ZhCnStrings))
+        assertEquals(EnStrings.loadFailedNotFound, "not_found".toLocalizedDownloadError(EnStrings))
+    }
+
+    @Test
+    fun `task error 遗留中文与异常消息回退 loadFailed 不泄露细节`() {
+        assertEquals(ZhCnStrings.loadFailed, "下载失败".toLocalizedDownloadError(ZhCnStrings))
+        assertEquals(EnStrings.loadFailed, "Connect timed out".toLocalizedDownloadError(EnStrings))
+        assertEquals(EnStrings.loadFailed, "forbidden (legacy exception message)".toLocalizedDownloadError(EnStrings))
+    }
+
+    @Test
+    fun `task error 为 null 回退 loadFailed`() {
+        assertEquals(ZhCnStrings.loadFailed, null.toLocalizedDownloadError(ZhCnStrings))
+        assertEquals(ZhCnStrings.loadFailed, (null as String?).toLocalizedDownloadError(ZhCnStrings))
     }
 }

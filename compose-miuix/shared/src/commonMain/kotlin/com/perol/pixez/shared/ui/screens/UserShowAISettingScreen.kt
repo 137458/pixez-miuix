@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -89,7 +90,7 @@ fun UserShowAISettingScreen(
                 currentShowAI = response.showAI
             }.onFailure { e ->
                 Napier.e("更新 AI 显示设置失败", e)
-                toastMessage = ToastData("${strings.loadFailed}：${e.message}", ToastType.Error)
+                toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
             }
             isUpdating = false
         }

@@ -15,9 +15,11 @@ import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.saveUgoiraIllust
+import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
@@ -93,7 +95,7 @@ internal fun IllustDetailTopBarSection(
                                                 ToastData(strings.downloadStatusSuccess, ToastType.Success)
                                             DownloadStatus.Failed ->
                                                 ToastData(
-                                                    "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}",
+                                                    "${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}",
                                                     ToastType.Error,
                                                 )
                                             else -> null
@@ -111,7 +113,7 @@ internal fun IllustDetailTopBarSection(
                         }
                     }.onFailure { e ->
                         performHapticFeedback(HapticType.Reject)
-                        onBookmarkErrorChange(e.message ?: strings.loadFailed)
+                        onBookmarkErrorChange(PixivApiErrorFormatter.format(e, strings))
                     }
                 } finally {
                     onBookmarkLoadingChange(false)
@@ -171,7 +173,7 @@ internal fun IllustDetailTopBarSection(
                                 DownloadStatus.Failed -> {
                                     performHapticFeedback(HapticType.Reject)
                                     ToastData(
-                                        "${strings.downloadStatusFailed}: ${task.error ?: strings.loadFailed}",
+                                        "${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}",
                                         ToastType.Error,
                                     )
                                 }
@@ -185,7 +187,7 @@ internal fun IllustDetailTopBarSection(
                     performHapticFeedback(HapticType.Reject)
                     onToast(
                         ToastData(
-                            "${strings.downloadStatusFailed}: ${e.message ?: strings.loadFailed}",
+                            PixivApiErrorFormatter.format(e, strings),
                             ToastType.Error,
                         ),
                     )

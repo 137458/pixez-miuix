@@ -4,12 +4,16 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.task.TaskDatabase
 import com.perol.pixez.shared.data.model.DownloadStatus
+import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.ImageUrls
 import com.perol.pixez.shared.data.model.IllustUser
 import com.perol.pixez.shared.data.model.IllustProfileImageUrls
+import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.AppErrorKind
 import com.perol.pixez.shared.platform.IllustSaver
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.russhwolf.settings.PreferencesSettings
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.runBlocking
@@ -20,6 +24,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.prefs.Preferences
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DownloadRepositoryTest {
@@ -180,5 +185,59 @@ class DownloadRepositoryTest {
         val file = File(savedPath)
         assertTrue(file.exists())
         assertEquals("SubdirArtist_4321", file.parentFile.name)
+    }
+
+    // ---------- 高-6b：task.error 写稳定错误码，不再存异常消息 ----------
+
+    /** 图片 host 白名单与 HTTPS 校验共同不可达的 URL：稳定触发下载失败路径，不依赖外网。 */
+    private val unreachableUrl = "https://127.0.0.1:1/denied.jpg"
+
+    @Test
+    fun `download 失败时任务状态为 Failed 且 error 是稳定错误码`() = runBlocking {
+        val illust = createDummyIllust(id = 666001L).copy(
+            metaSinglePage = MetaSinglePage(originalImageUrl = unreachableUrl),
+        )
+
+        val task = downloadRepo.download(illust, pageIndex = 0)
+
+        assertEquals(DownloadStatus.Failed, task.status)
+        assertEquals(AppErrorKind.DOWNLOAD_FAILED.code, task.error)
+    }
+
+    @Test
+    fun `download 失败的 error 不包含原始异常消息`() = runBlocking {
+        val illust = createDummyIllust(id = 666002L).copy(
+            metaSinglePage = MetaSinglePage(originalImageUrl = unreachableUrl),
+        )
+
+        val task = downloadRepo.download(illust, pageIndex = 0)
+
+        assertEquals(DownloadStatus.Failed, task.status)
+        assertFalse(task.error.isNullOrBlank())
+        assertFalse(task.error!!.contains("不受信任"), "error 不得透出内部异常消息: ${task.error}")
+        assertFalse(task.error!!.contains("Exception"), "error 不得透出异常类型名: ${task.error}")
+    }
+
+    @Test
+    fun `retry 失败时错误码稳定且历史回写为 Failed`() = runBlocking {
+        val pending = historyRepo.saveTask(
+            DownloadTaskHistory(
+                id = 0,
+                illustId = 666003L,
+                pageIndex = 0,
+                title = "Retry Target",
+                userName = "ArtistA",
+                remoteUrl = unreachableUrl,
+                fileName = "666003_p0.jpg",
+                status = DownloadStatus.Failed,
+            ),
+        )
+        assertTrue(pending.id > 0, "历史记录必须已持久化")
+
+        suspendRunCatchingNonCancel { downloadRepo.retry(pending) }
+
+        val recorded = historyRepo.getAllTasks().firstOrNull { it.id == pending.id }
+        assertTrue(recorded != null, "历史记录必须仍存在")
+        assertEquals(DownloadStatus.Failed, recorded.status)
     }
 }

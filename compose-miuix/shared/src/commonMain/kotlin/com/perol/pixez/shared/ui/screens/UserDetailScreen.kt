@@ -39,6 +39,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -169,7 +170,7 @@ fun UserDetailScreen(
                     }.onSuccess {
                         isFollowed = !isFollowed
                     }.onFailure { e ->
-                        val err = e.message ?: "${strings.follow}${strings.loadFailed}"
+                        val err = "${strings.follow}: ${PixivApiErrorFormatter.format(e, strings)}"
                         followError = err
                         toastMessage = ToastData(err, ToastType.Error)
                     }
