@@ -12,8 +12,6 @@ import com.arkivanov.decompose.Cancellation
 import com.arkivanov.decompose.defaultComponentContext
 import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
-import com.perol.pixez.shared.data.local.DriverFactory
-import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.platform.BrowserLauncherContext
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -50,10 +48,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         BrowserLauncherContext.applicationContext = applicationContext
-        dependencies = AppDependencies(
-            driverFactory = DriverFactory(applicationContext),
-            settingsFactory = SettingsFactory(applicationContext),
-        )
+        // 依赖容器由 PixEzApplication.onCreate 构建、随进程常驻，Activity 仅消费，
+        // 重建（字体缩放等配置变化）时不再创建新容器。
+        dependencies = PixEzApplication.dependencies
         dependencies.warmupAsync(lifecycleScope)
         rootComponent = RootComponent(
             componentContext = defaultComponentContext(),
@@ -207,12 +204,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        // 栈订阅先于依赖关闭取消，避免销毁期间栈状态回调引用已关闭的依赖。
+        // 栈订阅随 Activity 销毁取消，避免销毁期间栈状态回调引用已销毁的 Activity。
         stackSubscription?.cancel()
-        // 先释放数据库与网络资源，再调用 super.onDestroy()，避免 Activity 销毁期间句柄泄漏。
-        if (::dependencies.isInitialized) {
-            dependencies.close()
-        }
+        // 依赖容器已迁至 PixEzApplication 随进程常驻，Activity 销毁不再 close：
+        // 避免重建窗口内（字体缩放等未覆盖 configChanges 的配置变化）网络与数据库资源被误关，
+        // 导致进程存活期间后台协程经 orNull() 拿到资源已关闭的容器而静默失败。
         super.onDestroy()
     }
 }

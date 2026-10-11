@@ -38,7 +38,8 @@ import kotlinx.coroutines.launch
 /**
  * 应用级依赖容器。
  *
- * 在平台入口（Android Activity / Desktop main）中创建，并通过 [App] 传递到 UI 层。
+ * 在平台入口（Android Application / Desktop main）中创建，并通过 [App] 传递到 UI 层。
+ * Android 端容器随进程常驻，不随 Activity 销毁关闭。
  * 负责集中管理数据库驱动、网络客户端、Repository 等生命周期较长的对象。
  */
 class AppDependencies(
