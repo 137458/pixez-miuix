@@ -14,8 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -26,7 +24,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -36,7 +33,8 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -66,61 +64,45 @@ internal fun UserWorksTab(
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
+    // retryCount 自增（错误重试 / 下拉刷新）触发重新加载。
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
 
-    val state = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        userId,
-        retryCount,
-        banRepository,
-        settingsRepository.filterChangeVersion,
-    ) {
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId) }
-        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
+    // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState，替代原 produceState + remember(key)
+    // 桥接的手写状态机（报告点名的第三种写法）。状态机以 userId 为 remember key。
+    val listState = remember(userId) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getUserIllustsResponse(userId, nextUrl = nextUrl)
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
     }
-
-    var illusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
-    var nextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(state.value) {
-        state.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            illusts = initialIllusts
-            nextUrl = initialNextUrl
-            isLoadingMore = false
-            loadMoreError = null
-        }
+    // retryCount 自增走强制刷新（等价原 produceState 重跑总是重新请求）；tab 保持组合复用与
+    // 首次进入时 loadFirst 缓存早退不重拉；filterChangeVersion 变化仅本地重过滤（高-3 语义）。
+    LaunchedEffect(userId, retryCount, settingsRepository.filterChangeVersion) {
+        if (listState.refilterIfChanged()) return@LaunchedEffect
+        listState.loadFirst(force = retryCount > 0)
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getUserIllustsResponse(userId, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                    illusts = illusts.appendDistinct(filtered)
-                    nextUrl = response.nextUrl
-                }
-                .onFailure { error ->
-                    loadMoreError = error
-                }
-            isLoadingMore = false
+            listState.loadMore()
         }
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
 
     IllustTabBody(
-        state = state.value,
-        illusts = illusts,
-        hasMore = nextUrl != null,
-        isLoadingMore = isLoadingMore,
-        loadMoreError = loadMoreError,
+        illusts = listState.filteredIllusts,
+        initialError = listState.initialError,
+        hasMore = listState.nextUrl != null,
+        isLoadingMore = listState.isLoadingMore,
+        loadMoreError = listState.loadMoreError,
         header = header,
         gridState = gridState,
         onLoadMore = ::loadMore,
@@ -164,105 +146,47 @@ internal fun UserBookmarksTab(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // 公开收藏状态缓存
+    // 高-4c：公开/私密收藏各持一份 IllustPagedListState（替代原两份 produceState + 桥接状态机）。
+    // 原加载一次标志（loadedOnce）由「仅激活当前 tab + loadFirst 缓存早退」自然承担。
     var publicRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    var publicLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedRestrictIndex == 0) }
-    LaunchedEffect(selectedRestrictIndex) {
-        if (selectedRestrictIndex == 0) publicLoadedOnce = true
+    val publicState = remember(userId) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getUserBookmarksResponse(userId, "public", nextUrl = nextUrl)
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
     }
-    val publicState = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        userId,
-        publicRetryCount,
-        publicLoadedOnce,
-        banRepository,
-        settingsRepository.filterChangeVersion,
-    ) {
-        if (!publicLoadedOnce) return@produceState
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public") }
-        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
-    }
-    var publicIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
-    var publicNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
-    var publicIsLoadingMore by remember { mutableStateOf(false) }
-    var publicLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
-
-    LaunchedEffect(publicState.value) {
-        publicState.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            publicIllusts = initialIllusts
-            publicNextUrl = initialNextUrl
-            publicIsLoadingMore = false
-            publicLoadMoreError = null
-        }
-    }
-
-    // 私密收藏状态缓存
     var privateRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    var privateLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedRestrictIndex == 1) }
-    LaunchedEffect(selectedRestrictIndex) {
-        if (selectedRestrictIndex == 1) privateLoadedOnce = true
+    val privateState = remember(userId) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getUserBookmarksResponse(userId, "private", nextUrl = nextUrl)
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
     }
-    val privateState = produceState<Result<Pair<List<Illust>, String?>>?>(
-        initialValue = null,
-        userId,
-        privateRetryCount,
-        privateLoadedOnce,
-        banRepository,
-        settingsRepository.filterChangeVersion,
-    ) {
-        if (!privateLoadedOnce) return@produceState
-        val illustsResult = suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private") }
-        value = illustsResult.map { banRepository.filterIllustsBySettings(it.illusts, settingsRepository) to it.nextUrl }
-    }
-    var privateIllusts by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf(listOf<Illust>()) }
-    var privateNextUrl by remember(userId, settingsRepository.filterChangeVersion) { mutableStateOf<String?>(null) }
-    var privateIsLoadingMore by remember { mutableStateOf(false) }
-    var privateLoadMoreError by remember { mutableStateOf<Throwable?>(null) }
 
-    LaunchedEffect(privateState.value) {
-        privateState.value?.onSuccess { (initialIllusts, initialNextUrl) ->
-            privateIllusts = initialIllusts
-            privateNextUrl = initialNextUrl
-            privateIsLoadingMore = false
-            privateLoadMoreError = null
-        }
+    // 仅加载当前选中 tab（未选中保持空，lazy）；切回已加载 tab 时 loadFirst 缓存早退；
+    // 各自 retryCount 自增走强制刷新（等价原 produceState 重跑）；filterChangeVersion 变化时
+    // 当前 tab 本地重过滤（高-3 语义），未选中 tab 在下次选中时经 refilterIfChanged 补上。
+    LaunchedEffect(selectedRestrictIndex, publicRetryCount, privateRetryCount, settingsRepository.filterChangeVersion) {
+        val isPublic = selectedRestrictIndex == 0
+        val activeState = if (isPublic) publicState else privateState
+        val activeRetryCount = if (isPublic) publicRetryCount else privateRetryCount
+        if (activeState.refilterIfChanged()) return@LaunchedEffect
+        activeState.loadFirst(force = activeRetryCount > 0)
     }
 
     fun loadMore() {
-        if (selectedRestrictIndex == 0) {
-            val currentNextUrl = publicNextUrl ?: return
-            if (publicIsLoadingMore) return
-            coroutineScope.launch {
-                publicIsLoadingMore = true
-                publicLoadMoreError = null
-                suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "public", nextUrl = currentNextUrl) }
-                    .onSuccess { response ->
-                        val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                        publicIllusts = publicIllusts.appendDistinct(filtered)
-                        publicNextUrl = response.nextUrl
-                    }
-                    .onFailure { error ->
-                        publicLoadMoreError = error
-                    }
-                publicIsLoadingMore = false
-            }
-        } else {
-            val currentNextUrl = privateNextUrl ?: return
-            if (privateIsLoadingMore) return
-            coroutineScope.launch {
-                privateIsLoadingMore = true
-                privateLoadMoreError = null
-                suspendRunCatchingNonCancel { repository.getUserBookmarksResponse(userId, "private", nextUrl = currentNextUrl) }
-                    .onSuccess { response ->
-                        val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                        privateIllusts = privateIllusts.appendDistinct(filtered)
-                        privateNextUrl = response.nextUrl
-                    }
-                    .onFailure { error ->
-                        privateLoadMoreError = error
-                    }
-                privateIsLoadingMore = false
-            }
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
+        val activeState = if (selectedRestrictIndex == 0) publicState else privateState
+        coroutineScope.launch {
+            activeState.loadMore()
         }
     }
 
@@ -279,18 +203,14 @@ internal fun UserBookmarksTab(
     }
 
     val isPublic = selectedRestrictIndex == 0
-    val currentState = if (isPublic) publicState.value else privateState.value
-    val currentIllusts = if (isPublic) publicIllusts else privateIllusts
-    val currentHasMore = if (isPublic) publicNextUrl != null else privateNextUrl != null
-    val currentIsLoadingMore = if (isPublic) publicIsLoadingMore else privateIsLoadingMore
-    val currentLoadMoreError = if (isPublic) publicLoadMoreError else privateLoadMoreError
+    val activeState = if (isPublic) publicState else privateState
 
     IllustTabBody(
-        state = currentState,
-        illusts = currentIllusts,
-        hasMore = currentHasMore,
-        isLoadingMore = currentIsLoadingMore,
-        loadMoreError = currentLoadMoreError,
+        illusts = activeState.filteredIllusts,
+        initialError = activeState.initialError,
+        hasMore = activeState.nextUrl != null,
+        isLoadingMore = activeState.isLoadingMore,
+        loadMoreError = activeState.loadMoreError,
         header = bookmarkHeader,
         gridState = gridState,
         onLoadMore = ::loadMore,
@@ -317,11 +237,14 @@ internal fun UserBookmarksTab(
 /**
  * Tab 内容通用容器：处理加载 / 空态 / 错误 / 列表展示。
  * 即使处于加载态或错误态，头部信息（UserProfileHeader + TabRow）始终保持常驻展示，避免全屏闪烁。
+ *
+ * 三态由 [illusts] 与 [initialError] 表达：illusts == null && initialError == null 为加载中，
+ * illusts == null && initialError != null 为失败，否则为已加载（含空列表）。
  */
 @Composable
 internal fun IllustTabBody(
-    state: Result<Pair<List<Illust>, String?>>?,
-    illusts: List<Illust>,
+    illusts: List<Illust>?,
+    initialError: Throwable?,
     hasMore: Boolean,
     isLoadingMore: Boolean,
     loadMoreError: Throwable?,
@@ -337,7 +260,7 @@ internal fun IllustTabBody(
     onRefresh: () -> Unit = {},
 ) {
     when {
-        state == null -> {
+        illusts == null && initialError == null -> {
             PullToRefresh(
                 isRefreshing = isRefreshing,
                 onRefresh = onRefresh,
@@ -380,75 +303,74 @@ internal fun IllustTabBody(
                 }
             }
         }
-        state.isSuccess -> {
-            if (illusts.isEmpty() && !isLoadingMore) {
-                PullToRefresh(
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = topPadding),
-                    topAppBarScrollBehavior = scrollBehavior,
+        illusts != null && illusts.isEmpty() && !isLoadingMore -> {
+            PullToRefresh(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = topPadding),
+                topAppBarScrollBehavior = scrollBehavior,
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = topPadding + 8.dp,
+                        end = 8.dp,
+                        bottom = LocalBottomBarContentPadding.current,
+                    ),
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            start = 8.dp,
-                            top = topPadding + 8.dp,
-                            end = 8.dp,
-                            bottom = LocalBottomBarContentPadding.current,
-                        ),
-                    ) {
-                        if (header != null) {
-                            item(
-                                key = "empty_tab_header",
-                                contentType = "grid_custom_header",
-                            ) {
-                                header()
-                            }
-                        }
+                    if (header != null) {
                         item(
-                            key = "empty_placeholder_item",
-                            contentType = "empty_placeholder",
+                            key = "empty_tab_header",
+                            contentType = "grid_custom_header",
                         ) {
-                            EmptyPlaceholder(
-                                message = emptyText,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 32.dp),
-                            )
+                            header()
                         }
                     }
+                    item(
+                        key = "empty_placeholder_item",
+                        contentType = "empty_placeholder",
+                    ) {
+                        EmptyPlaceholder(
+                            message = emptyText,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                        )
+                    }
                 }
-            } else {
-                PullToRefresh(
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = topPadding),
-                    topAppBarScrollBehavior = scrollBehavior,
-                ) {
-                    IllustStaggeredGrid(
-                        illusts = illusts,
-                        onIllustClick = onIllustClick,
-                        state = gridState,
-                        header = header,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            start = 8.dp,
-                            top = topPadding + 8.dp,
-                            end = 8.dp,
-                            bottom = LocalBottomBarContentPadding.current,
-                        ),
-                        hasMore = hasMore,
-                        isLoadingMore = isLoadingMore,
-                        loadMoreError = loadMoreError,
-                        onLoadMore = onLoadMore,
-                    )
-                }
+            }
+        }
+        illusts != null -> {
+            PullToRefresh(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = topPadding),
+                topAppBarScrollBehavior = scrollBehavior,
+            ) {
+                IllustStaggeredGrid(
+                    illusts = illusts,
+                    onIllustClick = onIllustClick,
+                    state = gridState,
+                    header = header,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = topPadding + 8.dp,
+                        end = 8.dp,
+                        bottom = LocalBottomBarContentPadding.current,
+                    ),
+                    hasMore = hasMore,
+                    isLoadingMore = isLoadingMore,
+                    loadMoreError = loadMoreError,
+                    onLoadMore = onLoadMore,
+                )
             }
         }
         else -> {
@@ -483,7 +405,7 @@ internal fun IllustTabBody(
                         contentType = "error_placeholder",
                     ) {
                         ErrorPlaceholder(
-                            error = state.exceptionOrNull(),
+                            error = initialError,
                             onRetry = onRetry,
                             modifier = Modifier
                                 .fillMaxWidth()
