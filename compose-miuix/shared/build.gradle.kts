@@ -31,8 +31,23 @@ kotlin {
     }
 
     sourceSets {
+        val commonMain by getting
         val desktopMain by getting
         val desktopTest by getting
+        val androidMain by getting
+
+        // 高-7：Android 与 Desktop 双端同为 JVM，RobustDohDns（含熔断）与连接池/client 构建逻辑
+        // 收敛到本中间源集，双端能力对齐；平台差异（桌面端系统代理探测）由 actual 注入。
+        // iOS（Darwin 引擎自管 DNS）不含本源集。
+        val jvmShared by creating
+        jvmShared.dependsOn(commonMain)
+        androidMain.dependsOn(jvmShared)
+        desktopMain.dependsOn(jvmShared)
+
+        jvmShared.dependencies {
+            implementation(libs.okhttp.dnsoverhttps)
+            implementation(libs.ktor.client.okhttp)
+        }
 
         commonMain.dependencies {
             // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
