@@ -22,10 +22,12 @@ class NovelHistoryRepository(
     /**
      * 查询小说浏览历史，按时间升序排列。
      *
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     *
      * @param limit 最大返回条数，默认 1000，与插画历史导出上限语义统一。
      */
-    fun getAll(limit: Long = 1000L): List<NovelHistoryItem> {
-        return queries.selectAll(limit).executeAsList().map { it.toNovelHistoryItem() }
+    suspend fun getAll(limit: Long = 1000L): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
+        queries.selectAll(limit).executeAsList().map { it.toNovelHistoryItem() }
     }
 
     /**

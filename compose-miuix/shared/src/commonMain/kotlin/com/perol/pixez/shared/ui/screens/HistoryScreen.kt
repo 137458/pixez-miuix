@@ -36,9 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,14 +95,14 @@ fun HistoryScreen(
     var isProcessing by remember { mutableStateOf(false) }
 
     // 异步加载全部历史记录；以 refreshToken 作为 key 实现刷新。
-    // 数据库查询切到 IO 调度器，避免阻塞主线程。
+    // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
     val historyResult = produceState<Result<List<HistoryItem>>?>(
         initialValue = null,
         repository,
         refreshToken,
     ) {
         value = suspendRunCatchingNonCancel {
-            withContext(Dispatchers.Default) { repository.getAll() }
+            repository.getAll()
         }
     }
 
@@ -240,8 +238,8 @@ fun HistoryScreen(
                         coroutineScope.launch {
                             try {
                                 suspendRunCatchingNonCancel {
-                                    // 数据库清空是同步写操作，切到后台调度器避免阻塞主线程。
-                                    withContext(Dispatchers.Default) { repository.clearAll() }
+                                    // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
+                                    repository.clearAll()
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {
@@ -272,8 +270,8 @@ fun HistoryScreen(
                         coroutineScope.launch {
                             try {
                                 suspendRunCatchingNonCancel {
-                                    // 数据库删除是同步写操作，切到后台调度器避免阻塞主线程。
-                                    withContext(Dispatchers.Default) { repository.deleteById(deleteId) }
+                                    // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
+                                    repository.deleteById(deleteId)
                                 }
                                     .onSuccess { refreshToken++ }
                                     .onFailure {

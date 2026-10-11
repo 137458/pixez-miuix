@@ -31,9 +31,7 @@ import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
@@ -102,11 +100,11 @@ fun DataExportScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    // 执行一次导出/导入：IO 调度器执行文件与仓库操作，结果回主线程以 Toast 呈现
+    // 执行一次导出/导入：仓库与文件 IO 均已在下层切换调度器，结果回主线程以 Toast 呈现
     suspend fun performOperation(operation: PendingOperation, path: String) {
         isProcessing = true
         try {
-            val result = withContext(Dispatchers.Default) {
+            val result =
                 if (operation.action == Action.Export) {
                     performExport(
                         operation.type,
@@ -128,7 +126,6 @@ fun DataExportScreen(
                         json,
                     )
                 }
-            }
             val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
             val typeStr = operation.type.title(strings)
             if (result.isSuccess) {

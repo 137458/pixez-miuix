@@ -9,6 +9,8 @@ import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
@@ -116,7 +118,8 @@ internal suspend fun performExport(
             json.encodeToString(MuteData.serializer(), data)
         }
     }
-    writeExportFile(path, content).getOrThrow()
+    // 阻塞式文件写入切到 IO 调度器执行，避免占用调用方线程。
+    withContext(Dispatchers.IO) { writeExportFile(path, content) }.getOrThrow()
 }
 
 /**
@@ -136,35 +139,35 @@ internal suspend fun performImport(
     try {
         when (type) {
             DataType.SearchTagHistory -> {
-                val content = readExportFile(path).getOrThrow()
+                val content = readImportFile(path)
                 val list = json.decodeFromString(ListSerializer(String.serializer()), content)
                 val validated = validateImportedStringList(list, "searchHistory")
                 settingsRepository.setStringList(SettingsKeys.SEARCH_HISTORY, validated)
             }
 
             DataType.BookTags -> {
-                val content = readExportFile(path).getOrThrow()
+                val content = readImportFile(path)
                 val list = json.decodeFromString(ListSerializer(String.serializer()), content)
                 val validated = validateImportedStringList(list, "bookTags")
                 settingsRepository.bookTagList = validated
             }
 
             DataType.IllustHistory -> {
-                val content = readExportFile(path).getOrThrow()
+                val content = readImportFile(path)
                 val list = json.decodeFromString(ListSerializer(HistoryItem.serializer()), content)
                 val validated = validateHistoryItems(list)
                 historyRepository.replaceAll(validated)
             }
 
             DataType.NovelHistory -> {
-                val content = readExportFile(path).getOrThrow()
+                val content = readImportFile(path)
                 val list = json.decodeFromString(ListSerializer(NovelHistoryItem.serializer()), content)
                 val validated = validateNovelItems(list)
                 novelHistoryRepository.replaceAll(validated)
             }
 
             DataType.MuteData -> {
-                val content = readExportFile(path).getOrThrow()
+                val content = readImportFile(path)
                 val data = json.decodeFromString(MuteData.serializer(), content)
                 val validated = validateMuteData(data)
                 muteRepository.importMuteData(validated)
@@ -188,6 +191,12 @@ private suspend inline fun <T> suspendRunCatching(crossinline block: suspend () 
     } catch (e: Throwable) {
         Result.failure(e)
     }
+
+/**
+ * 阻塞式文件读取切到 IO 调度器执行，避免占用调用方线程；结果语义与直接调用 [readExportFile] 一致。
+ */
+private suspend fun readImportFile(path: String): String =
+    withContext(Dispatchers.IO) { readExportFile(path).getOrThrow() }
 
 /**
  * 校验导入的字符串列表：条数与每条内容的长度、字符集。
