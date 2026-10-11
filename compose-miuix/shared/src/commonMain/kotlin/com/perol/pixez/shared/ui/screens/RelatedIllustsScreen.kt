@@ -21,19 +21,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -65,53 +63,42 @@ fun RelatedIllustsScreen(
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember(illustId) { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
-    var initialError by remember(illustId) { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
+    // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState。状态机以作品 ID 为 remember key：
+    // 切换作品时整体重建。原手写状态机（报告点名的无守卫副本）无 generation 守卫，
+    // 迁移后翻页/刷新竞态由状态机内部 generation 守卫承担。
+    val listState = remember(illustId) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getIllustRelatedResponse(illustId, nextUrl = nextUrl)
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
+    }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
-    // 作品 ID 变更、重试或手动刷新时重新加载关联作品
+    // 作品 ID 变更、重试或手动刷新时重新加载关联作品；过滤条件变化仅本地重过滤（高-3）。
     LaunchedEffect(illustId, retryCount, settingsRepository.filterChangeVersion) {
         val force = isManualRefreshing
-        if (illustsState == null) {
-            initialError = null
+        if (!force && listState.refilterIfChanged()) return@LaunchedEffect
+        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
+            return@LaunchedEffect
         }
-        val illustsResult = suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId) }
+        val previous = listState.filteredIllusts
+        listState.loadFirst(force = force)
         isManualRefreshing = false
-        illustsResult.onSuccess { response ->
-            illustsState = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-            nextUrl = response.nextUrl
-            initialError = null
-            loadMoreError = null
-            if (force && gridState.firstVisibleItemIndex > 0) {
-                gridState.scrollToItem(0)
-            }
-        }.onFailure { error ->
-            if (illustsState == null) {
-                initialError = error
-            }
+        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；force 刷新成功后滚回顶部。
+        val current = listState.filteredIllusts
+        if (current != null && current !== previous && force && gridState.firstVisibleItemIndex > 0) {
+            gridState.scrollToItem(0)
         }
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getIllustRelatedResponse(illustId, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                    nextUrl = response.nextUrl
-                }
-                .onFailure { error ->
-                    loadMoreError = error
-                }
-            isLoadingMore = false
+            listState.loadMore()
         }
     }
 
@@ -163,15 +150,15 @@ fun RelatedIllustsScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val currentIllusts = illustsState
+            val currentIllusts = listState.filteredIllusts
             when {
-                currentIllusts == null && initialError == null -> LoadingPlaceholder(
+                currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                currentIllusts == null && initialError != null -> ErrorPlaceholder(
-                    error = initialError,
+                currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+                    error = listState.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -206,9 +193,9 @@ fun RelatedIllustsScreen(
                                     end = 8.dp,
                                     bottom = LocalBottomBarContentPadding.current,
                                 ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
+                                hasMore = listState.nextUrl != null,
+                                isLoadingMore = listState.isLoadingMore,
+                                loadMoreError = listState.loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
                         }
