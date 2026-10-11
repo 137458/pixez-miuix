@@ -35,7 +35,7 @@ import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -49,23 +49,19 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.LocalBackdrop
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 首页/推荐页：顶部标题栏 + 真实推荐插画瀑布流。
@@ -248,71 +244,62 @@ fun HelloScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-                scrollBehavior = scrollBehavior,
+        title = strings.tabRecommend,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        actions = {
+            IconButton(
+                onClick = triggerManualRefresh,
             ) {
-                TopAppBar(
-                    title = strings.tabRecommend,
-                    scrollBehavior = scrollBehavior,
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    actions = {
-                        IconButton(
-                            onClick = triggerManualRefresh,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                        if (isLoggedIn == false) {
-                            IconButton(
-                                onClick = onLoginClick,
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.Contacts,
-                                    contentDescription = strings.goLogin,
-                                )
-                            }
-                        }
-                        if (isLoggedIn == true) {
-                            IconButton(
-                                onClick = onRecomUserClick,
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.AddCircle,
-                                    contentDescription = strings.recomUserTitle,
-                                )
-                            }
-                            val currentUser = user
-                            val targetUserId = currentUser?.userId?.toLongOrNull()
-                            if (currentUser != null && targetUserId != null) {
-                                IconButton(
-                                    onClick = { onUserClick(targetUserId) },
-                                ) {
-                                    PixivAsyncImage(
-                                        model = currentUser.userImage,
-                                        contentDescription = strings.myProfile,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape),
-                                    )
-                                }
-                            }
-                        }
-                        IconButton(
-                            onClick = onSettingsClick,
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Settings,
-                                contentDescription = strings.tabSettings,
-                            )
-                        }
-                    },
+                Icon(
+                    imageVector = MiuixIcons.Refresh,
+                    contentDescription = strings.refresh,
+                )
+            }
+            if (isLoggedIn == false) {
+                IconButton(
+                    onClick = onLoginClick,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Contacts,
+                        contentDescription = strings.goLogin,
+                    )
+                }
+            }
+            if (isLoggedIn == true) {
+                IconButton(
+                    onClick = onRecomUserClick,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.AddCircle,
+                        contentDescription = strings.recomUserTitle,
+                    )
+                }
+                val currentUser = user
+                val targetUserId = currentUser?.userId?.toLongOrNull()
+                if (currentUser != null && targetUserId != null) {
+                    IconButton(
+                        onClick = { onUserClick(targetUserId) },
+                    ) {
+                        PixivAsyncImage(
+                            model = currentUser.userImage,
+                            contentDescription = strings.myProfile,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape),
+                        )
+                    }
+                }
+            }
+            IconButton(
+                onClick = onSettingsClick,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Settings,
+                    contentDescription = strings.tabSettings,
                 )
             }
         },
