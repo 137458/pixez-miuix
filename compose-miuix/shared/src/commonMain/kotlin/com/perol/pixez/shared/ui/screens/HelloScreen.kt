@@ -29,10 +29,10 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.state.FilterableIllustListState
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -113,60 +113,65 @@ fun HelloScreen(
 
     // 过滤被屏蔽作品与画师
     // 统一 UI 状态机（单向数据流 UDF），首帧优先取内存缓存，防止退出详情页返回时白屏闪烁与列表位置重置。
-    // 高-3：拆「原始列表 / 过滤后列表」双状态，过滤为展示期派生，filterChangeVersion 变化时仅本地重过滤。
+    // 高-4b：分页/竞态/加载态收敛到 IllustPagedListState（RankingScreen 版 generation 守卫），
+    // 过滤链仍为高-3「原始/过滤」双列表本地重过滤。登录态由 fetch 闭包动态读取；
+    // 首页 forceRefresh 依赖 forceNextFetch 标志：loadFirst 不透传 force 给 fetch，
+    // 以同一协程内先写后读保持原 getRecommendedResponse(forceRefresh = force) 语义。
+    var forceNextFetch by remember { mutableStateOf(false) }
     val listState = remember {
-        FilterableIllustListState(
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                if (isLoggedIn == true) {
+                    val response = repository.getRecommendedResponse(
+                        nextUrl = nextUrl,
+                        forceRefresh = forceNextFetch,
+                    )
+                    IllustPagedPage(response.illusts, response.nextUrl)
+                } else {
+                    // 未登录 walkthrough 匿名推荐无分页：nextUrl 恒为 null。
+                    val response = repository.getWalkthroughResponse(forceRefresh = forceNextFetch)
+                    IllustPagedPage(response.illusts, null)
+                }
+            },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            initialFilterVersion = settingsRepository.filterChangeVersion,
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
         ).also { state ->
-            repository.activeRecommendedIllusts?.let(state::restore)
+            repository.activeRecommendedIllusts?.let { cached ->
+                state.restore(cached, repository.activeRecommendedNextUrl)
+            }
         }
     }
-    var nextUrl by remember { mutableStateOf<String?>(repository.activeRecommendedNextUrl) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // 加载或刷新推荐插画数据
     LaunchedEffect(isLoggedIn, retryCount, settingsRepository.filterChangeVersion) {
-        val loggedIn = isLoggedIn ?: return@LaunchedEffect
+        // 登录态未检测完成（null）时不发起加载；登录分支在 fetch 闭包内动态读取。
+        if (isLoggedIn == null) return@LaunchedEffect
         val force = isManualRefreshing
         // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
-        if (!force &&
-            initialError == null &&
-            listState.refilterIfChanged(settingsRepository.filterChangeVersion)
-        ) {
-            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), nextUrl)
+        if (!force && listState.refilterIfChanged()) {
+            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), listState.nextUrl)
             return@LaunchedEffect
         }
-        if (!force && listState.filteredIllusts != null && initialError == null) {
+        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        if (listState.filteredIllusts == null) {
-            initialError = null
-        }
-        val responseResult = when (loggedIn) {
-            true -> suspendRunCatchingNonCancel { repository.getRecommendedResponse(forceRefresh = force) }
-                .map { it.illusts to it.nextUrl }
-            false -> suspendRunCatchingNonCancel { repository.getWalkthroughResponse(forceRefresh = force) }
-                .map { it.illusts to (null as String?) }
-        }
+        val previous = listState.filteredIllusts
+        forceNextFetch = force
+        listState.loadFirst(force = force)
+        forceNextFetch = false
+        // 对齐原实现：请求结束（成功或失败）即复位手动刷新指示；协程被取消时到不了此处，
+        // 指示保留并由下一轮 force 刷新复位（与原 isManualRefreshing 语义一致）。
         isManualRefreshing = false
-        responseResult.onSuccess { (rawIllusts, initialNextUrl) ->
-            listState.replace(rawIllusts, settingsRepository.filterChangeVersion)
-            nextUrl = initialNextUrl
-            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), initialNextUrl)
-            initialError = null
-            loadMoreError = null
+        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入，对齐 RankingScreen 版守卫）；
+        // 成功才同步跨页缓存并复位滚动位置。
+        val current = listState.filteredIllusts
+        if (current != null && current !== previous) {
+            repository.updateRecommendedFeed(current, listState.nextUrl)
             if (force && gridState.firstVisibleItemIndex > 0) {
                 gridState.scrollToItem(0)
-            }
-        }.onFailure { error ->
-            if (listState.filteredIllusts == null) {
-                initialError = error
             }
         }
     }
@@ -184,22 +189,14 @@ fun HelloScreen(
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            val nextResult = suspendRunCatchingNonCancel {
-                repository.getRecommendedResponse(nextUrl = currentNextUrl)
+            val previous = listState.filteredIllusts
+            listState.loadMore()
+            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写跨页缓存。
+            val current = listState.filteredIllusts
+            if (current != null && current !== previous) {
+                repository.updateRecommendedFeed(current, listState.nextUrl)
             }
-            nextResult.onSuccess { response ->
-                listState.append(response.illusts, settingsRepository.filterChangeVersion)
-                nextUrl = response.nextUrl
-                repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), response.nextUrl)
-            }.onFailure { error ->
-                loadMoreError = error
-            }
-            isLoadingMore = false
         }
     }
 
@@ -317,9 +314,9 @@ fun HelloScreen(
         ) {
             val currentIllusts = listState.filteredIllusts
             when {
-                currentIllusts == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                currentIllusts == null && initialError != null -> ErrorPlaceholder(
-                    error = initialError,
+                currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+                    error = listState.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -354,9 +351,9 @@ fun HelloScreen(
                                     end = 8.dp,
                                     bottom = bottomBarPadding,
                                 ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
+                                hasMore = listState.nextUrl != null,
+                                isLoadingMore = listState.isLoadingMore,
+                                loadMoreError = listState.loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
                         }

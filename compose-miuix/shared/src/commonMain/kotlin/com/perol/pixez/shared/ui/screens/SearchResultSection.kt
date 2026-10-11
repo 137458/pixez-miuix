@@ -2,8 +2,8 @@
  * 搜索页结果区（由 SearchScreen 拆分而来）。
  *
  * 包含作品搜索结果瀑布流、画师搜索结果列表，以及日期筛选的防抖工具函数。
- * 各子组件自带完整的请求状态机（加载 / 错误 / 分页），状态声明保留在各自组件内部，
- * 由 SearchScreen 通过参数下发查询条件与列表状态。
+ * 作品结果的分页/竞态/加载态收敛到共享状态机 IllustPagedListState（架构审查 高-4b），
+ * 画师结果仍自带完整请求状态机，由 SearchScreen 通过参数下发查询条件与列表状态。
  */
 
 package com.perol.pixez.shared.ui.screens
@@ -47,6 +47,8 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -128,13 +130,35 @@ internal fun SearchIllustResultGrid(
         return res
     }
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var illustsState by remember { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    var requestGeneration by remember { mutableIntStateOf(0) }
+    // 高-4b：分页/竞态/加载态收敛到 IllustPagedListState（RankingScreen 版 generation 守卫），
+    // 过滤链为高-3「原始/过滤」双列表本地重过滤。状态机以查询条件为 remember key：
+    // 分类/关键词/排序/筛选条件变化时整体重建（等价原实现的清空重载：illustsState = null + 重新请求），
+    // 分类切换语义不变；retryCount 重试与 filterChangeVersion 本地重过滤复用同一实例。
+    val listState = remember(
+        searchWord,
+        sort,
+        searchTarget,
+        searchAiType,
+        effectiveStartDate,
+        effectiveEndDate,
+    ) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.searchIllustResponse(
+                    word = searchWord,
+                    sort = sort,
+                    searchTarget = searchTarget,
+                    searchAiType = searchAiType,
+                    startDate = effectiveStartDate,
+                    endDate = effectiveEndDate,
+                    nextUrl = nextUrl,
+                )
+                IllustPagedPage(response.illusts, response.nextUrl)
+            },
+            filter = { raw -> banRepository.filterIllustsBySettings(raw, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
+    }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(
@@ -147,81 +171,29 @@ internal fun SearchIllustResultGrid(
         retryCount,
         settingsRepository.filterChangeVersion,
     ) {
-        requestGeneration++
-        val generation = requestGeneration
-        illustsState = null
-        nextUrl = null
-        initialError = null
-        loadMoreError = null
-        isLoadingMore = false
-        val searchResult = suspendRunCatchingNonCancel {
-            repository.searchIllustResponse(
-                word = searchWord,
-                sort = sort,
-                searchTarget = searchTarget,
-                searchAiType = searchAiType,
-                startDate = effectiveStartDate,
-                endDate = effectiveEndDate,
-            )
-        }
-        searchResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                illustsState = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration) {
-                initialError = error
-            }
-        }
+        // 过滤条件变化且已持有原始列表时仅本地重过滤（高-3 语义，零网络，替代原实现的全量重请求）；
+        // 查询条件变化时状态机已随 remember key 重建，此处走首屏加载；retryCount 变化时走重试。
+        if (listState.refilterIfChanged()) return@LaunchedEffect
+        listState.loadFirst()
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        val generation = requestGeneration
-        if (isLoadingMore) return
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel {
-                repository.searchIllustResponse(
-                    word = searchWord,
-                    sort = sort,
-                    searchTarget = searchTarget,
-                    searchAiType = searchAiType,
-                    startDate = effectiveStartDate,
-                    endDate = effectiveEndDate,
-                    nextUrl = currentNextUrl,
-                )
-            }.onSuccess { response ->
-                if (generation == requestGeneration) {
-                    val filtered = banRepository.filterIllustsBySettings(response.illusts, settingsRepository)
-                    illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                    nextUrl = response.nextUrl
-                }
-            }.onFailure { error ->
-                if (generation == requestGeneration) {
-                    loadMoreError = error
-                }
-            }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
+            listState.loadMore()
         }
     }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val currentIllusts = illustsState
+    val currentIllusts = listState.filteredIllusts
     when {
-        currentIllusts == null && initialError == null -> LoadingPlaceholder(
+        currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(effectiveContentPadding),
         )
-        currentIllusts == null && initialError != null -> ErrorPlaceholder(
-            error = initialError,
+        currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+            error = listState.initialError,
             onRetry = { retryCount++ },
             modifier = Modifier
                 .fillMaxSize()
@@ -231,9 +203,9 @@ internal fun SearchIllustResultGrid(
             val filteredIllusts = remember(currentIllusts, ugoiraFilter, ratioFilter) {
                 applyClientFilters(currentIllusts, ugoiraFilter, ratioFilter)
             }
-            if (filteredIllusts.isEmpty() && !isLoadingMore) {
-                if (nextUrl != null) {
-                    LaunchedEffect(filteredIllusts.isEmpty(), nextUrl) {
+            if (filteredIllusts.isEmpty() && !listState.isLoadingMore) {
+                if (listState.nextUrl != null) {
+                    LaunchedEffect(filteredIllusts.isEmpty(), listState.nextUrl) {
                         loadMore()
                     }
                     Box(
@@ -269,9 +241,9 @@ internal fun SearchIllustResultGrid(
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = effectiveContentPadding,
-                    hasMore = nextUrl != null,
-                    isLoadingMore = isLoadingMore,
-                    loadMoreError = loadMoreError,
+                    hasMore = listState.nextUrl != null,
+                    isLoadingMore = listState.isLoadingMore,
+                    loadMoreError = listState.loadMoreError,
                     onLoadMore = ::loadMore,
                 )
             }
