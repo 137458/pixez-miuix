@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Rect
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
@@ -187,7 +188,7 @@ fun RootContent(
                     .fillMaxSize()
                     .background(MiuixTheme.colorScheme.surface),
             ) {
-                val isWideScreen = maxWidth >= 600.dp
+                val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
                 val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
                 val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
                 val activeTab by component.selectedTab.collectAsState()

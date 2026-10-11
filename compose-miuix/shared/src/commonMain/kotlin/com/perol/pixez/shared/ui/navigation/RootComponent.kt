@@ -66,6 +66,18 @@ class RootComponent(
     }
 
     /**
+     * 指定标签的再选中事件流：仅当 [tab] 被再次选中时发射 [Unit]，
+     * 供该标签页消费以实现回顶与刷新。
+     * 统一在此构造过滤流，避免各标签页各自手写 flow 包装。
+     */
+    fun reselectFlowOf(tab: MainTab): kotlinx.coroutines.flow.Flow<Unit> =
+        kotlinx.coroutines.flow.flow {
+            tabReselectEvents.collect { event ->
+                if (event == tab) emit(Unit)
+            }
+        }
+
+    /**
      * 底部标签切换：驱动 Pager 切换或回退至主界面。
      *
      * 若当前在二级页面，先将栈重置为主页；
