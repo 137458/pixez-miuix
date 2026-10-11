@@ -20,20 +20,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.IllustPagedListState
+import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -68,70 +66,48 @@ fun IllustSeriesScreen(
 
     val strings = LocalStrings.current
 
-    // 统一 UI 状态机（单向数据流 UDF）
+    // 系列 ID 变更时重建状态机并重置标题；翻页响应不含标题更新。
     var seriesTitle by remember(seriesId) { mutableStateOf("") }
-    var illustsState by remember(seriesId) { mutableStateOf<List<Illust>?>(null) }
-    var nextUrl by remember(seriesId) { mutableStateOf<String?>(null) }
-    var initialError by remember(seriesId) { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    // 请求代次守卫：刷新/切系列后，在途旧请求的结果不得写回新数据源（写法同 RankingScreen）。
-    var requestGeneration by remember(seriesId) { mutableIntStateOf(0) }
+    // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
+    // 过滤链为高-3「原始/过滤」双列表本地重过滤。系列标题在 fetch 闭包内仅于首页请求（nextUrl == null）
+    // 时更新：切系列时 remember(seriesId) 重建闭包，旧闭包写入的是旧 State 对象，不污染新页面。
+    val listState = remember(seriesId) {
+        IllustPagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getIllustSeriesResponse(seriesId, nextUrl = nextUrl)
+                if (nextUrl == null) {
+                    seriesTitle = response.illustSeriesDetail?.title ?: ""
+                }
+                IllustPagedPage(response.illusts.orEmpty(), response.nextUrl)
+            },
+            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
+            filterVersionProvider = { settingsRepository.filterChangeVersion },
+        )
+    }
     val coroutineScope = rememberCoroutineScope()
     val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
 
-    // 系列 ID 变更、重试或手动刷新时重新加载作品
+    // 系列 ID 变更、重试或手动刷新时重新加载作品；过滤条件变化仅本地重过滤（高-3）。
     LaunchedEffect(seriesId, retryCount, settingsRepository.filterChangeVersion) {
-        val generation = ++requestGeneration
         val force = isManualRefreshing
-        // 使在途旧 loadMore 的结果失配后被拒绝；复位加载态避免其卡死阻塞新列表分页。
-        isLoadingMore = false
-        if (illustsState == null) {
-            initialError = null
+        if (!force && listState.refilterIfChanged()) return@LaunchedEffect
+        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
+            return@LaunchedEffect
         }
-        val seriesResult = suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId) }
+        val previous = listState.filteredIllusts
+        listState.loadFirst(force = force)
         isManualRefreshing = false
-        seriesResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                seriesTitle = response.illustSeriesDetail?.title ?: ""
-                illustsState = banRepository.filterIllustsBySettings(response.illusts.orEmpty(), settingsRepository)
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-                if (force && gridState.firstVisibleItemIndex > 0) {
-                    gridState.scrollToItem(0)
-                }
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration && illustsState == null) {
-                initialError = error
-            }
+        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；force 刷新成功后滚回顶部。
+        val current = listState.filteredIllusts
+        if (current != null && current !== previous && force && gridState.firstVisibleItemIndex > 0) {
+            gridState.scrollToItem(0)
         }
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
+        // 无下一页、在途与竞态守卫均由状态机内部处理。
         coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getIllustSeriesResponse(seriesId, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        val filtered = banRepository.filterIllustsBySettings(response.illusts.orEmpty(), settingsRepository)
-                        illustsState = (illustsState.orEmpty()).appendDistinct(filtered)
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
+            listState.loadMore()
         }
     }
 
@@ -181,15 +157,15 @@ fun IllustSeriesScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
-            val currentIllusts = illustsState
+            val currentIllusts = listState.filteredIllusts
             when {
-                currentIllusts == null && initialError == null -> LoadingPlaceholder(
+                currentIllusts == null && listState.initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
-                currentIllusts == null && initialError != null -> ErrorPlaceholder(
-                    error = initialError,
+                currentIllusts == null && listState.initialError != null -> ErrorPlaceholder(
+                    error = listState.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -224,9 +200,9 @@ fun IllustSeriesScreen(
                                     end = 8.dp,
                                     bottom = LocalBottomBarContentPadding.current,
                                 ),
-                                hasMore = nextUrl != null,
-                                isLoadingMore = isLoadingMore,
-                                loadMoreError = loadMoreError,
+                                hasMore = listState.nextUrl != null,
+                                isLoadingMore = listState.isLoadingMore,
+                                loadMoreError = listState.loadMoreError,
                                 onLoadMore = ::loadMore,
                             )
                         }
