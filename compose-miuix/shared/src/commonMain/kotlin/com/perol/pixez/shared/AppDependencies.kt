@@ -31,6 +31,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import com.perol.pixez.shared.network.createUpdateCheckClient
+import com.perol.pixez.shared.platform.installErrorLogAntilog
 import com.perol.pixez.shared.platform.isDebugBuild
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
@@ -50,9 +51,14 @@ class AppDependencies(
     init {
         currentInstance = this
         runCatching {
-            // 仅 debug 构建安装全量日志；release 不安装 Antilog（日志整体关闭），
-            // 叠加 PixivHttpClient 的错误响应体截断，避免敏感信息进入线上日志。
+            // debug 构建安装全量控制台日志；release 不安装（整体关闭）。
             if (isDebugBuild) Napier.base(DebugAntilog())
+            // 错误级落盘（架构审查 中-12，裁决 2026-10-11）：W/E 级经 ErrorLogSanitizer 红线脱敏
+            // （不落 Authorization/token/完整 URL/用户标识）后写入平台日志目录滚动文件（5MB×3），
+            // 仅落私有目录、不自动外发。debug/release 二选一（实施步骤 2）由 androidMain actual
+            // 按 isDebugBuild 执行（debug 仅 DebugAntilog 不落盘）；desktop 由 pixez.debug 属性判定，
+            // 默认 release 态发布 EXE 无控制台、落盘为唯一可观测通道，debug 态与 DebugAntilog 双通道。
+            installErrorLogAntilog()
         }
     }
 

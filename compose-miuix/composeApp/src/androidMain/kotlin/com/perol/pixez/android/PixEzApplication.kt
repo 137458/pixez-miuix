@@ -20,10 +20,32 @@ class PixEzApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         BrowserLauncherContext.applicationContext = this
+        installCrashLogHandler()
         container = AppDependencies(
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
         )
+    }
+
+    /**
+     * 顶层未捕获异常兜底（架构审查 中-12，对齐 desktop main.kt 的 crash-*.log 行为）：
+     * 崩溃信息经红线脱敏后落盘 errorLogDirectory()（filesDir/logs，与错误级日志同目录），
+     * 随后交还系统原有 handler 维持默认崩溃流程。
+     */
+    private fun installCrashLogHandler() {
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            runCatching {
+                com.perol.pixez.shared.platform.errorLogDirectory()?.let { directory ->
+                    com.perol.pixez.shared.platform.ErrorLogFiles.writeCrashLog(
+                        logDirectory = java.io.File(directory),
+                        threadName = thread.name,
+                        throwable = throwable,
+                    )
+                }
+            }
+            previousHandler?.uncaughtException(thread, throwable)
+        }
     }
 
     companion object {
