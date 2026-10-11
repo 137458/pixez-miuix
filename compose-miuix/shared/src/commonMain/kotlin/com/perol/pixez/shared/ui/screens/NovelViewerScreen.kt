@@ -42,6 +42,7 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -189,7 +190,9 @@ fun NovelViewerScreen(
                         // 在浏览器中打开
                         IconButton(
                             onClick = {
-                                com.perol.pixez.shared.platform.openBrowser(AppConstants.Urls.pixivNovelUrl(novelId))
+                                openSafeUrl(AppConstants.Urls.pixivNovelUrl(novelId), strings, onError = { message ->
+                                    toastMessage = ToastData(message, ToastType.Error)
+                                })
                             },
                         ) {
                             Icon(

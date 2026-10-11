@@ -18,10 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.UserDetail
-import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -31,6 +33,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * 用户详情页头部资料区：头像与账号、关注按钮、关注数/粉丝数与外部链接、个性签名。
  *
  * 纯展示组件，所有状态均由 [UserDetailTabContent] 以参数形式传入，自身不持有任何状态。
+ *
+ * @param onToast 外链打开失败等操作结果提示回调，由调用方给出显式 [ToastData]
  */
 @Composable
 internal fun UserProfileHeader(
@@ -43,8 +47,14 @@ internal fun UserProfileHeader(
     onFollowerListClick: () -> Unit,
     modifier: Modifier = Modifier,
     onIllustClick: (Long) -> Unit = {},
+    onToast: (ToastData) -> Unit = {},
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+
+    // 外部链接（Twitter/Pawoo/主页/简介内链接）统一经 scheme 白名单打开，失败提示由宿主 Toast 承载。
+    val openExternalUrl: (String) -> Unit = { url ->
+        openSafeUrl(url, strings, onError = { message -> onToast(ToastData(message, ToastType.Error)) })
+    }
 
     Column(
         modifier = modifier
@@ -135,7 +145,7 @@ internal fun UserProfileHeader(
                     color = MiuixTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { runCatching { openBrowser(url) } }
+                        .clickable { openExternalUrl(url) }
                         .padding(vertical = 2.dp),
                 )
             }
@@ -146,7 +156,7 @@ internal fun UserProfileHeader(
                     color = MiuixTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { runCatching { openBrowser(url) } }
+                        .clickable { openExternalUrl(url) }
                         .padding(vertical = 2.dp),
                 )
             }
@@ -157,7 +167,7 @@ internal fun UserProfileHeader(
                     color = MiuixTheme.colorScheme.primary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { runCatching { openBrowser(url) } }
+                        .clickable { openExternalUrl(url) }
                         .padding(vertical = 2.dp),
                 )
             }
@@ -168,6 +178,7 @@ internal fun UserProfileHeader(
             HtmlCaptionText(
                 html = bio,
                 onIllustClick = onIllustClick,
+                onLinkClick = openExternalUrl,
                 style = MiuixTheme.textStyles.footnote2,
                 color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                 collapsible = true,

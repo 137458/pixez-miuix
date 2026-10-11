@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.defaultUpdateCheckClient
-import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.ToastData
@@ -55,6 +54,7 @@ import com.perol.pixez.shared.ui.effect.BgEffectBackground
 import com.perol.pixez.shared.ui.effect.isRuntimeShaderSupported
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.formatFileSize
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -275,7 +275,11 @@ fun UpdateSettingScreen(
                                     }
                                 }
                             } else {
-                                releaseInfo?.releaseUrl?.let { openBrowser(it) }
+                                releaseInfo?.releaseUrl?.let { url ->
+                                    openSafeUrl(url, strings, onError = { message ->
+                                        toastMessage = ToastData(message, ToastType.Error)
+                                    })
+                                }
                             }
                         }
                         ChangelogCardSection(
@@ -339,7 +343,9 @@ fun UpdateSettingScreen(
                             }
                         },
                         onGithubClick = {
-                            openBrowser(AppConstants.Urls.GITHUB_RELEASES)
+                            openSafeUrl(AppConstants.Urls.GITHUB_RELEASES, strings, onError = { message ->
+                                toastMessage = ToastData(message, ToastType.Error)
+                            })
                         },
                         onOs3EffectChange = { isOs3Effect = it },
                     )
@@ -357,7 +363,9 @@ fun UpdateSettingScreen(
                 onDismiss = { showDialog = false },
                 onUpdate = { url ->
                     showDialog = false
-                    openBrowser(url)
+                    openSafeUrl(url, strings, onError = { message ->
+                        toastMessage = ToastData(message, ToastType.Error)
+                    })
                 },
                 onIgnore = { ver ->
                     coroutineScope.launch {

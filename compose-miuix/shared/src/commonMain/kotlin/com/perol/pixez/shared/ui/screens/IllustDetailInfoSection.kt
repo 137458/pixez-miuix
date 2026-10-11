@@ -300,6 +300,7 @@ internal fun IllustDetailCaptionCard(
     onIllustSeriesClick: (Long) -> Unit,
     onNovelClick: ((Long) -> Unit)?,
     onTagClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
     Card(
@@ -326,6 +327,7 @@ internal fun IllustDetailCaptionCard(
                 onIllustSeriesClick = onIllustSeriesClick,
                 onNovelClick = onNovelClick,
                 onTagClick = onTagClick,
+                onLinkClick = onLinkClick,
                 style = MiuixTheme.textStyles.body2,
             )
         }

@@ -292,7 +292,7 @@ internal fun IllustDetailMoreMenuShareActions(
         text = strings.openInBrowser,
         onClick = {
             onDismiss()
-            com.perol.pixez.shared.platform.openBrowser(buildIllustShareLink(illust))
+            openSafeUrl(buildIllustShareLink(illust), strings, onError = { onToast(ToastData(it, ToastType.Error)) })
         },
     )
     Box(

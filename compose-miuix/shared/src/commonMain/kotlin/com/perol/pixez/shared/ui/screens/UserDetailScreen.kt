@@ -217,6 +217,7 @@ fun UserDetailScreen(
             onIllustClick = onIllustClick,
             onRefresh = triggerManualRefresh,
             toastMessage = toastMessage,
+            onToast = { toastMessage = it },
             onToastDismiss = { toastMessage = null },
         )
     }
@@ -350,6 +351,7 @@ private fun UserDetailContent(
     onIllustClick: (Long) -> Unit,
     onRefresh: () -> Unit,
     toastMessage: ToastData?,
+    onToast: (ToastData) -> Unit,
     onToastDismiss: () -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
@@ -384,6 +386,7 @@ private fun UserDetailContent(
                     scrollBehavior = scrollBehavior,
                     isRefreshing = isManualRefreshing,
                     onRefresh = onRefresh,
+                    onToast = onToast,
                 )
             }
             else -> ErrorPlaceholder(
@@ -423,6 +426,7 @@ private fun UserDetailTabContent(
     scrollBehavior: ScrollBehavior,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    onToast: (ToastData) -> Unit = {},
 ) {
     val strings = LocalStrings.current
     var selectedTabIndex by rememberSaveable(userId, initialTab) { mutableIntStateOf(initialTab) }
@@ -466,6 +470,7 @@ private fun UserDetailTabContent(
             onFollowListClick = onFollowListClick,
             onFollowerListClick = onFollowerListClick,
             onIllustClick = onIllustClick,
+            onToast = onToast,
             tabs = tabs,
             selectedTabIndex = selectedTabIndex,
             onTabSelected = { selectedTabIndex = it },
@@ -546,6 +551,7 @@ private fun UserDetailTabHeader(
     onFollowListClick: () -> Unit,
     onFollowerListClick: () -> Unit,
     onIllustClick: (Long) -> Unit,
+    onToast: (ToastData) -> Unit,
     tabs: List<String>,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
@@ -562,6 +568,7 @@ private fun UserDetailTabHeader(
             onFollowListClick = onFollowListClick,
             onFollowerListClick = onFollowerListClick,
             onIllustClick = onIllustClick,
+            onToast = onToast,
         )
         TabRow(
             tabs = tabs,

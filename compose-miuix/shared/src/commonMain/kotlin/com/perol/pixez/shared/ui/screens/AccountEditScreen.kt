@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
@@ -325,12 +325,9 @@ fun AccountEditScreen(
                 DeletionConfirmBar(
                     onConfirm = {
                         showDeletionConfirm = false
-                        try {
-                            openBrowser(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT)
-                        } catch (e: Exception) {
-                            toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
-                            Napier.e("打开账号注销页面失败", e)
-                        }
+                        openSafeUrl(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT, strings, onError = { message ->
+                            toastMessage = ToastData(message, ToastType.Error)
+                        })
                     },
                     onCancel = { showDeletionConfirm = false },
                     modifier = Modifier.align(Alignment.BottomCenter),

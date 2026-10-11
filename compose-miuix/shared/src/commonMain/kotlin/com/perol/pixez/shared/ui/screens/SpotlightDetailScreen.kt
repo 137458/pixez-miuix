@@ -51,11 +51,14 @@ import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
-import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -90,6 +93,9 @@ fun SpotlightDetailScreen(
     val strings = LocalStrings.current
     var retryKey by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
+    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
+    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val showErrorToast: (String) -> Unit = { toastMessage = ToastData(it, ToastType.Error) }
 
     // 使用已有的内存缓存初始化，避免从画作详情返回时触发页面闪烁与重新请求
     val state = produceState<Result<SpotlightDetail>?>(
@@ -136,7 +142,7 @@ fun SpotlightDetailScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { openBrowser(article.articleUrl) }) {
+                        IconButton(onClick = { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) }) {
                             Icon(
                                 imageVector = MiuixIcons.More,
                                 contentDescription = strings.openInBrowser,
@@ -283,7 +289,7 @@ fun SpotlightDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { openBrowser(article.articleUrl) },
+                                    .clickable { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) },
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -334,7 +340,7 @@ fun SpotlightDetailScreen(
                         modifier = Modifier.padding(bottom = 16.dp),
                     )
                     Button(
-                        onClick = { openBrowser(article.articleUrl) },
+                        onClick = { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) },
                         modifier = Modifier.padding(horizontal = 32.dp),
                     ) {
                         Text(strings.viewOriginalArticle)
@@ -342,6 +348,11 @@ fun SpotlightDetailScreen(
                 }
             }
         }
+
+        ToastMessage(
+            toast = toastMessage,
+            onDismiss = { toastMessage = null },
+        )
     }
 }
 }

@@ -59,6 +59,7 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
 import top.yukonga.miuix.kmp.basic.Button
@@ -542,6 +543,10 @@ private fun IllustDetailContentList(
                         onIllustSeriesClick = onIllustSeriesClick,
                         onNovelClick = onNovelClick,
                         onTagClick = onTagClick,
+                        onLinkClick = { url ->
+                            // 简介为外部不可信输入，外链统一过 scheme 白名单，失败经页面 Toast 反馈。
+                            openSafeUrl(url, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
+                        },
                     )
                 }
             }

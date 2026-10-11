@@ -58,11 +58,14 @@ import com.perol.pixez.shared.ui.navigation.RootComponent.Child
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.data.settings.LocalSettingsRepository
-import com.perol.pixez.shared.platform.openBrowser
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastMessage
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.screens.ReleaseInfo
 import com.perol.pixez.shared.ui.screens.fetchLatestReleaseInfo
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -135,6 +138,8 @@ fun RootContent(
 
     var appReleaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
     var showAppUpdateDialog by remember { mutableStateOf(false) }
+    // 根级 Toast：承载更新链接等外链打开失败提示（页面内提示由各页面自持）。
+    var rootToastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     LaunchedEffect(Unit) {
         if (settingsRepository.autoCheckUpdate) {
@@ -175,7 +180,9 @@ fun RootContent(
                     onDismiss = { showAppUpdateDialog = false },
                     onUpdate = { url ->
                         showAppUpdateDialog = false
-                        openBrowser(url)
+                        openSafeUrl(url, strings, onError = { message ->
+                            rootToastMessage = ToastData(message, ToastType.Error)
+                        })
                     },
                     onIgnore = { ver ->
                         settingsRepository.ignoreUpdateVersion = ver
@@ -268,6 +275,12 @@ fun RootContent(
                         )
                     }
                 }
+
+                // 根级 Toast：承载更新链接等外链打开失败提示（无页面级反馈通道的场景）。
+                ToastMessage(
+                    toast = rootToastMessage,
+                    onDismiss = { rootToastMessage = null },
+                )
             }
         }
     }

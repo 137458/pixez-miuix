@@ -45,10 +45,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -249,13 +249,10 @@ fun LoginScreen(
                         Button(
                             colors = ButtonDefaults.buttonColorsPrimary(),
                             onClick = {
-                                try {
-                                    openBrowser(accountRepository.loginUrl())
-                                    errorMessage = ""
-                                } catch (e: Exception) {
-                                    errorMessage = "${strings.openInBrowser}: ${PixivApiErrorFormatter.format(e, strings)}"
-                                    Napier.e("打开登录浏览器失败", e)
-                                }
+                                errorMessage = ""
+                                openSafeUrl(accountRepository.loginUrl(), strings, onError = { message ->
+                                    errorMessage = "${strings.openInBrowser}: $message"
+                                })
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -269,13 +266,10 @@ fun LoginScreen(
                                 color = MiuixTheme.colorScheme.surfaceContainerHigh,
                             ),
                             onClick = {
-                                try {
-                                    openBrowser(accountRepository.loginUrl(create = true))
-                                    errorMessage = ""
-                                } catch (e: Exception) {
-                                    errorMessage = "${strings.openInBrowser}: ${PixivApiErrorFormatter.format(e, strings)}"
-                                    Napier.e("打开创建账号浏览器失败", e)
-                                }
+                                errorMessage = ""
+                                openSafeUrl(accountRepository.loginUrl(create = true), strings, onError = { message ->
+                                    errorMessage = "${strings.openInBrowser}: $message"
+                                })
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -443,11 +437,9 @@ fun LoginScreen(
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.primary,
                         modifier = Modifier.clickable {
-                            try {
-                                openBrowser(AppConstants.Urls.PIXIV_TERMS)
-                            } catch (e: Exception) {
-                                Napier.e("打开服务条款失败", e)
-                            }
+                            openSafeUrl(AppConstants.Urls.PIXIV_TERMS, strings, onError = { message ->
+                                errorMessage = "${strings.openInBrowser}: $message"
+                            })
                         },
                     )
                     Text(
@@ -460,11 +452,9 @@ fun LoginScreen(
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.primary,
                         modifier = Modifier.clickable {
-                            try {
-                                openBrowser(AppConstants.Urls.PIXIV_PRIVACY)
-                            } catch (e: Exception) {
-                                Napier.e("打开隐私政策失败", e)
-                            }
+                            openSafeUrl(AppConstants.Urls.PIXIV_PRIVACY, strings, onError = { message ->
+                                errorMessage = "${strings.openInBrowser}: $message"
+                            })
                         },
                     )
                 }

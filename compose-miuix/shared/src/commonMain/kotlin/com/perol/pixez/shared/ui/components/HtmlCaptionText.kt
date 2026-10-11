@@ -29,7 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -48,7 +47,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  *    - 插画系列：`pixiv://series/{id}`、`pixiv.net/user/{uid}/series/{id}` 等 -> [onIllustSeriesClick]
  *    - 小说详情：`pixiv://novels/{id}`、`pixiv.net/novel/show.php?id={id}` 等 -> [onNovelClick]
  *    - 标签搜索：`pixiv://tags/{tag}`、`pixiv.net/tags/{tag}` 等 -> [onTagClick]
- *    - 外部 Web URL -> 调用 [onLinkClick]（默认 [openBrowser]）
+ *    - 外部 Web URL -> 调用 [onLinkClick]（无默认实现，由调用方显式传入；简介为外部不可信输入，
+ *      调用方应经 [com.perol.pixez.shared.ui.utils.openSafeUrl] 做 scheme 白名单校验后再打开）
  * 6. 支持长文案折叠/展开与文本框长按选取复制（[SelectionContainer]）。
  */
 @Composable
@@ -60,7 +60,7 @@ fun HtmlCaptionText(
     onIllustSeriesClick: ((Long) -> Unit)? = null,
     onNovelClick: ((Long) -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
-    onLinkClick: (String) -> Unit = { openBrowser(it) },
+    onLinkClick: (String) -> Unit,
     style: TextStyle = MiuixTheme.textStyles.body2,
     color: Color = MiuixTheme.colorScheme.onSurface,
     linkColor: Color = MiuixTheme.colorScheme.primary,
@@ -206,7 +206,7 @@ internal fun handleCaptionLink(
     onIllustSeriesClick: ((Long) -> Unit)? = null,
     onNovelClick: ((Long) -> Unit)? = null,
     onTagClick: ((String) -> Unit)? = null,
-    onLinkClick: (String) -> Unit = { openBrowser(it) },
+    onLinkClick: (String) -> Unit,
 ) {
     val cleanUrl = unwrapPixivJumpUrl(url.trim())
 
