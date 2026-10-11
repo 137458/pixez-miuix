@@ -19,6 +19,7 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent.Child
+import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
 import com.perol.pixez.shared.ui.screens.AccountManageScreen
@@ -83,6 +84,9 @@ import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
 internal fun MainContent(
     initialTab: RootComponent.MainTab,
     component: RootComponent,
+    // 高-5：跨页恢复容器，由 createChild 在 Main child 组件初始化时接线（consume/register
+    // 只执行一次）；快照存原始 ID 列表，恢复经仓库 illustsCache 回查。
+    feedRestore: MainFeedRestore,
     illustRepository: IllustRepository,
     searchRepository: SearchRepository,
     userRepository: UserRepository,
@@ -153,6 +157,7 @@ internal fun MainContent(
                 accountRepository = accountRepository,
                 banRepository = banRepository,
                 settingsRepository = settingsRepository,
+                feedRestore = feedRestore.hello,
                 reselectFlow = remember(component) {
                     component.reselectFlowOf(RootComponent.MainTab.Hello)
                 },
@@ -171,6 +176,7 @@ internal fun MainContent(
                 repository = illustRepository,
                 banRepository = banRepository,
                 settingsRepository = settingsRepository,
+                feedRestore = feedRestore.ranking,
             )
 
             RootComponent.MainTab.New -> NewScreen(

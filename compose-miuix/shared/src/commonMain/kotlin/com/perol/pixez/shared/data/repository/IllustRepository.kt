@@ -29,7 +29,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
 import kotlin.concurrent.Volatile
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -50,70 +49,18 @@ class IllustRepository(
 
     private val illustsCache = ThreadSafeLruCache<Long, Illust>(500)
 
-    /** 跨页恢复的视图数据：UI 过滤后的作品列表与下一页 URL。 */
-    private data class ActiveFeed(
-        val illusts: List<Illust>,
-        val nextUrl: String?,
-    )
-
-    private val activeRecommendedFeed = MutableStateFlow<ActiveFeed?>(null)
-    private val activeRankingPages = MutableStateFlow<Map<String, ActiveFeed>>(emptyMap())
-
-    /** 排行跨页缓存的 key 容量上限，超出按 LRU 淘汰最久未用 key，防内存无界增长。 */
-    private companion object {
-        const val RANKING_CACHE_MAX_KEYS = 8
-    }
-
-    /** 推荐页跨页恢复列表快照（UI 过滤后），未记录时为 null。 */
-    val activeRecommendedIllusts: List<Illust>?
-        get() = activeRecommendedFeed.value?.illusts
-
-    /** 推荐页跨页恢复下一页 URL 快照，未记录时为 null。 */
-    val activeRecommendedNextUrl: String?
-        get() = activeRecommendedFeed.value?.nextUrl
-
     /**
-     * 记录推荐页跨页恢复数据（UI 过滤后的列表与下一页 URL）。
+     * 清空全部内存缓存（高-5 缓存清理缺失修复）：推荐/匿名推荐响应、插画 LRU、
+     * Spotlight 列表与详情 LRU 一并失效；跨页恢复快照自本版本起由 UI 层
+     * 恢复缓存承载（ui/state IllustFeedRestore / RankingFeedRestore），不再归仓库管理。
+     * 生产接入点为账号身份变化（AccountRepository.logout / switchAccount）。
      */
-    fun updateRecommendedFeed(filtered: List<Illust>, nextUrl: String?) {
-        activeRecommendedFeed.value = ActiveFeed(filtered, nextUrl)
-    }
-
-    /**
-     * 获取指定 key（mode_date）的排行页跨页恢复快照，未记录时为 null。
-     */
-    fun getCachedRankingPage(key: String): Pair<List<Illust>, String?>? =
-        activeRankingPages.value[key]?.let { it.illusts to it.nextUrl }
-
-    /**
-     * 记录指定 key（mode_date）的排行页跨页恢复数据；
-     * 同 key 重写视为最近使用，缓存超过 [RANKING_CACHE_MAX_KEYS] 个 key 时淘汰最久未用的 key。
-     */
-    fun updateRankingPage(key: String, list: List<Illust>, nextUrl: String?) {
-        activeRankingPages.value =
-            activeRankingPages.value.putRankingEntry(key, ActiveFeed(list, nextUrl))
-    }
-
-    /** 以写入序 LRU 语义返回插入后的新快照：重复 key 提升到最新，超限淘汰最旧 key。 */
-    private fun Map<String, ActiveFeed>.putRankingEntry(key: String, feed: ActiveFeed): Map<String, ActiveFeed> {
-        val next = LinkedHashMap<String, ActiveFeed>(size)
-        for ((existingKey, value) in this) {
-            if (existingKey != key) {
-                next[existingKey] = value
-            }
-        }
-        next[key] = feed
-        while (next.size > RANKING_CACHE_MAX_KEYS) {
-            next.remove(next.keys.first())
-        }
-        return next
-    }
-
-    fun clearMemoryCache() {
+    suspend fun clearMemoryCache() {
         cachedRecommendedResponse = null
         cachedWalkthroughResponse = null
-        activeRecommendedFeed.value = null
-        activeRankingPages.value = emptyMap()
+        illustsCache.clear()
+        spotlightArticlesCache.clear()
+        spotlightDetailCache.clear()
     }
 
     /**

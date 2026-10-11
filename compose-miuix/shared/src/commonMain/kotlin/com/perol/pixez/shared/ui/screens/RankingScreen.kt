@@ -34,6 +34,7 @@ import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -75,6 +76,7 @@ fun RankingScreen(
     repository: IllustRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    feedRestore: RankingFeedRestoreCache,
 ) {
     // 保存用户选择的排行榜模式，进程重建后恢复。
     var selectedMode by rememberSaveable { mutableStateOf(RankingMode.DAY) }
@@ -87,10 +89,13 @@ fun RankingScreen(
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
     val rankingCacheKey = "${selectedMode.code}_${selectedDate.orEmpty()}"
-    val cachedRanking = repository.getCachedRankingPage(rankingCacheKey)
+    // 高-5：跨页恢复快照来自 UI 层恢复缓存（随 Main child 的 InstanceKeeper 存活整个会话，
+    // 登录成功栈重置或进程死亡时释放；过期过滤结果由 restoreRaw 强制重过滤化解），只存原始
+    // ID 列表，经仓库 illustsCache 回查原始数据（LRU 淘汰项跳过；回源策略见架构审查待确认项）。
+    val cachedRanking = feedRestore.get(rankingCacheKey)
     // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
     // 过滤链仍为高-3「原始/过滤」双列表本地重过滤。状态机以榜单模式与日期为 remember key：
-    // 切换时整体重建（等价原实现的清空重载），并从仓库排行缓存恢复首屏快照与下一页 URL。
+    // 切换时整体重建（等价原实现的清空重载），并从恢复缓存快照回查恢复首屏原始列表与下一页 URL。
     val listState = remember(selectedMode, selectedDate) {
         IllustPagedListState(
             fetch = { nextUrl ->
@@ -104,7 +109,12 @@ fun RankingScreen(
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion },
         ).also { state ->
-            cachedRanking?.let { cached -> state.restore(cached.first, cached.second) }
+            cachedRanking?.let { snapshot ->
+                val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
+                if (snapshot.illustIds.isEmpty() || raw.isNotEmpty()) {
+                    state.restore(raw, snapshot.nextUrl)
+                }
+            }
         }
     }
     val coroutineScope = rememberCoroutineScope()
@@ -114,7 +124,7 @@ fun RankingScreen(
     LaunchedEffect(selectedMode, selectedDate, retryCount, settingsRepository.filterChangeVersion) {
         val force = isManualRefreshing
         if (!force && listState.refilterIfChanged()) {
-            repository.updateRankingPage(rankingCacheKey, listState.filteredIllusts.orEmpty(), listState.nextUrl)
+            // 本地重过滤不改变原始列表与下一页 URL，恢复快照无需更新。
             return@LaunchedEffect
         }
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
@@ -124,10 +134,10 @@ fun RankingScreen(
         listState.loadFirst(force = force)
         isManualRefreshing = false
         // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；
-        // 成功才同步跨页缓存并复位滚动位置。
-        val current = listState.filteredIllusts
-        if (current != null && current !== previous) {
-            repository.updateRankingPage(rankingCacheKey, current, listState.nextUrl)
+        // 成功才同步恢复快照（原始 ID 列表）并复位滚动位置。
+        val current = listState.rawIllusts
+        if (current != null && listState.filteredIllusts !== previous) {
+            feedRestore.update(rankingCacheKey, current, listState.nextUrl)
             if (force && gridState.firstVisibleItemIndex > 0) {
                 gridState.scrollToItem(0)
             }
@@ -138,10 +148,10 @@ fun RankingScreen(
         coroutineScope.launch {
             val previous = listState.filteredIllusts
             listState.loadMore()
-            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写跨页缓存。
-            val current = listState.filteredIllusts
-            if (current != null && current !== previous) {
-                repository.updateRankingPage(rankingCacheKey, current, listState.nextUrl)
+            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写恢复快照。
+            val current = listState.rawIllusts
+            if (current != null && listState.filteredIllusts !== previous) {
+                feedRestore.update(rankingCacheKey, current, listState.nextUrl)
             }
         }
     }

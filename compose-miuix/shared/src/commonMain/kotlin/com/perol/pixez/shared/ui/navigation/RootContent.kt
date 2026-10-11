@@ -559,6 +559,7 @@ private fun MainChildSection(
                     MainContent(
                         initialTab = instance.tab,
                         component = component,
+                        feedRestore = instance.feedRestore,
                         illustRepository = illustRepository,
                         searchRepository = searchRepository,
                         userRepository = userRepository,

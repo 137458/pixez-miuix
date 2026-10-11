@@ -31,6 +31,7 @@ import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
@@ -79,6 +80,7 @@ fun HelloScreen(
     accountRepository: AccountRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    feedRestore: IllustFeedRestoreCache,
     reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
     val strings = LocalStrings.current
@@ -112,11 +114,14 @@ fun HelloScreen(
     }
 
     // 过滤被屏蔽作品与画师
-    // 统一 UI 状态机（单向数据流 UDF），首帧优先取内存缓存，防止退出详情页返回时白屏闪烁与列表位置重置。
+    // 统一 UI 状态机（单向数据流 UDF），首帧优先取恢复快照，防止退出详情页返回时白屏闪烁与列表位置重置。
     // 高-4b：分页/竞态/加载态收敛到 IllustPagedListState（RankingScreen 版 generation 守卫），
     // 过滤链仍为高-3「原始/过滤」双列表本地重过滤。登录态由 fetch 闭包动态读取；
     // 首页 forceRefresh 依赖 forceNextFetch 标志：loadFirst 不透传 force 给 fetch，
     // 以同一协程内先写后读保持原 getRecommendedResponse(forceRefresh = force) 语义。
+    // 高-5：跨页恢复快照来自 UI 层恢复缓存（随 Main child 的 InstanceKeeper 存活整个会话，
+    // 登录成功栈重置或进程死亡时释放；过期过滤结果由 restoreRaw 强制重过滤化解），只存原始
+    // ID 列表，经仓库 illustsCache 回查原始数据（LRU 淘汰项跳过；回源策略见架构审查待确认项）。
     var forceNextFetch by remember { mutableStateOf(false) }
     val listState = remember {
         IllustPagedListState(
@@ -136,8 +141,11 @@ fun HelloScreen(
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion },
         ).also { state ->
-            repository.activeRecommendedIllusts?.let { cached ->
-                state.restore(cached, repository.activeRecommendedNextUrl)
+            feedRestore.snapshot?.let { snapshot ->
+                val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
+                if (snapshot.illustIds.isEmpty() || raw.isNotEmpty()) {
+                    state.restore(raw, snapshot.nextUrl)
+                }
             }
         }
     }
@@ -151,8 +159,8 @@ fun HelloScreen(
         if (isLoggedIn == null) return@LaunchedEffect
         val force = isManualRefreshing
         // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
+        // 本地重过滤不改变原始列表与下一页 URL，恢复快照无需更新。
         if (!force && listState.refilterIfChanged()) {
-            repository.updateRecommendedFeed(listState.filteredIllusts.orEmpty(), listState.nextUrl)
             return@LaunchedEffect
         }
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
@@ -166,10 +174,10 @@ fun HelloScreen(
         // 指示保留并由下一轮 force 刷新复位（与原 isManualRefreshing 语义一致）。
         isManualRefreshing = false
         // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入，对齐 RankingScreen 版守卫）；
-        // 成功才同步跨页缓存并复位滚动位置。
-        val current = listState.filteredIllusts
-        if (current != null && current !== previous) {
-            repository.updateRecommendedFeed(current, listState.nextUrl)
+        // 成功才同步恢复快照（原始 ID 列表）并复位滚动位置。
+        val current = listState.rawIllusts
+        if (current != null && listState.filteredIllusts !== previous) {
+            feedRestore.update(current, listState.nextUrl)
             if (force && gridState.firstVisibleItemIndex > 0) {
                 gridState.scrollToItem(0)
             }
@@ -192,10 +200,10 @@ fun HelloScreen(
         coroutineScope.launch {
             val previous = listState.filteredIllusts
             listState.loadMore()
-            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写跨页缓存。
-            val current = listState.filteredIllusts
-            if (current != null && current !== previous) {
-                repository.updateRecommendedFeed(current, listState.nextUrl)
+            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写恢复快照。
+            val current = listState.rawIllusts
+            if (current != null && listState.filteredIllusts !== previous) {
+                feedRestore.update(current, listState.nextUrl)
             }
         }
     }

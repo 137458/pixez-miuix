@@ -9,8 +9,16 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushToFront
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.instancekeeper.InstanceKeeper
+import com.arkivanov.essenty.instancekeeper.getOrCreateSimple
+import com.arkivanov.essenty.statekeeper.StateKeeper
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
+import com.perol.pixez.shared.ui.state.IllustFeedSnapshot
+import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
+import com.perol.pixez.shared.ui.state.RankingFeedSnapshot
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
 
@@ -426,7 +434,13 @@ class RootComponent(
         config: Config,
         componentContext: ComponentContext,
     ): Child = when (config) {
-        is Config.Main -> Child.Main(config.tab)
+        is Config.Main -> Child.Main(
+            tab = config.tab,
+            feedRestore = createMainFeedRestore(
+                stateKeeper = componentContext.stateKeeper,
+                instanceKeeper = componentContext.instanceKeeper,
+            ),
+        )
         is Config.IllustDetail -> Child.IllustDetail(config.illustId)
         is Config.UserDetail -> Child.UserDetail(config.userId, config.initialTab)
         is Config.SpotlightDetail -> Child.SpotlightDetail(config.article)
@@ -602,7 +616,12 @@ class RootComponent(
     }
 
     sealed class Child {
-        data class Main(val tab: MainTab) : Child()
+        /**
+         * 主页 child。高-5 起持有跨页恢复容器 [feedRestore]，在组件初始化（[createChild] 的
+         * 本分支）经 [createMainFeedRestore] 接线；Main 为栈底 child，实例随 child 的
+         * InstanceKeeper 存活整个会话（仅 onLoginSuccess 栈重置或进程死亡时随 child 释放）。
+         */
+        data class Main(val tab: MainTab, val feedRestore: MainFeedRestore) : Child()
         data class IllustDetail(val illustId: Long) : Child()
         data class UserDetail(val userId: Long, val initialTab: Int = 0) : Child()
         data class SpotlightDetail(val article: SpotlightArticle) : Child()
@@ -669,4 +688,42 @@ private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): Ro
         "setting" -> RootComponent.Config.Settings
         else -> RootComponent.Config.Main(RootComponent.MainTab.Hello)
     }
+}
+
+/** Main child 跨页恢复快照（高-5）的 stateKeeper / InstanceKeeper key。 */
+internal const val KEY_MAIN_HELLO_FEED = "key_main_hello_feed"
+internal const val KEY_MAIN_RANKING_FEED = "key_main_ranking_feed"
+
+/**
+ * Main child 跨页恢复接线（高-5）：consume / stateKeeper 注册 / InstanceKeeper 实例获取
+ * 全部在此完成，必须在 Main child 组件初始化（createChild 的 Config.Main 分支）调用一次。
+ * 禁止放入组合期 remember{}：栈动画换层会销毁重建组合，重复 register 同 key 会触发
+ * Essenty 2.5.0 的 IllegalStateException（"Another supplier is already registered"）。
+ *
+ * 两级恢复语义：InstanceKeeper 实例跨组合与 Activity 重建保留运行时快照；
+ * stateKeeper 快照（supplier 每次保存读取最新值）仅用于进程死亡恢复——以保存态注入
+ * [IllustFeedRestoreCache] / [RankingFeedRestoreCache] 初始值，恢复后经仓库 illustsCache
+ * 按 ID 回查原始数据。
+ */
+internal fun createMainFeedRestore(
+    stateKeeper: StateKeeper,
+    instanceKeeper: InstanceKeeper,
+): MainFeedRestore {
+    val helloSaved = stateKeeper.consume(KEY_MAIN_HELLO_FEED, IllustFeedSnapshot.serializer())
+    val hello = instanceKeeper.getOrCreateSimple(KEY_MAIN_HELLO_FEED) {
+        IllustFeedRestoreCache(helloSaved)
+    }
+    stateKeeper.register(KEY_MAIN_HELLO_FEED, IllustFeedSnapshot.serializer()) {
+        hello.snapshot
+    }
+
+    val rankingSaved = stateKeeper.consume(KEY_MAIN_RANKING_FEED, RankingFeedSnapshot.serializer())
+    val ranking = instanceKeeper.getOrCreateSimple(KEY_MAIN_RANKING_FEED) {
+        RankingFeedRestoreCache(rankingSaved?.pages.orEmpty())
+    }
+    stateKeeper.register(KEY_MAIN_RANKING_FEED, RankingFeedSnapshot.serializer()) {
+        RankingFeedSnapshot(pages = ranking.snapshot())
+    }
+
+    return MainFeedRestore(hello = hello, ranking = ranking)
 }

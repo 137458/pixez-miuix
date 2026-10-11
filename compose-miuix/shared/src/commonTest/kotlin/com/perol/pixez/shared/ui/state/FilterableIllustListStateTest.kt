@@ -137,6 +137,28 @@ class FilterableIllustListStateTest {
     }
 
     @Test
+    fun restoreRawForcesRefilterEvenWhenVersionUnchanged() = runTest {
+        val settings = FilterSettings()
+        val state = FilterableIllustListState(
+            filter = { raw -> settings.filter(raw) },
+            initialFilterVersion = 0,
+        )
+        // 跨页期间屏蔽设置已变化（长按屏蔽/ShieldScreen），回查得到的原始列表包含被屏项；
+        // 过滤版本号在恢复侧未变（仍是 0），恢复后下一轮检查也必须按当前设置重过滤。
+        settings.hideR18 = true
+        state.restoreRaw(listOf(illust(id = 7L), illust(id = 8L, xRestrict = 1)))
+
+        val refiltered = state.refilterIfChanged(filterVersion = 0)
+
+        assertTrue(refiltered, "恢复后即使版本号未变也必须重过滤一次（过滤版本可能在跨页期间已变化）")
+        assertEquals(listOf(7L), state.filteredIllusts?.map { it.id }, "跨页后返回列表，跨页期间屏蔽的项应消失")
+        assertEquals(listOf(7L, 8L), state.rawIllusts?.map { it.id })
+
+        // 重过滤完成后不再重复执行
+        assertFalse(state.refilterIfChanged(filterVersion = 0))
+    }
+
+    @Test
     fun restoreSnapshotKeepsRawForLaterRefilter() = runTest {
         val settings = FilterSettings()
         val state = FilterableIllustListState(
@@ -144,7 +166,7 @@ class FilterableIllustListStateTest {
             initialFilterVersion = 0,
         )
         val snapshot = listOf(illust(id = 7L), illust(id = 8L, xRestrict = 1))
-        state.restore(snapshot)
+        state.restoreRaw(snapshot)
         assertEquals(listOf(7L, 8L), state.rawIllusts?.map { it.id })
         assertEquals(listOf(7L, 8L), state.filteredIllusts?.map { it.id })
 

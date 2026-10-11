@@ -198,6 +198,8 @@ class AppDependencies(
             oAuthClient = httpClient.oAuthClient,
             tokenStorage = tokenStorage,
             accountClient = httpClient.accountClient,
+            // 高-5：账号身份变化（登出/切换账号）时清理作品内存缓存，防止跨账号读到旧缓存数据。
+            illustRepository = illustRepository,
         )
     }
 

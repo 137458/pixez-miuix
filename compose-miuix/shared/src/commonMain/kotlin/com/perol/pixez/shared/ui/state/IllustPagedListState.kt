@@ -138,11 +138,11 @@ class IllustPagedListState(
         filterable.refilterIfChanged(filterVersionProvider())
 
     /**
-     * 跨页恢复：以仓库快照（按旧设置过滤）同时作为原始与展示列表，并恢复下一页 URL，
-     * 待版本信号或刷新后重过滤。
+     * 跨页恢复（高-5）：快照按 ID 经仓库 illustsCache 回查得到的原始列表恢复，
+     * 并恢复下一页 URL；恢复后首轮 refilterIfChanged() 强制按当前过滤设置重过滤。
      */
     fun restore(illusts: List<Illust>, nextUrl: String?) {
-        filterable.restore(illusts)
+        filterable.restoreRaw(illusts)
         this.nextUrl = nextUrl
     }
 }

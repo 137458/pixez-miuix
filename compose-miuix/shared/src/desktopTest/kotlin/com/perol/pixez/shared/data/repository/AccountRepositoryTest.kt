@@ -5,7 +5,9 @@ import com.perol.pixez.shared.data.model.OAuthProfileImageUrls
 import com.perol.pixez.shared.data.model.OAuthUser
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.local.account.Account as AccountRow
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
+import com.russhwolf.settings.PreferencesSettings
 import com.perol.pixez.shared.network.OAuthClient
 import com.perol.pixez.shared.network.OAuthClient.PkcePair
 import io.ktor.client.HttpClient
@@ -25,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import org.junit.Before
+import java.util.prefs.Preferences
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -138,6 +141,7 @@ class AccountRepositoryTest {
     private lateinit var oauth: FakeOAuthClient
     private lateinit var storage: FakeTokenStorage
     private lateinit var repository: AccountRepository
+    private lateinit var illustRepository: IllustRepository
 
     private var capturedPath: String? = null
     private var editResponseBody: String = """{"error":false,"message":"","body":{"is_succeed":true,"validation_errors":{}}}"""
@@ -163,7 +167,13 @@ class AccountRepositoryTest {
                 }
             }
         }
-        repository = AccountRepository(oauth, storage, accountClient)
+        val settingsNode = Preferences.userRoot().node("com/perol/pixez/test/accountrepo/cache")
+        settingsNode.clear()
+        illustRepository = IllustRepository(
+            apiClient = HttpClient(),
+            settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
+        )
+        repository = AccountRepository(oauth, storage, accountClient, illustRepository)
     }
 
     private var capturedForm: Map<String, String> = emptyMap()
@@ -284,6 +294,61 @@ class AccountRepositoryTest {
         job.cancel()
         job2.cancel()
     }
+
+    @Test
+    fun `logout 清理作品内存缓存`() = runBlocking {
+        illustRepository.cacheIllust(cachedIllustFixture(301L))
+
+        repository.logout()
+
+        assertNull(illustRepository.getCachedIllust(301L), "登出必须失效作品内存缓存（高-5 缓存清理缺失修复）")
+    }
+
+    @Test
+    fun `switchAccount 清理作品内存缓存`() = runBlocking {
+        storage.rows.add(rowFixture("1"))
+        storage.rows.add(rowFixture("2"))
+        storage.activeUserId = "1"
+        illustRepository.cacheIllust(cachedIllustFixture(302L))
+
+        repository.switchAccount("2")
+
+        assertNull(illustRepository.getCachedIllust(302L), "切换账号必须失效作品内存缓存，防止跨账号读到旧收藏状态")
+    }
+
+    private fun cachedIllustFixture(id: Long): com.perol.pixez.shared.data.model.Illust =
+        com.perol.pixez.shared.data.model.Illust(
+            id = id,
+            title = "Illust $id",
+            type = "illust",
+            imageUrls = com.perol.pixez.shared.data.model.ImageUrls(squareMedium = "", medium = "", large = ""),
+            caption = "",
+            restrict = 0,
+            user = com.perol.pixez.shared.data.model.IllustUser(
+                id = 1L,
+                name = "Artist",
+                account = "artist",
+                profileImageUrls = com.perol.pixez.shared.data.model.IllustProfileImageUrls(medium = ""),
+            ),
+            tags = emptyList(),
+            tools = emptyList(),
+            createDate = "2026-10-11T00:00:00+09:00",
+            pageCount = 1,
+            width = 1000,
+            height = 1000,
+            sanityLevel = 2,
+            xRestrict = 0,
+            metaSinglePage = com.perol.pixez.shared.data.model.MetaSinglePage(originalImageUrl = ""),
+            metaPages = emptyList(),
+            totalView = 0,
+            totalBookmarks = 0,
+            isBookmarked = false,
+            visible = true,
+            isMuted = false,
+            totalComments = 0,
+            illustAIType = 0,
+            illustBookStyle = 0,
+        )
 
     private fun rowFixture(userId: String) = AccountRow(
         id = userId.toLong(),
