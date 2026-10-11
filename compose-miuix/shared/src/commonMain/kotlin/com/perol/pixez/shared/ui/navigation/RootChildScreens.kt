@@ -203,25 +203,25 @@ internal fun MainContent(
 
 @Composable
 internal fun renderIllustDetail(
-    instance: Config.IllustDetail,
-    component: RootComponent,
+    component: IllustDetailComponent,
     registry: RepositoryRegistry,
 ) {
     IllustDetailScreen(
-        illustId = instance.illustId,
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-        onCommentsClick = component::onCommentsClicked,
-        onRelatedIllustsClick = component::onRelatedIllustsClicked,
-        onIllustSeriesClick = component::onIllustSeriesClicked,
-        onTagClick = component::onSearchClicked,
+        illustId = component.illustId,
+        // Screen 的 onBack 为 () -> Unit，组件回调返回消费与否的 Boolean，此处丢弃返回值。
+        onBack = { component.onBack() },
+        onUserClick = component.onUserClick,
+        onCommentsClick = component.onCommentsClick,
+        onRelatedIllustsClick = component.onRelatedIllustsClick,
+        onIllustSeriesClick = component.onIllustSeriesClick,
+        onTagClick = component.onTagClick,
         repository = registry.illustRepository,
         bookmarkRepository = registry.bookmarkRepository,
         downloadRepository = registry.downloadRepository,
         banRepository = registry.banRepository,
         historyRepository = registry.historyRepository,
-        onIllustClick = component::onIllustClicked,
-        onNovelClick = component::onNovelClicked,
+        onIllustClick = component.onIllustClick,
+        onNovelClick = component.onNovelClick,
     )
 }
 

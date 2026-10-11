@@ -49,7 +49,11 @@ class RootComponent(
     lateinit var mainFeedRestore: MainFeedRestore
         private set
 
-    val stack: Value<ChildStack<Config, Config>> = childStack(
+    /**
+     * child 实例类型（中-6b 试点起为 Any）：作品详情页为 [IllustDetailComponent]，
+     * 其余页面维持平移后的 [Config] 本身（新页面按子 Component 范式接入，旧页面逐步迁移）。
+     */
+    val stack: Value<ChildStack<Config, Any>> = childStack(
         source = navigation,
         serializer = Config.serializer(),
         initialConfiguration = resolveWelcomePageConfig(settingsRepository),
@@ -443,18 +447,33 @@ class RootComponent(
     }
 
     /**
-     * childStack 工厂（中-6a）：Child 镜像删除后 child 实例即路由配置本身，直接透传；
+     * childStack 工厂（中-6a）：非试点页 child 实例仍为可序列化的 [Config] 本身，直接透传；
+     * 作品详情页（中-6b 试点）实例化为 [IllustDetailComponent]，注入根导航回调。
      * 仅保留 Main 分支的跨页恢复接线（高-5）——consume/register 必须在 child 的
      * ComponentContext 上执行且只执行一次（重复 register 同 key 会抛 IllegalStateException）。
      */
     private fun createChild(
         config: Config,
         componentContext: ComponentContext,
-    ): Config {
+    ): Any {
         if (config is Config.Main) {
             mainFeedRestore = createMainFeedRestore(
                 stateKeeper = componentContext.stateKeeper,
                 instanceKeeper = componentContext.instanceKeeper,
+            )
+        }
+        if (config is Config.IllustDetail) {
+            return IllustDetailComponent(
+                componentContext = componentContext,
+                config = config,
+                onBack = ::onBack,
+                onUserClick = ::onUserClicked,
+                onCommentsClick = ::onCommentsClicked,
+                onRelatedIllustsClick = ::onRelatedIllustsClicked,
+                onIllustSeriesClick = ::onIllustSeriesClicked,
+                onTagClick = ::onSearchClicked,
+                onIllustClick = ::onIllustClicked,
+                onNovelClick = ::onNovelClicked,
             )
         }
         return config

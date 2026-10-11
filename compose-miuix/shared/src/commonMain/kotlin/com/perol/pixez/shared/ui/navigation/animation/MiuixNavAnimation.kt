@@ -36,11 +36,12 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
  * @return 可直接交给 Children(animation = ...) 使用的 [StackAnimation]。
  */
 @OptIn(ExperimentalDecomposeApi::class)
-fun miuixSeekableStackAnimation(
+fun <C : Any, T : Any> miuixSeekableStackAnimation(
     registry: SharedBoundsRegistry,
     containerGeometry: () -> PageContainerGeometry,
-): StackAnimation<Config, Config> =
+): StackAnimation<C, T> =
     SeekableStackAnimation { child ->
+        // 路由参数只在 configuration 上（中-6b 起详情页 child 实例为子组件，不承载作品 ID）。
         val rawIllustId = (child.configuration as? Config.IllustDetail)?.illustId
         cardExpandFrame(
             rawIllustId = rawIllustId,

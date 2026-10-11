@@ -221,7 +221,7 @@ fun RootContent(
                 // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
                 // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
                 val stackAnimation = remember(sharedBounds) {
-                    miuixSeekableStackAnimation(
+                    miuixSeekableStackAnimation<Config, Any>(
                         registry = sharedBounds,
                         containerGeometry = { containerGeometry },
                     )
@@ -247,18 +247,20 @@ fun RootContent(
                             backHandler = component.backHandler,
                             fallbackAnimation = stackAnimation,
                             selector = { initialBackEvent, exitChild, _ ->
-                                // 预测性返回手势来源页直接取自 exitChild，避免 remember 闭包捕获首次组合时的陈旧 active 实例。
+                                // 预测性返回手势来源页直接取自 exitChild 的 configuration，
+                                // 避免依赖 child 实例类型（中-6b 起详情页实例为子组件，路由参数只在配置上）。
                                 // 手势预览与常规转场共用同一锚点解析：能落点则按卡片收回，否则回退侧滑。
                                 miuixCardExpandPredictiveBackAnimatable(
                                     initialBackEvent = initialBackEvent,
                                     registry = sharedBounds,
-                                    illustId = (exitChild.instance as? Config.IllustDetail)?.illustId,
+                                    illustId = (exitChild.configuration as? Config.IllustDetail)?.illustId,
                                     containerGeometry = { containerGeometry },
                                 )
                             },
                             onBack = { component.onBack() },
                             // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
-                            dragBackEligible = { it is Config.IllustDetail },
+                            // 实例判定：详情页 child 实例为中-6b 试点引入的子组件。
+                            dragBackEligible = { it is IllustDetailComponent },
                         ),
                     ) { child ->
                         RootChildContent(
@@ -286,12 +288,13 @@ fun RootContent(
 }
 
 /**
- * Decompose 栈顶页面的分发：按 [Config] 类型路由到对应 render* 页面。
+ * Decompose 栈顶页面的分发：按 child 实例类型路由到对应 render* 页面。
+ * 实例类型（中-6b 试点起）：作品详情页为 [IllustDetailComponent]，其余页面为 [Config]。
  * 一级页面（Main）见 [MainChildSection]，其余二级页面渲染见同包 RootChildScreens.kt。
  */
 @Composable
 private fun RootChildContent(
-    instance: Config,
+    instance: Any,
     component: RootComponent,
     activeTab: RootComponent.MainTab,
     isWideScreen: Boolean,
@@ -302,6 +305,12 @@ private fun RootChildContent(
     registry: RepositoryRegistry,
 ) {
     when (instance) {
+        // 中-6b 试点：作品详情页 child 实例为子组件，渲染参数与跳转回调经组件透传。
+        is IllustDetailComponent -> renderIllustDetail(
+            component = instance,
+            registry = registry,
+        )
+
         is Config.Main -> MainChildSection(
             tab = instance.tab,
             feedRestore = component.mainFeedRestore,
@@ -319,12 +328,6 @@ private fun RootChildContent(
             accountRepository = registry.accountRepository,
             banRepository = registry.banRepository,
             settingsRepository = registry.settingsRepository,
-        )
-
-        is Config.IllustDetail -> renderIllustDetail(
-            instance = instance,
-            component = component,
-            registry = registry,
         )
 
         is Config.UserDetail -> renderUserDetail(
@@ -519,6 +522,10 @@ private fun RootChildContent(
             component = component,
             registry = registry,
         )
+
+        // 分发主体改为 Any 后失去密封 Config 的编译期穷举校验，以此兜底：
+        // 新增 Config 未接线时在分发处即时抛错，而非静默白屏。
+        else -> error("RootChildContent 未分发的路由实例: $instance")
     }
 }
 
