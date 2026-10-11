@@ -23,6 +23,7 @@ import org.junit.Test
 import java.io.File
 import java.nio.file.Files
 import java.util.prefs.Preferences
+import okio.Path.Companion.toPath
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -185,6 +186,29 @@ class DownloadRepositoryTest {
         val file = File(savedPath)
         assertTrue(file.exists())
         assertEquals("SubdirArtist_4321", file.parentFile.name)
+    }
+
+    @Test
+    fun `saveUgoiraZipFromFile 从临时文件保存 zip 并写入历史记录`() = runBlocking {
+        val illust = createDummyIllust(id = 888997L, title = "Animated Ugoira From File")
+        val sourceFile = File(tempDir, "ugoira_src_${System.currentTimeMillis()}.zip").apply {
+            writeText("PK_FILE_ZIP_DATA")
+        }
+
+        val savedPath = downloadRepo.saveUgoiraZipFromFile(
+            illust = illust,
+            zipPath = sourceFile.absolutePath.toPath(),
+            zipUrl = "https://i.pximg.net/file_ugoira600x600.zip",
+        )
+
+        assertTrue(File(savedPath).exists(), "Saved ZIP file must exist on disk")
+        assertEquals("PK_FILE_ZIP_DATA", File(savedPath).readText(), "保存内容应与来源临时文件一致")
+
+        val historyTasks = historyRepo.getAllTasks()
+        val recordedTask = historyTasks.firstOrNull { it.illustId == 888997L }
+        assertTrue(recordedTask != null, "History must contain the ugoira task")
+        assertEquals(DownloadStatus.Success, recordedTask.status)
+        assertEquals("888997_ugoira.zip", recordedTask.fileName)
     }
 
     // ---------- 高-6b：task.error 写稳定错误码，不再存异常消息 ----------

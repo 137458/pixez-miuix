@@ -21,11 +21,20 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.Parameters
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
 import kotlin.concurrent.Volatile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import okio.FileSystem
+import okio.Path
 
 /**
  * 插画作品仓库：推荐、排行榜、作品详情等 app-api 业务接口。
@@ -309,15 +318,60 @@ class IllustRepository(
 
     /**
      * 下载动图 Zip 包字节流（自动应用用户配置的图源镜像 Host）。
+     *
+     * 整包读入内存，仅保留给小负载与既有测试使用；播放/保存链路应使用
+     * [downloadUgoiraZipToFile] 流式落盘（架构审查 中-15）。
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            val mirrorHost = settingsRepository.pictureSource
-            val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
-            val verifiedUrl = TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
-            downloadClient.get(verifiedUrl) {
+            downloadClient.get(resolveUgoiraZipUrl(zipUrl)) {
                 header("Referer", PixivHosts.PIXIV_APP_API)
             }.body()
         }
+
+    /**
+     * 下载动图 Zip 包并流式落盘至 [targetPath]（自动应用用户配置的图源镜像 Host）。
+     *
+     * 采用 prepareGet + 64KB 缓冲写盘（与 [DownloadRepository.downloadToTempFile] 同一模式），
+     * zip 不再整体驻留堆内存（架构审查 中-15）；下载或写盘失败时清理半成品文件后向上抛出。
+     *
+     * @return [targetPath] 本身。
+     */
+    suspend fun downloadUgoiraZipToFile(zipUrl: String, targetPath: Path): Path =
+        networkCall("下载动图 Zip 失败 url=$zipUrl") {
+            val verifiedUrl = resolveUgoiraZipUrl(zipUrl)
+            try {
+                downloadClient.prepareGet(verifiedUrl) {
+                    header("Referer", PixivHosts.PIXIV_APP_API)
+                }.execute { response ->
+                    val channel: ByteReadChannel = response.bodyAsChannel()
+                    // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方线程。
+                    withContext(Dispatchers.IO) {
+                        FileSystem.SYSTEM.write(targetPath) {
+                            val buffer = ByteArray(64 * 1024)
+                            while (!channel.isClosedForRead) {
+                                val read = channel.readAvailable(buffer, 0, buffer.size)
+                                if (read <= 0) break
+                                write(buffer, 0, read)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                // 失败路径清理半成品文件，避免残留被后续解压当作有效 zip 消费。
+                withContext(NonCancellable + Dispatchers.IO) {
+                    runCatching { if (FileSystem.SYSTEM.exists(targetPath)) FileSystem.SYSTEM.delete(targetPath) }
+                }
+                throw e
+            }
+            targetPath
+        }
+
+    /** 解析动图 Zip 的受信任下载地址：先套用用户配置的镜像 Host，再过图片域名白名单。 */
+    private fun resolveUgoiraZipUrl(zipUrl: String): String {
+        val mirrorHost = settingsRepository.pictureSource
+        val mappedUrl = zipUrl.mapToPictureSource(mirrorHost)
+        return TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
+    }
 }
 

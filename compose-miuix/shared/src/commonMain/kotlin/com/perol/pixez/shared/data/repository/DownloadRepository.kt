@@ -377,7 +377,30 @@ class DownloadRepository(
     /**
      * 保存动图原始 ZIP 压缩包，写入下载历史并发送系统通知。
      */
-    suspend fun saveUgoiraZip(illust: Illust, bytes: ByteArray, zipUrl: String): String {
+    suspend fun saveUgoiraZip(illust: Illust, bytes: ByteArray, zipUrl: String): String =
+        runUgoiraSaveTask(illust, zipUrl) { fileName, subDir, customBasePath ->
+            saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
+        }
+
+    /**
+     * 从已下载的临时 zip 文件保存动图作品（架构审查 中-15）：
+     * 经 [IllustSaver.saveFromTempFile] 流式复制落盘，zip 不整体读入堆内存；
+     * 来源临时文件在保存成功后被平台实现消费（删除）。
+     */
+    suspend fun saveUgoiraZipFromFile(illust: Illust, zipPath: Path, zipUrl: String): String =
+        runUgoiraSaveTask(illust, zipUrl) { fileName, subDir, customBasePath ->
+            saver.saveFromTempFile(fileName, zipPath, subDir = subDir, customBasePath = customBasePath)
+        }
+
+    /**
+     * 动图保存任务公共生命周期：写历史 → 执行保存 → 回写成功/失败状态与通知。
+     * [saveAction] 收到已解析的文件名与目标子目录/自定义基准路径，返回保存后的可读路径。
+     */
+    private suspend fun runUgoiraSaveTask(
+        illust: Illust,
+        zipUrl: String,
+        saveAction: suspend (fileName: String, subDir: String?, customBasePath: String?) -> String,
+    ): String {
         val fileName = "${illust.id}_ugoira.zip"
         val pendingTask = DownloadTask(
             illustId = illust.id,
@@ -395,7 +418,7 @@ class DownloadRepository(
         return try {
             historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
             notifyTaskChanged()
-            val savedPath = saver.save(fileName, bytes, subDir = subDir, customBasePath = customBasePath)
+            val savedPath = saveAction(fileName, subDir, customBasePath)
             Napier.d("动图 Zip 保存完成 path=$savedPath")
             val successTask = pendingTask.copy(status = DownloadStatus.Success)
             if (historyId > 0 && historyRepository != null) {

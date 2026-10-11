@@ -14,11 +14,15 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okio.FileSystem
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.random.Random
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
@@ -203,5 +207,69 @@ class IllustRepositoryTest {
             request.headers["Referer"],
             "动图 Zip 下载应携带 app-api Referer",
         )
+    }
+
+    // ---------- 中-15：ugoira zip 流式落盘版下载 ----------
+
+    @Test
+    fun `downloadUgoiraZipToFile 将响应体流式写入目标文件并携带 Referer`() = runBlocking {
+        downloadBody = byteArrayOf(1, 2, 3, 4, 5)
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_file_${Random.nextLong()}.zip"
+        try {
+            val result = repository.downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/88.zip", target)
+
+            assertEquals(target, result, "应返回目标路径本身")
+            assertTrue(FileSystem.SYSTEM.exists(target), "目标文件应已落盘")
+            val written = FileSystem.SYSTEM.read(target) { readByteArray() }
+            assertTrue(downloadBody.contentEquals(written), "落盘内容应与响应体一致")
+
+            val request = downloadCaptured.single()
+            assertEquals("/img-zip-ugoira/v1/88.zip", request.path)
+            assertEquals(
+                AppConstants.Urls.PIXIV_APP_API,
+                request.headers["Referer"],
+                "动图 Zip 下载应携带 app-api Referer",
+            )
+        } finally {
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    @Test
+    fun `downloadUgoiraZipToFile 拒绝非图片 host 且不产生目标文件`() = runBlocking {
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_file_${Random.nextLong()}.zip"
+        try {
+            try {
+                repository.downloadUgoiraZipToFile("https://evil.example.com/ugoira.zip", target)
+                fail("非受信任 host 的 Zip 下载必须被 TrustedUrlPolicy 拒绝")
+            } catch (e: IllegalArgumentException) {
+                // 预期路径
+            }
+            assertFalse(FileSystem.SYSTEM.exists(target), "被拒绝的下载不应产生目标文件")
+        } finally {
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    @Test
+    fun `downloadUgoiraZipToFile 下载失败时清理目标残留文件`() = runBlocking {
+        downloadHandlerFailure = RuntimeException("mock download failure")
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_file_${Random.nextLong()}.zip"
+        try {
+            // 预置残留文件，验证失败路径会清掉半成品而非留下损坏 zip。
+            FileSystem.SYSTEM.write(target) { writeUtf8("stale") }
+
+            try {
+                repository.downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/99.zip", target)
+                fail("下载失败必须向上抛出异常")
+            } catch (e: Exception) {
+                // 预期路径
+            }
+
+            assertFalse(FileSystem.SYSTEM.exists(target), "失败路径必须清理目标文件残留")
+        } finally {
+            downloadHandlerFailure = null
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
     }
 }

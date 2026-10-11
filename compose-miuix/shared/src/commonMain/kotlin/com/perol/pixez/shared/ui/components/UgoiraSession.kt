@@ -11,6 +11,7 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
@@ -20,6 +21,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
+import okio.buffer
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 /**
@@ -212,26 +214,18 @@ internal suspend fun loadUgoiraSession(
     val zipUrl = metadataResponse.ugoiraMetadata.zipUrls.medium
 
     onStage(UgoiraLoadStage.Downloading)
-    val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)
-
-    val tempZipPath = withContext(Dispatchers.IO) {
-        val path = getAppCacheDirectory() / "ugoira_temp_${illustId}.zip"
-        runCatching {
-            FileSystem.SYSTEM.write(path) { write(zipBytes) }
-            path
-        }.getOrNull()
-    }
+    // 中-15：流式下载，zip 边拉取边落盘，不再整体读入堆内存；
+    // 下载/写盘失败时 downloadUgoiraZipToFile 已清理半成品并抛出。
+    val tempZipPath = getAppCacheDirectory() / "ugoira_temp_${illustId}.zip"
+    illustRepository.downloadUgoiraZipToFile(zipUrl, tempZipPath)
 
     onStage(UgoiraLoadStage.Extracting)
     val framesDir = getAppCacheDirectory() / "ugoira_frames_${illustId}"
     try {
         // 流式解压：解压器直接从临时 zip 逐 entry 写帧文件，不再整体驻留内存
-        val extractedNames = if (tempZipPath != null) {
-            withContext(Dispatchers.IO) { UgoiraZipExtractor().extractFrames(tempZipPath, framesDir) }
-        } else {
-            emptyList()
-        }
-        val extractedNameSet = extractedNames.map { it.name }.toSet()
+        val extractedNameSet = withContext(Dispatchers.IO) {
+            UgoiraZipExtractor().extractFrames(tempZipPath, framesDir)
+        }.map { it.name }.toSet()
         val validFrames = metadataResponse.ugoiraMetadata.frames.filter { it.file in extractedNameSet }
 
         if (validFrames.isEmpty()) {
@@ -344,28 +338,54 @@ internal suspend fun saveUgoiraIllust(
     illustRepository: IllustRepository,
     downloadRepository: DownloadRepository,
 ): Result<String> = suspendRunCatchingNonCancel {
+    // 中-15：优先复用播放会话已缓存的 zip 文件，全程流式复制/落盘，zip 不整体读入堆内存。
+    // saveUgoiraZipFromFile 消费后会删除来源文件，故先复制到独立临时文件，
+    // 保留会话缓存 zip 供播放与后续保存复用。
     val cachedSession = UgoiraSessionCache.get(illust.id)
     val cachedZipPath = cachedSession?.tempZipPath
-    val cachedBytes = if (cachedZipPath != null) {
+    if (cachedSession != null && cachedZipPath != null && cachedSession.zipUrl.isNotBlank() &&
         withContext(Dispatchers.IO) {
-            runCatching {
-                if (FileSystem.SYSTEM.exists(cachedZipPath)) {
-                    FileSystem.SYSTEM.read(cachedZipPath) { readByteArray() }.takeIf { it.isNotEmpty() }
-                } else null
-            }.getOrNull()
+            runCatching { FileSystem.SYSTEM.exists(cachedZipPath) }.getOrDefault(false)
         }
-    } else null
-
-    if (cachedSession != null && cachedBytes != null && cachedSession.zipUrl.isNotBlank()) {
-        return@suspendRunCatchingNonCancel downloadRepository.saveUgoiraZip(
-            illust = illust,
-            bytes = cachedBytes,
-            zipUrl = cachedSession.zipUrl,
-        )
+    ) {
+        val copyPath = newUgoiraSaveTempPath(illust.id)
+        try {
+            withContext(Dispatchers.IO) {
+                FileSystem.SYSTEM.source(cachedZipPath).use { fileSource ->
+                    FileSystem.SYSTEM.write(copyPath) {
+                        writeAll(fileSource.buffer())
+                    }
+                }
+            }
+            return@suspendRunCatchingNonCancel downloadRepository.saveUgoiraZipFromFile(
+                illust = illust,
+                zipPath = copyPath,
+                zipUrl = cachedSession.zipUrl,
+            )
+        } finally {
+            cleanupUgoiraSaveTemp(copyPath)
+        }
     }
 
     val meta = illustRepository.getUgoiraMetadata(illust.id)
     val zipUrl = meta.ugoiraMetadata.zipUrls.medium
-    val zipBytes = illustRepository.downloadUgoiraZip(zipUrl)
-    downloadRepository.saveUgoiraZip(illust = illust, bytes = zipBytes, zipUrl = zipUrl)
+    val saveTempPath = newUgoiraSaveTempPath(illust.id)
+    try {
+        // 中-15：流式下载，zip 边拉取边落盘，不再整体读入堆内存。
+        illustRepository.downloadUgoiraZipToFile(zipUrl, saveTempPath)
+        downloadRepository.saveUgoiraZipFromFile(illust = illust, zipPath = saveTempPath, zipUrl = zipUrl)
+    } finally {
+        cleanupUgoiraSaveTemp(saveTempPath)
+    }
+}
+
+/** 为一次 ugoira 保存分配独立的临时 zip 路径，避免同作品并发保存互相覆盖。 */
+private fun newUgoiraSaveTempPath(illustId: Long): Path =
+    getAppCacheDirectory() / "ugoira_save_${illustId}_${kotlinx.datetime.Clock.System.now().toEpochMilliseconds()}.zip"
+
+/** 兜底清理保存用临时 zip：保存成功时来源已被平台实现消费删除，此处仅清理失败路径残留。 */
+private suspend fun cleanupUgoiraSaveTemp(tempPath: Path) {
+    withContext(NonCancellable + Dispatchers.IO) {
+        runCatching { if (FileSystem.SYSTEM.exists(tempPath)) FileSystem.SYSTEM.delete(tempPath) }
+    }
 }
