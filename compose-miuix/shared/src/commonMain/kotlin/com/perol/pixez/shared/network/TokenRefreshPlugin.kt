@@ -18,13 +18,42 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * 自动注入 Bearer Token 并在 401 时刷新 token 的 Ktor 插件。
+ * 自动注入 Bearer Token 并在凭证失效时刷新 token 的 Ktor 插件。
  *
  * 设计要点：
  * - 除 walkthrough 等匿名接口外，所有请求自动附加 Authorization: Bearer <access_token>。
- * - 收到 401 且错误信息包含 OAuth 时，串行执行一次 token 刷新，然后重试原请求。
+ * - 收到 401（响应体含 OAuth 相关特征）或 400 invalid_grant 时，串行执行一次 token 刷新，然后重试原请求。
  * - 刷新失败或没有登录账号时，直接向上抛异常，避免无限重试。
  */
+internal enum class AuthRefreshDecision { REFRESH, PASS_THROUGH }
+
+/** 401 场景的刷新特征宽匹配：认证失败本身是强信号，沿用既有口径（中-16 仅收窄 400 路径）。 */
+private val UNAUTHORIZED_REFRESH_HINTS = listOf("OAuth", "invalid_grant", "Access Token", "token")
+
+/**
+ * 依据响应状态与响应体判定是否触发 OAuth 刷新（中-16 收窄后的触发条件）：
+ * - 401：响应体含 OAuth 相关特征即刷新，不含则透传（账号被禁用、token 被撤销等非 OAuth 401 不刷新）；
+ * - 400：仅当命中 Pixiv OAuth 过期专属标识 invalid_grant 才刷新，错误消息含裸 "token" 字样的业务 400 不再误触发；
+ * - 其余状态码一律不刷新。
+ */
+internal fun resolveAuthRefreshDecision(status: HttpStatusCode, bodyText: String): AuthRefreshDecision =
+    when (status) {
+        HttpStatusCode.Unauthorized ->
+            if (UNAUTHORIZED_REFRESH_HINTS.any { bodyText.contains(it, ignoreCase = true) }) {
+                AuthRefreshDecision.REFRESH
+            } else {
+                AuthRefreshDecision.PASS_THROUGH
+            }
+
+        HttpStatusCode.BadRequest ->
+            if (bodyText.contains("invalid_grant", ignoreCase = true)) {
+                AuthRefreshDecision.REFRESH
+            } else {
+                AuthRefreshDecision.PASS_THROUGH
+            }
+
+        else -> AuthRefreshDecision.PASS_THROUGH
+    }
 class TokenRefreshPlugin(
     private val tokenStorage: AuthTokenStorage,
     private val oAuthClient: OAuthClient,
@@ -101,36 +130,36 @@ class TokenRefreshPlugin(
                         Napier.w("读取认证异常响应体失败", e)
                         ""
                     }
-                    val shouldRefresh = bodyText.contains("OAuth", ignoreCase = true) ||
-                            bodyText.contains("invalid_grant", ignoreCase = true) ||
-                            bodyText.contains("Access Token", ignoreCase = true) ||
-                            bodyText.contains("token", ignoreCase = true)
-                    if (shouldRefresh) {
-                        Napier.i("检测到 Pixiv Access Token 失效/过期 (HTTP $status)，正在自动执行 Token 刷新并重试...")
-                        plugin.refreshTokenOrThrow()
-                        // 移除旧的 Authorization，重新注入刷新后的 token。
-                        request.headers.remove("Authorization")
-                        plugin.getAuthorizationHeader()?.let {
-                            request.headers.append("Authorization", it)
+                    when (resolveAuthRefreshDecision(status, bodyText)) {
+                        AuthRefreshDecision.REFRESH -> {
+                            Napier.i("检测到 Pixiv Access Token 失效/过期 (HTTP $status)，正在自动执行 Token 刷新并重试...")
+                            plugin.refreshTokenOrThrow()
+                            // 移除旧的 Authorization，重新注入刷新后的 token。
+                            request.headers.remove("Authorization")
+                            plugin.getAuthorizationHeader()?.let {
+                                request.headers.append("Authorization", it)
+                            }
+                            call = execute(request)
+                            val retryStatus = call.response.status
+                            if (retryStatus == HttpStatusCode.Unauthorized) {
+                                call = call.save()
+                                val retryBody = runCatching { call.response.bodyAsText() }.getOrDefault("")
+                                // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
+                                throw PixivApiException(
+                                    statusCode = retryStatus.value,
+                                    message = "Still unauthorized after token refresh: $retryStatus, body=$retryBody",
+                                )
+                            }
                         }
-                        call = execute(request)
-                        val retryStatus = call.response.status
-                        if (retryStatus == HttpStatusCode.Unauthorized) {
-                            call = call.save()
-                            val retryBody = runCatching { call.response.bodyAsText() }.getOrDefault("")
+
+                        AuthRefreshDecision.PASS_THROUGH -> if (status == HttpStatusCode.Unauthorized) {
+                            // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
                             // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                             throw PixivApiException(
-                                statusCode = retryStatus.value,
-                                message = "Still unauthorized after token refresh: $retryStatus, body=$retryBody",
+                                statusCode = call.response.status.value,
+                                message = "Request unauthorized: ${call.response.status}, body=$bodyText",
                             )
                         }
-                    } else if (status == HttpStatusCode.Unauthorized) {
-                        // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
-                        // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
-                        throw PixivApiException(
-                            statusCode = call.response.status.value,
-                            message = "Request unauthorized: ${call.response.status}, body=$bodyText",
-                        )
                     }
                 }
                 call

@@ -39,6 +39,14 @@ private const val OAUTH_EXPIRED_BODY =
 private const val PLAIN_BAD_REQUEST_BODY =
     """{"error":"validation_failed","message":"invalid parameter: limit"}"""
 
+/** 业务性 400 错误体：错误消息含 "token" 字样但与 OAuth 凭证无关。 */
+private const val BUSINESS_TOKEN_BODY =
+    """{"error":"malformed_request","message":"invalid request: target token is not accessible"}"""
+
+/** Pixiv OAuth 过期 400 错误体：invalid_grant 专属标识（TokenRefreshPlugin.kt:90 已知行为）。 */
+private const val INVALID_GRANT_BODY =
+    """{"error":"invalid_grant","error_description":"Invalid refresh token or expired access token"}"""
+
 private const val OK_BODY = """{"error":false,"message":"","body":{}}"""
 
 private val jsonHeaders = headersOf("Content-Type", ContentType.Application.Json.toString())
@@ -364,5 +372,68 @@ class TokenRefreshPluginTest {
         assertEquals(HttpStatusCode.BadRequest, response, "不含 OAuth 特征的 400 应原样返回给调用方")
         assertEquals(0, oauth.refreshCalls, "响应体无 OAuth 特征时不应触发刷新")
         assertEquals(1, requests.size, "不触发刷新即不应重放请求")
+    }
+
+    @Test
+    fun `业务 400 响应体含 token 字样不触发刷新`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val oauth = FakeOAuthClient().apply {
+            // 刷新若被误触发必须在此显式失败为业务断言（refreshCalls 计数），而非 Fake 未配置异常。
+            refreshResult = accountFixture(FRESH_ACCESS_TOKEN, FRESH_REFRESH_TOKEN)
+        }
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth) { request ->
+            val auth = request.headers["Authorization"]
+            requests.add(request.url.encodedPath to auth)
+            if (auth == "Bearer $STALE_ACCESS_TOKEN") {
+                respond(BUSINESS_TOKEN_BODY, HttpStatusCode.BadRequest, jsonHeaders)
+            } else {
+                respond(OK_BODY, HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+
+        val response = client.use {
+            runBlocking { client.get("$API_HOST/v1/illust/detail").status }
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response, "业务性 400 应原样返回给调用方，不得被吞掉")
+        assertEquals(0, oauth.refreshCalls, "业务 400 含 token 字样不是凭证过期，不应触发 OAuth 刷新")
+        assertEquals(1, requests.size, "不触发刷新即不应重放请求")
+    }
+
+    @Test
+    fun `400 invalid_grant 过期 token 仍触发刷新并以新 token 重放`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val oauth = FakeOAuthClient().apply {
+            refreshResult = accountFixture(FRESH_ACCESS_TOKEN, FRESH_REFRESH_TOKEN)
+        }
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth) { request ->
+            val auth = request.headers["Authorization"]
+            requests.add(request.url.encodedPath to auth)
+            if (auth == "Bearer $STALE_ACCESS_TOKEN") {
+                respond(INVALID_GRANT_BODY, HttpStatusCode.BadRequest, jsonHeaders)
+            } else {
+                respond(OK_BODY, HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+
+        val response = client.use {
+            runBlocking { client.get("$API_HOST/v1/illust/detail").status }
+        }
+
+        assertEquals(HttpStatusCode.OK, response, "invalid_grant 400 刷新后重放应成功")
+        assertEquals(1, oauth.refreshCalls, "invalid_grant 表示凭证过期，应触发恰好一次刷新")
+        assertEquals(
+            listOf(STALE_REFRESH_TOKEN),
+            oauth.receivedRefreshTokens,
+            "刷新应使用存储中的旧 refresh_token",
+        )
+        assertEquals(2, requests.size, "应恰为一次 400 请求加一次重放")
+        assertEquals(
+            "Bearer $FRESH_ACCESS_TOKEN",
+            requests.last().second,
+            "重放请求应携带刷新后的 access_token",
+        )
     }
 }
