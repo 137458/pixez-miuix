@@ -158,6 +158,71 @@ class SauceNaoParserTest {
         assertEquals("https://img1.saucenao.com/t/test.jpg", results[0].thumbnail)
     }
 
+
+    @Test
+    fun `解析真实 SauceNAO 表格版 HTML 并提取元数据`() {
+        // 2026-10 实测 SauceNAO 网页端结构：每个结果为 <div class="result"><table>…</table></div>，
+        // 标题位于 <strong> 内，pixiv 链接为 member_illust.php?mode=medium&illust_id=…。
+        val html = """
+        <div class="result">
+        <table class="resulttable">
+        <tr>
+        <td class="resulttableimage">
+        <div class="resultimage" >
+        <a href="https://saucenao.com/search.php?db=999&url=https%3A%2F%2Fimg1.saucenao.com%2Fres%2Fpixiv%2F4797%2Fmanga%2F47976543_p13.jpg" class="linkify">
+        <img id="resImage0" title="Index #5: Pixiv Images - 47976543_p13.jpg" src="https://img1.saucenao.com/res/pixiv/4797/manga/47976543_p13.jpg" border="0"/>
+        </a>
+        </div>
+        </td>
+        <td class="resulttablecontent">
+        <div class="resultmatchinfo">
+        <div class="resultsimilarityinfo">54.52%</div>
+        <div class="resultmiscinfo">
+        </div>
+        </div>
+        <div class="resultcontent">
+        <div class="resulttitle">
+        <strong>ツイッターまとめ</strong>
+        <br />
+        </div>
+        <div class="resultcontentcolumn">
+        <strong>pixiv ID: </strong>
+        <a href="https://www.pixiv.net/member_illust.php?mode=medium&illust_id=47976543" class="linkify">47976543</a>
+        <br />
+        <strong>Member: </strong>
+        <a href="https://www.pixiv.net/member.php?id=2230180" class="linkify">ふでまる</a>
+        </div>
+        </div>
+        </td>
+        </tr>
+        </table>
+        </div>
+        <div class="result">
+        <table class="resulttable">
+        <tr>
+        <td class="resulttableimage">
+        <div class="resultimage" >
+        <a href="https://www.furaffinity.net/view/32572892"><img id="resImage1" src="https://img3.saucenao.com/furaffinity/3257/32572892.jpg"/></a>
+        </div>
+        </td>
+        <td class="resulttablecontent">
+        <div class="resultmatchinfo">
+        <div class="resultsimilarityinfo">51.00%</div>
+        </div>
+        </td>
+        </tr>
+        </table>
+        </div>
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(html)
+        assertEquals(1, results.size)
+        assertEquals(47976543L, results[0].illustId)
+        assertEquals("54.52%", results[0].similarity)
+        assertEquals("ツイッターまとめ", results[0].title)
+        assertEquals("ふでまる", results[0].author)
+        assertEquals("https://img1.saucenao.com/res/pixiv/4797/manga/47976543_p13.jpg", results[0].thumbnail)
+    }
     @Test
     fun `空响应或格式损坏时返回空列表而非抛出异常`() {
         assertTrue(SauceNaoParser.parse("").isEmpty())

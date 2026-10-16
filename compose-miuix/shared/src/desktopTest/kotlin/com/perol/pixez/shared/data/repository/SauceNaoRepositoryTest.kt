@@ -10,6 +10,8 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SauceNaoRepositoryTest {
 
@@ -72,5 +74,28 @@ class SauceNaoRepositoryTest {
             repository.search(byteArrayOf(1, 2, 3), "error.jpg")
         }
         Unit
+    }
+
+    @Test
+    fun `search 请求体仅携带图片字段且不包含 API 参数`() {
+        val repository = SauceNaoRepository(
+            HttpClient(
+                MockEngine {
+                    respond(
+                        content = "<html></html>",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, "text/html"),
+                    )
+                }
+            )
+        )
+        val parts = repository.buildUploadForm(byteArrayOf(1, 2, 3, 4), "test.jpg")
+
+        // 匿名请求携带 output_type/db 等 API 参数会被 SauceNAO 以 403 拒绝，
+        // 必须与网页表单一致：仅上传 name="file" 的图片字段且带 filename。
+        assertEquals(listOf("file"), parts.map { it.name })
+        val disposition = parts.single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(disposition.contains("name=\"file\""), disposition)
+        assertTrue(disposition.contains("filename=\"test.jpg\""), disposition)
     }
 }

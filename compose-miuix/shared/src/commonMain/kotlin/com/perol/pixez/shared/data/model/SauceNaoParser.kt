@@ -14,11 +14,12 @@ import kotlinx.serialization.json.jsonPrimitive
 object SauceNaoParser {
 
     private val PIXIV_URL_REGEX = Regex("""(?:pixiv\.net/(?:artworks/|member_illust\.php\?[^"'\s]*illust_id=))(\d+)""")
+    private val HTML_RESULT_TABLE_REGEX = Regex("""<div class="result">([\s\S]*?)</table>\s*</div>""")
     private val HTML_RESULT_REGEX = Regex("""<div class="result">([\s\S]*?)</div>\s*</div>""")
     private val HTML_IMG_REGEX = Regex("""<img[^>]+src=["']([^"']+)["']""")
     private val HTML_SIMILARITY_REGEX = Regex("""<div class="resultsimilarityinfo">([^<]+)</div>""")
-    private val HTML_TITLE_REGEX = Regex("""<div class="resulttitle">([^<]+)</div>""")
-    private val HTML_MEMBER_REGEX = Regex("""(?:member\.php\?id=|\/users\/)[^"'>]+">([^<]+)</a>""")
+    private val HTML_TITLE_REGEX = Regex("""<div class="resulttitle">\s*(?:<strong>)?([^<]+?)(?:</strong>)?(?:\s*<br\s*/?>)?\s*</div>""")
+    private val HTML_MEMBER_REGEX = Regex("""(?:member\.php\?id=|\/users\/)\d+[^>]*>([^<]+)</a>""")
 
     fun parse(rawResponse: String): List<SauceNaoResult> {
         val trimmed = rawResponse.trim()
@@ -95,7 +96,8 @@ object SauceNaoParser {
         val seen = mutableSetOf<Long>()
         val parsedList = mutableListOf<SauceNaoResult>()
 
-        val matches = HTML_RESULT_REGEX.findAll(html).toList()
+        // 今日 SauceNAO 页面为表格结构（result 到 </table></div>）；旧版 div 结构保留兜底
+        val matches = HTML_RESULT_TABLE_REGEX.findAll(html).toList().ifEmpty { HTML_RESULT_REGEX.findAll(html).toList() }
         if (matches.isNotEmpty()) {
             for (match in matches) {
                 val block = match.groupValues.getOrNull(1) ?: continue
