@@ -101,3 +101,9 @@ val LocalNovelRepository = staticCompositionLocalOf<NovelRepository> {
 val LocalUpdateRepository = staticCompositionLocalOf<UpdateRepository> {
     error("LocalUpdateRepository not provided")
 }
+
+/** SauceNAO 以图搜图数据通道：搜索页以图搜图浮层。 */
+val LocalSauceNaoRepository = staticCompositionLocalOf<com.perol.pixez.shared.data.repository.SauceNaoRepository> {
+    error("LocalSauceNaoRepository not provided")
+}
+

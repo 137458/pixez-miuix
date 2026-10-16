@@ -271,6 +271,9 @@ interface AppStrings {
     val menuShareLink: String
     val menuBanWork: String
     val menuSauceNao: String get() = "SauceNAO"
+    val sauceNaoUploading: String get() = "Uploading and searching SauceNAO…"
+    val sauceNaoPickImage: String get() = "Select Image"
+    val sauceNaoSimilarity: String get() = "Similarity"
     val imageCopySuccess: String
     val downloadTaskShowInFolder: String
     val dialogAddTag: String
@@ -1276,6 +1279,9 @@ object ZhCnStrings : AppStrings {
     override val menuShareLink = "分享链接"
     override val menuBanWork = "屏蔽作品"
     override val menuSauceNao = "SauceNAO 以图搜图"
+    override val sauceNaoUploading = "正在上传图片并检索 SauceNAO…"
+    override val sauceNaoPickImage = "选择图片"
+    override val sauceNaoSimilarity = "相似度"
     override val imageCopySuccess = "图片已复制到剪贴板"
     override val downloadTaskShowInFolder = "在文件夹中定位"
     override val dialogAddTag = "添加收藏标签"
@@ -1944,6 +1950,9 @@ object ZhTwStrings : AppStrings {
     override val menuShareLink = "分享連結"
     override val menuBanWork = "封鎖作品"
     override val menuSauceNao = "SauceNAO 以圖搜圖"
+    override val sauceNaoUploading = "正在上傳圖片並檢索 SauceNAO…"
+    override val sauceNaoPickImage = "選擇圖片"
+    override val sauceNaoSimilarity = "相似度"
     override val imageCopySuccess = "圖片已複製到剪貼簿"
     override val downloadTaskShowInFolder = "在資料夾中定位"
     override val dialogAddTag = "新增收藏標籤"
@@ -2690,6 +2699,9 @@ object EnStrings : AppStrings {
 object JaStrings : AppStrings {
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val menuSauceNao = "SauceNAO"
+    override val sauceNaoUploading = "画像をアップロードして SauceNAO で検索中…"
+    override val sauceNaoPickImage = "画像を選択"
+    override val sauceNaoSimilarity = "類似度"
     override val stamp = "スタンプ"
     override val ugoiraLoadingMetadata = "うごイラのメタデータを取得中..."
     override val ugoiraDownloading = "うごイラのフレームをダウンロード中..."

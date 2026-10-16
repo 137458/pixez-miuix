@@ -77,6 +77,7 @@ fun App(
             muteRepository = dependencies.muteRepository,
             novelRepository = dependencies.novelRepository,
             updateRepository = dependencies.updateRepository,
+            sauceNaoRepository = dependencies.sauceNaoRepository,
         )
     }
     CompositionLocalProvider(

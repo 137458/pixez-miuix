@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.LocalMuteRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalPixivisionRepository
+import com.perol.pixez.shared.ui.LocalSauceNaoRepository
 import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateRepository
@@ -182,6 +183,7 @@ fun RootContent(
             LocalMuteRepository provides registry.muteRepository,
             LocalNovelRepository provides registry.novelRepository,
             LocalUpdateRepository provides registry.updateRepository,
+            LocalSauceNaoRepository provides registry.sauceNaoRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,

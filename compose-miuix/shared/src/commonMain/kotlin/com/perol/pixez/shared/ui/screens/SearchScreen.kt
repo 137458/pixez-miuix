@@ -29,8 +29,11 @@ import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import kotlinx.coroutines.launch
+import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.data.model.TrendTag
+import com.perol.pixez.shared.platform.PlatformPhotoPicker
 import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalSauceNaoRepository
 import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -59,8 +62,18 @@ fun SearchScreen(
     val repository = LocalSearchRepository.current
     val settingsRepository = LocalSettingsRepository.current
     val banRepository = LocalBanRepository.current
+    val sauceNaoRepository = LocalSauceNaoRepository.current
     val strings = LocalStrings.current
     val bottomBarPadding = LocalBottomBarContentPadding.current
+    val photoPicker = remember { PlatformPhotoPicker() }
+
+    var showSauceNaoSheet by remember { mutableStateOf(false) }
+    var isSauceNaoLoading by remember { mutableStateOf(false) }
+    var sauceNaoError by remember { mutableStateOf<String?>(null) }
+    var sauceNaoResults by remember { mutableStateOf<List<SauceNaoResult>>(emptyList()) }
+    var currentSauceNaoBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var currentSauceNaoName by remember { mutableStateOf<String?>(null) }
+
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     // 存在初始查询词或点击标签后进入搜索结果模式。
     var isSearching by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
@@ -148,6 +161,33 @@ fun SearchScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
+
+    val performSauceNaoSearch: (ByteArray, String?) -> Unit = { bytes, fileName ->
+        currentSauceNaoBytes = bytes
+        currentSauceNaoName = fileName
+        showSauceNaoSheet = true
+        isSauceNaoLoading = true
+        sauceNaoError = null
+        sauceNaoResults = emptyList()
+        coroutineScope.launch {
+            try {
+                val list = sauceNaoRepository.search(bytes, fileName)
+                sauceNaoResults = list
+            } catch (e: Exception) {
+                sauceNaoError = e.message ?: e.toString()
+            } finally {
+                isSauceNaoLoading = false
+            }
+        }
+    }
+
+    val launchPickPhoto: () -> Unit = {
+        photoPicker.pickPhoto { bytes, fileName ->
+            if (bytes != null && bytes.isNotEmpty()) {
+                performSauceNaoSearch(bytes, fileName)
+            }
+        }
+    }
 
     val suggestionsListState = rememberLazyListState()
     val illustGridState = rememberLazyStaggeredGridState()
@@ -304,6 +344,7 @@ fun SearchScreen(
                                 }
                             }
                         },
+                        onSauceNao = launchPickPhoto,
                     )
 
                     if (isSearching && query.isNotBlank()) {
@@ -428,6 +469,22 @@ fun SearchScreen(
                     },
                     onClearHistory = { updateHistory(emptyList()) },
                     onRetryTrend = { trendRetryCount++ },
+                )
+            }
+
+            if (showSauceNaoSheet) {
+                SauceNaoBottomSheet(
+                    isLoading = isSauceNaoLoading,
+                    error = sauceNaoError,
+                    results = sauceNaoResults,
+                    onDismissRequest = { showSauceNaoSheet = false },
+                    onRetry = {
+                        currentSauceNaoBytes?.let { bytes ->
+                            performSauceNaoSearch(bytes, currentSauceNaoName)
+                        } ?: launchPickPhoto()
+                    },
+                    onPickAnother = launchPickPhoto,
+                    onIllustClick = onIllustClick,
                 )
             }
         }

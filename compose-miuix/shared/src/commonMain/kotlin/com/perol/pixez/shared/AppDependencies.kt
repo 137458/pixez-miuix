@@ -18,6 +18,7 @@ import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.PixivisionRepository
+import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
@@ -237,6 +238,10 @@ class AppDependencies(
 
     val searchRepository: SearchRepository by lazy {
         SearchRepository(httpClient.apiClient, illustRepository)
+    }
+
+    val sauceNaoRepository: SauceNaoRepository by lazy {
+        SauceNaoRepository(webClient)
     }
 
     val novelRepository: NovelRepository by lazy {

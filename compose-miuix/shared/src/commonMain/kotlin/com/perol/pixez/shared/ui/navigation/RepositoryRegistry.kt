@@ -12,6 +12,7 @@ import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.PixivisionRepository
+import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
@@ -43,4 +44,5 @@ data class RepositoryRegistry(
     // 可空标注为历史遗留；LocalNovelRepository 快速失败语义要求非空类型。
     val novelRepository: NovelRepository,
     val updateRepository: UpdateRepository,
+    val sauceNaoRepository: SauceNaoRepository,
 )

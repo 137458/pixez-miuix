@@ -1,0 +1,168 @@
+package com.perol.pixez.shared.data.model
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class SauceNaoParserTest {
+
+    @Test
+    fun `解析标准 JSON 响应成功提取 Pixiv 结果`() {
+        val json = """
+        {
+          "header": {
+            "status": 0,
+            "results_requested": 5
+          },
+          "results": [
+            {
+              "header": {
+                "similarity": "94.62",
+                "thumbnail": "https://img1.saucenao.com/t/2026/01/test1.jpg"
+              },
+              "data": {
+                "ext_urls": [
+                  "https://www.pixiv.net/member_illust.php?mode=medium&illust_id=12345678"
+                ],
+                "title": "测试作品1",
+                "pixiv_id": 12345678,
+                "member_name": "画师A",
+                "member_id": 99999
+              }
+            },
+            {
+              "header": {
+                "similarity": "88.10",
+                "thumbnail": "https://img1.saucenao.com/t/2026/01/test2.jpg"
+              },
+              "data": {
+                "ext_urls": [
+                  "https://www.pixiv.net/artworks/87654321"
+                ],
+                "title": "测试作品2",
+                "pixiv_id": "87654321",
+                "author_name": "画师B"
+              }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(json)
+        assertEquals(2, results.size)
+
+        val first = results[0]
+        assertEquals(12345678L, first.illustId)
+        assertEquals("测试作品1", first.title)
+        assertEquals("画师A", first.author)
+        assertEquals("94.62", first.similarity)
+        assertEquals("https://img1.saucenao.com/t/2026/01/test1.jpg", first.thumbnail)
+
+        val second = results[1]
+        assertEquals(87654321L, second.illustId)
+        assertEquals("测试作品2", second.title)
+        assertEquals("画师B", second.author)
+        assertEquals("88.10", second.similarity)
+    }
+
+    @Test
+    fun `无 pixiv_id 字段但 ext_urls 包含 artworks 链接时正确提取`() {
+        val json = """
+        {
+          "header": { "status": 0 },
+          "results": [
+            {
+              "header": {
+                "similarity": "90.00",
+                "thumbnail": "https://img1.saucenao.com/thumb.jpg"
+              },
+              "data": {
+                "ext_urls": [
+                  "https://www.pixiv.net/artworks/55667788"
+                ],
+                "title": "通过ext_urls提取作品",
+                "author": "画师C"
+              }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(json)
+        assertEquals(1, results.size)
+        assertEquals(55667788L, results[0].illustId)
+        assertEquals("通过ext_urls提取作品", results[0].title)
+        assertEquals("画师C", results[0].author)
+    }
+
+    @Test
+    fun `过滤非 Pixiv 来源并对重复结果去重`() {
+        val json = """
+        {
+          "header": { "status": 0 },
+          "results": [
+            {
+              "header": { "similarity": "95.00" },
+              "data": {
+                "ext_urls": [ "https://danbooru.donmai.us/posts/123" ],
+                "danbooru_id": 123
+              }
+            },
+            {
+              "header": { "similarity": "92.00" },
+              "data": {
+                "pixiv_id": 11112222,
+                "title": "作品1"
+              }
+            },
+            {
+              "header": { "similarity": "80.00" },
+              "data": {
+                "pixiv_id": 11112222,
+                "title": "重复作品1"
+              }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(json)
+        assertEquals(1, results.size)
+        assertEquals(11112222L, results[0].illustId)
+        assertEquals("92.00", results[0].similarity)
+    }
+
+    @Test
+    fun `解析 HTML 兜底响应并提取 Pixiv 作品`() {
+        val html = """
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <div class="result">
+            <div class="resultimage"><img src="https://img1.saucenao.com/t/test.jpg" /></div>
+            <div class="resultsimilarityinfo">96.5%</div>
+            <div class="resulttitle">HTML标题</div>
+            <div class="resultcontent">
+              <a href="https://www.pixiv.net/artworks/99887766">Pixiv Link</a>
+              <a href="https://www.pixiv.net/users/1234">画师X</a>
+            </div>
+          </div>
+        </body>
+        </html>
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(html)
+        assertEquals(1, results.size)
+        assertEquals(99887766L, results[0].illustId)
+        assertEquals("96.5%", results[0].similarity)
+        assertEquals("https://img1.saucenao.com/t/test.jpg", results[0].thumbnail)
+    }
+
+    @Test
+    fun `空响应或格式损坏时返回空列表而非抛出异常`() {
+        assertTrue(SauceNaoParser.parse("").isEmpty())
+        assertTrue(SauceNaoParser.parse("   ").isEmpty())
+        assertTrue(SauceNaoParser.parse("{ invalid json }").isEmpty())
+        assertTrue(SauceNaoParser.parse("<html><body>No pixiv results here</body></html>").isEmpty())
+    }
+}
