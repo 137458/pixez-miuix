@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -60,6 +61,8 @@ internal fun SauceNaoBottomSheet(
 ) {
     val strings = LocalStrings.current
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // 悬浮底栏绘制在抽屉之上，底部需额外让出底栏高度，避免操作按钮被遮挡。
+    val bottomBarClearance = LocalBottomBarContentPadding.current
 
     OverlayBottomSheet(
         show = true,
@@ -73,7 +76,7 @@ internal fun SauceNaoBottomSheet(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom = 16.dp + navBarBottom,
+                    bottom = 16.dp + navBarBottom + bottomBarClearance,
                 ),
         ) {
             when {

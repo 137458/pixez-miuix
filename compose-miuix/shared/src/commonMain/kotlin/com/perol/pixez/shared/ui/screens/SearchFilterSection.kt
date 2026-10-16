@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.components.LiquidFilterChip
+import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -90,7 +91,9 @@ internal fun SearchFilterBottomSheet(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom = 24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+                    // 悬浮底栏绘制在抽屉之上，底部需额外让出底栏高度，避免操作按钮被遮挡。
+                    bottom = 24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                        LocalBottomBarContentPadding.current,
                 ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
