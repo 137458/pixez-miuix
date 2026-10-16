@@ -73,11 +73,11 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -626,20 +626,14 @@ private fun UpdateSettingsSection(
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
     ) {
-        BasicComponent(
+        SwitchPreference(
             title = strings.updateAutoCheck,
             summary = strings.updateAutoCheckSummary,
-            endActions = {
-                Switch(
-                    checked = autoCheckUpdate,
-                    onCheckedChange = { checked ->
-                        onAutoCheckChange(checked)
-                    },
-                )
-            },
+            checked = autoCheckUpdate,
+            onCheckedChange = onAutoCheckChange,
         )
 
-        BasicComponent(
+        SwitchPreference(
             title = strings.updateIgnoreVersion,
             summary = when {
                 isChecking -> strings.loading
@@ -647,15 +641,9 @@ private fun UpdateSettingsSection(
                 ignored -> strings.updateIgnoreVersionIgnored
                 else -> strings.updateIgnoreVersionSummary.format(releaseVersionName)
             },
-            endActions = {
-                Switch(
-                    checked = hasNew && ignored,
-                    onCheckedChange = { checked ->
-                        onIgnoreChange(checked)
-                    },
-                    enabled = hasNew,
-                )
-            },
+            checked = hasNew && ignored,
+            onCheckedChange = onIgnoreChange,
+            enabled = hasNew,
         )
     }
 }
@@ -701,15 +689,11 @@ private fun UpdateChannelSection(
             },
         )
 
-        BasicComponent(
+        SwitchPreference(
             title = strings.updateHyperOs3Effect,
             summary = strings.updateHyperOs3EffectSummary,
-            endActions = {
-                Switch(
-                    checked = isOs3Effect,
-                    onCheckedChange = { onOs3EffectChange(it) },
-                )
-            },
+            checked = isOs3Effect,
+            onCheckedChange = onOs3EffectChange,
         )
     }
 }

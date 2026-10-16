@@ -4,7 +4,6 @@ import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -54,7 +53,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
@@ -62,6 +61,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
@@ -228,68 +228,63 @@ fun HistoryScreen(
                 }
             }
 
-            // 底部清空全部确认栏。
-            if (showClearConfirm) {
-                ConfirmBar(
-                    message = strings.historyClearConfirm,
-                    confirmEnabled = !isProcessing,
-                    onConfirm = {
-                        isProcessing = true
-                        coroutineScope.launch {
-                            try {
-                                suspendRunCatchingNonCancel {
-                                    // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
-                                    repository.clearAll()
-                                }
-                                    .onSuccess { refreshToken++ }
-                                    .onFailure {
-                                        toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
-                                    }
-                            } finally {
-                                // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
-                                isProcessing = false
-                                showClearConfirm = false
+            // 清空全部二次确认。
+            HistoryConfirmDialog(
+                show = showClearConfirm,
+                title = strings.actionClear,
+                summary = strings.historyClearConfirm,
+                confirmEnabled = !isProcessing,
+                onConfirm = {
+                    isProcessing = true
+                    coroutineScope.launch {
+                        try {
+                            suspendRunCatchingNonCancel {
+                                // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
+                                repository.clearAll()
                             }
+                                .onSuccess { refreshToken++ }
+                                .onFailure {
+                                    toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                }
+                        } finally {
+                            // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
+                            isProcessing = false
+                            showClearConfirm = false
                         }
-                    },
-                    onCancel = {
-                        if (!isProcessing) showClearConfirm = false
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
+                    }
+                },
+                onDismiss = { if (!isProcessing) showClearConfirm = false },
+            )
 
-            // 底部单条删除确认栏。
+            // 单条删除二次确认。
             val deleteId = itemToDelete
-            if (deleteId != null) {
-                ConfirmBar(
-                    message = strings.historyDeleteConfirm,
-                    confirmEnabled = !isProcessing,
-                    onConfirm = {
-                        isProcessing = true
-                        coroutineScope.launch {
-                            try {
-                                suspendRunCatchingNonCancel {
-                                    // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
-                                    repository.deleteById(deleteId)
-                                }
-                                    .onSuccess { refreshToken++ }
-                                    .onFailure {
-                                        toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
-                                    }
-                            } finally {
-                                // 协程取消或异常时也必须重置状态，避免确认栏/按钮永久禁用。
-                                isProcessing = false
-                                itemToDelete = null
+            HistoryConfirmDialog(
+                show = deleteId != null,
+                title = strings.btnDelete,
+                summary = strings.historyDeleteConfirm,
+                confirmEnabled = !isProcessing,
+                onConfirm = {
+                    val id = deleteId ?: return@HistoryConfirmDialog
+                    isProcessing = true
+                    coroutineScope.launch {
+                        try {
+                            suspendRunCatchingNonCancel {
+                                // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
+                                repository.deleteById(id)
                             }
+                                .onSuccess { refreshToken++ }
+                                .onFailure {
+                                    toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                }
+                        } finally {
+                            // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
+                            isProcessing = false
+                            itemToDelete = null
                         }
-                    },
-                    onCancel = {
-                        if (!isProcessing) itemToDelete = null
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
+                    }
+                },
+                onDismiss = { if (!isProcessing) itemToDelete = null },
+            )
 
             ToastMessage(
                 toast = toastMessage,
@@ -393,39 +388,35 @@ private fun HistoryCard(
 }
 
 /**
- * 底部确认栏：用于清空全部与单条删除的二次确认，避免引入 AlertDialog。
+ * 二次确认弹窗：基于 OverlayDialog，确定按钮支持禁用防止重复提交。
  */
 @Composable
-private fun ConfirmBar(
-    message: String,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-    // 确定按钮是否可用；执行耗时操作时应设为 false，防止重复提交。
+private fun HistoryConfirmDialog(
+    show: Boolean,
+    title: String,
+    summary: String,
     confirmEnabled: Boolean = true,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    OverlayDialog(
+        title = title,
+        summary = summary,
+        show = show,
+        onDismissRequest = onDismiss,
     ) {
-        Text(
-            text = message,
-            modifier = Modifier.weight(1f),
-            style = MiuixTheme.textStyles.body1,
-        )
         TextButton(
             text = strings.cancel,
-            onClick = onCancel,
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
         )
-        Button(
+        TextButton(
+            text = strings.confirm,
             onClick = onConfirm,
             enabled = confirmEnabled,
-        ) {
-            Text(strings.confirm)
-        }
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

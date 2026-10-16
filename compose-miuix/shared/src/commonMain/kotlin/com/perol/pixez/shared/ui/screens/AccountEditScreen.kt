@@ -5,13 +5,11 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,13 +44,15 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -301,17 +301,28 @@ fun AccountEditScreen(
                 }
             }
 
-            // 账号注销二次确认栏：确认后使用系统浏览器打开注销页。
-            if (showDeletionConfirm) {
-                DeletionConfirmBar(
-                    onConfirm = {
+            // 账号注销二次确认：确认后使用系统浏览器打开注销页。
+            OverlayDialog(
+                title = strings.accountEditLogoutTitle,
+                summary = strings.accountEditLogoutConfirm,
+                show = showDeletionConfirm,
+                onDismissRequest = { showDeletionConfirm = false },
+            ) {
+                TextButton(
+                    text = strings.cancel,
+                    onClick = { showDeletionConfirm = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = strings.confirm,
+                    onClick = {
                         showDeletionConfirm = false
                         openSafeUrl(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT, strings, onError = { message ->
                             toastMessage = ToastData(message, ToastType.Error)
                         })
                     },
-                    onCancel = { showDeletionConfirm = false },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -365,39 +376,5 @@ private fun PasswordVisibilityToggle(
             imageVector = if (visible) MiuixIcons.Hide else MiuixIcons.Show,
             contentDescription = if (visible) strings.accountEditHidePassword else strings.accountEditShowPassword,
         )
-    }
-}
-
-/**
- * 账号注销二次确认栏：底部显示，避免引入 AlertDialog。
- */
-@Composable
-private fun DeletionConfirmBar(
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = strings.accountEditLogoutConfirm,
-            modifier = Modifier.weight(1f),
-            style = MiuixTheme.textStyles.body1,
-        )
-        TextButton(
-            text = strings.cancel,
-            onClick = onCancel,
-        )
-        Button(
-            onClick = onConfirm,
-        ) {
-            Text(strings.confirm)
-        }
     }
 }

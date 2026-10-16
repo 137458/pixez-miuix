@@ -5,7 +5,6 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.ui.input.nestedscroll.nestedScroll

@@ -5,7 +5,6 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import androidx.compose.ui.graphics.Color
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -49,12 +48,13 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -181,18 +181,29 @@ fun DownloadHistoryScreen(
                 }
             }
 
-            // 底部确认栏：避免引入 AlertDialog，保持依赖最小化。
-            if (showClearConfirm) {
-                ClearConfirmBar(
-                    onConfirm = {
+            // 清空下载历史二次确认。
+            OverlayDialog(
+                title = strings.actionClear,
+                summary = strings.downloadHistoryClearConfirm,
+                show = showClearConfirm,
+                onDismissRequest = { showClearConfirm = false },
+            ) {
+                TextButton(
+                    text = strings.cancel,
+                    onClick = { showClearConfirm = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = strings.confirm,
+                    onClick = {
                         showClearConfirm = false
                         coroutineScope.launch {
                             suspendRunCatchingNonCancel { repository.clearAll() }
                                 .onSuccess { refreshToken++ }
                         }
                     },
-                    onCancel = { showClearConfirm = false },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -278,39 +289,5 @@ private fun statusColor(status: DownloadStatus): Color {
         DownloadStatus.Success -> MiuixTheme.colorScheme.primary
         DownloadStatus.Failed -> MiuixTheme.colorScheme.error
         else -> MiuixTheme.colorScheme.onSurface
-    }
-}
-
-/**
- * 底部清空确认栏：询问用户是否确认删除全部下载记录。
- */
-@Composable
-private fun ClearConfirmBar(
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = strings.downloadHistoryClearConfirm,
-            modifier = Modifier.weight(1f),
-            style = MiuixTheme.textStyles.body1,
-        )
-        TextButton(
-            text = strings.cancel,
-            onClick = onCancel,
-        )
-        Button(
-            onClick = onConfirm,
-        ) {
-            Text(strings.confirm)
-        }
     }
 }

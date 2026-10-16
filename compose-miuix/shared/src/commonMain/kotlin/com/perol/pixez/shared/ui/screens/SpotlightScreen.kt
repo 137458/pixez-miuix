@@ -51,7 +51,6 @@ import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import top.yukonga.miuix.kmp.blur.Backdrop
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.LocalBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
