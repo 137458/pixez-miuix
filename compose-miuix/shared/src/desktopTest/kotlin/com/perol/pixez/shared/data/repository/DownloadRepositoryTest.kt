@@ -13,9 +13,16 @@ import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AppErrorKind
 import com.perol.pixez.shared.platform.IllustSaver
+import com.perol.pixez.shared.platform.getAppCacheDirectory
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.russhwolf.settings.PreferencesSettings
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -23,10 +30,13 @@ import org.junit.Test
 import java.io.File
 import java.nio.file.Files
 import java.util.prefs.Preferences
+import okio.FileSystem
 import okio.Path.Companion.toPath
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class DownloadRepositoryTest {
 
@@ -263,5 +273,103 @@ class DownloadRepositoryTest {
         val recorded = historyRepo.getAllTasks().firstOrNull { it.id == pending.id }
         assertTrue(recorded != null, "历史记录必须仍存在")
         assertEquals(DownloadStatus.Failed, recorded.status)
+    }
+    // ---------- 风险1：下载流式大小上限与临时文件清理 ----------
+
+    /** 由用例改写的桩响应：字节体与显式 Content-Length（null = 不声明长度）。 */
+    private var stubBody: ByteArray = ByteArray(0)
+    private var stubDeclaredLength: Long? = null
+
+    private fun newCappedDownloadRepo(maxBytes: Long): DownloadRepository {
+        val mockClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { _ ->
+                    val headerPairs = buildList {
+                        add(HttpHeaders.ContentType to listOf("application/octet-stream"))
+                        stubDeclaredLength?.let { add(HttpHeaders.ContentLength to listOf(it.toString())) }
+                    }
+                    respond(
+                        content = ByteReadChannel(stubBody),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(*headerPairs.toTypedArray()),
+                    )
+                }
+            }
+        }
+        return DownloadRepository(
+            httpClient = mockClient,
+            saver = IllustSaver(),
+            historyRepository = historyRepo,
+            settingsRepository = settingsRepo,
+            maxDownloadBytes = maxBytes,
+        )
+    }
+
+    /** 缓存目录中当前残留的下载临时文件名（目录不存在时为空）。 */
+    private fun tempFileLeftovers(): List<String> {
+        val cacheDir = getAppCacheDirectory()
+        if (!FileSystem.SYSTEM.exists(cacheDir)) return emptyList()
+        return FileSystem.SYSTEM.list(cacheDir)
+            .map { it.name }
+            .filter { it.startsWith("dl_temp_") || it.startsWith("dl_retry_") }
+    }
+
+    private fun illustWithUrl(url: String): Illust = createDummyIllust().copy(
+        metaSinglePage = MetaSinglePage(originalImageUrl = url),
+    )
+
+    @Test
+    fun `流式下载超过大小上限时任务失败且清理临时文件`() = runBlocking {
+        val repo = newCappedDownloadRepo(maxBytes = 1_000L)
+        stubBody = ByteArray(5_000) // 无声明长度，仅靠流中累计字节上限拦截
+
+        val task = repo.download(illustWithUrl("https://i.pximg.net/huge.bin"), pageIndex = 0)
+
+        assertEquals(DownloadStatus.Failed, task.status, "超过流式上限的下载必须失败")
+        assertEquals(AppErrorKind.DOWNLOAD_FAILED.code, task.error)
+        val leftovers = tempFileLeftovers()
+        assertTrue(leftovers.isEmpty(), "失败后不得残留下载临时文件，实际残留: $leftovers")
+    }
+
+    @Test
+    fun `Content-Length 声明超过上限时直接拒绝下载`() = runBlocking {
+        val repo = newCappedDownloadRepo(maxBytes = 1_000L)
+        stubBody = ByteArray(64)
+        stubDeclaredLength = 5_000_000_000L
+
+        val task = repo.download(illustWithUrl("https://i.pximg.net/oversize.jpg"), pageIndex = 0)
+
+        assertEquals(DownloadStatus.Failed, task.status, "声明长度超限必须在落盘前拒绝")
+        val leftovers = tempFileLeftovers()
+        assertTrue(leftovers.isEmpty(), "拒绝后不得残留临时文件，实际残留: $leftovers")
+    }
+
+    @Test
+    fun `实际字节数与 Content-Length 不符时拒绝截断响应`() = runBlocking {
+        val repo = newCappedDownloadRepo(maxBytes = 1_000L)
+        stubBody = ByteArray(50)
+        stubDeclaredLength = 100L
+
+        val task = repo.download(illustWithUrl("https://i.pximg.net/truncated.jpg"), pageIndex = 0)
+
+        assertEquals(DownloadStatus.Failed, task.status, "声明 100 字节实收 50 字节的截断响应必须失败")
+        val leftovers = tempFileLeftovers()
+        assertTrue(leftovers.isEmpty(), "失败后不得残留下载临时文件，实际残留: $leftovers")
+    }
+
+    @Test
+    fun `限额内的正常下载成功保存且消费临时文件`() = runBlocking {
+        val repo = newCappedDownloadRepo(maxBytes = 1_000L)
+        stubBody = ByteArray(100) { (it % 251).toByte() }
+        stubDeclaredLength = 100L
+
+        val task = repo.download(illustWithUrl("https://i.pximg.net/ok.jpg"), pageIndex = 0)
+
+        assertEquals(DownloadStatus.Success, task.status, "限额内的正常下载必须成功")
+        val saved = tempDir.walkTopDown().filter { it.isFile && it.name == "123456_p0.jpg" }.firstOrNull()
+            ?: fail("保存文件必须存在")
+        assertContentEquals(stubBody, saved.readBytes(), "保存内容应与响应一致")
+        val leftovers = tempFileLeftovers()
+        assertTrue(leftovers.isEmpty(), "保存成功后临时文件应被消费，实际残留: $leftovers")
     }
 }

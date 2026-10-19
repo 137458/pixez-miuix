@@ -24,6 +24,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.prepareGet
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
 import io.ktor.http.Parameters
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
@@ -44,6 +45,7 @@ class IllustRepository(
     private val apiClient: HttpClient,
     private val downloadClient: HttpClient = HttpClient(),
     private val settingsRepository: SettingsRepository,
+    private val maxUgoiraZipBytes: Long = DownloadRepository.DEFAULT_MAX_DOWNLOAD_BYTES,
 ) {
     @Volatile
     private var cachedRecommendedResponse: Recommend? = null
@@ -333,7 +335,10 @@ class IllustRepository(
      * 下载动图 Zip 包并流式落盘至 [targetPath]（自动应用用户配置的图源镜像 Host）。
      *
      * 采用 prepareGet + 64KB 缓冲写盘（与 [DownloadRepository.downloadToTempFile] 同一模式），
-     * zip 不再整体驻留堆内存（架构审查 中-15）；下载或写盘失败时清理半成品文件后向上抛出。
+     * zip 不再整体驻留堆内存（架构审查 中-15）。
+     * 大小防护三重校验（上限 [maxUgoiraZipBytes]，默认与 [DownloadRepository.DEFAULT_MAX_DOWNLOAD_BYTES] 对齐）：
+     * 写盘前按声明 Content-Length 预检、流中按累计字节上限拦截、结束后核验实收字节与声明长度一致；
+     * 下载或写盘失败时清理半成品文件后向上抛出。
      *
      * @return [targetPath] 本身。
      */
@@ -344,15 +349,30 @@ class IllustRepository(
                 downloadClient.prepareGet(verifiedUrl) {
                     header("Referer", PixivHosts.PIXIV_APP_API)
                 }.execute { response ->
+                    // 写盘前先按声明长度预检，恶意/异常的超大响应不落盘。
+                    val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+                    require(declaredLength == null || declaredLength <= maxUgoiraZipBytes) {
+                        "下载内容声明大小超过上限: $declaredLength"
+                    }
                     val channel: ByteReadChannel = response.bodyAsChannel()
                     // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方线程。
                     withContext(Dispatchers.IO) {
                         FileSystem.SYSTEM.write(targetPath) {
                             val buffer = ByteArray(64 * 1024)
+                            var totalBytes = 0L
                             while (!channel.isClosedForRead) {
                                 val read = channel.readAvailable(buffer, 0, buffer.size)
                                 if (read <= 0) break
+                                totalBytes += read
+                                // 写入前校验累计字节，超限立即中止，防止无限流撑爆磁盘。
+                                require(totalBytes <= maxUgoiraZipBytes) {
+                                    "下载内容超过大小上限: $totalBytes"
+                                }
                                 write(buffer, 0, read)
+                            }
+                            // 声明长度已知时核验实收字节，拒绝被截断的损坏响应。
+                            require(declaredLength == null || totalBytes == declaredLength) {
+                                "下载内容不完整: 实收 $totalBytes, 声明 $declaredLength"
                             }
                         }
                     }

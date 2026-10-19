@@ -19,7 +19,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
-import io.ktor.client.statement.readRawBytes
+import io.ktor.http.HttpHeaders
 import io.ktor.http.Url
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
@@ -35,6 +35,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -56,6 +57,8 @@ class DownloadRepository(
     private val historyRepository: DownloadHistoryRepository? = null,
     private val notifier: DownloadNotifier = DownloadNotifier(),
     private val settingsRepository: SettingsRepository,
+    /** 流式下载大小上限（字节），防恶意/异常服务器无限写盘；默认与更新器上限对齐。 */
+    private val maxDownloadBytes: Long = DEFAULT_MAX_DOWNLOAD_BYTES,
 ) {
     // P-5：任务状态变更事件（下载中/成功/失败写入历史后发出）。
     // UI 层收集后触发列表刷新，替代秒级全表轮询；tryEmit 无订阅者时丢弃（刷新非关键路径）。
@@ -269,6 +272,10 @@ class DownloadRepository(
 
     /**
      * 流式下载图片至应用缓存临时文件，配合 64KB 缓冲区边拉取边落盘，避免大图或动图占用 JVM 堆内存。
+     *
+     * 大小防护三重校验：写盘前按声明 Content-Length 预检、流中按累计字节上限拦截、
+     * 结束后核验实收字节与声明长度一致（拒绝被截断的响应）；
+     * 下载失败或取消时清理临时文件，避免缓存目录残留垃圾。
      */
     private suspend fun downloadToTempFile(url: String, tempFileName: String): Path {
         val mirrorHost = settingsRepository.pictureSource
@@ -277,23 +284,46 @@ class DownloadRepository(
         val cacheDir = getAppCacheDirectory()
         val tempPath = cacheDir / tempFileName
 
-        httpClient.prepareGet(trustedUrl) {
-            header("Referer", PixivHosts.PIXIV_APP_API)
-        }.execute { response ->
-            val channel: ByteReadChannel = response.bodyAsChannel()
-            // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方（UI 主协程）线程。
-            withContext(Dispatchers.IO) {
-                FileSystem.SYSTEM.write(tempPath) {
-                    val buffer = ByteArray(64 * 1024)
-                    while (!channel.isClosedForRead) {
-                        val read = channel.readAvailable(buffer, 0, buffer.size)
-                        if (read <= 0) break
-                        write(buffer, 0, read)
+        try {
+            httpClient.prepareGet(trustedUrl) {
+                header("Referer", PixivHosts.PIXIV_APP_API)
+            }.execute { response ->
+                // 写盘前先按声明长度预检，恶意/异常的超大响应不落盘。
+                val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+                require(declaredLength == null || declaredLength <= maxDownloadBytes) {
+                    "下载内容声明大小超过上限: $declaredLength"
+                }
+                val channel: ByteReadChannel = response.bodyAsChannel()
+                // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方（UI 主协程）线程。
+                withContext(Dispatchers.IO) {
+                    FileSystem.SYSTEM.write(tempPath) {
+                        val buffer = ByteArray(64 * 1024)
+                        var totalBytes = 0L
+                        while (!channel.isClosedForRead) {
+                            val read = channel.readAvailable(buffer, 0, buffer.size)
+                            if (read <= 0) break
+                            totalBytes += read
+                            // 写入前校验累计字节，超限立即中止，防止无限流撑爆磁盘。
+                            require(totalBytes <= maxDownloadBytes) {
+                                "下载内容超过大小上限: $totalBytes"
+                            }
+                            write(buffer, 0, read)
+                        }
+                        // 声明长度已知时核验实收字节，拒绝被截断的损坏响应。
+                        require(declaredLength == null || totalBytes == declaredLength) {
+                            "下载内容不完整: 实收 $totalBytes, 声明 $declaredLength"
+                        }
                     }
                 }
             }
+            return tempPath
+        } catch (e: Throwable) {
+            // 下载失败/取消时清理临时文件；清理本身不可再被取消，异常原样上抛。
+            withContext(NonCancellable + Dispatchers.IO) {
+                FileSystem.SYSTEM.delete(tempPath, mustExist = false)
+            }
+            throw e
         }
-        return tempPath
     }
 
     /**
@@ -464,5 +494,8 @@ class DownloadRepository(
 
     companion object {
         private val SUPPORTED_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp")
+
+        /** 单次流式下载的最大字节数（256MB），与更新器 MAX_UPDATE_BYTES 对齐。 */
+        const val DEFAULT_MAX_DOWNLOAD_BYTES: Long = 256L * 1024 * 1024
     }
 }

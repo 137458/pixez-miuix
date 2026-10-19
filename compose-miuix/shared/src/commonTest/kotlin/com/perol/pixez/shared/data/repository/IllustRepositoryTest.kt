@@ -8,6 +8,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodedPath
 import io.ktor.http.headersOf
@@ -45,6 +46,7 @@ class IllustRepositoryTest {
     private var apiResponseBody: String = "{}"
     private var downloadBody: ByteArray = ByteArray(0)
     private var downloadHandlerFailure: Throwable? = null
+    private var downloadDeclaredLength: Long? = null
 
     private lateinit var client: HttpClient
     private lateinit var downloadClient: HttpClient
@@ -96,10 +98,16 @@ class IllustRepositoryTest {
                 }
                 sink.add(CapturedRequest(request.method.value, request.url.encodedPath, query, headers, formParams))
                 if (isDownload) {
+                    val responseHeaders = mutableListOf<Pair<String, List<String>>>(
+                        "Content-Type" to listOf(ContentType.Application.OctetStream.toString()),
+                    )
+                    downloadDeclaredLength?.let { length ->
+                        responseHeaders.add(HttpHeaders.ContentLength to listOf(length.toString()))
+                    }
                     respond(
                         downloadBody,
                         HttpStatusCode.OK,
-                        headersOf("Content-Type", ContentType.Application.OctetStream.toString()),
+                        headersOf(*responseHeaders.toTypedArray()),
                     )
                 } else {
                     respond(
@@ -269,6 +277,100 @@ class IllustRepositoryTest {
             assertFalse(FileSystem.SYSTEM.exists(target), "失败路径必须清理目标文件残留")
         } finally {
             downloadHandlerFailure = null
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    // ---------- 中-15b：ugoira zip 流式落盘大小上限 ----------
+
+    private fun cappedUgoiraRepository(maxUgoiraZipBytes: Long): IllustRepository = IllustRepository(
+        apiClient = client,
+        downloadClient = downloadClient,
+        settingsRepository = SettingsRepository(InMemorySettings()),
+        maxUgoiraZipBytes = maxUgoiraZipBytes,
+    )
+
+    @Test
+    fun `downloadUgoiraZipToFile 流式内容超过上限时中止并清理目标文件`() = runBlocking {
+        downloadBody = ByteArray(5000)
+        downloadDeclaredLength = null
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_cap_${Random.nextLong()}.zip"
+        try {
+            try {
+                cappedUgoiraRepository(maxUgoiraZipBytes = 1000L)
+                    .downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/110.zip", target)
+                fail("超过大小上限的流式下载必须被中止")
+            } catch (e: Exception) {
+                assertTrue(
+                    e.message.orEmpty().contains("大小上限"),
+                    "拒绝原因应指向大小上限, 实际: ${e.message}",
+                )
+            }
+            assertFalse(FileSystem.SYSTEM.exists(target), "超限中止后不应留下半成品文件")
+        } finally {
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    @Test
+    fun `downloadUgoiraZipToFile 声明长度超过上限时写盘前拒绝`() = runBlocking {
+        downloadBody = ByteArray(64)
+        downloadDeclaredLength = 5_000_000_000L
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_cap_${Random.nextLong()}.zip"
+        try {
+            try {
+                cappedUgoiraRepository(maxUgoiraZipBytes = 1000L)
+                    .downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/111.zip", target)
+                fail("声明大小超过上限的响应必须在写盘前被拒绝")
+            } catch (e: Exception) {
+                assertTrue(
+                    e.message.orEmpty().contains("声明大小超过上限"),
+                    "拒绝原因应指向声明大小超限, 实际: ${e.message}",
+                )
+            }
+            assertFalse(FileSystem.SYSTEM.exists(target), "预检拒绝后不应产生目标文件")
+        } finally {
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    @Test
+    fun `downloadUgoiraZipToFile 实收字节与声明不符时拒绝截断响应`() = runBlocking {
+        downloadBody = ByteArray(50)
+        downloadDeclaredLength = 100L
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_cap_${Random.nextLong()}.zip"
+        try {
+            try {
+                cappedUgoiraRepository(maxUgoiraZipBytes = 1000L)
+                    .downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/112.zip", target)
+                fail("实收字节与声明长度不符的截断响应必须被拒绝")
+            } catch (e: Exception) {
+                assertTrue(
+                    e.message.orEmpty().contains("不完整"),
+                    "拒绝原因应指向内容不完整, 实际: ${e.message}",
+                )
+            }
+            assertFalse(FileSystem.SYSTEM.exists(target), "截断拒绝后应清理目标文件")
+        } finally {
+            runCatching { FileSystem.SYSTEM.delete(target) }
+        }
+    }
+
+    @Test
+    fun `downloadUgoiraZipToFile 限额内正常下载成功落盘`() = runBlocking {
+        val content = ByteArray(100) { (it % 251).toByte() }
+        downloadBody = content
+        downloadDeclaredLength = 100L
+        val target = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "pixez_ugoira_cap_${Random.nextLong()}.zip"
+        try {
+            val result = cappedUgoiraRepository(maxUgoiraZipBytes = 1000L)
+                .downloadUgoiraZipToFile("https://i.pximg.net/img-zip-ugoira/v1/113.zip", target)
+
+            assertEquals(target, result, "应返回目标路径本身")
+            assertTrue(FileSystem.SYSTEM.exists(target), "限额内下载应成功落盘")
+            val written = FileSystem.SYSTEM.read(target) { readByteArray() }
+            assertTrue(content.contentEquals(written), "落盘内容应与响应体一致")
+        } finally {
             runCatching { FileSystem.SYSTEM.delete(target) }
         }
     }
