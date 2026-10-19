@@ -76,7 +76,10 @@ class TokenRefreshPlugin(
             }
             try {
                 val refreshed = oAuthClient.refreshToken(currentAccount.refresh_token)
-                tokenStorage.updateTokens(
+                // 锁内已捕获发起刷新的账号，新凭证只写回该账号行；
+                // 刷新往返期间若活跃账号被切换，不得写入切换后的账号（跨账号凭证污染）。
+                tokenStorage.updateTokensForUser(
+                    userId = currentAccount.user_id,
                     accessToken = refreshed.response.accessToken,
                     refreshToken = refreshed.response.refreshToken,
                 )

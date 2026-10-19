@@ -105,6 +105,14 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
         activeUserId = TEST_USER_ID
     }
 
+    /** 预置第二个账号行，供跨账号切换用例构造多账号存储状态。 */
+    fun addUser(userId: String, accessToken: String, refreshToken: String) {
+        accounts[userId] = rowFixture(userId, accessToken, refreshToken)
+    }
+
+    /** 按账号行读取凭证字段（测试断言用，绕过 activeUserId 语义）。 */
+    fun rowOf(userId: String): AccountRow? = accounts[userId]
+
     override fun getCachedAccountFast(): AccountRow? = accounts[activeUserId]
 
     override suspend fun getCurrentAccount(): AccountRow? {
@@ -138,6 +146,11 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
     override suspend fun updateTokens(accessToken: String, refreshToken: String) {
         val current = accounts[activeUserId] ?: throw IllegalStateException("没有登录账号，无法更新 token")
         accounts[activeUserId!!] = current.copy(access_token = accessToken, refresh_token = refreshToken)
+    }
+
+    override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {
+        val current = accounts[userId] ?: throw IllegalStateException("未找到账号 $userId，无法更新 token")
+        accounts[userId] = current.copy(access_token = accessToken, refresh_token = refreshToken)
     }
 
     override suspend fun updateCurrentAccount(transform: suspend (AccountRow?) -> AccountRow?) {
@@ -399,6 +412,41 @@ class TokenRefreshPluginTest {
         assertEquals(HttpStatusCode.BadRequest, response, "业务性 400 应原样返回给调用方，不得被吞掉")
         assertEquals(0, oauth.refreshCalls, "业务 400 含 token 字样不是凭证过期，不应触发 OAuth 刷新")
         assertEquals(1, requests.size, "不触发刷新即不应重放请求")
+    }
+
+    @Test
+    fun `刷新期间活跃账号切换时刷新结果不得写入切换后的账号`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        // 预置切换目标账号 200：模拟刷新网络往返期间用户完成 switchAccount 的并发窗口。
+        storage.addUser("200", "at-200", "rt-200")
+        val oauth = FakeOAuthClient().apply {
+            refreshResult = accountFixture(FRESH_ACCESS_TOKEN, FRESH_REFRESH_TOKEN)
+            onRefreshing = { storage.switchAccount("200") }
+        }
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth, recordingHandler(requests))
+
+        val response = client.use {
+            runBlocking { client.get("$API_HOST/v1/illust/detail").status }
+        }
+
+        assertEquals(
+            "at-200",
+            storage.rowOf("200")?.access_token,
+            "旧账号刷新出的新 token 严禁写入切换后的账号 200（跨账号凭证污染）",
+        )
+        assertEquals(
+            "rt-200",
+            storage.rowOf("200")?.refresh_token,
+            "旧账号刷新出的新 refresh_token 严禁写入切换后的账号 200",
+        )
+        assertEquals(
+            FRESH_ACCESS_TOKEN,
+            storage.rowOf("100")?.access_token,
+            "刷新结果应写回发起刷新的账号 100",
+        )
+        assertEquals(FRESH_REFRESH_TOKEN, storage.rowOf("100")?.refresh_token, "刷新结果应写回发起刷新的账号 100")
+        assertEquals(HttpStatusCode.OK, response, "刷新重放请求不应因并发切换而失败")
     }
 
     @Test

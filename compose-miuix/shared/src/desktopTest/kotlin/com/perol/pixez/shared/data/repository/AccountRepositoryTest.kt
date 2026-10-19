@@ -122,6 +122,10 @@ class AccountRepositoryTest {
             updateTokensCalls++
         }
 
+        override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {
+            updateTokensCalls++
+        }
+
         override suspend fun updateCurrentAccount(transform: suspend (AccountRow?) -> AccountRow?) {
             updateCurrentAccountCalls++
             val latest = getCurrentAccount()

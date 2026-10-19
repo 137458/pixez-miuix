@@ -88,7 +88,12 @@ class WidgetRepository(
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {
         val accountDriver = driverFactory.createDriver(AccountDatabase.Schema, "account.db")
-        val tokenStorage = SqlDelightAuthTokenStorage(accountDriver)
+        val tokenStorage = SqlDelightAuthTokenStorage(
+            accountDriver,
+            // 小组件进程经同一设置桥读取活跃账号指针：follow 流需鉴权，须以当前登录账号身份请求；
+            // widget 只读账号库，不注入 setActiveUserId（活跃指针自愈分支自然退化为空操作）。
+            getActiveUserId = { settingsRepository.activeUserId },
+        )
         val pixivHttpClient = PixivHttpClient(
             tokenStorage = tokenStorage,
             // 语言码经共享解析函数取自用户设置（架构审查 中-14），小组件请求语言与 App 内一致。

@@ -186,6 +186,67 @@ class AuthTokenStorageTest {
         assertEquals("", reloaded?.refresh_token, "清理应落库，重新读取不得再返回损坏密文")
     }
 
+    /** password 传空白以绕过密码加密分支，隔离验证 token 字段本身必须经由注入 encryptFn 加密。 */
+    private fun plainAccount(userId: String) = com.perol.pixez.shared.data.local.account.Account(
+        id = 0L,
+        access_token = "plain-at-$userId",
+        refresh_token = "plain-rt-$userId",
+        device_token = "dev-$userId",
+        user_id = userId,
+        user_image = "img-$userId",
+        name = "user-$userId",
+        password = "",
+        account = "acc-$userId",
+        mail_address = "m@$userId",
+        is_premium = 0,
+        x_restrict = 0,
+        is_mail_authorized = 1,
+    )
+
+    @Test
+    fun `加密失败走 saveAccount(Account) 写路径同样中断且明文不落库`() = runBlocking {
+        val failingStorage = SqlDelightAuthTokenStorage(
+            driver = driver,
+            getActiveUserId = { persistedActiveUserId },
+            setActiveUserId = { persistedActiveUserId = it },
+            encryptFn = { throw TokenCipherException(TokenCipherException.STAGE_ENCRYPT, "模拟平台加密失败") },
+            decryptFn = { PlatformTokenCipher.decrypt(it) },
+        )
+
+        val result = runCatching { failingStorage.saveAccount(plainAccount("11")) }
+
+        val thrown = result.exceptionOrNull()
+        assertTrue(thrown is TokenCipherException, "saveAccount(Account) 加密失败应上抛 TokenCipherException，实际: $thrown")
+        assertNull(failingStorage.getCachedAccountFast(), "保存失败后不应有缓存账号")
+        // 用默认加解密直接读库，确认整行未写入（token 既不得明文也不得经由旁路密文落库）
+        val verify = SqlDelightAuthTokenStorage(driver)
+        assertNull(verify.getCurrentAccount(), "saveAccount(Account) 加密失败时整行不得落库")
+    }
+
+    @Test
+    fun `加密失败走 updateCurrentAccount 写路径中断且原行保留`() = runBlocking {
+        storage.saveAccount(response("12"), password = "pwd")
+        val failingStorage = SqlDelightAuthTokenStorage(
+            driver = driver,
+            getActiveUserId = { persistedActiveUserId },
+            setActiveUserId = { persistedActiveUserId = it },
+            encryptFn = { throw TokenCipherException(TokenCipherException.STAGE_ENCRYPT, "模拟平台加密失败") },
+            decryptFn = { PlatformTokenCipher.decrypt(it) },
+        )
+
+        val result = runCatching {
+            failingStorage.updateCurrentAccount { it?.copy(name = "renamed", password = "") }
+        }
+
+        val thrown = result.exceptionOrNull()
+        assertTrue(thrown is TokenCipherException, "updateCurrentAccount 加密失败应上抛 TokenCipherException，实际: $thrown")
+        val verify = SqlDelightAuthTokenStorage(driver)
+        val original = verify.getCurrentAccount()
+        assertEquals("user-12", original?.name, "加密失败时原行不得被覆盖")
+        assertEquals("at-12", original?.access_token, "加密失败时原行 token 不得被改动")
+        assertEquals("pwd", original?.password, "加密失败时原行密码不得被改动")
+    }
+
     @Test
     fun `加密失败保存中断且明文不落库`() = runBlocking {
         val failingStorage = SqlDelightAuthTokenStorage(

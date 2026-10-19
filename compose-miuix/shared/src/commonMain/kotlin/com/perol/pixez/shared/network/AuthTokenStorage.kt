@@ -31,6 +31,12 @@ interface AuthTokenStorage {
 
     suspend fun updateTokens(accessToken: String, refreshToken: String)
 
+    /**
+     * 按 [userId] 指定账号更新 access_token / refresh_token（token 刷新专用）。
+     * 刷新结果只写回发起刷新的账号，防止刷新网络往返期间切换活跃账号导致的跨账号凭证污染。
+     */
+    suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String)
+
     suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?)
 
     suspend fun clear()

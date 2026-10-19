@@ -225,6 +225,40 @@ class SqlDelightAuthTokenStorage(
     }
 
     /**
+     * 按 [userId] 指定账号更新 access_token / refresh_token（token 刷新专用）。
+     *
+     * 刷新结果只写回 [userId] 对应的账号行；内存缓存仅在缓存指向该账号时同步刷新，
+     * 防止刷新网络往返期间切换活跃账号导致新凭证被写入切换后的账号（跨账号凭证污染）。
+     *
+     * @throws IllegalStateException 当 [userId] 对应账号不存在时（含刷新期间账号被登出/删除）。
+     */
+    override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val target = queries.selectByUserId(userId).executeAsList().firstOrNull()
+                ?: throw IllegalStateException("未找到账号 $userId，无法更新 token")
+            queries.insertOrReplace(
+                id = target.id,
+                access_token = encryptFn(accessToken),
+                refresh_token = encryptFn(refreshToken),
+                device_token = target.device_token,
+                user_id = target.user_id,
+                user_image = target.user_image,
+                name = target.name,
+                password = target.password,
+                account = target.account,
+                mail_address = target.mail_address,
+                is_premium = target.is_premium,
+                x_restrict = target.x_restrict,
+                is_mail_authorized = target.is_mail_authorized,
+            )
+            if (cachedAccount?.user_id == userId) {
+                cachedAccount = queries.selectByUserId(userId).executeAsList().firstOrNull()?.decrypted()
+                isCacheInitialized = true
+            }
+        }
+    }
+
+    /**
      * 原子更新当前账号。
      *
      * 在 Mutex 保护下读取当前账号，调用 [transform] 生成新账号对象，再将结果写回数据库。
@@ -349,8 +383,9 @@ class SqlDelightAuthTokenStorage(
     }
 
     private fun Account.encrypted(): Account {
-        val encAccess = PlatformTokenCipher.encrypt(access_token)
-        val encRefresh = PlatformTokenCipher.encrypt(refresh_token)
+        // 与 saveAccount/updateTokens 一致，统一走注入的 encryptFn，保证故障注入测试能覆盖本路径。
+        val encAccess = encryptFn(access_token)
+        val encRefresh = encryptFn(refresh_token)
         val encPass = encryptPassword(password)
         if (encAccess == access_token && encRefresh == refresh_token && encPass == password) {
             return this
