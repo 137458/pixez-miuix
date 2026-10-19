@@ -18,19 +18,18 @@ import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -54,7 +53,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import com.perol.pixez.shared.data.model.UserPreviewsResponse
 
 /**
  * 用户好P友/粉丝列表页：支持流式分页与下拉刷新。
@@ -71,28 +69,20 @@ fun UserFollowerListScreen(
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
 
-    var previews by remember(userId) { mutableStateOf<List<UserPreview>>(emptyList()) }
-    var nextUrl by remember(userId) { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember(userId) { mutableStateOf(false) }
-    var loadMoreError by remember(userId) { mutableStateOf<Throwable?>(null) }
-    // 请求代数：刷新时自增，使在途 loadMore 的过期回调失效，避免旧页数据混入新列表。
-    var requestGeneration by remember(userId) { mutableIntStateOf(0) }
+    // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
+    val pagedList = remember(userId) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getUserFollowersResponse(userId = userId, nextUrl = nextUrl)
+                PagedListPage(response.userPreviews, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
+    }
 
-    val state = produceState<Result<UserPreviewsResponse>?>(
-        initialValue = null,
-        userId,
-        retryCount,
-    ) {
-        requestGeneration++
-        val generation = requestGeneration
-        val result = suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId) }
-        result.onSuccess { response ->
-            if (generation == requestGeneration) {
-                previews = response.userPreviews
-                nextUrl = response.nextUrl
-            }
-        }
-        value = result
+    LaunchedEffect(userId, retryCount) {
+        val force = isManualRefreshing
+        pagedList.loadFirst(force = force)
         isManualRefreshing = false
     }
 
@@ -102,37 +92,20 @@ fun UserFollowerListScreen(
     }
 
     fun loadMore() {
-        val url = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getUserFollowersResponse(userId = userId, nextUrl = url) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        previews = previews.appendDistinct(response.userPreviews)
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
+        coroutineScope.launch { pagedList.loadMore() }
     }
 
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
-    val shouldLoadMore by remember(previews.size, nextUrl, isLoadingMore, loadMoreError) {
+    val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            val totalCount = previews.size
-            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+            val totalCount = pagedList.items?.size ?: 0
+            if (totalCount == 0 ||
+                pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null
+            ) {
                 false
             } else {
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
@@ -173,18 +146,20 @@ fun UserFollowerListScreen(
                 .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
-            val result = state.value
+            val currentItems = pagedList.items
             when {
-                result == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                result.isSuccess -> {
-                    if (previews.isEmpty()) {
+                currentItems == null && pagedList.initialError == null ->
+                    LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentItems != null -> when {
+                    currentItems.isEmpty() -> {
                         EmptyPlaceholder(
                             message = strings.userFollowerEmpty,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(paddingValues),
                         )
-                    } else {
+                    }
+                    else -> {
                         PullToRefresh(
                             isRefreshing = isManualRefreshing,
                             onRefresh = triggerManualRefresh,
@@ -206,7 +181,7 @@ fun UserFollowerListScreen(
                                     contentPadding = paddingValues,
                                 ) {
                                     items(
-                                        items = previews,
+                                        items = currentItems,
                                         key = { it.user.id },
                                         contentType = { "user_preview_item" },
                                     ) { preview ->
@@ -224,8 +199,8 @@ fun UserFollowerListScreen(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             when {
-                                                isLoadingMore -> InfiniteProgressIndicator()
-                                                loadMoreError != null -> Row(
+                                                pagedList.isLoadingMore -> InfiniteProgressIndicator()
+                                                pagedList.loadMoreError != null -> Row(
                                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                 ) {
@@ -238,7 +213,7 @@ fun UserFollowerListScreen(
                                                         Text(text = strings.retry)
                                                     }
                                                 }
-                                                nextUrl == null -> Text(
+                                                pagedList.nextUrl == null -> Text(
                                                     text = strings.noMoreData,
                                                     style = MiuixTheme.textStyles.footnote1,
                                                 )
@@ -252,7 +227,7 @@ fun UserFollowerListScreen(
                 }
 
                 else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
+                    error = pagedList.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier
                         .fillMaxSize()

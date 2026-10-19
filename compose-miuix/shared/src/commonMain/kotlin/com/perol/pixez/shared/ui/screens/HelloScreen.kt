@@ -152,9 +152,15 @@ fun HelloScreen(
 
     // 加载或刷新推荐插画数据
     val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
-    LaunchedEffect(isLoggedIn, retryCount, filterChangeVersion) {
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(isLoggedIn, user, retryCount, filterChangeVersion) {
         // 登录态未检测完成（null）时不发起加载；登录分支在 fetch 闭包内动态读取。
         if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) listState.reset()
+        loadedForAccount = user
         val force = isManualRefreshing
         // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
         // 本地重过滤不改变原始列表与下一页 URL，恢复快照无需更新。

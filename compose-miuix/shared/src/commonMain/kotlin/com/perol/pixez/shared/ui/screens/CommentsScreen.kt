@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +42,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -98,7 +99,7 @@ fun CommentsScreen(
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalIllustRepository.current
     val accountRepository = LocalAccountRepository.current
-    // retryCount 作为 produceState 的 key，点击重试或发表评论后自增触发重新加载。
+    // retryCount 变化触发重新加载：点击重试或发表评论后自增。
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
     var inputText by rememberSaveable { mutableStateOf("") }
@@ -116,68 +117,32 @@ fun CommentsScreen(
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var commentsState by remember(illustId) { mutableStateOf<List<Comment>?>(null) }
-    var nextUrl by remember(illustId) { mutableStateOf<String?>(null) }
-    var initialError by remember(illustId) { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    // 请求代数：刷新时自增，使在途 loadMore 的过期回调失效，避免旧页数据混入新列表。
-    var requestGeneration by remember(illustId) { mutableIntStateOf(0) }
+    // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
+    val pagedList = remember(illustId) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getIllustCommentsResponse(illustId, nextUrl = nextUrl)
+                PagedListPage(response.comments, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
+    }
 
     val listState = rememberLazyListState()
 
     LaunchedEffect(illustId, retryCount) {
         val force = isManualRefreshing
-        requestGeneration++
-        val generation = requestGeneration
-        if (commentsState == null) {
-            initialError = null
-        }
-        val commentResult = suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId) }
+        val previousItems = pagedList.items
+        pagedList.loadFirst(force = force)
         isManualRefreshing = false
-        commentResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                commentsState = response.comments
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-                if (force && listState.firstVisibleItemIndex > 0) {
-                    listState.scrollToItem(0)
-                }
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration && commentsState == null) {
-                initialError = error
-            }
+        // 刷新成功且列表已替换时回到顶部（含发表评论后的自动刷新）。
+        if (force && previousItems != null && pagedList.items !== previousItems && listState.firstVisibleItemIndex > 0) {
+            listState.scrollToItem(0)
         }
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            try {
-                suspendRunCatchingNonCancel { repository.getIllustCommentsResponse(illustId, nextUrl = currentNextUrl) }
-                    .onSuccess { response ->
-                        if (generation == requestGeneration) {
-                            commentsState = (commentsState.orEmpty()).appendDistinct(response.comments)
-                            nextUrl = response.nextUrl
-                        }
-                    }
-                    .onFailure { error ->
-                        if (generation == requestGeneration) {
-                            loadMoreError = error
-                        }
-                    }
-            } finally {
-                // 取消或异常时同样复位，避免分页加载被永久阻塞。
-                isLoadingMore = false
-            }
-        }
+        coroutineScope.launch { pagedList.loadMore() }
     }
 
     val triggerManualRefresh: () -> Unit = {
@@ -185,13 +150,17 @@ fun CommentsScreen(
         retryCount++
     }
 
-    val currentComments = commentsState
+    val currentComments = pagedList.items
 
     // 触底预加载：当滑到最后 4 项时自动请求下一页
-    val shouldLoadMore by remember(currentComments?.size, nextUrl, isLoadingMore, loadMoreError) {
+    val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            val totalCount = currentComments?.size ?: 0
-            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+            val totalCount = pagedList.items?.size ?: 0
+            if (totalCount == 0 ||
+                pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null
+            ) {
                 false
             } else {
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
@@ -267,9 +236,9 @@ fun CommentsScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             when {
-                currentComments == null && initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                currentComments == null && initialError != null -> ErrorPlaceholder(
-                    error = initialError,
+                currentComments == null && pagedList.initialError == null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentComments == null && pagedList.initialError != null -> ErrorPlaceholder(
+                    error = pagedList.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
                 )
@@ -323,8 +292,8 @@ fun CommentsScreen(
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         when {
-                                            isLoadingMore -> InfiniteProgressIndicator()
-                                            loadMoreError != null -> Row(
+                                            pagedList.isLoadingMore -> InfiniteProgressIndicator()
+                                            pagedList.loadMoreError != null -> Row(
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
@@ -337,7 +306,7 @@ fun CommentsScreen(
                                                     Text(text = strings.retry)
                                                 }
                                             }
-                                            nextUrl == null -> Text(
+                                            pagedList.nextUrl == null -> Text(
                                                 text = strings.commentsNoMore,
                                                 style = MiuixTheme.textStyles.footnote1,
                                             )

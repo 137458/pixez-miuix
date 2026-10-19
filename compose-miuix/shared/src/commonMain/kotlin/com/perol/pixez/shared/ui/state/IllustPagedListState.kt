@@ -145,4 +145,19 @@ class IllustPagedListState(
         filterable.restoreRaw(illusts)
         this.nextUrl = nextUrl
     }
+
+    /**
+     * 作废当前列表并复位全部分页状态（登录/账号切换场景）：清双列表与 nextUrl/错误/加载标志，
+     * 并递增 [generation] 使在途 loadFirst/loadMore 的结果写入与标志复位全部失配丢弃。
+     * 后续 loadFirst() 因 filteredIllusts == null 自然重拉首屏。
+     */
+    fun reset() {
+        generation++
+        filterable.clear()
+        nextUrl = null
+        initialError = null
+        isRefreshing = false
+        isLoadingMore = false
+        loadMoreError = null
+    }
 }

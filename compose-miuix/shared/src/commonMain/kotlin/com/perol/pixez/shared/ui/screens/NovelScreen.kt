@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.NovelRankingMode
 import com.perol.pixez.shared.ui.LocalNovelRepository
@@ -49,7 +48,8 @@ import com.perol.pixez.shared.ui.components.NovelCard
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -87,86 +87,31 @@ fun NovelScreen(
     var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
     var refreshToken by rememberSaveable { mutableIntStateOf(0) }
 
-    var novels by remember { mutableStateOf<List<Novel>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-
-    // 请求代次守卫：切 tab/切榜单/刷新后，在途旧请求的结果不得写回新数据源（写法同 RankingScreen）。
-    var requestGeneration by remember { mutableIntStateOf(0) }
-
-    fun loadInitialData() {
-        val generation = ++requestGeneration
+    // 分页状态机单点实现（含 generation 竞态守卫）；tab/榜单切换以身份键重建，等效旧代次自增。
+    val pagedList = remember(currentTab, rankingMode) {
         val tab = currentTab
         val mode = rankingMode
-        coroutineScope.launch {
-            isLoading = true
-            initialError = null
-            // 使在途旧 loadMore 的结果失配后被拒绝；复位加载态避免其卡死阻塞新列表分页。
-            isLoadingMore = false
-            try {
-                suspendRunCatchingNonCancel {
-                    when (tab) {
-                        NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels()
-                        NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode)
-                    }
-                }.fold(
-                    onSuccess = { response ->
-                        if (generation == requestGeneration) {
-                            novels = response.novels
-                            nextUrl = response.nextUrl
-                        }
-                    },
-                    onFailure = { error ->
-                        if (generation == requestGeneration) {
-                            initialError = error
-                        }
-                    },
-                )
-            } finally {
-                // 取消或异常时同样复位，避免列表被永久标记为加载中。
-                if (generation == requestGeneration) {
-                    isLoading = false
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = when (tab) {
+                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = nextUrl)
+                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = nextUrl)
                 }
-            }
-        }
+                PagedListPage(response.novels, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
     }
 
     LaunchedEffect(currentTab, rankingMode, refreshToken) {
-        loadInitialData()
+        // refreshToken 变化（手动刷新/重试）时强制重新拉取首屏。
+        pagedList.loadFirst(force = refreshToken > 0)
     }
 
     val listState = rememberLazyListState()
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
-        val tab = currentTab
-        val mode = rankingMode
-        coroutineScope.launch {
-            isLoadingMore = true
-            suspendRunCatchingNonCancel {
-                when (tab) {
-                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = currentNextUrl)
-                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = currentNextUrl)
-                }
-            }.fold(
-                onSuccess = { response ->
-                    if (generation == requestGeneration) {
-                        novels = (novels.orEmpty()).appendDistinct(response.novels)
-                        nextUrl = response.nextUrl
-                    }
-                },
-                onFailure = {
-                    // 保留现有列表，网络失败后允许再次触发
-                },
-            )
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
+        coroutineScope.launch { pagedList.loadMore() }
     }
 
     // 触底自动加载更多：使用 snapshotFlow 监听滚动可视项位置，消除原 LaunchedEffect key 翻转导致的协程取消与分页死锁
@@ -177,7 +122,7 @@ fun NovelScreen(
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             totalItems > 0 && lastVisibleItem >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
         }.collect { shouldLoad ->
-            if (shouldLoad && !isLoadingMore && !nextUrl.isNullOrBlank()) {
+            if (shouldLoad && !pagedList.isLoadingMore && pagedList.nextUrl != null && pagedList.loadMoreError == null) {
                 loadMore()
             }
         }
@@ -268,24 +213,24 @@ fun NovelScreen(
 
                 // 内容区：加载 / 失败 / 空 / 列表展示
                 when {
-                    isLoading -> {
+                    pagedList.items == null && pagedList.initialError == null -> {
                         LoadingPlaceholder(modifier = Modifier.fillMaxSize())
                     }
-                    initialError != null -> {
+                    pagedList.initialError != null -> {
                         ErrorPlaceholder(
-                            error = initialError,
+                            error = pagedList.initialError,
                             onRetry = { refreshToken++ },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    novels.isNullOrEmpty() -> {
+                    pagedList.items.isNullOrEmpty() -> {
                         EmptyPlaceholder(
                             message = strings.noData,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
                     else -> {
-                        val novelList = novels.orEmpty()
+                        val novelList = pagedList.items.orEmpty()
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
@@ -307,7 +252,7 @@ fun NovelScreen(
                                 )
                             }
 
-                            if (isLoadingMore) {
+                            if (pagedList.isLoadingMore) {
                                 item(key = "footer_loading") {
                                     Box(
                                         modifier = Modifier

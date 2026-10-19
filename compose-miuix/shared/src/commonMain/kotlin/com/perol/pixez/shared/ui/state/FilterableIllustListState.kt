@@ -57,6 +57,13 @@ class FilterableIllustListState(
         forceRefilterOnNextCheck = true
     }
 
+    /** 清空双列表回到未加载态（null），登录/账号切换时作废旧账号数据；版本号基线由下一次 replace 重写。 */
+    fun clear() {
+        rawIllusts = null
+        filteredIllusts = null
+        forceRefilterOnNextCheck = false
+    }
+
     /**
      * 过滤版本号变化时对原始列表本地重过滤（零网络成本）；[restoreRaw] 恢复后的首轮
      * 检查即使版本未变也强制执行一次。

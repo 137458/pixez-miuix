@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,8 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.UserPreview
-import com.perol.pixez.shared.data.model.UserPreviewsResponse
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -42,7 +39,8 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -72,60 +70,30 @@ fun RecomUserScreen(
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    val initialState = produceState<Result<UserPreviewsResponse>?>(
-        initialValue = null,
-        repository,
-        retryCount,
-    ) {
-        val userResult = suspendRunCatchingNonCancel { repository.getRecommendedUsers() }
-        isManualRefreshing = false
-        value = userResult
+    // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
+    val pagedList = remember(repository) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = if (nextUrl == null) {
+                    repository.getRecommendedUsers()
+                } else {
+                    repository.getRecommendedUsers(nextUrl)
+                }
+                PagedListPage(response.userPreviews, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
     }
-
-    var previews by remember { mutableStateOf(listOf<UserPreview>()) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    // 请求代数：刷新时自增，使在途 loadMore 的过期回调失效，避免旧页数据混入新列表。
-    var requestGeneration by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(initialState.value) {
-        requestGeneration++
-        val generation = requestGeneration
-        initialState.value?.onSuccess { response ->
-            if (generation == requestGeneration) {
-                previews = response.userPreviews
-                nextUrl = response.nextUrl
-                isLoadingMore = false
-                loadMoreError = null
-            }
-        }
+    LaunchedEffect(repository, retryCount) {
+        val force = isManualRefreshing
+        pagedList.loadFirst(force = force)
+        isManualRefreshing = false
     }
 
     fun loadMore() {
-        val url = nextUrl ?: return
-        if (isLoadingMore) return
-        val generation = requestGeneration
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.getRecommendedUsers(url) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        previews = previews.appendDistinct(response.userPreviews)
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
+        coroutineScope.launch { pagedList.loadMore() }
     }
 
     val triggerManualRefresh: () -> Unit = {
@@ -136,10 +104,14 @@ fun RecomUserScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
-    val shouldLoadMore by remember(previews.size, nextUrl, isLoadingMore, loadMoreError) {
+    val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            val totalCount = previews.size
-            if (totalCount == 0 || nextUrl == null || isLoadingMore || loadMoreError != null) {
+            val totalCount = pagedList.items?.size ?: 0
+            if (totalCount == 0 ||
+                pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null
+            ) {
                 false
             } else {
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
@@ -180,16 +152,18 @@ fun RecomUserScreen(
                 .blurBackdropSource(backdrop),
             contentAlignment = Alignment.TopCenter,
         ) {
-            when (val result = initialState.value) {
-                null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                else -> when {
-                    result.isSuccess -> {
-                        if (previews.isEmpty()) {
-                            EmptyPlaceholder(
-                                message = strings.recomUserEmpty,
-                                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                            )
-                        } else {
+            val currentItems = pagedList.items
+            when {
+                currentItems == null && pagedList.initialError == null ->
+                    LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentItems != null -> when {
+                    currentItems.isEmpty() -> {
+                        EmptyPlaceholder(
+                            message = strings.recomUserEmpty,
+                            modifier = Modifier.fillMaxSize().padding(paddingValues),
+                        )
+                    }
+                    else -> {
                             PullToRefresh(
                                 isRefreshing = isManualRefreshing,
                                 onRefresh = triggerManualRefresh,
@@ -211,7 +185,7 @@ fun RecomUserScreen(
                                         contentPadding = paddingValues,
                                     ) {
                                         items(
-                                            items = previews,
+                                            items = currentItems,
                                             key = { it.user.id },
                                             contentType = { "user_preview_item" },
                                         ) { preview ->
@@ -229,8 +203,8 @@ fun RecomUserScreen(
                                                 contentAlignment = Alignment.Center,
                                             ) {
                                                 when {
-                                                    isLoadingMore -> InfiniteProgressIndicator()
-                                                    loadMoreError != null -> Row(
+                                                    pagedList.isLoadingMore -> InfiniteProgressIndicator()
+                                                    pagedList.loadMoreError != null -> Row(
                                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                         verticalAlignment = Alignment.CenterVertically,
                                                     ) {
@@ -243,7 +217,7 @@ fun RecomUserScreen(
                                                             Text(text = strings.retry)
                                                         }
                                                     }
-                                                    nextUrl == null -> Text(
+                                                    pagedList.nextUrl == null -> Text(
                                                         text = strings.noMoreData,
                                                         style = MiuixTheme.textStyles.footnote1,
                                                     )
@@ -257,13 +231,12 @@ fun RecomUserScreen(
                     }
 
                     else -> ErrorPlaceholder(
-                    error = result.exceptionOrNull(),
+                    error = pagedList.initialError,
                     onRetry = { triggerManualRefresh() },
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
                 )
             }
         }
     }
-}
 }
 

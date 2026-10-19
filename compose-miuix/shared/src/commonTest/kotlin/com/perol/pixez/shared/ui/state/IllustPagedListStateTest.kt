@@ -200,6 +200,61 @@ class IllustPagedListStateTest {
         assertNull(state.initialError)
     }
 
+    // ---- reset 组（登录/账号切换作废旧账号数据） ----
+
+    @Test
+    fun resetClearsDualListsAndInvalidatesInFlightLoadMore() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(2)), null)
+        state.loadFirst()
+        assertEquals(listOf(1L), state.rawIllusts?.map { it.id })
+        val generationBeforeReset = state.generation
+
+        source.hold(2)
+        val loadMoreJob = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        state.reset()
+
+        assertNull(state.rawIllusts)
+        assertNull(state.filteredIllusts)
+        assertNull(state.nextUrl)
+        assertFalse(state.isLoadingMore)
+        assertFalse(state.isRefreshing)
+        assertNull(state.initialError)
+        assertNull(state.loadMoreError)
+        assertEquals(generationBeforeReset + 1, state.generation)
+
+        source.release(2)
+        loadMoreJob.join()
+
+        // 过期翻页结果不得写入；reset 自身不触发请求（calls 停留在首页 + 翻页两次）
+        assertNull(state.rawIllusts)
+        assertEquals(2, source.calls.size)
+    }
+
+    @Test
+    fun loadFirstAfterResetRefetchesInsteadOfEarlyReturn() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), null)
+        state.loadFirst()
+        assertEquals(listOf(1L), state.rawIllusts?.map { it.id })
+
+        // 模拟换账号后数据源变化：reset 后 loadFirst 必须重新拉取而非早退命中既有列表
+        source.pages[null] = IllustPagedPage(listOf(illust(9)), null)
+        state.reset()
+        state.loadFirst()
+
+        assertEquals(listOf(9L), state.rawIllusts?.map { it.id })
+        assertEquals(2, source.calls.size)
+    }
+
     @Test
     fun loadMoreWithoutNextUrlDoesNotFetch() = runTest {
         val source = FakeIllustSource()

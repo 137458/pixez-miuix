@@ -145,8 +145,16 @@ fun NewScreen(
     val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
-    LaunchedEffect(isLoggedIn, currentRestrict, retryCount, filterChangeVersion) {
-        // 未登录（false）时 UI 层展示登录占位，状态机保持空；登录态未检测完成（null）不发起加载。
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 currentAccount/isLoggedIn）时作废旧账号列表并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(isLoggedIn, currentAccount, currentRestrict, retryCount, filterChangeVersion) {
+        // 登录态未检测完成（null）时不发起加载；登出/切号先作废旧账号列表。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != currentAccount
+        if (accountSwitched) listState.reset()
+        loadedForAccount = currentAccount
+        // 未登录（false）时 UI 层展示登录占位，状态机保持空。
         if (isLoggedIn != true) return@LaunchedEffect
         val force = isManualRefreshing
         // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。

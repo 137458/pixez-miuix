@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
@@ -50,6 +49,8 @@ import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -58,7 +59,6 @@ import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.UserPreviewItem
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -102,7 +102,7 @@ internal fun SearchIllustResultGrid(
         if (bookmarkThreshold > 0) "$cleanQuery ${bookmarkThreshold}users入り" else cleanQuery
     }
 
-    // 搜索结果重试计数，作为 produceState 的 key 触发重新加载。
+    // 搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
     var retryCount by rememberSaveable(
         searchWord,
         sort,
@@ -269,68 +269,35 @@ internal fun SearchUserResultList(
     // 画师搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 
-    // 统一 UI 状态机（单向数据流 UDF）
-    var previewsState by remember { mutableStateOf<List<UserPreview>?>(null) }
-    var nextUrl by remember { mutableStateOf<String?>(null) }
-    var initialError by remember { mutableStateOf<Throwable?>(null) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var loadMoreError by remember { mutableStateOf<Throwable?>(null) }
-    var requestGeneration by remember { mutableIntStateOf(0) }
+    // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
+    val pagedList = remember(query) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = repository.searchUserResponse(query, nextUrl = nextUrl)
+                PagedListPage(response.userPreviews, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
+    }
     val coroutineScope = rememberCoroutineScope()
 
     val filterChangeVersion2 = settingsRepository.filterChangeVersion.collectAsState().value
     LaunchedEffect(query, retryCount, filterChangeVersion2) {
-        requestGeneration++
-        val generation = requestGeneration
-        previewsState = null
-        nextUrl = null
-        initialError = null
-        loadMoreError = null
-        isLoadingMore = false
-        val userResult = suspendRunCatchingNonCancel { repository.searchUserResponse(query) }
-        userResult.onSuccess { response ->
-            if (generation == requestGeneration) {
-                previewsState = response.userPreviews
-                nextUrl = response.nextUrl
-                initialError = null
-                loadMoreError = null
-            }
-        }.onFailure { error ->
-            if (generation == requestGeneration) {
-                initialError = error
-            }
-        }
+        pagedList.loadFirst(force = true)
     }
 
     fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        val generation = requestGeneration
-        if (isLoadingMore) return
-        coroutineScope.launch {
-            isLoadingMore = true
-            loadMoreError = null
-            suspendRunCatchingNonCancel { repository.searchUserResponse(query, nextUrl = currentNextUrl) }
-                .onSuccess { response ->
-                    if (generation == requestGeneration) {
-                        previewsState = (previewsState.orEmpty()).appendDistinct(response.userPreviews)
-                        nextUrl = response.nextUrl
-                    }
-                }
-                .onFailure { error ->
-                    if (generation == requestGeneration) {
-                        loadMoreError = error
-                    }
-                }
-            if (generation == requestGeneration) {
-                isLoadingMore = false
-            }
-        }
+        coroutineScope.launch { pagedList.loadMore() }
     }
 
-    val currentPreviews = previewsState
-    val shouldLoadMore by remember(nextUrl, isLoadingMore, loadMoreError, currentPreviews?.size) {
+    val currentPreviews = pagedList.items
+    val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            if (nextUrl == null || isLoadingMore || loadMoreError != null || currentPreviews.isNullOrEmpty()) {
+            if (pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null ||
+                pagedList.items.isNullOrEmpty()
+            ) {
                 false
             } else {
                 val layoutInfo = listState.layoutInfo
@@ -348,13 +315,13 @@ internal fun SearchUserResultList(
     }
 
     when {
-        currentPreviews == null && initialError == null -> LoadingPlaceholder(
+        currentPreviews == null && pagedList.initialError == null -> LoadingPlaceholder(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(effectiveContentPadding),
         )
-        currentPreviews == null && initialError != null -> ErrorPlaceholder(
-            error = initialError,
+        currentPreviews == null && pagedList.initialError != null -> ErrorPlaceholder(
+            error = pagedList.initialError,
             onRetry = { retryCount++ },
             modifier = Modifier
                 .fillMaxSize()
@@ -388,7 +355,7 @@ internal fun SearchUserResultList(
                             )
                         }
 
-                        if (isLoadingMore || loadMoreError != null || (nextUrl == null && currentPreviews.isNotEmpty())) {
+                        if (pagedList.isLoadingMore || pagedList.loadMoreError != null || (pagedList.nextUrl == null && currentPreviews.isNotEmpty())) {
                             item(key = "search_user_footer", contentType = "footer") {
                                 Box(
                                     modifier = Modifier
@@ -397,7 +364,7 @@ internal fun SearchUserResultList(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     when {
-                                        isLoadingMore -> {
+                                        pagedList.isLoadingMore -> {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -410,7 +377,7 @@ internal fun SearchUserResultList(
                                                 )
                                             }
                                         }
-                                        loadMoreError != null -> {
+                                        pagedList.loadMoreError != null -> {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
