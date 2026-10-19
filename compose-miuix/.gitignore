@@ -10,6 +10,10 @@ captures/
 .cxx/
 *.apk
 *.aab
+# 发布签名密钥与配置，严禁入库
+keystore.properties
+*.jks
+*.keystore
 *.ipa
 *.msix
 *.dmg

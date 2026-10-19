@@ -1,5 +1,12 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+// 发布签名配置：keystore.properties（已 gitignore）提供 storeFile/storePassword/keyAlias/keyPassword。
+// 缺失时回退 debug 签名，保证本地与 CI 构建（assembleDebug）始终可用；正式发版须先配置该文件。
+val releaseSigningProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+    Properties().apply { file.inputStream().use { load(it) } }
+}
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -80,6 +87,17 @@ android {
         versionName = "0.9.109.5-miuix"
     }
 
+    signingConfigs {
+        if (releaseSigningProps != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseSigningProps.getProperty("storeFile"))
+                storePassword = releaseSigningProps.getProperty("storePassword")
+                keyAlias = releaseSigningProps.getProperty("keyAlias")
+                keyPassword = releaseSigningProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
@@ -88,7 +106,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // 有 keystore.properties 时用正式签名，否则回退 debug，避免无密钥环境构建失败
+            signingConfig = signingConfigs.getByName(
+                if (releaseSigningProps != null) "release" else "debug"
+            )
         }
     }
 
