@@ -34,6 +34,25 @@ object TrustedUrlPolicy {
         requireHost(raw, RELEASE_HOSTS, "GitHub 更新包 URL")
 
     /**
+     * GitHub Release asset 直链的官方仓库闸门：在 [releaseAssetUrl] 的 HTTPS/host/凭据
+     * 约束之上，进一步要求 URL 指向官方仓库路径（owner/repo 精确前缀），拒绝 GitHub 域内
+     * 任意第三方仓库直链与前缀拼接仿冒（如官方仓库后追加 -evil 的同名仿冒仓库）。
+     *
+     * 仅用于 GitHub API 返回的初始 browser_download_url；重定向目标
+     * （objects.githubusercontent.com 等存储域）不含仓库路径，逐跳校验仍走 [releaseAssetUrl]。
+     */
+    fun officialReleaseAssetUrl(raw: String, officialRepoPath: String): String {
+        val normalized = releaseAssetUrl(raw)
+        val url = Url(normalized)
+        val path = url.encodedPath
+        require(
+            url.host.lowercase() == "github.com" &&
+                (path == "/$officialRepoPath" || path.startsWith("/$officialRepoPath/")),
+        ) { "GitHub 更新包直链必须指向官方仓库 $officialRepoPath" }
+        return normalized
+    }
+
+    /**
      * 小组件图片 URL：内置白名单之外额外放行用户在设置里配置的图源镜像 host。
      *
      * 供逐跳重定向校验使用，每一跳都需通过本方法才会发起下一次请求。

@@ -119,6 +119,39 @@ class TrustedUrlPolicyTest {
     }
 
     @Test
+    fun `officialReleaseAssetUrl 放行官方仓库直链并原样返回`() {
+        val raw = "https://github.com/137458/pixez-miuix/releases/download/v99.0.0/PixEz-windows-x64-99.0.0.exe"
+
+        assertEquals(raw, TrustedUrlPolicy.officialReleaseAssetUrl(raw, "137458/pixez-miuix"))
+    }
+
+    @Test
+    fun `officialReleaseAssetUrl 拒绝非官方仓库与前缀拼接路径`() {
+        listOf(
+            "https://github.com/attacker/malware/releases/download/v9.0/app.apk",
+            "https://github.com/137458/pixez-miuix-evil/releases/download/v9.0/app.apk",
+            "https://github.com/evil/pixez-miuix/releases/download/v9.0/app.apk",
+        ).forEach { raw ->
+            assertFailsWith<IllegalArgumentException>("应拒绝非官方仓库直链: $raw") {
+                TrustedUrlPolicy.officialReleaseAssetUrl(raw, "137458/pixez-miuix")
+            }
+        }
+    }
+
+    @Test
+    fun `officialReleaseAssetUrl 继承 HTTPS 与 host 白名单约束`() {
+        listOf(
+            "http://github.com/137458/pixez-miuix/releases/download/v9.0/app.apk",
+            "https://evil.example.com/137458/pixez-miuix/releases/download/v9.0/app.apk",
+            "https://user:pass@github.com/137458/pixez-miuix/releases/download/v9.0/app.apk",
+        ).forEach { raw ->
+            assertFailsWith<IllegalArgumentException>("应继承既有安全约束: $raw") {
+                TrustedUrlPolicy.officialReleaseAssetUrl(raw, "137458/pixez-miuix")
+            }
+        }
+    }
+
+    @Test
     fun `输入首尾空白被容忍且返回规范化后的字符串`() {
         val result = TrustedUrlPolicy.apiPaginationUrl("  https://app-api.pixiv.net/v1/x  ")
 

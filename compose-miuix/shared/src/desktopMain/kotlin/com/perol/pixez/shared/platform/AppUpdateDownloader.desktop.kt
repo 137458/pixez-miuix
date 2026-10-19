@@ -82,8 +82,9 @@ actual class AppUpdateDownloader actual constructor() {
             require(totalBytes <= 0L || downloadedBytes == totalBytes) {
                 "更新包下载不完整: $downloadedBytes / $totalBytes"
             }
-            // GitHub release digest（sha256）可用时强校验，防截断/被替换包进入安装
-            if (sha256Digest != null && !verifyFileDigest(targetFile, sha256Digest)) {
+            // GitHub release digest（sha256）可用时强校验，防截断/被替换包进入安装。
+            // 必须校验临时文件：targetFile 在首次更新时尚不存在，旧实现会错校验/必失败。
+            if (sha256Digest != null && !verifyFileDigest(tempFile, sha256Digest)) {
                 throw IllegalStateException("更新包 SHA-256 校验失败，安装包可能被篡改或损坏")
             }
             java.nio.file.Files.move(

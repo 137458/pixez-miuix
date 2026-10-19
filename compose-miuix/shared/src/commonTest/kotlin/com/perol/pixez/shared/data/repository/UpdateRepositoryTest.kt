@@ -166,4 +166,25 @@ class UpdateRepositoryTest {
         assertNull(info.downloadUrl, "无资产时 downloadUrl 应为 null")
         assertNull(info.fileName)
     }
+
+    @Test
+    fun `fetchLatestReleaseInfo 拒绝指向非官方仓库的 asset 直链`() = runBlocking {
+        respondBody = releaseJson(
+            tagName = "v99.0.0",
+            assetsJson = """
+                [
+                  {"name":"PixEz-windows-x64-99.0.0.exe","browser_download_url":"https://github.com/attacker/malware/releases/download/v99.0.0/PixEz-windows-x64-99.0.0.exe","size":68000000}
+                ]
+            """.trimIndent(),
+        )
+
+        val result = repository.fetchLatestReleaseInfo()
+
+        assertTrue(result.isFailure, "asset 直链不属于官方仓库时必须整体失败（fail closed）")
+        val error = result.exceptionOrNull()
+        assertTrue(
+            error?.message?.contains("官方仓库") == true,
+            "失败消息应说明非官方仓库，实际为: ${error?.message}",
+        )
+    }
 }

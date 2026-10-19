@@ -172,7 +172,10 @@ class UpdateRepository(
             val isNew = hasNewVersion(versionName)
 
             val matchedAsset = selectPlatformReleaseAsset(release.assets)
-            val downloadUrl = matchedAsset?.browser_download_url?.let(TrustedUrlPolicy::releaseAssetUrl)
+            // asset 直链必须指向官方仓库（owner/repo 白名单），拒绝 GitHub 域内第三方仓库投毒。
+            val downloadUrl = matchedAsset?.browser_download_url?.let {
+                TrustedUrlPolicy.officialReleaseAssetUrl(it, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
+            }
             val fileName = matchedAsset?.name?.let {
                 com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
             }

@@ -2,6 +2,7 @@ package com.perol.pixez.shared.platform
 
 import android.os.Build
 import com.perol.pixez.shared.network.TrustedUrlPolicy
+import com.perol.pixez.shared.network.verifyFileDigest
 import com.perol.pixez.shared.AppInfo
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -78,6 +79,15 @@ actual class AppUpdateDownloader actual constructor() {
                 }
             }
             require(tempFile.length() > 0L) { "更新包为空" }
+            // 连接提前 EOF 时 totalBytes 已知却不等：截断的安装包不得转正
+            require(totalBytes <= 0L || downloadedBytes == totalBytes) {
+                "更新包下载不完整: $downloadedBytes / $totalBytes"
+            }
+            // GitHub release digest（sha256）可用时强校验，防截断/被替换包进入安装。
+            // 必须校验临时文件：targetFile 在首次更新时尚不存在，无旧内容可比。
+            if (sha256Digest != null && !verifyFileDigest(tempFile, sha256Digest)) {
+                throw IllegalStateException("更新包 SHA-256 校验失败，安装包可能被篡改或损坏")
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 java.nio.file.Files.move(
                     tempFile.toPath(),

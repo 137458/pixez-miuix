@@ -8,4 +8,7 @@ package com.perol.pixez.shared.network
 object GitHubReleaseEndpoints {
     const val RELEASES_PAGE = "https://github.com/137458/pixez-miuix/releases"
     const val LATEST_API = "https://api.github.com/repos/137458/pixez-miuix/releases/latest"
+
+    /** 官方发布仓库路径（owner/repo），asset 直链白名单校验用。 */
+    const val OFFICIAL_REPO_PATH = "137458/pixez-miuix"
 }
