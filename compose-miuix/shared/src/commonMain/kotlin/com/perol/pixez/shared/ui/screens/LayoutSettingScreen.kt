@@ -49,6 +49,18 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import com.perol.pixez.shared.data.settings.parseCrossAdapterWidthInput
 
 /**
  * 布局设置页：管理底栏模式、平板模式、竖屏自适应/固定列数、横屏自适应/固定列数。
@@ -235,6 +247,7 @@ fun LayoutSettingScreen(
                 }
             }
         }
+
     }
 }
 
@@ -253,6 +266,9 @@ private fun Int.toDisplayModeLabel(): String {
 
 /**
  * 宽度阈值滑块与实时预览。
+ *
+ * 滑块右侧数值可直接点击切换为行内输入框：输入框跟随页面滚动，天然避让输入法；
+ * 滑块拖动保留连续调节。
  */
 @Composable
 private fun AdapterWidthSlider(
@@ -261,6 +277,14 @@ private fun AdapterWidthSlider(
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     var sliderValue by remember(width) { mutableFloatStateOf(width.toFloat()) }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var inputText by rememberSaveable { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(editing) {
+        if (editing) focusRequester.requestFocus()
+    }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),
@@ -275,12 +299,69 @@ private fun AdapterWidthSlider(
                 value = sliderValue,
                 onValueChange = { sliderValue = it },
                 title = strings.crossAdapterThreshold.format(sliderValue.toInt(), columnCount),
-                valueText = "${sliderValue.toInt()} dp",
+                valueText = null,
+                endActions = {
+                    if (!editing) {
+                        // 数值即入口：点击切换为行内输入，避免小屏长距离拖动才能命中目标阈值。
+                        Text(
+                            text = "${sliderValue.toInt()} dp",
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clickable {
+                                    inputText = sliderValue.toInt().toString()
+                                    editing = true
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                        )
+                    }
+                },
                 valueRange = SettingsRepository.CROSS_ADAPTER_WIDTH_MIN.toFloat()..SettingsRepository.CROSS_ADAPTER_WIDTH_MAX.toFloat(),
                 onValueChangeFinished = {
                     onWidthChangeFinished(sliderValue.toInt())
                 },
             )
+
+            if (editing) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextField(
+                        value = inputText,
+                        onValueChange = { text -> inputText = text.filter { it in '0'..'9' }.take(4) },
+                        label = strings.crossAdapterWidthInputHint,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                    )
+                    TextButton(
+                        text = strings.cancel,
+                        onClick = {
+                            editing = false
+                            focusManager.clearFocus()
+                        },
+                    )
+                    TextButton(
+                        text = strings.confirm,
+                        enabled = parseCrossAdapterWidthInput(inputText) != null,
+                        onClick = {
+                            val parsed = parseCrossAdapterWidthInput(inputText)
+                            if (parsed != null) {
+                                sliderValue = parsed.toFloat()
+                                onWidthChangeFinished(parsed)
+                            }
+                            editing = false
+                            focusManager.clearFocus()
+                        },
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
 
             Text(
                 text = strings.crossAdapterPreview,

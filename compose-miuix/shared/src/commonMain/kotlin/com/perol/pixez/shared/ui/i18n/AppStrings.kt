@@ -508,6 +508,7 @@ interface AppStrings {
     val bookTagsMoveDown: String
     val bookTagsDeleteConfirm: String
     val crossAdapterThreshold: String
+    val crossAdapterWidthInputHint: String
     val crossAdapterPreview: String
     val networkModeEch: String
     val networkModeEchSummary: String
@@ -905,6 +906,7 @@ object ZhCnStrings : AppStrings {
     override val bookTagsMoveDown = "下移"
     override val bookTagsDeleteConfirm = "确定删除标签「%s」吗？"
     override val crossAdapterThreshold = "阈值：%d px，当前列数：%d"
+    override val crossAdapterWidthInputHint = "输入 50–2160 之间的整数（dp）"
     override val crossAdapterPreview = "预览"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "通过 Encrypted ClientHello 绕过 SNI 审查"
@@ -1547,6 +1549,7 @@ object ZhTwStrings : AppStrings {
     override val bookTagsMoveDown = "下移"
     override val bookTagsDeleteConfirm = "確定刪除標籤「%s」嗎？"
     override val crossAdapterThreshold = "閾值：%d px，目前欄數：%d"
+    override val crossAdapterWidthInputHint = "輸入 50–2160 之間的整數（dp）"
     override val crossAdapterPreview = "預覽"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "透過 Encrypted ClientHello 繞過 SNI 審查"
@@ -2220,6 +2223,7 @@ object EnStrings : AppStrings {
     override val bookTagsMoveDown = "Move Down"
     override val bookTagsDeleteConfirm = "Are you sure you want to delete tag \"%s\"?"
     override val crossAdapterThreshold = "Threshold: %d px, current columns: %d"
+    override val crossAdapterWidthInputHint = "Enter an integer from 50 to 2160 (dp)"
     override val crossAdapterPreview = "Preview"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Bypass SNI censorship with Encrypted ClientHello"
@@ -2920,6 +2924,7 @@ object JaStrings : AppStrings {
     override val bookTagsMoveDown = "下へ移動"
     override val bookTagsDeleteConfirm = "タグ「%s」を削除しますか？"
     override val crossAdapterThreshold = "しきい値: %d px、現在の列数: %d"
+    override val crossAdapterWidthInputHint = "50〜2160 の整数を入力（dp）"
     override val crossAdapterPreview = "プレビュー"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Encrypted ClientHello で SNI 制限を回避"
@@ -3604,6 +3609,7 @@ object KoStrings : AppStrings {
     override val bookTagsMoveDown = "아래로 이동"
     override val bookTagsDeleteConfirm = "태그 '%s'을(를) 삭제하시겠습니까?"
     override val crossAdapterThreshold = "임계값: %d px, 현재 열 수: %d"
+    override val crossAdapterWidthInputHint = "50–2160 사이의 정수를 입력하세요 (dp)"
     override val crossAdapterPreview = "미리보기"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Encrypted ClientHello를 통해 SNI 검열 우회"
@@ -4270,6 +4276,7 @@ object RuStrings : AppStrings {
     override val bookTagsMoveDown = "Переместить вниз"
     override val bookTagsDeleteConfirm = "Удалить тег «%s»?"
     override val crossAdapterThreshold = "Порог: %d px, столбцов: %d"
+    override val crossAdapterWidthInputHint = "Введите целое число от 50 до 2160 (dp)"
     override val crossAdapterPreview = "Предпросмотр"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Обход цензуры SNI через Encrypted ClientHello"
@@ -4938,6 +4945,7 @@ object EsStrings : AppStrings {
     override val bookTagsMoveDown = "Mover abajo"
     override val bookTagsDeleteConfirm = "¿Estás seguro de eliminar la etiqueta \"%s\"?"
     override val crossAdapterThreshold = "Umbral: %d px, columnas actuales: %d"
+    override val crossAdapterWidthInputHint = "Introduce un entero entre 50 y 2160 (dp)"
     override val crossAdapterPreview = "Vista previa"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Evitar la censura de SNI con Encrypted ClientHello"
@@ -5604,6 +5612,7 @@ object TrStrings : AppStrings {
     override val bookTagsMoveDown = "Aşağı Taşı"
     override val bookTagsDeleteConfirm = "\"%s\" etiketini silmek istediğinizden emin misiniz?"
     override val crossAdapterThreshold = "Eşik: %d px, geçerli sütunlar: %d"
+    override val crossAdapterWidthInputHint = "50–2160 arasında bir tam sayı girin (dp)"
     override val crossAdapterPreview = "Önizleme"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Encrypted ClientHello ile SNI sansürünü atlatın"
@@ -6272,6 +6281,7 @@ object IdStrings : AppStrings {
     override val bookTagsMoveDown = "Pindah ke Bawah"
     override val bookTagsDeleteConfirm = "Yakin ingin menghapus tag \"%s\"?"
     override val crossAdapterThreshold = "Ambang batas: %d px, kolom saat ini: %d"
+    override val crossAdapterWidthInputHint = "Masukkan bilangan bulat 50–2160 (dp)"
     override val crossAdapterPreview = "Pratinjau"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Lewati sensor SNI dengan Encrypted ClientHello"
@@ -6939,6 +6949,7 @@ object FilStrings : AppStrings {
     override val bookTagsMoveDown = "Ilipat Pababa"
     override val bookTagsDeleteConfirm = "Sigurado ka bang gusto mong tanggalin ang tag na \"%s\"?"
     override val crossAdapterThreshold = "Threshold: %d px, kasalukuyang column: %d"
+    override val crossAdapterWidthInputHint = "Maglagay ng integer mula 50 hanggang 2160 (dp)"
     override val crossAdapterPreview = "Preview"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "I-bypass ang SNI censorship gamit ang Encrypted ClientHello"
@@ -7606,6 +7617,7 @@ object DeStrings : AppStrings {
     override val bookTagsMoveDown = "Nach unten verschieben"
     override val bookTagsDeleteConfirm = "Möchten Sie das Tag „%s“ wirklich löschen?"
     override val crossAdapterThreshold = "Schwellenwert: %d px, aktuelle Spalten: %d"
+    override val crossAdapterWidthInputHint = "Ganzzahl von 50 bis 2160 eingeben (dp)"
     override val crossAdapterPreview = "Vorschau"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "SNI-Zensur mit Encrypted ClientHello umgehen"
@@ -8229,6 +8241,7 @@ object ViStrings : AppStrings {
     override val bookTagsMoveDown = "Đưa xuống dưới"
     override val bookTagsDeleteConfirm = "Bạn có chắc muốn xóa thẻ \"%s\"?"
     override val crossAdapterThreshold = "Ngưỡng: %d px, số cột hiện tại: %d"
+    override val crossAdapterWidthInputHint = "Nhập số nguyên từ 50 đến 2160 (dp)"
     override val crossAdapterPreview = "Xem trước"
     override val networkModeEch = "ECH"
     override val networkModeEchSummary = "Vượt chặn SNI bằng Encrypted ClientHello"

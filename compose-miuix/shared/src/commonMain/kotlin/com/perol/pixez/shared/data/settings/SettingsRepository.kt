@@ -476,7 +476,7 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.CROSS_ADAPT] = value; notifyChanged() }
 
     /**
-     * 竖屏自适应宽度阈值（50-2160，默认 180dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
+     * 竖屏自适应宽度阈值（50-2160，默认 160dp：手机竖屏 2 列，平板/折叠屏 3~4 列，桌面 5~8 列）。
      */
     var crossAdapterWidth: Int
         get() = tracked().getIntWithLegacyFallback(SettingsKeys.CROSS_ADAPT_WIDTH, DEFAULT_CROSS_ADAPTER_WIDTH)
@@ -502,7 +502,7 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.H_CROSS_ADAPT] = value; notifyChanged() }
 
     /**
-     * 横屏自适应宽度阈值（50-2160，默认 180dp）。
+     * 横屏自适应宽度阈值（50-2160，默认 160dp）。
      * 若未独立设置则回退读取竖屏/共用设置 CROSS_ADAPT_WIDTH。
      */
     var hCrossAdapterWidth: Int
@@ -715,8 +715,8 @@ class SettingsRepository(
         private const val SAVE_MODE_LEGACY_SAFE = 1
         private const val SAVE_MODE_LEGACY_HELPLESS = 2
 
-        // 跨适配宽度阈值范围与默认自适应基准宽度（180dp：手机竖屏 2 列，平板/横屏 3~6 列）
-        private const val DEFAULT_CROSS_ADAPTER_WIDTH = 180
+        // 跨适配宽度阈值范围与默认自适应基准宽度（160dp：手机竖屏 2 列，平板/横屏 3~6 列）
+        private const val DEFAULT_CROSS_ADAPTER_WIDTH = 160
 
         /** 跨适配网格宽度阈值上下限（dp）：仓库读写 coerce 与设置页滑杆共用同一来源。 */
         const val CROSS_ADAPTER_WIDTH_MIN = 50
