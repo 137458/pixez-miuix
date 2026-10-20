@@ -35,9 +35,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.NovelRankingMode
+import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -79,6 +82,7 @@ fun NovelScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val novelRepository = LocalNovelRepository.current
+    val accountRepository = LocalAccountRepository.current
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
     val backdrop = rememberBlurBackdrop()
@@ -86,6 +90,19 @@ fun NovelScreen(
     var currentTab by rememberSaveable { mutableStateOf(NovelBrowseTab.Recommend) }
     var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
     var refreshToken by rememberSaveable { mutableIntStateOf(0) }
+
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
 
     // 分页状态机单点实现（含 generation 竞态守卫）；tab/榜单切换以身份键重建，等效旧代次自增。
     val pagedList = remember(currentTab, rankingMode) {
@@ -103,7 +120,15 @@ fun NovelScreen(
         )
     }
 
-    LaunchedEffect(currentTab, rankingMode, refreshToken) {
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(currentTab, rankingMode, refreshToken, isLoggedIn, user) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
         // refreshToken 变化（手动刷新/重试）时强制重新拉取首屏。
         pagedList.loadFirst(force = refreshToken > 0)
     }

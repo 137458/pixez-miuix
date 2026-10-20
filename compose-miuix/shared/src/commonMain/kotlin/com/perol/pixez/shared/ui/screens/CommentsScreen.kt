@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.state.PagedListPage
@@ -107,10 +108,16 @@ fun CommentsScreen(
     var isSending by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
     // 登录状态：未登录时禁用发送按钮，与 Hello/New/Spotlight 等页面保持一致。
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(Unit) {
         // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        isLoggedIn = suspendRunCatchingNonCancel { accountRepository.currentAccount() != null }.getOrDefault(false)
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
     }
     // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。
     // 使用 remember：进程恢复时丢失回复目标不会导致功能异常，用户可重新点击回复。
@@ -130,7 +137,15 @@ fun CommentsScreen(
 
     val listState = rememberLazyListState()
 
-    LaunchedEffect(illustId, retryCount) {
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号评论列表并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(illustId, retryCount, isLoggedIn, user) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
         val force = isManualRefreshing
         val previousItems = pagedList.items
         pagedList.loadFirst(force = force)

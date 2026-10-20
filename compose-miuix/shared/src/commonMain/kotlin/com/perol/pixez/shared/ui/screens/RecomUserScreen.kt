@@ -32,8 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -67,8 +70,22 @@ fun RecomUserScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalUserRepository.current
+    val accountRepository = LocalAccountRepository.current
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
+
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
 
     // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
     val pagedList = remember(repository) {
@@ -86,7 +103,15 @@ fun RecomUserScreen(
     }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(repository, retryCount) {
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(repository, retryCount, isLoggedIn, user) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
         val force = isManualRefreshing
         pagedList.loadFirst(force = force)
         isManualRefreshing = false

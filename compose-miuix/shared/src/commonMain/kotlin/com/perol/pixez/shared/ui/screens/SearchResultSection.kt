@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -59,6 +60,8 @@ import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.UserPreviewItem
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -83,6 +86,19 @@ internal fun SearchIllustResultGrid(
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues? = null,
 ) {
+    // 登录状态与账号身份跟踪：登录/登出/切号（loginEventFlow）到达时作废旧账号结果并重拉首屏。
+    val accountRepository = LocalAccountRepository.current
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
     val searchTarget = filterState.searchTarget
     val searchAiType = filterState.searchAiType
     val bookmarkThreshold = filterState.bookmarkThreshold
@@ -163,6 +179,9 @@ internal fun SearchIllustResultGrid(
     val coroutineScope = rememberCoroutineScope()
 
     val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号结果并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
     LaunchedEffect(
         searchWord,
         sort,
@@ -172,7 +191,14 @@ internal fun SearchIllustResultGrid(
         effectiveEndDate,
         retryCount,
         filterChangeVersion,
+        isLoggedIn,
+        user,
     ) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) listState.reset()
+        loadedForAccount = user
         // 过滤条件变化且已持有原始列表时仅本地重过滤（高-3 语义，零网络，替代原实现的全量重请求）；
         // 查询条件变化时状态机已随 remember key 重建，此处走首屏加载；retryCount 变化时走重试。
         if (listState.refilterIfChanged()) return@LaunchedEffect
@@ -266,6 +292,19 @@ internal fun SearchUserResultList(
 ) {
     val effectiveContentPadding = contentPadding ?: PaddingValues(bottom = LocalBottomBarContentPadding.current)
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 登录状态与账号身份跟踪：登录/登出/切号（loginEventFlow）到达时作废旧账号结果并重拉首屏。
+    val accountRepository = LocalAccountRepository.current
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
     // 画师搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 
@@ -282,7 +321,15 @@ internal fun SearchUserResultList(
     val coroutineScope = rememberCoroutineScope()
 
     val filterChangeVersion2 = settingsRepository.filterChangeVersion.collectAsState().value
-    LaunchedEffect(query, retryCount, filterChangeVersion2) {
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号结果并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(query, retryCount, filterChangeVersion2, isLoggedIn, user) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
         pagedList.loadFirst(force = true)
     }
 
