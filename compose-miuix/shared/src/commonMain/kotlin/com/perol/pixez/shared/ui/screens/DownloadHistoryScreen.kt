@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -87,6 +88,8 @@ fun DownloadHistoryScreen(
     }
 
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
+    // 清空操作进行中标志，用于禁用确认弹窗的确定按钮，防止重复提交。
+    var isProcessing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
@@ -181,25 +184,33 @@ fun DownloadHistoryScreen(
                 }
             }
 
-            // 清空下载历史二次确认。
+            // 清空下载历史二次确认；对齐 HistoryScreen：处理期间确定按钮禁用、不可关闭，成功后才关闭，防止重复提交。
             OverlayDialog(
                 title = strings.actionClear,
                 summary = strings.downloadHistoryClearConfirm,
                 show = showClearConfirm,
-                onDismissRequest = { showClearConfirm = false },
+                onDismissRequest = { if (!isProcessing) showClearConfirm = false },
             ) {
                 TextButton(
                     text = strings.cancel,
-                    onClick = { showClearConfirm = false },
+                    onClick = { if (!isProcessing) showClearConfirm = false },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TextButton(
                     text = strings.confirm,
+                    enabled = !isProcessing,
                     onClick = {
-                        showClearConfirm = false
+                        isProcessing = true
                         coroutineScope.launch {
-                            suspendRunCatchingNonCancel { repository.clearAll() }
-                                .onSuccess { refreshToken++ }
+                            try {
+                                val result = suspendRunCatchingNonCancel { repository.clearAll() }
+                                result.onSuccess { refreshToken++ }
+                                // 处理成功才关闭弹窗；失败保持打开并恢复按钮以便重试。
+                                if (result.isSuccess) showClearConfirm = false
+                            } finally {
+                                // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
+                                isProcessing = false
+                            }
                         }
                     },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
