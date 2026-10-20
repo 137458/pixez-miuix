@@ -210,4 +210,45 @@ class ReleaseErrorAntilogTest {
         val text = assertNotNull(crash).readText()
         assertFalse(text.contains("LeakyTokenValue123456"), "红线：崩溃日志不得包含 token 值，实际：$text")
     }
+
+    // ---------- 崩溃日志保留策略：仅保留最新 3 份（与错误日志滚动一致） ----------
+
+    @Test
+    fun writeCrashLog_超出3份时删除最旧仅保留最新3份() {
+        val dir = newTempDir()
+        val now = System.currentTimeMillis()
+        // 预置 3 份更早的崩溃日志；时间戳互异且与当前时刻相差足够大，保证文件名不冲突。
+        val oldest = File(dir, "crash-${now - 3000}.log").apply { writeText("Thread: main\noldest-crash") }
+        val middle = File(dir, "crash-${now - 2000}.log").apply { writeText("Thread: main\nmiddle-crash") }
+        val newer = File(dir, "crash-${now - 1000}.log").apply { writeText("Thread: main\nnewer-crash") }
+        // 第 4 份经公共入口写入，时间戳取当前时刻，新于全部预置文件。
+        val newest = assertNotNull(ErrorLogFiles.writeCrashLog(dir, "main", IllegalStateException("newest-crash")))
+        val remaining = dir.listFiles { file -> file.name.startsWith("crash-") }.orEmpty().map { it.name }.sorted()
+        assertEquals(
+            listOf(middle.name, newer.name, newest.name),
+            remaining,
+            "crash 日志应仅保留最新 3 份，实际：$remaining",
+        )
+        assertFalse(oldest.exists(), "超出份数的最旧崩溃日志应被删除：${oldest.name}")
+        assertTrue(newest.readText().contains("newest-crash"), "保留的最新日志内容应对应本次崩溃，实际：${newest.readText()}")
+        assertTrue(middle.readText().contains("middle-crash"), "未超限的旧日志内容不得被改写")
+    }
+
+    @Test
+    fun writeCrashLog_恰好3份时全部保留且不误删无关文件() {
+        val dir = newTempDir()
+        val keeper = File(dir, "unrelated.txt").apply { writeText("keep-me") }
+        val now = System.currentTimeMillis()
+        val first = File(dir, "crash-${now - 2000}.log").apply { writeText("Thread: main\nfirst-crash") }
+        val second = File(dir, "crash-${now - 1000}.log").apply { writeText("Thread: main\nsecond-crash") }
+        val third = assertNotNull(ErrorLogFiles.writeCrashLog(dir, "main", IllegalStateException("third-crash")))
+        val remaining = dir.listFiles { file -> file.name.startsWith("crash-") }.orEmpty().map { it.name }.sorted()
+        assertEquals(
+            listOf(first.name, second.name, third.name),
+            remaining,
+            "恰好 3 份时应全部保留，实际：$remaining",
+        )
+        assertEquals("keep-me", keeper.readText(), "清理不得误删非 crash 日志文件")
+        assertTrue(first.readText().contains("first-crash"), "既有崩溃日志内容不得被改写")
+    }
 }
