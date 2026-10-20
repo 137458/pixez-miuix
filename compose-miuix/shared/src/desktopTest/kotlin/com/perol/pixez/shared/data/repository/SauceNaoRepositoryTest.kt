@@ -98,4 +98,73 @@ class SauceNaoRepositoryTest {
         assertTrue(disposition.contains("name=\"file\""), disposition)
         assertTrue(disposition.contains("filename=\"test.jpg\""), disposition)
     }
+
+    @Test
+    fun `buildUploadForm 剥离文件名中的路径分隔符仅保留安全 basename`() {
+        val repository = SauceNaoRepository(
+            HttpClient(
+                MockEngine {
+                    respond(content = "", status = HttpStatusCode.OK)
+                }
+            )
+        )
+
+        val unixPath = repository.buildUploadForm(byteArrayOf(1), "folder/sub/pic.png")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(unixPath.contains("filename=\"pic.png\""), unixPath)
+        assertFalse(unixPath.contains('/'), unixPath)
+
+        val windowsPath = repository.buildUploadForm(byteArrayOf(1), "C:\\Users\\test\\pic.png")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(windowsPath.contains("filename=\"pic.png\""), windowsPath)
+        assertFalse(windowsPath.contains('\\'), windowsPath)
+
+        val traversal = repository.buildUploadForm(byteArrayOf(1), "../../evil.jpg")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(traversal.contains("filename=\"evil.jpg\""), traversal)
+        assertFalse(traversal.contains(".."), traversal)
+    }
+
+    @Test
+    fun `buildUploadForm 去除引号与控制字符防止 Content-Disposition 注入`() {
+        val repository = SauceNaoRepository(
+            HttpClient(
+                MockEngine {
+                    respond(content = "", status = HttpStatusCode.OK)
+                }
+            )
+        )
+
+        val quoted = repository.buildUploadForm(byteArrayOf(1), "we\"ird.jpg")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(quoted.contains("filename=\"weird.jpg\""), quoted)
+
+        val controlChars = repository.buildUploadForm(byteArrayOf(1), "bad\r\nInjected: 1.jpg")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(controlChars.contains("filename=\"badInjected: 1.jpg\""), controlChars)
+        assertFalse(controlChars.any { it.isISOControl() }, controlChars)
+    }
+
+    @Test
+    fun `buildUploadForm 保留非 ASCII 文件名并给空值回退默认名`() {
+        val repository = SauceNaoRepository(
+            HttpClient(
+                MockEngine {
+                    respond(content = "", status = HttpStatusCode.OK)
+                }
+            )
+        )
+
+        val nonAscii = repository.buildUploadForm(byteArrayOf(1), "插画_タイトル.png")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(nonAscii.contains("filename=\"插画_タイトル.png\""), nonAscii)
+
+        val nullName = repository.buildUploadForm(byteArrayOf(1), null)
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(nullName.contains("filename=\"image.jpg\""), nullName)
+
+        val blankName = repository.buildUploadForm(byteArrayOf(1), "   ")
+            .single().headers[HttpHeaders.ContentDisposition].orEmpty()
+        assertTrue(blankName.contains("filename=\"image.jpg\""), blankName)
+    }
 }

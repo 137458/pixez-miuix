@@ -1,5 +1,9 @@
 package com.perol.pixez.shared.data.model
 
+import com.perol.pixez.shared.network.PixivHosts
+import io.github.aakira.napier.Napier
+import io.ktor.http.URLProtocol
+import io.ktor.http.Url
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -12,6 +16,10 @@ import kotlinx.serialization.json.jsonPrimitive
  * 支持结构化 JSON 响应及 HTML 降级兜底解析。
  */
 object SauceNaoParser {
+
+    /** SauceNAO 缩略图可信 host：自有缩略图域 saucenao.com（含 img*.saucenao.com 子域）与 Pixiv 图源静态域。 */
+    private const val SAUCENAO_HOST_SUFFIX = "saucenao.com"
+    private val THUMBNAIL_HOSTS = setOf(PixivHosts.HOST_PXIMG, "s.pximg.net")
 
     private val PIXIV_URL_REGEX = Regex("""(?:pixiv\.net/(?:artworks/|member_illust\.php\?[^"'\s]*illust_id=))(\d+)""")
     private val HTML_RESULT_TABLE_REGEX = Regex("""<div class="result">([\s\S]*?)</table>\s*</div>""")
@@ -33,6 +41,26 @@ object SauceNaoParser {
 
         // 降级兜底：HTML 网页解析
         return parseHtml(trimmed)
+    }
+
+    /**
+     * 缩略图 URL 闸门：仅放行 HTTPS、无用户凭据、host 在白名单（saucenao.com 及其子域 /
+     * i.pximg.net / s.pximg.net）的地址。缩略图实际形态为 SauceNAO 自有缩略图代理
+     * （img*.saucenao.com）或源站 CDN（Pixiv 结果即 i.pximg.net），HTTPS/凭据约束与
+     * TrustedUrlPolicy 同口径；host 集独立维护，不污染 Pixiv 主图片政策。
+     * 校验失败返回 null，UI 回退占位显示，不影响结果列表。
+     */
+    fun safeThumbnailUrl(raw: String?): String? {
+        val normalized = raw?.trim().orEmpty()
+        if (normalized.isEmpty()) return null
+        val url = runCatching { Url(normalized) }.getOrNull() ?: return null
+        if (url.protocol != URLProtocol.HTTPS) return null
+        if (url.user != null || url.password != null) return null
+        val host = url.host.lowercase()
+        val hostAllowed = host in THUMBNAIL_HOSTS ||
+            host == SAUCENAO_HOST_SUFFIX ||
+            host.endsWith(".$SAUCENAO_HOST_SUFFIX")
+        return if (hostAllowed) normalized else null
     }
 
     private fun parseJson(raw: String): List<SauceNaoResult> {
@@ -65,12 +93,14 @@ object SauceNaoParser {
                         title = title,
                         author = author,
                         similarity = similarity,
-                        thumbnail = thumbnail,
+                        thumbnail = safeThumbnailUrl(thumbnail),
                     )
                 )
             }
             parsedList
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // 降级行为不变，仅补开发者向日志（对齐「静默吞错补 Napier 降级日志」约定），不需要多语言。
+            Napier.w("SauceNAO 响应 JSON 解析失败，降级为 HTML 解析", e, tag = "SauceNaoParser")
             emptyList()
         }
     }
@@ -116,7 +146,7 @@ object SauceNaoParser {
                         title = title,
                         author = author,
                         similarity = similarity,
-                        thumbnail = thumbnail,
+                        thumbnail = safeThumbnailUrl(thumbnail),
                     )
                 )
             }

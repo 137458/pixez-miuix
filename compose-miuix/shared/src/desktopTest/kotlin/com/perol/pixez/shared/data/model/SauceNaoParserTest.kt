@@ -1,7 +1,11 @@
 package com.perol.pixez.shared.data.model
 
+import io.github.aakira.napier.Antilog
+import io.github.aakira.napier.LogLevel
+import io.github.aakira.napier.Napier
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SauceNaoParserTest {
@@ -229,5 +233,145 @@ class SauceNaoParserTest {
         assertTrue(SauceNaoParser.parse("   ").isEmpty())
         assertTrue(SauceNaoParser.parse("{ invalid json }").isEmpty())
         assertTrue(SauceNaoParser.parse("<html><body>No pixiv results here</body></html>").isEmpty())
+    }
+
+    @Test
+    fun `JSON 缩略图非 HTTPS 携带凭据或 host 不受信时置空`() {
+        val json = """
+        {
+          "header": { "status": 0 },
+          "results": [
+            {
+              "header": { "similarity": "90.0", "thumbnail": "http://img1.saucenao.com/t/a.jpg" },
+              "data": { "pixiv_id": 101, "title": "A" }
+            },
+            {
+              "header": { "similarity": "80.0", "thumbnail": "https://user:pass@img1.saucenao.com/b.jpg" },
+              "data": { "pixiv_id": 102, "title": "B" }
+            },
+            {
+              "header": { "similarity": "70.0", "thumbnail": "https://evil.example.com/c.jpg" },
+              "data": { "pixiv_id": 103, "title": "C" }
+            },
+            {
+              "header": { "similarity": "60.0", "thumbnail": "https://img1.saucenao.com/t/ok.jpg" },
+              "data": { "pixiv_id": 104, "title": "D" }
+            },
+            {
+              "header": { "similarity": "50.0", "thumbnail": "https://saucenao.com.evil.io/e.jpg" },
+              "data": { "pixiv_id": 105, "title": "E" }
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(json)
+        assertEquals(5, results.size)
+        assertNull(results[0].thumbnail, "非 HTTPS 缩略图应置空回退占位")
+        assertNull(results[1].thumbnail, "携带 userinfo 的缩略图应置空回退占位")
+        assertNull(results[2].thumbnail, "host 不受信的缩略图应置空回退占位")
+        assertEquals("https://img1.saucenao.com/t/ok.jpg", results[3].thumbnail)
+        assertNull(results[4].thumbnail, "后缀仿冒 host 应置空回退占位")
+    }
+
+    @Test
+    fun `HTML 缩略图非 HTTPS 时置空`() {
+        val html = """
+        <div class="result">
+          <div class="resultimage"><img src="http://img1.saucenao.com/t/test.jpg" /></div>
+          <div class="resultsimilarityinfo">96.5%</div>
+          <div class="resulttitle">HTML标题</div>
+          <div class="resultcontent">
+            <a href="https://www.pixiv.net/artworks/99887766">Pixiv Link</a>
+          </div>
+        </div>
+        """.trimIndent()
+
+        val results = SauceNaoParser.parse(html)
+        assertEquals(1, results.size)
+        assertEquals(99887766L, results[0].illustId)
+        assertNull(results[0].thumbnail, "非 HTTPS 缩略图应置空回退占位")
+    }
+
+    @Test
+    fun `safeThumbnailUrl 放行 saucenao 与 pximg 白名单 HTTPS 地址`() {
+        assertEquals(
+            "https://img1.saucenao.com/t/test.jpg",
+            SauceNaoParser.safeThumbnailUrl("https://img1.saucenao.com/t/test.jpg"),
+        )
+        assertEquals(
+            "https://saucenao.com/thumbnails/a.jpg",
+            SauceNaoParser.safeThumbnailUrl("https://saucenao.com/thumbnails/a.jpg"),
+        )
+        assertEquals(
+            "https://i.pximg.net/img-master/img/a.jpg",
+            SauceNaoParser.safeThumbnailUrl("https://i.pximg.net/img-master/img/a.jpg"),
+        )
+        assertEquals(
+            "https://s.pximg.net/a.png",
+            SauceNaoParser.safeThumbnailUrl("  https://s.pximg.net/a.png  "),
+        )
+        assertNull(SauceNaoParser.safeThumbnailUrl(null))
+        assertNull(SauceNaoParser.safeThumbnailUrl("   "))
+    }
+
+    @Test
+    fun `safeThumbnailUrl 拒绝非 HTTPS 凭据与非白名单 host`() {
+        assertNull(SauceNaoParser.safeThumbnailUrl("http://img1.saucenao.com/t/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("https://user:pass@saucenao.com/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("https://user@i.pximg.net/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("https://evil.example.com/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("https://saucenao.com.evil.io/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("https://img1.evil-saucenao.com/a.jpg"))
+        assertNull(SauceNaoParser.safeThumbnailUrl("javascript:alert(1)"))
+    }
+
+    /** 捕获 Napier W 级日志的测试桩：仅第三方日志通道打桩，不涉及自身逻辑。 */
+    private class CapturingAntilog : Antilog() {
+        val warnings = mutableListOf<Pair<String?, Throwable?>>()
+
+        override fun performLog(priority: LogLevel, tag: String?, throwable: Throwable?, message: String?) {
+            if (priority == LogLevel.WARNING) warnings += message to throwable
+        }
+    }
+
+    @Test
+    fun `JSON 解析失败降级 HTML 时输出 Napier 警告并携带原始异常`() {
+        val antilog = CapturingAntilog()
+        Napier.base(antilog)
+        try {
+            assertTrue(SauceNaoParser.parse("{ invalid json }").isEmpty())
+
+            val warn = antilog.warnings.firstOrNull()
+            assertTrue(warn != null, "JSON 解析失败应输出 Napier warn 日志，实际记录=${antilog.warnings}")
+            assertTrue(warn.second != null, "warn 日志应携带原始解析异常")
+        } finally {
+            Napier.takeLogarithm()
+        }
+    }
+
+    @Test
+    fun `合法 JSON 正常解析不输出降级警告`() {
+        val antilog = CapturingAntilog()
+        Napier.base(antilog)
+        try {
+            val json = """
+            {
+              "header": { "status": 0 },
+              "results": [
+                {
+                  "header": { "similarity": "95.5" },
+                  "data": { "pixiv_id": 12345678, "title": "正常作品" }
+                }
+              ]
+            }
+            """.trimIndent()
+
+            val results = SauceNaoParser.parse(json)
+            assertTrue(results.isNotEmpty())
+            assertTrue(antilog.warnings.isEmpty(), "正常解析不应产生 warn 日志：${antilog.warnings}")
+        } finally {
+            Napier.takeLogarithm()
+        }
     }
 }

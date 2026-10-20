@@ -37,6 +37,7 @@ import com.perol.pixez.shared.ui.LocalSauceNaoRepository
 import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -174,7 +175,8 @@ fun SearchScreen(
                 val list = sauceNaoRepository.search(bytes, fileName)
                 sauceNaoResults = list
             } catch (e: Exception) {
-                sauceNaoError = e.message ?: e.toString()
+                // 错误文案统一走 PixivApiErrorFormatter 本地化输出，原始异常消息不直透 UI。
+                sauceNaoError = PixivApiErrorFormatter.format(e, strings)
             } finally {
                 isSauceNaoLoading = false
             }

@@ -2,6 +2,7 @@ package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.SauceNaoParser
 import com.perol.pixez.shared.data.model.SauceNaoResult
+import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.ui.AppConstants
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.formData
@@ -13,6 +14,28 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.content.PartData
 import io.ktor.http.isSuccess
 import kotlinx.io.Buffer
+
+/** 上传文件名清洗后为空时的默认名，与网页端表单默认行为一致。 */
+private const val DEFAULT_UPLOAD_FILE_NAME = "image.jpg"
+
+/**
+ * 上传文件名清洗：与下载/保存链路的 [FileNamePolicy.requireSafeBaseName] 同口径。
+ * 先取安全 basename（剥除 / 与 \ 分隔的目录段），再去除引号与 ISO 控制字符；
+ * 清洗后仍不合法的名字（如 "."、".."）经 [FileNamePolicy.sanitizeSegment] 兜底替换非法字符。
+ * 保证拼入 Content-Disposition 的 filename 永不携带目录分隔符、引号与控制字符，头注入不可行。
+ */
+internal fun sanitizeUploadFileName(raw: String?): String {
+    val baseName = raw.orEmpty()
+        .substringAfterLast('/')
+        .substringAfterLast('\\')
+        .replace("\"", "")
+        .filterNot { it.isISOControl() }
+        .trim()
+    if (baseName.isEmpty()) return DEFAULT_UPLOAD_FILE_NAME
+    return runCatching { FileNamePolicy.requireSafeBaseName(baseName) }
+        .getOrElse { FileNamePolicy.sanitizeSegment(baseName) }
+        .ifBlank { DEFAULT_UPLOAD_FILE_NAME }
+}
 
 /**
  * SauceNAO 以图搜图数据仓库。
@@ -31,7 +54,7 @@ class SauceNaoRepository(
         )
 
         if (!response.status.isSuccess()) {
-            throw IllegalStateException("SauceNAO request failed with status: ${'$'}{response.status}")
+            throw IllegalStateException("SauceNAO request failed with status: ${response.status}")
         }
 
         val text = response.bodyAsText()
@@ -55,7 +78,7 @@ class SauceNaoRepository(
                 append(HttpHeaders.ContentType, "image/jpeg")
                 append(
                     HttpHeaders.ContentDisposition,
-                    "form-data; name=\"file\"; filename=\"${fileName ?: "image.jpg"}\"",
+                    "form-data; name=\"file\"; filename=\"${sanitizeUploadFileName(fileName)}\"",
                 )
             },
         ),

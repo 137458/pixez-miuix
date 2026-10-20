@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.perol.pixez.shared.data.model.SauceNaoParser
 import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -215,6 +217,8 @@ private fun SauceNaoResultCard(
 ) {
     val strings = LocalStrings.current
     val thumbShape = remember { RoundedCornerShape(8.dp) }
+    // 缩略图加载路径同口径闸门：非 HTTPS / 带凭据 / 非白名单 host 一律回退占位，不送入 coil。
+    val safeThumbnail = remember(item.thumbnail) { SauceNaoParser.safeThumbnailUrl(item.thumbnail) }
 
     Card(
         modifier = Modifier
@@ -227,17 +231,25 @@ private fun SauceNaoResultCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!item.thumbnail.isNullOrBlank()) {
+            if (safeThumbnail != null) {
                 AsyncImage(
-                    model = item.thumbnail,
+                    model = safeThumbnail,
                     contentDescription = item.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(64.dp)
                         .clip(thumbShape),
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+            } else {
+                // 缺失或校验失败的缩略图回退占位显示，保持结果行高稳定。
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(thumbShape)
+                        .background(MiuixTheme.colorScheme.surfaceContainer),
+                )
             }
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier.weight(1f),
