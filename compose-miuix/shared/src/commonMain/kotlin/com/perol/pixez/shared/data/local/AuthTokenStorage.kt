@@ -263,7 +263,11 @@ class SqlDelightAuthTokenStorage(
      *
      * 在 Mutex 保护下读取当前账号，调用 [transform] 生成新账号对象，再将结果写回数据库。
      * 读取、transform、写入整个流程串行化，避免并发操作导致的数据覆盖或丢失。
-     * [transform] 允许挂起，因此可在其中执行网络请求后再返回更新后的账号。
+     *
+     * 锁边界约束：[transform] 在 Mutex 内被串行调用，其中严禁执行网络请求或任何挂起的
+     * 外部 IO（项目约定见 CONTEXT.md：「网络请求不得在 token storage 的 Mutex 内执行」）。
+     * [transform] 长时间挂起会阻塞所有账号读写，与锁外的 token 刷新网络往返相互等待即构成
+     * 死锁入口；[transform] 只应做纯内存变换后立即返回。
      *
      * @param transform 接收当前账号（未登录时为 null），返回更新后的账号；返回 null 表示不写入。
      */
