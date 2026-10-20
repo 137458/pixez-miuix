@@ -414,7 +414,7 @@ fun SettingsScreen(
                             onClick = onBoardClick,
                         )
                     }
-                    val hasNewUpdate = releaseInfo?.isNew == true && releaseInfo?.versionName != settingsRepository?.ignoreUpdateVersion
+                    val hasNewUpdate = releaseInfo?.isNew == true && releaseInfo?.versionName != settingsRepository.ignoreUpdateVersion
                     ArrowPreference(
                         title = strings.settingUpdate,
                         summary = if (hasNewUpdate) strings.updateFoundNew.format(releaseInfo?.versionName ?: "", AppInfo.VERSION_NAME) else strings.settingUpdateSummary,

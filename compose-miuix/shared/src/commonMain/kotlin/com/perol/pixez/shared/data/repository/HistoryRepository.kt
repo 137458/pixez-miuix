@@ -24,11 +24,11 @@ class HistoryRepository(
      * 若该作品已存在历史记录，则更新其时间并前置到最新位置。
      */
     suspend fun insert(illust: Illust) = withContext(Dispatchers.IO) {
-        val pictureUrl = illust.imageUrls?.medium
-            ?: illust.imageUrls?.large
+        val pictureUrl = illust.imageUrls.medium
+            ?: illust.imageUrls.large
             ?: illust.metaSinglePage?.originalImageUrl
-            ?: illust.metaPages?.firstOrNull()?.imageUrls?.medium
-            ?: illust.metaPages?.firstOrNull()?.imageUrls?.large
+            ?: illust.metaPages.firstOrNull()?.imageUrls?.medium
+            ?: illust.metaPages.firstOrNull()?.imageUrls?.large
             ?: ""
         val now = Clock.System.now().toEpochMilliseconds()
         queries.transaction {

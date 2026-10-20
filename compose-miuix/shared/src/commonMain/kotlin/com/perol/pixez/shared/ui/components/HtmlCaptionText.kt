@@ -632,7 +632,7 @@ internal fun decodeHtmlEntities(input: String): String {
             val code = match.groupValues[1].toIntOrNull(16)
             if (code != null && code in 0L..0x10FFFFL) {
                 try {
-                    codePointToString(code.toInt())
+                    codePointToString(code)
                 } catch (_: Throwable) {
                     match.value
                 }
