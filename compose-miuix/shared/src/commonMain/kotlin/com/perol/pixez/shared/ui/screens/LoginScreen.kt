@@ -135,14 +135,16 @@ fun LoginScreen(
                     .fillMaxHeight()
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
+                    // nestedScroll 必须位于 verticalScroll 外层（祖先侧），滚动增量才会派发到顶栏
+                    // ScrollBehavior；置于内层时顶栏 contentOffset 恒为 0，毛玻璃永不浮现。
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(
                         top = paddingValues.calculateTopPadding(),
                         bottom = paddingValues.calculateBottomPadding(),
                         start = 16.dp,
                         end = 16.dp,
-                    )
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
