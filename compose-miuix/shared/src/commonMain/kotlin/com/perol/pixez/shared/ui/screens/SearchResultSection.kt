@@ -45,6 +45,7 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -59,6 +60,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.NovelCard
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -404,6 +406,196 @@ internal fun SearchUserResultList(
 
                         if (pagedList.isLoadingMore || pagedList.loadMoreError != null || (pagedList.nextUrl == null && currentPreviews.isNotEmpty())) {
                             item(key = "search_user_footer", contentType = "footer") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    when {
+                                        pagedList.isLoadingMore -> {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
+                                                InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
+                                                Text(
+                                                    text = strings.loadingMore,
+                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                                )
+                                            }
+                                        }
+                                        pagedList.loadMoreError != null -> {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            ) {
+                                                Text(
+                                                    text = strings.loadMoreFailedRetry,
+                                                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.error,
+                                                )
+                                                TextButton(
+                                                    text = strings.retry,
+                                                    onClick = ::loadMore,
+                                                )
+                                            }
+                                        }
+                                        else -> {
+                                            Text(
+                                                text = strings.noMoreData,
+                                                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                                                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalScrollBar(
+                        adapter = rememberScrollBarAdapter(listState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight(),
+                        trackPadding = effectiveContentPadding,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 小说搜索结果列表：纯 word 直搜（/v1/search/novel，不带 sort/search_target 筛选），
+ * 竖向 NovelCard 列表 + 触底分页。分页/竞态/账号跟踪与 [SearchUserResultList] 同构，
+ * 小说结果不做 R18/AI 筛选（本批次范围外）。
+ */
+@OptIn(ExperimentalScrollBarApi::class)
+@Composable
+internal fun SearchNovelResultList(
+    query: String,
+    novelRepository: NovelRepository,
+    onNovelClick: (Long) -> Unit,
+    scrollBehavior: ScrollBehavior,
+    listState: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues? = null,
+) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(bottom = LocalBottomBarContentPadding.current)
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 登录状态与账号身份跟踪：登录/登出/切号（loginEventFlow）到达时作废旧账号结果并重拉首屏。
+    val accountRepository = LocalAccountRepository.current
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
+    // 小说搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
+    var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
+
+    // 分页状态机单点实现（含 generation 竞态守卫），同画师结果列表。
+    val pagedList = remember(query) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = novelRepository.searchNovels(query, nextUrl = nextUrl)
+                PagedListPage(response.novels, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
+    }
+    val coroutineScope = rememberCoroutineScope()
+
+    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号结果并重拉首屏。
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(query, retryCount, isLoggedIn, user) {
+        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
+        pagedList.loadFirst(force = true)
+    }
+
+    fun loadMore() {
+        coroutineScope.launch { pagedList.loadMore() }
+    }
+
+    val currentNovels = pagedList.items
+    val shouldLoadMore by remember(pagedList) {
+        derivedStateOf {
+            if (pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null ||
+                pagedList.items.isNullOrEmpty()
+            ) {
+                false
+            } else {
+                val layoutInfo = listState.layoutInfo
+                val totalItems = layoutInfo.totalItemsCount
+                val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
+                lastVisibleIndex >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
+    }
+
+    when {
+        currentNovels == null && pagedList.initialError == null -> LoadingPlaceholder(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
+        )
+        currentNovels == null && pagedList.initialError != null -> ErrorPlaceholder(
+            error = pagedList.initialError,
+            onRetry = { retryCount++ },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(effectiveContentPadding),
+        )
+        currentNovels != null -> {
+            if (currentNovels.isEmpty()) {
+                EmptyPlaceholder(
+                    message = strings.noData,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(effectiveContentPadding),
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = effectiveContentPadding,
+                    ) {
+                        items(
+                            items = currentNovels,
+                            key = { it.id },
+                            contentType = { "novel_card_item" },
+                        ) { novel ->
+                            NovelCard(
+                                novel = novel,
+                                onClick = { onNovelClick(novel.id) },
+                            )
+                        }
+
+                        if (pagedList.isLoadingMore || pagedList.loadMoreError != null || (pagedList.nextUrl == null && currentNovels.isNotEmpty())) {
+                            item(key = "search_novel_footer", contentType = "footer") {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()

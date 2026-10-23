@@ -33,6 +33,7 @@ import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.platform.PlatformPhotoPicker
 import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSauceNaoRepository
 import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -50,17 +51,19 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  *
  * 本函数仅保留状态声明、数据加载副作用与 Scaffold 骨架编排：
  * 顶部栏见 [SearchTopAppBar] / [SearchInputBar] / [SearchResultFilterBar]，
- * 结果区见 [SearchIllustResultGrid] / [SearchUserResultList]，
+ * 结果区见 [SearchIllustResultGrid] / [SearchUserResultList] / [SearchNovelResultList]，
  * 筛选面板见 [SearchFilterBottomSheet]，推荐区见 [SearchSuggestions]。
  */
 @Composable
 fun SearchScreen(
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
+    onNovelClick: (Long) -> Unit,
     initialQuery: String = "",
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalSearchRepository.current
+    val novelRepository = LocalNovelRepository.current
     val settingsRepository = LocalSettingsRepository.current
     val banRepository = LocalBanRepository.current
     val sauceNaoRepository = LocalSauceNaoRepository.current
@@ -79,9 +82,9 @@ fun SearchScreen(
     // 存在初始查询词或点击标签后进入搜索结果模式。
     var isSearching by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
 
-    // 搜索类型：0 = 作品，1 = 画师。
+    // 搜索类型：0 = 作品，1 = 画师，2 = 小说。
     var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
-    val searchTypes = listOf(strings.searchTypeIllust, strings.searchTypeUser)
+    val searchTypes = listOf(strings.searchTypeIllust, strings.searchTypeUser, strings.searchTypeNovel)
 
     // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值、Ugoira 过滤与时间范围（仅作品搜索有效）。
     var sort by rememberSaveable {
@@ -194,6 +197,7 @@ fun SearchScreen(
     val suggestionsListState = rememberLazyListState()
     val illustGridState = rememberLazyStaggeredGridState()
     val userListState = rememberLazyListState()
+    val novelListState = rememberLazyListState()
 
     var isSearchCollapsed by rememberSaveable { mutableStateOf(false) }
 
@@ -203,8 +207,10 @@ fun SearchScreen(
                 suggestionsListState.firstVisibleItemIndex == 0 && suggestionsListState.firstVisibleItemScrollOffset == 0
             } else if (searchTypeIndex == 0) {
                 illustGridState.firstVisibleItemIndex == 0 && illustGridState.firstVisibleItemScrollOffset == 0
-            } else {
+            } else if (searchTypeIndex == 1) {
                 userListState.firstVisibleItemIndex == 0 && userListState.firstVisibleItemScrollOffset == 0
+            } else {
+                novelListState.firstVisibleItemIndex == 0 && novelListState.firstVisibleItemScrollOffset == 0
             }
         }
     }
@@ -336,10 +342,10 @@ fun SearchScreen(
                                     is SearchQueryTarget.IllustId -> onIllustClick(target.id)
                                     is SearchQueryTarget.UserId -> onUserClick(target.id)
                                     is SearchQueryTarget.NumericId -> {
-                                        if (searchTypeIndex == 1) {
-                                            onUserClick(target.id)
-                                        } else {
-                                            onIllustClick(target.id)
+                                        when (searchTypeIndex) {
+                                            1 -> onUserClick(target.id)
+                                            2 -> onNovelClick(target.id)
+                                            else -> onIllustClick(target.id)
                                         }
                                     }
                                     null -> isSearching = true
@@ -414,6 +420,14 @@ fun SearchScreen(
                         listState = userListState,
                         contentPadding = effectiveContentPadding,
                     )
+                    2 -> SearchNovelResultList(
+                        query = query,
+                        novelRepository = novelRepository,
+                        onNovelClick = onNovelClick,
+                        scrollBehavior = scrollBehavior,
+                        listState = novelListState,
+                        contentPadding = effectiveContentPadding,
+                    )
                 }
 
                 if (showFilterSheet) {
@@ -458,7 +472,11 @@ fun SearchScreen(
                                 is SearchQueryTarget.IllustId -> onIllustClick(target.id)
                                 is SearchQueryTarget.UserId -> onUserClick(target.id)
                                 is SearchQueryTarget.NumericId -> {
-                                    if (searchTypeIndex == 1) onUserClick(target.id) else onIllustClick(target.id)
+                                    when (searchTypeIndex) {
+                                        1 -> onUserClick(target.id)
+                                        2 -> onNovelClick(target.id)
+                                        else -> onIllustClick(target.id)
+                                    }
                                 }
                             }
                         } else {

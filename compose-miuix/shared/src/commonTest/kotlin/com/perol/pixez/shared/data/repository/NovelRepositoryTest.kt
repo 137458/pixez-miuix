@@ -146,6 +146,41 @@ class NovelRepositoryTest {
     }
 
     @Test
+    fun `searchNovels 默认请求搜索端点携带 word 与基础过滤且不带筛选参数`() = runBlocking {
+        responseBody = recomJson
+
+        val result = repository.searchNovels("原创")
+
+        val request = captured.single()
+        assertEquals("/v1/search/novel", request.path)
+        assertEquals("原创", request.query["word"])
+        assertEquals("for_android", request.query["filter"])
+        assertEquals("true", request.query["merge_plain_keyword_results"])
+        // 纯 word 直搜：不带排序与搜索目标筛选（对齐旧 Flutter 版行为）。
+        assertFalse(request.query.containsKey("sort"), "小说搜索不应携带 sort")
+        assertFalse(request.query.containsKey("search_target"), "小说搜索不应携带 search_target")
+        assertEquals(1, result.novels.size)
+        assertEquals("推荐小说", result.novels.single().title)
+    }
+
+    @Test
+    fun `searchNovels 传入 nextUrl 时透传分页 URL 且不追加首页参数`() = runBlocking {
+        responseBody = """{"novels":[],"next_url":null}"""
+        val nextUrl = "https://app-api.pixiv.net/v1/search/novel?word=%E5%8E%9F%E5%88%9B&offset=30&filter=for_ios"
+
+        val result = repository.searchNovels("原创", nextUrl = nextUrl)
+
+        val request = captured.single()
+        assertEquals("app-api.pixiv.net", request.host, "分页 URL 必须命中可信 API host")
+        assertEquals("/v1/search/novel", request.path)
+        assertEquals("原创", request.query["word"])
+        assertEquals("30", request.query["offset"])
+        assertEquals("for_ios", request.query["filter"], "分页应使用 nextUrl 自带参数")
+        assertFalse(request.query.containsKey("merge_plain_keyword_results"), "透传分支不应追加首页参数")
+        assertEquals(0, result.novels.size)
+    }
+
+    @Test
     fun `getNovelRanking 强类型枚举映射 mode 参数`() = runBlocking {
         responseBody = recomJson
 

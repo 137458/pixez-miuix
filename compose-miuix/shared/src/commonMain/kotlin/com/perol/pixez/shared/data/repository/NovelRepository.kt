@@ -84,6 +84,24 @@ class NovelRepository(
     ): NovelRecomResponse = getNovelRanking(mode = mode.value, nextUrl = nextUrl)
 
     /**
+     * 关键词搜索小说（纯 word 直搜，不带 sort/search_target 筛选，对齐旧 Flutter 版行为）。
+     */
+    suspend fun searchNovels(
+        word: String,
+        nextUrl: String? = null,
+    ): NovelRecomResponse = networkCall("搜索小说失败 word=$word") {
+        if (!nextUrl.isNullOrBlank()) {
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        } else {
+            apiClient.get("/v1/search/novel") {
+                parameter("word", word)
+                parameter("filter", "for_android")
+                parameter("merge_plain_keyword_results", "true")
+            }.body()
+        }
+    }
+
+    /**
      * 获取小说排行榜（支持日榜、周榜、月榜等与分页）。
      */
     suspend fun getNovelRanking(

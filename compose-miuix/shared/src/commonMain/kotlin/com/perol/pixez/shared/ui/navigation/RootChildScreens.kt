@@ -152,6 +152,7 @@ internal fun MainContent(
             RootComponent.MainTab.Search -> SearchScreen(
                 onIllustClick = component::onIllustClicked,
                 onUserClick = component::onUserClicked,
+                onNovelClick = component::onNovelClicked,
             )
 
             RootComponent.MainTab.Ranking -> RankingScreen(
@@ -332,6 +333,7 @@ internal fun renderSearch(
     SearchScreen(
         onIllustClick = component::onIllustClicked,
         onUserClick = component::onUserClicked,
+        onNovelClick = component::onNovelClicked,
         initialQuery = instance.query,
     )
 }
