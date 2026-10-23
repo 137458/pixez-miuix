@@ -2,19 +2,22 @@
 
 # PixEz MIUIX ![](https://camo.githubusercontent.com/f2b4fa6779c8a4825e0e7347076746a2047ed100/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d47504c2d2d332e302d6f72616e67652e737667)
 
-> **Compose adalah jalur utama**: PixEz MIUIX dikembangkan dan dirilis dari [`compose-miuix/`](../compose-miuix). Flutter v1 telah dibekukan di [`archive/flutter-v1/`](../archive/flutter-v1/) untuk referensi historis dan perbaikan keamanan terbatas.
+> **Compose adalah jalur utama**: PixEz MIUIX dikembangkan dan dirilis dari [`compose-miuix/`](../compose-miuix). Flutter v1 telah diarsipkan di [`archive/flutter-v1/`](../archive/flutter-v1/) untuk penelusuran historis dan perbaikan keamanan. Di Android, Flutter v1 dan versi Compose memakai application ID yang berbeda sehingga tidak dapat ditimpa saat pembaruan.
 
-Klien pihak ketiga Pixiv yang dibuat dengan Compose Multiplatform. Rilis aktif tersedia untuk Android dan Windows Desktop.
+Klien pihak ketiga Pixiv yang dibangun di atas Kotlin Multiplatform (KMP) dan Compose Multiplatform (CMP), dengan antarmuka berbasis pustaka komponen MIUIX (`top.yukonga.miuix.kmp`). Rilis aktif tersedia untuk Android dan Windows Desktop; iOS hanya diverifikasi kompilasi, dan target macOS belum diaktifkan.
 
-Dapat mengakses Pixiv secara langsung dari Tiongkok Daratan.
+Koneksi langsung ke Pixiv dari Tiongkok Daratan tanpa proxy: mode SNI langsung, DNS aman DoH, dan mirror sumber gambar opsional.
 
 # Download
 
 |OS|Market|GitHub Releases|
 |:---:|:---:|:---:|
-|Android|[Google Play](https://play.google.com/store/apps/details?id=com.perol.play.pixez)|[Release APK](https://github.com/137458/pixez-miuix/releases)|
-|Windows Desktop|/|[Standalone EXE / Portable ZIP / MSI](https://github.com/137458/pixez-miuix/releases)|
-|macOS / Linux|/|Target sumber Compose, belum ada rilis resmi|
+|Android|/|[`PixEz-MIUIX-v*.apk`](https://github.com/137458/pixez-miuix/releases)|
+|Windows Desktop|/|[`PixEz-Standalone.exe` / `PixEz-windows-x64-portable.zip` / `PixEz-*.msi`](https://github.com/137458/pixez-miuix/releases)|
+|Linux|/|Build dari sumber (termasuk paket Deb), belum ada rilis resmi|
+|macOS|/|Target belum diaktifkan, belum ada rilis resmi|
+
+Android 7.0 (API 24) atau lebih baru, untuk ponsel dan tablet. EXE Windows dapat dijalankan tanpa pemasangan Java. Versi portabel diekstrak terlebih dahulu, lalu jalankan `PixEz.exe`.
 
 # Preview
 
@@ -23,17 +26,19 @@ Dapat mengakses Pixiv secara langsung dari Tiongkok Daratan.
 
 # Tentang repositori ini
 
-Seperti yang kamu lihat, Flutter adalah sebuah framework yang membantu pengembang untuk mendesain UI dengan cepat.
+PixEz MIUIX adalah versi tulis-ulang dari PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 19 berkas `*Repository.kt` dan 42 berkas `*Screen.kt`.
 
-Fitur Hot Reload-nya dapat mempersingkat waktu debug secara signifikan, membuat prosesnya menjadi WYSIWYG(Apa yang Kau Lihat Itulah yang Kau Dapatkan).
+Komponen utama:
 
-Dengan menggunakan PlatformChannel, Kamu dapat membuat fungsi khusus untuk platform yang berbeda.
-
-Aplikasi ini menggunakan `mobx`, `flutter_bloc` (akan ditinggalkan), `provider` untuk mengelola status, dan `custompainter` untuk memainkan ugoira.
+- Navigasi Decompose.
+- Ktor Client: login OAuth2 PKCE, pembaruan token otomatis beserta pencobaan ulang permintaan asli, dan dukungan multi-akun.
+- SQLDelight untuk basis data lokal; Coil 3 untuk pemuatan gambar.
+- Bilah bawah mengapung dengan lima tab: Rekomendasi, Pencarian, Peringkat, Feed, dan Spotlight; mendukung rendering Liquid Glass dan otomatis kembali ke blur bila `RuntimeShader` tidak didukung.
+- Daftar mendukung tarik-turun untuk menyegarkan dan memuat lebih banyak konten secara otomatis saat mencapai dasar daftar.
 
 ## Kontribusi
 
-Saat ini kami memiliki para pengguna yang berkontribusi dalam proyek ini. Terima kasih atas partisipasi mereka!
+Terima kasih kepada semua kontributor proyek ini:
 
 <table>
   <tr>
@@ -48,23 +53,13 @@ Saat ini kami memiliki para pengguna yang berkontribusi dalam proyek ini. Terima
   </tr>
 </table>
 
-Jika kamu seorang pengembang, dan ingin berkontribusi pada proyek ini, jangan ragu untuk mengirimkan PR ya!
-
-Aplikasi ini juga menggunakan `flutter_intl` untuk melokalkan. Kamu juga dipersilakan untuk melakukan penerjemahan.
-
-Punya ide tentang desain UI? Kamu juga dipersilakan untuk berbagi pendapat.
+Kontribusi kode, antarmuka, dan terjemahan diterima melalui Pull Request.
 
 # Komunikasi
 
-Kami memiliki [halaman panduan dan FAQ di sini (hanya dalam bahasa Mandarin)](./FAQ.md).
+Panduan penggunaan dan FAQ tersedia [di sini (bahasa Mandarin)](./FAQ.md).
 
-Umpan balik melalui surat: PxezFeedback@outlook.com
-
-Juga, umpan balik di Telegram: [@PixEzViewer](https://t.me/PixEzViewer)
-
-(Terutama bahasa Mandarin, bahasa Inggris dipersilakan)
-
-Jika kamu memiliki pertanyaan tentang pendaftaran atau 🔞, tolong jangan meminta solusi.
+Umpan balik melalui surel: [gaaf14738@gmail.com](mailto:gaaf14738@gmail.com)
 
 # Penafian (Disclaimer)
 

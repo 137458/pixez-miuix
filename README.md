@@ -4,7 +4,7 @@
 
 # PixEz MIUIX
 
-**基于 Compose Multiplatform 与 Xiaomi HyperOS (MIUIX) 设计规范打造的高颜值、现代跨平台 Pixiv 客户端**
+**基于 Kotlin Multiplatform 与 Compose Multiplatform 的 Pixiv 第三方客户端，采用 Xiaomi HyperOS（MIUIX）设计规范**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
 [![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#下载与安装)
@@ -35,133 +35,153 @@
 
 ## 项目简介
 
-**PixEz MIUIX** 是原知名开源 Pixiv 第三方客户端 PixEz 的全新世代重构版本。本项目全面拥抱 **Kotlin Multiplatform (KMP)** 与 **Compose Multiplatform (CMP)** 技术栈，并深度结合 **Xiaomi HyperOS (MIUIX)** 设计语言与交互规范，当前主线面向 Android 与 Windows Desktop 交付原生流畅、通透轻盈、富有动感的美学体验。
+**PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目基于 Kotlin Multiplatform（简称 KMP）与 Compose Multiplatform（简称 CMP）开发。界面使用 MIUIX 组件库（`top.yukonga.miuix.kmp`）。
 
-无论是在移动设备还是桌面设备上，PixEz MIUIX 均支持中国大陆地区免代理直连，让优质艺术作品触手可及。
+当前发行平台为 Android 与 Windows Desktop。iOS 仅做编译验证，macOS target 暂未启用。
+
+应用面向中国大陆网络环境提供免代理直连。内置 SNI 直连、DoH 安全 DNS 与可选图源镜像。
 
 ***
 
 ## 核心特性
 
-- **Xiaomi HyperOS (MIUIX) 原生交互美学**：
-  - 官方 Squircle 超椭圆几何圆角与 MIUIX 层级卡片容器 (`Card`, `BasicComponent`)。
-  - Liquid Glass 悬浮液态玻璃底栏：高斯模糊基底、动态高光与透镜折射三重渲染。
-  - 动态流光背景：基于 Android 13+ 原生 `RuntimeShader` 与 Desktop Skia `RuntimeEffect` 的实时 GLSL 着色器。
-  - 大屏与平板响应式适配：自适应多列瀑布流与居中限宽悬浮底栏。
-- **全链路流式分页与无限滚动**：
-  - 首页推荐、关注动态、插画搜索、画师搜索、排行榜、相关推荐、系列作品与评论区均支持触底平滑预加载与下拉刷新。
-- **强大的 Pixiv 核心功能**：
-  - 推荐与多维度榜单（日榜、周榜、月榜、新人榜、原创榜、R-18 榜）。
-  - 高清大图多页轮播、动图 (Ugoira) 原生帧播放。
-  - Pixivision 官方特辑沉浸式图文阅读器。
-  - 评论区多级回复与作品关联推荐。
-- **严密的内容过滤与安全防护系统**：
-  - 标签屏蔽、作品 ID 屏蔽、画师 ID 屏蔽、NSFW 敏感内容遮罩与 AI 生成作品过滤。
-- **收藏与下载深度联动**：
-  - 收藏自动下载、下载自动收藏、收藏自动打标与关注画师多项深度联动配置。
-- **多任务下载与资源管理**：
-  - 原图一键高速下载、后台任务队列调度、断点续传与自动同步至系统相册。
-- **全自动鉴权与免代理直连**：
-  - OAuth2 PKCE 认证流程与 Token 自动无感刷新。
-  - 内置免代理 SNI 混淆直连与防盗链图片管线。
+- **MIUIX 界面与 Liquid Glass 悬浮底栏**：
+  - 界面基于 MIUIX 组件库构建，主要容器为 `Card` 与 `BasicComponent`。
+  - 悬浮底栏支持液态玻璃折射与背景模糊两种渲染。设备不支持 `RuntimeShader` 时自动回退为模糊效果。
+  - 着色器动效在 Android 13（API 33）及以上使用系统 `RuntimeShader`，桌面端使用 Skia `RuntimeEffect`。
+  - 平板与宽屏启用多列瀑布流。悬浮底栏限宽居中（最大 540 dp），内容区最大宽度 760 dp。
+- **列表浏览**：
+  - 首页推荐、关注动态、搜索、排行榜、画师主页、系列作品、评论区与好友列表均支持下拉刷新。
+  - 列表触底时自动加载更多内容。
+- **Pixiv 核心功能**：
+  - 排行榜：日榜、周榜、月榜、新人榜、原创榜、R-18 榜与 AI 榜。
+  - 插画与漫画多页浏览，动图（Ugoira）逐帧播放。
+  - Pixivision 特辑图文浏览。
+  - 评论区支持多级回复。
+  - 以图搜图：选取本地图片，通过 SauceNAO 检索相似作品。
+- **内容过滤**：
+  - 支持标签屏蔽、画师与作品屏蔽、NSFW 遮罩与 AI 生成作品过滤。
+- **收藏与下载联动**：
+  - 可在设置中开启收藏后自动保存、保存后自动收藏、收藏时自动添加标签与收藏时自动关注画师。
+- **下载管理**：
+  - 支持原图与分页原图下载。下载与动图压缩包共用 256 MB 单任务上限，超限中止并清理临时文件。
+  - 下载队列并发数可在 1～6 之间调节，默认同时运行 2 个任务。失败任务可重试。
+  - Android 端可将图片保存到系统相册（`Pictures/PixEz` 与 `Downloads/PixEz`）。
+- **账号与网络**：
+  - OAuth2 PKCE 登录。令牌过期后自动刷新并重试原请求。
+  - 支持多账号切换。
+  - 免代理直连：SNI 直连模式、DoH 安全 DNS 与可选图源镜像。DoH 解析失败时自动熔断，冷却期内回退系统 DNS。
+  - `TrustedUrlPolicy` 限制外部链接仅访问受信任域名。
 
 ***
 
 ## 下载与安装
 
-请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的最新安装包或运行包：
+请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的安装包或运行包：
 
 ### Android
 
-- 下载 `PixEz-MIUIX-v*.apk` 文件并在设备上直接安装运行（支持 Android 7.0 / API 24 及以上系统，已适配手机、折叠屏与平板）。
+下载 `PixEz-MIUIX-v*.apk` 并在设备上直接安装。支持 Android 7.0（API 24）及以上系统，适配手机与平板。
 
-### Windows 桌面端 (无需预装 Java 环境)
+### Windows 桌面端（无需预装 Java 环境）
 
-- **单文件独立版 (推荐)**：下载 `PixEz-Standalone.exe`，内嵌完整裁剪 JRE 运行时与硬件加速渲染库，双击即可直接运行，无需解压。
-- **免安装绿色便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
-- **MSI 安装向导包**：下载 `PixEz-*.msi` 安装包，双击按提示安装至系统，自动创建桌面与开始菜单快捷方式。
+- **单文件独立版**：下载 `PixEz-Standalone.exe`，内嵌运行时，双击即可直接运行，无需解压。
+- **免安装便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
+- **MSI 安装包**：下载 `PixEz-*.msi`，双击按提示安装，自动创建桌面与开始菜单快捷方式。
 
 ### 其他桌面目标
 
-- macOS 与 Linux 保留 Compose 源码目标，尚未纳入正式发行与自动化安装包验证。
+Linux 可从源码构建，打包格式包含 Deb。macOS target 因依赖库缺少对应变体暂未启用。两个平台当前均未提供正式发行安装包。
 
 ***
 
 ## 使用说明
 
-1. **登录账号**：启动应用后进入登录页，点击登录并完成 Pixiv 网页端授权，应用将自动完成 Token 兑换并持久化。
+1. **登录账号**：启动应用进入登录页，完成 Pixiv 网页端授权。应用自动换取令牌并保存。
 2. **浏览与发现**：
-   - 底部悬浮底栏提供“推荐 (Hello)”、“动态 (New)”、“发现 (Spotlight)”、“我的 (User)”快速切换。
-   - 列表向下滑动时将自动流式预加载后续作品，下拉即可触发即时刷新。
-3. **作品操作**：
-   - 点击作品卡片进入沉浸式详情页，可进行收藏、点赞、下载原图、查看画师主页、阅读评论及关联作品。
-4. **屏蔽设置**：
-   - 进入“设置 -> 屏蔽管理”，可配置屏蔽标签、画师黑名单、作品黑名单及是否过滤 AI 生成内容。
+   - 底部悬浮底栏提供“推荐”、“搜索”、“排行”、“动态”、“特辑”五个页签。
+   - 列表触底时自动加载更多内容，下拉即可刷新。
+3. **作品操作**：在详情页可收藏作品、下载原图、查看画师主页、阅读评论与相关推荐。
+4. **内容过滤**：在设置中配置标签屏蔽、画师屏蔽、用户屏蔽与 AI 生成作品过滤。
 
 ***
 
 ## Flutter v1 归档
 
-Flutter v1 已从主线归档至 [`archive/flutter-v1/`](archive/flutter-v1/)，不再参与日常 CI、功能开发或桌面发布。该目录保留完整历史源码、平台工程与私有插件，供历史追溯、数据迁移研究及必要的安全修复使用；所有新功能请提交至 [`compose-miuix/`](compose-miuix/)。
+Flutter v1 已从主线归档至 [`archive/flutter-v1/`](archive/flutter-v1/)，不再参与日常开发与桌面发布。该目录保留完整历史源码、平台工程与私有插件，供历史追溯与安全修复使用。新功能开发在 [`compose-miuix/`](compose-miuix/) 进行。
 
-Android Flutter v1 与 Compose 版使用不同应用 ID，不能直接覆盖升级；Compose Desktop 会尽可能复用历史桌面数据目录。详细迁移说明见 [archive README](archive/flutter-v1/README.md)。
+Android 端 Flutter v1 与 Compose 版使用不同应用 ID，无法覆盖安装升级。详细迁移说明见 [archive README](archive/flutter-v1/README.md)。
 
 ## 工程架构
 
 ```text
 pixez-flutter-MIUIX/
-├── compose-miuix/                     # Compose Multiplatform 跨平台源码
-│   ├── composeApp/                    # 各平台入口模块 (Android / Desktop)
-│   │   ├── src/androidMain/           # Android 原生入口与清单文件
-│   │   └── src/desktopMain/           # Desktop JVM 平台入口与打包配置
-│   └── shared/                        # 跨平台共享核心模块
+├── compose-miuix/                      # Kotlin Multiplatform 工程
+│   ├── composeApp/                     # 应用入口模块
+│   │   ├── src/androidMain/            # Android 入口、清单与资源
+│   │   └── src/desktopMain/            # Desktop JVM 入口与打包配置
+│   └── shared/                         # 跨平台共享模块
 │       └── src/commonMain/
-│           ├── composeResources/      # 矢量图标与多语言资源
-│           ├── sqldelight/            # SQLDelight 数据库架构定义
+│           ├── composeResources/       # 图标与多语言资源
+│           ├── sqldelight/             # SQLDelight 数据库定义
 │           └── kotlin/com/perol/pixez/shared/
-│               ├── data/              # 数据模型、数据库驱动与 14 个核心 Repository
-│               ├── network/           # Ktor HTTP 客户端、OAuth 认证与 Token 刷新插件
-│               ├── platform/          # 跨平台 Expect 抽象 (相册、剪贴板、分享)
-│               └── ui/                # 42 个业务界面、MIUIX 组件与液态玻璃动效
-├── Code_Wiki.md                       # 架构全景手册
-├── MIUIX_Spec.md                      # UI 设计与组件规范
-└── Global_TODO.md                     # 全局待办与路线图
+│               ├── data/               # 数据模型、本地存储与 Repository
+│               ├── navigation/         # Decompose 路由与导航
+│               ├── network/            # Ktor 客户端、OAuth 认证与令牌刷新
+│               ├── platform/           # Expect/Actual 平台抽象
+│               ├── ui/                 # 页面、MIUIX 组件与动效
+│               └── utils/              # 通用工具
+├── AGENTS.md                           # 构建验证命令清单
+├── CHANGELOG.md                        # 版本变更记录
+├── Code_Wiki.md                        # 架构与调用链说明
+├── MIUIX_Spec.md                       # UI 组件规范
+└── Global_TODO.md                      # 待办与路线图
 ```
+
+`shared/src/commonMain` 下包含 19 个 `*Repository.kt` 与 42 个 `*Screen.kt`。
 
 ***
 
 ## 源码构建
 
-如需从源码编译开发，请确保本地具备以下开发环境：
+### 环境要求
 
-- **JDK**: Java Development Kit 17 或 21
-- **Android SDK**: `compileSdk = 36`, `minSdk = 24`
+- JDK 17。
+- Android SDK：`compileSdk = 36`、`minSdk = 24`。
+- 构建通过 Gradle Wrapper（Gradle 8.14.4）执行。
+- Windows 单文件 EXE 打包依赖 .NET Framework 的 `csc.exe`。
+
+### 常用命令
+
+以下命令在 `compose-miuix/` 目录执行。完整验证清单以 `AGENTS.md` 为唯一来源：
 
 ```bash
-# 1. 切换至 Compose 工程目录
-cd compose-miuix
+# Android Debug 编译验证
+./gradlew :composeApp:compileDebugKotlinAndroid
 
-# 2. 编译并验证 Desktop 端共享模块
+# 构建 Android Debug APK
+./gradlew :composeApp:assembleDebug
+
+# 编译 Desktop 共享模块
 ./gradlew :shared:compileKotlinDesktop
 
-# 3. 运行 Desktop (JVM) 桌面端客户端
+# 运行桌面端
 ./gradlew :composeApp:run
 
-# 4. 编译并安装 Android Debug 版本至连接的设备
-./gradlew :composeApp:installDebug
+# 运行双端单元测试
+./gradlew :shared:desktopTest :composeApp:desktopTest
 
-# 5. 打包 Android Release APK
-./gradlew :composeApp:assembleRelease
-
-# 6. 打包当前桌面平台安装包 (MSI / DMG / DEB)
-./gradlew :composeApp:packageDistributionForCurrentOS
+# 打包 Windows 单文件 EXE
+./gradlew :composeApp:packageWindowsSingleFileExe
 ```
+
+Android Release APK 使用 `./gradlew :composeApp:assembleRelease` 构建。发布流程见 `RELEASE_NOTES_GUIDE.md`。
 
 ***
 
 ## 贡献者与鸣谢
 
-本项目感谢所有为 PixEz 及其 MIUIX 跨平台重构做出贡献的开发者与社区成员：
+本项目感谢所有为 PixEz 与 MIUIX 重制版做出贡献的开发者与社区成员：
 
 <table>
   <tr>
@@ -176,27 +196,27 @@ cd compose-miuix
   </tr>
 </table>
 
-如果你愿意为本项目贡献代码、优化设计或完善多语言翻译，欢迎随时提交 Pull Request！
+欢迎通过 Pull Request 参与代码、界面与多语言翻译贡献。
 
-特别鸣谢 [pixez-flutter](https://github.com/Notsfsssf/pixez-flutter) 社区提供的优秀 Flutter 跨平台客户端。
-特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) 社区提供的优秀 Compose MIUIX 跨平台组件库。
+特别鸣谢 [pixez-flutter](https://github.com/Notsfsssf/pixez-flutter)：PixEz 原版 Flutter 客户端。
+特别鸣谢 [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix)：Xiaomi HyperOS 风格的 Compose 组件库。
 
 ***
 
 ## 社区与反馈
 
-- 使用指南 & 常见问题：[点此查看 FAQ 文档](.github/FAQ.md)
+- 使用指南与常见问题：[FAQ](.github/FAQ.md)
 - 邮件反馈：[gaaf14738@gmail.com](mailto:gaaf14738@gmail.com)
 
 ***
 
 ## 免责声明
 
-1. **非官方客户端声明**：PixEz MIUIX 是由开源社区与个人开发者基于学习、研究与技术探索目的独立打造的第三方 Pixiv 客户端，与 pixiv Inc. 及其关联公司无任何商业关联、投资关系或官方合作。本项目的名称、标识及内容均不代表 pixiv Inc. 的官方立场。
-2. **知识产权与版权归属**：本应用内展示的所有插画、漫画、小说、动图（Ugoira）、Pixivision 特辑及相关元数据的版权均归原作者及 pixiv Inc. 所有。用户通过本应用获取或下载的内容仅供个人非商业性学习、鉴赏与交流使用，严禁将任何相关资源用于商业用途、未经授权的二次分发或其他侵犯版权的行为。
-3. **网络与安全合规**：为提升用户体验，应用内置了直连通道等网络优化技术方案，该等方案仅用于网络通信研究与连通性改善目的。使用者应自觉遵守所在国家及地区的法律法规，以及 pixiv 平台的服务条款（Terms of Service）。因用户个人不当使用本应用或其中内容所造成的任何纠纷、损失或法律责任，由使用者自行承担，本项目开发者及贡献者不承担任何直接或连带责任。
+1. **非官方客户端声明**：PixEz MIUIX 是由开源社区与个人开发者基于学习、研究与技术探索目的独立开发的第三方 Pixiv 客户端，与 pixiv Inc. 及其关联公司无任何商业关联、投资关系或官方合作。本项目的名称、标识及内容均不代表 pixiv Inc. 的官方立场。
+2. **知识产权与版权归属**：本应用内展示的所有插画、漫画、小说、动图（Ugoira）、Pixivision 特辑及相关元数据的版权均归原作者及 pixiv Inc. 所有。用户通过本应用获取或下载的内容，仅供个人非商业性学习、鉴赏与交流使用。严禁将任何相关资源用于商业用途、未经授权的二次分发或其他侵犯版权的行为。
+3. **网络与安全合规**：应用内置直连通道等网络优化方案，仅用于网络通信研究与连通性改善目的。使用者应自觉遵守所在国家及地区的法律法规，以及 pixiv 平台的服务条款（Terms of Service）。因用户个人不当使用本应用或其中内容所造成的任何纠纷、损失或法律责任，由使用者自行承担。本项目开发者及贡献者不承担任何直接或连带责任。
 4. **服务可用性与稳定性**：本项目以开源形式免费提供，不保证应用及其内置服务的持续可用性、稳定性或安全性。开发者保留在不另行通知的情况下调整、中断或终止部分或全部功能的权利。
-5. **第三方链接与内容**：本应用可能包含指向 pixiv 官方平台或其他第三方网站的链接及引用，该等外部资源由其各自所有者独立运营与负责。本项目对任何第三方内容、服务的准确性、合法性或安全性不作任何保证。
+5. **第三方链接与内容**：本应用可能包含指向 pixiv 官方平台或其他第三方网站的链接及引用，上述外部资源由其各自所有者独立运营与负责。本项目对任何第三方内容、服务的准确性、合法性或安全性不作任何保证。
 
 
 ***

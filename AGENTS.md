@@ -17,7 +17,7 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Windows 单文件 EXE | `./gradlew :composeApp:packageWindowsSingleFileExe` |
 | 桌面端运行 | `./gradlew :composeApp:run` |
-| iOS 编译验证（仅 macOS 机器 / CI） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
+| iOS 编译验证（仅 macOS 机器） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
 
 发布前全量验证（一行版）：
 

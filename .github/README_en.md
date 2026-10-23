@@ -4,10 +4,10 @@
 
 # PixEz MIUIX
 
-**A gorgeous, modern, and fluid cross-platform Pixiv client built with Compose Multiplatform and Xiaomi HyperOS (MIUIX) design language**
+**A third-party Pixiv client built with Kotlin Multiplatform and Compose Multiplatform, using the Xiaomi HyperOS (MIUIX) design specification**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](../LICENSE)
-[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#-build--development)
+[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#download--installation)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
@@ -18,44 +18,46 @@
 
 ---
 
-## 📖 Introduction
+## Introduction
 
-**PixEz MIUIX** is the next-generation rewrite of the well-known Pixiv third-party client PixEz. Built entirely on **Kotlin Multiplatform (KMP)** and **Compose Multiplatform (CMP)** with deep integration of **Xiaomi HyperOS (MIUIX)** design paradigms, PixEz MIUIX delivers a native, lightweight, and fluid visual aesthetic across mobile and desktop platforms.
+**PixEz MIUIX** is a rewrite of PixEz, a third-party Pixiv client. The project is built on **Kotlin Multiplatform (KMP)** and **Compose Multiplatform (CMP)**, with the UI based on the MIUIX component library (`top.yukonga.miuix.kmp`).
 
-Direct connection from Mainland China is supported without requiring external proxy configurations.
+The current release platforms are Android and Windows Desktop. iOS is compile-verified only, and the macOS target is not enabled.
 
----
-
-## ✨ Features & Design Highlights
-
-### 🎨 Xiaomi HyperOS (MIUIX) Aesthetics
-- **HyperOS Visual Foundations**: Squircle geometry, hierarchical card containers (`Card`, `BasicComponent`), and full system dynamic color tokens.
-- **IosLiquidGlass Floating Navigation Bar**:
-  - Official 3-layer rendering pipeline: `CombinedBackdrop` frosted glass base, specular highlight reflection, and chromatic dispersion lens.
-  - Physics-based damped drag animation (`DampedDragAnimation`) with inertial elastic snapping.
-- **HyperOS 2 / HyperOS 3 Dynamic Shaders**:
-  - Official GLSL runtime dynamic background shader (Android 13+ native `RuntimeShader` / Desktop Skia `RuntimeEffect`).
-  - 60fps continuous color interpolation and Perlin noise flow.
-- **Parallax Micro-Interactions**: Hero application logo dynamic scale-and-fade synced with list scroll offset.
-
-### ⚡ Modern Multiplatform Architecture & Performance
-- **Unified Cross-Platform Core**: Jetpack / JetBrains Compose Multiplatform shared across Android, Desktop (JVM), iOS, and macOS.
-- **Decompose Navigation**: Complete lifecycle management, multi-stack routing, and hardware back-press dispatching.
-- **Async Networking**: Ktor Client + Kotlinx.Serialization with auto OAuth token refresh and direct SNI proxy engine.
-- **Robust Persistence**: SQLDelight type-safe databases maintaining backward compatibility with historical records.
-- **Optimized Image Pipeline**: Coil 3 async multiplatform loader with multi-tier caching and anti-hotlinking headers.
-
-### 🖼️ Pixiv Core Capabilities
-- **Discovery & Rankings**: Daily, weekly, monthly, rookie, original, and R-18 rankings.
-- **Adaptive Staggered Grid**: Fluid column layout with smart preview resolution matching.
-- **Pixivision / Spotlight**: Full article parsing with rich inline reader mode.
-- **Artwork Details**: High-resolution carousel viewer, animated GIF (Ugoira) frame rendering, comment tree, related works, and series navigation.
-- **Advanced Filtering & Shielding**: Multi-rule muting (by Tag, Artwork ID, Artist ID, AI-generated content toggle).
-- **Download & Task Manager**: One-click original saving, background download queue, automatic gallery indexing, and clipboard quick lookup.
+The app connects to Pixiv directly from Mainland China without a proxy. It includes SNI direct connection, DoH secure DNS, and an optional image mirror.
 
 ---
 
-## 📱 Screenshots & Preview
+## Features
+
+### MIUIX Design
+- The UI is built on the MIUIX component library; the primary containers are `Card` and `BasicComponent`.
+- The floating bottom bar supports Liquid Glass refraction and background blur rendering, and falls back to blur automatically when `RuntimeShader` is unsupported.
+- Shader effects use the system `RuntimeShader` on Android 13 (API 33) and later, and Skia `RuntimeEffect` on desktop.
+- The bottom bar provides five tabs: Recommend, Search, Ranking, Feed, and Spotlight.
+- Tablets and wide screens enable a multi-column staggered grid. The floating bottom bar is width-capped and centered (max 540 dp); the content area is capped at 760 dp.
+
+### Multiplatform Architecture
+- `shared/src/commonMain` contains 19 `*Repository.kt` and 42 `*Screen.kt`.
+- Decompose for routing and navigation.
+- Ktor Client for networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
+- SQLDelight for the local database; Coil 3 for image loading.
+- Direct connection from Mainland China: SNI direct mode, DoH secure DNS with fallback to system DNS after a resolution failure, and an optional image mirror.
+- `TrustedUrlPolicy` restricts external links to trusted domains.
+
+### Pixiv Core Capabilities
+- Pull-to-refresh and load-more on the home recommendations, following feed, search, rankings, artist pages, series works, comment sections, and the friends list.
+- Rankings: daily, weekly, monthly, rookie, original, R-18, and AI.
+- Multi-page browsing for illustrations and manga; Ugoira playback frame by frame.
+- Pixivision article browsing; multi-level comment replies.
+- Search by image: pick a local image and find similar works through SauceNAO.
+- Content filtering: tag muting, artist and work muting, NSFW masking, and AI-generated content filtering.
+- Bookmark and download automation: auto-save on bookmark, auto-bookmark on save, auto-tag on bookmark, and auto-follow the artist on bookmark.
+- Downloads: original images and per-page originals. Downloads and Ugoira archives share a 256 MB per-task limit; tasks that exceed it are aborted and temporary files are cleaned. Queue concurrency is adjustable from 1 to 6 (default 2). Failed tasks can be retried. On Android, images can be saved to the system gallery (`Pictures/PixEz` and `Downloads/PixEz`).
+
+---
+
+## Screenshots
 
 <div align="center">
 <table>
@@ -72,36 +74,65 @@ Direct connection from Mainland China is supported without requiring external pr
 
 ---
 
-## 🛠️ Build & Development
+## Download & Installation
 
-### Prerequisites
-- **JDK 17+** (JDK 21 recommended)
-- **Android Studio** (Ladybug / Koala) or IntelliJ IDEA
-- **Android SDK**: `compileSdk = 36`, `minSdk = 24`
+Download the package for your platform from [GitHub Releases](https://github.com/137458/pixez-miuix/releases).
 
-### Build Commands
+### Android
 
-```bash
-cd compose-miuix
+Install `PixEz-MIUIX-v*.apk` directly on the device. Requires Android 7.0 (API 24) or later; works on phones and tablets.
 
-# Run Android Debug build on connected device
-./gradlew :composeApp:installDebug
+### Windows Desktop (no Java runtime required)
 
-# Launch Desktop (JVM) application
-./gradlew :composeApp:run
+- **Single-file standalone**: `PixEz-Standalone.exe` embeds the runtime and runs directly, no extraction needed.
+- **Portable**: extract `PixEz-windows-x64-portable.zip` and run `PixEz.exe`.
+- **MSI installer**: run `PixEz-*.msi`; it creates desktop and Start-menu shortcuts.
 
-# Build signed Android Release APK
-./gradlew :composeApp:assembleRelease
+### Other desktop targets
 
-# Package Desktop distribution (MSI / DMG / DEB)
-./gradlew :composeApp:packageDistributionForCurrentOS
-```
+Linux can be built from source; packaging includes Deb. The macOS target is not enabled because a dependency lacks the corresponding variant. Neither platform has official release packages.
 
 ---
 
-## 👥 Contributors
+## Build & Development
 
-Heartfelt thanks to everyone who contributes to PixEz:
+### Prerequisites
+- JDK 17
+- Android SDK: `compileSdk = 36`, `minSdk = 24`
+- Build through the Gradle Wrapper (Gradle 8.14.4)
+- Windows single-file EXE packaging depends on the .NET Framework `csc.exe`
+
+### Build Commands
+
+Commands run from `compose-miuix/`. `AGENTS.md` is the single source of truth for the full verification checklist.
+
+```bash
+# Android Debug compile check
+./gradlew :composeApp:compileDebugKotlinAndroid
+
+# Build the Android Debug APK
+./gradlew :composeApp:assembleDebug
+
+# Compile the Desktop shared module
+./gradlew :shared:compileKotlinDesktop
+
+# Run the desktop app
+./gradlew :composeApp:run
+
+# Run unit tests on both platforms
+./gradlew :shared:desktopTest :composeApp:desktopTest
+
+# Package the Windows single-file EXE
+./gradlew :composeApp:packageWindowsSingleFileExe
+```
+
+The Android Release APK is built with `./gradlew :composeApp:assembleRelease`.
+
+---
+
+## Contributors
+
+Thanks to all developers and community members who contributed to PixEz and this MIUIX rewrite:
 
 <table>
   <tr>
@@ -116,21 +147,21 @@ Heartfelt thanks to everyone who contributes to PixEz:
   </tr>
 </table>
 
-Special thanks to [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) for their amazing Compose UI library.
+Contributions to code, UI, and translations are welcome through Pull Requests.
+
+Special thanks to [pixez-flutter](https://github.com/Notsfsssf/pixez-flutter), the original Flutter PixEz client.
+Special thanks to [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix), the Compose UI library in Xiaomi HyperOS style.
 
 ---
 
-## 💬 Community & Feedback
+## Community & Feedback
 
-- 📘 [FAQ & Guidelines (Chinese)](FAQ.md)
-- 📮 Email: PxezFeedback@outlook.com
-- ✈️ Telegram Channel: [@PixEzChannel](https://t.me/PixEzChannel)
-- 🎮 Discord: [@PixEz](https://discord.gg/Em9AeJbg)
-- 🐧 QQ Group: 815791942
+- User guide and FAQ: [FAQ & Guidelines (Chinese)](FAQ.md)
+- Email feedback: [gaaf14738@gmail.com](mailto:gaaf14738@gmail.com)
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 1. **Unofficial Client**: PixEz MIUIX is an open-source third-party Pixiv client developed by independent developers and the open-source community for educational, research, and personal use. It is not affiliated with, endorsed by, or associated with pixiv Inc. in any way.
 2. **Copyright & Intellectual Property**: All illustrations, comics, novels, animations, Spotlight articles, and related media accessible via this application belong to their respective creators and pixiv Inc. Any content accessed or downloaded through this app is strictly for personal study, appreciation, and non-commercial research. Commercial use or unauthorized redistribution is strictly prohibited.
@@ -138,6 +169,6 @@ Special thanks to [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/m
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [GPL-3.0 License](../LICENSE).
