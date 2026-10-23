@@ -190,6 +190,11 @@ data class NovelTextResponse(
 )
 
 @Serializable
+data class NovelDetailResponse(
+    val novel: Novel,
+)
+
+@Serializable
 data class NovelMarker(
     val page: Int? = null,
 )

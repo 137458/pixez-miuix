@@ -92,6 +92,20 @@ class NovelRepositoryTest {
     }
 
     @Test
+    fun `getNovelDetail 请求详情端点携带 novel_id 并解析作品与收藏状态`() = runBlocking {
+        responseBody = """{"novel":$novelJson}"""
+        responseBody = responseBody.replace("\"is_bookmarked\":false", "\"is_bookmarked\":true")
+
+        val result = repository.getNovelDetail(88)
+
+        assertEquals("/v2/novel/detail", captured.single().path)
+        assertEquals("88", captured.single().query["novel_id"])
+        assertEquals("推荐小说", result.novel.title)
+        assertEquals(11L, result.novel.id)
+        assertTrue(result.novel.isBookmarked, "详情应解析收藏状态")
+    }
+
+    @Test
     fun `getRecommendedNovels 默认携带 for_android 过滤且默认开启排行榜`() = runBlocking {
         responseBody = recomJson
 

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.model.NovelDetailResponse
 import com.perol.pixez.shared.data.model.NovelRecomResponse
 import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.network.TrustedUrlPolicy
@@ -42,6 +43,16 @@ class NovelRepository(
     suspend fun getNovelText(novelId: Long): NovelTextResponse =
         networkCall("获取小说正文失败 novelId=$novelId") {
             apiClient.get("/v1/novel/text") {
+                parameter("novel_id", novelId)
+            }.body()
+        }
+
+    /**
+     * 获取小说详情（含收藏状态、作者与封面，供阅读器落历史与收藏按钮使用）。
+     */
+    suspend fun getNovelDetail(novelId: Long): NovelDetailResponse =
+        networkCall("获取小说详情失败 novelId=$novelId") {
+            apiClient.get("/v2/novel/detail") {
                 parameter("novel_id", novelId)
             }.body()
         }
