@@ -13,10 +13,32 @@ CREATE TABLE novelpersist (
 selectAll:
 SELECT * FROM novelpersist ORDER BY time LIMIT :limit;
 
+-- 按时间降序的浏览历史查询（最新在前），语义对齐 illustpersist 的 selectAll。
+selectAllDesc:
+SELECT * FROM novelpersist ORDER BY time DESC LIMIT :limit;
+
+selectByNovelId:
+SELECT * FROM novelpersist WHERE novel_id = ?;
+
+-- 为按作品 ID 查询/去重删除建立索引，避免数据量增大后全表扫描。
+CREATE INDEX IF NOT EXISTS idx_novelpersist_novel_id ON novelpersist(novel_id);
+
 insertOrReplace:
 INSERT OR REPLACE INTO novelpersist (
     id, novel_id, user_id, picture_url, title, user_name, time
 ) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- 阅读埋点插入：不带 id，由 SQLite 自增生成主键。
+insertHistory:
+INSERT INTO novelpersist (
+    novel_id, user_id, picture_url, title, user_name, time
+) VALUES (?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM novelpersist WHERE id = ?;
+
+deleteByNovelId:
+DELETE FROM novelpersist WHERE novel_id = ?;
 
 deleteAll:
 DELETE FROM novelpersist;

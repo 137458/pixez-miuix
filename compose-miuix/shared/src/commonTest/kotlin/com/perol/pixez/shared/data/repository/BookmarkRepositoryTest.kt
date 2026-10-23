@@ -115,6 +115,37 @@ class BookmarkRepositoryTest {
     }
 
     @Test
+    fun `addNovelBookmark 公开收藏走小说收藏端点`() = runBlocking {
+        repository.addNovelBookmark(novelId = 42L)
+
+        assertEquals(1, captured.size, "小说收藏应恰好发出一次请求")
+        val request = captured.single()
+        assertEquals("/v2/novel/bookmark/add", request.path)
+        assertEquals("42", request.params["novel_id"])
+        assertEquals("public", request.params["restrict"], "默认应提交 public")
+    }
+
+    @Test
+    fun `addNovelBookmark 私密收藏 restrict 映射正确`() = runBlocking {
+        repository.addNovelBookmark(novelId = 42L, isPrivate = true)
+
+        val request = captured.single()
+        assertEquals("/v2/novel/bookmark/add", request.path)
+        assertEquals("42", request.params["novel_id"])
+        assertEquals("private", request.params["restrict"])
+    }
+
+    @Test
+    fun `deleteNovelBookmark 请求取消小说收藏端点`() = runBlocking {
+        repository.deleteNovelBookmark(7)
+
+        assertEquals(1, captured.size, "取消小说收藏应恰好发出一次请求")
+        val request = captured.single()
+        assertEquals("/v1/novel/bookmark/delete", request.path)
+        assertEquals("7", request.params["novel_id"])
+    }
+
+    @Test
     fun `网络异常经 networkCall 记录后原样向上抛出`() = runBlocking {
         handlerFailure = IllegalStateException("mock network down")
 

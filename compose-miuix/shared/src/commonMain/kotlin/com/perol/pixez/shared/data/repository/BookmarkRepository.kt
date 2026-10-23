@@ -58,6 +58,45 @@ class BookmarkRepository(
     }
 
     /**
+     * 收藏小说。
+     *
+     * @param novelId 小说 ID。
+     * @param isPrivate 是否私密收藏（true 为非公开收藏）。
+     */
+    suspend fun addNovelBookmark(
+        novelId: Long,
+        isPrivate: Boolean = false,
+    ) = networkCall("收藏小说失败 novelId=$novelId") {
+        apiClient.post("/v2/novel/bookmark/add") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("novel_id", novelId.toString())
+                        append("restrict", if (isPrivate) "private" else "public")
+                    },
+                ),
+            )
+        }
+    }
+
+    /**
+     * 取消收藏小说。
+     */
+    suspend fun deleteNovelBookmark(novelId: Long) = networkCall("取消收藏小说失败 novelId=$novelId") {
+        apiClient.post("/v1/novel/bookmark/delete") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("novel_id", novelId.toString())
+                    },
+                ),
+            )
+        }
+    }
+
+    /**
      * 关注用户。
      *
      * @param userId 用户 ID。

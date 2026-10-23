@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +31,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.data.model.NovelTextResponse
+import com.perol.pixez.shared.platform.HapticType
+import com.perol.pixez.shared.platform.performHapticFeedback
+import com.perol.pixez.shared.ui.LocalBookmarkRepository
+import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
@@ -42,6 +48,7 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -77,10 +84,17 @@ fun NovelViewerScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val novelRepository = LocalNovelRepository.current
+    val bookmarkRepository = LocalBookmarkRepository.current
+    val novelHistoryRepository = LocalNovelHistoryRepository.current
     val strings = LocalStrings.current
     val settings = LocalSettingsRepository.current
     val scope = rememberCoroutineScope()
     var state by remember(novelId) { mutableStateOf<NovelViewState>(NovelViewState.Loading) }
+    // 详情接口与正文并行加载：仅用于收藏状态初值与浏览历史落库，
+    // 加载失败不阻塞正文阅读（此时隐藏收藏按钮、不落历史），错误仅记日志。
+    var novelDetail by remember(novelId) { mutableStateOf<Novel?>(null) }
+    // 收藏状态为 UI 本地可变状态，详情接口返回只做初值。
+    var isBookmarked by remember(novelId) { mutableStateOf(false) }
 
     // 字号持久化与微调（基准 AppConstants.Novel.DEFAULT_FONT_SIZE_SP，范围 MIN_FONT_SIZE_SP ~ MAX_FONT_SIZE_SP）
     var fontSizeSp by remember(settings.novelFontSize) {
@@ -107,6 +121,52 @@ fun NovelViewerScreen(
                 state = NovelViewState.Error(PixivApiErrorFormatter.format(err, strings))
             }
         }
+        // 详情并行加载：成功后同步收藏初值并写入浏览历史；失败仅记日志，不影响正文展示。
+        scope.launch {
+            val detailResult = suspendRunCatchingNonCancel {
+                novelRepository.getNovelDetail(novelId)
+            }
+            detailResult.onSuccess { detail ->
+                novelDetail = detail.novel
+                isBookmarked = detail.novel.isBookmarked
+                suspendRunCatchingNonCancel {
+                    novelHistoryRepository.insert(detail.novel)
+                }.onFailure { err ->
+                    Napier.e("小说浏览历史写入失败 novelId=$novelId", err, tag = "NovelViewer")
+                }
+            }.onFailure { err ->
+                Napier.e("加载小说详情失败 novelId=$novelId", err, tag = "NovelViewer")
+            }
+        }
+    }
+
+    // 收藏/取消收藏：点击普通收藏（私密与否跟随 defaultPrivateLike），
+    // 长按强制私密收藏；已收藏时点击与长按均为取消收藏（对齐旧版 novel_bookmark_button）。
+    fun toggleNovelBookmark(forcePrivate: Boolean) {
+        val target = novelDetail ?: return
+        scope.launch {
+            val wasBookmarked = isBookmarked
+            suspendRunCatchingNonCancel {
+                if (wasBookmarked) {
+                    bookmarkRepository.deleteNovelBookmark(target.id)
+                } else {
+                    bookmarkRepository.addNovelBookmark(
+                        novelId = target.id,
+                        isPrivate = if (forcePrivate) true else settings.defaultPrivateLike,
+                    )
+                }
+            }.onSuccess {
+                performHapticFeedback(HapticType.Confirm)
+                isBookmarked = !wasBookmarked
+                if (!wasBookmarked) {
+                    toastMessage = ToastData(strings.bookmarked, ToastType.Success)
+                }
+            }.onFailure { err ->
+                performHapticFeedback(HapticType.Reject)
+                Napier.e("小说收藏操作失败 novelId=${target.id}", err, tag = "NovelViewer")
+                toastMessage = ToastData(PixivApiErrorFormatter.format(err, strings), ToastType.Error)
+            }
+        }
     }
 
     LaunchedEffect(novelId) {
@@ -129,6 +189,28 @@ fun NovelViewerScreen(
                         }
                     },
                     actions = {
+                        // 收藏：详情加载成功后显示；点击普通收藏，长按强制私密收藏。
+                        if (novelDetail != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .combinedClickable(
+                                        onClick = { toggleNovelBookmark(forcePrivate = false) },
+                                        onLongClick = { toggleNovelBookmark(forcePrivate = true) },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+                                    contentDescription = strings.bookmark,
+                                    tint = if (isBookmarked) {
+                                        LocalAppExtraColors.current.bookmarkActive
+                                    } else {
+                                        MiuixTheme.colorScheme.onSurface
+                                    },
+                                )
+                            }
+                        }
                         // 缩小字号
                         IconButton(
                             onClick = {

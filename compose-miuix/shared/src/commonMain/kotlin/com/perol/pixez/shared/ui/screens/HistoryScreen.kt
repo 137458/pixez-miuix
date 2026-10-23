@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -42,7 +43,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.HistoryItem
+import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.ui.LocalHistoryRepository
+import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -53,9 +56,13 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -66,23 +73,28 @@ import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
- * 浏览历史页：展示本地插画浏览历史网格，支持搜索、单条删除与清空全部。
+ * 浏览历史页：分"插画 / 小说"两页签展示本地浏览历史，支持搜索、单条删除与清空全部。
  *
  * @param onBack 返回上一级页面。
  * @param onIllustClick 点击作品时传入作品 ID。
+ * @param onNovelClick 点击小说时传入小说 ID。
  */
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
     // 历史记录中的 illust_id 以 Long 保存，避免数据库大 ID 转 Int 溢出。
     onIllustClick: (Long) -> Unit,
+    onNovelClick: (Long) -> Unit,
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalHistoryRepository.current
+    val novelRepository = LocalNovelHistoryRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     // 搜索关键词；使用 rememberSaveable 在配置变更后保留。
     var query by rememberSaveable { mutableStateOf("") }
+    // 历史类型：0 = 插画，1 = 小说。
+    var selectedType by rememberSaveable { mutableIntStateOf(0) }
     // refreshToken 在删除/清空后自增，触发 produceState 重新加载。
     var refreshToken by rememberSaveable { mutableIntStateOf(0) }
     // 是否显示清空全部确认栏。
@@ -106,6 +118,17 @@ fun HistoryScreen(
         }
     }
 
+    // 异步加载小说浏览历史（降序）；与插画历史共用 refreshToken 刷新。
+    val novelHistoryResult = produceState<Result<List<NovelHistoryItem>>?>(
+        initialValue = null,
+        novelRepository,
+        refreshToken,
+    ) {
+        value = suspendRunCatchingNonCancel {
+            novelRepository.getAllDesc()
+        }
+    }
+
     // 使用 derivedStateOf 缓存过滤结果：搜索输入频繁变化时不会重复计算完整列表，
     // 仅当 query 或历史列表实际变化时才重新过滤。
     val filteredItems by remember {
@@ -123,8 +146,29 @@ fun HistoryScreen(
         }
     }
 
-    // 是否有可清空的历史记录，用于控制右上角按钮可用状态。
-    val hasHistory = historyResult.value?.getOrNull().orEmpty().isNotEmpty()
+    // 小说历史的搜索过滤：按小说 ID、标题或作者名匹配。
+    val filteredNovelItems by remember {
+        derivedStateOf {
+            val allItems = novelHistoryResult.value?.getOrNull().orEmpty()
+            val trimmed = query.trim()
+            if (trimmed.isEmpty()) {
+                allItems
+            } else {
+                allItems.filter { item ->
+                    item.novelId.toString().contains(trimmed) ||
+                        item.title.contains(trimmed, ignoreCase = true) ||
+                        item.userName.contains(trimmed, ignoreCase = true)
+                }
+            }
+        }
+    }
+
+    // 是否有可清空的历史记录（按当前类型页签），用于控制右上角按钮可用状态。
+    val hasHistory = if (selectedType == 0) {
+        historyResult.value?.getOrNull().orEmpty().isNotEmpty()
+    } else {
+        novelHistoryResult.value?.getOrNull().orEmpty().isNotEmpty()
+    }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
@@ -195,34 +239,79 @@ fun HistoryScreen(
                     },
                 )
 
+                // 历史类型切换：插画 / 小说。
+                val historyTabs = remember(strings) {
+                    listOf(strings.historyTypeIllust, strings.historyTypeNovel)
+                }
+                TabRow(
+                    tabs = historyTabs,
+                    selectedTabIndex = selectedType,
+                    onTabSelected = { index -> selectedType = index },
+                    modifier = Modifier
+                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                )
+
                 // 根据加载状态展示不同内容。
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    when (val result = historyResult.value) {
-                        null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
-                        else -> if (result.isSuccess) {
-                            if (filteredItems.isEmpty()) {
-                                EmptyPlaceholder(
-                                    message = if (query.isBlank()) {
-                                        strings.historyEmpty
-                                    } else {
-                                        strings.historyNoMatch
-                                    },
+                    if (selectedType == 0) {
+                        when (val result = historyResult.value) {
+                            null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                            else -> if (result.isSuccess) {
+                                if (filteredItems.isEmpty()) {
+                                    EmptyPlaceholder(
+                                        message = if (query.isBlank()) {
+                                            strings.historyEmpty
+                                        } else {
+                                            strings.historyNoMatch
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    HistoryGrid(
+                                        items = filteredItems,
+                                        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        onIllustClick = onIllustClick,
+                                        onLongClick = { itemToDelete = it.id },
+                                    )
+                                }
+                            } else {
+                                ErrorPlaceholder(
+                                    error = result.exceptionOrNull(),
+                                    onRetry = { refreshToken++ },
                                     modifier = Modifier.fillMaxSize(),
                                 )
+                            }
+                        }
+                    } else {
+                        when (val result = novelHistoryResult.value) {
+                            null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                            else -> if (result.isSuccess) {
+                                if (filteredNovelItems.isEmpty()) {
+                                    EmptyPlaceholder(
+                                        message = if (query.isBlank()) {
+                                            strings.historyEmpty
+                                        } else {
+                                            strings.historyNoMatch
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    NovelHistoryList(
+                                        items = filteredNovelItems,
+                                        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+                                        onNovelClick = onNovelClick,
+                                        onLongClick = { itemToDelete = it.id },
+                                    )
+                                }
                             } else {
-                                HistoryGrid(
-                                    items = filteredItems,
-                                    modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    onIllustClick = onIllustClick,
-                                    onLongClick = { itemToDelete = it.id },
+                                ErrorPlaceholder(
+                                    error = result.exceptionOrNull(),
+                                    onRetry = { refreshToken++ },
+                                    modifier = Modifier.fillMaxSize(),
                                 )
                             }
-                        } else {
-                            ErrorPlaceholder(
-                                error = result.exceptionOrNull(),
-                                onRetry = { refreshToken++ },
-                                modifier = Modifier.fillMaxSize(),
-                            )
                         }
                     }
                 }
@@ -240,7 +329,11 @@ fun HistoryScreen(
                         try {
                             suspendRunCatchingNonCancel {
                                 // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
-                                repository.clearAll()
+                                if (selectedType == 0) {
+                                    repository.clearAll()
+                                } else {
+                                    novelRepository.clearAll()
+                                }
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
@@ -270,7 +363,11 @@ fun HistoryScreen(
                         try {
                             suspendRunCatchingNonCancel {
                                 // 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
-                                repository.deleteById(id)
+                                if (selectedType == 0) {
+                                    repository.deleteById(id)
+                                } else {
+                                    novelRepository.deleteById(id)
+                                }
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
@@ -385,6 +482,112 @@ private fun HistoryCard(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
         )
     }
+}
+
+/**
+ * 小说浏览历史列表：封面、标题、作者与浏览时间纵向排布；长按触发删除确认。
+ */
+@Composable
+private fun NovelHistoryList(
+    items: List<NovelHistoryItem>,
+    onNovelClick: (Long) -> Unit,
+    onLongClick: (NovelHistoryItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 8.dp,
+            end = 16.dp,
+            bottom = LocalBottomBarContentPadding.current,
+        ),
+    ) {
+        // LazyListScope.items(count) 为成员函数，避免与 staggeredgrid items 扩展导入冲突。
+        // id 为导入时的 null 会按旧语义折叠为 0L 单行，故 ?: 0L 不会产生重复 key。
+        items(
+            count = items.size,
+            key = { items[it].id ?: 0L },
+            contentType = { "novel_history_item" },
+        ) { index ->
+            val item = items[index]
+            NovelHistoryRow(
+                item = item,
+                onClick = { onNovelClick(item.novelId) },
+                onLongClick = { onLongClick(item) },
+            )
+        }
+    }
+}
+
+/**
+ * 小说浏览历史条目：方形封面 + 标题/作者/浏览时间。
+ */
+@Composable
+private fun NovelHistoryRow(
+    item: NovelHistoryItem,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PixivAsyncImage(
+            model = item.pictureUrl,
+            contentDescription = item.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(8.dp)),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                style = MiuixTheme.textStyles.body2,
+                maxLines = 2,
+            )
+            Text(
+                text = item.userName,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Text(
+                text = formatNovelHistoryTime(item.time),
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        IconButton(onClick = onLongClick) {
+            Icon(
+                imageVector = MiuixIcons.Delete,
+                contentDescription = strings.btnDelete,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+/**
+ * 将浏览时间的 epoch 毫秒格式化为本地时区的 yyyy-MM-dd HH:mm。
+ */
+private fun formatNovelHistoryTime(epochMilli: Long): String {
+    val dateTime = Instant.fromEpochMilliseconds(epochMilli)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+    fun Int.pad2(): String = toString().padStart(2, '0')
+    return "${dateTime.year}-${dateTime.monthNumber.pad2()}-${dateTime.dayOfMonth.pad2()} " +
+        "${dateTime.hour.pad2()}:${dateTime.minute.pad2()}"
 }
 
 /**

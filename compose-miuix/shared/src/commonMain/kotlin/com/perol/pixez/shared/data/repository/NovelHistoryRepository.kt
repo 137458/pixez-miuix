@@ -3,16 +3,18 @@ package com.perol.pixez.shared.data.repository
 import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.local.novelpersist.NovelPersistDatabase
 import com.perol.pixez.shared.data.local.novelpersist.Novelpersist
+import com.perol.pixez.shared.data.model.Novel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * 小说浏览历史仓库：封装对旧 Flutter `Novelpersist.db` 的查询与导入导出。
+ * 小说浏览历史仓库：封装对旧 Flutter `Novelpersist.db` 的记录、查询、清理与导入导出。
  *
- * 表结构与旧版 `novelpersist` 保持一致，仅提供查询与批量替换能力，
- * 不新增小说阅读埋点。
+ * 表结构与旧版 `novelpersist` 保持一致；阅读器打开小说详情后写入浏览历史
+ * （同小说去重并前置），历史页按时间降序展示，导入导出沿用旧版语义。
  */
 class NovelHistoryRepository(
     driver: SqlDriver,
@@ -20,7 +22,56 @@ class NovelHistoryRepository(
     private val queries = NovelPersistDatabase(driver).novelPersistQueries
 
     /**
-     * 查询小说浏览历史，按时间升序排列。
+     * 写入一条小说浏览历史。
+     * 若该小说已存在历史记录，则更新其时间并前置到最新位置。
+     */
+    suspend fun insert(novel: Novel) = withContext(Dispatchers.IO) {
+        val now = Clock.System.now().toEpochMilliseconds()
+        queries.transaction {
+            queries.deleteByNovelId(novel.id)
+            queries.insertHistory(
+                novel_id = novel.id,
+                user_id = novel.user.id,
+                picture_url = novel.imageUrls.squareMedium,
+                title = novel.title,
+                user_name = novel.user.name,
+                time = now,
+            )
+        }
+    }
+
+    /**
+     * 查询小说浏览历史，按时间降序排列（最新浏览排在最前）。
+     *
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     *
+     * @param limit 最大返回条数，防止一次性加载过多历史记录导致内存/卡顿问题。
+     */
+    suspend fun getAllDesc(limit: Long = 1000L): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
+        queries.selectAllDesc(limit).executeAsList().map { it.toNovelHistoryItem() }
+    }
+
+    /**
+     * 删除指定主键的历史记录。
+     *
+     * 使用自增主键 [id] 而非 [Novel.id]，避免同小说多次浏览时误删多条记录。
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     */
+    suspend fun deleteById(id: Long) = withContext(Dispatchers.IO) {
+        queries.deleteById(id)
+    }
+
+    /**
+     * 清空全部浏览历史。
+     *
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     */
+    suspend fun clearAll() = withContext(Dispatchers.IO) {
+        queries.deleteAll()
+    }
+
+    /**
+     * 查询小说浏览历史（导出用），按时间升序排列。
      *
      * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
      *
