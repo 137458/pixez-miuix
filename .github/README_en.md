@@ -38,7 +38,7 @@ The app connects to Pixiv directly from Mainland China without a proxy. It inclu
 - Tablets and wide screens enable a multi-column staggered grid. The floating bottom bar is width-capped and centered (max 540 dp); the content area is capped at 760 dp.
 
 ### Multiplatform Architecture
-- `shared/src/commonMain` contains 19 `*Repository.kt` and 42 `*Screen.kt`.
+- `shared/src/commonMain` contains 20 `*Repository.kt` and 42 `*Screen.kt`.
 - Decompose for routing and navigation.
 - Ktor Client for networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
 - SQLDelight for the local database; Coil 3 for image loading.
@@ -49,6 +49,8 @@ The app connects to Pixiv directly from Mainland China without a proxy. It inclu
 - Pull-to-refresh and load-more on the home recommendations, following feed, search, rankings, artist pages, series works, comment sections, and the friends list.
 - Rankings: daily, weekly, monthly, rookie, original, R-18, and AI.
 - Multi-page browsing for illustrations and manga; Ugoira playback frame by frame.
+- Novels: in-app search, detail browsing, and a reader with rich-text rendering (embedded illustrations, chapter markers, and paginated links); bookmarking, reading history, and comments.
+- The following feed includes a manga series watchlist; series can be watched or unwatched in one tap from the series page.
 - Pixivision article browsing; multi-level comment replies.
 - Search by image: pick a local image and find similar works through SauceNAO.
 - Content filtering: tag muting, artist and work muting, NSFW masking, and AI-generated content filtering.

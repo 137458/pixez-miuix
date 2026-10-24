@@ -26,7 +26,7 @@ Android 7.0 (API 24) atau lebih baru, untuk ponsel dan tablet. EXE Windows dapat
 
 # Tentang repositori ini
 
-PixEz MIUIX adalah versi tulis-ulang dari PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 19 berkas `*Repository.kt` dan 42 berkas `*Screen.kt`.
+PixEz MIUIX adalah versi tulis-ulang dari PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 20 berkas `*Repository.kt` dan 42 berkas `*Screen.kt`.
 
 Komponen utama:
 
@@ -34,6 +34,8 @@ Komponen utama:
 - Ktor Client: login OAuth2 PKCE, pembaruan token otomatis beserta pencobaan ulang permintaan asli, dan dukungan multi-akun.
 - SQLDelight untuk basis data lokal; Coil 3 untuk pemuatan gambar.
 - Bilah bawah mengapung dengan lima tab: Rekomendasi, Pencarian, Peringkat, Feed, dan Spotlight; mendukung rendering Liquid Glass dan otomatis kembali ke blur bila `RuntimeShader` tidak didukung.
+- Novel: pencarian dalam aplikasi, penjelajahan detail, dan pembaca dengan rendering teks kaya (ilustrasi tersemat, penanda bab, dan tautan halaman); bookmark, riwayat bacaan, dan komentar.
+- Feed mengikuti menyertakan daftar pantauan serial manga; serial dapat dipantau atau batal dipantau langsung dari halaman serial.
 - Daftar mendukung tarik-turun untuk menyegarkan dan memuat lebih banyak konten secara otomatis saat mencapai dasar daftar.
 
 ## Kontribusi
@@ -47,7 +49,7 @@ Terima kasih kepada semua kontributor proyek ini:
     <td align="center"><a href="https://xyx.moe"><img src="https://avatars3.githubusercontent.com/u/9017470?v=4" width="100px;" alt=""/><br /><sub><b>Skimige</b></sub></a><br /><a href="https://github.com/Skimige" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/TragicLifeHu"><img src="https://avatars3.githubusercontent.com/u/16817202?v=4" width="100px;" alt=""/><br /><sub><b>Tragic Life</b></sub></a><br /><a href="#translation-TragicLifeHu" title="Translation">🌍 (zh_TW)</a></td>
     <td align="center"><a href="http://ivtune.net"><img src="https://avatars0.githubusercontent.com/u/54385201?v=4" width="100px;" alt=""/><br /><sub><b>karin722</b></sub></a><br /><a href="#translation-karin722" title="Translation">🌍 (ja)</a></td>
-    <td align="center"><a href="http://archman.fun"><img src="https://avatars0.githubusercontent.com/u/68731023?v=4" width="100px;" alt=""/><br /><sub><b>Romani-Archman</b></sub></a><br /><a href="https://github.com/Skimige/pixez-flutter/commits?author=Romani-Archman" title="Documentation">📖</a></td>
+    <td align="center"><a href="http://archman.fun"><img src="https://avatars0.githubusercontent.com/u/68731023?v=4" width="100px;" alt=""/><br /><sub><b>Romani-Archman</b></sub></a><br /><a href="#documentation-Romani-Archman" title="Documentation">📖</a></td>
     <td align="center"><a href="https://github.com/itzXian"><img src="https://avatars1.githubusercontent.com/u/34748039?v=4" width="100px;" alt=""/><br /><sub><b>Xian</b></sub></a><br /><a href="#translation-itzXian" title="Translation">🌍 (en_US)</a></td>
     <td align="center"><a href="https://github.com/ReikiAigawara"><img src="https://avatars1.githubusercontent.com/u/66962815?v=4" width="100px;" alt=""/><br /><sub><b>Reiki Aigawara</b></sub></a><br /><a href="#translation-ReikiAigawara" title="Translation">🌍 (id_ID)</a></td>
   </tr>

@@ -56,6 +56,8 @@
 - **Pixiv 核心功能**：
   - 排行榜：日榜、周榜、月榜、新人榜、原创榜、R-18 榜与 AI 榜。
   - 插画与漫画多页浏览，动图（Ugoira）逐帧播放。
+  - 小说：站内搜索、详情浏览与阅读器阅读（支持内嵌插画、章节标记与分页链接），可收藏、记录阅读历史与查看发表评论。
+  - 关注动态内置漫画系列追更列表，可在系列页一键追更或取消追更。
   - Pixivision 特辑图文浏览。
   - 评论区支持多级回复。
   - 以图搜图：选取本地图片，通过 SauceNAO 检索相似作品。
@@ -138,7 +140,7 @@ pixez-flutter-MIUIX/
 └── Global_TODO.md                      # 待办与路线图
 ```
 
-`shared/src/commonMain` 下包含 19 个 `*Repository.kt` 与 42 个 `*Screen.kt`。
+`shared/src/commonMain` 下包含 20 个 `*Repository.kt` 与 42 个 `*Screen.kt`。
 
 ***
 
