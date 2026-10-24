@@ -195,6 +195,37 @@ class IllustRepositoryTest {
         assertEquals("99", apiCaptured[1].formParams["parent_comment_id"])
     }
 
+    // ---------- 追更：系列详情 watchlist_added 解析 ----------
+
+    private fun seriesJson(watchlistAdded: Boolean) = """
+        {"illust_series_detail":{
+          "height":100,"series_work_count":12,"id":266067,
+          "create_date":"2024-12-01T00:00:00+09:00","title":"X'max Present","width":100,
+          "cover_image_urls":{"medium":"cm"},
+          "watchlist_added":$watchlistAdded,"caption":""},
+         "illusts":[],"next_url":null}
+    """.trimIndent()
+
+    @Test
+    fun `系列详情响应解析 watchlist_added 为 true`() = runBlocking {
+        apiResponseBody = seriesJson(watchlistAdded = true)
+
+        val response = repository.getIllustSeriesResponse(266067)
+
+        assertEquals("/v1/illust/series", apiCaptured.single().path)
+        assertEquals("266067", apiCaptured.single().query["illust_series_id"])
+        assertEquals(true, response.illustSeriesDetail?.watchlistAdded)
+    }
+
+    @Test
+    fun `系列详情响应解析 watchlist_added 为 false`() = runBlocking {
+        apiResponseBody = seriesJson(watchlistAdded = false)
+
+        val response = repository.getIllustSeriesResponse(266067)
+
+        assertEquals(false, response.illustSeriesDetail?.watchlistAdded)
+    }
+
     @Test
     fun `downloadUgoiraZip 拒绝非图片 host 并对受信任 host 携带 Referer`() = runBlocking {
         try {

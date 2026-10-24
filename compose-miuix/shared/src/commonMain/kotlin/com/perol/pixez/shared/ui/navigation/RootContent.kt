@@ -62,6 +62,7 @@ import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
+import com.perol.pixez.shared.ui.LocalWatchlistRepository
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
@@ -184,6 +185,7 @@ fun RootContent(
             LocalNovelRepository provides registry.novelRepository,
             LocalUpdateRepository provides registry.updateRepository,
             LocalSauceNaoRepository provides registry.sauceNaoRepository,
+            LocalWatchlistRepository provides registry.watchlistRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
             LocalSharedBoundsRegistry provides sharedBounds,

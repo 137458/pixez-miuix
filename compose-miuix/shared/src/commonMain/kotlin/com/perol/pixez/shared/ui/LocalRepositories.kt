@@ -16,6 +16,7 @@ import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.data.repository.WatchlistRepository
 
 /**
  * 各数据仓储的组合注入通道（中-9 单通道收敛）：由 RootContent 在应用根部统一 provide，
@@ -55,6 +56,11 @@ val LocalAccountRepository = staticCompositionLocalOf<AccountRepository> {
 /** 收藏数据通道：插画/用户详情页的收藏操作。 */
 val LocalBookmarkRepository = staticCompositionLocalOf<BookmarkRepository> {
     error("LocalBookmarkRepository not provided")
+}
+
+/** 漫画系列追更通道：动态页追更页签与系列页追更切换。 */
+val LocalWatchlistRepository = staticCompositionLocalOf<WatchlistRepository> {
+    error("LocalWatchlistRepository not provided")
 }
 
 /** 浏览历史通道：详情页自动写入历史与历史记录页（原定义于 App.kt，中-9 收敛至 ui 包）。 */

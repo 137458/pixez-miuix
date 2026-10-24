@@ -164,6 +164,7 @@ internal fun MainContent(
                 onIllustClick = component::onIllustClicked,
                 onUserClick = component::onUserClicked,
                 onLoginClick = component::onLoginClicked,
+                onSeriesClick = component::onIllustSeriesClicked,
                 reselectFlow = remember(component) {
                     component.reselectFlowOf(RootComponent.MainTab.New)
                 },

@@ -78,6 +78,7 @@ fun App(
             novelRepository = dependencies.novelRepository,
             updateRepository = dependencies.updateRepository,
             sauceNaoRepository = dependencies.sauceNaoRepository,
+            watchlistRepository = dependencies.watchlistRepository,
         )
     }
     CompositionLocalProvider(

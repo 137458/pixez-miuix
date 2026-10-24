@@ -16,6 +16,7 @@ import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
+import com.perol.pixez.shared.data.repository.WatchlistRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 
 /**
@@ -45,4 +46,5 @@ data class RepositoryRegistry(
     val novelRepository: NovelRepository,
     val updateRepository: UpdateRepository,
     val sauceNaoRepository: SauceNaoRepository,
+    val watchlistRepository: WatchlistRepository,
 )

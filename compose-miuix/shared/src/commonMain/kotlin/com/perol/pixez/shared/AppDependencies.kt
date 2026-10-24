@@ -21,6 +21,7 @@ import com.perol.pixez.shared.data.repository.PixivisionRepository
 import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
+import com.perol.pixez.shared.data.repository.WatchlistRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
@@ -273,6 +274,13 @@ class AppDependencies(
 
     val bookmarkRepository: BookmarkRepository by lazy {
         BookmarkRepository(httpClient.apiClient)
+    }
+
+    /**
+     * 漫画系列追更仓库：追更列表分页与追更/取消追更。
+     */
+    val watchlistRepository: WatchlistRepository by lazy {
+        WatchlistRepository(httpClient.apiClient)
     }
 
     /**
