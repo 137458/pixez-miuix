@@ -276,6 +276,66 @@ class IllustRepository(
     }
 
     /**
+     * 获取小说评论响应（含 nextUrl）。响应结构与插画评论同构，复用 [CommentResponse]。
+     */
+    suspend fun getNovelCommentsResponse(
+        novelId: Long,
+        nextUrl: String? = null,
+    ): CommentResponse = networkCall("获取小说评论失败 novelId=$novelId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        } else {
+            apiClient.get("/v3/novel/comments") {
+                parameter("novel_id", novelId)
+            }.body()
+        }
+    }
+
+    /**
+     * 获取小说评论回复（楼中楼）响应（含 nextUrl）。
+     */
+    suspend fun getNovelCommentRepliesResponse(
+        commentId: Long,
+        nextUrl: String? = null,
+    ): CommentResponse = networkCall("获取小说评论回复失败 commentId=$commentId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        } else {
+            apiClient.get("/v2/novel/comment/replies") {
+                parameter("comment_id", commentId)
+            }.body()
+        }
+    }
+
+    /**
+     * 发表小说评论或回复指定评论。
+     *
+     * @param novelId 小说 ID。
+     * @param comment 评论内容。
+     * @param parentCommentId 被回复的评论 ID；为空时发表普通评论。
+     */
+    suspend fun postNovelComment(
+        novelId: Long,
+        comment: String,
+        parentCommentId: Long? = null,
+    ): Unit = networkCall("发表小说评论失败 novelId=$novelId") {
+        apiClient.post("/v1/novel/comment/add") {
+            header("Content-Type", "application/x-www-form-urlencoded")
+            setBody(
+                FormDataContent(
+                    Parameters.build {
+                        append("novel_id", novelId.toString())
+                        append("comment", comment)
+                        if (parentCommentId != null) {
+                            append("parent_comment_id", parentCommentId.toString())
+                        }
+                    },
+                ),
+            )
+        }
+    }
+
+    /**
      * 获取相关作品响应（含 nextUrl）。
      */
     suspend fun getIllustRelatedResponse(

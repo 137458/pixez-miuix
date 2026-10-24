@@ -121,6 +121,7 @@ fun NovelViewerScreen(
     onBack: () -> Unit,
     onNovelClick: (Long) -> Unit = {},
     onIllustClick: (Long) -> Unit = {},
+    onCommentsClick: (Long) -> Unit = {},
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val novelRepository = LocalNovelRepository.current
@@ -242,6 +243,13 @@ fun NovelViewerScreen(
                         }
                     },
                     actions = {
+                        // 评论：跳转小说评论页。
+                        IconButton(onClick = { onCommentsClick(novelId) }) {
+                            Icon(
+                                imageVector = MiuixIcons.Messages,
+                                contentDescription = strings.commentsTitle,
+                            )
+                        }
                         // 收藏：详情加载成功后显示；点击普通收藏，长按强制私密收藏。
                         if (novelDetail != null) {
                             Box(

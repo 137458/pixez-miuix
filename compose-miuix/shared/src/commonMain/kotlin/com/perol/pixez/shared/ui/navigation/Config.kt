@@ -71,7 +71,7 @@ sealed class Config {
 
     @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "Comments")
-    data class Comments(val illustId: Long) : Config()
+    data class Comments(val illustId: Long, val isNovel: Boolean = false) : Config()
 
     @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "RelatedIllusts")

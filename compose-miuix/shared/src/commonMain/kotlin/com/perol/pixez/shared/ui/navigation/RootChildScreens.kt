@@ -229,6 +229,7 @@ internal fun renderComments(
         illustId = instance.illustId,
         onBack = component::onBack,
         onUserClick = component::onUserClicked,
+        isNovel = instance.isNovel,
     )
 }
 
@@ -602,5 +603,6 @@ internal fun renderNovelViewer(
         onBack = component::onBack,
         onNovelClick = component::onNovelClicked,
         onIllustClick = component::onIllustClicked,
+        onCommentsClick = component::onNovelCommentsClicked,
     )
 }

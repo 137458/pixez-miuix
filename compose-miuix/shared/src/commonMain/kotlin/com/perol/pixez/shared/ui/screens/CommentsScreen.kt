@@ -89,6 +89,7 @@ import pixez_miuix.shared.generated.resources.emoji_304
 
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
+ * [isNovel] 为 true 时走小说评论端点（/v3/novel/comments 等），否则走插画评论端点。
  */
 @OptIn(ExperimentalScrollBarApi::class)
 @Composable
@@ -96,6 +97,7 @@ fun CommentsScreen(
     illustId: Long,
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
+    isNovel: Boolean = false,
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalIllustRepository.current
@@ -125,10 +127,14 @@ fun CommentsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
-    val pagedList = remember(illustId) {
+    val pagedList = remember(illustId, isNovel) {
         PagedListState(
             fetch = { nextUrl ->
-                val response = repository.getIllustCommentsResponse(illustId, nextUrl = nextUrl)
+                val response = if (isNovel) {
+                    repository.getNovelCommentsResponse(illustId, nextUrl = nextUrl)
+                } else {
+                    repository.getIllustCommentsResponse(illustId, nextUrl = nextUrl)
+                }
                 PagedListPage(response.comments, response.nextUrl)
             },
             mergeItems = { old, new -> old.appendDistinct(new) },
@@ -223,11 +229,19 @@ fun CommentsScreen(
                         isSending = true
                         sendError = null
                         suspendRunCatchingNonCancel {
-                            repository.postComment(
-                                illustId = illustId,
-                                comment = inputText,
-                                parentCommentId = replyTarget?.id,
-                            )
+                            if (isNovel) {
+                                repository.postNovelComment(
+                                    novelId = illustId,
+                                    comment = inputText,
+                                    parentCommentId = replyTarget?.id,
+                                )
+                            } else {
+                                repository.postComment(
+                                    illustId = illustId,
+                                    comment = inputText,
+                                    parentCommentId = replyTarget?.id,
+                                )
+                            }
                         }.onSuccess {
                             inputText = ""
                             replyTarget = null

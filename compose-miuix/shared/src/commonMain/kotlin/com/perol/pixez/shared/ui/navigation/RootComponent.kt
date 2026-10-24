@@ -372,6 +372,13 @@ class RootComponent(
     }
 
     /**
+     * 打开小说评论页。
+     */
+    fun onNovelCommentsClicked(novelId: Long) {
+        navigation.pushToFront(Config.Comments(novelId, isNovel = true))
+    }
+
+    /**
      * 打开相关作品页。
      */
     fun onRelatedIllustsClicked(illustId: Long) {
