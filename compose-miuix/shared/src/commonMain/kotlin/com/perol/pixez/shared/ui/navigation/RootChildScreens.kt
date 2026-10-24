@@ -601,5 +601,6 @@ internal fun renderNovelViewer(
         novelId = instance.novelId,
         onBack = component::onBack,
         onNovelClick = component::onNovelClicked,
+        onIllustClick = component::onIllustClicked,
     )
 }

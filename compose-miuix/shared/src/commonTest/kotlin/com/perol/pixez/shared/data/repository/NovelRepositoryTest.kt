@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -103,6 +104,45 @@ class NovelRepositoryTest {
         assertEquals("推荐小说", result.novel.title)
         assertEquals(11L, result.novel.id)
         assertTrue(result.novel.isBookmarked, "详情应解析收藏状态")
+    }
+
+    @Test
+    fun `getNovelWebResource 请求 webview 端点携带 id 并解析插画与上传图映射`() = runBlocking {
+        responseBody = """
+            <html><body><script>
+            window.__INITIAL_STATE__ = {route:"/novel/42.php",novel:{"id":"42","title":"内嵌资源小说","text":"[pixivimage:12345-1]",
+            "illusts":{"12345-1":{"illust":{"images":{"small":"is","medium":"im","original":"io"}}},"666":null},
+            "images":{"777":{"novelImageId":"777","sl":"sl","urls":{"240mw":"u240","128x128":"u128","1200x1200":"u1200","original":"uo"}}},
+            "seriesNavigation":{"nextNovel":{"id":43,"viewable":true,"contentOrder":"2","title":"下一章","coverUrl":"c43"},"prevNovel":null}}};
+            </script></body></html>
+        """.trimIndent()
+
+        val result = repository.getNovelWebResource(42)
+
+        val request = captured.single()
+        assertEquals("/webview/v2/novel", request.path)
+        assertEquals("42", request.query["id"])
+        assertEquals("42", result.id)
+        assertEquals("im", result.illusts["12345-1"]?.illust?.images?.medium, "illusts 键应为 作品ID-页码 格式")
+        assertNull(result.illusts["666"], "illusts 条目允许为 null")
+        assertEquals("u128", result.images["777"]?.urls?.size128)
+        assertEquals("uo", result.images["777"]?.urls?.original)
+        assertEquals(43L, result.seriesNavigation?.nextNovel?.id)
+        assertNull(result.seriesNavigation?.prevNovel)
+    }
+
+    @Test
+    fun `getNovelWebResource 响应缺 novel JSON 时抛出异常`() = runBlocking {
+        responseBody = "<html><body><script>novel:null;</script></body></html>"
+
+        val error = assertFailsWith<IllegalStateException> {
+            repository.getNovelWebResource(42)
+        }
+        assertTrue(
+            error.message!!.contains("未找到 novel JSON"),
+            "失败应来自业务解析而非桩：${error.message}",
+        )
+        assertTrue(captured.single().path == "/webview/v2/novel", "仍应先请求 webview 端点")
     }
 
     @Test

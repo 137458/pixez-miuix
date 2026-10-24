@@ -3,6 +3,8 @@ package com.perol.pixez.shared.data.repository
 import com.perol.pixez.shared.data.model.NovelDetailResponse
 import com.perol.pixez.shared.data.model.NovelRecomResponse
 import com.perol.pixez.shared.data.model.NovelTextResponse
+import com.perol.pixez.shared.data.model.NovelWebResponse
+import com.perol.pixez.shared.network.HttpClientDefaults
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -55,6 +57,22 @@ class NovelRepository(
             apiClient.get("/v2/novel/detail") {
                 parameter("novel_id", novelId)
             }.body()
+        }
+
+    /**
+     * 获取小说 webview 内嵌资源（illusts/images 图源映射与系列导航）。
+     *
+     * /webview/v2/novel 返回 HTML 包装的 JSON，需先提取 "novel:" 后的 JSON 再反序列化；
+     * 响应不含 novel JSON 或解析失败时抛异常，由调用方降级为无图纯文本阅读。
+     */
+    suspend fun getNovelWebResource(novelId: Long): NovelWebResponse =
+        networkCall("获取小说内嵌资源失败 novelId=$novelId") {
+            val html = apiClient.get("/webview/v2/novel") {
+                parameter("id", novelId)
+            }.body<String>()
+            val payload = NovelWebParser.extractNovelJsonFromHtml(html)
+                ?: error("webview 响应中未找到 novel JSON novelId=$novelId")
+            HttpClientDefaults.commonJson.decodeFromString(NovelWebResponse.serializer(), payload)
         }
 
     /**

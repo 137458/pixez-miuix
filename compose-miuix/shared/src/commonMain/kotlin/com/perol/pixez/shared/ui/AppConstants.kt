@@ -200,6 +200,15 @@ object AppConstants {
         const val DEFAULT_FONT_SIZE_SP = 16f
         const val MIN_FONT_SIZE_SP = 12f
         const val MAX_FONT_SIZE_SP = 28f
+
+        /** [newpage] 分页符渲染留白高度（dp）。 */
+        const val NEW_PAGE_SPACING_DP = 48
+
+        /** 内嵌插画 / 用户上传图在正文中的渲染高度（dp）。 */
+        const val EMBEDDED_IMAGE_HEIGHT_DP = 220
+
+        /** 章节标题相对正文的字号增量（sp）。 */
+        const val CHAPTER_TITLE_FONT_SIZE_DELTA_SP = 4f
     }
 
     /**
