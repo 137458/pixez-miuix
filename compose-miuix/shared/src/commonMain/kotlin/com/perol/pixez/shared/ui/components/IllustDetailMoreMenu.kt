@@ -3,7 +3,7 @@
  *
  * [IllustDetailMoreMenu] 负责菜单的进出场动画、全屏透明遮罩与液态玻璃卡片容器；
  * [IllustDetailMoreMenuCopyActions] 负责复制信息 / 复制图片 / 复制链接；
- * [IllustDetailMoreMenuShareActions] 负责分享 / SauceNao 搜图 / 屏蔽作品。
+ * [IllustDetailMoreMenuShareActions] 负责分享 / SauceNao 搜图 / 屏蔽作品与屏蔽画师。
  * 菜单可见性与剪贴板、分享、协程作用域等状态仍由入口函数持有并作为参数传入。
  */
 
@@ -248,7 +248,7 @@ internal fun IllustDetailMoreMenuCopyActions(
 }
 
 /**
- * 菜单「分享 / 其他」分组：分享作品、SauceNao 搜图、屏蔽作品（未屏蔽时）。
+ * 菜单「分享 / 其他」分组：分享作品、SauceNao 搜图、屏蔽作品与屏蔽画师（作品未屏蔽时）。
  */
 @Composable
 internal fun IllustDetailMoreMenuShareActions(
@@ -334,6 +334,31 @@ internal fun IllustDetailMoreMenuShareActions(
                             onToast(ToastData(strings.menuBanWork, ToastType.Success))
                         },
                         onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
+                    )
+                }
+            },
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .height(0.5.dp)
+                .background(Color.White.copy(alpha = 0.10f)),
+        )
+        LiquidMenuItem(
+            icon = MiuixIcons.Blocklist,
+            text = strings.menuBanUser,
+            onClick = {
+                onDismiss()
+                coroutineScope.launch {
+                    suspendRunCatchingNonCancel {
+                        banRepository.insertBanUser(illust.user.id, illust.user.name)
+                    }.fold(
+                        onSuccess = {
+                            onBanSuccess()
+                            onToast(ToastData(strings.menuBanUser, ToastType.Success))
+                        },
+                        onFailure = { e -> onToast(ToastData("${strings.menuBanUser}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
                     )
                 }
             },
