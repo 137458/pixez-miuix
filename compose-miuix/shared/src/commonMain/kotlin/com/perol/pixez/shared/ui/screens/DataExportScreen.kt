@@ -33,9 +33,8 @@ import com.perol.pixez.shared.ui.components.ToastType
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
@@ -294,23 +293,18 @@ private fun PathInputDialog(
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
         )
-        Row(
+        TextButton(
+            text = strings.cancel,
+            onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TextButton(
-                text = strings.cancel,
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-            )
-            Button(
-                onClick = { onConfirm(path) },
-                enabled = path.isNotBlank() && !isProcessing,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(text = if (isProcessing) strings.loading else strings.confirm)
-            }
-        }
+        )
+        TextButton(
+            text = if (isProcessing) strings.loading else strings.confirm,
+            onClick = { onConfirm(path) },
+            enabled = path.isNotBlank() && !isProcessing,
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

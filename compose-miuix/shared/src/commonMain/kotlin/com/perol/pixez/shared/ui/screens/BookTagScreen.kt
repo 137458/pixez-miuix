@@ -260,28 +260,23 @@ private fun AddTagDialog(
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
         )
-        Row(
+        TextButton(
+            text = strings.cancel,
+            onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TextButton(
-                text = strings.cancel,
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                text = if (isLoading) strings.btnAdding else strings.btnAdd,
-                onClick = {
-                    val trimmed = name.trim()
-                    if (trimmed.isNotBlank()) {
-                        onConfirm(trimmed)
-                    }
-                },
-                enabled = !isLoading,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
-        }
+        )
+        TextButton(
+            text = if (isLoading) strings.btnAdding else strings.btnAdd,
+            onClick = {
+                val trimmed = name.trim()
+                if (trimmed.isNotBlank()) {
+                    onConfirm(trimmed)
+                }
+            },
+            enabled = !isLoading,
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -305,22 +300,17 @@ private fun DeleteConfirmationDialog(
         show = show,
         onDismissRequest = onDismiss,
     ) {
-        Row(
+        TextButton(
+            text = strings.cancel,
+            onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TextButton(
-                text = strings.cancel,
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                text = if (isLoading) strings.btnDeleting else strings.btnDelete,
-                onClick = onConfirm,
-                enabled = !isLoading,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
-        }
+        )
+        TextButton(
+            text = if (isLoading) strings.btnDeleting else strings.btnDelete,
+            onClick = onConfirm,
+            enabled = !isLoading,
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

@@ -39,6 +39,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Favorites
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -83,6 +84,8 @@ fun NovelCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            // 连续曲率裁剪；半径对齐 MIUIX Card 默认 16dp 圆角，保持视觉等效（MIUIX_Spec 3.3）。
+            .squircleClip(16.dp)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 contentDescription = novelA11yDescription

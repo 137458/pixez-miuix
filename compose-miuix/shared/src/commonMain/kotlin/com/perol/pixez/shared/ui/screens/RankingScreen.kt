@@ -2,7 +2,6 @@ package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -50,6 +48,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
@@ -63,7 +62,7 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.window.WindowDialog
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -172,7 +171,7 @@ fun RankingScreen(
     var showDateDialog by rememberSaveable { mutableStateOf(false) }
 
     // 日期筛选弹窗
-    WindowDialog(
+    OverlayDialog(
         title = strings.rankingDateLabel,
         show = showDateDialog,
         onDismissRequest = { showDateDialog = false },
@@ -184,18 +183,21 @@ fun RankingScreen(
                 dateInput = ""
                 showDateDialog = false
             },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+        )
+        TextButton(
+            text = strings.cancel,
+            onClick = { showDateDialog = false },
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
+        TextButton(
+            text = strings.confirm,
+            onClick = { showDateDialog = false },
+            colors = ButtonDefaults.textButtonColorsPrimary(),
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(
-                text = strings.confirm,
-                onClick = { showDateDialog = false },
-            )
-        }
+        )
     }
 
     Scaffold(

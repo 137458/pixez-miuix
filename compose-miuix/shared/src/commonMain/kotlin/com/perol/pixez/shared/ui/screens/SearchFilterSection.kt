@@ -295,29 +295,23 @@ internal fun SearchFilterActionButtons(
     onConfirm: () -> Unit,
 ) {
     val strings = LocalStrings.current
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Button(
             onClick = onReset,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                color = MiuixTheme.colorScheme.surfaceContainer,
-                contentColor = MiuixTheme.colorScheme.onSurface,
-            ),
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(),
         ) {
             Text(text = strings.searchResetAll)
         }
         Button(
             onClick = onConfirm,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                color = MiuixTheme.colorScheme.primary,
-                contentColor = MiuixTheme.colorScheme.onPrimary,
-            ),
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColorsPrimary(),
         ) {
             Text(text = strings.confirm)
         }

@@ -21,12 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.isAndroidPlatform
-import com.perol.pixez.shared.ui.components.CheckIndicator
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +44,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.FocusRequester
@@ -82,7 +77,6 @@ fun LayoutSettingScreen(
     var hCrossAdapterWidth by remember { mutableStateOf(settingsRepository.hCrossAdapterWidth) }
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
     var displayMode by remember { mutableIntStateOf(settingsRepository.displayMode) }
-    var showDisplayModeDialog by rememberSaveable { mutableStateOf(false) }
 
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
@@ -95,6 +89,15 @@ fun LayoutSettingScreen(
         } else {
             listOf("2", "3", "4", "5", "6")
         }
+    }
+
+    // 显示模式下拉选项：索引与 displayMode 数值一一对应（0 跟随系统 / 1 60Hz / 2 高刷）。
+    val displayModeLabels = remember(strings) {
+        listOf(
+            strings.platformDisplayModeFollowSystem,
+            strings.refreshRate60Hz,
+            strings.refreshRateHigh,
+        )
     }
 
     BlurTopBarScaffold(
@@ -138,10 +141,14 @@ fun LayoutSettingScreen(
                     item {
                         SmallTitle(text = strings.dialogDisplayMode)
                         Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                            BasicComponent(
+                            OverlayDropdownPreference(
                                 title = strings.dialogDisplayMode,
-                                summary = displayMode.toDisplayModeLabel(),
-                                onClick = { showDisplayModeDialog = true },
+                                items = displayModeLabels,
+                                selectedIndex = displayMode.coerceIn(0, displayModeLabels.lastIndex),
+                                onSelectedIndexChange = { index ->
+                                    displayMode = index
+                                    settingsRepository.displayMode = index
+                                },
                             )
                         }
                     }
@@ -218,49 +225,6 @@ fun LayoutSettingScreen(
                 }
             }
         }
-
-        val displayModeOptions = remember(strings) {
-            listOf(
-                0 to strings.platformDisplayModeFollowSystem,
-                1 to strings.refreshRate60Hz,
-                2 to strings.refreshRateHigh,
-            )
-        }
-        OverlayDialog(
-            title = strings.dialogDisplayMode,
-            show = showDisplayModeDialog,
-            onDismissRequest = { showDisplayModeDialog = false },
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                displayModeOptions.forEach { (value, label) ->
-                    BasicComponent(
-                        title = label,
-                        onClick = {
-                            displayMode = value
-                            settingsRepository.displayMode = value
-                            showDisplayModeDialog = false
-                        },
-                        endActions = {
-                            CheckIndicator(selected = displayMode == value)
-                        },
-                    )
-                }
-            }
-        }
-
-    }
-}
-
-/**
- * 将屏幕刷新率数值转换为展示文案。
- */
-@Composable
-private fun Int.toDisplayModeLabel(): String {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    return when (this) {
-        1 -> strings.refreshRate60Hz
-        2 -> strings.refreshRateHigh
-        else -> strings.platformDisplayModeFollowSystem
     }
 }
 

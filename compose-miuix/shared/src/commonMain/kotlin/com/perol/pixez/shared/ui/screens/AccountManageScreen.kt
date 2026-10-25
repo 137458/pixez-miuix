@@ -28,12 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.ui.LocalAccountRepository
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
@@ -46,12 +46,12 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
@@ -102,28 +102,18 @@ fun AccountManageScreen(
     }
 
     val backdrop = rememberBlurBackdrop()
+    val scrollBehavior = MiuixScrollBehavior()
 
-    Scaffold(
-        topBar = {
-            BlurredBar(backdrop = backdrop) {
-                TopAppBar(
-                    title = strings.accountManageTitle,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = onAddAccount) {
-                            Icon(
-                                imageVector = MiuixIcons.Add,
-                                contentDescription = strings.accountAdd,
-                            )
-                        }
-                    },
+    BlurTopBarScaffold(
+        title = strings.accountManageTitle,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = onAddAccount) {
+                Icon(
+                    imageVector = MiuixIcons.Add,
+                    contentDescription = strings.accountAdd,
                 )
             }
         },
@@ -137,7 +127,8 @@ fun AccountManageScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item { Spacer(modifier = Modifier.height(6.dp)) }
@@ -153,7 +144,7 @@ fun AccountManageScreen(
                             ) {
                                 Text(
                                     text = strings.accountEmpty,
-                                    fontSize = 15.sp,
+                                    style = MiuixTheme.textStyles.body1,
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -196,8 +187,7 @@ fun AccountManageScreen(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
                                                     text = account.name,
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.SemiBold,
+                                                    style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold),
                                                     color = MiuixTheme.colorScheme.onSurface,
                                                 )
                                                 if (isActive) {
@@ -210,9 +200,8 @@ fun AccountManageScreen(
                                                     ) {
                                                         Text(
                                                             text = strings.accountCurrentActive,
-                                                            fontSize = 10.sp,
+                                                            style = MiuixTheme.textStyles.footnote2.copy(fontWeight = FontWeight.Medium),
                                                             color = MiuixTheme.colorScheme.primary,
-                                                            fontWeight = FontWeight.Medium,
                                                         )
                                                     }
                                                 }
@@ -220,7 +209,7 @@ fun AccountManageScreen(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = "@${account.account} (${account.userId})",
-                                                fontSize = 12.sp,
+                                                style = MiuixTheme.textStyles.footnote1,
                                                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
                                         }
@@ -244,7 +233,7 @@ fun AccountManageScreen(
                                             ) {
                                                 Text(
                                                     text = strings.accountSwitch,
-                                                    fontSize = 12.sp,
+                                                    style = MiuixTheme.textStyles.footnote1,
                                                 )
                                             }
                                         }
@@ -268,13 +257,7 @@ fun AccountManageScreen(
                                         }
                                     }
                                     if (index < accounts.lastIndex) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp)
-                                                .height(0.5.dp)
-                                                .background(MiuixTheme.colorScheme.dividerLine),
-                                        )
+                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                                     }
                                 }
                             }
@@ -293,8 +276,7 @@ fun AccountManageScreen(
                     ) {
                         Text(
                             text = "+ ${strings.accountAdd}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = MiuixTheme.textStyles.body2.copy(fontWeight = FontWeight.Medium),
                         )
                     }
                 }
@@ -311,30 +293,26 @@ fun AccountManageScreen(
                 show = showDeleteDialog && deleteTarget != null,
                 onDismissRequest = { showDeleteDialog = false },
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = { showDeleteDialog = false },
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(
-                        text = strings.confirm,
-                        onClick = {
-                            val targetId = deleteTarget?.userId
-                            showDeleteDialog = false
-                            if (targetId != null) {
-                                scope.launch {
-                                    accountRepository.deleteAccount(targetId)
-                                    refreshAccounts()
-                                }
+                TextButton(
+                    text = strings.cancel,
+                    onClick = { showDeleteDialog = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = strings.confirm,
+                    onClick = {
+                        val targetId = deleteTarget?.userId
+                        showDeleteDialog = false
+                        if (targetId != null) {
+                            scope.launch {
+                                accountRepository.deleteAccount(targetId)
+                                refreshAccounts()
                             }
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             // Toast 消息

@@ -1,53 +1,28 @@
 /**
- * [IllustDetailTopBar] 的「更多操作」液态玻璃浮动菜单（自 IllustDetailTopBar.kt 拆分而来，纯代码搬运）。
+ * [IllustDetailTopBar]「更多操作」下拉菜单条目构建。
  *
- * [IllustDetailMoreMenu] 负责菜单的进出场动画、全屏透明遮罩与液态玻璃卡片容器；
- * [IllustDetailMoreMenuCopyActions] 负责复制信息 / 复制图片 / 复制链接；
- * [IllustDetailMoreMenuShareActions] 负责分享 / SauceNao 搜图 / 屏蔽作品与屏蔽画师。
- * 菜单可见性与剪贴板、分享、协程作用域等状态仍由入口函数持有并作为参数传入。
+ * 原手写浮层（全屏遮罩、AnimatedVisibility 进出场、液态玻璃卡片与菜单行）已迁移至
+ * Miuix 原生 OverlayDropdownPopup；本文件仅负责把参数映射为 [DropdownEntry] 列表，
+ * 复制 / 分享 / 屏蔽的动作协程逻辑原样保留。
  */
 
 package com.perol.pixez.shared.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.unit.dp
 import coil3.PlatformContext
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
-import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Blocklist
 import top.yukonga.miuix.kmp.icon.extended.Copy
@@ -55,26 +30,13 @@ import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.icon.extended.Show
-import top.yukonga.miuix.kmp.squircle.squircleBorder
-
-// 弹层出入场物理参数（HyperOS 弹性曲线，组件内独立调参值）。
-private const val MENU_FADE_ENTER_DAMPING = 0.8f
-private const val MENU_SCALE_ENTER_DAMPING = 0.65f
-private const val MENU_SCALE_ENTER_STIFFNESS = 420f
-private const val MENU_FADE_EXIT_DAMPING = 0.9f
-private const val MENU_SCALE_EXIT_DAMPING = 0.85f
 
 /**
- * 更多操作浮动菜单容器。
- *
- * @param visible 菜单是否可见（由入口函数的 rememberSaveable 状态驱动）
- * @param onDismiss 关闭菜单回调（点击遮罩或任一菜单项后触发）
+ * 构建「更多操作」下拉菜单条目，按功能分三组（组间分隔线由 Miuix 弹层内置）：
+ * 复制信息 / 复制图片 / 复制链接；分享作品 / 浏览器打开 / SauceNao 搜图；屏蔽作品与屏蔽画师（作品未屏蔽时）。
  */
-@Composable
-internal fun IllustDetailMoreMenu(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-    detailBackdrop: Backdrop?,
+internal fun buildIllustDetailMoreMenuEntries(
+    strings: AppStrings,
     illust: Illust,
     isBanned: Boolean,
     banRepository: BanRepository,
@@ -84,284 +46,139 @@ internal fun IllustDetailMoreMenu(
     share: IllustShare,
     context: PlatformContext,
     coroutineScope: CoroutineScope,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(spring(dampingRatio = MENU_FADE_ENTER_DAMPING)) +
-            scaleIn(
-                animationSpec = spring(dampingRatio = MENU_SCALE_ENTER_DAMPING, stiffness = MENU_SCALE_ENTER_STIFFNESS),
-                initialScale = 0.80f,
-                transformOrigin = TransformOrigin(0.95f, 0f),
+): List<DropdownEntry> = buildList {
+    add(
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = strings.menuCopyInfo,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Copy, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        val text = buildIllustCopyInfo(illust)
+                        runClipboardShare(
+                            success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                            onToast = onToast,
+                        ) { clipboard.copy(text) }
+                    },
+                ),
+                DropdownItem(
+                    text = strings.menuCopyImage,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Show, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        coroutineScope.launch {
+                            suspendRunClipboardShare(
+                                success = ToastData(strings.imageCopySuccess, ToastType.Success),
+                                failurePrefix = strings.menuCopyImage,
+                                onToast = onToast,
+                            ) {
+                                withContext(Dispatchers.IO) {
+                                    val candidateUrls = listOf(
+                                        illust.imageUrls.large,
+                                        illust.imageUrls.medium,
+                                        illust.imageUrls.squareMedium,
+                                    )
+                                    val bytes = extractCachedImageBytes(context, candidateUrls)
+                                    bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
+                                }
+                            }
+                        }
+                    },
+                ),
+                DropdownItem(
+                    text = strings.menuCopyLink,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Link, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        val link = buildIllustShareLink(illust)
+                        runClipboardShare(
+                            success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                            onToast = onToast,
+                        ) { clipboard.copy(link) }
+                    },
+                ),
             ),
-        exit = fadeOut(spring(dampingRatio = MENU_FADE_EXIT_DAMPING)) +
-            scaleOut(
-                animationSpec = spring(dampingRatio = MENU_SCALE_EXIT_DAMPING),
-                targetScale = 0.85f,
-                transformOrigin = TransformOrigin(0.95f, 0f),
+        ),
+    )
+    add(
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = strings.share,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Share, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        val link = buildIllustShareLink(illust)
+                        val successMsg = if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
+                            strings.copiedToClipboard
+                        } else {
+                            strings.share
+                        }
+                        runClipboardShare(
+                            success = ToastData(successMsg, ToastType.Success),
+                            failurePrefix = strings.share,
+                            onToast = onToast,
+                        ) { share.share(link, illust.title) }
+                    },
+                ),
+                DropdownItem(
+                    text = strings.openInBrowser,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Link, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        openSafeUrl(buildIllustShareLink(illust), strings, onError = { onToast(ToastData(it, ToastType.Error)) })
+                    },
+                ),
+                DropdownItem(
+                    text = strings.menuSauceNao,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Search, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        val imgUrl = illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+                        val sauceUrl = buildSauceNaoUrl(imgUrl)
+                        openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
+                    },
+                ),
             ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            // 全屏透明遮罩（点击外部关闭菜单）
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
-            )
-
-            // 悬浮液态玻璃菜单卡片
-            val menuCornerRadius = 18.dp
-            val menuShape = remember { RoundedCornerShape(menuCornerRadius) }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 58.dp, end = 16.dp)
-                    .widthIn(min = 160.dp, max = 200.dp)
-                    .liquidGlass(
-                        backdrop = detailBackdrop,
-                        shape = menuShape,
-                        blurRadius = 18.dp,
-                        tintColor = Color.Black,
-                        tintAlpha = 0.45f,
-                    )
-                    .squircleBorder(
-                        width = 0.6.dp,
-                        color = Color.White.copy(alpha = 0.18f),
-                        cornerRadius = menuCornerRadius,
-                    )
-                    .clip(menuShape)
-                    .padding(vertical = 4.dp),
-            ) {
-                IllustDetailMoreMenuCopyActions(
-                    illust = illust,
-                    onDismiss = onDismiss,
-                    clipboard = clipboard,
-                    context = context,
-                    coroutineScope = coroutineScope,
-                    onToast = onToast,
-                )
-                IllustDetailMoreMenuShareActions(
-                    illust = illust,
-                    onDismiss = onDismiss,
-                    share = share,
-                    isBanned = isBanned,
-                    banRepository = banRepository,
-                    onBanSuccess = onBanSuccess,
-                    coroutineScope = coroutineScope,
-                    onToast = onToast,
-                )
-            }
-        }
-    }
-}
-
-/**
- * 菜单「复制」分组：复制信息、复制图片、复制链接。
- */
-@Composable
-internal fun IllustDetailMoreMenuCopyActions(
-    illust: Illust,
-    onDismiss: () -> Unit,
-    clipboard: IllustClipboard,
-    context: PlatformContext,
-    coroutineScope: CoroutineScope,
-    onToast: (ToastData) -> Unit,
-) {
-    val strings = LocalStrings.current
-    LiquidMenuItem(
-        icon = MiuixIcons.Copy,
-        text = strings.menuCopyInfo,
-        onClick = {
-            onDismiss()
-            val text = buildIllustCopyInfo(illust)
-            runClipboardShare(
-                success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                failurePrefix = "${strings.copy}${strings.loadFailed}",
-                onToast = onToast,
-            ) { clipboard.copy(text) }
-        },
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.10f)),
-    )
-    LiquidMenuItem(
-        icon = MiuixIcons.Show,
-        text = strings.menuCopyImage,
-        onClick = {
-            onDismiss()
-            coroutineScope.launch {
-                suspendRunClipboardShare(
-                    success = ToastData(strings.imageCopySuccess, ToastType.Success),
-                    failurePrefix = strings.menuCopyImage,
-                    onToast = onToast,
-                ) {
-                    withContext(Dispatchers.IO) {
-                        val candidateUrls = listOf(
-                            illust.imageUrls.large,
-                            illust.imageUrls.medium,
-                            illust.imageUrls.squareMedium,
-                        )
-                        val bytes = extractCachedImageBytes(context, candidateUrls)
-                        bytes?.let { clipboard.copyImage(it) } ?: throw IllegalStateException(strings.imageNoCacheFound)
-                    }
-                }
-            }
-        },
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.10f)),
-    )
-    LiquidMenuItem(
-        icon = MiuixIcons.Link,
-        text = strings.menuCopyLink,
-        onClick = {
-            onDismiss()
-            val link = buildIllustShareLink(illust)
-            runClipboardShare(
-                success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                failurePrefix = "${strings.copy}${strings.loadFailed}",
-                onToast = onToast,
-            ) { clipboard.copy(link) }
-        },
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.10f)),
-    )
-}
-
-/**
- * 菜单「分享 / 其他」分组：分享作品、SauceNao 搜图、屏蔽作品与屏蔽画师（作品未屏蔽时）。
- */
-@Composable
-internal fun IllustDetailMoreMenuShareActions(
-    illust: Illust,
-    onDismiss: () -> Unit,
-    share: IllustShare,
-    isBanned: Boolean,
-    banRepository: BanRepository,
-    onBanSuccess: () -> Unit,
-    coroutineScope: CoroutineScope,
-    onToast: (ToastData) -> Unit,
-) {
-    val strings = LocalStrings.current
-    LiquidMenuItem(
-        icon = MiuixIcons.Share,
-        text = strings.share,
-        onClick = {
-            onDismiss()
-            val link = buildIllustShareLink(illust)
-            val successMsg = if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
-                strings.copiedToClipboard
-            } else {
-                strings.share
-            }
-            runClipboardShare(
-                success = ToastData(successMsg, ToastType.Success),
-                failurePrefix = strings.share,
-                onToast = onToast,
-            ) { share.share(link, illust.title) }
-        },
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.10f)),
-    )
-    LiquidMenuItem(
-        icon = MiuixIcons.Link,
-        text = strings.openInBrowser,
-        onClick = {
-            onDismiss()
-            openSafeUrl(buildIllustShareLink(illust), strings, onError = { onToast(ToastData(it, ToastType.Error)) })
-        },
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.10f)),
-    )
-    LiquidMenuItem(
-        icon = MiuixIcons.Search,
-        text = strings.menuSauceNao,
-        onClick = {
-            onDismiss()
-            val imgUrl = illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-            val sauceUrl = buildSauceNaoUrl(imgUrl)
-            openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
-        },
+        ),
     )
     if (!isBanned) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .height(0.5.dp)
-                .background(Color.White.copy(alpha = 0.10f)),
-        )
-        LiquidMenuItem(
-            icon = MiuixIcons.Blocklist,
-            text = strings.menuBanWork,
-            onClick = {
-                onDismiss()
-                coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanIllust(illust.id, illust.title)
-                    }.fold(
-                        onSuccess = {
-                            onBanSuccess()
-                            onToast(ToastData(strings.menuBanWork, ToastType.Success))
+        add(
+            DropdownEntry(
+                items = listOf(
+                    DropdownItem(
+                        text = strings.menuBanWork,
+                        icon = { modifier -> Icon(imageVector = MiuixIcons.Blocklist, contentDescription = null, modifier = modifier) },
+                        onClick = {
+                            coroutineScope.launch {
+                                suspendRunCatchingNonCancel {
+                                    banRepository.insertBanIllust(illust.id, illust.title)
+                                }.fold(
+                                    onSuccess = {
+                                        onBanSuccess()
+                                        onToast(ToastData(strings.menuBanWork, ToastType.Success))
+                                    },
+                                    onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
+                                )
+                            }
                         },
-                        onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
-                    )
-                }
-            },
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .height(0.5.dp)
-                .background(Color.White.copy(alpha = 0.10f)),
-        )
-        LiquidMenuItem(
-            icon = MiuixIcons.Blocklist,
-            text = strings.menuBanUser,
-            onClick = {
-                onDismiss()
-                coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanUser(illust.user.id, illust.user.name)
-                    }.fold(
-                        onSuccess = {
-                            onBanSuccess()
-                            onToast(ToastData(strings.menuBanUser, ToastType.Success))
+                    ),
+                    DropdownItem(
+                        text = strings.menuBanUser,
+                        icon = { modifier -> Icon(imageVector = MiuixIcons.Blocklist, contentDescription = null, modifier = modifier) },
+                        onClick = {
+                            coroutineScope.launch {
+                                suspendRunCatchingNonCancel {
+                                    banRepository.insertBanUser(illust.user.id, illust.user.name)
+                                }.fold(
+                                    onSuccess = {
+                                        onBanSuccess()
+                                        onToast(ToastData(strings.menuBanUser, ToastType.Success))
+                                    },
+                                    onFailure = { e -> onToast(ToastData("${strings.menuBanUser}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
+                                )
+                            }
                         },
-                        onFailure = { e -> onToast(ToastData("${strings.menuBanUser}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
-                    )
-                }
-            },
+                    ),
+                ),
+            ),
         )
     }
 }

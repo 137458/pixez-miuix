@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -138,12 +139,10 @@ fun MarkdownText(
                 }
 
                 is MarkdownBlock.Divider -> {
-                    Box(
+                    HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .height(0.5.dp)
-                            .background(MiuixTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                            .padding(vertical = 4.dp),
                     )
                 }
             }

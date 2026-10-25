@@ -22,16 +22,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
@@ -39,7 +38,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.background
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 网络设置页：提供 OAuth / API 服务网络模式切换与图片源选择。
@@ -161,9 +159,9 @@ fun NetworkSettingScreen(
                     SmallTitle(text = strings.oauthNetworkMode)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         networkModes.forEach { (code, label, description) ->
-                            NetworkModeOption(
-                                label = label,
-                                description = description,
+                            RadioButtonPreference(
+                                title = label,
+                                summary = description,
                                 selected = oauthNetworkMode == code,
                                 onClick = { setOAuthNetworkMode(code) },
                             )
@@ -175,9 +173,9 @@ fun NetworkSettingScreen(
                     SmallTitle(text = strings.apiNetworkMode)
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         networkModes.forEach { (code, label, description) ->
-                            NetworkModeOption(
-                                label = label,
-                                description = description,
+                            RadioButtonPreference(
+                                title = label,
+                                summary = description,
                                 selected = apiNetworkMode == code,
                                 onClick = { setApiNetworkMode(code) },
                             )
@@ -189,21 +187,17 @@ fun NetworkSettingScreen(
                     item {
                         SmallTitle(text = strings.pictureSource)
                         top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = DEFAULT_IMAGE_HOST,
                                 summary = DEFAULT_IMAGE_HOST,
+                                selected = pictureSource == DEFAULT_IMAGE_HOST,
                                 onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
-                                endActions = {
-                                    CheckIndicator(selected = pictureSource == DEFAULT_IMAGE_HOST)
-                                },
                             )
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = MIRROR_IMAGE_HOST,
                                 summary = MIRROR_IMAGE_HOST,
+                                selected = pictureSource == MIRROR_IMAGE_HOST,
                                 onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
-                                endActions = {
-                                    CheckIndicator(selected = pictureSource == MIRROR_IMAGE_HOST)
-                                },
                             )
                             Column(
                                 modifier = Modifier
@@ -241,26 +235,6 @@ fun NetworkSettingScreen(
             onDismiss = { toastMessage = null },
         )
     }
-}
-
-/**
- * 网络模式单选项：标题 + 描述 + 选中指示器。
- */
-@Composable
-private fun NetworkModeOption(
-    label: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    BasicComponent(
-        title = label,
-        summary = description,
-        onClick = onClick,
-        endActions = {
-            CheckIndicator(selected = selected)
-        },
-    )
 }
 
 /**

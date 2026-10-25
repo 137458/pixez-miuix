@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -52,6 +54,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.SquircleShape
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -66,8 +69,11 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.VerticalScrollBar
+import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -441,6 +447,10 @@ private fun HistoryCard(
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 卡片与封面共用项目约定的连续曲率超椭圆 Shape，半径与 illustTransitionBounds 保持一致。
+    val cardShape = remember(AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP) {
+        SquircleShape(AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP.dp)
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -448,7 +458,7 @@ private fun HistoryCard(
                 illustId = item.illustId.takeIf { it > 0 },
                 cornerRadius = AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP.dp,
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(cardShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
@@ -458,7 +468,7 @@ private fun HistoryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(3f / 4f)
-                .clip(RoundedCornerShape(12.dp)),
+                .clip(cardShape),
             contentAlignment = Alignment.Center,
         ) {
             PixivAsyncImage(
@@ -487,6 +497,7 @@ private fun HistoryCard(
 /**
  * 小说浏览历史列表：封面、标题、作者与浏览时间纵向排布；长按触发删除确认。
  */
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 private fun NovelHistoryList(
     items: List<NovelHistoryItem>,
@@ -494,29 +505,41 @@ private fun NovelHistoryList(
     onLongClick: (NovelHistoryItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 8.dp,
-            end = 16.dp,
-            bottom = LocalBottomBarContentPadding.current,
-        ),
-    ) {
-        // LazyListScope.items(count) 为成员函数，避免与 staggeredgrid items 扩展导入冲突。
-        // id 为导入时的 null 会按旧语义折叠为 0L 单行，故 ?: 0L 不会产生重复 key。
-        items(
-            count = items.size,
-            key = { items[it].id ?: 0L },
-            contentType = { "novel_history_item" },
-        ) { index ->
-            val item = items[index]
-            NovelHistoryRow(
-                item = item,
-                onClick = { onNovelClick(item.novelId) },
-                onLongClick = { onLongClick(item) },
-            )
+    val listState = rememberLazyListState()
+    val bottomContentPadding = LocalBottomBarContentPadding.current
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 8.dp,
+                end = 16.dp,
+                bottom = bottomContentPadding,
+            ),
+        ) {
+            // LazyListScope.items(count) 为成员函数，避免与 staggeredgrid items 扩展导入冲突。
+            // id 为导入时的 null 会按旧语义折叠为 0L 单行，故 ?: 0L 不会产生重复 key。
+            items(
+                count = items.size,
+                key = { items[it].id ?: 0L },
+                contentType = { "novel_history_item" },
+            ) { index ->
+                val item = items[index]
+                NovelHistoryRow(
+                    item = item,
+                    onClick = { onNovelClick(item.novelId) },
+                    onLongClick = { onLongClick(item) },
+                )
+            }
         }
+        VerticalScrollBar(
+            adapter = rememberScrollBarAdapter(listState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight(),
+            trackPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding),
+        )
     }
 }
 

@@ -127,20 +127,22 @@ internal fun SauceNaoBottomSheet(
                                 color = MiuixTheme.colorScheme.error,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Button(
-                                    onClick = onRetry,
-                                    colors = ButtonDefaults.buttonColors(
-                                        color = MiuixTheme.colorScheme.primary,
-                                        contentColor = MiuixTheme.colorScheme.onPrimary,
-                                    ),
-                                ) {
-                                    Text(text = strings.retry)
-                                }
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
                                 TextButton(
                                     text = strings.sauceNaoPickImage,
                                     onClick = onPickAnother,
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
+                                Button(
+                                    onClick = onRetry,
+                                    colors = ButtonDefaults.buttonColorsPrimary(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(text = strings.retry)
+                                }
                             }
                         }
                     }
@@ -158,10 +160,7 @@ internal fun SauceNaoBottomSheet(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = onPickAnother,
-                            colors = ButtonDefaults.buttonColors(
-                                color = MiuixTheme.colorScheme.primary,
-                                contentColor = MiuixTheme.colorScheme.onPrimary,
-                            ),
+                            colors = ButtonDefaults.buttonColorsPrimary(),
                         ) {
                             Text(text = strings.sauceNaoPickImage)
                         }

@@ -18,10 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.CheckIndicator
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
@@ -29,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 桌面小组件推荐类型与图源设置页：
@@ -104,14 +102,12 @@ fun WidgetRecommendSettingScreen(
                                 "day" -> selectedType == "day" || selectedType == "rank"
                                 else -> selectedType == option.type
                             }
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = option.label,
+                                selected = isSelected,
                                 onClick = {
                                     selectedType = option.type
                                     settingsRepository.widgetIllustType = option.type
-                                },
-                                endActions = {
-                                    CheckIndicator(selected = isSelected)
                                 },
                             )
                         }
@@ -123,14 +119,12 @@ fun WidgetRecommendSettingScreen(
                     SmallTitle(text = strings.settingWidgetPictureSourceSection)
                     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         widgetPictureSourceOptions.forEach { option ->
-                            BasicComponent(
+                            RadioButtonPreference(
                                 title = option.label,
+                                selected = selectedPictureSource == option.source,
                                 onClick = {
                                     selectedPictureSource = option.source
                                     settingsRepository.widgetPictureSource = option.source
-                                },
-                                endActions = {
-                                    CheckIndicator(selected = selectedPictureSource == option.source)
                                 },
                             )
                         }

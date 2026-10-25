@@ -3,14 +3,11 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -41,23 +37,22 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
-import com.perol.pixez.shared.platform.PlatformBackHandler
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.FileSystem
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.TooltipBox
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.popup.OverlayDropdownPopup
 
 /**
  * 作品详情页沉浸式顶栏：
  * 物理恒定锚点、微气泡背景平滑折叠、动态标题与右侧液态玻璃操作组（收藏、下载、更多操作菜单）。
  *
  * 本函数仅负责状态持有与整体编排；顶栏主体行与操作按钮组见 [IllustDetailTopBarHeader] /
- * [IllustDetailTopBarActions]，更多操作菜单见 [IllustDetailMoreMenu]。
+ * [IllustDetailTopBarActions]，更多操作菜单条目构建见 [buildIllustDetailMoreMenuEntries]。
  */
 @Composable
 fun IllustDetailTopBar(
@@ -119,69 +114,32 @@ fun IllustDetailTopBar(
             onBack = onBack,
             onMoreClick = { showMoreMenu = !showMoreMenu },
         )
-    }
 
-    // 更多操作液态玻璃浮动菜单
-    if (illust != null) {
-        val currentIllust = illust
-        PlatformBackHandler(enabled = showMoreMenu) {
-            showMoreMenu = false
+        // 3. 更多操作下拉菜单：锚定顶栏容器、展开于其下方右缘；
+        // 遮罩、进出场动画、点外关闭与返回键处理均由 Miuix 弹层接管。
+        if (illust != null) {
+            OverlayDropdownPopup(
+                entries = buildIllustDetailMoreMenuEntries(
+                    strings = LocalStrings.current,
+                    illust = illust,
+                    isBanned = isBanned,
+                    banRepository = banRepository,
+                    onBanSuccess = onBanSuccess,
+                    onToast = onToast,
+                    clipboard = clipboard,
+                    share = share,
+                    context = context,
+                    coroutineScope = coroutineScope,
+                ),
+                show = showMoreMenu,
+                onDismiss = { showMoreMenu = false },
+                onDismissFinished = {},
+                maxHeight = null,
+                dropdownColors = DropdownDefaults.dropdownColors(),
+                renderInRootScaffold = true,
+                collapseOnSelection = true,
+            )
         }
-
-        IllustDetailMoreMenu(
-            visible = showMoreMenu,
-            onDismiss = { showMoreMenu = false },
-            detailBackdrop = detailBackdrop,
-            illust = currentIllust,
-            isBanned = isBanned,
-            banRepository = banRepository,
-            onBanSuccess = onBanSuccess,
-            onToast = onToast,
-            clipboard = clipboard,
-            share = share,
-            context = context,
-            coroutineScope = coroutineScope,
-        )
-    }
-}
-
-/**
- * 液态玻璃菜单单项组件。
- */
-@Composable
-internal fun LiquidMenuItem(
-    icon: ImageVector,
-    text: String,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (isPressed) Color.White.copy(alpha = 0.12f) else Color.Transparent,
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text = text,
-            style = MiuixTheme.textStyles.body2,
-            color = Color.White,
-        )
     }
 }
 

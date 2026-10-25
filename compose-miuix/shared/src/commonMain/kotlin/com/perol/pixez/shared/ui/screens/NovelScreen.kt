@@ -32,9 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.repository.NovelRankingMode
@@ -42,7 +42,7 @@ import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
@@ -57,11 +57,9 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -86,6 +84,7 @@ fun NovelScreen(
     val strings = LocalStrings.current
     val coroutineScope = rememberCoroutineScope()
     val backdrop = rememberBlurBackdrop()
+    val scrollBehavior = MiuixScrollBehavior()
 
     var currentTab by rememberSaveable { mutableStateOf(NovelBrowseTab.Recommend) }
     var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
@@ -153,28 +152,17 @@ fun NovelScreen(
         }
     }
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(backdrop = backdrop) {
-                TopAppBar(
-                    title = strings.novelBrowseTitle,
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = MiuixIcons.Back,
-                                contentDescription = strings.back,
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { refreshToken++ }) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = strings.refresh,
-                            )
-                        }
-                    },
+        title = strings.novelBrowseTitle,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = { refreshToken++ }) {
+                Icon(
+                    imageVector = MiuixIcons.Refresh,
+                    contentDescription = strings.refresh,
                 )
             }
         },
@@ -258,7 +246,9 @@ fun NovelScreen(
                         val novelList = pagedList.items.orEmpty()
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(
                                 start = 16.dp,
                                 end = 16.dp,
@@ -318,8 +308,9 @@ private fun NovelTabChip(
     ) {
         Text(
             text = title,
-            fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            style = MiuixTheme.textStyles.footnote1.copy(
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            ),
             color = textColor,
         )
     }
@@ -343,8 +334,9 @@ private fun NovelSubModeChip(
     ) {
         Text(
             text = title,
-            fontSize = 12.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            style = MiuixTheme.textStyles.footnote1.copy(
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            ),
             color = textColor,
         )
     }

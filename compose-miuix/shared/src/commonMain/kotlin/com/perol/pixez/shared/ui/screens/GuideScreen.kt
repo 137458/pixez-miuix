@@ -1,9 +1,8 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import androidx.compose.ui.graphics.Color
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
@@ -17,7 +16,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,7 +52,6 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.CheckIndicator
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -66,17 +63,10 @@ import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /** 引导页分步切换的转场时长（毫秒），四段位移动画与两段淡入淡出共用。 */
 private const val GUIDE_PAGE_TRANSITION_MILLIS = 300
@@ -106,37 +96,22 @@ fun GuideScreen(
         onFinish()
     }
 
-    Scaffold(
+    BlurTopBarScaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            BlurredBar(
-                backdrop = backdrop,
-            ) {
-                TopAppBar(
-                    title = when (currentStep) {
-                        0 -> "1. ${strings.guideStepLanguage}"
-                        1 -> "2. ${strings.guideStepNetwork}"
-                        else -> "3. ${strings.guideStepWelcome}"
-                    },
-                    color = if (backdrop != null) Color.Transparent else colorScheme.surface,
-                    navigationIcon = {
-                        if (currentStep > 0) {
-                            IconButton(onClick = { currentStep-- }) {
-                                Icon(
-                                    imageVector = MiuixIcons.Back,
-                                    contentDescription = strings.guidePrev,
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        TextButton(
-                            text = strings.guideSkipLogin,
-                            onClick = finishGuide,
-                        )
-                    },
-                )
-            }
+        title = when (currentStep) {
+            0 -> "1. ${strings.guideStepLanguage}"
+            1 -> "2. ${strings.guideStepNetwork}"
+            else -> "3. ${strings.guideStepWelcome}"
+        },
+        backdrop = backdrop,
+        // 引导页内容为分步 AnimatedContent 中的 LazyColumn，未接 nestedScroll，故传 null 关闭滚动联动。
+        scrollBehavior = null,
+        onBack = if (currentStep > 0) ({ currentStep-- }) else null,
+        actions = {
+            TextButton(
+                text = strings.guideSkipLogin,
+                onClick = finishGuide,
+            )
         },
         bottomBar = {
             GuideBottomBar(
@@ -338,26 +313,22 @@ private fun GuideNetworkStep(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    BasicComponent(
+                    RadioButtonPreference(
                         title = strings.guideImageMirror,
                         summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
+                        selected = isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = true
                             settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
                         },
-                        endActions = {
-                            CheckIndicator(selected = isMirrorEnabled)
-                        },
                     )
-                    BasicComponent(
+                    RadioButtonPreference(
                         title = strings.guideImageOfficial,
                         summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
+                        selected = !isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = false
                             settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
-                        },
-                        endActions = {
-                            CheckIndicator(selected = !isMirrorEnabled)
                         },
                     )
                 }
@@ -369,28 +340,24 @@ private fun GuideNetworkStep(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    BasicComponent(
+                    RadioButtonPreference(
                         title = strings.guideNetworkDirect,
                         summary = strings.guideNetworkDirectDesc,
+                        selected = currentNetworkMode == "direct",
                         onClick = {
                             currentNetworkMode = "direct"
                             settingsRepository.apiNetworkMode = "direct"
                             settingsRepository.oauthNetworkMode = "direct"
                         },
-                        endActions = {
-                            CheckIndicator(selected = currentNetworkMode == "direct")
-                        },
                     )
-                    BasicComponent(
+                    RadioButtonPreference(
                         title = strings.guideNetworkSni,
                         summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
+                        selected = currentNetworkMode == "sni",
                         onClick = {
                             currentNetworkMode = "sni"
                             settingsRepository.apiNetworkMode = "sni"
                             settingsRepository.oauthNetworkMode = "sni"
-                        },
-                        endActions = {
-                            CheckIndicator(selected = currentNetworkMode == "sni")
                         },
                     )
                 }

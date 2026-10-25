@@ -283,8 +283,7 @@ fun NovelViewerScreen(
                         ) {
                             Text(
                                 text = "A-",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
                                 color = MiuixTheme.colorScheme.primary,
                             )
                         }
@@ -299,8 +298,7 @@ fun NovelViewerScreen(
                         ) {
                             Text(
                                 text = "A+",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
                                 color = MiuixTheme.colorScheme.primary,
                             )
                         }
@@ -379,7 +377,7 @@ fun NovelViewerScreen(
                             ) {
                                 Text(
                                     text = st.message,
-                                    fontSize = 14.sp,
+                                    style = MiuixTheme.textStyles.body2,
                                     color = MiuixTheme.colorScheme.error,
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -421,7 +419,7 @@ fun NovelViewerScreen(
                                         item {
                                             Text(
                                                 text = strings.novelTextEmpty,
-                                                fontSize = 14.sp,
+                                                style = MiuixTheme.textStyles.body2,
                                                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                                 modifier = Modifier.padding(horizontal = 18.dp),
                                             )
@@ -464,7 +462,7 @@ fun NovelViewerScreen(
                                                     ) {
                                                         Text(
                                                             text = "◀ ${strings.novelPrevChapter}",
-                                                            fontSize = 13.sp,
+                                                            style = MiuixTheme.textStyles.footnote1,
                                                         )
                                                     }
                                                 } else {
@@ -478,7 +476,7 @@ fun NovelViewerScreen(
                                                     ) {
                                                         Text(
                                                             text = "${strings.novelNextChapter} ▶",
-                                                            fontSize = 13.sp,
+                                                            style = MiuixTheme.textStyles.footnote1,
                                                         )
                                                     }
                                                 } else {
@@ -624,7 +622,7 @@ private fun NovelEmbeddedImage(
         } else {
             Text(
                 text = placeholderText,
-                fontSize = 13.sp,
+                style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }

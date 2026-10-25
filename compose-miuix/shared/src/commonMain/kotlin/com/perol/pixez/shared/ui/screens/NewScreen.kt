@@ -76,7 +76,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -275,31 +274,26 @@ fun NewScreen(
     }
 
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
-    WindowDialog(
+    OverlayDialog(
         title = strings.dialogNeedLogin,
         summary = strings.dialogNeedLoginSummary,
         show = showLoginDialog,
         onDismissRequest = { showLoginDialog = false },
     ) {
-        Row(
+        TextButton(
+            text = strings.btnCancelLogin,
+            onClick = { showLoginDialog = false },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TextButton(
-                text = strings.btnCancelLogin,
-                onClick = { showLoginDialog = false },
-                modifier = Modifier.weight(1f),
-            )
-            Button(
-                onClick = {
-                    showLoginDialog = false
-                    onLoginClick()
-                },
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(strings.btnGoLogin)
-            }
-        }
+        )
+        TextButton(
+            text = strings.btnGoLogin,
+            onClick = {
+                showLoginDialog = false
+                onLoginClick()
+            },
+            colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 
     val scrollBehavior = MiuixScrollBehavior()
