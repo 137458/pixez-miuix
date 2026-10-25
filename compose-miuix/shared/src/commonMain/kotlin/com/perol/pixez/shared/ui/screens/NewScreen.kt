@@ -30,6 +30,7 @@ import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
+import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
@@ -75,7 +76,6 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -582,7 +582,6 @@ private fun WatchlistSeriesList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
-    val strings = LocalStrings.current
     LazyColumn(
         state = state,
         modifier = modifier.fillMaxSize(),
@@ -601,33 +600,13 @@ private fun WatchlistSeriesList(
         }
 
         item(key = "watchlist_pagination_footer", contentType = "watchlist_pagination_footer") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                when {
-                    isLoadingMore -> InfiniteProgressIndicator()
-                    loadMoreError != null -> Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = strings.loadFailed,
-                            style = MiuixTheme.textStyles.body2,
-                            color = MiuixTheme.colorScheme.error,
-                        )
-                        Button(onClick = onLoadMore) {
-                            Text(text = strings.retry)
-                        }
-                    }
-                    !hasMore -> Text(
-                        text = strings.noMoreData,
-                        style = MiuixTheme.textStyles.footnote1,
-                    )
-                }
-            }
+            // 分页 footer 三态与搜索结果列表共用同一组件，观感与文案统一。
+            PagingLoadMoreFooter(
+                hasMore = hasMore,
+                isLoadingMore = isLoadingMore,
+                loadMoreError = loadMoreError,
+                onRetry = onLoadMore,
+            )
         }
     }
 }
