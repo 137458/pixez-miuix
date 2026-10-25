@@ -554,6 +554,10 @@ private fun NovelHistoryRow(
     modifier: Modifier = Modifier,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    // 缩略图与插画行共用规范圆角（MIUIX_Spec 3.3）的连续曲率超椭圆 Shape。
+    val thumbnailShape = remember(AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP) {
+        SquircleShape(AppConstants.Layout.HISTORY_CARD_CORNER_RADIUS_DP.dp)
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -570,7 +574,7 @@ private fun NovelHistoryRow(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(thumbnailShape),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
