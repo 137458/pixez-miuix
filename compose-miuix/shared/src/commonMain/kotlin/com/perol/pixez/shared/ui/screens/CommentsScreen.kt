@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Comment
+import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -126,15 +127,29 @@ fun CommentsScreen(
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
+    // isNovel 在本页生命周期内固定：按其一次性选定评论读取与发表的仓储端点，下游两处调用收敛到选中函数。
+    val fetchCommentsResponse: suspend (String?) -> CommentResponse =
+        if (isNovel) {
+            { nextUrl -> repository.getNovelCommentsResponse(illustId, nextUrl = nextUrl) }
+        } else {
+            { nextUrl -> repository.getIllustCommentsResponse(illustId, nextUrl = nextUrl) }
+        }
+    val submitComment: suspend (comment: String, parentCommentId: Long?) -> Unit =
+        if (isNovel) {
+            { comment, parentCommentId ->
+                repository.postNovelComment(novelId = illustId, comment = comment, parentCommentId = parentCommentId)
+            }
+        } else {
+            { comment, parentCommentId ->
+                repository.postComment(illustId = illustId, comment = comment, parentCommentId = parentCommentId)
+            }
+        }
+
     // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
     val pagedList = remember(illustId, isNovel) {
         PagedListState(
             fetch = { nextUrl ->
-                val response = if (isNovel) {
-                    repository.getNovelCommentsResponse(illustId, nextUrl = nextUrl)
-                } else {
-                    repository.getIllustCommentsResponse(illustId, nextUrl = nextUrl)
-                }
+                val response = fetchCommentsResponse(nextUrl)
                 PagedListPage(response.comments, response.nextUrl)
             },
             mergeItems = { old, new -> old.appendDistinct(new) },
@@ -229,19 +244,7 @@ fun CommentsScreen(
                         isSending = true
                         sendError = null
                         suspendRunCatchingNonCancel {
-                            if (isNovel) {
-                                repository.postNovelComment(
-                                    novelId = illustId,
-                                    comment = inputText,
-                                    parentCommentId = replyTarget?.id,
-                                )
-                            } else {
-                                repository.postComment(
-                                    illustId = illustId,
-                                    comment = inputText,
-                                    parentCommentId = replyTarget?.id,
-                                )
-                            }
+                            submitComment(inputText, replyTarget?.id)
                         }.onSuccess {
                             inputText = ""
                             replyTarget = null

@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -194,6 +196,15 @@ fun SearchScreen(
         }
     }
 
+    // 纯数字 ID 按当前搜索类型分流：1 = 画师，2 = 小说，其余（含 0）= 作品。
+    val onNumericIdClick: (Long) -> Unit = { id ->
+        when (searchTypeIndex) {
+            1 -> onUserClick(id)
+            2 -> onNovelClick(id)
+            else -> onIllustClick(id)
+        }
+    }
+
     val suggestionsListState = rememberLazyListState()
     val illustGridState = rememberLazyStaggeredGridState()
     val userListState = rememberLazyListState()
@@ -204,13 +215,13 @@ fun SearchScreen(
     val isCurrentListAtTop by remember(isSearching, query, searchTypeIndex) {
         derivedStateOf {
             if (!isSearching || query.isBlank()) {
-                suggestionsListState.firstVisibleItemIndex == 0 && suggestionsListState.firstVisibleItemScrollOffset == 0
-            } else if (searchTypeIndex == 0) {
-                illustGridState.firstVisibleItemIndex == 0 && illustGridState.firstVisibleItemScrollOffset == 0
-            } else if (searchTypeIndex == 1) {
-                userListState.firstVisibleItemIndex == 0 && userListState.firstVisibleItemScrollOffset == 0
+                suggestionsListState.isScrolledToTop()
             } else {
-                novelListState.firstVisibleItemIndex == 0 && novelListState.firstVisibleItemScrollOffset == 0
+                when (searchTypeIndex) {
+                    0 -> illustGridState.isScrolledToTop()
+                    1 -> userListState.isScrolledToTop()
+                    else -> novelListState.isScrolledToTop()
+                }
             }
         }
     }
@@ -341,13 +352,7 @@ fun SearchScreen(
                                 when (val target = parseSearchQueryTarget(trimmed)) {
                                     is SearchQueryTarget.IllustId -> onIllustClick(target.id)
                                     is SearchQueryTarget.UserId -> onUserClick(target.id)
-                                    is SearchQueryTarget.NumericId -> {
-                                        when (searchTypeIndex) {
-                                            1 -> onUserClick(target.id)
-                                            2 -> onNovelClick(target.id)
-                                            else -> onIllustClick(target.id)
-                                        }
-                                    }
+                                    is SearchQueryTarget.NumericId -> onNumericIdClick(target.id)
                                     null -> isSearching = true
                                 }
                             }
@@ -471,13 +476,7 @@ fun SearchScreen(
                             when (target) {
                                 is SearchQueryTarget.IllustId -> onIllustClick(target.id)
                                 is SearchQueryTarget.UserId -> onUserClick(target.id)
-                                is SearchQueryTarget.NumericId -> {
-                                    when (searchTypeIndex) {
-                                        1 -> onUserClick(target.id)
-                                        2 -> onNovelClick(target.id)
-                                        else -> onIllustClick(target.id)
-                                    }
-                                }
+                                is SearchQueryTarget.NumericId -> onNumericIdClick(target.id)
                             }
                         } else {
                             query = tag
@@ -537,6 +536,14 @@ sealed interface SearchQueryTarget {
     data class IllustId(override val id: Long) : SearchQueryTarget
     data class UserId(override val id: Long) : SearchQueryTarget
 }
+
+/** 列表回到顶端的统一判定：首项可见且无滚动偏移。 */
+private fun LazyListState.isScrolledToTop(): Boolean =
+    firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0
+
+/** 瀑布流网格回到顶端判定，与列表版同语义（两类型无公共父接口，故各留一份）。 */
+private fun LazyStaggeredGridState.isScrolledToTop(): Boolean =
+    firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0
 
 private val ILLUST_URL_REGEX = Regex("""(?:artworks/|illust_id=|pixiv://illusts?/)(\d+)""", RegexOption.IGNORE_CASE)
 private val USER_URL_REGEX = Regex("""(?:users/|member\.php\?id=|pixiv://users?/)(\d+)""", RegexOption.IGNORE_CASE)
