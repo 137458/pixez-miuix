@@ -9,6 +9,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,9 +38,12 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.background
@@ -78,6 +82,8 @@ fun IllustSeriesScreen(
     var watchlistAdded by remember(seriesId) { mutableStateOf<Boolean?>(null) }
     // 追更切换进行中，防重复提交。
     var isTogglingWatchlist by remember { mutableStateOf(false) }
+    // 取消追更二次确认弹窗开关。
+    var pendingUnwatchConfirm by remember { mutableStateOf(false) }
     var watchlistToast by remember { mutableStateOf<ToastData?>(null) }
     // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
     // 过滤链为高-3「原始/过滤」双列表本地重过滤。系列标题在 fetch 闭包内仅于首页请求（nextUrl == null）
@@ -173,7 +179,14 @@ fun IllustSeriesScreen(
             // 追更切换：系列详情加载完成（watchlistAdded 非 null）后展示。
             if (watchlistAdded != null) {
                 IconButton(
-                    onClick = ::toggleWatchlist,
+                    // 取消追更为破坏性操作，先二次确认；追更直接执行。
+                    onClick = {
+                        if (watchlistAdded == true) {
+                            pendingUnwatchConfirm = true
+                        } else {
+                            toggleWatchlist()
+                        }
+                    },
                     enabled = !isTogglingWatchlist,
                 ) {
                     Text(
@@ -259,6 +272,30 @@ fun IllustSeriesScreen(
                 toast = watchlistToast,
                 onDismiss = { watchlistToast = null },
             )
+
+            // 取消追更二次确认（与动态页追更页签的移除确认同款交互）。
+            OverlayDialog(
+                title = strings.watchlistTitle,
+                summary = strings.watchlistRemoveConfirm,
+                show = pendingUnwatchConfirm,
+                onDismissRequest = { if (!isTogglingWatchlist) pendingUnwatchConfirm = false },
+            ) {
+                TextButton(
+                    text = strings.cancel,
+                    onClick = { if (!isTogglingWatchlist) pendingUnwatchConfirm = false },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    text = strings.confirm,
+                    enabled = !isTogglingWatchlist,
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        pendingUnwatchConfirm = false
+                        toggleWatchlist()
+                    },
+                )
+            }
         }
     }
 }
