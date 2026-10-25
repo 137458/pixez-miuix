@@ -292,22 +292,6 @@ class IllustRepository(
     }
 
     /**
-     * 获取小说评论回复（楼中楼）响应（含 nextUrl）。
-     */
-    suspend fun getNovelCommentRepliesResponse(
-        commentId: Long,
-        nextUrl: String? = null,
-    ): CommentResponse = networkCall("获取小说评论回复失败 commentId=$commentId") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
-            apiClient.get("/v2/novel/comment/replies") {
-                parameter("comment_id", commentId)
-            }.body()
-        }
-    }
-
-    /**
      * 发表小说评论或回复指定评论。
      *
      * @param novelId 小说 ID。

@@ -136,23 +136,6 @@ class NovelCommentsRepositoryTest {
     }
 
     @Test
-    fun `getNovelCommentRepliesResponse 请求评论回复端点且 query 为 comment_id 并解析楼中楼`() = runBlocking {
-        responseBody = """
-            {"comments":[{"id":1003,"comment":"楼中楼",
-              "user":{"id":9,"name":"路人","account":"passerby","profile_image_urls":{"medium":"pm"}}}],
-             "next_url":null}
-        """.trimIndent()
-
-        val response = repository.getNovelCommentRepliesResponse(commentId = 1001L)
-
-        assertEquals(1, captured.size)
-        assertEquals("/v2/novel/comment/replies", captured.single().path)
-        assertEquals("1001", captured.single().query["comment_id"])
-        assertEquals(1003L, response.comments.single().id)
-        assertEquals("楼中楼", response.comments.single().comment)
-    }
-
-    @Test
     fun `postNovelComment 表单参数完整且回复时携带父评论 ID`() = runBlocking {
         responseBody = "{}"
 
