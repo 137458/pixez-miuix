@@ -13,6 +13,7 @@
 .trae/
 .zcode/
 .zcodeignore
+.qoder/
 release/
 misc/
 msic
@@ -61,5 +62,6 @@ research/
 CONTEXT.md
 Code_Wiki.md
 RELEASE_NOTES_GUIDE.md
+release-notes-*.md
 
 .goal/
