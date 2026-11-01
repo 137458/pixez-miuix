@@ -20,20 +20,21 @@ class AppLanguageTagsTest {
 
     @Test
     fun `有效序号各自映射到唯一标签`() {
-        val tags = (0..11).map { languageTagForNum(it) }
+        val tags = (0..12).map { languageTagForNum(it) }
 
-        assertTrue(tags.all { it != null }, "0..11 都应有标签，实际 $tags")
-        assertEquals(12, tags.distinct().size, "标签不得重复: $tags")
+        assertTrue(tags.all { it != null }, "0..12 都应有标签，实际 $tags")
+        assertEquals(13, tags.distinct().size, "标签不得重复: $tags")
         assertEquals("en", languageTagForNum(0))
         assertEquals("zh-CN", languageTagForNum(1))
         assertEquals("zh-TW", languageTagForNum(2))
         assertEquals("vi", languageTagForNum(11))
+        assertEquals("fa", languageTagForNum(12))
     }
 
     @Test
     fun `越界序号返回空表示不覆盖语言`() {
         assertNull(languageTagForNum(-1))
-        assertNull(languageTagForNum(12))
+        assertNull(languageTagForNum(13))
         assertNull(languageTagForNum(Int.MAX_VALUE))
     }
 
@@ -54,11 +55,12 @@ class AppLanguageTagsTest {
     /** 语言码表按序号驱动 Accept-Language，序号语义与长度锁定，出现重复码说明表已损坏。 */
     @Test
     fun `语言码有序表锁定序号语义且无重复`() {
-        assertEquals(12, APP_LANGUAGE_CODES.size, "语言码数量必须与序号语义一致")
-        assertEquals(12, APP_LANGUAGE_CODES.distinct().size, "语言码不得重复: $APP_LANGUAGE_CODES")
+        assertEquals(13, APP_LANGUAGE_CODES.size, "语言码数量必须与序号语义一致")
+        assertEquals(13, APP_LANGUAGE_CODES.distinct().size, "语言码不得重复: $APP_LANGUAGE_CODES")
         assertEquals("en-US", APP_LANGUAGE_CODES[0])
         assertEquals("zh-CN", APP_LANGUAGE_CODES[1])
         assertEquals("vi", APP_LANGUAGE_CODES[11])
+        assertEquals("fa", APP_LANGUAGE_CODES[12])
     }
 
     /** 语言选择列表的语言码必须单源引用语言码表，绕开引用回写字面量即视为双表回归。 */
@@ -99,5 +101,15 @@ class AppLanguageTagsTest {
         assertEquals("zh-CN", languageCodeForNum(-1), "负序号应回退默认 zh-CN")
         assertEquals("zh-CN", languageCodeForNum(APP_LANGUAGE_CODES.size), "越界序号应回退默认 zh-CN")
         assertEquals("zh-CN", languageCodeForNum(Int.MAX_VALUE), "极端越界应回退默认 zh-CN")
+    }
+
+    @Test
+    fun `波斯语判定为 RTL 语言而其他语言为 LTR`() {
+        assertTrue(isRtlLanguage(12), "序号 12（波斯语）应判定为 RTL")
+        (0..11).forEach {
+            assertTrue(!isRtlLanguage(it), "序号 $it 不应判定为 RTL")
+        }
+        assertTrue(!isRtlLanguage(-1), "负序号不应判定为 RTL")
+        assertTrue(!isRtlLanguage(13), "越界序号不应判定为 RTL")
     }
 }

@@ -178,4 +178,16 @@ internal val LANGUAGE_OPTIONS = listOf(
         displayName = "Vietnamese (machine translated, beta)",
         nativeName = "Tiếng Việt",
     ),
+    LanguageOption(
+        code = APP_LANGUAGE_CODES[12],
+        displayName = "Persian",
+        nativeName = "فارسی",
+        sponsors = listOf(
+            Sponsor(
+                name = "aliafshany",
+                avatar = "https://avatars.githubusercontent.com/u/40741745?v=4",
+                uri = "https://github.com/aliafshany",
+            ),
+        ),
+    ),
 )

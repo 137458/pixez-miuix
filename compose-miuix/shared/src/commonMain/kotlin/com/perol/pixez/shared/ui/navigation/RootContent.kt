@@ -24,7 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Rect
+import com.perol.pixez.shared.platform.isRtlLanguage
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.platform.rememberScreenCornerRadius
@@ -188,6 +191,7 @@ fun RootContent(
             LocalWatchlistRepository provides registry.watchlistRepository,
             LocalBottomBarVisibility provides bottomBarVisible,
             LocalStrings provides strings,
+            LocalLayoutDirection provides (if (isRtlLanguage(currentLanguageNum)) LayoutDirection.Rtl else LayoutDirection.Ltr),
             LocalSharedBoundsRegistry provides sharedBounds,
             LocalAppExtraColors provides appExtraColors,
             LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
@@ -495,6 +499,16 @@ private fun RootChildContent(
         )
 
         is Config.NovelViewer -> renderNovelViewer(
+            instance = instance,
+            component = component,
+        )
+
+        is Config.UserRelatedList -> renderUserRelatedList(
+            instance = instance,
+            component = component,
+        )
+
+        is Config.UserNovelList -> renderUserNovelList(
             instance = instance,
             component = component,
         )

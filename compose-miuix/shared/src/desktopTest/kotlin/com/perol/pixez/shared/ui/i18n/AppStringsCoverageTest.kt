@@ -26,6 +26,7 @@ class AppStringsCoverageTest {
             "Fil" to ("100 salita" to FilStrings),
             "De" to ("100 Wörter" to DeStrings),
             "Vi" to ("100 từ" to ViStrings),
+            "Fa" to ("100 کلمه" to FaStrings),
         )
         for ((name, pair) in expectedTexts) {
             val (want, strings) = pair
@@ -151,5 +152,17 @@ class AppStringsCoverageTest {
         assertEquals("Chương trước", ViStrings.novelPrevChapter)
         assertEquals("Số từ", ViStrings.novelWordsCount)
         assertEquals("Pixiv ID", ViStrings.pixivId)
+    }
+
+    @Test
+    fun `波斯语关键功能区不回退到中文默认值`() {
+        assertEquals("تمبر", FaStrings.stamp)
+        assertEquals("پخش", FaStrings.ugoiraPlay)
+        assertEquals("مکث", FaStrings.ugoiraPause)
+        assertEquals("مدیریت حساب‌ها", FaStrings.accountManageTitle)
+        assertEquals("رمان‌ها", FaStrings.novelBrowseTitle)
+        assertEquals("اندازه قلم", FaStrings.novelFontSize)
+        assertEquals("فصل قبل", FaStrings.novelPrevChapter)
+        assertEquals("تعداد کلمات", FaStrings.novelWordsCount)
     }
 }

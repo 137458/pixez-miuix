@@ -24,6 +24,7 @@ internal val APP_LANGUAGE_CODES = listOf(
     "fil",
     "de",
     "vi",
+    "fa",
 )
 
 /**
@@ -47,7 +48,16 @@ fun languageTagForNum(languageNum: Int): String? = when (languageNum) {
     9 -> "fil"
     10 -> "de"
     11 -> "vi"
+    12 -> "fa"
     else -> null
+}
+
+/**
+ * 判断语言序号是否对应从右至左（RTL）书写方向语言（如波斯语 fa）。
+ */
+fun isRtlLanguage(languageNum: Int): Boolean = when (languageNum) {
+    12 -> true
+    else -> false
 }
 
 /**
