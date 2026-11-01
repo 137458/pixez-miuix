@@ -134,6 +134,24 @@ class UserRepositoryTest {
     }
 
     @Test
+    fun `getUserRelated 首页携带 seed_user_id 且分页复用 nextUrl`() = runBlocking {
+        responseBody = """{"user_previews":[],"next_url":null}"""
+
+        repository.getUserRelated(12345L)
+        repository.getUserRelated(12345L, nextUrl = "https://app-api.pixiv.net/v1/user/related?seed_user_id=12345&offset=20")
+
+        assertEquals("GET", captured[0].method)
+        assertEquals("/v1/user/related", captured[0].path)
+        assertEquals("12345", captured[0].query["seed_user_id"])
+        assertEquals("for_android", captured[0].query["filter"])
+
+        assertEquals("GET", captured[1].method)
+        assertEquals("/v1/user/related", captured[1].path)
+        assertEquals("20", captured[1].query["offset"])
+        assertEquals("12345", captured[1].query["seed_user_id"])
+    }
+
+    @Test
     fun `AI 显示设置读取与更新端点及表单参数正确`() = runBlocking {
         responseBody = """{"show_ai":true}"""
         assertEquals(true, repository.getUserAISettings().showAI)

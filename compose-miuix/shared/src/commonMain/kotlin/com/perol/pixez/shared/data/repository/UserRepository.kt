@@ -151,6 +151,26 @@ class UserRepository(
     }
 
     /**
+     * 获取相关用户列表（基于某个画师推荐相似创作者）。
+     *
+     * @param seedUserId 作为推荐基准的用户 ID。
+     * @param nextUrl 下一页分页 URL。
+     */
+    suspend fun getUserRelated(
+        seedUserId: Long,
+        nextUrl: String? = null,
+    ): UserPreviewsResponse = networkCall("获取相关用户失败 seedUserId=$seedUserId") {
+        if (nextUrl != null && nextUrl.isNotBlank()) {
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        } else {
+            apiClient.get("/v1/user/related") {
+                parameter("filter", "for_android")
+                parameter("seed_user_id", seedUserId)
+            }.body()
+        }
+    }
+
+    /**
      * 获取当前账号的 AI 作品显示设置。
      */
     suspend fun getUserAISettings(): ShowAIResponse = networkCall("获取 AI 显示设置失败") {
