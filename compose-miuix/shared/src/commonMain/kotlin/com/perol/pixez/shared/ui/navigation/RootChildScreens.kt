@@ -52,6 +52,8 @@ import com.perol.pixez.shared.ui.screens.UpdateSettingScreen
 import com.perol.pixez.shared.ui.screens.UserDetailScreen
 import com.perol.pixez.shared.ui.screens.UserFollowListScreen
 import com.perol.pixez.shared.ui.screens.UserFollowerListScreen
+import com.perol.pixez.shared.ui.screens.UserNovelListScreen
+import com.perol.pixez.shared.ui.screens.UserRelatedListScreen
 import com.perol.pixez.shared.ui.screens.UserShowAISettingScreen
 import com.perol.pixez.shared.ui.screens.WelcomePageSettingScreen
 import com.perol.pixez.shared.ui.screens.WidgetRecommendSettingScreen
@@ -206,6 +208,8 @@ internal fun renderUserDetail(
         onIllustClick = component::onIllustClicked,
         onFollowListClick = component::onUserFollowListClicked,
         onFollowerListClick = component::onUserFollowerListClicked,
+        onRelatedUsersClick = component::onUserRelatedListClicked,
+        onUserNovelsClick = component::onUserNovelListClicked,
         initialTab = instance.initialTab,
     )
 }
@@ -591,6 +595,7 @@ internal fun renderNovel(
     NovelScreen(
         onBack = component::onBack,
         onNovelClick = component::onNovelClicked,
+        onUserClick = component::onUserClicked,
     )
 }
 
@@ -604,6 +609,33 @@ internal fun renderNovelViewer(
         onBack = component::onBack,
         onNovelClick = component::onNovelClicked,
         onIllustClick = component::onIllustClicked,
+        onUserClick = component::onUserClicked,
         onCommentsClick = component::onNovelCommentsClicked,
+    )
+}
+
+@Composable
+internal fun renderUserRelatedList(
+    instance: Config.UserRelatedList,
+    component: RootComponent,
+) {
+    UserRelatedListScreen(
+        userId = instance.userId,
+        onBack = component::onBack,
+        onUserClick = component::onUserClicked,
+    )
+}
+
+@Composable
+internal fun renderUserNovelList(
+    instance: Config.UserNovelList,
+    component: RootComponent,
+) {
+    UserNovelListScreen(
+        userId = instance.userId,
+        authorName = instance.authorName,
+        onBack = component::onBack,
+        onNovelClick = component::onNovelClicked,
+        onUserClick = component::onUserClicked,
     )
 }

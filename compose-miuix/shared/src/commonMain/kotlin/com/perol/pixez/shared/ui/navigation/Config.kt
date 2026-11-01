@@ -90,6 +90,14 @@ sealed class Config {
     data class UserFollowerList(val userId: Long) : Config()
 
     @Serializable
+    @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "UserRelatedList")
+    data class UserRelatedList(val userId: Long) : Config()
+
+    @Serializable
+    @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "UserNovelList")
+    data class UserNovelList(val userId: Long, val authorName: String = "") : Config()
+
+    @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "RecomUserList")
     data object RecomUserList : Config()
 

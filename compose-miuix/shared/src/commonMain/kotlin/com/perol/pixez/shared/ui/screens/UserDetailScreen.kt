@@ -82,6 +82,8 @@ fun UserDetailScreen(
     onIllustClick: (Long) -> Unit,
     onFollowListClick: (Long) -> Unit,
     onFollowerListClick: (Long) -> Unit,
+    onRelatedUsersClick: ((Long) -> Unit)? = null,
+    onUserNovelsClick: ((Long, String) -> Unit)? = null,
     initialTab: Int = 0,
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
@@ -148,15 +150,17 @@ fun UserDetailScreen(
         }
     }
 
-    // 「更多操作」下拉菜单项：复制信息 / 复制链接 / 分享链接。
+    // 「更多操作」下拉菜单项：相关画师 / 用户小说 / 复制信息 / 复制链接 / 分享链接。
     // remember 保留在主入口作用域，菜单项通过参数下发给顶栏子组件。
-    val moreEntry = remember(userDetail) {
+    val moreEntry = remember(userDetail, onRelatedUsersClick, onUserNovelsClick) {
         userDetail?.let { detail ->
             buildUserMoreDropdownEntry(
                 strings = strings,
                 detail = detail,
                 clipboard = clipboard,
                 share = share,
+                onRelatedUsersClick = onRelatedUsersClick,
+                onUserNovelsClick = onUserNovelsClick,
                 onToast = { toastMessage = it },
             )
         }
@@ -241,40 +245,64 @@ private fun buildUserMoreDropdownEntry(
     detail: UserDetail,
     clipboard: IllustClipboard,
     share: IllustShare,
+    onRelatedUsersClick: ((Long) -> Unit)? = null,
+    onUserNovelsClick: ((Long, String) -> Unit)? = null,
     onToast: (ToastData) -> Unit,
 ): DropdownEntry = DropdownEntry(
-    items = listOf(
-        DropdownItem(
-            text = strings.menuCopyInfo,
-            onClick = {
-                runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.loadFailed}",
-                    onToast = onToast,
-                ) { clipboard.copy(buildUserCopyInfo(detail)) }
-            }
-        ),
-        DropdownItem(
-            text = strings.menuCopyLink,
-            onClick = {
-                runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.loadFailed}",
-                    onToast = onToast,
-                ) { clipboard.copy(AppConstants.Urls.pixivUserUrl(detail.user.id)) }
-            }
-        ),
-        DropdownItem(
-            text = strings.menuShareLink,
-            onClick = {
-                runClipboardShare(
-                    success = ToastData(strings.share, ToastType.Success),
-                    failurePrefix = "${strings.share}${strings.loadFailed}",
-                    onToast = onToast,
-                ) { share.share(AppConstants.Urls.pixivUserUrl(detail.user.id), detail.user.name) }
-            }
-        ),
-    )
+    items = buildList {
+        if (onRelatedUsersClick != null) {
+            add(
+                DropdownItem(
+                    text = strings.relatedUsers,
+                    onClick = { onRelatedUsersClick(detail.user.id) },
+                )
+            )
+        }
+        if (onUserNovelsClick != null) {
+            add(
+                DropdownItem(
+                    text = strings.userNovels,
+                    onClick = { onUserNovelsClick(detail.user.id, detail.user.name) },
+                )
+            )
+        }
+        add(
+            DropdownItem(
+                text = strings.menuCopyInfo,
+                onClick = {
+                    runClipboardShare(
+                        success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                        failurePrefix = "${strings.copy}${strings.loadFailed}",
+                        onToast = onToast,
+                    ) { clipboard.copy(buildUserCopyInfo(detail)) }
+                }
+            )
+        )
+        add(
+            DropdownItem(
+                text = strings.menuCopyLink,
+                onClick = {
+                    runClipboardShare(
+                        success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                        failurePrefix = "${strings.copy}${strings.loadFailed}",
+                        onToast = onToast,
+                    ) { clipboard.copy(AppConstants.Urls.pixivUserUrl(detail.user.id)) }
+                }
+            )
+        )
+        add(
+            DropdownItem(
+                text = strings.menuShareLink,
+                onClick = {
+                    runClipboardShare(
+                        success = ToastData(strings.share, ToastType.Success),
+                        failurePrefix = "${strings.share}${strings.loadFailed}",
+                        onToast = onToast,
+                    ) { share.share(AppConstants.Urls.pixivUserUrl(detail.user.id), detail.user.name) }
+                }
+            )
+        )
+    }
 )
 
 /**

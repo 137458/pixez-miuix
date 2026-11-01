@@ -562,6 +562,10 @@ interface AppStrings {
     val userFollowEmpty: String
     val userFollowerTitle: String
     val userFollowerEmpty: String
+    val relatedUsers: String get() = "相关用户"
+    val relatedUsersEmpty: String get() = "暂无相关用户"
+    val userNovels: String get() = "小说作品"
+    val userNovelsEmpty: String get() = "暂无小说作品"
     val userWorkTab: String
     val userBookmarkTab: String
     val userPublicRestrict: String
@@ -720,6 +724,7 @@ interface AppStrings {
             9 -> FilStrings
             10 -> DeStrings
             11 -> ViStrings
+            12 -> FaStrings
             else -> EnStrings // 0 或默认 -> en-US
         }
     }
@@ -962,6 +967,10 @@ object ZhCnStrings : AppStrings {
     override val userFollowEmpty = "暂无关注用户"
     override val userFollowerTitle = "好P友"
     override val userFollowerEmpty = "暂无好P友"
+    override val relatedUsers = "相关用户"
+    override val relatedUsersEmpty = "暂无相关用户"
+    override val userNovels = "小说作品"
+    override val userNovelsEmpty = "暂无小说作品"
     override val userWorkTab = "作品"
     override val userBookmarkTab = "收藏"
     override val userPublicRestrict = "公开"
@@ -1614,6 +1623,10 @@ object ZhTwStrings : AppStrings {
     override val userFollowEmpty = "暫無關注使用者"
     override val userFollowerTitle = "好P友"
     override val userFollowerEmpty = "暫無好P友"
+    override val relatedUsers = "相關用戶"
+    override val relatedUsersEmpty = "暫無相關用戶"
+    override val userNovels = "小說作品"
+    override val userNovelsEmpty = "暫無小說作品"
     override val userWorkTab = "作品"
     override val userBookmarkTab = "收藏"
     override val userPublicRestrict = "公開"
@@ -2296,6 +2309,10 @@ object EnStrings : AppStrings {
     override val userFollowEmpty = "No followed users"
     override val userFollowerTitle = "Followers"
     override val userFollowerEmpty = "No followers yet"
+    override val relatedUsers = "Related Users"
+    override val relatedUsersEmpty = "No related users"
+    override val userNovels = "Novels"
+    override val userNovelsEmpty = "No novels"
     override val userWorkTab = "Artworks"
     override val userBookmarkTab = "Bookmarks"
     override val userPublicRestrict = "Public"

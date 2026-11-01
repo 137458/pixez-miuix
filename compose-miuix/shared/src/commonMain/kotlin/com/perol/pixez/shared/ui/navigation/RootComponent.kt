@@ -407,6 +407,20 @@ class RootComponent(
     }
 
     /**
+     * 打开相关用户列表页。
+     */
+    fun onUserRelatedListClicked(userId: Long) {
+        navigation.pushToFront(Config.UserRelatedList(userId))
+    }
+
+    /**
+     * 打开用户小说列表页。
+     */
+    fun onUserNovelListClicked(userId: Long, authorName: String = "") {
+        navigation.pushToFront(Config.UserNovelList(userId, authorName))
+    }
+
+    /**
      * 打开推荐用户列表页。
      */
     fun onRecomUserListClicked() {
