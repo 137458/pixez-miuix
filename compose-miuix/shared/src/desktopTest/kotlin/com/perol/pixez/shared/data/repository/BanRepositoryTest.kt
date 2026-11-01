@@ -222,7 +222,7 @@ class BanRepositoryTest {
         val banTags = repository.getAllBanTags()
 
         val tags = listOf("r18", "普通标签", "猫", "ネコ")
-        val kept = repository.filterBannedTags(banTags, tags) { it }
+        val kept = repository.filterBannedTags(banTags, tags) { listOf(it) }
 
         assertEquals(listOf("普通标签"), kept)
     }
@@ -233,7 +233,7 @@ class BanRepositoryTest {
         val banTags = repository.getAllBanTags()
 
         val tags = listOf("ai_generated", "original", "AI2")
-        val kept = repository.filterBannedTags(banTags, tags) { it }
+        val kept = repository.filterBannedTags(banTags, tags) { listOf(it) }
 
         assertEquals(listOf("original", "AI2"), kept)
     }
@@ -241,7 +241,7 @@ class BanRepositoryTest {
     @Test
     fun `test filterBannedTags keeps all when no ban tag configured`() = runBlocking {
         val tags = listOf("a", "b")
-        val kept = repository.filterBannedTags(repository.getAllBanTags(), tags) { it }
+        val kept = repository.filterBannedTags(repository.getAllBanTags(), tags) { listOf(it) }
 
         assertEquals(tags, kept)
     }
@@ -255,9 +255,27 @@ class BanRepositoryTest {
             TrendTag(tag = "风景", translatedName = null, illust = createTrendIllust()),
         )
 
-        val kept = repository.filterBannedTags(banTags, trendTags) { it.tag }
+        val kept = repository.filterBannedTags(banTags, trendTags) { listOf(it.tag) }
 
         assertEquals(listOf("风景"), kept.map { it.tag })
+    }
+
+    @Test
+    fun `test filterBannedTags filters by translatedName when multiple tags supplied`() = runBlocking {
+        repository.insertBanTag("猫咪", "")
+        val banTags = repository.getAllBanTags()
+        val trendTags = listOf(
+            TrendTag(tag = "ネコ", translatedName = "猫咪", illust = createTrendIllust()),
+            TrendTag(tag = "風景", translatedName = "风景", illust = createTrendIllust()),
+        )
+
+        // 单传 it.tag 会漏掉按翻译名屏蔽的标签（断言保留了ネコ）
+        val leaked = repository.filterBannedTags(banTags, trendTags) { listOf(it.tag) }
+        assertEquals(2, leaked.size)
+
+        // 传入包含原生名与翻译名的列表，正确过滤掉命中翻译名的标签
+        val kept = repository.filterBannedTags(banTags, trendTags) { listOfNotNull(it.tag, it.translatedName) }
+        assertEquals(listOf("風景"), kept.map { it.tag })
     }
 
     private fun createTrendIllust(): TrendTagIllust =

@@ -2,6 +2,9 @@ package com.perol.pixez.shared.platform
 
 /** Validates names before they are used as a child of an application-owned directory. */
 object FileNamePolicy {
+    private val ILLEGAL_CHARS_REGEX = Regex("""[\\/:*?"<>|\u0000-\u001F\u007F-\u009F]""")
+    private val CONSECUTIVE_DOTS_REGEX = Regex("""\.{2,}""")
+
     fun requireSafeBaseName(raw: String): String {
         val name = raw.trim()
         require(name.isNotEmpty()) { "文件名不能为空" }
@@ -20,11 +23,10 @@ object FileNamePolicy {
      * 最终表现为下载失败而非"剔除后照常保存"。连续点同理折叠为下划线，避免命中路径遍历校验。
      */
     fun sanitizeSegment(raw: String): String {
-        val illegalChars = Regex("""[\\/:*?"<>|\u0000-\u001F\u007F-\u009F]""")
-        val clean = illegalChars.replace(raw, "_").trim()
+        val clean = ILLEGAL_CHARS_REGEX.replace(raw, "_").trim()
         if (clean.isEmpty() || clean == "." || clean == "..") {
             return "untitled"
         }
-        return clean.replace(Regex("\\.{2,}"), "_")
+        return clean.replace(CONSECUTIVE_DOTS_REGEX, "_")
     }
 }

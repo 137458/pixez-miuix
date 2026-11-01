@@ -153,8 +153,8 @@ fun SearchScreen(
     ) {
         value = suspendRunCatchingNonCancel {
             val tags = repository.getTrendTags()
-            // 热门标签同样受屏蔽标签规则约束（含正则规则），避免已屏蔽内容被再次推荐。
-            banRepository.filterBannedTags(banRepository.getAllBanTags(), tags) { it.tag }
+            // 热门标签同样受屏蔽标签规则约束（含原生名、翻译名及正则规则），避免已屏蔽内容被再次推荐。
+            banRepository.filterBannedTags(banRepository.getAllBanTags(), tags) { listOfNotNull(it.tag, it.translatedName) }
         }
     }
 
@@ -433,6 +433,7 @@ fun SearchScreen(
                         query = query,
                         novelRepository = novelRepository,
                         onNovelClick = onNovelClick,
+                        onUserClick = onUserClick,
                         scrollBehavior = scrollBehavior,
                         listState = novelListState,
                         contentPadding = effectiveContentPadding,

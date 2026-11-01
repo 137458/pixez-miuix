@@ -282,12 +282,13 @@ class BanRepository(
     /**
      * 按屏蔽规则过滤条目列表，保持输入顺序。
      *
-     * 搜索结果、热门标签等上层模型各自带标签字段，用 [tagNameOf] 取出待匹配标签名后交给
-     * [isBannedByTags] 统一判定，避免各处重复实现匹配逻辑。
+     * 搜索结果、热门标签等模型通常包含原标签名与翻译名等多个关联名，
+     * 通过 [tagsOf] 取出待匹配的所有候选标签名后交给 [isBannedByTags] 统一判定，
+     * 确保原生名与翻译名任一命中屏蔽词时均能正确过滤。
      */
-    fun <T> filterBannedTags(banTags: List<BanTag>, items: List<T>, tagNameOf: (T) -> String): List<T> {
+    fun <T> filterBannedTags(banTags: List<BanTag>, items: List<T>, tagsOf: (T) -> List<String>): List<T> {
         if (banTags.isEmpty()) return items
-        return items.filterNot { isBannedByTags(banTags, listOf(tagNameOf(it))) }
+        return items.filterNot { isBannedByTags(banTags, tagsOf(it)) }
     }
 
     /**
