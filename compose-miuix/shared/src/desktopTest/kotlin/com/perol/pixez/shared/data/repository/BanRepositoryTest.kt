@@ -9,6 +9,8 @@ import com.perol.pixez.shared.data.model.IllustProfileImageUrls
 import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.model.IllustUser
 import com.perol.pixez.shared.data.model.ImageUrls
+import com.perol.pixez.shared.data.model.TrendTag
+import com.perol.pixez.shared.data.model.TrendTagIllust
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.russhwolf.settings.PreferencesSettings
 import kotlinx.coroutines.runBlocking
@@ -212,6 +214,54 @@ class BanRepositoryTest {
         val filtered = repository.filterIllustsBySettings(illusts, settings)
         assertEquals(listOf(1L, 2L), filtered.map { it.id })
     }
+
+    @Test
+    fun `test filterBannedTags drops tags matched by exact name or translation`() = runBlocking {
+        repository.insertBanTag("r18", "R-18")
+        repository.insertBanTag("ネコ", "猫")
+        val banTags = repository.getAllBanTags()
+
+        val tags = listOf("r18", "普通标签", "猫", "ネコ")
+        val kept = repository.filterBannedTags(banTags, tags) { it }
+
+        assertEquals(listOf("普通标签"), kept)
+    }
+
+    @Test
+    fun `test filterBannedTags drops tags matched by regex rule`() = runBlocking {
+        repository.insertBanTag("r'^ai_'", "")
+        val banTags = repository.getAllBanTags()
+
+        val tags = listOf("ai_generated", "original", "AI2")
+        val kept = repository.filterBannedTags(banTags, tags) { it }
+
+        assertEquals(listOf("original", "AI2"), kept)
+    }
+
+    @Test
+    fun `test filterBannedTags keeps all when no ban tag configured`() = runBlocking {
+        val tags = listOf("a", "b")
+        val kept = repository.filterBannedTags(repository.getAllBanTags(), tags) { it }
+
+        assertEquals(tags, kept)
+    }
+
+    @Test
+    fun `test filterBannedTags works with trend tag models`() = runBlocking {
+        repository.insertBanTag("r18", "R-18")
+        val banTags = repository.getAllBanTags()
+        val trendTags = listOf(
+            TrendTag(tag = "r18", translatedName = "R-18", illust = createTrendIllust()),
+            TrendTag(tag = "风景", translatedName = null, illust = createTrendIllust()),
+        )
+
+        val kept = repository.filterBannedTags(banTags, trendTags) { it.tag }
+
+        assertEquals(listOf("风景"), kept.map { it.tag })
+    }
+
+    private fun createTrendIllust(): TrendTagIllust =
+        TrendTagIllust(id = 1L, imageUrls = ImageUrls(squareMedium = "", medium = "", large = ""))
 
     private fun assertNotNull(value: Any?) {
         assertTrue(value != null)

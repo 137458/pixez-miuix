@@ -151,7 +151,11 @@ fun SearchScreen(
         repository,
         trendRetryCount,
     ) {
-        value = suspendRunCatchingNonCancel { repository.getTrendTags() }
+        value = suspendRunCatchingNonCancel {
+            val tags = repository.getTrendTags()
+            // 热门标签同样受屏蔽标签规则约束（含正则规则），避免已屏蔽内容被再次推荐。
+            banRepository.filterBannedTags(banRepository.getAllBanTags(), tags) { it.tag }
+        }
     }
 
     // 搜索历史从设置中读取并持久化回写。
