@@ -1,0 +1,272 @@
+package com.perol.pixez.shared.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalNovelRepository
+import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
+import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.NovelCard
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+/**
+ * 用户小说列表页：展示指定画师/作者的小说作品，支持流式分页与下拉刷新。
+ */
+@Composable
+fun UserNovelListScreen(
+    userId: Long,
+    authorName: String = "",
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onUserClick: ((Long) -> Unit)? = null,
+) {
+    val repository = LocalNovelRepository.current
+    val accountRepository = LocalAccountRepository.current
+
+    var user by remember { mutableStateOf<AccountPersist?>(null) }
+    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+        isLoggedIn = user != null
+        accountRepository.loginEventFlow.collect {
+            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
+            isLoggedIn = user != null
+        }
+    }
+    var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
+    var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
+
+    val pagedList = remember(userId) {
+        PagedListState(
+            fetch = { nextUrl ->
+                val response = repository.getUserNovels(userId, nextUrl = nextUrl)
+                PagedListPage(response.novels, response.nextUrl)
+            },
+            mergeItems = { old, new -> old.appendDistinct(new) },
+        )
+    }
+    val coroutineScope = rememberCoroutineScope()
+
+    val accountUnloaded = remember { Any() }
+    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
+    LaunchedEffect(userId, retryCount, isLoggedIn, user) {
+        if (isLoggedIn == null) return@LaunchedEffect
+        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        if (accountSwitched) pagedList.reset()
+        loadedForAccount = user
+        val force = isManualRefreshing
+        pagedList.loadFirst(force = force)
+        isManualRefreshing = false
+    }
+
+    fun loadMore() {
+        coroutineScope.launch { pagedList.loadMore() }
+    }
+
+    val triggerManualRefresh: () -> Unit = {
+        isManualRefreshing = true
+        retryCount++
+    }
+
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember(pagedList) {
+        derivedStateOf {
+            val totalCount = pagedList.items?.size ?: 0
+            if (totalCount == 0 ||
+                pagedList.nextUrl == null ||
+                pagedList.isLoadingMore ||
+                pagedList.loadMoreError != null
+            ) {
+                false
+            } else {
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
+                lastVisibleItem >= totalCount - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
+            }
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            loadMore()
+        }
+    }
+
+    val strings = LocalStrings.current
+    val scrollBehavior = MiuixScrollBehavior()
+    val backdrop = rememberBlurBackdrop()
+    val colorScheme = MiuixTheme.colorScheme
+
+    val pageTitle = remember(authorName, strings.userNovels) {
+        if (authorName.isNotBlank()) {
+            "$authorName - ${strings.userNovels}"
+        } else {
+            strings.userNovels
+        }
+    }
+
+    BlurTopBarScaffold(
+        modifier = Modifier.fillMaxSize(),
+        title = pageTitle,
+        backdrop = backdrop,
+        scrollBehavior = scrollBehavior,
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = triggerManualRefresh) {
+                Icon(
+                    imageVector = MiuixIcons.Refresh,
+                    contentDescription = strings.refresh,
+                )
+            }
+        },
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.surface)
+                .blurBackdropSource(backdrop),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            val currentItems = pagedList.items
+            when {
+                currentItems == null && pagedList.initialError == null ->
+                    LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
+                currentItems != null -> when {
+                    currentItems.isEmpty() -> {
+                        EmptyPlaceholder(
+                            message = strings.userNovelsEmpty,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                        )
+                    }
+                    else -> {
+                        PullToRefresh(
+                            isRefreshing = isManualRefreshing,
+                            onRefresh = triggerManualRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                            topAppBarScrollBehavior = scrollBehavior,
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.TopCenter,
+                            ) {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                                        .fillMaxWidth()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = PaddingValues(
+                                        start = 12.dp,
+                                        end = 12.dp,
+                                        top = paddingValues.calculateTopPadding() + 8.dp,
+                                        bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                                    ),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    items(
+                                        items = currentItems,
+                                        key = { it.id },
+                                        contentType = { "novel_card_item" },
+                                    ) { novel ->
+                                        NovelCard(
+                                            novel = novel,
+                                            onClick = { onNovelClick(novel.id) },
+                                            onUserClick = onUserClick,
+                                        )
+                                    }
+
+                                    item(key = "novel_pagination_footer", contentType = "footer") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 16.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            when {
+                                                pagedList.isLoadingMore -> InfiniteProgressIndicator()
+                                                pagedList.loadMoreError != null -> Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Text(
+                                                        text = strings.loadFailed,
+                                                        style = MiuixTheme.textStyles.body2,
+                                                        color = MiuixTheme.colorScheme.error,
+                                                    )
+                                                    Button(onClick = ::loadMore) {
+                                                        Text(text = strings.retry)
+                                                    }
+                                                }
+                                                pagedList.nextUrl == null -> Text(
+                                                    text = strings.noMoreData,
+                                                    style = MiuixTheme.textStyles.footnote1,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> ErrorPlaceholder(
+                    error = pagedList.initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                )
+            }
+        }
+    }
+}

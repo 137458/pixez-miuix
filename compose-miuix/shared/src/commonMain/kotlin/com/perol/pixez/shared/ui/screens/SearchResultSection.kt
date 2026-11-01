@@ -329,6 +329,7 @@ internal fun SearchNovelResultList(
     query: String,
     novelRepository: NovelRepository,
     onNovelClick: (Long) -> Unit,
+    onUserClick: ((Long) -> Unit)? = null,
     scrollBehavior: ScrollBehavior,
     listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues? = null,
@@ -352,6 +353,7 @@ internal fun SearchNovelResultList(
             NovelCard(
                 novel = novel,
                 onClick = { onNovelClick(novel.id) },
+                onUserClick = onUserClick,
             )
         },
     )

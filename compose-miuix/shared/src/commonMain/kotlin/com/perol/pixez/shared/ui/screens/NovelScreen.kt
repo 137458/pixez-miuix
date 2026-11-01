@@ -77,6 +77,7 @@ fun NovelScreen(
     onBack: () -> Unit,
     onNovelClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onUserClick: ((Long) -> Unit)? = null,
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val novelRepository = LocalNovelRepository.current
@@ -264,6 +265,7 @@ fun NovelScreen(
                                 NovelCard(
                                     novel = novel,
                                     onClick = { onNovelClick(novel.id) },
+                                    onUserClick = onUserClick,
                                 )
                             }
 

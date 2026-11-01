@@ -135,4 +135,21 @@ class NovelRepository(
             }.body()
         }
     }
+
+    /**
+     * 获取画师/作者的小说列表（/v1/user/novels）。
+     */
+    suspend fun getUserNovels(
+        userId: Long,
+        nextUrl: String? = null,
+    ): NovelRecomResponse = networkCall("获取用户小说失败 userId=$userId") {
+        if (!nextUrl.isNullOrBlank()) {
+            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        } else {
+            apiClient.get("/v1/user/novels") {
+                parameter("user_id", userId.toString())
+                parameter("filter", "for_android")
+            }.body()
+        }
+    }
 }

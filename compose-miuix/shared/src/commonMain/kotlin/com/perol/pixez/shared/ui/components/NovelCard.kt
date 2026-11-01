@@ -51,6 +51,7 @@ fun NovelCard(
     novel: Novel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onUserClick: ((Long) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
@@ -170,7 +171,15 @@ fun NovelCard(
 
                 Column {
                     // 作者信息行
+                    val authorRowModifier = if (onUserClick != null) {
+                        Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { onUserClick(novel.user.id) }
+                    } else {
+                        Modifier
+                    }
                     Row(
+                        modifier = authorRowModifier,
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {

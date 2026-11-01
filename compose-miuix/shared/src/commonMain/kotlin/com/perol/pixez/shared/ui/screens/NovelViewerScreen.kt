@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -121,6 +122,7 @@ fun NovelViewerScreen(
     onBack: () -> Unit,
     onNovelClick: (Long) -> Unit = {},
     onIllustClick: (Long) -> Unit = {},
+    onUserClick: (Long) -> Unit = {},
     onCommentsClick: (Long) -> Unit = {},
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
@@ -414,6 +416,53 @@ fun NovelViewerScreen(
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     item { Spacer(modifier = Modifier.height(16.dp)) }
+
+                                    novelDetail?.let { detail ->
+                                        item {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 18.dp),
+                                            ) {
+                                                Text(
+                                                    text = detail.title,
+                                                    style = MiuixTheme.textStyles.title1.copy(fontWeight = FontWeight.Bold),
+                                                    color = MiuixTheme.colorScheme.onSurface,
+                                                )
+                                                Spacer(modifier = Modifier.height(12.dp))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { onUserClick(detail.user.id) }
+                                                        .padding(vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                ) {
+                                                    PixivAsyncImage(
+                                                        model = detail.user.profileImageUrls.medium,
+                                                        contentDescription = detail.user.name,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clip(CircleShape),
+                                                    )
+                                                    Column {
+                                                        Text(
+                                                            text = detail.user.name,
+                                                            style = MiuixTheme.textStyles.body2.copy(fontWeight = FontWeight.Medium),
+                                                            color = MiuixTheme.colorScheme.onSurface,
+                                                        )
+                                                        Text(
+                                                            text = detail.user.account,
+                                                            style = MiuixTheme.textStyles.footnote1,
+                                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                            }
+                                        }
+                                    }
 
                                     if (viewerItems.isEmpty()) {
                                         item {

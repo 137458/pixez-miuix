@@ -273,4 +273,24 @@ class NovelRepositoryTest {
 
         assertTrue(captured.isEmpty(), "被拒绝的分页 URL 不应发出任何请求")
     }
+
+    @Test
+    fun `getUserNovels 首页携带 user_id 与 filter 且翻页透传 nextUrl`() = runBlocking {
+        responseBody = """{"novels":[],"next_url":null}"""
+
+        val firstPage = repository.getUserNovels(userId = 98765L)
+        val firstReq = captured.removeAt(0)
+        assertEquals("/v1/user/novels", firstReq.path)
+        assertEquals("98765", firstReq.query["user_id"])
+        assertEquals("for_android", firstReq.query["filter"])
+        assertEquals(0, firstPage.novels.size)
+
+        val nextUrl = "https://app-api.pixiv.net/v1/user/novels?filter=for_android&offset=30&user_id=98765"
+        val nextPage = repository.getUserNovels(userId = 98765L, nextUrl = nextUrl)
+        val nextReq = captured.removeAt(0)
+        assertEquals("app-api.pixiv.net", nextReq.host)
+        assertEquals("/v1/user/novels", nextReq.path)
+        assertEquals("30", nextReq.query["offset"])
+        assertEquals(0, nextPage.novels.size)
+    }
 }
