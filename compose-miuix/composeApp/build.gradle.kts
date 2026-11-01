@@ -83,8 +83,8 @@ android {
         applicationId = "com.perol.pixez.miuix"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10010096
-        versionName = "0.9.109.6-miuix"
+        versionCode = 10010097
+        versionName = "0.9.109.7-miuix"
     }
 
     signingConfigs {
