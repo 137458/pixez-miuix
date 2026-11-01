@@ -24,10 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -45,53 +48,84 @@ fun MarkdownText(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        blocks.forEach { block ->
+        blocks.forEachIndexed { index, block ->
             when (block) {
                 is MarkdownBlock.Heading -> {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = buildAnnotatedContent(block.text, linkColor),
-                        modifier = Modifier.fillMaxWidth(),
-                        style = when (block.level) {
-                            1 -> MiuixTheme.textStyles.title3.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = (baseFontSize + 4).sp,
+                    val isFirst = index == 0
+                    val cleanText = block.text.trim()
+                    val categoryKind = detectChangelogCategory(cleanText)
+
+                    if (!isFirst) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    if (categoryKind != null) {
+                        // 更新分类标题（如 新增 / 优化 / 修复），渲染为醒目的 HyperOS 胶囊徽章
+                        ChangelogCategoryBadge(
+                            title = cleanText,
+                            kind = categoryKind,
+                            baseFontSize = baseFontSize,
+                        )
+                    } else {
+                        // 常规标题（如版本号或普通章节），搭配主题色指示条与层级样式
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 3.dp, height = (baseFontSize + 2).dp)
+                                    .clip(RoundedCornerShape(1.5.dp))
+                                    .background(MiuixTheme.colorScheme.primary)
                             )
-                            2 -> MiuixTheme.textStyles.title4.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = (baseFontSize + 2).sp,
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = buildAnnotatedContent(block.text, linkColor),
+                                modifier = Modifier.weight(1f),
+                                style = when (block.level) {
+                                    1 -> MiuixTheme.textStyles.title3.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = (baseFontSize + 4).sp,
+                                    )
+                                    2 -> MiuixTheme.textStyles.title4.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = (baseFontSize + 2).sp,
+                                    )
+                                    else -> MiuixTheme.textStyles.body1.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = (baseFontSize + 1).sp,
+                                    )
+                                },
+                                color = MiuixTheme.colorScheme.primary,
                             )
-                            else -> MiuixTheme.textStyles.body1.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = (baseFontSize + 1).sp,
-                            )
-                        },
-                        color = MiuixTheme.colorScheme.primary,
-                    )
+                        }
+                    }
                 }
 
                 is MarkdownBlock.BulletItem -> {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 1.dp),
+                            .padding(vertical = 2.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
                         Box(
                             modifier = Modifier
-                                .padding(top = 6.dp, end = 8.dp)
-                                .size(4.dp)
+                                .padding(top = 6.5.dp, end = 8.dp)
+                                .size(4.5.dp)
                                 .clip(CircleShape)
-                                .background(MiuixTheme.colorScheme.primary),
+                                .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.85f)),
                         )
                         Text(
                             text = buildAnnotatedContent(block.text, linkColor),
                             modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
-                                lineHeight = (baseFontSize + 6).sp,
+                                lineHeight = (baseFontSize + 6.5).sp,
                             ),
                             color = MiuixTheme.colorScheme.onSurface,
                         )
@@ -102,15 +136,15 @@ fun MarkdownText(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 1.dp),
+                            .padding(vertical = 2.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
                         Text(
                             text = "${block.number}. ",
                             style = MiuixTheme.textStyles.body2.copy(
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 fontSize = baseFontSize.sp,
-                                lineHeight = (baseFontSize + 6).sp,
+                                lineHeight = (baseFontSize + 6.5).sp,
                             ),
                             color = MiuixTheme.colorScheme.primary,
                         )
@@ -119,7 +153,7 @@ fun MarkdownText(
                             modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
-                                lineHeight = (baseFontSize + 6).sp,
+                                lineHeight = (baseFontSize + 6.5).sp,
                             ),
                             color = MiuixTheme.colorScheme.onSurface,
                         )
@@ -129,10 +163,12 @@ fun MarkdownText(
                 is MarkdownBlock.Paragraph -> {
                     Text(
                         text = buildAnnotatedContent(block.text, linkColor),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
                         style = MiuixTheme.textStyles.body2.copy(
                             fontSize = baseFontSize.sp,
-                            lineHeight = (baseFontSize + 6).sp,
+                            lineHeight = (baseFontSize + 6.5).sp,
                         ),
                         color = MiuixTheme.colorScheme.onSurface,
                     )
@@ -147,6 +183,67 @@ fun MarkdownText(
                 }
             }
         }
+    }
+}
+
+/**
+ * 更新日志分类类别（新增、优化、修复）。
+ */
+internal enum class CategoryKind {
+    NEW,
+    OPTIMIZATION,
+    FIX,
+}
+
+/**
+ * 检测标题是否属于标准更新日志分类。
+ */
+internal fun detectChangelogCategory(text: String): CategoryKind? {
+    val lower = text.lowercase()
+    return when {
+        lower.contains("新增") || lower.contains("新特性") || lower.contains("feature") || lower == "new" -> CategoryKind.NEW
+        lower.contains("优化") || lower.contains("改进") || lower.contains("improvement") || lower.contains("optimize") -> CategoryKind.OPTIMIZATION
+        lower.contains("修复") || lower.contains("fix") || lower.contains("bug") -> CategoryKind.FIX
+        else -> null
+    }
+}
+
+/**
+ * HyperOS 规范更新日志分类胶囊小标。
+ */
+@Composable
+private fun ChangelogCategoryBadge(
+    title: String,
+    kind: CategoryKind,
+    baseFontSize: Int,
+) {
+    val (badgeBg, badgeText) = when (kind) {
+        CategoryKind.NEW -> {
+            MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.7f) to MiuixTheme.colorScheme.onPrimaryContainer
+        }
+        CategoryKind.OPTIMIZATION -> {
+            MiuixTheme.colorScheme.surfaceContainerHigh to MiuixTheme.colorScheme.primary
+        }
+        CategoryKind.FIX -> {
+            MiuixTheme.colorScheme.surfaceContainerHigh to MiuixTheme.colorScheme.onSurface
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .padding(vertical = 2.dp)
+            .squircleClip(6.dp)
+            .background(badgeBg)
+            .padding(horizontal = 8.dp, vertical = 2.5.dp),
+    ) {
+        Text(
+            text = title,
+            style = MiuixTheme.textStyles.body2.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = (baseFontSize - 1).sp,
+            ),
+            color = badgeText,
+        )
     }
 }
 

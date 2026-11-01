@@ -3,12 +3,19 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -16,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,7 +35,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.platform.AppInstaller
@@ -226,38 +243,76 @@ fun UpdateDialog(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. 更新日志卡片
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(
-                        min = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
-                        max = AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp,
-                    )
-                    .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
-                    .background(MiuixTheme.colorScheme.surfaceContainer)
-                    .padding(14.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                if (releaseInfo.changelog.isNotBlank()) {
-                    MarkdownText(
-                        markdown = releaseInfo.changelog,
-                        modifier = Modifier.fillMaxWidth(),
-                        baseFontSize = 13,
-                    )
-                } else {
+            // 2. 更新日志卡片（支持扩容展示、动态视口响应、边缘平滑渐隐遮罩与细微滚动指示器）
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val maxAvailable = maxHeight
+                val changelogMaxHeight = remember(maxAvailable) {
+                    if (maxAvailable > 0.dp && maxAvailable != Dp.Infinity) {
+                        (maxAvailable * 0.58f).coerceIn(
+                            minimumValue = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
+                            maximumValue = AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp,
+                        )
+                    } else {
+                        AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
+                            max = changelogMaxHeight,
+                        )
+                        .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
+                        .background(MiuixTheme.colorScheme.surfaceContainer),
+                ) {
+                    val scrollState = rememberScrollState()
+
+                    // 滚动视口容器：外挂上下边缘渐变淡出遮罩，padding 移入内侧避免截断
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
+                            .fillMaxSize()
+                            .verticalFadingEdges(
+                                scrollState = scrollState,
+                                topFadeHeight = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
+                                bottomFadeHeight = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
+                            )
+                            .verticalScroll(scrollState)
+                            .padding(
+                                start = 14.dp,
+                                end = if (scrollState.maxValue > 0) 18.dp else 14.dp,
+                                top = 12.dp,
+                                bottom = 12.dp,
+                            ),
                     ) {
-                        Text(
-                            text = strings.updateChangelogEmpty,
-                            style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
+                        if (releaseInfo.changelog.isNotBlank()) {
+                            MarkdownText(
+                                markdown = releaseInfo.changelog,
+                                modifier = Modifier.fillMaxWidth(),
+                                baseFontSize = 13,
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = strings.updateChangelogEmpty,
+                                    style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                )
+                            }
+                        }
                     }
+
+                    // 右侧贴边细微胶囊滚动指示条
+                    ChangelogScrollbar(
+                        scrollState = scrollState,
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                    )
                 }
             }
 
@@ -505,6 +560,102 @@ private fun VersionBadge(
                     fontWeight = FontWeight.SemiBold,
                 ),
                 color = textColor,
+            )
+        }
+    }
+}
+
+/**
+ * 为垂直滚动内容提供顶部与底部边缘渐变平滑淡出遮罩（Fading Edges）。
+ *
+ * 避免文字在滚动容器边界处被硬生生横切腰斩，并提供自然的内容未见底流动感知。
+ * 当停留在顶端或底端时对应方向不进行多余裁切，保留首行与末行 100% 锐利清晰度。
+ */
+fun Modifier.verticalFadingEdges(
+    scrollState: ScrollState,
+    topFadeHeight: Dp = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
+    bottomFadeHeight: Dp = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
+): Modifier = this
+    .graphicsLayer {
+        compositingStrategy = CompositingStrategy.Offscreen
+    }
+    .drawWithContent {
+        drawContent()
+        val topFadePx = topFadeHeight.toPx()
+        val bottomFadePx = bottomFadeHeight.toPx()
+        val hasScrollableContent = scrollState.maxValue > 0
+
+        if (!hasScrollableContent) return@drawWithContent
+
+        val canScrollBackward = scrollState.value > 0
+        val canScrollForward = scrollState.value < scrollState.maxValue
+
+        if (canScrollBackward && topFadePx > 0f) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Transparent, Color.Black),
+                    startY = 0f,
+                    endY = topFadePx,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (canScrollForward && bottomFadePx > 0f) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Black, Color.Transparent),
+                    startY = size.height - bottomFadePx,
+                    endY = size.height,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
+
+/**
+ * HyperOS 规范细微胶囊滚动指示条。
+ * 伴随滚动操作优雅渐现，静止时保持弱化半透，让用户直观掌握更新日志的阅读进度与剩余篇幅。
+ */
+@Composable
+private fun BoxScope.ChangelogScrollbar(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+) {
+    if (scrollState.maxValue <= 0) return
+
+    val isScrolling = scrollState.isScrollInProgress
+    val scrollbarAlpha by animateFloatAsState(
+        targetValue = if (isScrolling) 0.8f else 0.35f,
+        animationSpec = tween(durationMillis = 200),
+        label = "ChangelogScrollbarAlpha",
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(end = 4.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        val density = LocalDensity.current
+        val trackHeightPx = with(density) { maxHeight.toPx() }
+
+        if (trackHeightPx > 0f) {
+            val totalContentPx = trackHeightPx + scrollState.maxValue.toFloat()
+            val thumbFraction = (trackHeightPx / totalContentPx).coerceIn(0.18f, 0.75f)
+            val thumbHeightDp = maxHeight * thumbFraction
+            val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
+            val maxTravelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
+
+            Box(
+                modifier = Modifier
+                    .width(AppConstants.Update.SCROLLBAR_WIDTH_DP.dp)
+                    .height(thumbHeightDp)
+                    .graphicsLayer {
+                        val scrollFraction = (scrollState.value.toFloat() / scrollState.maxValue.toFloat()).coerceIn(0f, 1f)
+                        translationY = maxTravelPx * scrollFraction
+                        alpha = scrollbarAlpha
+                    }
+                    .clip(CircleShape)
+                    .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.6f)),
             )
         }
     }

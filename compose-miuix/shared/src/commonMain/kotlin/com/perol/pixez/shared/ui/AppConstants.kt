@@ -215,8 +215,18 @@ object AppConstants {
      * 应用更新与弹窗常量预设（单位：dp / ms）
      */
     object Update {
-        const val CHANGELOG_MAX_HEIGHT_DP = 220
+        /** 更新日志卡片可视区域最大高度（dp），扩容以展示更充分的版本说明，消除视口狭窄感。 */
+        const val CHANGELOG_MAX_HEIGHT_DP = 380
+
+        /** 更新日志卡片可视区域最小高度（dp）。 */
         const val CHANGELOG_MIN_HEIGHT_DP = 80
+
+        /** 更新日志滚动渐变遮罩边缘高度（dp），用于顶部卷出和底部未完时的平滑淡出。 */
+        const val CHANGELOG_FADE_EDGE_DP = 28
+
+        /** 滚动条指示器宽度（dp）。 */
+        const val SCROLLBAR_WIDTH_DP = 3
+
         const val SPEED_CALCULATION_INTERVAL_MS = 500L
         const val CARD_CORNER_RADIUS_DP = 16
         const val BADGE_CORNER_RADIUS_DP = 8
