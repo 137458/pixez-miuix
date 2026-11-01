@@ -14,13 +14,17 @@ object FileNamePolicy {
 
     /**
      * 清洗文件名片段中的非法字符（如 \\ / : * ? " < > | 及控制字符），替换为下划线。
+     *
+     * 控制字符覆盖 C0（U+0000–U+001F）与 C1（U+007F–U+009F）两段，与 [requireSafeBaseName]
+     * 的 `Char.isISOControl` 判定面对齐：否则清洗会放过 DEL/C1，却被保存前的安全校验拒绝，
+     * 最终表现为下载失败而非"剔除后照常保存"。连续点同理折叠为下划线，避免命中路径遍历校验。
      */
     fun sanitizeSegment(raw: String): String {
-        val illegalChars = Regex("""[\\/:*?"<>|\r\n\t\u0000-\u001f]""")
-        var clean = illegalChars.replace(raw, "_").trim()
+        val illegalChars = Regex("""[\\/:*?"<>|\u0000-\u001F\u007F-\u009F]""")
+        val clean = illegalChars.replace(raw, "_").trim()
         if (clean.isEmpty() || clean == "." || clean == "..") {
-            clean = "untitled"
+            return "untitled"
         }
-        return clean
+        return clean.replace(Regex("\\.{2,}"), "_")
     }
 }

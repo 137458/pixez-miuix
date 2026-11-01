@@ -13,6 +13,23 @@ import kotlin.test.assertEquals
 
 class DownloadFileNameTest {
 
+    @Test
+    fun `filename with consecutive dots and controls stays saveable`() {
+        settingsRepository.format = "{user_name}_{title}"
+        val illust = createDummyIllust(
+            id = 777L,
+            title = "test..title\u007f",
+            userName = "artist..name",
+        )
+        val fileName = downloadRepository.buildFileName(
+            illust = illust,
+            pageIndex = 0,
+            remoteUrl = "https://i.pximg.net/sample.jpg",
+        )
+        // 保存链路会再用 requireSafeBaseName 校验一次，此处直接断言结果可用
+        assertEquals("artist_name_test_title_.jpg", fileName)
+    }
+
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var downloadRepository: DownloadRepository
 

@@ -3,6 +3,7 @@ package com.perol.pixez.shared.platform
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class FileNamePolicyTest {
 
@@ -40,5 +41,32 @@ class FileNamePolicyTest {
         assertEquals("untitled", FileNamePolicy.sanitizeSegment("   "))
         assertEquals("untitled", FileNamePolicy.sanitizeSegment("."))
         assertEquals("untitled", FileNamePolicy.sanitizeSegment(".."))
+    }
+
+    @Test
+    fun `sanitizeSegment strips DEL and C1 control characters`() {
+        assertEquals("file_.png", FileNamePolicy.sanitizeSegment("file\u007f.png"))
+        assertEquals("a_b", FileNamePolicy.sanitizeSegment("a\u0085b"))
+        assertEquals("a_b", FileNamePolicy.sanitizeSegment("a\u009fb"))
+    }
+
+    @Test
+    fun `sanitizeSegment output always passes requireSafeBaseName`() {
+        val samples = listOf(
+            "a..b",
+            "test..title",
+            "...",
+            "..hidden",
+            "a\u007fb",
+            "x\u009fy",
+            "normal.jpg",
+            "a/b\\c:d*e?f\"g<h>i|",
+            "line1\r\nline2\ttab",
+        )
+        for (sample in samples) {
+            val cleaned = FileNamePolicy.sanitizeSegment(sample)
+            val accepted = runCatching { FileNamePolicy.requireSafeBaseName(cleaned) }.isSuccess
+            assertTrue(accepted, "sanitizeSegment(\"$sample\") 得到 \"$cleaned\"，未通过 requireSafeBaseName")
+        }
     }
 }
