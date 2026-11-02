@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -167,20 +168,11 @@ fun HistoryScreen(
         scrollBehavior = scrollBehavior,
         onBack = onBack,
         actions = {
-            IconButton(
+            TextButton(
+                text = strings.actionClear,
                 onClick = { showClearConfirm = true },
                 enabled = hasHistory,
-            ) {
-                Text(
-                    text = strings.actionClear,
-                    style = MiuixTheme.textStyles.body1,
-                    color = if (hasHistory) {
-                        MiuixTheme.colorScheme.primary
-                    } else {
-                        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    },
-                )
-            }
+            )
         },
     ) { paddingValues ->
         Box(
@@ -665,15 +657,16 @@ private fun HistoryConfirmDialog(
         onDismissRequest = onDismiss,
     ) {
         TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
             text = strings.confirm,
             onClick = onConfirm,
             enabled = confirmEnabled,
             colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            text = strings.cancel,
+            onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
         )
     }

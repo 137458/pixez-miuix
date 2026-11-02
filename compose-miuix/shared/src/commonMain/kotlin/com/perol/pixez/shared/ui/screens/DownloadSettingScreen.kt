@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -143,16 +145,34 @@ fun DownloadSettingScreen(
                             onClick = { pickDirectory() },
                         )
                         if (effectiveStorePath.isNotBlank()) {
-                            val pathSegments = remember(effectiveStorePath) {
-                                effectiveStorePath.split(Regex("[/\\\\]")).filter { it.isNotBlank() }
-                            }
-                            if (pathSegments.isNotEmpty()) {
-                                val breadcrumbs = remember(pathSegments) {
-                                    pathSegments.map { BreadcrumbItem(path = it, text = it) }
+                            val breadcrumbs = remember(effectiveStorePath) {
+                                val isWindows = effectiveStorePath.contains('\\') || (effectiveStorePath.length >= 2 && effectiveStorePath[1] == ':')
+                                val separator = if (isWindows) "\\" else "/"
+                                val rawSegments = effectiveStorePath.split('/', '\\').filter { it.isNotBlank() }
+                                val items = mutableListOf<BreadcrumbItem>()
+                                var currentAcc = if (!isWindows && effectiveStorePath.startsWith("/")) "/" else ""
+                                rawSegments.forEach { seg ->
+                                    currentAcc = if (currentAcc.isEmpty() || currentAcc == "/" || currentAcc.endsWith("\\")) {
+                                        currentAcc + seg
+                                    } else {
+                                        currentAcc + separator + seg
+                                    }
+                                    items.add(BreadcrumbItem(text = seg, path = currentAcc))
                                 }
+                                items
+                            }
+                            if (breadcrumbs.isNotEmpty()) {
                                 BreadcrumbBar(
                                     items = breadcrumbs,
-                                    onItemClick = { pickDirectory() },
+                                    onItemClick = { index ->
+                                        val clickedItem = breadcrumbs.getOrNull(index) ?: return@BreadcrumbBar
+                                        if (clickedItem.path.isNotBlank() && clickedItem.path != effectiveStorePath) {
+                                            storePath = clickedItem.path
+                                            settingsRepository.storePath = clickedItem.path
+                                        } else {
+                                            pickDirectory()
+                                        }
+                                    },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                                 )
                             }
@@ -303,27 +323,24 @@ fun DownloadSettingScreen(
                     )
                 }
             }
-            Row(
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(
+                text = strings.confirm,
+                onClick = {
+                    val trimmed = formatFieldValue.text.trim()
+                    format = trimmed
+                    settingsRepository.format = trimmed
+                    showFormatDialog = false
+                },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = { showFormatDialog = false },
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    onClick = {
-                        val trimmed = formatFieldValue.text.trim()
-                        format = trimmed
-                        settingsRepository.format = trimmed
-                        showFormatDialog = false
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                text = strings.cancel,
+                onClick = { showFormatDialog = false },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

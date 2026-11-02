@@ -112,7 +112,40 @@ fun SpotlightDetailScreen(
     }
 
     val effectiveColumns = rememberSpotlightGridColumns()
+    val clipboard = remember { com.perol.pixez.shared.platform.IllustClipboard() }
+    val share = remember { com.perol.pixez.shared.platform.IllustShare() }
 
+    val moreDropdownEntry = remember(article, strings) {
+        top.yukonga.miuix.kmp.basic.DropdownEntry(
+            items = listOf(
+                top.yukonga.miuix.kmp.basic.DropdownItem(
+                    text = strings.menuCopyLink,
+                    onClick = {
+                        try {
+                            clipboard.copy(article.articleUrl)
+                            toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
+                        } catch (_: Throwable) {
+                            toastMessage = ToastData("${strings.copy}${strings.loadFailed}", ToastType.Error)
+                        }
+                    },
+                ),
+                top.yukonga.miuix.kmp.basic.DropdownItem(
+                    text = strings.share,
+                    onClick = {
+                        try {
+                            share.share(article.articleUrl, article.pureTitle.ifBlank { article.title })
+                        } catch (_: Throwable) {
+                            toastMessage = ToastData("${strings.share}${strings.loadFailed}", ToastType.Error)
+                        }
+                    },
+                ),
+                top.yukonga.miuix.kmp.basic.DropdownItem(
+                    text = strings.openInBrowser,
+                    onClick = { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) },
+                ),
+            ),
+        )
+    }
 
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -125,17 +158,23 @@ fun SpotlightDetailScreen(
         scrollBehavior = scrollBehavior,
         onBack = onBack,
         actions = {
-            IconButton(onClick = { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) }) {
-                Icon(
-                    imageVector = MiuixIcons.More,
-                    contentDescription = strings.openInBrowser,
-                )
+            top.yukonga.miuix.kmp.basic.TooltipBox(text = strings.refresh) {
+                IconButton(onClick = triggerManualRefresh) {
+                    Icon(
+                        imageVector = MiuixIcons.Refresh,
+                        contentDescription = strings.refresh,
+                    )
+                }
             }
-            IconButton(onClick = triggerManualRefresh) {
-                Icon(
-                    imageVector = MiuixIcons.Refresh,
-                    contentDescription = strings.refresh,
-                )
+            top.yukonga.miuix.kmp.basic.TooltipBox(text = strings.menuMoreActions) {
+                top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu(
+                    entry = moreDropdownEntry,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.More,
+                        contentDescription = strings.menuMoreActions,
+                    )
+                }
             }
         },
     ) { paddingValues ->

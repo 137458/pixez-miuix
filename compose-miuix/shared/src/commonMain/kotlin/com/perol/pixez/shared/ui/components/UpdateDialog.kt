@@ -425,11 +425,10 @@ fun UpdateDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 6. 底部操作按钮栏
-            Row(
+            // 6. 底部操作按钮栏（严格遵循 MIUIX 垂直纵向整宽排列规范：主操作置顶、取消置底）
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (downloadState.isDownloading) {
                     // 下载中状态：提供取消下载操作
@@ -439,26 +438,27 @@ fun UpdateDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 } else if (downloadState.filePath != null) {
-                    // 下载完成：取消 / 立即安装（安全解包避免 !!）
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                    )
+                    // 下载完成：立即安装（主）/ 取消
                     TextButton(
                         text = strings.updateInstallNow,
                         onClick = {
                             downloadState.filePath?.let { AppInstaller().install(it) }
                         },
-                        modifier = Modifier.weight(1.2f),
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
-                } else if (downloadState.error != null) {
-                    // 下载失败：取消 / 浏览器下载 / 重试
                     TextButton(
                         text = strings.cancel,
                         onClick = onDismiss,
-                        modifier = Modifier.weight(0.9f),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else if (downloadState.error != null) {
+                    // 下载失败：重试（主）/ 浏览器下载 / 取消
+                    TextButton(
+                        text = strings.retry,
+                        onClick = { startDownload() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
                     )
                     TextButton(
                         text = strings.updateOpenInBrowser,
@@ -466,37 +466,22 @@ fun UpdateDialog(
                             onDismiss()
                             onUpdate(releaseInfo.releaseUrl)
                         },
-                        modifier = Modifier.weight(1.2f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    TextButton(
-                        text = strings.retry,
-                        onClick = { startDownload() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                } else {
-                    // 常规待更新状态
-                    val hasDirectDownload = !releaseInfo.downloadUrl.isNullOrBlank() && !releaseInfo.fileName.isNullOrBlank()
-
-                    if (onIgnore != null) {
-                        TextButton(
-                            text = strings.btnIgnore,
-                            onClick = { onIgnore(releaseInfo.versionName) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-
                     TextButton(
                         text = strings.cancel,
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                } else {
+                    // 常规待更新状态：更新（主）/ 浏览器下载 / 取消 / 忽略
+                    val hasDirectDownload = !releaseInfo.downloadUrl.isNullOrBlank() && !releaseInfo.fileName.isNullOrBlank()
 
                     if (hasDirectDownload) {
                         TextButton(
                             text = strings.btnUpdate,
                             onClick = { startDownload() },
-                            modifier = Modifier.weight(1.2f),
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.textButtonColorsPrimary(),
                         )
                     } else {
@@ -507,8 +492,22 @@ fun UpdateDialog(
                                 onDismiss()
                                 onUpdate(releaseInfo.releaseUrl)
                             },
-                            modifier = Modifier.weight(1.4f),
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.textButtonColorsPrimary(),
+                        )
+                    }
+
+                    TextButton(
+                        text = strings.cancel,
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    if (onIgnore != null) {
+                        TextButton(
+                            text = strings.btnIgnore,
+                            onClick = { onIgnore(releaseInfo.versionName) },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }

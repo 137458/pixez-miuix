@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
@@ -188,14 +189,15 @@ fun RankingScreen(
                 .padding(bottom = 8.dp),
         )
         TextButton(
-            text = strings.cancel,
-            onClick = { showDateDialog = false },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
             text = strings.confirm,
             onClick = { showDateDialog = false },
             colors = ButtonDefaults.textButtonColorsPrimary(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            text = strings.cancel,
+            onClick = { showDateDialog = false },
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -219,22 +221,26 @@ fun RankingScreen(
                                     onClick = { showDateDialog = true },
                                 )
                             } else {
-                                IconButton(
-                                    onClick = { showDateDialog = true },
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.Recent,
-                                        contentDescription = strings.rankingDateLabel,
-                                    )
+                                top.yukonga.miuix.kmp.basic.TooltipBox(text = strings.rankingDateLabel) {
+                                    IconButton(
+                                        onClick = { showDateDialog = true },
+                                    ) {
+                                        Icon(
+                                            imageVector = MiuixIcons.Recent,
+                                            contentDescription = strings.rankingDateLabel,
+                                        )
+                                    }
                                 }
                             }
-                            IconButton(
-                                onClick = triggerManualRefresh,
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.Refresh,
-                                    contentDescription = strings.refresh,
-                                )
+                            top.yukonga.miuix.kmp.basic.TooltipBox(text = strings.refresh) {
+                                IconButton(
+                                    onClick = triggerManualRefresh,
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Refresh,
+                                        contentDescription = strings.refresh,
+                                    )
+                                }
                             }
                         },
                     )

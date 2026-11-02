@@ -153,14 +153,16 @@ fun DownloadTaskScreen(
         scrollBehavior = scrollBehavior,
         onBack = onBack,
         actions = {
-            IconButton(
-                onClick = { showBatchMenu = true },
-                enabled = !isBatchProcessing,
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.More,
-                    contentDescription = strings.menuMoreActions,
-                )
+            top.yukonga.miuix.kmp.basic.TooltipBox(text = strings.menuMoreActions) {
+                IconButton(
+                    onClick = { showBatchMenu = true },
+                    enabled = !isBatchProcessing,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.More,
+                        contentDescription = strings.menuMoreActions,
+                    )
+                }
             }
         },
     ) { paddingValues ->

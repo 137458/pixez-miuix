@@ -8,6 +8,11 @@
 
 ### 优化
 
+- 审查并重构 MIUIX 组件使用规范与高阶交互：
+  - 弹窗按钮布局合规：重构版本更新弹窗（UpdateDialog）、下载保存格式编辑弹窗（DownloadSettingScreen）及历史记录、排行榜确认弹窗，严格遵循 MIUIX 纵向堆叠规范（主操作全宽置顶，取消/辅助置底）。
+  - 下拉菜单现代化：特辑详情页（SpotlightDetailScreen）顶栏升级为高阶 OverlayIconDropdownMenu 并集成 TooltipBox，提供复制链接、分享与浏览器打开功能。
+  - 面包屑导航进阶交互：优化下载设置页（DownloadSettingScreen）BreadcrumbBar，点击路径段可直接切换至对应父级目录。
+  - 桌面端可用性增强：为排行榜（RankingScreen）、下载任务（DownloadTaskScreen）、特辑详情（SpotlightDetailScreen）顶栏图标按钮统一挂载 TooltipBox，优化桌面端悬浮提示。
 - 优化了版本更新弹窗的日志展示与排版体验：更新日志卡片高度由固定 220 dp 升级为响应式自适应约束（最大高度扩容至 380 dp），大幅减少滚动负担；引入视口边缘平滑淡出渐变遮罩（Fading Edges），彻底消除文字在边界被粗暴横切腰斩的问题；新增 MIUIX 细微胶囊滚动指示条，直观掌握阅读进度；重构 MarkdownText 标题与分类胶囊标签，自动高亮「新增/优化/修复」模块并优化列表首行基线与行内代码排版，视觉层次更清晰舒展。
 
 ---
