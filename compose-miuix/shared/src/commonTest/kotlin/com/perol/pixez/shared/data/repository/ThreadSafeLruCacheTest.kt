@@ -53,6 +53,25 @@ class ThreadSafeLruCacheTest {
     }
 
     @Test
+    fun testGetRefreshesLruOrder() = runBlocking {
+        val cache = ThreadSafeLruCache<Int, String>(maxCapacity = 3)
+        cache.put(1, "one")
+        cache.put(2, "two")
+        cache.put(3, "three")
+
+        // 通过 get(1) 访问 key 1，此时最近被访问的是 1，最久未被访问的是 2
+        assertEquals("one", cache.get(1))
+
+        // 插入第 4 个元素，超出容量 3，最久未被访问的 2 应被淘汰，而 1 应该保留
+        cache.put(4, "four")
+
+        assertNull(cache.get(2), "Key 2 should have been evicted as the least recently used")
+        assertEquals("one", cache.get(1), "Key 1 was accessed via get() and should be kept in cache")
+        assertEquals("three", cache.get(3))
+        assertEquals("four", cache.get(4))
+    }
+
+    @Test
     fun testGetMissingKeyReturnsNull() {
         val cache = ThreadSafeLruCache<String, String>(maxCapacity = 5)
         assertNull(cache.get("non_existent_key"))

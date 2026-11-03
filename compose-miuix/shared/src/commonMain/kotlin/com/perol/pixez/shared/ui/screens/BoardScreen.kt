@@ -44,6 +44,7 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.utils.HtmlUtils
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -272,7 +273,7 @@ private fun parseHtmlToAnnotatedString(
     linkColor: Color,
 ): AnnotatedString {
     return buildAnnotatedString {
-        val normalized = html.unescapeHtmlEntities()
+        val normalized = HtmlUtils.decodeHtmlEntities(html)
         var index = 0
         var pendingLinkUrl: String? = null
         var pendingLinkStart = -1
@@ -355,41 +356,6 @@ private fun parseHtmlToAnnotatedString(
 private fun extractHref(attributes: String): String? {
     val regex = Regex("""href\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
     return regex.find(attributes)?.groupValues?.get(1)
-}
-
-/**
- * 反转义常见 HTML 实体，避免标签与文本被错误解析。
- *
- * 先处理数值实体（十进制 `&#123;` 与十六进制 `&#x7B;`），再处理命名实体。
- * 超出 BMP 或无法解析的数值实体保留原样，避免误替换。
- */
-private fun String.unescapeHtmlEntities(): String {
-    return this.decodeNumericEntities()
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&#x27;", "'")
-        .replace("&#x2F;", "/")
-        .replace("&nbsp;", " ")
-}
-
-/**
- * 解码 HTML 数值实体。
- *
- * 支持 `&#NNNN;`（十进制）与 `&#xHHHH;`（十六进制）两种形式，
- * 仅将落在基本多文种平面（BMP）内的码点转换为对应字符。
- */
-private fun String.decodeNumericEntities(): String {
-    return replace(Regex("&#([0-9]+);|&#x([0-9a-fA-F]+);")) { match ->
-        val code = match.groups[1]?.value?.toIntOrNull()
-            ?: match.groups[2]?.value?.toIntOrNull(16)
-        when {
-            code != null && code in 0..0xFFFF -> code.toChar().toString()
-            else -> match.value
-        }
-    }
 }
 
 private const val URL_ANNOTATION_TAG = "URL"

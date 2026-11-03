@@ -8,6 +8,10 @@
 
 ### 优化
 
+- 消除重复造轮子与跨端冗余实现：
+  - 重构 ThreadSafeLruCache 消除伪 LRU 缺陷与 GC 垃圾：修复 get 操作未更新 LinkedHashMap 访问顺序导致热点数据被误淘汰的问题，并消除写操作全量 map.toMap() 造成的频繁内存分配。
+  - 下沉合并 JVM 平台重复代码：将 HashUtils、SecureRandom 与 Sha256File 收敛至 jvmShared 源集，彻底删除 androidMain 与 desktopMain 中 100% 逐字重复的冗余拷贝。
+  - 收敛 HTML 与 URL 解码清洗工具：新增跨平台 HtmlUtils，统一收敛 BoardScreen、HtmlCaptionText 与 PixivisionParser 分裂手写的 HTML 实体解码与标签过滤逻辑；移除手写脆弱的 decodeUrlPercent，接入 Ktor 标准 decodeURLQueryComponent API。
 - 审查并重构 MIUIX 组件使用规范与高阶交互：
   - 弹窗按钮布局合规：重构版本更新弹窗（UpdateDialog）、下载保存格式编辑弹窗（DownloadSettingScreen）及历史记录、排行榜确认弹窗，严格遵循 MIUIX 纵向堆叠规范（主操作全宽置顶，取消/辅助置底）。
   - 下拉菜单现代化：特辑详情页（SpotlightDetailScreen）顶栏升级为高阶 OverlayIconDropdownMenu 并集成 TooltipBox，提供复制链接、分享与浏览器打开功能。

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import com.perol.pixez.shared.utils.HtmlUtils
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -139,44 +140,9 @@ fun HtmlCaptionText(
 }
 
 /**
- * 解码 URL 百分号编码（例如 `%2F` -> `/`），纯 Kotlin 实现以支持跨平台。
+ * 解码 URL 百分号编码（例如 `%2F` -> `/`），委托至 [HtmlUtils]。
  */
-internal fun decodeUrlPercent(input: String): String {
-    if (!input.contains('%') && !input.contains('+')) return input
-    val bytes = mutableListOf<Byte>()
-    var i = 0
-    while (i < input.length) {
-        val c = input[i]
-        when (c) {
-            '+' -> {
-                bytes.add(' '.code.toByte())
-                i++
-            }
-            '%' -> {
-                if (i + 2 < input.length) {
-                    val hex = input.substring(i + 1, i + 3)
-                    val b = hex.toIntOrNull(16)
-                    if (b != null) {
-                        bytes.add(b.toByte())
-                        i += 3
-                        continue
-                    }
-                }
-                bytes.addAll(c.toString().encodeToByteArray().toList())
-                i++
-            }
-            else -> {
-                bytes.addAll(c.toString().encodeToByteArray().toList())
-                i++
-            }
-        }
-    }
-    return try {
-        bytes.toByteArray().decodeToString()
-    } catch (_: Throwable) {
-        input
-    }
-}
+internal fun decodeUrlPercent(input: String): String = HtmlUtils.decodeUrlPercent(input)
 
 /**
  * 解包 Pixiv 外链跳转地址（jump.php），提取出真实目标 URL 并解码。
@@ -440,11 +406,9 @@ private val AUTO_LINK_PATTERN = Regex(
 )
 
 /**
- * 清除字符串中的 HTML 标签。
+ * 清除字符串中的 HTML 标签，委托至 [HtmlUtils]。
  */
-internal fun stripHtmlTags(input: String): String {
-    return input.replace(Regex("""<[^>]*>"""), "")
-}
+internal fun stripHtmlTags(input: String): String = HtmlUtils.stripHtmlTags(input)
 
 /**
  * 去除 URL 末尾由于标点符号贴附而多匹配的符号（例如句子末尾句号、逗号等）。
@@ -592,64 +556,6 @@ private fun AnnotatedString.Builder.appendPlainChunkWithAutoLinks(
 }
 
 /**
- * 快速解码常见命名与数字（十进制与十六进制）类型的 HTML 实体转义字符。
+ * 快速解码常见命名与数字（十进制与十六进制）类型的 HTML 实体转义字符，委托至 [HtmlUtils]。
  */
-internal fun decodeHtmlEntities(input: String): String {
-    if (!input.contains('&')) return input
-
-    return input
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ")
-        .replace("&copy;", "©")
-        .replace("&reg;", "®")
-        .replace("&trade;", "™")
-        .replace("&mdash;", "—")
-        .replace("&ndash;", "–")
-        .replace("&hellip;", "…")
-        .replace("&laquo;", "«")
-        .replace("&raquo;", "»")
-        .replace("&bull;", "•")
-        .replace("&yen;", "¥")
-        .replace("&euro;", "€")
-        .replace("&pound;", "£")
-        .replace("&cent;", "¢")
-        .replace(Regex("""&#(\d+);""")) { match ->
-            val code = match.groupValues[1].toLongOrNull()
-            if (code != null && code in 0L..0x10FFFFL) {
-                try {
-                    codePointToString(code.toInt())
-                } catch (_: Throwable) {
-                    match.value
-                }
-            } else match.value
-        }
-        .replace(Regex("""&#x([0-9a-fA-F]+);""")) { match ->
-            val code = match.groupValues[1].toIntOrNull(16)
-            if (code != null && code in 0L..0x10FFFFL) {
-                try {
-                    codePointToString(code)
-                } catch (_: Throwable) {
-                    match.value
-                }
-            } else match.value
-        }
-}
-
-/**
- * 将 Unicode CodePoint 转换为 String（支持 BMP 与高平面 Supplementary 平面字符）。
- */
-private fun codePointToString(codePoint: Int): String {
-    return if (codePoint <= 0xFFFF) {
-        codePoint.toChar().toString()
-    } else {
-        val high = ((codePoint - 0x10000) ushr 10) + 0xD800
-        val low = ((codePoint - 0x10000) and 0x3FF) + 0xDC00
-        charArrayOf(high.toChar(), low.toChar()).concatToString()
-    }
-}
-
+internal fun decodeHtmlEntities(input: String): String = HtmlUtils.decodeHtmlEntities(input)

@@ -1,15 +1,19 @@
 # PixEz MIUIX — Agent 约束入口
 
-PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatform + Miuix 重制版，Android / Windows Desktop 双端（iOS 仅编译验证；macOS target 因 zoomable 无 macOS 变体暂未启用）。
+PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform + MIUIX 重制版。
 
-> 本文件是本项目构建验证命令的**唯一清单**，其他文档只引用、不重复维护。所有命令在 `compose-miuix/` 目录执行。
+## 工具链与平台矩阵
 
-## 构建与验证
+- **基线**：JDK 17、Gradle 8.14.4、Kotlin 2.4.10、Compose Multiplatform 1.12.0、MIUIX 0.9.4、Coil 3.6.3
+- **平台支持**：Android（API 24+）、Windows Desktop（x64）；iOS（仅 macOS 编译验证）；macOS 未启用（缺少 zoomable 变体）
+- **CI 状态**：无远程 CI，所有验证与打包均在本地执行
 
-改动完成的标准 = 涉及平台对应的命令跑通，无编译错误与回归：
+## 构建与验证命令（唯一清单）
 
-| 目标 | 命令 |
-|---|---|
+> 执行工作目录：`compose-miuix/`。交付验收标准：目标平台命令无错误且单元测试全绿。
+
+| 目标 | 执行命令 |
+| :--- | :--- |
 | Desktop 共享模块编译 | `./gradlew :shared:compileKotlinDesktop` |
 | Desktop 应用编译 | `./gradlew :composeApp:compileKotlinDesktop` |
 | 双端单元测试 | `./gradlew :shared:desktopTest :composeApp:desktopTest` |
@@ -17,34 +21,26 @@ PixEz（Pixiv 第三方客户端）的 Kotlin Multiplatform + Compose Multiplatf
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Windows 单文件 EXE | `./gradlew :composeApp:packageWindowsSingleFileExe` |
 | 桌面端运行 | `./gradlew :composeApp:run` |
-| iOS 编译验证（仅 macOS 机器） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
+| iOS 编译验证（限 macOS） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
 
-发布前全量验证（一行版）：
-
+**发布前全量验证（单行）：**
 ```bash
 ./gradlew :shared:compileKotlinDesktop :shared:desktopTest :composeApp:compileKotlinDesktop :composeApp:desktopTest :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
 ```
 
-工具链基线：JDK 17、Kotlin 2.4.10、Compose Multiplatform 1.12.0、Coil 3.6.3、Gradle 8.14.4。
+## 核心开发红线
 
-## UI 规范
-
-- UI 规范全文见 `MIUIX_Spec.md`（组件选型、Liquid Glass、悬浮底栏、大屏适配、多语言），新增页面或通用组件前必读。
-- 严格使用 `top.yukonga.miuix.kmp` 官方组件，严禁引入 Material 3 控件。
-- UI 文本统一接入 `LocalStrings.current` 多语言体系；常量收敛至 `AppConstants.kt`。
-
-## 项目约定
-
-- `archive/flutter-v1/` 为旧 Flutter 版源码归档，修复默认不改动。
-- iOS 目标仅能在 macOS 机器本地验证，Windows 无法运行 Apple toolchain；macOS target 当前未启用。项目当前无 CI，构建与测试均本地执行（命令以上表为唯一清单）。
+1. **组件约束**：严格采用 `top.yukonga.miuix.kmp`，严禁引入任何 Material 3（`androidx.compose.material3.*`）控件。
+2. **多语言与常量**：UI 文本必须接入 `LocalStrings.current`（12 国语言）；常量与布局断点必须收敛至 `AppConstants.kt`。
+3. **范围边界**：`archive/flutter-v1/` 为只读归档代码，禁止非明确要求的修改；测试先行，不可篡改既有测试断言。
 
 ## 文档索引
 
-| 何时读 | 文档 |
-|---|---|
-| 构建验证命令 | 本文件（唯一清单） |
-| UI 规范全文 | `MIUIX_Spec.md` |
-| 架构与调用链 | `Code_Wiki.md` |
-| 路线与待办 | `Global_TODO.md` |
-| 跨会话记忆 / 本轮修复批次 | `CONTEXT.md` |
-| 发布流程与用语 | `RELEASE_NOTES_GUIDE.md` |
+| 用途 | 目标文档 | 核心职责 |
+| :--- | :--- | :--- |
+| 构建验证 | `AGENTS.md` | 命令唯一清单与 Agent 核心约束入口 |
+| UI 与交互 | `MIUIX_Spec.md` | 组件选型、Liquid Glass、响应式断点、多语言规范 |
+| 架构与调用 | `Code_Wiki.md` | 分层架构、数据流向、核心 API、持久化与网络引擎 |
+| 路线追踪 | `Global_TODO.md` | 优先级任务清单、架构决策结论、历史落地归档 |
+| 跨会话状态 | `CONTEXT.md` | 本地会话记忆、系统安全不变量、环境踩坑与构建调优 |
+| 发版规范 | `RELEASE_NOTES_GUIDE.md` | CHANGELOG 维护准则、发版流程与 Release 模板 |

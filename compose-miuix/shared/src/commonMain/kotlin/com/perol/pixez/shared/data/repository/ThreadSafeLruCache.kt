@@ -1,37 +1,48 @@
 package com.perol.pixez.shared.data.repository
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-
 /**
  * 协程安全的泛型内存 LRU 缓存。
  *
- * - 写入操作通过 [Mutex] 串行化，保持最近最少使用淘汰策略与高并发原子性；
- * - 读取操作直接读取无锁不可变 [snapshot]，具备极高吞吐量与无锁开销；
- * - 每次写操作更新不可变快照，保障外部并发读取的强一致性与隔离性。
+ * - 内部基于 [LinkedHashMap] 保证最近最少使用（LRU）淘汰顺序；
+ * - 线程安全通过内部同步互斥锁保障，[get] 读取时更新访问顺序（真正的 LRU 契约）；
+ * - 消除写操作过程中的冗余深拷贝分配，仅在 [snapshot] 调用时按需生成只读副本。
  */
 class ThreadSafeLruCache<K, V>(val maxCapacity: Int) {
     init {
         require(maxCapacity > 0) { "maxCapacity must be greater than 0, but was $maxCapacity" }
     }
 
-    private val mutex = Mutex()
+    private val lock = Any()
     private val map = LinkedHashMap<K, V>()
 
-    @kotlin.concurrent.Volatile
-    private var snapshot: Map<K, V> = emptyMap()
+    /**
+     * 读取指定 [key] 对应的值。若存在则将其标记为最近访问并返回；不存在返回 null。
+     */
+    fun get(key: K): V? = synchronized(lock) {
+        val value = map.remove(key) ?: return null
+        map[key] = value
+        value
+    }
 
-    fun get(key: K): V? = snapshot[key]
+    /**
+     * 获取当前缓存内容的只读快照副本。
+     */
+    fun snapshot(): Map<K, V> = synchronized(lock) {
+        map.toMap()
+    }
 
-    fun snapshot(): Map<K, V> = snapshot
-
+    /**
+     * 写入键值对。已存在时更新值并移至最新，超过容量时淘汰最久未访问的项。
+     */
     suspend fun put(key: K, value: V) {
-        mutex.withLock {
-            map.remove(key)
-            map[key] = value
-            evictIfNeeded()
-            snapshot = map.toMap()
-        }
+        putSync(key, value)
+    }
+
+    /** 同步写入重载，便于非协程上下文调用。 */
+    fun putSync(key: K, value: V) = synchronized(lock) {
+        map.remove(key)
+        map[key] = value
+        evictIfNeeded()
     }
 
     suspend fun putAll(entries: List<Pair<K, V>>) {
@@ -39,40 +50,39 @@ class ThreadSafeLruCache<K, V>(val maxCapacity: Int) {
     }
 
     suspend fun putAll(entries: Iterable<Pair<K, V>>) {
-        mutex.withLock {
-            for ((key, value) in entries) {
-                map.remove(key)
-                map[key] = value
-            }
-            evictIfNeeded()
-            snapshot = map.toMap()
-        }
+        putAllSync(entries)
     }
 
-    suspend fun touch(key: K): Boolean {
-        return mutex.withLock {
-            val value = map.remove(key) ?: return@withLock false
+    /** 同步批量写入重载。 */
+    fun putAllSync(entries: Iterable<Pair<K, V>>) = synchronized(lock) {
+        for ((key, value) in entries) {
+            map.remove(key)
             map[key] = value
-            snapshot = map.toMap()
-            true
         }
+        evictIfNeeded()
     }
 
-    suspend fun remove(key: K): V? {
-        return mutex.withLock {
-            val removed = map.remove(key)
-            if (removed != null) {
-                snapshot = map.toMap()
-            }
-            removed
-        }
+    /**
+     * 手动将 [key] 标记为最近使用。
+     */
+    suspend fun touch(key: K): Boolean = synchronized(lock) {
+        val value = map.remove(key) ?: return false
+        map[key] = value
+        true
     }
 
-    suspend fun clear() {
-        mutex.withLock {
-            map.clear()
-            snapshot = emptyMap()
-        }
+    /**
+     * 移除指定 [key] 的缓存项。
+     */
+    suspend fun remove(key: K): V? = synchronized(lock) {
+        map.remove(key)
+    }
+
+    /**
+     * 清空缓存。
+     */
+    suspend fun clear() = synchronized(lock) {
+        map.clear()
     }
 
     private fun evictIfNeeded() {
