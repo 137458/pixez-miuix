@@ -345,9 +345,10 @@ private fun RootChildContent(
                             floatingBackdrop = floatingBackdrop,
                         )
 
-        is Config.UserDetail -> renderUserDetail(
-            instance = instance,
-            component = component,
+        // 用户详情页同样组件化：页面状态由子组件的 InstanceKeeper 保留，栈换层重建不丢。
+        is UserDetailComponent -> renderUserDetail(
+            component = instance,
+            root = component,
         )
 
         Config.Login -> renderLogin(

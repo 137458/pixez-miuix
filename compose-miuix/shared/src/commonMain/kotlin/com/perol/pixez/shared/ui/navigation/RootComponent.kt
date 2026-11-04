@@ -469,7 +469,8 @@ class RootComponent(
 
     /**
      * childStack 工厂（中-6a）：非试点页 child 实例仍为可序列化的 [Config] 本身，直接透传；
-     * 作品详情页（中-6b 试点）实例化为 [IllustDetailComponent]，注入根导航回调。
+     * 作品详情页（中-6b 试点）实例化为 [IllustDetailComponent]，注入根导航回调；
+     * 用户详情页实例化为 [UserDetailComponent]，页面状态由其 InstanceKeeper 保留。
      * 仅保留 Main 分支的跨页恢复接线（高-5）——consume/register 必须在 child 的
      * ComponentContext 上执行且只执行一次（重复 register 同 key 会抛 IllegalStateException）。
      */
@@ -495,6 +496,14 @@ class RootComponent(
                 onTagClick = ::onSearchClicked,
                 onIllustClick = ::onIllustClicked,
                 onNovelClick = ::onNovelClicked,
+            )
+        }
+        if (config is Config.UserDetail) {
+            // 个人收藏页返回空白修复：页面状态（资料 / 分页列表 / 网格滚动位置）挂在 child 的
+            // InstanceKeeper 上，栈换层销毁组合后重建首帧即可复用，出栈则随 child 释放。
+            return UserDetailComponent(
+                componentContext = componentContext,
+                config = config,
             )
         }
         return config

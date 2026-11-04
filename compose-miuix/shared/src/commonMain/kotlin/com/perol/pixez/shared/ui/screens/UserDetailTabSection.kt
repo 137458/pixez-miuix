@@ -36,6 +36,7 @@ import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.UserDetailPageState
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -54,6 +55,7 @@ import top.yukonga.miuix.kmp.basic.TabRow
 @Composable
 internal fun UserWorksTab(
     userId: Long,
+    pageState: UserDetailPageState,
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onIllustClick: (Long) -> Unit,
@@ -70,15 +72,16 @@ internal fun UserWorksTab(
 
     // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState，替代原 produceState + remember(key)
     // 桥接的手写状态机（报告点名的第三种写法）。状态机以 userId 为 remember key。
-    val listState = remember(userId) {
-        IllustPagedListState(
+    // 优先复用保留状态里的实例：栈换层重建组合后仍是同一份分页数据，loadFirst 缓存早退不发请求。
+    val listState = remember(userId, pageState) {
+        pageState.works ?: IllustPagedListState(
             fetch = { nextUrl ->
                 val response = repository.getUserIllustsResponse(userId, nextUrl = nextUrl)
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion.value },
-        )
+        ).also { pageState.works = it }
     }
     val coroutineScope = rememberCoroutineScope()
 
@@ -130,6 +133,7 @@ internal fun UserWorksTab(
 @Composable
 internal fun UserBookmarksTab(
     userId: Long,
+    pageState: UserDetailPageState,
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     onIllustClick: (Long) -> Unit,
@@ -151,26 +155,27 @@ internal fun UserBookmarksTab(
     // 高-4c：公开/私密收藏各持一份 IllustPagedListState（替代原两份 produceState + 桥接状态机）。
     // 原加载一次标志（loadedOnce）由「仅激活当前 tab + loadFirst 缓存早退」自然承担。
     var publicRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    val publicState = remember(userId) {
-        IllustPagedListState(
+    // 优先复用保留状态里的实例（个人收藏页返回空白修复）：返回重建后收藏网格首帧即有数据。
+    val publicState = remember(userId, pageState) {
+        pageState.publicBookmarks ?: IllustPagedListState(
             fetch = { nextUrl ->
                 val response = repository.getUserBookmarksResponse(userId, "public", nextUrl = nextUrl)
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion.value },
-        )
+        ).also { pageState.publicBookmarks = it }
     }
     var privateRetryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    val privateState = remember(userId) {
-        IllustPagedListState(
+    val privateState = remember(userId, pageState) {
+        pageState.privateBookmarks ?: IllustPagedListState(
             fetch = { nextUrl ->
                 val response = repository.getUserBookmarksResponse(userId, "private", nextUrl = nextUrl)
                 IllustPagedPage(response.illusts, response.nextUrl)
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion.value },
-        )
+        ).also { pageState.privateBookmarks = it }
     }
 
     // 仅加载当前选中 tab（未选中保持空，lazy）；切回已加载 tab 时 loadFirst 缓存早退；

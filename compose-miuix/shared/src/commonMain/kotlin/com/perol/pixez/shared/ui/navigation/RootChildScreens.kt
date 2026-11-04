@@ -199,18 +199,19 @@ internal fun renderIllustDetail(
 
 @Composable
 internal fun renderUserDetail(
-    instance: Config.UserDetail,
-    component: RootComponent,
+    component: UserDetailComponent,
+    root: RootComponent,
 ) {
     UserDetailScreen(
-        userId = instance.userId,
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-        onFollowListClick = component::onUserFollowListClicked,
-        onFollowerListClick = component::onUserFollowerListClicked,
-        onRelatedUsersClick = component::onUserRelatedListClicked,
-        onUserNovelsClick = component::onUserNovelListClicked,
-        initialTab = instance.initialTab,
+        userId = component.userId,
+        pageState = component.pageState,
+        onBack = root::onBack,
+        onIllustClick = root::onIllustClicked,
+        onFollowListClick = root::onUserFollowListClicked,
+        onFollowerListClick = root::onUserFollowerListClicked,
+        onRelatedUsersClick = root::onUserRelatedListClicked,
+        onUserNovelsClick = root::onUserNovelListClicked,
+        initialTab = component.config.initialTab,
     )
 }
 

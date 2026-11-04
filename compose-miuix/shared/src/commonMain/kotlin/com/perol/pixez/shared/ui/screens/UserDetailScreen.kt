@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -53,6 +54,8 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.state.GridScrollPosition
+import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -78,6 +81,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun UserDetailScreen(
     userId: Long,
+    pageState: UserDetailPageState,
     onBack: () -> Unit,
     onIllustClick: (Long) -> Unit,
     onFollowListClick: (Long) -> Unit,
@@ -112,14 +116,24 @@ fun UserDetailScreen(
     }
 
     // 用户资料加载失败时整页进入错误态；成功后再展示 Tab 内容。
+    // 个人收藏页返回空白修复：初值取保留状态里的最近资料，栈换层重建组合后首帧即渲染内容，
+    // 出栈收回动画的落点因此不会落到加载占位上。
     val detailState = produceState<Result<UserDetail>?>(
-        initialValue = null,
+        initialValue = pageState.userDetail?.let { Result.success(it) },
         userId,
         repository,
         retryCount,
     ) {
         // 当前处于 produceState 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        value = suspendRunCatchingNonCancel { repository.getUserDetail(userId) }
+        val loaded = suspendRunCatchingNonCancel { repository.getUserDetail(userId) }
+        val cached = pageState.userDetail
+        if (loaded.isSuccess) {
+            pageState.userDetail = loaded.getOrNull()
+            value = loaded
+        } else {
+            // 重建后回源失败时沿用已展示过的资料，避免整页退回错误态。
+            value = cached?.let { Result.success(it) } ?: loaded
+        }
     }
 
     val result = detailState.value
@@ -209,6 +223,7 @@ fun UserDetailScreen(
     ) { paddingValues ->
         UserDetailContent(
             userId = userId,
+            pageState = pageState,
             result = result,
             userDetail = userDetail,
             isCurrentUser = isCurrentUser,
@@ -367,6 +382,7 @@ private fun UserDetailTopAppBar(
 @Composable
 private fun UserDetailContent(
     userId: Long,
+    pageState: UserDetailPageState,
     result: Result<UserDetail>?,
     userDetail: UserDetail?,
     isCurrentUser: Boolean,
@@ -406,6 +422,7 @@ private fun UserDetailContent(
             result.isSuccess && userDetail != null -> {
                 UserDetailTabContent(
                     userId = userId,
+                    pageState = pageState,
                     userDetail = userDetail,
                     isCurrentUser = isCurrentUser,
                     isFollowed = isFollowed,
@@ -446,6 +463,7 @@ private fun UserDetailContent(
 @Composable
 private fun UserDetailTabContent(
     userId: Long,
+    pageState: UserDetailPageState,
     userDetail: UserDetail,
     isCurrentUser: Boolean,
     isFollowed: Boolean,
@@ -468,8 +486,29 @@ private fun UserDetailTabContent(
     var selectedTabIndex by rememberSaveable(userId, initialTab) { mutableIntStateOf(initialTab) }
     val tabs = listOf(strings.userWorkTab, strings.userBookmarkTab)
 
-    val worksGridState = rememberLazyStaggeredGridState()
-    val bookmarksGridState = rememberLazyStaggeredGridState()
+    // 保留状态里的滚动位置用作初值：重建组合后网格回到离开时的位置，与出栈收回动画的落点一致。
+    val worksGridState = rememberLazyStaggeredGridState(
+        initialFirstVisibleItemIndex = pageState.worksScroll.index,
+        initialFirstVisibleItemScrollOffset = pageState.worksScroll.offset,
+    )
+    val bookmarksGridState = rememberLazyStaggeredGridState(
+        initialFirstVisibleItemIndex = pageState.bookmarksScroll.index,
+        initialFirstVisibleItemScrollOffset = pageState.bookmarksScroll.offset,
+    )
+
+    // 组合销毁（栈换层）时回写滚动位置；重建时由上面的初值播种。
+    DisposableEffect(worksGridState, bookmarksGridState, pageState) {
+        onDispose {
+            pageState.worksScroll = GridScrollPosition(
+                index = worksGridState.firstVisibleItemIndex,
+                offset = worksGridState.firstVisibleItemScrollOffset,
+            )
+            pageState.bookmarksScroll = GridScrollPosition(
+                index = bookmarksGridState.firstVisibleItemIndex,
+                offset = bookmarksGridState.firstVisibleItemScrollOffset,
+            )
+        }
+    }
 
     var worksLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedTabIndex == 0) }
     var bookmarksLoadedOnce by rememberSaveable(userId) { mutableStateOf(selectedTabIndex == 1) }
@@ -530,6 +569,7 @@ private fun UserDetailTabContent(
             ) {
                 UserWorksTab(
                     userId = userId,
+                    pageState = pageState,
                     header = headerContent,
                     gridState = worksGridState,
                     onIllustClick = onIllustClick,
@@ -558,6 +598,7 @@ private fun UserDetailTabContent(
             ) {
                 UserBookmarksTab(
                     userId = userId,
+                    pageState = pageState,
                     header = headerContent,
                     gridState = bookmarksGridState,
                     onIllustClick = onIllustClick,
