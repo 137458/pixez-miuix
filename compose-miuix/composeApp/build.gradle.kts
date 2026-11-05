@@ -3,6 +3,48 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
+import java.io.File
+
+/**
+ * 定位可用于 jpackage 的 JDK：先认显式注入（-PpackageJavaHome / PACKAGE_JAVA_HOME），
+ * 再按各平台常规安装目录扫描（Windows 的 Program Files、Eclipse Adoptium、用户 .jdks；
+ * macOS 的 JavaVirtualMachines；Linux 的 /usr/lib/jvm），只采纳带 bin/jpackage 的发行版。
+ * 不写任何机器私有路径：换机器后只要能找到任一常规安装的 JDK 即可打包。
+ */
+fun resolveJpackageJdk(project: Project): File? {
+    val isWindows = OperatingSystem.current().isWindows
+    val jpackageRelative = if (isWindows) "bin/jpackage.exe" else "bin/jpackage"
+    fun usable(dir: File) = dir.isDirectory && dir.resolve(jpackageRelative).exists()
+
+    val injected = listOfNotNull(
+        project.providers.gradleProperty("packageJavaHome").orNull,
+        System.getenv("PACKAGE_JAVA_HOME"),
+        System.getenv("JAVA_HOME"),
+        System.getProperty("java.home"),
+    ).map { project.file(it) }.filter(::usable)
+    if (injected.isNotEmpty()) return injected.first()
+
+    val roots = if (isWindows) {
+        listOfNotNull(
+            System.getenv("ProgramFiles"),
+            System.getenv("ProgramW6432"),
+            System.getenv("LOCALAPPDATA")?.let { "$it\\Programs" },
+            System.getProperty("user.home")?.let { "$it\\.jdks" },
+        )
+    } else {
+        listOfNotNull(
+            "/Library/Java/JavaVirtualMachines",
+            "/usr/lib/jvm",
+        )
+    }
+    return roots.map { project.file(it) }.filter { it.isDirectory }
+        .flatMap { root ->
+            val children = root.listFiles()?.toList().orEmpty()
+            val grandchildren = children.flatMap { child -> child.listFiles()?.toList().orEmpty() }
+            children + grandchildren + root
+        }
+        .firstOrNull(::usable)
+}
 
 // 发布签名配置：keystore.properties（已 gitignore）提供 storeFile/storePassword/keyAlias/keyPassword。
 // 缺失时回退 debug 签名，保证本地与 CI 构建（assembleDebug）始终可用；正式发版须先配置该文件。
@@ -178,24 +220,15 @@ tasks.matching { it.name == "run" }.configureEach {
 compose.desktop {
     application {
         mainClass = "com.perol.pixez.desktop.MainKt"
-        // jpackage 的 JDK 只由环境变量或 -P 属性注入：不在脚本里写机器私有路径。
-        // 全部落空时回退 Gradle 当前 JVM（jpackage 随之用该 JVM 的运行时），并显式告警。
-        val packageJavaHome = listOfNotNull(
-            providers.gradleProperty("packageJavaHome").orNull,
-            System.getenv("PACKAGE_JAVA_HOME"),
-        ).firstOrNull()
-        val jpackageJdk = packageJavaHome
-            ?.let(::file)
-            ?.takeIf { it.resolve("bin/jpackage.exe").exists() || it.resolve("bin/jpackage").exists() }
+        // jpackage 的 JDK 由注入或平台常规安装目录解析（见 resolveJpackageJdk）：不在脚本里写机器私有路径。
+        // 全部落空时回退 Gradle 当前 JVM，并显式告警——jpackage 缺失时该 JVM 会在 checkRuntime 处失败。
+        val jpackageJdk = resolveJpackageJdk(project)
         if (jpackageJdk != null) {
             javaHome = jpackageJdk.absolutePath
         } else {
-            val jpackageHint = packageJavaHome
-                ?.let { "packageJavaHome=" + it + " 下没有 bin/jpackage" }
-                ?: "-PpackageJavaHome / PACKAGE_JAVA_HOME 均未设置"
             logger.warn(
-                "未找到可用的 jpackage（" + jpackageHint +
-                    "）：打包将回退 Gradle 当前 JVM " + System.getProperty("java.home"),
+                "未找到带 jpackage 的 JDK（-PpackageJavaHome、PACKAGE_JAVA_HOME、JAVA_HOME 与常规安装目录均未命中）：" +
+                    "打包将回退 Gradle 当前 JVM " + System.getProperty("java.home"),
             )
         }
 
