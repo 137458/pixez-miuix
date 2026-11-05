@@ -31,7 +31,7 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 ## 核心开发红线
 
 1. **组件约束**：严格采用 `top.yukonga.miuix.kmp`，严禁引入任何 Material 3（`androidx.compose.material3.*`）控件。
-2. **多语言与常量**：UI 文本必须接入 `LocalStrings.current`（12 国语言）；常量与布局断点必须收敛至 `AppConstants.kt`。
+2. **多语言与常量**：UI 文本必须接入 `LocalStrings.current`（13 国语言，含波斯语 `fa` 与 RTL）。常量按层落位：网络/主机/引擎常量在 `network/`（`PixivHosts`、`HttpEngineDefaults`、`GitHubReleaseEndpoints`），凭据常量在 `platform/TokenCipherDefaults`，下载平台常量在 `platform/DownloadPlatformDefaults`；`ui/AppConstants.kt` 只保留 UI 常量与布局断点（其余为待清理的过渡委讬）。
 3. **范围边界**：`archive/flutter-v1/` 为只读归档代码，禁止非明确要求的修改；测试先行，不可篡改既有测试断言。
 
 ## 文档索引
