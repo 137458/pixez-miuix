@@ -11,7 +11,12 @@ import androidx.compose.ui.platform.LocalContext
 import io.github.aakira.napier.Napier
 
 @Composable
-actual fun rememberDirectoryPicker(onResult: (String?) -> Unit): () -> Unit {
+actual fun rememberDirectoryPicker(
+    initialDirectory: String?,
+    dialogTitle: String?,
+    onResult: (String?) -> Unit,
+): () -> Unit {
+    // SAF 选择器不接受初始目录与标题参数，二者仅桌面端使用。
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()

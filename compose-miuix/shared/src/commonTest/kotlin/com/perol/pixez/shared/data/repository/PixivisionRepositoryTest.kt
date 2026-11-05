@@ -1,17 +1,11 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.testutil.CapturedRequest
+import com.perol.pixez.shared.testutil.StubEngine
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.encodedPath
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,16 +20,24 @@ import kotlin.test.assertTrue
  */
 class PixivisionRepositoryTest {
 
-    private data class CapturedRequest(
-        val path: String,
-        val query: Map<String, String>,
-        val headers: Map<String, String>,
+    // API 与网页两条链路各用一份共享夹具，请求快照（含请求头）由夹具负责。
+    private val apiEngine = StubEngine()
+    private val webEngine = StubEngine(
+        responseContentType = ContentType.Text.Html,
+        installContentNegotiation = false,
     )
-
-    private val apiCaptured = mutableListOf<CapturedRequest>()
-    private val webCaptured = mutableListOf<CapturedRequest>()
-    private var apiResponseBody: String = "{}"
-    private var webBody: String = ""
+    private val apiCaptured: List<CapturedRequest> get() = apiEngine.requests
+    private val webCaptured: List<CapturedRequest> get() = webEngine.requests
+    private var apiResponseBody: String
+        get() = apiEngine.responseBody
+        set(value) {
+            apiEngine.responseBody = value
+        }
+    private var webBody: String
+        get() = webEngine.responseBody
+        set(value) {
+            webEngine.responseBody = value
+        }
 
     private lateinit var apiClient: HttpClient
     private lateinit var webClient: HttpClient
@@ -44,50 +46,14 @@ class PixivisionRepositoryTest {
 
     @Before
     fun setUp() {
-        apiClient = mockClient(apiCaptured, ContentType.Application.Json, isApi = true)
-        webClient = mockClient(webCaptured, ContentType.Text.Html, isApi = false)
+        apiClient = apiEngine.client()
+        webClient = webEngine.client()
         settingsRepository = SettingsRepository(InMemorySettings())
         repository = PixivisionRepository(
             apiClient = apiClient,
             webClient = webClient,
             settingsRepository = settingsRepository,
         )
-    }
-
-    private fun mockClient(
-        sink: MutableList<CapturedRequest>,
-        contentType: ContentType,
-        isApi: Boolean,
-    ): HttpClient = HttpClient(MockEngine) {
-        if (isApi) {
-            install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        coerceInputValues = true
-                        isLenient = true
-                    },
-                )
-            }
-        }
-        engine {
-            addHandler { request ->
-                val query = LinkedHashMap<String, String>()
-                for (name in request.url.parameters.names()) {
-                    query[name] = request.url.parameters[name] ?: ""
-                }
-                val headers = LinkedHashMap<String, String>()
-                for (name in request.headers.names()) {
-                    headers[name] = request.headers.getAll(name)?.joinToString(",") ?: ""
-                }
-                sink.add(CapturedRequest(request.url.encodedPath, query, headers))
-                respond(
-                    if (isApi) apiResponseBody else webBody,
-                    HttpStatusCode.OK,
-                    headersOf("Content-Type", contentType.toString()),
-                )
-            }
-        }
     }
 
     @After

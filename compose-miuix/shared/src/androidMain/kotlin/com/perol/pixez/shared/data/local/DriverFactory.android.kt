@@ -48,6 +48,9 @@ actual class DriverFactory(private val context: Context) {
         )
     }
 
+    actual fun resolveDatabaseFileName(database: LocalDatabase): String =
+        database.candidateFileNames.firstOrNull { context.getDatabasePath(it).exists() } ?: database.fileName
+
     actual fun closeDriver(driver: SqlDriver) {
         driver.close()
     }

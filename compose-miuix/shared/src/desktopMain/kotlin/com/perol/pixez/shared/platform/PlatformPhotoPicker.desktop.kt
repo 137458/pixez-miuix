@@ -1,7 +1,5 @@
 package com.perol.pixez.shared.platform
 
-import com.perol.pixez.shared.AppDependencies
-import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,20 +14,21 @@ import java.io.FilenameFilter
 /**
  * Desktop 平台图片文件选择器（用于 SauceNAO 以图搜图等场景）。
  * 采用系统原生 [FileDialog] 选择图片并读取字节内容。
+ *
+ * 对话框标题由调用方传入（平台层不读 ui 的本地化单例，架构审查 DN15），空白时用中性缺省标题。
  */
 actual class PlatformPhotoPicker {
     // 共享作用域：每次调用裸建 CoroutineScope 无法集中管理在途任务
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    actual fun pickPhoto(onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
+    actual fun pickPhoto(title: String, onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
         ioScope.launch {
             try {
                 var selectedFile: File? = null
-                val langNum = AppDependencies.orNull()?.settingsRepository?.languageNum ?: 0
-                val title = AppStrings.fromLanguageNum(langNum).menuSauceNao
+                val dialogTitle = title.ifBlank { PlatformDialogDefaults.PICK_PHOTO_TITLE }
                 EventQueue.invokeAndWait {
                     val activeFrame = Frame.getFrames().firstOrNull { it.isVisible }
-                    val dialog = FileDialog(activeFrame, title, FileDialog.LOAD).apply {
+                    val dialog = FileDialog(activeFrame, dialogTitle, FileDialog.LOAD).apply {
                         filenameFilter = FilenameFilter { _, name ->
                             val lower = name.lowercase()
                             IMAGE_EXTENSIONS.any { lower.endsWith(it) }

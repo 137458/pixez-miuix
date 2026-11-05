@@ -1,8 +1,10 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.testutil.StubEngine
+import com.perol.pixez.shared.testutil.stubEngine
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -15,9 +17,17 @@ import kotlin.test.assertTrue
 
 class SauceNaoRepositoryTest {
 
+    /** 固定 HTML 回包的桩客户端（buildUploadForm 用例不需要 JSON 协商）。 */
+    private fun htmlClient(body: String = ""): HttpClient = stubEngine(
+        responseBody = body,
+        responseContentType = ContentType.Text.Html,
+        installContentNegotiation = false,
+    ).client()
+
     @Test
     fun `search 发送 multipart 请求并成功返回解析结果`() = runBlocking {
-        val mockEngine = MockEngine { request ->
+        val engine = StubEngine()
+        val client = engine.client { request ->
             assertEquals("https://saucenao.com/search.php", request.url.toString())
             assertEquals("POST", request.method.value)
 
@@ -46,8 +56,6 @@ class SauceNaoRepositoryTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
-
-        val client = HttpClient(mockEngine)
         val repository = SauceNaoRepository(client)
         val results = repository.search(byteArrayOf(1, 2, 3, 4), "test.jpg")
 
@@ -60,15 +68,12 @@ class SauceNaoRepositoryTest {
 
     @Test
     fun `服务端返回异常状态码时抛出异常`() = runBlocking {
-        val mockEngine = MockEngine {
-            respond(
-                content = "Internal Server Error",
-                status = HttpStatusCode.InternalServerError,
-            )
-        }
+        val engine = stubEngine(
+            responseBody = "Internal Server Error",
+            responseStatus = HttpStatusCode.InternalServerError,
+        )
 
-        val client = HttpClient(mockEngine)
-        val repository = SauceNaoRepository(client)
+        val repository = SauceNaoRepository(engine.client())
 
         assertFailsWith<Exception> {
             repository.search(byteArrayOf(1, 2, 3), "error.jpg")
@@ -78,17 +83,7 @@ class SauceNaoRepositoryTest {
 
     @Test
     fun `search 请求体仅携带图片字段且不包含 API 参数`() {
-        val repository = SauceNaoRepository(
-            HttpClient(
-                MockEngine {
-                    respond(
-                        content = "<html></html>",
-                        status = HttpStatusCode.OK,
-                        headers = headersOf(HttpHeaders.ContentType, "text/html"),
-                    )
-                }
-            )
-        )
+        val repository = SauceNaoRepository(htmlClient("<html></html>"))
         val parts = repository.buildUploadForm(byteArrayOf(1, 2, 3, 4), "test.jpg")
 
         // 匿名请求携带 output_type/db 等 API 参数会被 SauceNAO 以 403 拒绝，
@@ -101,13 +96,7 @@ class SauceNaoRepositoryTest {
 
     @Test
     fun `buildUploadForm 剥离文件名中的路径分隔符仅保留安全 basename`() {
-        val repository = SauceNaoRepository(
-            HttpClient(
-                MockEngine {
-                    respond(content = "", status = HttpStatusCode.OK)
-                }
-            )
-        )
+        val repository = SauceNaoRepository(htmlClient())
 
         val unixPath = repository.buildUploadForm(byteArrayOf(1), "folder/sub/pic.png")
             .single().headers[HttpHeaders.ContentDisposition].orEmpty()
@@ -127,13 +116,7 @@ class SauceNaoRepositoryTest {
 
     @Test
     fun `buildUploadForm 去除引号与控制字符防止 Content-Disposition 注入`() {
-        val repository = SauceNaoRepository(
-            HttpClient(
-                MockEngine {
-                    respond(content = "", status = HttpStatusCode.OK)
-                }
-            )
-        )
+        val repository = SauceNaoRepository(htmlClient())
 
         val quoted = repository.buildUploadForm(byteArrayOf(1), "we\"ird.jpg")
             .single().headers[HttpHeaders.ContentDisposition].orEmpty()
@@ -147,13 +130,7 @@ class SauceNaoRepositoryTest {
 
     @Test
     fun `buildUploadForm 保留非 ASCII 文件名并给空值回退默认名`() {
-        val repository = SauceNaoRepository(
-            HttpClient(
-                MockEngine {
-                    respond(content = "", status = HttpStatusCode.OK)
-                }
-            )
-        )
+        val repository = SauceNaoRepository(htmlClient())
 
         val nonAscii = repository.buildUploadForm(byteArrayOf(1), "插画_タイトル.png")
             .single().headers[HttpHeaders.ContentDisposition].orEmpty()

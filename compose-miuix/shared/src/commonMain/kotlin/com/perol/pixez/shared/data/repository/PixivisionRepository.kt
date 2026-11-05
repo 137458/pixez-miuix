@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.model.SpotlightDetail
 import com.perol.pixez.shared.data.model.SpotlightResponse
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -29,8 +30,20 @@ class PixivisionRepository(
     private val apiClient: HttpClient,
     private val webClient: HttpClient,
     private val settingsRepository: SettingsRepository,
+    sessionCache: SessionCache? = null,
 ) {
+    init {
+        // 会话缓存接缝：账号身份变化时由 SessionCache 统一失效本仓库全部内存缓存。
+        sessionCache?.register { clearMemoryCache() }
+    }
+
+    /**
+     * 特辑列表缓存。键含语言维度：抓取路径按语言拼接（[getPixivisionLanguagePath]），
+     * 切换语言后同一分类必须是另一条快照，否则会命中旧语言内容（架构审查 DN17）。
+     */
     private val spotlightArticlesCache = ThreadSafeLruCache<String, SpotlightResponse>(20)
+
+    private fun spotlightCacheKey(category: String): String = "${getPixivisionLanguagePath()}|${category.lowercase()}"
 
     /**
      * 清空全部内存缓存：Spotlight 列表与详情 LRU 一并失效。
@@ -44,7 +57,8 @@ class PixivisionRepository(
     /**
      * 获取指定分类已缓存的 Spotlight 首页快照，若无缓存返回 null。
      */
-    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? = spotlightArticlesCache.get(category)
+    fun getCachedSpotlightArticles(category: String = "all"): SpotlightResponse? =
+        spotlightArticlesCache.get(spotlightCacheKey(category))
 
     /**
      * 获取 Spotlight 精选文章列表，支持按分类与分页加载。
@@ -62,7 +76,7 @@ class PixivisionRepository(
         forceRefresh: Boolean = false,
     ): SpotlightResponse {
         if (nextUrl == null && !forceRefresh) {
-            val cached = spotlightArticlesCache.get(category)
+            val cached = spotlightArticlesCache.get(spotlightCacheKey(category))
             if (cached != null) {
                 return cached
             }
@@ -87,17 +101,17 @@ class PixivisionRepository(
                         nextUrl = null,
                     )
                 }
-            } else if (nextUrl != null && nextUrl.isNotBlank()) {
-                apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
             } else {
-                apiClient.get("/v1/spotlight/articles") {
-                    parameter("filter", "for_android")
-                    parameter("category", category)
-                }.body()
+                apiClient.pagedRequest(nextUrl) {
+                    apiClient.get("/v1/spotlight/articles") {
+                        parameter("filter", "for_android")
+                        parameter("category", category)
+                    }.body()
+                }
             }
 
             if (nextUrl == null) {
-                spotlightArticlesCache.put(category, response)
+                spotlightArticlesCache.put(spotlightCacheKey(category), response)
             }
             response
         }

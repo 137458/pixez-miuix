@@ -24,8 +24,9 @@ import platform.Foundation.NSUserDomainMask
 actual class DriverFactory {
     actual fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver {
         val fileManager = NSFileManager.defaultManager
-        val dbDir = when (fileName) {
-            GLANCE_DB_NAME -> legacyAppGroupDbDir(fileManager) ?: legacyDocumentsDbDir(fileManager)
+        val dbDir = when {
+            isGlanceDatabase(fileName) ->
+                legacyAppGroupDbDir(fileManager) ?: legacyDocumentsDbDir(fileManager)
             else -> legacyDocumentsDbDir(fileManager)
         }
 
@@ -52,9 +53,28 @@ actual class DriverFactory {
         return NativeSqliteDriver(configuration)
     }
 
+    actual fun resolveDatabaseFileName(database: LocalDatabase): String {
+        val fileManager = NSFileManager.defaultManager
+        val dirs = candidateDbDirs(database, fileManager)
+        return database.candidateFileNames.firstOrNull { candidate ->
+            dirs.any { dir -> fileManager.fileExistsAtPath("$dir/$candidate") }
+        } ?: database.fileName
+    }
+
     actual fun closeDriver(driver: SqlDriver) {
         driver.close()
     }
+
+    /** 小组件库位于 App Group 的 DB/ 目录，其余库位于 Documents/databases。 */
+    private fun isGlanceDatabase(fileName: String): Boolean =
+        LocalDatabases.byFileName(fileName) === LocalDatabases.glanceIllustPersist
+
+    private fun candidateDbDirs(database: LocalDatabase, fileManager: NSFileManager): List<String> =
+        if (database === LocalDatabases.glanceIllustPersist) {
+            listOfNotNull(legacyAppGroupDbDir(fileManager), legacyDocumentsDbDir(fileManager))
+        } else {
+            listOf(legacyDocumentsDbDir(fileManager))
+        }
 
     private fun SqlDriver.hasLegacyTables(): Boolean {
         return executeQuery(
@@ -99,7 +119,6 @@ actual class DriverFactory {
     }
 
     companion object {
-        private const val GLANCE_DB_NAME = "glanceillustpersist.db"
         private const val APP_GROUP_ID = "group.pixez"
     }
 }

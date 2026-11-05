@@ -1,7 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.testutil.StubEngine
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.ContentType
@@ -22,25 +22,22 @@ class BoardRepositoryTest {
 
     private data class StubResponse(val status: HttpStatusCode, val body: String)
 
-    private val capturedUrls = mutableListOf<String>()
+    // 请求记录由共享夹具负责，本类只按 URL 路由回包。
+    private val engine = StubEngine()
+    private val capturedUrls: List<String> get() = engine.urls
     private val stubbed = LinkedHashMap<String, StubResponse>()
 
-    private fun mockClient(): HttpClient = HttpClient(MockEngine) {
-        engine {
-            addHandler { request ->
-                val url = request.url.toString()
-                capturedUrls.add(url)
-                val stub = stubbed[url]
-                when {
-                    stub == null -> respondError(HttpStatusCode.InternalServerError)
-                    stub.status == HttpStatusCode.OK -> respond(
-                        stub.body,
-                        HttpStatusCode.OK,
-                        headersOf("Content-Type", ContentType.Application.Json.toString()),
-                    )
-                    else -> respondError(stub.status)
-                }
-            }
+    private fun mockClient(): HttpClient = engine.client { request ->
+        val url = request.url.toString()
+        val stub = stubbed[url]
+        when {
+            stub == null -> respondError(HttpStatusCode.InternalServerError)
+            stub.status == HttpStatusCode.OK -> respond(
+                stub.body,
+                HttpStatusCode.OK,
+                headersOf("Content-Type", ContentType.Application.Json.toString()),
+            )
+            else -> respondError(stub.status)
         }
     }
 

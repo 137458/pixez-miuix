@@ -17,13 +17,6 @@ import app.cash.sqldelight.db.SqlDriver
  */
 object LegacyDatabaseMigrations {
 
-    /** 各数据库文件的表 → 旧 v1 缺失列清单（均为可空 TEXT）。 */
-    private val REQUIRED_COLUMNS_BY_TABLE: Map<String, Map<String, List<String>>> = mapOf(
-        "task.db" to mapOf("task" to listOf("medium")),
-        "illustpersist.db" to mapOf("illustpersist" to listOf("title", "user_name")),
-        "glanceillustpersist.db" to mapOf("glanceillustpersist" to listOf("original_url", "large_url")),
-    )
-
     /**
      * 平台无关的列迁移执行器：屏蔽 SqlDriver 与 Android SupportSQLiteDatabase 的 API 差异。
      */
@@ -38,10 +31,13 @@ object LegacyDatabaseMigrations {
 
     /**
      * 按 [fileName] 补齐旧库缺失列；结构已完整时为无操作，已存在的数据不受影响。
-     * 不在清单内的数据库文件不做任何处理。
+     * 不在登记表内的数据库文件不做任何处理。
+     *
+     * 缺列清单来自 [LocalDatabases]：主名与历史别名解析到同一登记项，
+     * 保证「实际打开的库文件名」与「补列清单」永不脱节（小组件库曾因此永不补列）。
      */
     fun migrateLegacyDatabase(fileName: String, migrator: LegacyColumnMigrator) {
-        REQUIRED_COLUMNS_BY_TABLE[fileName]?.forEach { (table, requiredColumns) ->
+        LocalDatabases.byFileName(fileName)?.legacyRequiredColumns?.forEach { (table, requiredColumns) ->
             val existing = migrator.tableColumns(table)
             requiredColumns
                 .filter { it !in existing }

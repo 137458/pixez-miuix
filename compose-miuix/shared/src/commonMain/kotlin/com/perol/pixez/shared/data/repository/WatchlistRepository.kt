@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.WatchlistMangaResponse
-import com.perol.pixez.shared.network.TrustedUrlPolicy
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
@@ -25,11 +24,7 @@ class WatchlistRepository(
      */
     suspend fun getMangaWatchlist(nextUrl: String? = null): WatchlistMangaResponse =
         networkCall("获取追更列表失败") {
-            if (nextUrl != null && nextUrl.isNotBlank()) {
-                apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-            } else {
-                apiClient.get("/v1/watchlist/manga").body()
-            }
+            apiClient.pagedRequest(nextUrl) { apiClient.get("/v1/watchlist/manga").body() }
         }
 
     /**

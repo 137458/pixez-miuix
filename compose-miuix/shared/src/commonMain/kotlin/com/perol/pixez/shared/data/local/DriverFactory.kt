@@ -12,6 +12,15 @@ expect class DriverFactory {
     fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver
 
     /**
+     * 解析该库在当前设备上应实际打开的库文件名。
+     *
+     * 按 [LocalDatabase.candidateFileNames] 顺序返回第一个已存在的文件（兼容旧 Flutter 库名与
+     * 过渡版本写出的别名），全部不存在时返回登记主名（新建库走主名）。持库方必须经此解析，
+     * 否则补列清单会与实开文件脱节。
+     */
+    fun resolveDatabaseFileName(database: LocalDatabase): String
+
+    /**
      * 关闭由 [createDriver] 创建的 [SqlDriver]，释放底层文件句柄与连接。
      * Repository / DatabaseHolder 层应在合适的生命周期点统一调用。
      */

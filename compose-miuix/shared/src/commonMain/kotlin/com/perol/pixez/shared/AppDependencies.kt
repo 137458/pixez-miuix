@@ -1,11 +1,12 @@
 package com.perol.pixez.shared
 
 import app.cash.sqldelight.db.SqlDriver
+import com.perol.pixez.shared.data.cache.IllustMemoryCache
+import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.local.DriverFactory
+import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
-import com.perol.pixez.shared.data.local.account.AccountDatabase
-import com.perol.pixez.shared.data.local.illustpersist.IllustPersistDatabase
-import com.perol.pixez.shared.data.local.novelpersist.NovelPersistDatabase
+import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -74,72 +75,37 @@ class AppDependencies(
     /**
      * 账号数据库驱动，复用旧 Flutter account.db。
      */
-    val accountDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            AccountDatabase.Schema,
-            "account.db",
-        )
-    }
+    val accountDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.account) }
 
     /**
      * 下载任务数据库驱动，复用旧 Flutter task.db。
      */
-    val taskDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            com.perol.pixez.shared.data.local.task.TaskDatabase.Schema,
-            "task.db",
-        )
-    }
+    val taskDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.task) }
 
     /**
      * 屏蔽作品数据库驱动，复用旧 Flutter banillustid.db。
      */
-    val banDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            com.perol.pixez.shared.data.local.banillustid.BanIllustIdDatabase.Schema,
-            "banillustid.db",
-        )
-    }
+    val banDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banIllustId) }
 
     /**
      * 屏蔽画师数据库驱动，复用旧 Flutter banuserid.db。
      */
-    val banUserDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            com.perol.pixez.shared.data.local.banuserid.BanUserIdDatabase.Schema,
-            "banuserid.db",
-        )
-    }
+    val banUserDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banUserId) }
 
     /**
      * 屏蔽标签数据库驱动，复用旧 Flutter bantag.db。
      */
-    val banTagDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            com.perol.pixez.shared.data.local.bantag.BanTagDatabase.Schema,
-            "bantag.db",
-        )
-    }
+    val banTagDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banTag) }
 
     /**
      * 插画浏览历史数据库驱动，复用旧 Flutter illustpersist.db。
      */
-    val illustPersistDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            IllustPersistDatabase.Schema,
-            "illustpersist.db",
-        )
-    }
+    val illustPersistDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.illustPersist) }
 
     /**
      * 小说浏览历史数据库驱动，复用旧 Flutter Novelpersist.db。
      */
-    val novelPersistDriver: SqlDriver by lazy {
-        driverFactory.createDriver(
-            NovelPersistDatabase.Schema,
-            "Novelpersist.db",
-        )
-    }
+    val novelPersistDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.novelPersist) }
 
     /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
@@ -206,14 +172,23 @@ class AppDependencies(
         }
     }
 
+    /**
+     * 会话作用域缓存失效接缝：各缓存模块构造时自登记，
+     * 账号身份变化由 [AccountRepository] 调一次 invalidateAll（架构审查 DN4）。
+     */
+    private val sessionCache = SessionCache()
+
+    /**
+     * 作品内存缓存模块：3 个仓库共享同一实例，容量与清理规则由模块独占（架构审查 DN3）。
+     */
+    private val illustCache = IllustMemoryCache()
+
     val accountRepository: AccountRepository by lazy {
         AccountRepository(
             oAuthClient = httpClient.oAuthClient,
             tokenStorage = tokenStorage,
             accountClient = httpClient.accountClient,
-            // 高-5：账号身份变化（登出/切换账号）时清理作品内存缓存，防止跨账号读到旧缓存数据。
-            illustRepository = illustRepository,
-            pixivisionRepository = pixivisionRepository,
+            sessionCache = sessionCache,
         )
     }
 
@@ -222,6 +197,8 @@ class AppDependencies(
             apiClient = httpClient.apiClient,
             downloadClient = httpClient.downloadClient,
             settingsRepository = settingsRepository,
+            illustCache = illustCache,
+            sessionCache = sessionCache,
         )
     }
 
@@ -234,11 +211,12 @@ class AppDependencies(
             apiClient = httpClient.apiClient,
             webClient = webClient,
             settingsRepository = settingsRepository,
+            sessionCache = sessionCache,
         )
     }
 
     val searchRepository: SearchRepository by lazy {
-        SearchRepository(httpClient.apiClient, illustRepository)
+        SearchRepository(httpClient.apiClient, illustCache)
     }
 
     val sauceNaoRepository: SauceNaoRepository by lazy {
@@ -269,7 +247,7 @@ class AppDependencies(
     }
 
     val userRepository: UserRepository by lazy {
-        UserRepository(httpClient.apiClient, illustRepository)
+        UserRepository(httpClient.apiClient, illustCache)
     }
 
     val bookmarkRepository: BookmarkRepository by lazy {

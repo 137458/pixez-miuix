@@ -2,8 +2,8 @@ package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.SauceNaoParser
 import com.perol.pixez.shared.data.model.SauceNaoResult
+import com.perol.pixez.shared.network.SauceNaoEndpoints
 import com.perol.pixez.shared.platform.FileNamePolicy
-import com.perol.pixez.shared.ui.AppConstants
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
@@ -49,7 +49,7 @@ class SauceNaoRepository(
         fileName: String? = null,
     ): List<SauceNaoResult> {
         val response = client.submitFormWithBinaryData(
-            url = AppConstants.Urls.SAUCE_NAO_SEARCH,
+            url = SauceNaoEndpoints.SEARCH,
             formData = buildUploadForm(imageBytes, fileName),
         )
 

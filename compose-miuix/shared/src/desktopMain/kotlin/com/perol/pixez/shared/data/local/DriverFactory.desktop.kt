@@ -71,6 +71,11 @@ actual class DriverFactory {
         return driver
     }
 
+    actual fun resolveDatabaseFileName(database: LocalDatabase): String {
+        val dbDir = File(legacyDatabaseRoot(), "databases")
+        return database.candidateFileNames.firstOrNull { File(dbDir, it).exists() } ?: database.fileName
+    }
+
     actual fun closeDriver(driver: SqlDriver) {
         driver.close()
     }

@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
-import com.perol.pixez.shared.network.TrustedUrlPolicy
-
+import com.perol.pixez.shared.data.cache.IllustMemoryCache
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.Search
 import com.perol.pixez.shared.data.model.TrendTag
@@ -15,10 +14,12 @@ import io.ktor.client.request.parameter
 
 /**
  * 搜索仓库：热门标签与插画搜索。
+ *
+ * @param illustCache 作品内存缓存模块（必传，架构审查 DN3）：替代原先可空的 IllustRepository 缓存句柄。
  */
 class SearchRepository(
     private val apiClient: HttpClient,
-    private val illustRepository: IllustRepository? = null,
+    private val illustCache: IllustMemoryCache,
 ) {
     /**
      * 获取热门标签列表。
@@ -42,9 +43,7 @@ class SearchRepository(
         endDate: String? = null,
         nextUrl: String? = null,
     ): Search = networkCall("搜索插画失败 word=$word") {
-        val response: Search = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        val response: Search = apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/search/illust") {
                 parameter("filter", "for_android")
                 parameter("merge_plain_keyword_results", "true")
@@ -56,7 +55,7 @@ class SearchRepository(
                 endDate?.let { parameter("end_date", it.toPixivDateFormat()) }
             }.body()
         }
-        illustRepository?.cacheIllusts(response.illusts)
+        illustCache.putAll(response.illusts)
         response
     }
 
@@ -86,9 +85,7 @@ class SearchRepository(
         word: String,
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("搜索画师失败 word=$word") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/search/user") {
                 parameter("filter", "for_android")
                 parameter("word", word)

@@ -11,8 +11,6 @@ private const val DEFAULT_PASSWORD_PLACEHOLDER = "no more"
  * 实现负责加解密、缓存与持久化。
  */
 interface AuthTokenStorage {
-    fun getCachedAccountFast(): Account?
-
     suspend fun getCurrentAccount(): Account?
 
     suspend fun saveAccount(
@@ -21,19 +19,17 @@ interface AuthTokenStorage {
         deviceToken: String = "",
     )
 
-    suspend fun saveAccount(account: Account)
-
     suspend fun getAllAccounts(): List<Account>
 
     suspend fun switchAccount(userId: String): Account
 
     suspend fun deleteAccount(userId: String)
 
-    suspend fun updateTokens(accessToken: String, refreshToken: String)
-
     /**
      * 按 [userId] 指定账号更新 access_token / refresh_token（token 刷新专用）。
-     * 刷新结果只写回发起刷新的账号，防止刷新网络往返期间切换活跃账号导致的跨账号凭证污染。
+     *
+     * 不变量：token 刷新只能经本方法回写——刷新结果只写回发起刷新的账号，
+     * 防止刷新网络往返期间切换活跃账号导致的跨账号凭证污染（CONTEXT.md §2）。
      */
     suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String)
 

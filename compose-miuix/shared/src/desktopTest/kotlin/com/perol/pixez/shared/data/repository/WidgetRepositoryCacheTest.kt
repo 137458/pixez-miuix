@@ -2,6 +2,7 @@ package com.perol.pixez.shared.data.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.DriverFactory
+import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.russhwolf.settings.PreferencesSettings
@@ -46,7 +47,7 @@ class WidgetRepositoryCacheTest {
     }
 
     private fun openDb(): JdbcSqliteDriver =
-        JdbcSqliteDriver("jdbc:sqlite:${File(File(testRoot, "databases"), "glance_illust_persist.db").absolutePath}")
+        JdbcSqliteDriver("jdbc:sqlite:${File(File(testRoot, "databases"), LocalDatabases.glanceIllustPersist.fileName).absolutePath}")
 
     private fun insertRow(db: JdbcSqliteDriver, id: Long?, illustId: Long, ctype: String, ctime: Long) {
         GlanceIllustPersistDatabase(db).glanceIllustPersistQueries.insertOrReplace(

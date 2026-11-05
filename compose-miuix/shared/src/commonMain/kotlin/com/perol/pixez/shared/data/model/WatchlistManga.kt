@@ -44,10 +44,5 @@ data class MangaSeriesProfileImageUrls(
 /**
  * 基于系列 ID 幂等合并列表，过滤重复系列卡片，避免刷新与触底加载竞态出现重复项。
  */
-fun List<MangaSeries>.appendDistinct(newItems: List<MangaSeries>): List<MangaSeries> {
-    if (newItems.isEmpty()) return this
-    if (this.isEmpty()) return newItems
-    val existingIds = mapTo(HashSet(size + newItems.size)) { it.id }
-    val uniqueNew = newItems.filter { existingIds.add(it.id) }
-    return this + uniqueNew
-}
+fun List<MangaSeries>.appendDistinct(newItems: List<MangaSeries>): List<MangaSeries> =
+    appendDistinctBy(newItems) { it.id }

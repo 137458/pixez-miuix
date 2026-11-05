@@ -113,8 +113,6 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
     /** 按账号行读取凭证字段（测试断言用，绕过 activeUserId 语义）。 */
     fun rowOf(userId: String): AccountRow? = accounts[userId]
 
-    override fun getCachedAccountFast(): AccountRow? = accounts[activeUserId]
-
     override suspend fun getCurrentAccount(): AccountRow? {
         onGetCurrentAccount?.invoke()
         return accounts[activeUserId]
@@ -123,11 +121,6 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
     override suspend fun saveAccount(account: AccountResponse, password: String, deviceToken: String) {
         accounts[account.user.id] = rowFixture(account.user.id, account.accessToken, account.refreshToken)
         activeUserId = account.user.id
-    }
-
-    override suspend fun saveAccount(account: AccountRow) {
-        accounts[account.user_id] = account
-        activeUserId = account.user_id
     }
 
     override suspend fun getAllAccounts(): List<AccountRow> = accounts.values.toList()
@@ -141,11 +134,6 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
     override suspend fun deleteAccount(userId: String) {
         accounts.remove(userId)
         if (activeUserId == userId) activeUserId = null
-    }
-
-    override suspend fun updateTokens(accessToken: String, refreshToken: String) {
-        val current = accounts[activeUserId] ?: throw IllegalStateException("没有登录账号，无法更新 token")
-        accounts[activeUserId!!] = current.copy(access_token = accessToken, refresh_token = refreshToken)
     }
 
     override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {

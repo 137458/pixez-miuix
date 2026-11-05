@@ -1,14 +1,9 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.testutil.CapturedRequest
+import com.perol.pixez.shared.testutil.StubEngine
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -23,48 +18,16 @@ import kotlin.test.fail
  */
 class NovelRepositoryTest {
 
-    private data class CapturedRequest(
-        val url: String,
-        val host: String,
-        val path: String,
-        val query: Map<String, String>,
-    )
-
-    private val captured = mutableListOf<CapturedRequest>()
-    private var responseBody: String = "{}"
-
-    private val client: HttpClient = HttpClient(MockEngine) {
-        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                    coerceInputValues = true
-                    isLenient = true
-                },
-            )
+    // 请求快照（含 host/url）与回包统一由共享夹具维护，本类只保留既有断言所需的别名。
+    private val engine = StubEngine()
+    private val captured: List<CapturedRequest> get() = engine.requests
+    private var responseBody: String
+        get() = engine.responseBody
+        set(value) {
+            engine.responseBody = value
         }
-        engine {
-            addHandler { request ->
-                val query = LinkedHashMap<String, String>()
-                for (name in request.url.parameters.names()) {
-                    query[name] = request.url.parameters[name] ?: ""
-                }
-                captured.add(
-                    CapturedRequest(
-                        url = request.url.toString(),
-                        host = request.url.host,
-                        path = request.url.encodedPath,
-                        query = query,
-                    ),
-                )
-                respond(
-                    responseBody,
-                    HttpStatusCode.OK,
-                    headersOf("Content-Type", ContentType.Application.Json.toString()),
-                )
-            }
-        }
-    }
+
+    private val client: HttpClient = engine.client()
 
     private val repository = NovelRepository(client)
 
@@ -279,15 +242,16 @@ class NovelRepositoryTest {
         responseBody = """{"novels":[],"next_url":null}"""
 
         val firstPage = repository.getUserNovels(userId = 98765L)
-        val firstReq = captured.removeAt(0)
+        val firstReq = captured.single()
         assertEquals("/v1/user/novels", firstReq.path)
         assertEquals("98765", firstReq.query["user_id"])
         assertEquals("for_android", firstReq.query["filter"])
         assertEquals(0, firstPage.novels.size)
 
+        engine.clear()
         val nextUrl = "https://app-api.pixiv.net/v1/user/novels?filter=for_android&offset=30&user_id=98765"
         val nextPage = repository.getUserNovels(userId = 98765L, nextUrl = nextUrl)
-        val nextReq = captured.removeAt(0)
+        val nextReq = captured.single()
         assertEquals("app-api.pixiv.net", nextReq.host)
         assertEquals("/v1/user/novels", nextReq.path)
         assertEquals("30", nextReq.query["offset"])

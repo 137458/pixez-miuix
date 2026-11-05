@@ -5,7 +5,6 @@ import com.perol.pixez.shared.data.model.NovelRecomResponse
 import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.data.model.NovelWebResponse
 import com.perol.pixez.shared.network.HttpClientDefaults
-import com.perol.pixez.shared.network.TrustedUrlPolicy
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -82,9 +81,7 @@ class NovelRepository(
         includeRanking: Boolean = true,
         nextUrl: String? = null,
     ): NovelRecomResponse = networkCall("获取推荐小说失败") {
-        if (!nextUrl.isNullOrBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/novel/recommended") {
                 parameter("filter", "for_android")
                 parameter("include_privacy_policy", "true")
@@ -108,9 +105,7 @@ class NovelRepository(
         word: String,
         nextUrl: String? = null,
     ): NovelRecomResponse = networkCall("搜索小说失败 word=$word") {
-        if (!nextUrl.isNullOrBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/search/novel") {
                 parameter("word", word)
                 parameter("filter", "for_android")
@@ -126,9 +121,7 @@ class NovelRepository(
         mode: String = NovelRankingMode.Day.value,
         nextUrl: String? = null,
     ): NovelRecomResponse = networkCall("获取小说排行榜失败 mode=$mode") {
-        if (!nextUrl.isNullOrBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/novel/ranking") {
                 parameter("filter", "for_android")
                 parameter("mode", mode)
@@ -143,9 +136,7 @@ class NovelRepository(
         userId: Long,
         nextUrl: String? = null,
     ): NovelRecomResponse = networkCall("获取用户小说失败 userId=$userId") {
-        if (!nextUrl.isNullOrBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/novels") {
                 parameter("user_id", userId.toString())
                 parameter("filter", "for_android")

@@ -10,7 +10,7 @@ import io.github.aakira.napier.Napier
  * 在低于 Android 13 的设备上优雅降级至 ACTION_GET_CONTENT 开放选择沙盒，全程零存储权限声明。
  */
 actual class PlatformPhotoPicker {
-    actual fun pickPhoto(onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
+    actual fun pickPhoto(title: String, onResult: (byteArray: ByteArray?, fileName: String?) -> Unit) {
         val context = BrowserLauncherContext.applicationContext ?: run {
             Napier.w("PlatformPhotoPicker failed: applicationContext is null", tag = "PhotoPicker")
             onResult(null, null)

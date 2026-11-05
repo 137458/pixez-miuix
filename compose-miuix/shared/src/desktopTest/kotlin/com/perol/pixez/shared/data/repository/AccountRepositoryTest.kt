@@ -5,6 +5,7 @@ import com.perol.pixez.shared.data.model.OAuthProfileImageUrls
 import com.perol.pixez.shared.data.model.OAuthUser
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.local.account.Account as AccountRow
+import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.russhwolf.settings.PreferencesSettings
@@ -94,7 +95,6 @@ class AccountRepositoryTest {
             is_mail_authorized = 0,
         )
 
-        override fun getCachedAccountFast(): AccountRow? = rows.lastOrNull()
         override suspend fun getCurrentAccount(): AccountRow? =
             rows.lastOrNull { it.user_id == activeUserId } ?: rows.lastOrNull()
 
@@ -102,10 +102,6 @@ class AccountRepositoryTest {
             savedResponses.add(account)
             rows.add(row(account.user.id, accessToken = account.accessToken, refreshToken = account.refreshToken))
             if (activeUserId == null) activeUserId = account.user.id
-        }
-
-        override suspend fun saveAccount(account: AccountRow) {
-            rows.add(account)
         }
 
         override suspend fun getAllAccounts(): List<AccountRow> = rows.toList()
@@ -116,10 +112,6 @@ class AccountRepositoryTest {
 
         override suspend fun deleteAccount(userId: String) {
             rows.removeAll { it.user_id == userId }
-        }
-
-        override suspend fun updateTokens(accessToken: String, refreshToken: String) {
-            updateTokensCalls++
         }
 
         override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {
@@ -175,9 +167,11 @@ class AccountRepositoryTest {
         }
         val settingsNode = Preferences.userRoot().node("com/perol/pixez/test/accountrepo/cache")
         settingsNode.clear()
+        val sessionCache = SessionCache()
         illustRepository = IllustRepository(
             apiClient = HttpClient(),
             settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
+            sessionCache = sessionCache,
         )
         // 中-7：Spotlight 特辑缓存随拆分迁至 PixivisionRepository，
         // 用 MockEngine 打桩网页抓取以验证登出/切换账号时的缓存失效。
@@ -196,8 +190,9 @@ class AccountRepositoryTest {
             apiClient = HttpClient(),
             webClient = pixivisionWebClient,
             settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
+            sessionCache = sessionCache,
         )
-        repository = AccountRepository(oauth, storage, accountClient, illustRepository, pixivisionRepository)
+        repository = AccountRepository(oauth, storage, accountClient, sessionCache)
     }
 
     private var capturedForm: Map<String, String> = emptyMap()

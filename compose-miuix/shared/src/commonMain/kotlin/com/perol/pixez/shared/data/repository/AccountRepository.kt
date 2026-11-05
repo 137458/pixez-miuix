@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
+import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.model.Account as OAuthAccount
 import com.perol.pixez.shared.data.model.AccountEditResponse
@@ -25,8 +26,7 @@ class AccountRepository(
     private val oAuthClient: OAuthClient,
     private val tokenStorage: AuthTokenStorage,
     private val accountClient: HttpClient,
-    private val illustRepository: IllustRepository,
-    private val pixivisionRepository: PixivisionRepository,
+    private val sessionCache: SessionCache,
 ) {
     private val _loginEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val loginEventFlow: SharedFlow<Unit> = _loginEventFlow.asSharedFlow()
@@ -127,10 +127,9 @@ class AccountRepository(
      */
     suspend fun switchAccount(userId: String) {
         tokenStorage.switchAccount(userId)
-        // 高-5 缓存清理缺失修复：账号身份变化必须失效作品内存缓存（含按账号状态缓存的收藏标记），
-        // 防止新账号读到旧账号的缓存数据；Spotlight 缓存随中-7 拆分同步失效。
-        illustRepository.clearMemoryCache()
-        pixivisionRepository.clearMemoryCache()
+        // 账号身份变化必须失效全部账号相关缓存（含按账号状态缓存的收藏标记），
+        // 清单由各缓存模块在 SessionCache 自登记，新增缓存自动被清理（架构审查 DN4）。
+        sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
     }
 
@@ -147,10 +146,8 @@ class AccountRepository(
      */
     suspend fun logout() {
         tokenStorage.clear()
-        // 高-5 缓存清理缺失修复：登出同时失效作品内存缓存（原因同 switchAccount）；
-        // Spotlight 缓存随中-7 拆分同步失效。
-        illustRepository.clearMemoryCache()
-        pixivisionRepository.clearMemoryCache()
+        // 登出同 switchAccount：一次失效全部已登记缓存。
+        sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
     }
 

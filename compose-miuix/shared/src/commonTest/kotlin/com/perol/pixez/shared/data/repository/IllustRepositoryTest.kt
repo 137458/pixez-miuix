@@ -1,20 +1,16 @@
 package com.perol.pixez.shared.data.repository
 
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.testutil.CapturedRequest
+import com.perol.pixez.shared.testutil.StubEngine
+import com.perol.pixez.shared.ui.AppConstants
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.forms.FormDataContent
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.encodedPath
 import io.ktor.http.headersOf
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import okio.FileSystem
 import org.junit.After
 import org.junit.Before
@@ -33,17 +29,19 @@ import kotlin.test.fail
  */
 class IllustRepositoryTest {
 
-    private data class CapturedRequest(
-        val method: String,
-        val path: String,
-        val query: Map<String, String>,
-        val headers: Map<String, String>,
-        val formParams: Map<String, String>,
+    // API 与下载两条链路各用一份共享夹具：API 走固定 JSON 回包，下载走自定义字节回包。
+    private val apiEngine = StubEngine()
+    private val downloadEngine = StubEngine(
+        responseContentType = ContentType.Application.OctetStream,
+        installContentNegotiation = false,
     )
-
-    private val apiCaptured = mutableListOf<CapturedRequest>()
-    private val downloadCaptured = mutableListOf<CapturedRequest>()
-    private var apiResponseBody: String = "{}"
+    private val apiCaptured: List<CapturedRequest> get() = apiEngine.requests
+    private val downloadCaptured: List<CapturedRequest> get() = downloadEngine.requests
+    private var apiResponseBody: String
+        get() = apiEngine.responseBody
+        set(value) {
+            apiEngine.responseBody = value
+        }
     private var downloadBody: ByteArray = ByteArray(0)
     private var downloadHandlerFailure: Throwable? = null
     private var downloadDeclaredLength: Long? = null
@@ -54,8 +52,8 @@ class IllustRepositoryTest {
 
     @Before
     fun setUp() {
-        client = mockClient(apiCaptured, isDownload = false)
-        downloadClient = mockClient(downloadCaptured, isDownload = true)
+        client = mockClient(isDownload = false)
+        downloadClient = mockClient(isDownload = true)
         repository = IllustRepository(
             apiClient = client,
             downloadClient = downloadClient,
@@ -63,62 +61,25 @@ class IllustRepositoryTest {
         )
     }
 
-    private fun mockClient(
-        sink: MutableList<CapturedRequest>,
-        isDownload: Boolean,
-    ): HttpClient = HttpClient(MockEngine) {
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                    coerceInputValues = true
-                    isLenient = true
-                },
-            )
-        }
-        engine {
-            addHandler { request ->
-                if (isDownload && downloadHandlerFailure != null) {
-                    throw downloadHandlerFailure!!
+    private fun mockClient(isDownload: Boolean): HttpClient =
+        if (isDownload) {
+            downloadEngine.client {
+                downloadHandlerFailure?.let { throw it }
+                val responseHeaders = mutableListOf<Pair<String, List<String>>>(
+                    HttpHeaders.ContentType to listOf(ContentType.Application.OctetStream.toString()),
+                )
+                downloadDeclaredLength?.let { length ->
+                    responseHeaders.add(HttpHeaders.ContentLength to listOf(length.toString()))
                 }
-                val query = LinkedHashMap<String, String>()
-                for (name in request.url.parameters.names()) {
-                    query[name] = request.url.parameters[name] ?: ""
-                }
-                val headers = LinkedHashMap<String, String>()
-                for (name in request.headers.names()) {
-                    headers[name] = request.headers.getAll(name)?.joinToString(",") ?: ""
-                }
-                val formParams = LinkedHashMap<String, String>()
-                val formData = request.body as? FormDataContent
-                if (formData != null) {
-                    for (entry in formData.formData.entries()) {
-                        formParams[entry.key] = entry.value.joinToString(",")
-                    }
-                }
-                sink.add(CapturedRequest(request.method.value, request.url.encodedPath, query, headers, formParams))
-                if (isDownload) {
-                    val responseHeaders = mutableListOf<Pair<String, List<String>>>(
-                        "Content-Type" to listOf(ContentType.Application.OctetStream.toString()),
-                    )
-                    downloadDeclaredLength?.let { length ->
-                        responseHeaders.add(HttpHeaders.ContentLength to listOf(length.toString()))
-                    }
-                    respond(
-                        downloadBody,
-                        HttpStatusCode.OK,
-                        headersOf(*responseHeaders.toTypedArray()),
-                    )
-                } else {
-                    respond(
-                        apiResponseBody,
-                        HttpStatusCode.OK,
-                        headersOf("Content-Type", ContentType.Application.Json.toString()),
-                    )
-                }
+                respond(
+                    downloadBody,
+                    HttpStatusCode.OK,
+                    headersOf(*responseHeaders.toTypedArray()),
+                )
             }
+        } else {
+            apiEngine.client()
         }
-    }
 
     @After
     fun tearDown() {

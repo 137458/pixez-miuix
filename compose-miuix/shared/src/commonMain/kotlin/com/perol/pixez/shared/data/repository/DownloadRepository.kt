@@ -168,7 +168,7 @@ class DownloadRepository(
         if (total <= 0) return@coroutineScope emptyList()
         com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
         notifier.notifyProgress(illust.id, illust.title, 0, total)
-        val semaphore = Semaphore(maxConcurrency.coerceIn(1, 6))
+        val semaphore = Semaphore(coerceParallelTasks(maxConcurrency))
         val progressMutex = Mutex()
         var completedCount = 0
 
@@ -497,5 +497,19 @@ class DownloadRepository(
 
         /** 单次流式下载的最大字节数（256MB），与更新器 MAX_UPDATE_BYTES 对齐。 */
         const val DEFAULT_MAX_DOWNLOAD_BYTES: Long = 256L * 1024 * 1024
+
+        /**
+         * 并发下载上限（含）：设置项档位与运行时夹取的唯一权威（架构审查 R5）。
+         *
+         * 历史上该上限有三份互不一致的声明（AppConstants.MAX_TASK_OPTIONS=1/2/3/5/8/10、
+         * 设置页本地列表 1..6、仓库 coerceIn(1,6)），此处收敛为单一来源。
+         */
+        const val MAX_PARALLEL_TASKS: Int = 6
+
+        /** 并发下载可选档位，设置页应从本列表派生选项。 */
+        val PARALLEL_TASK_OPTIONS: List<Int> = (1..MAX_PARALLEL_TASKS).toList()
+
+        /** 把任意并发设置值夹取到合法区间 [1, MAX_PARALLEL_TASKS]。 */
+        fun coerceParallelTasks(value: Int): Int = value.coerceIn(1, MAX_PARALLEL_TASKS)
     }
 }

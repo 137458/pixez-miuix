@@ -15,3 +15,13 @@ object PixivHosts {
 
     const val PIXIV_ARTWORK_PREFIX = "https://www.pixiv.net/artworks/"
 }
+
+/**
+ * 第三方直连接口地址（非 Pixiv 域）。
+ *
+ * 与 [PixivHosts] 同处 network 层：data 层直引此处，不再反向 import ui.AppConstants（架构审查 DN15）。
+ */
+object SauceNaoEndpoints {
+    /** SauceNAO 以图搜图表单提交地址。 */
+    const val SEARCH = "https://saucenao.com/search.php"
+}

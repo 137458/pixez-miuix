@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
-import com.perol.pixez.shared.network.TrustedUrlPolicy
-
+import com.perol.pixez.shared.data.cache.IllustMemoryCache
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.ShowAIResponse
 import com.perol.pixez.shared.data.model.UserDetail
@@ -20,10 +19,13 @@ import io.ktor.http.Parameters
 
 /**
  * 用户仓库：用户资料与作品列表。
+ *
+ * @param illustCache 作品内存缓存模块（必传，架构审查 DN3）：历史上以可空 [IllustRepository] 传入，
+ *   忘传即静默不写缓存；改为必传依赖后缺失在编译期暴露。
  */
 class UserRepository(
     private val apiClient: HttpClient,
-    private val illustRepository: IllustRepository? = null,
+    private val illustCache: IllustMemoryCache,
 ) {
     /**
      * 获取用户详情。
@@ -48,16 +50,14 @@ class UserRepository(
         type: String = "illust",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户作品失败 userId=$userId type=$type") {
-        val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        val response: UserIllusts = apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/illusts") {
                 parameter("filter", "for_android")
                 parameter("user_id", userId)
                 parameter("type", type)
             }.body()
         }
-        illustRepository?.cacheIllusts(response.illusts)
+        illustCache.putAll(response.illusts)
         response
     }
 
@@ -73,16 +73,14 @@ class UserRepository(
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserIllusts = networkCall("获取用户收藏失败 userId=$userId restrict=$restrict") {
-        val response: UserIllusts = if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        val response: UserIllusts = apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/bookmarks/illust") {
                 parameter("filter", "for_android")
                 parameter("user_id", userId)
                 parameter("restrict", restrict)
             }.body()
         }
-        illustRepository?.cacheIllusts(response.illusts)
+        illustCache.putAll(response.illusts)
         response
     }
 
@@ -98,9 +96,7 @@ class UserRepository(
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户关注列表失败 userId=$userId restrict=$restrict") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/following") {
                 parameter("filter", "for_android")
                 parameter("user_id", userId)
@@ -121,9 +117,7 @@ class UserRepository(
         restrict: String = "public",
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取用户粉丝列表失败 userId=$userId restrict=$restrict") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/follower") {
                 parameter("filter", "for_android")
                 parameter("user_id", userId)
@@ -147,7 +141,7 @@ class UserRepository(
      * @param nextUrl 上一页响应中的 `next_url`。
      */
     suspend fun getRecommendedUsers(nextUrl: String): UserPreviewsResponse = networkCall("加载更多推荐用户失败") {
-        apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
+        apiClient.pagedGet(nextUrl)
     }
 
     /**
@@ -160,9 +154,7 @@ class UserRepository(
         seedUserId: Long,
         nextUrl: String? = null,
     ): UserPreviewsResponse = networkCall("获取相关用户失败 seedUserId=$seedUserId") {
-        if (nextUrl != null && nextUrl.isNotBlank()) {
-            apiClient.get(TrustedUrlPolicy.apiPaginationUrl(nextUrl)).body()
-        } else {
+        apiClient.pagedRequest(nextUrl) {
             apiClient.get("/v1/user/related") {
                 parameter("filter", "for_android")
                 parameter("seed_user_id", seedUserId)

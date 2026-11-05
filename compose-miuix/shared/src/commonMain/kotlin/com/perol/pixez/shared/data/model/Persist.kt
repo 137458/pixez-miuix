@@ -21,13 +21,6 @@ data class AccountPersist(
 )
 
 @Serializable
-data class BanCommentPersist(
-    @SerialName("comment_id") val commentId: String,
-    val name: String,
-    val id: Int? = null,
-)
-
-@Serializable
 data class BanIllustIdPersist(
     @SerialName("illust_id") val illustId: String,
     val name: String,
@@ -49,20 +42,6 @@ data class BanUserIdPersist(
 )
 
 @Serializable
-data class GlanceIllustPersist(
-    val id: Int? = null,
-    @SerialName("illust_id") val illustId: Long,
-    @SerialName("user_id") val userId: Long,
-    @SerialName("picture_url") val pictureUrl: String,
-    val title: String? = null,
-    @SerialName("user_name") val userName: String? = null,
-    val type: String,
-    @SerialName("original_url") val originalUrl: String? = null,
-    @SerialName("large_url") val largeUrl: String? = null,
-    val time: Int,
-)
-
-@Serializable
 data class IllustPersist(
     val id: Int? = null,
     @SerialName("illust_id") val illustId: Long,
@@ -71,14 +50,6 @@ data class IllustPersist(
     @SerialName("user_name") val userName: String? = null,
     val title: String? = null,
     val time: Int,
-)
-
-@Serializable
-data class KVPair(
-    val key: String,
-    val value: String,
-    @SerialName("expire_time") val expireTime: Int,
-    @SerialName("date_time") val dateTime: Int,
 )
 
 @Serializable
@@ -92,30 +63,4 @@ data class NovelPersist(
     @SerialName("user_name") val userName: String,
 )
 
-@Serializable
-data class NovelViewerPersist(
-    val id: Int? = null,
-    @SerialName("novel_id") val novelId: Long,
-    val offset: Double,
-)
 
-@Serializable
-data class TaskPersist(
-    val id: Int? = null,
-    @SerialName("user_name") val userName: String,
-    @SerialName("file_name") val fileName: String,
-    val title: String,
-    val url: String,
-    val medium: String? = null,
-    @SerialName("user_id") val userId: Long,
-    @SerialName("illust_id") val illustId: Long,
-    // 旧 Flutter task 表中的 sanity_level 列为 INTEGER（可空），保持可空以避免读取旧数据时崩溃。
-    @SerialName("sanity_level") val sanityLevel: Int? = null,
-    val status: Int,
-)
-
-@Serializable
-data class TagExportData(
-    @SerialName("tagHisotry") val tagHistory: List<TagPersist>? = null,
-    val bookTags: List<String>? = null,
-)

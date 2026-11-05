@@ -1,8 +1,9 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.local.DriverFactory
+import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
-import com.perol.pixez.shared.data.local.account.AccountDatabase
+import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
 import com.perol.pixez.shared.data.local.glanceillustpersist.Glanceillustpersist
 import com.perol.pixez.shared.data.model.Illust
@@ -25,7 +26,8 @@ class WidgetRepository(
     private val driverFactory: DriverFactory,
     private val settingsRepository: SettingsRepository,
 ) {
-    private val glanceDriver = driverFactory.createDriver(GlanceIllustPersistDatabase.Schema, "glance_illust_persist.db")
+    // 库名/schema/旧库补列一律取自登记表：主名与旧 Flutter 库一致，避免自造库名读不到老数据。
+    private val glanceDriver = driverFactory.createDriver(LocalDatabases.glanceIllustPersist)
     private val glanceDatabase = GlanceIllustPersistDatabase(glanceDriver)
 
     /**
@@ -87,7 +89,7 @@ class WidgetRepository(
     }
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {
-        val accountDriver = driverFactory.createDriver(AccountDatabase.Schema, "account.db")
+        val accountDriver = driverFactory.createDriver(LocalDatabases.account)
         val tokenStorage = SqlDelightAuthTokenStorage(
             accountDriver,
             // 小组件进程经同一设置桥读取活跃账号指针：follow 流需鉴权，须以当前登录账号身份请求；
