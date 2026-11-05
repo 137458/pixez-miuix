@@ -734,6 +734,37 @@ interface AppStrings {
  * 简体中文 (zh-CN)
  */
 object ZhCnStrings : AppStrings {
+    // 显式实现本语言全部用户页 / 动图 / 小说 / 账号词条，不再依赖接口中文默认值（IB-2 全量覆盖守护）。
+    override val ugoiraLoadingMetadata = "正在获取动图元数据..."
+    override val ugoiraDownloading = "正在下载动图帧资源..."
+    override val ugoiraExtracting = "正在解压动图数据..."
+    override val ugoiraPlay = "播放"
+    override val ugoiraPause = "暂停"
+    override val ugoiraSaveZip = "保存动图 Zip"
+    override val ugoiraSaveZipSuccess = "动图 Zip 保存成功"
+    override val ugoiraLoadFailed = "动图加载失败，点击重试"
+    override val ugoiraClickToPlay = "点击加载动图"
+    override val accountManageTitle = "多账号管理"
+    override val accountCurrentActive = "当前账号"
+    override val accountSwitch = "切换至该账号"
+    override val accountDelete = "移除账号"
+    override val accountDeleteConfirmTitle = "确认移除账号"
+    override val accountDeleteConfirmMsg = "确定要从本地移除该账号吗？"
+    override val accountAdd = "添加新账号"
+    override val accountEmpty = "暂无登录账号"
+    override val accountSwitchSuccess = "已切换账号"
+    override val ugoiraDecodeFailed = "未能解码出动图帧"
+    override val novelReaderTitle = "小说阅读"
+    override val novelBrowseTitle = "小说"
+    override val novelRecommend = "小说推荐"
+    override val novelRanking = "小说排行榜"
+    override val novelSeries = "系列"
+    override val novelWordsCount = "字数"
+    override val novelTextEmpty = "小说正文为空"
+    override val novelPrevChapter = "上一章"
+    override val novelNextChapter = "下一章"
+    override val novelFontSize = "字号"
+    override val pixivId = "Pixiv ID"
     // 显式实现本语言全部 novel 展示成员，避免依赖接口中文默认值回退。
     override fun formatNovelWordCount(count: Int): String = "$count 字"
 
@@ -2071,6 +2102,10 @@ object ZhTwStrings : AppStrings {
  * 英语 (en-US)
  */
 object EnStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val sauceNaoUploading = "Uploading and searching SauceNAO…"
+    override val sauceNaoPickImage = "Select Image"
+    override val sauceNaoSimilarity = "Similarity"
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
     override val novelPrevChapter: String get() = "Previous Chapter"
     override val novelNextChapter: String get() = "Next Chapter"
@@ -2754,6 +2789,11 @@ object EnStrings : AppStrings {
  * 日本语 (ja)
  */
 object JaStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "関連ユーザー"
+    override val relatedUsersEmpty = "関連ユーザーはいません"
+    override val userNovels = "小説作品"
+    override val userNovelsEmpty = "小説作品はありません"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val menuSauceNao = "SauceNAO"
     override val sauceNaoUploading = "画像をアップロードして SauceNAO で検索中…"
@@ -3434,6 +3474,14 @@ object JaStrings : AppStrings {
  * 韩语 (ko)
  */
 object KoStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "관련 사용자"
+    override val relatedUsersEmpty = "관련 사용자가 없습니다"
+    override val userNovels = "소설 작품"
+    override val userNovelsEmpty = "소설 작품이 없습니다"
+    override val sauceNaoUploading = "SauceNAO에 업로드하여 검색하는 중…"
+    override val sauceNaoPickImage = "이미지 선택"
+    override val sauceNaoSimilarity = "유사도"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val imageNoCacheFound = "캐시에서 이미지를 찾을 수 없습니다"
     override val menuSauceNao = "SauceNAO"
@@ -4111,6 +4159,14 @@ object KoStrings : AppStrings {
  * 俄语 (ru)
  */
 object RuStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Похожие пользователи"
+    override val relatedUsersEmpty = "Нет похожих пользователей"
+    override val userNovels = "Новеллы"
+    override val userNovelsEmpty = "Нет новелл"
+    override val sauceNaoUploading = "Загрузка и поиск в SauceNAO…"
+    override val sauceNaoPickImage = "Выбрать изображение"
+    override val sauceNaoSimilarity = "Сходство"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val menuSauceNao = "SauceNAO"
     override val stamp = "Стикер"
@@ -4788,6 +4844,14 @@ object RuStrings : AppStrings {
  * 西班牙语 (es)
  */
 object EsStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Usuarios relacionados"
+    override val relatedUsersEmpty = "No hay usuarios relacionados"
+    override val userNovels = "Novelas"
+    override val userNovelsEmpty = "No hay novelas"
+    override val sauceNaoUploading = "Subiendo y buscando en SauceNAO…"
+    override val sauceNaoPickImage = "Seleccionar imagen"
+    override val sauceNaoSimilarity = "Similitud"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val imageNoCacheFound = "Imagen no encontrada en la caché"
     override val menuSauceNao = "SauceNAO"
@@ -5465,6 +5529,14 @@ object EsStrings : AppStrings {
  * 土耳其语 (tr)
  */
 object TrStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "İlgili Kullanıcılar"
+    override val relatedUsersEmpty = "İlgili kullanıcı yok"
+    override val userNovels = "Romanlar"
+    override val userNovelsEmpty = "Roman yok"
+    override val sauceNaoUploading = "SauceNAO'ya yükleniyor ve aranıyor…"
+    override val sauceNaoPickImage = "Görsel Seç"
+    override val sauceNaoSimilarity = "Benzerlik"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val menuSauceNao = "SauceNAO"
     override val stamp = "Damga"
@@ -6142,6 +6214,14 @@ object TrStrings : AppStrings {
  * 印尼语 (id)
  */
 object IdStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Pengguna Terkait"
+    override val relatedUsersEmpty = "Tidak ada pengguna terkait"
+    override val userNovels = "Novel"
+    override val userNovelsEmpty = "Tidak ada novel"
+    override val sauceNaoUploading = "Mengunggah dan mencari di SauceNAO…"
+    override val sauceNaoPickImage = "Pilih Gambar"
+    override val sauceNaoSimilarity = "Kemiripan"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val imageNoCacheFound = "Gambar tidak ditemukan di cache"
     override val menuSauceNao = "SauceNAO"
@@ -6819,6 +6899,14 @@ object IdStrings : AppStrings {
  * 菲律宾语 (fil)
  */
 object FilStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Mga Kaugnay na Gumagamit"
+    override val relatedUsersEmpty = "Walang kaugnay na mga gumagamit"
+    override val userNovels = "Mga nobela"
+    override val userNovelsEmpty = "Walang nobela"
+    override val sauceNaoUploading = "Nag-a-upload at naghahanap sa SauceNAO…"
+    override val sauceNaoPickImage = "Pumili ng Larawan"
+    override val sauceNaoSimilarity = "Pagkakatulad"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val imageNoCacheFound = "Hindi natagpuan ang imahe sa cache"
     override val menuSauceNao = "SauceNAO"
@@ -7496,6 +7584,14 @@ object FilStrings : AppStrings {
  * 德语 (de)
  */
 object DeStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Ähnliche Nutzer"
+    override val relatedUsersEmpty = "Keine ähnlichen Nutzer"
+    override val userNovels = "Romane"
+    override val userNovelsEmpty = "Keine Romane"
+    override val sauceNaoUploading = "Hochladen und Suchen in SauceNAO…"
+    override val sauceNaoPickImage = "Bild auswählen"
+    override val sauceNaoSimilarity = "Ähnlichkeit"
     // 补齐登录页/引导页/动图播放器/多账号/小说模块漏翻成员，消除中文默认值回退。
     override val imageNoCacheFound = "Bild nicht im Cache gefunden"
     override val menuSauceNao = "SauceNAO"
@@ -8174,6 +8270,14 @@ object DeStrings : AppStrings {
  * 完整实现全部字符串，不再委托 EnStrings。属性顺序与 EnStrings 保持一致，便于对照补译。
  */
 object ViStrings : AppStrings {
+    // 用户页与 SauceNAO 面板词条原先未声明，回退到接口默认值（IB-2 全量覆盖守护）。
+    override val relatedUsers = "Người dùng liên quan"
+    override val relatedUsersEmpty = "Không có người dùng liên quan"
+    override val userNovels = "Truyện"
+    override val userNovelsEmpty = "Không có truyện"
+    override val sauceNaoUploading = "Đang tải lên và tìm kiếm trên SauceNAO…"
+    override val sauceNaoPickImage = "Chọn ảnh"
+    override val sauceNaoSimilarity = "Độ tương đồng"
     override val interactionSettingLaunchOnStartup = "Tự động khởi chạy khi bật máy"
     override val interactionSettingLaunchOnStartupSummaryOn = "Tự động khởi chạy trong nền khi đăng nhập Windows"
     override val interactionSettingLaunchOnStartupSummaryOff = "Mở ứng dụng thủ công"

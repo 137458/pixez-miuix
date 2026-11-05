@@ -5,6 +5,11 @@ package com.perol.pixez.shared.ui.i18n
  * 赞助者/翻译者: aliafshany
  */
 object FaStrings : AppStrings {
+    // 以下 3 条沿用英文回退（本文件其余词条同样存在大量英文回退，待母语者校对后替换），
+    // 目的是先消除「依赖接口默认值」的静默回退（IB-2 全量覆盖守护）。
+    override val sauceNaoUploading = "Uploading and searching SauceNAO…"
+    override val sauceNaoPickImage = "Select Image"
+    override val sauceNaoSimilarity = "Similarity"
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
     override val novelPrevChapter: String get() = "فصل قبل"
     override val novelNextChapter: String get() = "فصل بعد"

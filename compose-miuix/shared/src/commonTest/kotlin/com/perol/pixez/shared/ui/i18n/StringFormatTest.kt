@@ -70,4 +70,56 @@ class StringFormatTest {
         assertEquals("value is null", "value is %s".format(null))
         assertEquals("pos null", "pos %1\$s".format(null))
     }
+
+    // IB-4 回归：format 改为按 token 位置一次重建，参数不得再被正则替换语义解释。
+    @Test
+    fun testStringFormatArgumentWithDollarIsLiteral() {
+        assertEquals("Cost \$5", "Cost %s".format("\$5"))
+        assertEquals("\$1\$2", "%1\$s".format("\$1\$2"))
+        assertEquals("\$\$\$", "%s".format("\$\$\$"))
+        assertEquals("\$&", "%1\$s".format("\$&"))
+    }
+
+    @Test
+    fun testStringFormatArgumentWithBackslashIsLiteral() {
+        assertEquals("C:\\Temp\\pixez", "%s".format("C:\\Temp\\pixez"))
+        assertEquals("\\d+", "%1\$s".format("\\d+"))
+        assertEquals("\\", "%s".format("\\"))
+    }
+
+    @Test
+    fun testStringFormatLiteralPercent() {
+        // %% 是百分号字面量，不消耗参数
+        assertEquals("100% 完成", "100%% 完成".format("未被使用"))
+        assertEquals("占比 50%", "占比 %s%%".format(50))
+        assertEquals("写入 %s 不替换", "写入 %%s 不替换".format("ignored"))
+        assertEquals("纯文本 100%", "纯文本 100%".format("ignored"))
+    }
+
+    @Test
+    fun testStringFormatMissingArgumentsKeepPlaceholders() {
+        assertEquals("a 与 %s", "%s 与 %s".format("a"))
+        assertEquals("only %2\$s", "%1\$s %2\$s".format("only"))
+        assertEquals("%2\$s", "%2\$s".format("only"))
+    }
+
+    @Test
+    fun testStringFormatExtraArgumentsAreIgnored() {
+        assertEquals("只有一个 a", "只有一个 %s".format("a", "b", "c"))
+        assertEquals("x", "x".format("a", "b"))
+    }
+
+    // 存储占用展示：与 SettingsScreen 原私有副本语义一致（KB 起步、GB 两位小数），
+    // 供 ui/screens 接线后删除私有副本。
+    @Test
+    fun testFormatCacheSizeBoundaries() {
+        assertEquals("0 B", formatCacheSize(0L))
+        assertEquals("0 B", formatCacheSize(-5L))
+        assertEquals("0.5 KB", formatCacheSize(512L))
+        assertEquals("1.0 KB", formatCacheSize(1024L))
+        assertEquals("1.5 KB", formatCacheSize(1536L))
+        assertEquals("1.0 MB", formatCacheSize(1024L * 1024L))
+        assertEquals("1.0 GB", formatCacheSize(1024L * 1024L * 1024L))
+        assertEquals("3.45 GB", formatCacheSize((1024L * 1024L * 1024L * 3.456).toLong()))
+    }
 }
