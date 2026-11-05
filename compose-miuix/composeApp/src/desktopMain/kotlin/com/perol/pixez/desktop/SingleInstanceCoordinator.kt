@@ -124,10 +124,10 @@ internal class SingleInstanceCoordinator private constructor(
                 }
             }.getOrElse {
                 // 文件锁已证明本进程是唯一实例；端口被第三方占用（如 Hyper-V 保留段）时
-                // 不应阻断启动——降级为“无转发 Primary”模式，仅牺牲二次启动参数转发能力。
-                lock.release()
-                channel.close()
-                io.github.aakira.napier.Napier.w("单实例监听端口被占用，降级启动（禁用二次启动参数转发）")
+                // 不应阻断启动——降级为「持锁但无监听」的 Primary，仅牺牲二次启动参数转发能力。
+                // 唯一性只由文件锁决定，因此这里绝不能释放锁/关闭 channel，否则后续进程会拿到锁
+                // 并同样降级，退化成多个主窗口（见 SingleInstanceCoordinatorTest 降级分支用例）。
+                io.github.aakira.napier.Napier.w("单实例监听端口被占用，降级启动（保留文件锁，禁用二次启动参数转发）")
                 val degraded = SingleInstanceCoordinator(
                     lockChannel = channel,
                     lock = lock,
