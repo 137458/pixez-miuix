@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,16 +40,16 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.components.PagingFooterAppearance
+import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -116,19 +115,12 @@ fun UserNovelListScreen(
 
     val listState = rememberLazyListState()
 
+    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
     val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            val totalCount = pagedList.items?.size ?: 0
-            if (totalCount == 0 ||
-                pagedList.nextUrl == null ||
-                pagedList.isLoadingMore ||
-                pagedList.loadMoreError != null
-            ) {
-                false
-            } else {
-                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
-                lastVisibleItem >= totalCount - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
-            }
+            pagedList.shouldPreloadMore(
+                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+            )
         }
     }
 
@@ -225,33 +217,15 @@ fun UserNovelListScreen(
                                         )
                                     }
 
-                                    item(key = "novel_pagination_footer", contentType = "footer") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 16.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            when {
-                                                pagedList.isLoadingMore -> InfiniteProgressIndicator()
-                                                pagedList.loadMoreError != null -> Row(
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    Text(
-                                                        text = strings.loadFailed,
-                                                        style = MiuixTheme.textStyles.body2,
-                                                        color = MiuixTheme.colorScheme.error,
-                                                    )
-                                                    Button(onClick = ::loadMore) {
-                                                        Text(text = strings.retry)
-                                                    }
-                                                }
-                                                pagedList.nextUrl == null -> Text(
-                                                    text = strings.noMoreData,
-                                                    style = MiuixTheme.textStyles.footnote1,
-                                                )
-                                            }
+                                    // 三态 footer 收敛到统一组件（UI-3）：Hidden 时不挂 item，避免尾部留白。
+                                    val footerState = pagedList.footerState
+                                    if (footerState.phase != PagingFooterPhase.Hidden) {
+                                        item(key = "novel_pagination_footer", contentType = "footer") {
+                                            PagingLoadMoreFooter(
+                                                state = footerState,
+                                                onRetry = ::loadMore,
+                                                appearance = PagingFooterAppearance.Compact,
+                                            )
                                         }
                                     }
                                 }

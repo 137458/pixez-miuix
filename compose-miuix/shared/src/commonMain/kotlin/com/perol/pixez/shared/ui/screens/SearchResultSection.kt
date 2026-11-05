@@ -50,7 +50,7 @@ import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
@@ -426,20 +426,12 @@ private fun <T> SearchPagedListColumn(
     }
 
     val currentItems = pagedList.items
+    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
     val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            if (pagedList.nextUrl == null ||
-                pagedList.isLoadingMore ||
-                pagedList.loadMoreError != null ||
-                pagedList.items.isNullOrEmpty()
-            ) {
-                false
-            } else {
-                val layoutInfo = listState.layoutInfo
-                val totalItems = layoutInfo.totalItemsCount
-                val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
-                lastVisibleIndex >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
-            }
+            pagedList.shouldPreloadMore(
+                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+            )
         }
     }
 
@@ -487,12 +479,12 @@ private fun <T> SearchPagedListColumn(
                             itemContent(item)
                         }
 
-                        if (pagedList.isLoadingMore || pagedList.loadMoreError != null || (pagedList.nextUrl == null && currentItems.isNotEmpty())) {
+                        // 三态 footer 收敛到统一组件（UI-3）：Hidden 时不挂 item。
+                        val footerState = pagedList.footerState
+                        if (footerState.phase != PagingFooterPhase.Hidden) {
                             item(key = footerKey, contentType = "footer") {
                                 PagingLoadMoreFooter(
-                                    hasMore = pagedList.nextUrl != null,
-                                    isLoadingMore = pagedList.isLoadingMore,
-                                    loadMoreError = pagedList.loadMoreError,
+                                    state = footerState,
                                     onRetry = ::loadMore,
                                 )
                             }

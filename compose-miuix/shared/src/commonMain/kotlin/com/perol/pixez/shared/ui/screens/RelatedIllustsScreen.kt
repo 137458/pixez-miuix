@@ -26,6 +26,7 @@ import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -84,12 +85,10 @@ fun RelatedIllustsScreen(
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        val previous = listState.filteredIllusts
-        listState.loadFirst(force = force)
+        val outcome = listState.loadFirst(force = force)
         isManualRefreshing = false
-        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；force 刷新成功后滚回顶部。
-        val current = listState.filteredIllusts
-        if (current != null && current !== previous && force && gridState.firstVisibleItemIndex > 0) {
+        // UI-8：写入成功由状态机回报，不再比较列表引用；仅强制刷新成功才回顶。
+        if (outcome == PagedLoadOutcome.Written && force && gridState.firstVisibleItemIndex > 0) {
             gridState.scrollToItem(0)
         }
     }

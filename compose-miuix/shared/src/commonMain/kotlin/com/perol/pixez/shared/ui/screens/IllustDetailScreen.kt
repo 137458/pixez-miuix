@@ -54,6 +54,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.state.CollapseGesture
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.ToastData
@@ -252,14 +253,18 @@ private fun IllustDetailSingleContent(
     val detailBackdrop = rememberBlurBackdrop()
     val listState = rememberLazyListState()
     val density = LocalDensity.current
-    val scrollThresholdPx = with(density) { 72.dp.toPx() }
+    // 折叠进度累计阈值收敛到 AppConstants（UI-7），与搜索页折叠手势共用同一组纯函数。
+    val scrollThresholdPx = with(density) { AppConstants.Layout.DETAIL_COLLAPSE_THRESHOLD_DP.dp.toPx() }
     var scrollOffset by remember { mutableStateOf(0f) }
 
     val detailNestedScrollConnection = remember(scrollThresholdPx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
-                scrollOffset = (scrollOffset - delta).coerceIn(0f, scrollThresholdPx)
+                scrollOffset = CollapseGesture.accumulateCollapseOffset(
+                    delta = available.y,
+                    currentOffset = scrollOffset,
+                    thresholdPx = scrollThresholdPx,
+                )
                 return Offset.Zero
             }
         }
@@ -273,11 +278,11 @@ private fun IllustDetailSingleContent(
 
     val collapseProgressState = remember(scrollThresholdPx) {
         derivedStateOf {
-            if (listState.firstVisibleItemIndex > 0) {
-                1f
-            } else {
-                (scrollOffset / scrollThresholdPx).coerceIn(0f, 1f)
-            }
+            CollapseGesture.resolveCollapseProgress(
+                firstVisibleItemIndex = listState.firstVisibleItemIndex,
+                scrollOffset = scrollOffset,
+                thresholdPx = scrollThresholdPx,
+            )
         }
     }
 

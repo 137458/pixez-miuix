@@ -31,6 +31,7 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
+import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
@@ -167,18 +168,15 @@ fun HelloScreen(
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        val previous = listState.filteredIllusts
         forceNextFetch = force
-        listState.loadFirst(force = force)
+        val outcome = listState.loadFirst(force = force)
         forceNextFetch = false
         // 对齐原实现：请求结束（成功或失败）即复位手动刷新指示；协程被取消时到不了此处，
         // 指示保留并由下一轮 force 刷新复位（与原 isManualRefreshing 语义一致）。
         isManualRefreshing = false
-        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入，对齐 RankingScreen 版守卫）；
-        // 成功才同步恢复快照（原始 ID 列表）并复位滚动位置。
-        val current = listState.rawIllusts
-        if (current != null && listState.filteredIllusts !== previous) {
-            feedRestore.update(current, listState.nextUrl)
+        // UI-8：写入成功由状态机回报，不再比较列表引用；失败与竞态失配都不写恢复快照、不回顶。
+        if (outcome == PagedLoadOutcome.Written) {
+            listState.rawIllusts?.let { feedRestore.update(it, listState.nextUrl) }
             if (force && gridState.firstVisibleItemIndex > 0) {
                 gridState.scrollToItem(0)
             }
@@ -199,12 +197,9 @@ fun HelloScreen(
 
     fun loadMore() {
         coroutineScope.launch {
-            val previous = listState.filteredIllusts
-            listState.loadMore()
-            // 引用变化 = 翻页成功追加；失败/被拒绝/竞态失配时列表未变，不重复写恢复快照。
-            val current = listState.rawIllusts
-            if (current != null && listState.filteredIllusts !== previous) {
-                feedRestore.update(current, listState.nextUrl)
+            // UI-8：翻页写入成功才写恢复快照；失败/被拒绝/竞态失配都不写。
+            if (listState.loadMore() == PagedLoadOutcome.Written) {
+                listState.rawIllusts?.let { feedRestore.update(it, listState.nextUrl) }
             }
         }
     }

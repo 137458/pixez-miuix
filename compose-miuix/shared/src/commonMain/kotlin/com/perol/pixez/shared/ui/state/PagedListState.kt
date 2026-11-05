@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.state
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 
 /**
@@ -60,14 +61,17 @@ class PagedListState<T>(
     /**
      * 首屏加载或强制刷新：递增 [generation] 作废所有在途翻页并复位其加载态，再拉取首页。
      * 已有数据且无首屏错误时默认早退，避免重复请求覆盖既有列表（force = true 跳过早退）。
+     *
+     * @return [PagedLoadOutcome]：屏幕据此决定是否写恢复快照与回顶，不再比较列表引用（UI-8）。
      */
-    suspend fun loadFirst(force: Boolean = false) {
+    suspend fun loadFirst(force: Boolean = false): PagedLoadOutcome {
         val myGeneration = ++generation
         isLoadingMore = false
         loadMoreError = null
-        if (!force && items != null && initialError == null) return
+        if (!force && items != null && initialError == null) return PagedLoadOutcome.Skipped
         isRefreshing = true
         if (items == null) initialError = null
+        var outcome = PagedLoadOutcome.Discarded
         suspendRunCatchingNonCancel { fetch(null) }
             .onSuccess { page ->
                 if (myGeneration == generation) {
@@ -75,38 +79,82 @@ class PagedListState<T>(
                     nextUrl = page.nextUrl
                     initialError = null
                     loadMoreError = null
+                    outcome = PagedLoadOutcome.Written
                 }
             }
             .onFailure { error ->
-                // 已有数据时刷新失败不得清空/报错占位，旧列表原样保留
-                if (myGeneration == generation && items == null) initialError = error
+                if (myGeneration == generation) {
+                    // 已有数据时刷新失败不得清空/报错占位，旧列表原样保留
+                    if (items == null) initialError = error
+                    outcome = PagedLoadOutcome.Failed
+                }
             }
         if (myGeneration == generation) isRefreshing = false
+        return outcome
     }
 
     /**
      * 触底翻页：捕获当前 [generation]，拉取下一页并以 [mergeItems] 合并进累积列表。
      * 在途检查与加载标志写入同点完成（首个挂起点之前），杜绝双请求竞态；
      * 完成时的标志复位以 generation 守卫，过期翻页不得清除新一代的在途标志。
+     *
+     * @return [PagedLoadOutcome]：Written 表示本轮确实写入了列表（UI-8）。
      */
-    suspend fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
+    suspend fun loadMore(): PagedLoadOutcome {
+        val currentNextUrl = nextUrl ?: return PagedLoadOutcome.Skipped
+        if (isLoadingMore) return PagedLoadOutcome.Skipped
         val myGeneration = generation
         isLoadingMore = true
         loadMoreError = null
+        var outcome = PagedLoadOutcome.Discarded
         suspendRunCatchingNonCancel { fetch(currentNextUrl) }
             .onSuccess { page ->
                 if (myGeneration == generation) {
                     items = mergeItems(items.orEmpty(), page.items)
                     nextUrl = page.nextUrl
                     loadMoreError = null
+                    outcome = PagedLoadOutcome.Written
                 }
             }
             .onFailure { error ->
-                if (myGeneration == generation) loadMoreError = error
+                if (myGeneration == generation) {
+                    loadMoreError = error
+                    outcome = PagedLoadOutcome.Failed
+                }
             }
         if (myGeneration == generation) isLoadingMore = false
+        return outcome
+    }
+
+    /**
+     * 触底预加载判定（架构审查 UI-2）：四条件守卫与本类累积条目数单点判定，
+     * 调用方只提供布局上报的末项索引。
+     */
+    fun shouldPreloadMore(
+        lastVisibleItemIndex: Int,
+        thresholdItems: Int = AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS,
+    ): Boolean = shouldPreloadMore(
+        itemCount = items?.size ?: 0,
+        hasMore = nextUrl != null,
+        isLoadingMore = isLoadingMore,
+        hasLoadMoreError = loadMoreError != null,
+        lastVisibleItemIndex = lastVisibleItemIndex,
+        thresholdItems = thresholdItems,
+    )
+
+    /** footer 三态所需的状态快照（架构审查 UI-3），交给统一 footer 组件渲染。 */
+    val footerState: PagingFooterState
+        get() = PagingFooterState(
+            hasMore = nextUrl != null,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
+            hasItems = !items.isNullOrEmpty(),
+        )
+
+    /** 快照恢复：直接写入列表与下一页 URL（如特辑分类首屏缓存命中），不改 [generation]。 */
+    fun restore(items: List<T>, nextUrl: String?) {
+        this.items = items
+        this.nextUrl = nextUrl
     }
 
     /**

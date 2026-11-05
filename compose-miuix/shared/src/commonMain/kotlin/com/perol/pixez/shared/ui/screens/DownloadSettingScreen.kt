@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.components.CheckIndicator
@@ -80,8 +81,9 @@ fun DownloadSettingScreen(
     var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
     var singleFolder by remember { mutableStateOf(settingsRepository.singleFolder) }
     var overSanityLevelFolder by remember { mutableStateOf(settingsRepository.overSanityLevelFolder) }
-    var maxRunningTask by remember { mutableIntStateOf(settingsRepository.maxRunningTask.coerceIn(1, 6)) }
-    val taskCountOptions = remember { listOf("1", "2", "3", "4", "5", "6") }
+    // 并发档位与夹取边界由 DownloadRepository 单点派生（架构审查 R5）：设置页不再自建 1..6 字面列表。
+    var maxRunningTask by remember { mutableIntStateOf(DownloadRepository.coerceParallelTasks(settingsRepository.maxRunningTask)) }
+    val taskCountOptions = remember { DownloadRepository.PARALLEL_TASK_OPTIONS.map(Int::toString) }
 
     // 对话框显隐状态。
     var showFormatDialog by rememberSaveable { mutableStateOf(false) }
@@ -103,7 +105,11 @@ fun DownloadSettingScreen(
     var saveAfterStar by remember { mutableStateOf(settingsRepository.saveAfterStar) }
     var starAfterSave by remember { mutableStateOf(settingsRepository.starAfterSave) }
 
-    val pickDirectory = rememberDirectoryPicker { pickedPath ->
+    // 初始目录与标题由调用方注入（DN15：platform 层不读 ui 的 CompositionLocal / LocalStrings）。
+    val pickDirectory = rememberDirectoryPicker(
+        initialDirectory = storePath,
+        dialogTitle = strings.dialogSavePath,
+    ) { pickedPath ->
         if (!pickedPath.isNullOrBlank()) {
             storePath = pickedPath
             settingsRepository.storePath = pickedPath

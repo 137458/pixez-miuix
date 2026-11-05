@@ -81,8 +81,11 @@ private sealed interface NovelViewState {
 /**
  * 阅读器渲染条目：标记解析结果按展示形态展开，
  * Text 段沿用按行 chunked(10) 切分以保持 LazyColumn 长文渲染性能。
+ *
+ * 与 [buildNovelViewerItems] 同为 internal：纯计算与 Screen 分离，便于 commonTest 直接断言
+ * 分块与标记展开契约（同 resolveIllustDetailImageWidthPx 的可测范式）。
  */
-private sealed interface NovelViewerItem {
+internal sealed interface NovelViewerItem {
     data class TextChunk(val text: String) : NovelViewerItem
     data class Chapter(val title: String) : NovelViewerItem
     data object NewPageSpacer : NovelViewerItem
@@ -92,7 +95,8 @@ private sealed interface NovelViewerItem {
     data class JumpRaw(val raw: String) : NovelViewerItem
 }
 
-private fun buildNovelViewerItems(novelText: String): List<NovelViewerItem> = buildList {
+/** 小说正文 → 渲染条目（纯函数）：每个标记展开为一个条目，Text 段按 10 行分块。 */
+internal fun buildNovelViewerItems(novelText: String): List<NovelViewerItem> = buildList {
     for (span in NovelContentParser.parse(novelText)) {
         when (span) {
             is NovelSpan.Text ->

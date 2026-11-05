@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 
 /**
@@ -69,18 +70,21 @@ class IllustPagedListState(
     /**
      * 首屏加载或强制刷新：递增 [generation] 作废所有在途翻页并复位其加载态，再拉取首页。
      * 非 force 且已有数据且无首屏错误时早退（缓存命中，不做网络请求）。
+     *
+     * @return [PagedLoadOutcome]：屏幕据此决定是否写恢复快照与回顶，不再比较列表引用（UI-8）。
      */
-    suspend fun loadFirst(force: Boolean = false) {
+    suspend fun loadFirst(force: Boolean = false): PagedLoadOutcome {
         val myGeneration = ++generation
         // 作废在途翻页：复位其加载态与错误（RankingScreen.kt:127-128 语义），
         // 使旧 loadMore 完成时因代数失配被整体拒绝。
         isLoadingMore = false
         loadMoreError = null
-        if (!force && filteredIllusts != null && initialError == null) return
+        if (!force && filteredIllusts != null && initialError == null) return PagedLoadOutcome.Skipped
         isRefreshing = true
         if (filteredIllusts == null) {
             initialError = null
         }
+        var outcome = PagedLoadOutcome.Discarded
         suspendRunCatchingNonCancel { fetch(null) }
             .onSuccess { page ->
                 if (myGeneration == generation) {
@@ -88,11 +92,15 @@ class IllustPagedListState(
                     nextUrl = page.nextUrl
                     initialError = null
                     loadMoreError = null
+                    outcome = PagedLoadOutcome.Written
                 }
             }
             .onFailure { error ->
-                if (myGeneration == generation && filteredIllusts == null) {
-                    initialError = error
+                if (myGeneration == generation) {
+                    if (filteredIllusts == null) {
+                        initialError = error
+                    }
+                    outcome = PagedLoadOutcome.Failed
                 }
             }
         // 复位受守卫约束：并发的新一轮刷新在途时，过期的旧调用不得复位其刷新标志
@@ -100,35 +108,67 @@ class IllustPagedListState(
         if (myGeneration == generation) {
             isRefreshing = false
         }
+        return outcome
     }
 
     /**
      * 触底翻页：无下一页或在途时直接返回；成功按 id 去重追加，失败记录 [loadMoreError]，
      * generation 失配（期间发生刷新）的过期结果与错误一律丢弃，也不复位 [isLoadingMore]。
+     *
+     * @return [PagedLoadOutcome]：Written 表示本轮确实写入了列表（UI-8）。
      */
-    suspend fun loadMore() {
-        val currentNextUrl = nextUrl ?: return
-        if (isLoadingMore) return
+    suspend fun loadMore(): PagedLoadOutcome {
+        val currentNextUrl = nextUrl ?: return PagedLoadOutcome.Skipped
+        if (isLoadingMore) return PagedLoadOutcome.Skipped
         // 翻页捕获当前代数不递增：刷新路径递增后本任务即失配（RankingScreen.kt:157 语义）。
         val myGeneration = generation
         isLoadingMore = true
         loadMoreError = null
+        var outcome = PagedLoadOutcome.Discarded
         suspendRunCatchingNonCancel { fetch(currentNextUrl) }
             .onSuccess { page ->
                 if (myGeneration == generation) {
                     filterable.append(page.illusts, filterVersionProvider())
                     nextUrl = page.nextUrl
+                    outcome = PagedLoadOutcome.Written
                 }
             }
             .onFailure { error ->
                 if (myGeneration == generation) {
                     loadMoreError = error
+                    outcome = PagedLoadOutcome.Failed
                 }
             }
         if (myGeneration == generation) {
             isLoadingMore = false
         }
+        return outcome
     }
+
+    /**
+     * 触底预加载判定（架构审查 UI-2）：四条件守卫与本类过滤后条目数单点判定，
+     * 调用方只提供布局上报的末项索引。
+     */
+    fun shouldPreloadMore(
+        lastVisibleItemIndex: Int,
+        thresholdItems: Int = AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS,
+    ): Boolean = shouldPreloadMore(
+        itemCount = filteredIllusts?.size ?: 0,
+        hasMore = nextUrl != null,
+        isLoadingMore = isLoadingMore,
+        hasLoadMoreError = loadMoreError != null,
+        lastVisibleItemIndex = lastVisibleItemIndex,
+        thresholdItems = thresholdItems,
+    )
+
+    /** footer 三态所需的状态快照（架构审查 UI-3），交给统一 footer 组件渲染。 */
+    val footerState: PagingFooterState
+        get() = PagingFooterState(
+            hasMore = nextUrl != null,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
+            hasItems = !filteredIllusts.isNullOrEmpty(),
+        )
 
     /**
      * 过滤版本号变化时对原始列表本地重过滤（零网络成本）。

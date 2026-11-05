@@ -1,15 +1,10 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
@@ -27,14 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
+import com.perol.pixez.shared.ui.state.PagingFooterState
+import com.perol.pixez.shared.ui.state.shouldPreloadMore
 import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 插画瀑布流网格。
@@ -71,7 +64,7 @@ fun IllustStaggeredGrid(
             bottom = LocalBottomBarContentPadding.current,
         )
         val isLandscape = maxWidth > maxHeight
-        val defaultCardWidth = AppConstants.Layout.GRID_CARD_MIN_WIDTH_DP
+        // 列数换算收敛到 UI-9 的纯函数：横竖屏各取一套布局设置，策略参数见 IllustGridColumnPolicy。
         val effectiveColumns = remember(
             columns,
             isLandscape,
@@ -83,36 +76,15 @@ fun IllustStaggeredGrid(
             settings.hCrossCount,
             changeVersion,
         ) {
-            if (columns != null) {
-                columns
-            } else if (isLandscape) {
-                val adapt = settings.hCrossAdapt
-                if (adapt) {
-                    val minWidth = settings.hCrossAdapterWidth.coerceIn(
-                        SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
-                        1000,
-                    )
-                    StaggeredGridCells.Adaptive(minWidth.dp)
-                } else {
-                    val configuredCols = settings.hCrossCount
-                    StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
-                }
-            } else {
-                val adapt = settings.crossAdapt
-                if (adapt) {
-                    val minWidth = settings.crossAdapterWidth.coerceIn(
-                        SettingsRepository.CROSS_ADAPTER_WIDTH_MIN,
-                        1000,
-                    )
-                    StaggeredGridCells.Adaptive(minWidth.dp)
-                } else {
-                    val configuredCols = settings.crossCount
-                    StaggeredGridCells.Fixed(configuredCols.coerceIn(1, 8))
-                }
-            }
+            columns ?: resolveGridColumns(
+                adapt = if (isLandscape) settings.hCrossAdapt else settings.crossAdapt,
+                adapterWidthDp = if (isLandscape) settings.hCrossAdapterWidth else settings.crossAdapterWidth,
+                configuredCount = if (isLandscape) settings.hCrossCount else settings.crossCount,
+                policy = IllustGridColumnPolicy,
+            ).toStaggeredGridCells()
         }
 
-        // 触底自动流式加载监听：当滑动到接近底部（倒数 6 个作品内）时自动触发下一页请求。
+        // 触底自动流式加载监听：当滑动到接近底部（倒数 6 个作品内，UI-2 阈值单源）时自动触发下一页请求。
         if (onLoadMore != null) {
             // derivedStateOf 一旦创建就把参数引用固化在闭包里，故闭包读到的每个参数都要进键：
             // 用 illusts 本身而不是 illusts.size，避免刷新后条数相同、内容整体替换时仍按旧列表判定。
@@ -124,14 +96,14 @@ fun IllustStaggeredGrid(
                 state,
             ) {
                 derivedStateOf {
-                    if (!hasMore || isLoadingMore || loadMoreError != null || illusts.isEmpty()) {
-                        false
-                    } else {
-                        val layoutInfo = state.layoutInfo
-                        val totalItems = layoutInfo.totalItemsCount
-                        val lastVisibleIndex = layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: 0
-                        lastVisibleIndex >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS
-                    }
+                    shouldPreloadMore(
+                        itemCount = illusts.size,
+                        hasMore = hasMore,
+                        isLoadingMore = isLoadingMore,
+                        hasLoadMoreError = loadMoreError != null,
+                        lastVisibleItemIndex = state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+                        thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
+                    )
                 }
             }
 
@@ -171,59 +143,23 @@ fun IllustStaggeredGrid(
                 )
             }
 
-        // 底部加载更多状态区（跨整行展示）
-        if (isLoadingMore || loadMoreError != null || (!hasMore && illusts.isNotEmpty() && onLoadMore != null)) {
+        // 底部加载更多状态区（跨整行展示）：三态判定与呈现收敛到统一 footer（UI-3）。
+        val footerState = PagingFooterState(
+            hasMore = hasMore,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
+            hasItems = illusts.isNotEmpty(),
+        )
+        if (onLoadMore != null && footerState.phase != PagingFooterPhase.Hidden) {
             item(
                 key = "load_more_footer",
                 span = StaggeredGridItemSpan.FullLine,
                 contentType = "load_more_footer",
             ) {
-                val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    when {
-                        isLoadingMore -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
-                                Text(
-                                    text = strings.loadingMore,
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            }
-                        }
-                        loadMoreError != null -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Text(
-                                    text = strings.loadMoreFailedRetry,
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    color = MiuixTheme.colorScheme.error,
-                                )
-                                TextButton(
-                                    text = strings.retry,
-                                    onClick = { (onRetryLoadMore ?: onLoadMore)?.invoke() },
-                                )
-                            }
-                        }
-                        !hasMore && illusts.isNotEmpty() -> {
-                            Text(
-                                text = strings.noMoreData,
-                                style = MiuixTheme.textStyles.footnote1,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            )
-                        }
-                    }
-                }
+                PagingLoadMoreFooter(
+                    state = footerState,
+                    onRetry = { (onRetryLoadMore ?: onLoadMore)?.invoke() },
+                )
             }
         }
     }

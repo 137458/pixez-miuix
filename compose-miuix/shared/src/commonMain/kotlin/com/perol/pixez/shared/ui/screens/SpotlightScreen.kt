@@ -6,27 +6,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,32 +27,35 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.LocalPixivisionRepository
-import com.perol.pixez.shared.ui.components.BlurredBar
-import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-import com.perol.pixez.shared.ui.components.LiquidFilterBar
-import top.yukonga.miuix.kmp.blur.Backdrop
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import androidx.compose.ui.graphics.Color
-import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.SpotlightGridColumnPolicy
+import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.resolveGridColumns
+import com.perol.pixez.shared.ui.components.toStaggeredGridCells
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.PagedListPage
+import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -71,10 +67,10 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * Spotlight 特辑分类枚举。
@@ -96,19 +92,11 @@ fun SpotlightCategory.labelFor(strings: AppStrings): String = when (this) {
 }
 
 /**
- * 分类列表状态容器，维护特辑列表、分页 nextUrl 与加载状态。
- */
-private class CategoryState {
-    var articles by mutableStateOf<List<SpotlightArticle>>(emptyList())
-    var nextUrl by mutableStateOf<String?>(null)
-    var isInitialLoading by mutableStateOf(true)
-    var isRefreshing by mutableStateOf(false)
-    var isLoadingMore by mutableStateOf(false)
-    var error by mutableStateOf<Throwable?>(null)
-}
-
-/**
  * Spotlight 发现页：支持分类切换（全部/插画/漫画/小说）与无限向下滚动分页加载。
+ *
+ * 架构审查 UI-5：分类分页不再手写第四套状态机，每个分类各持一个 [PagedListState]——
+ * 竞态守卫、翻页失败重试与触底阈值与其余列表页同源；分类切换保留各自列表与游标，
+ * 首屏缓存命中直接 [PagedListState.restore]。
  */
 @Composable
 fun SpotlightScreen(
@@ -121,23 +109,37 @@ fun SpotlightScreen(
     var selectedCategory by rememberSaveable { mutableStateOf(SpotlightCategory.ALL) }
     val coroutineScope = rememberCoroutineScope()
 
-    // 为每个分类分别维护状态，切换分类时保持各自的浏览位置与缓存数据。
+    // loadFirst 不透传 force 给 fetch，以「同一协程内先写后读」保持手动刷新跳过缓存的语义（同 HelloScreen）。
+    var forceNextFetch by remember { mutableStateOf(false) }
+
+    fun newCategoryState(category: SpotlightCategory): PagedListState<SpotlightArticle> = PagedListState(
+        fetch = { nextUrl ->
+            val response = repository.getSpotlightArticles(
+                category = category.code,
+                nextUrl = nextUrl,
+                forceRefresh = forceNextFetch,
+            )
+            PagedListPage(response.spotlightArticles, response.nextUrl)
+        },
+        // 累积与去重收敛到状态机注入点（架构审查 中-8）：仓库只返回当页响应。
+        mergeItems = { old, new -> old.appendDistinct(new) },
+    )
+
+    // 为每个分类分别维护状态，切换分类时保持各自的浏览位置与缓存数据；首屏缓存命中直接恢复。
     val categoryStates = remember {
-        mutableStateMapOf<SpotlightCategory, CategoryState>().apply {
+        mutableStateMapOf<SpotlightCategory, PagedListState<SpotlightArticle>>().apply {
             SpotlightCategory.entries.forEach { category ->
-                val cached = repository.getCachedSpotlightArticles(category.code)
-                val state = CategoryState().apply {
-                    if (cached != null && cached.spotlightArticles.isNotEmpty()) {
-                        articles = cached.spotlightArticles
-                        nextUrl = cached.nextUrl
-                        isInitialLoading = false
+                val state = newCategoryState(category)
+                repository.getCachedSpotlightArticles(category.code)?.let { cached ->
+                    if (cached.spotlightArticles.isNotEmpty()) {
+                        state.restore(cached.spotlightArticles, cached.nextUrl)
                     }
                 }
                 put(category, state)
             }
         }
     }
-    val currentCategoryState = categoryStates.getOrPut(selectedCategory) { CategoryState() }
+    val currentCategoryState = categoryStates.getOrPut(selectedCategory) { newCategoryState(selectedCategory) }
 
     // 为每个分类分别维护独立的网格滚动状态。
     val gridStates = remember {
@@ -149,79 +151,37 @@ fun SpotlightScreen(
 
     val scrollBehavior = MiuixScrollBehavior()
 
-    val loadCategoryData: (SpotlightCategory, Boolean) -> Unit = { category, isRefresh ->
-        val targetState = categoryStates.getOrPut(category) { CategoryState() }
-        if (!isRefresh && targetState.articles.isNotEmpty()) {
-            // 已有缓存且非强制刷新，不再重新请求
-        } else {
-            coroutineScope.launch {
-                if (isRefresh) {
-                    targetState.isRefreshing = true
-                } else if (targetState.articles.isEmpty()) {
-                    targetState.isInitialLoading = true
-                }
-                targetState.error = null
-
-                val result = suspendRunCatchingNonCancel {
-                    repository.getSpotlightArticles(category = category.code, nextUrl = null, forceRefresh = isRefresh)
-                }
-
-                result.onSuccess { response ->
-                    targetState.articles = response.spotlightArticles
-                    targetState.nextUrl = response.nextUrl
-                    targetState.error = null
-                }.onFailure { err ->
-                    targetState.error = err
-                }
-
-                targetState.isInitialLoading = false
-                targetState.isRefreshing = false
-            }
-        }
-    }
-
-    val loadMoreCategoryData: (SpotlightCategory) -> Unit = { category ->
-        val targetState = categoryStates.getOrPut(category) { CategoryState() }
-        val nextUrl = targetState.nextUrl
-        if (!targetState.isLoadingMore && !targetState.isRefreshing && nextUrl != null && nextUrl.isNotBlank()) {
-            coroutineScope.launch {
-                targetState.isLoadingMore = true
-                val result = suspendRunCatchingNonCancel {
-                    repository.getSpotlightArticles(category = category.code, nextUrl = nextUrl)
-                }
-                result.onSuccess { response ->
-                    // 累积与去重收敛到 UI 层单点（架构审查 中-8）：仓库只返回当页响应
-                    targetState.articles = targetState.articles.appendDistinct(response.spotlightArticles)
-                    targetState.nextUrl = response.nextUrl
-                }
-                targetState.isLoadingMore = false
-            }
-        }
-    }
-
-    // 首次进入或分类切换时，若当前分类未加载过则发起初次加载。
+    // 首次进入或分类切换时发起首屏加载：已持有列表（缓存命中或此前已加载）时状态机内部早退。
     LaunchedEffect(selectedCategory) {
-        if (currentCategoryState.articles.isEmpty() && !currentCategoryState.isRefreshing) {
-            loadCategoryData(selectedCategory, false)
+        currentCategoryState.loadFirst()
+    }
+
+    fun refreshCurrentCategory() {
+        coroutineScope.launch {
+            forceNextFetch = true
+            currentCategoryState.loadFirst(force = true)
+            forceNextFetch = false
         }
     }
 
-    // 监听列表滚动触底，自动触发加载下一页。
-    LaunchedEffect(currentGridState, selectedCategory) {
+    fun loadMoreCurrentCategory() {
+        coroutineScope.launch { currentCategoryState.loadMore() }
+    }
+
+    // 监听列表滚动触底，自动触发加载下一页（四条件守卫与阈值单源在状态机内）。
+    LaunchedEffect(currentGridState, currentCategoryState) {
         snapshotFlow {
-            val layoutInfo = currentGridState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisibleItem >= totalItems - 4
+            currentCategoryState.shouldPreloadMore(
+                lastVisibleItemIndex = currentGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
+            )
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                loadMoreCategoryData(selectedCategory)
+                loadMoreCurrentCategory()
             }
     }
 
     val effectiveColumns = rememberSpotlightGridColumns()
-
 
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
@@ -239,7 +199,7 @@ fun SpotlightScreen(
                         scrollBehavior = scrollBehavior,
                         color = if (backdrop != null) Color.Transparent else colorScheme.surface,
                         actions = {
-                            IconButton(onClick = { loadCategoryData(selectedCategory, true) }) {
+                            IconButton(onClick = { refreshCurrentCategory() }) {
                                 Icon(
                                     imageVector = MiuixIcons.Refresh,
                                     contentDescription = strings.refresh,
@@ -271,22 +231,23 @@ fun SpotlightScreen(
                 .background(colorScheme.surface)
                 .blurBackdropSource(backdrop),
         ) {
+            val currentArticles = currentCategoryState.items
             when {
-                currentCategoryState.isInitialLoading -> LoadingPlaceholder(
+                currentArticles == null && currentCategoryState.initialError == null -> LoadingPlaceholder(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
 
-                currentCategoryState.error != null && currentCategoryState.articles.isEmpty() -> ErrorPlaceholder(
-                    error = currentCategoryState.error,
-                    onRetry = { loadCategoryData(selectedCategory, false) },
+                currentArticles == null && currentCategoryState.initialError != null -> ErrorPlaceholder(
+                    error = currentCategoryState.initialError,
+                    onRetry = { refreshCurrentCategory() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
                 )
 
-                currentCategoryState.articles.isEmpty() -> EmptyPlaceholder(
+                currentArticles != null && currentArticles.isEmpty() -> EmptyPlaceholder(
                     message = strings.noData,
                     modifier = Modifier
                         .fillMaxSize()
@@ -295,7 +256,7 @@ fun SpotlightScreen(
 
                 else -> PullToRefresh(
                     isRefreshing = currentCategoryState.isRefreshing,
-                    onRefresh = { loadCategoryData(selectedCategory, true) },
+                    onRefresh = { refreshCurrentCategory() },
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
                     topAppBarScrollBehavior = scrollBehavior,
@@ -316,7 +277,7 @@ fun SpotlightScreen(
                         verticalItemSpacing = 12.dp,
                     ) {
                         itemsIndexed(
-                            items = currentCategoryState.articles,
+                            items = currentArticles.orEmpty(),
                             key = { _, item -> "${selectedCategory.code}_${item.id}" },
                             contentType = { _, _ -> "spotlight_article" },
                         ) { _, article ->
@@ -326,24 +287,17 @@ fun SpotlightScreen(
                             )
                         }
 
-                        if (currentCategoryState.isLoadingMore) {
+                        // 统一三态 footer（UI-3）：翻页失败给出重试入口，代替此前静默停在半截。
+                        val footerState = currentCategoryState.footerState
+                        if (footerState.phase != PagingFooterPhase.Hidden) {
                             item(
                                 span = StaggeredGridItemSpan.FullLine,
-                                contentType = "loading_footer",
+                                contentType = "load_more_footer",
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = strings.loading,
-                                        style = MiuixTheme.textStyles.footnote1,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    )
-                                }
+                                PagingLoadMoreFooter(
+                                    state = footerState,
+                                    onRetry = { loadMoreCurrentCategory() },
+                                )
                             }
                         }
                     }
@@ -352,7 +306,6 @@ fun SpotlightScreen(
         }
     }
 }
-
 
 /**
  * 单张 Spotlight 文章卡片：封面图 + 标题 + 副标题。
@@ -409,30 +362,18 @@ internal fun SpotlightArticleCard(
 
 /**
  * Spotlight 特辑网格的列数策略（SpotlightScreen 与 SpotlightDetailScreen 共用）：
- * 自适应模式按设置宽度换算最小卡宽（160-600dp 收敛），
- * 固定模式下 2 列走 240dp 自适应、其余列数收敛到 1-4。
+ * 列数换算收敛到 UI-9 的纯函数，策略数值见 [SpotlightGridColumnPolicy] 与 AppConstants.Layout。
  */
 @Composable
 internal fun rememberSpotlightGridColumns(): StaggeredGridCells {
     val settings = LocalSettingsRepository.current
     val changeVersion = settings.changeVersion.collectAsState().value
     return remember(settings.crossAdapt, settings.crossAdapterWidth, settings.crossCount, changeVersion) {
-        if (settings.crossAdapt == true) {
-            val minWidth = (settings.crossAdapterWidth * 1.2f).toInt()
-                .coerceIn(SPOTLIGHT_CARD_MIN_WIDTH_DP, SPOTLIGHT_CARD_MAX_WIDTH_DP)
-            StaggeredGridCells.Adaptive(minWidth.dp)
-        } else {
-            val configuredCols = settings.crossCount
-            if (configuredCols == 2) {
-                StaggeredGridCells.Adaptive(SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP.dp)
-            } else {
-                StaggeredGridCells.Fixed(configuredCols.coerceIn(1, SPOTLIGHT_GRID_MAX_COLUMNS))
-            }
-        }
+        resolveGridColumns(
+            adapt = settings.crossAdapt == true,
+            adapterWidthDp = settings.crossAdapterWidth,
+            configuredCount = settings.crossCount,
+            policy = SpotlightGridColumnPolicy,
+        ).toStaggeredGridCells()
     }
 }
-
-private const val SPOTLIGHT_CARD_MIN_WIDTH_DP = 160
-private const val SPOTLIGHT_CARD_MAX_WIDTH_DP = 600
-private const val SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP = 240
-private const val SPOTLIGHT_GRID_MAX_COLUMNS = 4

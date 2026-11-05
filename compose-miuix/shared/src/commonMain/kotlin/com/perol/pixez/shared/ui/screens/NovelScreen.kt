@@ -139,15 +139,15 @@ fun NovelScreen(
         coroutineScope.launch { pagedList.loadMore() }
     }
 
-    // 触底自动加载更多：使用 snapshotFlow 监听滚动可视项位置，消除原 LaunchedEffect key 翻转导致的协程取消与分页死锁
-    LaunchedEffect(listState) {
+    // 触底自动加载更多：snapshotFlow 监听滚动可视项位置 + 状态机内四条件守卫（UI-2），
+    // 消除 listState 作唯一 key 时的协程取消与分页死锁。
+    LaunchedEffect(listState, pagedList) {
         snapshotFlow {
-            val layoutInfo = listState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisibleItem >= totalItems - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
+            pagedList.shouldPreloadMore(
+                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
+            )
         }.collect { shouldLoad ->
-            if (shouldLoad && !pagedList.isLoadingMore && pagedList.nextUrl != null && pagedList.loadMoreError == null) {
+            if (shouldLoad) {
                 loadMore()
             }
         }

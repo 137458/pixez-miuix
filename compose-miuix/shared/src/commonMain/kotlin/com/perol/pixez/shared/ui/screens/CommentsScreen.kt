@@ -46,12 +46,16 @@ import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagedLoadOutcome
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.PagingFooterAppearance
+import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
@@ -78,7 +82,6 @@ import com.perol.pixez.shared.ui.components.PixivEmojis
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.derivedStateOf
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
@@ -168,11 +171,10 @@ fun CommentsScreen(
         if (accountSwitched) pagedList.reset()
         loadedForAccount = user
         val force = isManualRefreshing
-        val previousItems = pagedList.items
-        pagedList.loadFirst(force = force)
+        val outcome = pagedList.loadFirst(force = force)
         isManualRefreshing = false
-        // 刷新成功且列表已替换时回到顶部（含发表评论后的自动刷新）。
-        if (force && previousItems != null && pagedList.items !== previousItems && listState.firstVisibleItemIndex > 0) {
+        // UI-8：写入成功由状态机回报，不再比较列表引用（失败与竞态失配都不回顶）。
+        if (force && outcome == PagedLoadOutcome.Written && listState.firstVisibleItemIndex > 0) {
             listState.scrollToItem(0)
         }
     }
@@ -188,20 +190,12 @@ fun CommentsScreen(
 
     val currentComments = pagedList.items
 
-    // 触底预加载：当滑到最后 4 项时自动请求下一页
+    // 触底预加载：四条件守卫与阈值单源在状态机内（UI-2），此处只喂末项索引。
     val shouldLoadMore by remember(pagedList) {
         derivedStateOf {
-            val totalCount = pagedList.items?.size ?: 0
-            if (totalCount == 0 ||
-                pagedList.nextUrl == null ||
-                pagedList.isLoadingMore ||
-                pagedList.loadMoreError != null
-            ) {
-                false
-            } else {
-                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1
-                lastVisibleItem >= totalCount - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
-            }
+            pagedList.shouldPreloadMore(
+                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+            )
         }
     }
 
@@ -316,33 +310,16 @@ fun CommentsScreen(
                                     )
                                 }
 
-                                item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        when {
-                                            pagedList.isLoadingMore -> InfiniteProgressIndicator()
-                                            pagedList.loadMoreError != null -> Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Text(
-                                                    text = strings.loadFailed,
-                                                    style = MiuixTheme.textStyles.body2,
-                                                    color = MiuixTheme.colorScheme.error,
-                                                )
-                                                Button(onClick = ::loadMore) {
-                                                    Text(text = strings.retry)
-                                                }
-                                            }
-                                            pagedList.nextUrl == null -> Text(
-                                                text = strings.commentsNoMore,
-                                                style = MiuixTheme.textStyles.footnote1,
-                                            )
-                                        }
+                                // 三态 footer 收敛到统一组件（UI-3），「没有更多」沿用评论文案键。
+                                val footerState = pagedList.footerState
+                                if (footerState.phase != PagingFooterPhase.Hidden) {
+                                    item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
+                                        PagingLoadMoreFooter(
+                                            state = footerState,
+                                            onRetry = ::loadMore,
+                                            appearance = PagingFooterAppearance.Compact,
+                                            noMoreText = strings.commentsNoMore,
+                                        )
                                     }
                                 }
                             }

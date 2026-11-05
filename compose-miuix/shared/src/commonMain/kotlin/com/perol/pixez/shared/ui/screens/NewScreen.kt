@@ -28,6 +28,9 @@ import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagedLoadOutcome
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
+import com.perol.pixez.shared.ui.state.PagingFooterState
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
@@ -226,12 +229,10 @@ fun NewScreen(
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        val previous = listState.filteredIllusts
-        listState.loadFirst(force = force)
+        val outcome = listState.loadFirst(force = force)
         isManualRefreshing = false
-        // 引用变化 = 本轮成功替换了列表（失败与竞态失配时状态机不写入）；force 刷新成功后滚回顶部。
-        val current = listState.filteredIllusts
-        if (current != null && current !== previous && force && gridState.firstVisibleItemIndex > 0) {
+        // UI-8：写入成功由状态机回报，不再比较列表引用；仅强制刷新成功才回顶。
+        if (outcome == PagedLoadOutcome.Written && force && gridState.firstVisibleItemIndex > 0) {
             gridState.scrollToItem(0)
         }
     }
@@ -599,14 +600,20 @@ private fun WatchlistSeriesList(
             )
         }
 
-        item(key = "watchlist_pagination_footer", contentType = "watchlist_pagination_footer") {
-            // 分页 footer 三态与搜索结果列表共用同一组件，观感与文案统一。
-            PagingLoadMoreFooter(
-                hasMore = hasMore,
-                isLoadingMore = isLoadingMore,
-                loadMoreError = loadMoreError,
-                onRetry = onLoadMore,
-            )
+        // 分页 footer 三态与其余列表页共用同一组件（UI-3）：Hidden 时不挂 item。
+        val footerState = PagingFooterState(
+            hasMore = hasMore,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
+            hasItems = series.isNotEmpty(),
+        )
+        if (footerState.phase != PagingFooterPhase.Hidden) {
+            item(key = "watchlist_pagination_footer", contentType = "watchlist_pagination_footer") {
+                PagingLoadMoreFooter(
+                    state = footerState,
+                    onRetry = onLoadMore,
+                )
+            }
         }
     }
 }

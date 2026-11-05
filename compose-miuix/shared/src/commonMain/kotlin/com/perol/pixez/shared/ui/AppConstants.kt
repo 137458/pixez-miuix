@@ -121,8 +121,6 @@ object AppConstants {
             "{width}x{height}",
         )
 
-        val MAX_TASK_OPTIONS = listOf(1, 2, 3, 5, 8, 10)
-
         const val EXTRA_ANDROID_LIVE_STATUS = "android.requestLiveStatusNotification"
         const val EXTRA_ANDROID_LIVE = "android.liveStatus"
         const val EXTRA_ANDROID_LIVE_TITLE = "android.liveStatusTitle"
@@ -191,6 +189,36 @@ object AppConstants {
 
         /** 瀑布流双列场景的触底预加载阈值：单屏条目少，需更早触发（IllustStaggeredGrid）。 */
         const val PRELOAD_THRESHOLD_STAGGERED_ITEMS = 6
+
+        /** 自适应网格最小卡宽上限（dp）：布局设置给的偏好宽度超过该值时收敛（IllustStaggeredGrid）。 */
+        const val GRID_ADAPTIVE_MAX_WIDTH_DP = 1000
+
+        /** 网格固定列数上限（IllustStaggeredGrid）。 */
+        const val GRID_MAX_FIXED_COLUMNS = 8
+
+        /** 特辑卡片网格最小卡宽换算倍率：特辑卡片更宽，按其偏好宽度放大后再作自适应最小宽。 */
+        const val SPOTLIGHT_CARD_WIDTH_SCALE = 1.2f
+
+        /** 特辑卡片自适应最小宽下限（dp）。 */
+        const val SPOTLIGHT_CARD_MIN_WIDTH_DP = 160
+
+        /** 特辑卡片自适应最小宽上限（dp）。 */
+        const val SPOTLIGHT_CARD_MAX_WIDTH_DP = 600
+
+        /** 特辑卡片在「固定 2 列」时改走自适应所用卡宽（dp）。 */
+        const val SPOTLIGHT_CARD_ADAPTIVE_WIDTH_DP = 240
+
+        /** 特辑卡片网格固定列数上限。 */
+        const val SPOTLIGHT_GRID_MAX_COLUMNS = 4
+
+        /** 折叠手势上滑阈值（px）：手指上推位移超过该值才协同折叠大标题（SearchScreen）。 */
+        const val COLLAPSE_SCROLL_THRESHOLD_PX = 8f
+
+        /** 折叠手势回顶过冲阈值（px）：列表触顶后仍继续下拉超过该值才展开大标题（SearchScreen）。 */
+        const val EXPAND_OVERSCROLL_THRESHOLD_PX = 4f
+
+        /** 详情页大图折叠进度累计位移阈值（dp）：上滑累计到该位移即视为完全折叠（IllustDetailScreen）。 */
+        const val DETAIL_COLLAPSE_THRESHOLD_DP = 72
     }
 
     /**

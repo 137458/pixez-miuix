@@ -43,6 +43,8 @@ import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
+import com.perol.pixez.shared.ui.state.CollapseAction
+import com.perol.pixez.shared.ui.state.CollapseGesture
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -193,7 +195,8 @@ fun SearchScreen(
     }
 
     val launchPickPhoto: () -> Unit = {
-        photoPicker.pickPhoto { bytes, fileName ->
+        // 标题由调用方注入（DN15：platform actual 不再读 AppStrings 单例）。
+        photoPicker.pickPhoto(title = strings.menuSauceNao) { bytes, fileName ->
             if (bytes != null && bytes.isNotEmpty()) {
                 performSauceNaoSearch(bytes, fileName)
             }
@@ -238,46 +241,36 @@ fun SearchScreen(
         }
     }
 
+    // 折叠时序与阈值收敛到 CollapseGesture 纯函数（UI-7，阈值见 AppConstants.Layout）；
+    // 此处只负责把决策结果写回滚动状态。下拉不在此处展开，只有回顶过冲才展开。
     val searchNestedScrollConnection = remember(scrollBehavior) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
-                if (delta < 0f) {
-                    // 手指向上推（向下浏览内容）：
-                    // 1. 同步累加 contentOffset，驱动 BlurredBar 渐进式毛玻璃在滑动时平滑淡入
-                    scrollBehavior.state.contentOffset += delta
-
-                    // 2. 当向上滑动超过阈值时协同折叠大标题与全宽搜索框
-                    if (delta < -8f) {
-                        val limit = scrollBehavior.state.heightOffsetLimit
-                        if (limit < 0f) {
-                            scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + delta).coerceIn(limit, 0f)
-                        }
-                        if (!isSearchCollapsed) isSearchCollapsed = true
-                    }
-                }
-                // 注意：手指往下拉时不在此处盲目展开！必须等列表真正滚回最顶端时才展开，避免在列表中间浏览时误触发放大。
+                val step = CollapseGesture.resolvePreScroll(
+                    delta = available.y,
+                    heightOffset = scrollBehavior.state.heightOffset,
+                    contentOffset = scrollBehavior.state.contentOffset,
+                    heightOffsetLimit = scrollBehavior.state.heightOffsetLimit,
+                    isCollapsed = isSearchCollapsed,
+                )
+                scrollBehavior.state.heightOffset = step.heightOffset
+                scrollBehavior.state.contentOffset = step.contentOffset
+                if (step.action == CollapseAction.Collapse) isSearchCollapsed = true
                 return Offset.Zero
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                // 手指向下拉回：
-                if (consumed.y > 0f) {
-                    scrollBehavior.state.contentOffset = (scrollBehavior.state.contentOffset + consumed.y).coerceAtMost(0f)
-                }
-
-                // 当列表已滑动到最顶端无法再继续往下拉（available.y > 0 表示列表已触顶过冲）：
-                // 顺畅展开大标题与搜索框，并归零 contentOffset
-                if (available.y > 0f) {
-                    scrollBehavior.state.contentOffset = (scrollBehavior.state.contentOffset + available.y).coerceAtMost(0f)
-                    if (available.y > 4f) {
-                        if (isSearchCollapsed) isSearchCollapsed = false
-                        val limit = scrollBehavior.state.heightOffsetLimit
-                        if (limit < 0f) {
-                            scrollBehavior.state.heightOffset = (scrollBehavior.state.heightOffset + available.y).coerceIn(limit, 0f)
-                        }
-                    }
-                }
+                val step = CollapseGesture.resolvePostScroll(
+                    consumed = consumed.y,
+                    availableOverscroll = available.y,
+                    heightOffset = scrollBehavior.state.heightOffset,
+                    contentOffset = scrollBehavior.state.contentOffset,
+                    heightOffsetLimit = scrollBehavior.state.heightOffsetLimit,
+                    isCollapsed = isSearchCollapsed,
+                )
+                scrollBehavior.state.heightOffset = step.heightOffset
+                scrollBehavior.state.contentOffset = step.contentOffset
+                if (step.action == CollapseAction.Expand) isSearchCollapsed = false
                 return Offset.Zero
             }
         }

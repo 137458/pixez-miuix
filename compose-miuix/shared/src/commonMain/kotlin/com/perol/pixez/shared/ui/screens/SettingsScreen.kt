@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.formatCacheSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -531,16 +532,5 @@ private fun AccountSection(
         }
     }
 }
-
-private fun formatCacheSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "${((kb * 10).toInt() / 10.0)} KB"
-    val mb = kb / 1024.0
-    if (mb < 1024) return "${((mb * 10).toInt() / 10.0)} MB"
-    val gb = mb / 1024.0
-    return "${((gb * 100).toInt() / 100.0)} GB"
-}
-
 
 
