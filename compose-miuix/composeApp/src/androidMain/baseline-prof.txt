@@ -17,7 +17,6 @@ HSPLcom/perol/pixez/shared/ui/navigation/RootContentKt;->RootContent(Lcom/perol/
 HSPLcom/perol/pixez/shared/AppDependencies;-><init>(Lcom/perol/pixez/shared/data/local/DriverFactory;Lcom/perol/pixez/shared/data/settings/SettingsFactory;)V
 HSPLcom/perol/pixez/shared/AppDependencies;->warmupAsync(Lkotlinx/coroutines/CoroutineScope;)V
 HSPLcom/perol/pixez/shared/network/PixivHttpClient;->warmup()Ljava/lang/Object;
-HSPLcom/perol/pixez/shared/network/AuthTokenStorage;->getCachedAccountFast()Lcom/perol/pixez/shared/data/local/account/Account;
 HSPLcom/perol/pixez/shared/network/AuthTokenStorage;->getCurrentAccount(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 
 # Home Feed & Staggered Grid Rendering

@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
@@ -14,6 +16,15 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+}
+
+// 回退分支不静默：缺配置时明确告警，并给 release 产物打上 debug-signed 版本标注（见下方 androidComponents）。
+val releaseSigningConfigured = releaseSigningProps != null
+if (!releaseSigningConfigured) {
+    logger.warn(
+        "release 构建回退到 debug 签名：未找到 compose-miuix/keystore.properties。" +
+            "该 release 产物不可用于正式发版，版本名会追加 -debug-signed 后缀以便追溯。",
+    )
 }
 
 kotlin {
@@ -108,7 +119,7 @@ android {
             )
             // 有 keystore.properties 时用正式签名，否则回退 debug，避免无密钥环境构建失败
             signingConfig = signingConfigs.getByName(
-                if (releaseSigningProps != null) "release" else "debug"
+                if (releaseSigningConfigured) "release" else "debug"
             )
         }
     }
@@ -144,6 +155,21 @@ android {
 }
 
 
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        if (!releaseSigningConfigured) {
+            // 产物自证：debug 签名的 release 包在清单版本名上带 -debug-signed，安装后可直接辨认。
+            // 基础版本仍取 defaultConfig 的字面量，避免在脚本里再写一份版本号。
+            val baseVersionName = android.defaultConfig.versionName
+            if (baseVersionName != null) {
+                variant.outputs.forEach { output ->
+                    output.versionName.set(baseVersionName + "-debug-signed")
+                }
+            }
+        }
+    }
+}
+
 // 开发运行（gradlew :composeApp:run）开启桌面调试日志；jpackage 发布包不带该属性
 tasks.matching { it.name == "run" }.configureEach {
     (this as? JavaExec)?.jvmArgs("-Dpixez.debug=true")
@@ -152,24 +178,37 @@ tasks.matching { it.name == "run" }.configureEach {
 compose.desktop {
     application {
         mainClass = "com.perol.pixez.desktop.MainKt"
-        val jpackageJdk = listOf(
+        // jpackage 的 JDK 只由环境变量或 -P 属性注入：不在脚本里写机器私有路径。
+        // 全部落空时回退 Gradle 当前 JVM（jpackage 随之用该 JVM 的运行时），并显式告警。
+        val packageJavaHome = listOfNotNull(
+            providers.gradleProperty("packageJavaHome").orNull,
             System.getenv("PACKAGE_JAVA_HOME"),
-            "I:\\Program Files\\Java\\jdk-26.0.1",
-            "C:\\Program Files\\Java\\latest\\jdk-26",
-            "C:\\Program Files\\Java\\jdk-17",
-            "C:\\Program Files\\Eclipse Adoptium\\jdk-17",
-        ).filterNotNull().firstOrNull { file(it).resolve("bin/jpackage.exe").exists() }
+        ).firstOrNull()
+        val jpackageJdk = packageJavaHome
+            ?.let(::file)
+            ?.takeIf { it.resolve("bin/jpackage.exe").exists() || it.resolve("bin/jpackage").exists() }
         if (jpackageJdk != null) {
-            javaHome = jpackageJdk
+            javaHome = jpackageJdk.absolutePath
+        } else {
+            val jpackageHint = packageJavaHome
+                ?.let { "packageJavaHome=" + it + " 下没有 bin/jpackage" }
+                ?: "-PpackageJavaHome / PACKAGE_JAVA_HOME 均未设置"
+            logger.warn(
+                "未找到可用的 jpackage（" + jpackageHint +
+                    "）：打包将回退 Gradle 当前 JVM " + System.getProperty("java.home"),
+            )
         }
 
         nativeDistributions {
-            targetFormats(
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
-            )
+            // 只声明宿主真正能产出的格式：Dmg 需 macOS、Deb 需 Linux，在 Windows 上它们永远不会生成。
+            val hostFormats: List<TargetFormat> = when {
+                OperatingSystem.current().isWindows -> listOf(TargetFormat.Exe, TargetFormat.Msi)
+                OperatingSystem.current().isMacOsX -> listOf(TargetFormat.Dmg)
+                OperatingSystem.current().isLinux -> listOf(TargetFormat.Deb)
+                else -> emptyList()
+            }
+            targetFormats(*hostFormats.toTypedArray())
+
             packageName = "PixEz"
             packageVersion = "0.9.109"
             description = "PixEz MIUIX - Pixiv Client with Xiaomi HyperOS design"
@@ -368,9 +407,5 @@ tasks.register("packageWindowsSingleFileExe") {
 
         println("Successfully generated Single-File Self-Contained EXE: ${targetExe.absolutePath} (${targetExe.length() / 1024 / 1024} MB)")
     }
-}
-
-tasks.matching { it.name.contains("AarMetadata") }.configureEach {
-    enabled = false
 }
 

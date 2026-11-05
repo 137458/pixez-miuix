@@ -154,11 +154,6 @@ android {
     }
 }
 
-tasks.matching { it.name.contains("AarMetadata") || it.name.contains("bundleReleaseLocalLintAar") || it.name.contains("bundleDebugLocalLintAar") }.configureEach {
-    enabled = false
-}
-
-
 // SQLDelight migration 验证在 Windows 上因 native sqlite 库释放路径问题可能失败，
 // 因此仅在非 Windows 平台默认启用；Windows 本地/CI 可通过 -PskipVerifyMigrations 显式跳过。
 // 现在有真实 migration 文件（1.sqm），必须保留校验以捕获 schema 不一致问题。
@@ -220,9 +215,5 @@ sqldelight {
             srcDirs.setFrom("src/commonMain/sqldelight/novelpersist")
         }
     }
-}
-
-tasks.matching { it.name.contains("AarMetadata") }.configureEach {
-    enabled = false
 }
 

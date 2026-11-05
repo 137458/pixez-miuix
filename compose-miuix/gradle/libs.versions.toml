@@ -10,7 +10,6 @@ miuix = "0.9.4"
 # KMP / Android 基础
 androidx-activity-compose = "1.10.1"
 androidx-lifecycle = "2.9.4"
-androidx-core-ktx = "1.16.0"
 androidx-core-splashscreen = "1.0.1"
 androidx-profileinstaller = "1.4.1"
 
@@ -32,7 +31,6 @@ okhttp = "4.12.0"
 # 桌面端 Windows 原生 API 绑定（DPAPI 凭据加密、窗口与任务栏调用）
 jna = "5.14.0"
 
-# DI / 导航 / 工具
 # DI / 导航 / 工具 / 特效
 decompose = "3.3.0"
 navigationevent = "1.1.2"
