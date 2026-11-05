@@ -175,38 +175,6 @@ class CardExpandGeometryTest {
     }
 
     @Test
-    fun `底层列表页面在卡片展开与收回全程保持铺满不缩放不裁切以根除四周白边`() {
-        val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        val idleBackdrop = resolveBackdropLayerState(
-            expansion = 0f,
-            sourceBounds = card,
-            containerBounds = container,
-            containerCornerRadiusDp = 0f,
-        )
-        assertClose(1.0f, idleBackdrop.scale)
-        assertClose(0f, idleBackdrop.localCornerRadiusDp)
-
-        val expandedBackdrop = resolveBackdropLayerState(
-            expansion = 1f,
-            sourceBounds = card,
-            containerBounds = container,
-            containerCornerRadiusDp = 32f,
-        )
-        assertClose(1.0f, expandedBackdrop.scale)
-        assertClose(0f, expandedBackdrop.localCornerRadiusDp)
-    }
-
-    @Test
-    fun `底层页面微缩放锚点对齐源卡片中心在容器内的归一化位置`() {
-        val card = Rect(left = 100f, top = 400f, right = 500f, bottom = 800f)
-        // 卡片中心为 (300, 600)，容器为 1000x2000 -> 归一化锚点应为 (0.3, 0.3)
-        val origin = resolveBackdropTransformOrigin(card, container)
-
-        assertClose(0.3f, origin.pivotFractionX)
-        assertClose(0.3f, origin.pivotFractionY)
-    }
-
-    @Test
     fun `收回终点顶层可见窗口与卡片矩形像素级重合`() {
         landingCases.forEach { case ->
             val state = assertNotNull(
@@ -258,7 +226,7 @@ class CardExpandGeometryTest {
         val landscapeContainer = Rect(left = 0f, top = 0f, right = 2400f, bottom = 1080f)
         val card = Rect(left = 300f, top = 220f, right = 600f, bottom = 790f)
 
-        assertTrue(isCardExpandLandable(card, landscapeContainer))
+        assertTrue(hasUsableCardExpandGeometry(card, landscapeContainer))
 
         val state = assertNotNull(
             resolveCardExpandTransform(expansion = 0f, sourceBounds = card, containerBounds = landscapeContainer),
@@ -320,7 +288,7 @@ class CardExpandGeometryTest {
         val squareContainer = Rect(left = 0f, top = 0f, right = 1000f, bottom = 1000f)
         val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 850f)
 
-        assertTrue(isCardExpandLandable(card, squareContainer))
+        assertTrue(hasUsableCardExpandGeometry(card, squareContainer))
         val state = assertNotNull(
             resolveCardExpandTransform(expansion = 0f, sourceBounds = card, containerBounds = squareContainer),
         )
@@ -334,17 +302,17 @@ class CardExpandGeometryTest {
         val portraitContainer = Rect(left = 100f, top = 50f, right = 1100f, bottom = 2050f)
         val card = Rect(left = 300f, top = 250f, right = 700f, bottom = 850f)
 
-        assertTrue(isCardExpandLandable(card, portraitContainer))
+        assertTrue(hasUsableCardExpandGeometry(card, portraitContainer))
     }
 
     @Test
     fun `容器或卡片尺寸非法时判定为不可落点`() {
         val card = Rect(left = 100f, top = 100f, right = 500f, bottom = 600f)
 
-        assertFalse(isCardExpandLandable(card, Rect.Zero))
-        assertFalse(isCardExpandLandable(card, Rect(left = 0f, top = 0f, right = 1080f, bottom = 0f)))
-        assertFalse(isCardExpandLandable(Rect.Zero, container))
-        assertFalse(isCardExpandLandable(card.copy(right = card.left), container))
+        assertFalse(hasUsableCardExpandGeometry(card, Rect.Zero))
+        assertFalse(hasUsableCardExpandGeometry(card, Rect(left = 0f, top = 0f, right = 1080f, bottom = 0f)))
+        assertFalse(hasUsableCardExpandGeometry(Rect.Zero, container))
+        assertFalse(hasUsableCardExpandGeometry(card.copy(right = card.left), container))
     }
 
     /**

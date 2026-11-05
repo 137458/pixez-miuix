@@ -25,7 +25,6 @@ import com.perol.pixez.shared.ui.screens.DownloadHistoryScreen
 import com.perol.pixez.shared.ui.screens.DownloadSettingScreen
 import com.perol.pixez.shared.ui.screens.DownloadTaskScreen
 import com.perol.pixez.shared.ui.screens.GuideScreen
-import com.perol.pixez.shared.ui.screens.HelloScreen
 import com.perol.pixez.shared.ui.screens.HistoryScreen
 import com.perol.pixez.shared.ui.screens.IllustDetailScreen
 import com.perol.pixez.shared.ui.screens.IllustSeriesScreen
@@ -34,18 +33,15 @@ import com.perol.pixez.shared.ui.screens.LanguageSettingScreen
 import com.perol.pixez.shared.ui.screens.LayoutSettingScreen
 import com.perol.pixez.shared.ui.screens.LoginScreen
 import com.perol.pixez.shared.ui.screens.NetworkSettingScreen
-import com.perol.pixez.shared.ui.screens.NewScreen
 import com.perol.pixez.shared.ui.screens.NovelScreen
 import com.perol.pixez.shared.ui.screens.NovelViewerScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
-import com.perol.pixez.shared.ui.screens.RankingScreen
 import com.perol.pixez.shared.ui.screens.RecomUserScreen
 import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
 import com.perol.pixez.shared.ui.screens.SpotlightDetailScreen
-import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.screens.ThanksScreen
 import com.perol.pixez.shared.ui.screens.ThemeSettingScreen
 import com.perol.pixez.shared.ui.screens.UpdateSettingScreen
@@ -138,44 +134,8 @@ internal fun MainContent(
         beyondViewportPageCount = 4,
         modifier = Modifier.fillMaxSize(),
     ) { page ->
-        when (RootComponent.MAIN_TAB_ORDER[page]) {
-            RootComponent.MainTab.Hello -> HelloScreen(
-                onIllustClick = component::onIllustClicked,
-                onUserClick = component::onUserClicked,
-                onSettingsClick = component::onSettingsClicked,
-                onLoginClick = component::onLoginClicked,
-                onRecomUserClick = component::onRecomUserListClicked,
-                feedRestore = feedRestore.hello,
-                reselectFlow = remember(component) {
-                    component.reselectFlowOf(RootComponent.MainTab.Hello)
-                },
-            )
-
-            RootComponent.MainTab.Search -> SearchScreen(
-                onIllustClick = component::onIllustClicked,
-                onUserClick = component::onUserClicked,
-                onNovelClick = component::onNovelClicked,
-            )
-
-            RootComponent.MainTab.Ranking -> RankingScreen(
-                onIllustClick = component::onIllustClicked,
-                feedRestore = feedRestore.ranking,
-            )
-
-            RootComponent.MainTab.New -> NewScreen(
-                onIllustClick = component::onIllustClicked,
-                onUserClick = component::onUserClicked,
-                onLoginClick = component::onLoginClicked,
-                onSeriesClick = component::onIllustSeriesClicked,
-                reselectFlow = remember(component) {
-                    component.reselectFlowOf(RootComponent.MainTab.New)
-                },
-            )
-
-            RootComponent.MainTab.Spotlight -> SpotlightScreen(
-                onArticleClick = component::onSpotlightArticleClicked,
-            )
-        }
+        val descriptor = MAIN_TAB_DESCRIPTORS[page]
+        descriptor.content(component, feedRestore)
     }
 }
 

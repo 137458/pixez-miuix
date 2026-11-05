@@ -40,12 +40,12 @@ fun BgEffectBackground(
         modifier = modifier,
     ) {
         val surface = MiuixTheme.colorScheme.surface
-        val deviceType = DeviceType.PHONE
         val isDarkTheme = isSystemInDarkTheme()
         val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }
 
-        val preset = remember(deviceType, isDarkTheme, isOs3Effect) {
-            BgEffectConfig.get(deviceType, isDarkTheme, isOs3Effect)
+        // 预设解析一次的单一权威（nav9）：painter 不再自行查表。
+        val preset = remember(isDarkTheme, isOs3Effect) {
+            BgEffectConfig.get(isDarkTheme, isOs3Effect)
         }
 
         val colorStage = remember { Animatable(0f) }
@@ -73,7 +73,6 @@ fun BgEffectBackground(
                 .bgEffectDraw(
                     painter = painter,
                     preset = preset,
-                    deviceType = deviceType,
                     isDarkTheme = isDarkTheme,
                     surface = surface,
                     effectBackground = effectBackground,

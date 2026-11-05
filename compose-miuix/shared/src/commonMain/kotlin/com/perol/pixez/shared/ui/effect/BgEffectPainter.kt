@@ -26,8 +26,7 @@ internal class BgEffectPainter(
     private val pointsAnimBuffer = FloatArray(8)
 
     private var animTime = Float.NaN
-    private var isDarkCached: Boolean? = null
-    private var deviceTypeCached: DeviceType? = null
+    private var cachedPreset: BgEffectConfig.Config? = null
 
     private var presetApplied = false
 
@@ -131,19 +130,20 @@ internal class BgEffectPainter(
         cachedTotalWidth = totalWidth
     }
 
-    fun updatePresetIfNeeded(deviceType: DeviceType, isDark: Boolean) {
-        if (presetApplied && isDarkCached == isDark && deviceTypeCached == deviceType) return
+    /**
+     * 应用预设的静态 uniform（nav9）：预设由调用方解析一次后传入，painter 不再自行查表，
+     * 保证「设备形态 × 明暗 × OS2/3 -> 预设」的解析只有一处权威。
+     */
+    fun updatePresetIfNeeded(preset: BgEffectConfig.Config) {
+        if (presetApplied && cachedPreset === preset) return
 
-        applyPreset(deviceType, isDark)
+        applyPreset(preset)
 
-        isDarkCached = isDark
-        deviceTypeCached = deviceType
+        cachedPreset = preset
         presetApplied = true
     }
 
-    private fun applyPreset(deviceType: DeviceType, isDark: Boolean) {
-        val preset = BgEffectConfig.get(deviceType, isDark, isOs3)
-
+    private fun applyPreset(preset: BgEffectConfig.Config) {
         runtimeShader.setFloatUniform("uPoints", preset.points)
         runtimeShader.setFloatUniform("uLightOffset", preset.lightOffset)
         runtimeShader.setFloatUniform("uSaturateOffset", preset.saturateOffset)

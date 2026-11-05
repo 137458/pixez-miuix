@@ -521,13 +521,10 @@ class RootComponent(
     }
 
     companion object {
-        val MAIN_TAB_ORDER = listOf(
-            MainTab.Hello,
-            MainTab.Search,
-            MainTab.Ranking,
-            MainTab.New,
-            MainTab.Spotlight,
-        )
+        /**
+         * 一级标签顺序：由 [MAIN_TAB_DESCRIPTORS] 派生（nav13），与底栏/侧栏/Pager 同源。
+         */
+        val MAIN_TAB_ORDER: List<MainTab> = MAIN_TAB_DESCRIPTORS.map { it.tab }
     }
 }
 

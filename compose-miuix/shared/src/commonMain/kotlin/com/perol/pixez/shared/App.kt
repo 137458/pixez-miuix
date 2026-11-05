@@ -59,6 +59,10 @@ fun App(
 
     val component = rootComponent ?: rememberRootComponent(dependencies)
     val navigationEventDispatcherOwner = rememberNavigationEventDispatcherOwner(parent = null)
+    // 仓库清单的唯一权威是 RepositoryRegistry（ui/navigation）。
+    // nav3/DN14 已把「全部仓储 CompositionLocal 的展开」收敛到 ui/ProvideRepositories，
+    // 但本处「AppDependencies -> Registry」的逐字段搬运仍是未收敛的第 4 处：
+    // 后续若由 AppDependencies 直接暴露 Registry（或改为容器投影），即可删除下面整段搬运。
     val registry = remember(dependencies) {
         RepositoryRegistry(
             illustRepository = dependencies.illustRepository,

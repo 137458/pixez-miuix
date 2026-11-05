@@ -108,57 +108,17 @@ internal fun resolveCardExpandTransform(
 }
 
 /**
- * 判定给定容器能否承载「卡片展开」转场。
+ * 判定给定卡片/容器几何是否可用于「卡片展开」转场。
  *
+ * 该判定只排除尺寸非法（宽或高不为正）的几何，**不**按纵横比否决：
  * 通过 `maxOf(liveScaleX, liveScaleY)` 等比缩放配合双向视口裁切（[CardExpandTransformState.visibleWidthFraction]
  * 与 [CardExpandTransformState.visibleHeightFraction]），竖屏与横屏容器下的任意比例卡片在收回终点均能与卡片四边像素级重合，
- * 因此只要容器与卡片尺寸合法即可执行卡片转场。
+ * 因此这里回答的是「几何是否可用」，而非「纵横比是否合适」。
  */
-internal fun isCardExpandLandable(sourceBounds: Rect, containerBounds: Rect): Boolean {
+internal fun hasUsableCardExpandGeometry(sourceBounds: Rect, containerBounds: Rect): Boolean {
     if (containerBounds.width <= 0f || containerBounds.height <= 0f) return false
     if (sourceBounds.width <= 0f || sourceBounds.height <= 0f) return false
     return true
-}
-
-/**
- * 底层页面（作品列表）在给定展开度下的纵深缩放与圆角裁切状态。
- */
-internal data class BackdropLayerState(
-    val scale: Float,
-    val transformOrigin: TransformOrigin,
-    val localCornerRadiusDp: Float,
-)
-
-/**
- * 计算底层列表页面在给定展开度下的缩放比例、缩放锚点与逆向补偿后的本地圆角。
- */
-internal fun resolveBackdropLayerState(
-    expansion: Float,
-    sourceBounds: Rect?,
-    containerBounds: Rect,
-    containerCornerRadiusDp: Float = 0f,
-): BackdropLayerState {
-    val origin = resolveBackdropTransformOrigin(sourceBounds, containerBounds)
-    return BackdropLayerState(
-        scale = 1f,
-        transformOrigin = origin,
-        localCornerRadiusDp = 0f,
-    )
-}
-
-/**
- * 计算底层页面纵深微缩放的锚点（归一化到 0..1），使其围绕源卡片中心退让与聚拢。
- */
-internal fun resolveBackdropTransformOrigin(
-    sourceBounds: Rect?,
-    containerBounds: Rect,
-): TransformOrigin {
-    if (sourceBounds == null || containerBounds.width <= 0f || containerBounds.height <= 0f) {
-        return TransformOrigin.Center
-    }
-    val pivotX = ((sourceBounds.center.x - containerBounds.left) / containerBounds.width).coerceIn(0f, 1f)
-    val pivotY = ((sourceBounds.center.y - containerBounds.top) / containerBounds.height).coerceIn(0f, 1f)
-    return TransformOrigin(pivotX, pivotY)
 }
 
 /**
@@ -319,13 +279,12 @@ private data class ClippedContainerShape(
  *
  * 始终保持 `drawWithContent` 节点挂载（`scrimAlpha <= 0.001f` 时仅调用 `drawContent()`），
  * 防止转场起止帧动态增删修饰符节点触发底层列表重测量与闪烁。
+ *
+ * 签名只保留真正被消费的 [alpha]（nav7）：底层遮罩不参与缩放/裁切/圆角计算，
+ * 展开度到不透明度的换算由 [cardExpandScrimAlpha] 在调用点完成。
  */
 internal fun Modifier.cardExpandScrim(
     alpha: Float,
-    expansion: Float = (alpha / BACKDROP_SCRIM_ALPHA).coerceIn(0f, 1f),
-    sourceBounds: Rect? = null,
-    containerBounds: Rect = Rect.Zero,
-    containerCornerRadius: Dp = 0.dp,
 ): Modifier {
     val scrimAlpha = alpha.coerceIn(0f, 1f)
     return this.drawWithContent {

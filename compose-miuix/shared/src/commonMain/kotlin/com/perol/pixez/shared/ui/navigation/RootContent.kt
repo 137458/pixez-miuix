@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -48,24 +47,8 @@ import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimati
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.ui.LocalAccountRepository
-import com.perol.pixez.shared.ui.LocalBanRepository
-import com.perol.pixez.shared.ui.LocalBoardRepository
-import com.perol.pixez.shared.ui.LocalBookmarkRepository
-import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
-import com.perol.pixez.shared.ui.LocalDownloadRepository
-import com.perol.pixez.shared.ui.LocalHistoryRepository
-import com.perol.pixez.shared.ui.LocalIllustRepository
-import com.perol.pixez.shared.ui.LocalMuteRepository
-import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
-import com.perol.pixez.shared.ui.LocalNovelRepository
-import com.perol.pixez.shared.ui.LocalPixivisionRepository
-import com.perol.pixez.shared.ui.LocalSauceNaoRepository
-import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.LocalUpdateRepository
-import com.perol.pixez.shared.ui.LocalUserRepository
-import com.perol.pixez.shared.ui.LocalWatchlistRepository
+import com.perol.pixez.shared.ui.ProvideRepositories
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
@@ -76,13 +59,10 @@ import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeColorSpec
-import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
-import top.yukonga.miuix.kmp.theme.darkColorScheme
-import top.yukonga.miuix.kmp.theme.lightColorScheme
+import com.perol.pixez.shared.ui.theme.AppThemeSettings
+import com.perol.pixez.shared.ui.theme.resolveAppThemeSpec
+import com.perol.pixez.shared.ui.theme.toThemeController
 
 /**
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
@@ -101,31 +81,23 @@ fun RootContent(
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
     // 监听 changeVersion 响应式自增，确保 ThemeSettingScreen 修改后即时全局重绘。
     val changeVersion = settingsRepository.changeVersion.collectAsState().value
-    val themeMode = settingsRepository.themeMode
-    val isAmoled = settingsRepository.isAmoled
-    val useDynamicColor = settingsRepository.useDynamicColor
-    val seedColor = settingsRepository.seedColor ?: DEFAULT_SEED_COLOR
-    val paletteStyleIndex = settingsRepository.miuixPaletteStyle
-    val useSpec2025 = settingsRepository.miuixUseSpec2025
+    val themeSettings = AppThemeSettings(
+        themeMode = settingsRepository.themeMode,
+        isAmoled = settingsRepository.isAmoled,
+        useDynamicColor = settingsRepository.useDynamicColor,
+        seedColor = settingsRepository.seedColor ?: DEFAULT_SEED_COLOR,
+        paletteStyleIndex = settingsRepository.miuixPaletteStyle,
+        useSpec2025 = settingsRepository.miuixUseSpec2025,
+    )
+    val systemInDarkTheme = isSystemInDarkTheme()
 
+    // 主题策略为纯函数（nav10）：本函数只负责读快照、装配并下发控制器，映射规则见 ui/theme。
     // 进程重建后上述状态会由 SettingsRepository 恢复（M4）。
-    val themeController = remember(
-        themeMode,
-        isAmoled,
-        useDynamicColor,
-        seedColor,
-        paletteStyleIndex,
-        useSpec2025,
-        changeVersion,
-    ) {
-        buildThemeController(
-            themeMode = themeMode,
-            isAmoled = isAmoled,
-            useDynamicColor = useDynamicColor,
-            seedColor = seedColor,
-            paletteStyleIndex = paletteStyleIndex,
-            useSpec2025 = useSpec2025,
-        )
+    val appThemeSpec = remember(themeSettings, systemInDarkTheme, changeVersion) {
+        resolveAppThemeSpec(themeSettings, systemInDarkTheme)
+    }
+    val themeController = remember(appThemeSpec, changeVersion) {
+        appThemeSpec.toThemeController()
     }
 
     val stack by component.stack.subscribeAsState()
@@ -161,151 +133,132 @@ fun RootContent(
         }
     }
 
-    // I-26：明暗判定由 themeMode 解析（与 buildThemeController 的 ColorSchemeMode 一致，AMOLED/动态色不影响）
-    val resolvedDark = when (themeMode) {
-        1 -> false
-        2 -> true
-        else -> isSystemInDarkTheme()
-    }
-    val appExtraColors = if (resolvedDark) darkAppExtraColors else lightAppExtraColors
+    // I-26：明暗判定由 themeMode 解析（与 resolveAppThemeSpec 的 ColorSchemeMode 同源，AMOLED/动态色不影响）
+    val appExtraColors = if (appThemeSpec.resolvedDark) darkAppExtraColors else lightAppExtraColors
 
     MiuixTheme(controller = themeController) {
-        CompositionLocalProvider(
-            LocalSettingsRepository provides settingsRepository,
-            LocalIllustRepository provides registry.illustRepository,
-            LocalPixivisionRepository provides registry.pixivisionRepository,
-            LocalSearchRepository provides registry.searchRepository,
-            LocalUserRepository provides registry.userRepository,
-            LocalAccountRepository provides registry.accountRepository,
-            LocalBookmarkRepository provides registry.bookmarkRepository,
-            LocalHistoryRepository provides registry.historyRepository,
-            LocalDownloadRepository provides registry.downloadRepository,
-            LocalDownloadHistoryRepository provides registry.downloadHistoryRepository,
-            LocalBanRepository provides registry.banRepository,
-            LocalBoardRepository provides registry.boardRepository,
-            LocalNovelHistoryRepository provides registry.novelHistoryRepository,
-            LocalMuteRepository provides registry.muteRepository,
-            LocalNovelRepository provides registry.novelRepository,
-            LocalUpdateRepository provides registry.updateRepository,
-            LocalSauceNaoRepository provides registry.sauceNaoRepository,
-            LocalWatchlistRepository provides registry.watchlistRepository,
-            LocalBottomBarVisibility provides bottomBarVisible,
-            LocalStrings provides strings,
-            LocalLayoutDirection provides (if (isRtlLanguage(currentLanguageNum)) LayoutDirection.Rtl else LayoutDirection.Ltr),
-            LocalSharedBoundsRegistry provides sharedBounds,
-            LocalAppExtraColors provides appExtraColors,
-            LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
-        ) {
-            val updateInfo = appReleaseInfo
-            if (showAppUpdateDialog && updateInfo != null) {
-                UpdateDialog(
-                    show = showAppUpdateDialog,
-                    releaseInfo = updateInfo,
-                    onDismiss = { showAppUpdateDialog = false },
-                    onUpdate = { url ->
-                        showAppUpdateDialog = false
-                        openSafeUrl(url, strings, onError = { message ->
-                            rootToastMessage = ToastData(message, ToastType.Error)
-                        })
-                    },
-                    onIgnore = { ver ->
-                        settingsRepository.ignoreUpdateVersion = ver
-                        showAppUpdateDialog = false
-                    },
-                )
-            }
-
-            BoxWithConstraints(
-                modifier = modifier
-                    .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.surface),
+        // 仓储通道统一由 RepositoryRegistry 展开（nav3/DN14）：组合根不再逐条 provides 仓储 Local，
+        // 新增仓储只需改 AppDependencies 字段 / Registry 字段 / ui.LocalRepositories.kt 的 provide 一行。
+        ProvideRepositories(registry) {
+            CompositionLocalProvider(
+                LocalBottomBarVisibility provides bottomBarVisible,
+                LocalStrings provides strings,
+                LocalLayoutDirection provides (if (isRtlLanguage(currentLanguageNum)) LayoutDirection.Rtl else LayoutDirection.Ltr),
+                LocalSharedBoundsRegistry provides sharedBounds,
+                LocalAppExtraColors provides appExtraColors,
+                LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
             ) {
-                val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
-                val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
-                val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
-                val activeTab by component.selectedTab.collectAsState()
-                val density = LocalDensity.current
-                val screenCornerRadius = rememberScreenCornerRadius()
-                val containerWidthPx = with(density) { maxWidth.toPx() }
-                // 页面容器几何：矩形由布局回填，宽度与圆角由本层测量得出。
-                var containerGeometry by remember {
-                    mutableStateOf(PageContainerGeometry(widthPx = containerWidthPx, cornerRadius = screenCornerRadius))
-                }
-                // 宽度与圆角随环境变化时同步到几何快照；矩形保持布局回填的最新值。
-                LaunchedEffect(containerWidthPx, screenCornerRadius) {
-                    containerGeometry = containerGeometry.copy(
-                        widthPx = containerWidthPx,
-                        cornerRadius = screenCornerRadius,
-                    )
-                }
-
-                // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
-                // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                // 几何以即时读取源传入：Decompose 会按 child 缓存动画器实例，
-                // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
-                // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
-                // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
-                val stackAnimation = remember(sharedBounds) {
-                    miuixSeekableStackAnimation<Config, Any>(
-                        registry = sharedBounds,
-                        containerGeometry = { containerGeometry },
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MiuixTheme.colorScheme.surface)
-                        .onGloballyPositioned { coordinates ->
-                            val newBounds = coordinates.boundsInWindow()
-                            if (newBounds != containerGeometry.bounds) {
-                                NavTransitionLog.d("root") { "containerGeometry bounds=$newBounds" }
-                                containerGeometry = containerGeometry.withBounds(newBounds)
-                            }
+                val updateInfo = appReleaseInfo
+                if (showAppUpdateDialog && updateInfo != null) {
+                    UpdateDialog(
+                        show = showAppUpdateDialog,
+                        releaseInfo = updateInfo,
+                        onDismiss = { showAppUpdateDialog = false },
+                        onUpdate = { url ->
+                            showAppUpdateDialog = false
+                            openSafeUrl(url, strings, onError = { message ->
+                                rootToastMessage = ToastData(message, ToastType.Error)
+                            })
                         },
+                        onIgnore = { ver ->
+                            settingsRepository.ignoreUpdateVersion = ver
+                            showAppUpdateDialog = false
+                        },
+                    )
+                }
+
+                BoxWithConstraints(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .background(MiuixTheme.colorScheme.surface),
                 ) {
-                    NavTransitionLog.d("root") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] recompose" }
-                    Children(
-                        stack = component.stack,
-                        modifier = Modifier.fillMaxSize(),
-                        animation = miuixPredictiveBackAnimation(
-                            backHandler = component.backHandler,
-                            fallbackAnimation = stackAnimation,
-                            selector = { initialBackEvent, exitChild, _ ->
-                                // 预测性返回手势来源页直接取自 exitChild 的 configuration，
-                                // 避免依赖 child 实例类型（中-6b 起详情页实例为子组件，路由参数只在配置上）。
-                                // 手势预览与常规转场共用同一锚点解析：能落点则按卡片收回，否则回退侧滑。
-                                miuixCardExpandPredictiveBackAnimatable(
-                                    initialBackEvent = initialBackEvent,
-                                    registry = sharedBounds,
-                                    illustId = (exitChild.configuration as? Config.IllustDetail)?.illustId,
-                                    containerGeometry = { containerGeometry },
-                                )
-                            },
-                            onBack = { component.onBack() },
-                            // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
-                            // 实例判定：详情页 child 实例为中-6b 试点引入的子组件。
-                            dragBackEligible = { it is IllustDetailComponent },
-                        ),
-                    ) { child ->
-                        RootChildContent(
-                            instance = child.instance,
-                            component = component,
-                            activeTab = activeTab,
-                            isWideScreen = isWideScreen,
-                            useFloatingBottomBar = useFloatingBottomBar,
-                            showNavigationRailInMain = showNavigationRailInMain,
-                            bottomBarVisible = bottomBarVisible,
-                            floatingBackdrop = floatingBackdrop,
+                    val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
+                    val useFloatingBottomBar = settingsRepository.useFloatingBottomBar
+                    val showNavigationRailInMain = isWideScreen && !useFloatingBottomBar
+                    val activeTab by component.selectedTab.collectAsState()
+                    val density = LocalDensity.current
+                    val screenCornerRadius = rememberScreenCornerRadius()
+                    val containerWidthPx = with(density) { maxWidth.toPx() }
+                    // 页面容器几何：矩形由布局回填，宽度与圆角由本层测量得出。
+                    var containerGeometry by remember {
+                        mutableStateOf(PageContainerGeometry(widthPx = containerWidthPx, cornerRadius = screenCornerRadius))
+                    }
+                    // 宽度与圆角随环境变化时同步到几何快照；矩形保持布局回填的最新值。
+                    LaunchedEffect(containerWidthPx, screenCornerRadius) {
+                        containerGeometry = containerGeometry.copy(
+                            widthPx = containerWidthPx,
+                            cornerRadius = screenCornerRadius,
                         )
                     }
-                }
 
-                // 根级 Toast：承载更新链接等外链打开失败提示（无页面级反馈通道的场景）。
-                ToastMessage(
-                    toast = rootToastMessage,
-                    onDismiss = { rootToastMessage = null },
-                )
+                    // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
+                    // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
+                    // 几何以即时读取源传入：Decompose 会按 child 缓存动画器实例，
+                    // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
+                    // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
+                    // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
+                    val stackAnimation = remember(sharedBounds) {
+                        miuixSeekableStackAnimation<Config, Any>(
+                            registry = sharedBounds,
+                            containerGeometry = { containerGeometry },
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MiuixTheme.colorScheme.surface)
+                            .onGloballyPositioned { coordinates ->
+                                val newBounds = coordinates.boundsInWindow()
+                                if (newBounds != containerGeometry.bounds) {
+                                    NavTransitionLog.d("root") { "containerGeometry bounds=$newBounds" }
+                                    containerGeometry = containerGeometry.withBounds(newBounds)
+                                }
+                            },
+                    ) {
+                        NavTransitionLog.d("root") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] recompose" }
+                        Children(
+                            stack = component.stack,
+                            modifier = Modifier.fillMaxSize(),
+                            animation = miuixPredictiveBackAnimation(
+                                backHandler = component.backHandler,
+                                fallbackAnimation = stackAnimation,
+                                selector = { initialBackEvent, exitChild, _ ->
+                                    // 预测性返回手势来源页直接取自 exitChild 的 configuration，
+                                    // 避免依赖 child 实例类型（中-6b 起详情页实例为子组件，路由参数只在配置上）。
+                                    // 手势预览与常规转场共用同一锚点解析：能落点则按卡片收回，否则回退侧滑。
+                                    miuixCardExpandPredictiveBackAnimatable(
+                                        initialBackEvent = initialBackEvent,
+                                        registry = sharedBounds,
+                                        illustId = (exitChild.configuration as? Config.IllustDetail)?.illustId,
+                                        containerGeometry = { containerGeometry },
+                                    )
+                                },
+                                onBack = { component.onBack() },
+                                // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
+                                // 实例判定：详情页 child 实例为中-6b 试点引入的子组件。
+                                dragBackEligible = { it is IllustDetailComponent },
+                            ),
+                        ) { child ->
+                            RootChildContent(
+                                instance = child.instance,
+                                component = component,
+                                activeTab = activeTab,
+                                isWideScreen = isWideScreen,
+                                useFloatingBottomBar = useFloatingBottomBar,
+                                showNavigationRailInMain = showNavigationRailInMain,
+                                bottomBarVisible = bottomBarVisible,
+                                floatingBackdrop = floatingBackdrop,
+                            )
+                        }
+                    }
+
+                    // 根级 Toast：承载更新链接等外链打开失败提示（无页面级反馈通道的场景）。
+                    ToastMessage(
+                        toast = rootToastMessage,
+                        onDismiss = { rootToastMessage = null },
+                    )
+                }
             }
         }
     }
@@ -586,96 +539,5 @@ private fun MainChildSection(
                 }
             }
         }
-    }
-}
-
-/**
- * 根据当前主题偏好构建 [ThemeController]。
- *
- * @param themeMode 0 跟随系统，1 浅色，2 深色。
- * @param isAmoled 是否开启 AMOLED 纯黑深色模式。
- * @param useDynamicColor 是否使用 Monet 动态颜色。
- * @param seedColor 动态颜色/非动态颜色下的种子色。
- * @param paletteStyleIndex 调色板风格索引，对应 [ThemePaletteStyle] 枚举顺序。
- * @param useSpec2025 是否使用 Material 2025 色彩规范。
- */
-private fun buildThemeController(
-    themeMode: Int,
-    isAmoled: Boolean,
-    useDynamicColor: Boolean,
-    seedColor: Int,
-    paletteStyleIndex: Int,
-    useSpec2025: Boolean,
-): ThemeController {
-    val colorSchemeMode = if (useDynamicColor) {
-        when (themeMode) {
-            1 -> ColorSchemeMode.MonetLight
-            2 -> ColorSchemeMode.MonetDark
-            else -> ColorSchemeMode.MonetSystem
-        }
-    } else {
-        when (themeMode) {
-            1 -> ColorSchemeMode.Light
-            2 -> ColorSchemeMode.Dark
-            else -> ColorSchemeMode.System
-        }
-    }
-    val keyColor = if (useDynamicColor) null else Color(seedColor)
-
-    // 将持久化的调色板风格索引映射为 MIUIX 枚举值，越界时回退到默认 TonalSpot。
-    val paletteStyle = ThemePaletteStyle.entries.getOrNull(paletteStyleIndex)
-        ?: ThemePaletteStyle.TonalSpot
-    val colorSpec = if (useSpec2025) ThemeColorSpec.Spec2025 else ThemeColorSpec.Spec2021
-
-    // 自定义浅色颜色方案：背景为浅灰色（#F6F7F9），卡片/容器为纯白（Color.White），显式指定高对比度深色文本前景色。
-    val lightColors = lightColorScheme(
-        background = Color(0xFFF6F7F9),
-        surface = Color(0xFFF6F7F9),
-        surfaceContainer = Color.White,
-        surfaceContainerHigh = Color(0xFFF0F1F4),
-        surfaceContainerHighest = Color(0xFFE5E7EB),
-        onBackground = Color(0xFF191919),
-        onSurface = Color(0xFF191919),
-        onSurfaceContainer = Color(0xFF191919),
-        onSurfaceVariantSummary = Color(0xFF666666),
-        onSurfaceSecondary = Color(0xFF888888),
-    )
-
-    // AMOLED 模式下自定义深色颜色方案，将背景与表面颜色设为纯黑，并确保前景色为高对比度浅色。
-    val darkColors = if (isAmoled) {
-        darkColorScheme(
-            background = Color.Black,
-            surface = Color.Black,
-            surfaceVariant = Color(0xFF121212),
-            surfaceContainer = Color.Black,
-            surfaceContainerHigh = Color(0xFF1E1E1E),
-            surfaceContainerHighest = Color(0xFF2C2C2C),
-            onBackground = Color(0xFFF3F4F6),
-            onSurface = Color(0xFFF3F4F6),
-            onSurfaceContainer = Color(0xFFF3F4F6),
-            onSurfaceVariantSummary = Color(0xFF9CA3AF),
-            onSurfaceSecondary = Color(0xFF9CA3AF),
-        )
-    } else {
-        null
-    }
-
-    return if (darkColors != null) {
-        ThemeController(
-            colorSchemeMode = colorSchemeMode,
-            keyColor = keyColor,
-            lightColors = lightColors,
-            darkColors = darkColors,
-            colorSpec = colorSpec,
-            paletteStyle = paletteStyle,
-        )
-    } else {
-        ThemeController(
-            colorSchemeMode = colorSchemeMode,
-            keyColor = keyColor,
-            lightColors = lightColors,
-            colorSpec = colorSpec,
-            paletteStyle = paletteStyle,
-        )
     }
 }

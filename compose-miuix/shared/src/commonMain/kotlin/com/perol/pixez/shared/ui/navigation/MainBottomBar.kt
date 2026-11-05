@@ -18,8 +18,6 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 val LocalBottomBarVisibility = compositionLocalOf { mutableStateOf(true) }
@@ -35,6 +33,9 @@ val LocalTabGesturePosition = compositionLocalOf { mutableStateOf<Float?>(null) 
  * 底部 5 标签导航栏。
  * - 悬浮模式 (isFloating = true)：与 InstallerX-Revived / compose-miuix-ui 对齐的 Liquid Glass 液态玻璃悬浮导航栏。
  * - 标准模式 (isFloating = false)：使用原生 MIUIX NavigationBar + 背景毛玻璃模糊。
+ *
+ * 标签文案、图标与徽标条件统一读 [MAIN_TAB_DESCRIPTORS]（nav13），与侧栏 [MainNavigationRail]
+ * 及 Pager（MainContent）同源，本文件不再维护第二份标签表。
  */
 @Composable
 fun MainBottomBar(
@@ -48,40 +49,33 @@ fun MainBottomBar(
     val colorScheme = MiuixTheme.colorScheme
     val strings = LocalStrings.current
 
-    val mainTabs = remember(strings) {
-        listOf(
-            RootComponent.MainTab.Hello to (strings.tabRecommend to MiuixIcons.All),
-            RootComponent.MainTab.Search to (strings.tabSearch to MiuixIcons.Search),
-            RootComponent.MainTab.Ranking to (strings.tabRanking to MiuixIcons.TopDownloads),
-            RootComponent.MainTab.New to (strings.tabNew to MiuixIcons.Recent),
-            RootComponent.MainTab.Spotlight to (strings.tabSpotlight to MiuixIcons.Promotions),
-        )
-    }
+    val descriptors = MAIN_TAB_DESCRIPTORS
 
     val settingsRepository = com.perol.pixez.shared.ui.LocalSettingsRepository.current
-    val hasUnreadBadge = settingsRepository.hasUnreadFeedBadge && activeTab != RootComponent.MainTab.New
+    val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
 
     if (isFloating) {
-        val navItems = remember(mainTabs) {
-            mainTabs.map { (_, pair) ->
-                val (label, icon) = pair
-                NavigationItem(label = label, icon = icon)
+        val navItems = remember(strings) {
+            descriptors.map { descriptor ->
+                NavigationItem(label = descriptor.label(strings), icon = descriptor.icon)
             }
         }
-        val selectedIndex = mainTabs.indexOfFirst { it.first == activeTab }.coerceAtLeast(0)
+        val selectedIndex = descriptors.indexOfFirst { it.tab == activeTab }.coerceAtLeast(0)
 
         IosLiquidGlassNavigationBar(
             items = navItems,
             selectedIndex = selectedIndex,
             onItemClick = { index ->
-                val targetTab = mainTabs.getOrNull(index)?.first ?: return@IosLiquidGlassNavigationBar
-                onTabSelected(targetTab)
+                val target = descriptors.getOrNull(index) ?: return@IosLiquidGlassNavigationBar
+                onTabSelected(target.tab)
             },
             backdrop = backdrop,
             modifier = modifier,
             badge = { index ->
-                val tab = mainTabs.getOrNull(index)?.first
-                if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
+                val descriptor = descriptors.getOrNull(index)
+                if (descriptor != null &&
+                    shouldShowUnreadFeedBadge(descriptor, activeTab, hasUnreadFeedBadge)
+                ) {
                     { Badge() }
                 } else {
                     null
@@ -116,17 +110,16 @@ fun MainBottomBar(
             modifier = bottomBarModifier,
             color = if (backdrop != null) Color.Transparent else colorScheme.surface,
         ) {
-            mainTabs.forEach { (tab, pair) ->
-                val (label, icon) = pair
+            descriptors.forEach { descriptor ->
                 NavigationBarItem(
-                    selected = activeTab == tab,
+                    selected = activeTab == descriptor.tab,
                     onClick = {
                         hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                        onTabSelected(tab)
+                        onTabSelected(descriptor.tab)
                     },
-                    icon = icon,
-                    label = label,
-                    badge = if (hasUnreadBadge && tab == RootComponent.MainTab.New) {
+                    icon = descriptor.icon,
+                    label = descriptor.label(strings),
+                    badge = if (shouldShowUnreadFeedBadge(descriptor, activeTab, hasUnreadFeedBadge)) {
                         { Badge() }
                     } else {
                         null

@@ -89,10 +89,10 @@ internal fun cardExpandFrame(
     // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
     // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
     val anchor = registry?.resolveAnchor(candidates, containerBounds)
-    // 容器纵横比与卡片纵横比差距过大（典型如桌面端横向窗口）时收回终点无法覆盖卡片全高，
-    // 逐帧表现为窗口比卡片矮、收尾时卡片下半部分突兀补入；该几何无法落点，与「无卡片几何」同样回退默认侧滑。
+    // 无卡片几何、或卡片/容器尺寸非法（见 hasUsableCardExpandGeometry）时回退默认侧滑。
+    // 纵横比不参与否决：等比缩放 + 双向视口裁切保证任意横纵比卡片在收回终点都能落位，故不做纵横比预筛。
     val activeSourceBounds = anchor?.card?.rect
-        ?: sourceBounds?.takeIf { isCardExpandLandable(it, containerBounds) }
+        ?: sourceBounds?.takeIf { hasUsableCardExpandGeometry(it, containerBounds) }
     val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
     NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
 
@@ -129,13 +129,7 @@ internal fun cardExpandFrame(
                 containerCornerRadius = geometry.cornerRadius,
             )
         } else {
-            Modifier.cardExpandScrim(
-                alpha = cardExpandScrimAlpha(frame.expansion),
-                expansion = frame.expansion,
-                sourceBounds = activeSourceBounds,
-                containerBounds = geometry.bounds,
-                containerCornerRadius = geometry.cornerRadius,
-            )
+            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(frame.expansion))
         }
     }
     // content 必须保持单一调用点：content 内部承载 movableContent 包裹的页面内容，

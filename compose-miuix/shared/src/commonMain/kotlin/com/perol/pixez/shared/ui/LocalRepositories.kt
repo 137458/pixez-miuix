@@ -1,6 +1,9 @@
 package com.perol.pixez.shared.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -26,6 +29,10 @@ import com.perol.pixez.shared.data.repository.WatchlistRepository
  * - 全部无默认值，缺失时读取即抛（快速失败），装配缺失首帧即暴露；
  * - Decompose Component/后台/Widget 等非组合环境走构造注入，不走本组 Local；
  * - 禁止回退 AppDependencies 全局单例（中-20）。
+ *
+ * 展开点唯一（nav3/DN14）：仓储通道一律经 [ProvideRepositories] 由
+ * [com.perol.pixez.shared.ui.navigation.RepositoryRegistry] 一次性展开，
+ * 组合根不得在别处逐条 `provides LocalXxxRepository`。
  */
 
 /** 插画数据通道：作品详情、相关作品、排行榜/推荐等插画列表页的取数入口。 */
@@ -113,3 +120,44 @@ val LocalSauceNaoRepository = staticCompositionLocalOf<com.perol.pixez.shared.da
     error("LocalSauceNaoRepository not provided")
 }
 
+/**
+ * 仓储注入展开点（nav3/DN14）：把 [RepositoryRegistry] 的每个字段展开为对应仓储 CompositionLocal。
+ *
+ * 这里是「Registry 字段 -> Local 通道」的唯一声明处，[com.perol.pixez.shared.ui.navigation.RootContent]
+ * 等组合根只调用本函数，不再手写 provides。新增一个仓储时只需三处：
+ * 1. [com.perol.pixez.shared.AppDependencies] 增加字段（容器持有）；
+ * 2. [RepositoryRegistry] 增加同名字段（唯一仓库清单）；
+ * 3. 本函数增加一行 `LocalXxxRepository provides registry.xxxRepository`。
+ *
+ * 注意：App.kt 目前仍逐字段把 AppDependencies 搬进 Registry（本轮未收敛的第 4 处），
+ * 后续可让容器直接暴露 Registry 后删除该段搬运。
+ *
+ * @param registry 唯一仓库清单；各 Local 的 provide 值与改造前逐字段一致。
+ */
+@Composable
+internal fun ProvideRepositories(
+    registry: RepositoryRegistry,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalSettingsRepository provides registry.settingsRepository,
+        LocalIllustRepository provides registry.illustRepository,
+        LocalPixivisionRepository provides registry.pixivisionRepository,
+        LocalSearchRepository provides registry.searchRepository,
+        LocalUserRepository provides registry.userRepository,
+        LocalAccountRepository provides registry.accountRepository,
+        LocalBookmarkRepository provides registry.bookmarkRepository,
+        LocalHistoryRepository provides registry.historyRepository,
+        LocalDownloadRepository provides registry.downloadRepository,
+        LocalDownloadHistoryRepository provides registry.downloadHistoryRepository,
+        LocalBanRepository provides registry.banRepository,
+        LocalBoardRepository provides registry.boardRepository,
+        LocalNovelHistoryRepository provides registry.novelHistoryRepository,
+        LocalMuteRepository provides registry.muteRepository,
+        LocalNovelRepository provides registry.novelRepository,
+        LocalUpdateRepository provides registry.updateRepository,
+        LocalSauceNaoRepository provides registry.sauceNaoRepository,
+        LocalWatchlistRepository provides registry.watchlistRepository,
+        content = content,
+    )
+}

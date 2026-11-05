@@ -337,13 +337,13 @@ class SharedBoundsRegistry {
      * 详情页内左右滑动切换到关联作品后，该作品的卡片往往不在原列表里，
      * 此时必须退回用户点进来的那张卡片，否则收回动画会整页平移走人、终点不在原作品位置。
      *
-     * 候选全部不可用（未登记、已滚出容器可视范围，或容器纵横比与卡片纵横比差距过大导致收回终点盖不住卡片全高，
-     * 见 [isCardExpandLandable]）时返回 null，调用方回退为默认侧滑。
+     * 候选全部不可用（未登记、已滚出容器可视范围，或卡片/容器尺寸非法，
+     * 见 [hasUsableCardExpandGeometry]；纵横比不参与否决）时返回 null，调用方回退为默认侧滑。
      */
     fun resolveAnchor(illustIdCandidates: List<Long?>, containerBounds: Rect): Anchor? =
         illustIdCandidates.filterNotNull().distinct().firstNotNullOfOrNull { id ->
             getVisibleInContainer(id, containerBounds)
-                ?.takeIf { isCardExpandLandable(it.rect, containerBounds) }
+                ?.takeIf { hasUsableCardExpandGeometry(it.rect, containerBounds) }
                 ?.let { Anchor(illustId = id, card = it) }
         }
 

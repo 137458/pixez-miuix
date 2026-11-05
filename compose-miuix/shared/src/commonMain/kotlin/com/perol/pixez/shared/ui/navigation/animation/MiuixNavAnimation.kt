@@ -114,13 +114,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
         getEnterModifier = { progress, _ ->
             val current = containerGeometry()
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
-            Modifier.cardExpandScrim(
-                alpha = cardExpandScrimAlpha(expansion),
-                expansion = expansion,
-                sourceBounds = sourceCard.rect,
-                containerBounds = current.bounds,
-                containerCornerRadius = current.cornerRadius,
-            )
+            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(expansion))
         },
     )
 }
