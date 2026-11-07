@@ -70,16 +70,18 @@ class IllustPagedListState(
     /**
      * 首屏加载或强制刷新：递增 [generation] 作废所有在途翻页并复位其加载态，再拉取首页。
      * 非 force 且已有数据且无首屏错误时早退（缓存命中，不做网络请求）。
+     * 早退判断必须先于 generation/翻页标志复位执行：缓存命中不重新加载，
+     * 因而也不得作废在途翻页或清除 footer 的重试入口。
      *
      * @return [PagedLoadOutcome]：屏幕据此决定是否写恢复快照与回顶，不再比较列表引用（UI-8）。
      */
     suspend fun loadFirst(force: Boolean = false): PagedLoadOutcome {
+        if (!force && filteredIllusts != null && initialError == null) return PagedLoadOutcome.Skipped
         val myGeneration = ++generation
         // 作废在途翻页：复位其加载态与错误（RankingScreen.kt:127-128 语义），
         // 使旧 loadMore 完成时因代数失配被整体拒绝。
         isLoadingMore = false
         loadMoreError = null
-        if (!force && filteredIllusts != null && initialError == null) return PagedLoadOutcome.Skipped
         isRefreshing = true
         if (filteredIllusts == null) {
             initialError = null

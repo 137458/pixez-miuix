@@ -61,14 +61,16 @@ class PagedListState<T>(
     /**
      * 首屏加载或强制刷新：递增 [generation] 作废所有在途翻页并复位其加载态，再拉取首页。
      * 已有数据且无首屏错误时默认早退，避免重复请求覆盖既有列表（force = true 跳过早退）。
+     * 早退判断必须先于 generation/翻页标志复位执行：缓存命中不重新加载，
+     * 因而也不得作废在途翻页或清除 footer 的重试入口。
      *
      * @return [PagedLoadOutcome]：屏幕据此决定是否写恢复快照与回顶，不再比较列表引用（UI-8）。
      */
     suspend fun loadFirst(force: Boolean = false): PagedLoadOutcome {
+        if (!force && items != null && initialError == null) return PagedLoadOutcome.Skipped
         val myGeneration = ++generation
         isLoadingMore = false
         loadMoreError = null
-        if (!force && items != null && initialError == null) return PagedLoadOutcome.Skipped
         isRefreshing = true
         if (items == null) initialError = null
         var outcome = PagedLoadOutcome.Discarded

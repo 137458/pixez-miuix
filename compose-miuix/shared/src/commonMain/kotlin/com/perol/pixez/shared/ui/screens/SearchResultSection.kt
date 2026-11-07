@@ -232,28 +232,44 @@ internal fun SearchIllustResultGrid(
                 applyClientFilters(currentIllusts, ugoiraFilter, ratioFilter)
             }
             if (filteredIllusts.isEmpty() && !listState.isLoadingMore) {
-                if (listState.nextUrl != null) {
-                    LaunchedEffect(filteredIllusts.isEmpty(), listState.nextUrl) {
-                        loadMore()
-                    }
-                    Box(
+                when (
+                    resolveSearchEmptyPhase(
+                        hasMore = listState.nextUrl != null,
+                        isLoadingMore = listState.isLoadingMore,
+                        hasLoadMoreError = listState.loadMoreError != null,
+                    )
+                ) {
+                    // 翻页失败：自动翻页已停（shouldPreloadMore 在 hasLoadMoreError 时返回 false），
+                    // 必须给出重试入口，否则空结果页会永久停在「加载中」。
+                    SearchEmptyPhase.Retry -> ErrorPlaceholder(
+                        error = listState.loadMoreError,
+                        onRetry = ::loadMore,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(effectiveContentPadding),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            InfiniteProgressIndicator()
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = strings.loading,
-                                style = MiuixTheme.textStyles.body2,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            )
+                    )
+                    SearchEmptyPhase.LoadingMore -> {
+                        LaunchedEffect(filteredIllusts.isEmpty(), listState.nextUrl) {
+                            loadMore()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(effectiveContentPadding),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                InfiniteProgressIndicator()
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = strings.loading,
+                                    style = MiuixTheme.textStyles.body2,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                )
+                            }
                         }
                     }
-                } else {
-                    EmptyPlaceholder(
+                    SearchEmptyPhase.Empty -> EmptyPlaceholder(
                         message = strings.searchEmptyIllust,
                         modifier = Modifier
                             .fillMaxSize()
@@ -277,6 +293,29 @@ internal fun SearchIllustResultGrid(
             }
         }
     }
+}
+
+/**
+ * 搜索结果为空时的后续状态：仍在翻页 / 翻页失败待重试 / 确实没有结果。
+ */
+internal enum class SearchEmptyPhase {
+    LoadingMore,
+    Retry,
+    Empty,
+}
+
+/**
+ * 空列表分支的渲染态判定：失败重试优先于继续翻页，两者都优先于空态。
+ * 抽成纯函数以便直接断言分支优先级（组合内的分支本身无法在 JVM 测试中驱动）。
+ */
+internal fun resolveSearchEmptyPhase(
+    hasMore: Boolean,
+    isLoadingMore: Boolean,
+    hasLoadMoreError: Boolean,
+): SearchEmptyPhase = when {
+    hasLoadMoreError -> SearchEmptyPhase.Retry
+    hasMore || isLoadingMore -> SearchEmptyPhase.LoadingMore
+    else -> SearchEmptyPhase.Empty
 }
 
 /**

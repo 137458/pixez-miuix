@@ -297,6 +297,41 @@ class IllustPagedListStateTest {
         assertFalse(state.isLoadingMore)
     }
 
+    // ---- 早退组（loadFirst 缓存命中不得作废在途翻页） ----
+
+    @Test
+    fun loadFirstEarlyReturnKeepsInFlightLoadMore() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(2)), "p2")
+        state.loadFirst()
+        val generationBefore = state.generation
+
+        source.hold(2)
+        val inFlight = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        // 非 force 且已有数据：早退不得递增 generation、不得复位 isLoadingMore，
+        // 否则在途翻页结果会被代数守卫丢弃，而页面并未重新加载。
+        assertEquals(PagedLoadOutcome.Skipped, state.loadFirst())
+        assertTrue(state.isLoadingMore)
+        assertEquals(generationBefore, state.generation)
+
+        source.release(2)
+        inFlight.join()
+
+        assertEquals(listOf(1L, 2L), state.rawIllusts?.map { it.id })
+        assertEquals(listOf(1L, 2L), state.filteredIllusts?.map { it.id })
+        assertEquals("p2", state.nextUrl)
+        assertFalse(state.isLoadingMore)
+        assertNull(state.loadMoreError)
+        // 早退不重新拉取首页
+        assertEquals(2, source.calls.size)
+    }
+
     @Test
     fun loadFirstFailureWithoutDataSetsInitialErrorThenRetryRecovers() = runTest {
         val source = FakeIllustSource()

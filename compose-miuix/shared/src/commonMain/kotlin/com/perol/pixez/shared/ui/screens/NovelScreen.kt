@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -48,15 +47,17 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.NovelCard
+import com.perol.pixez.shared.ui.components.PagingFooterAppearance
+import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -269,19 +270,16 @@ fun NovelScreen(
                                 )
                             }
 
-                            if (pagedList.isLoadingMore) {
-                                item(key = "footer_loading") {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        InfiniteProgressIndicator(
-                                            color = MiuixTheme.colorScheme.primary,
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    }
+                            // 三态 footer 收敛到统一组件（UI-3）：加载中 / 翻页失败重试 / 没有更多。
+                            // 翻页失败后自动预加载会停（hasLoadMoreError 守卫），必须提供重试入口。
+                            val footerState = pagedList.footerState
+                            if (footerState.phase != PagingFooterPhase.Hidden) {
+                                item(key = "novel_footer") {
+                                    PagingLoadMoreFooter(
+                                        state = footerState,
+                                        onRetry = ::loadMore,
+                                        appearance = PagingFooterAppearance.Compact,
+                                    )
                                 }
                             }
                         }

@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.state
 
 import androidx.compose.runtime.snapshots.Snapshot
+import com.perol.pixez.shared.ui.screens.SearchEmptyPhase
+import com.perol.pixez.shared.ui.screens.resolveSearchEmptyPhase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -10,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -177,6 +180,102 @@ class PagedListStateTest {
         assertEquals(2, source.calls.size)
         assertEquals(listOf("a", "b", "c"), state.items)
         assertFalse(state.isLoadingMore)
+    }
+
+    // ---- 早退组（loadFirst 缓存命中不得作废在途翻页 / 清除 footer 重试态） ----
+
+    @Test
+    fun loadFirstEarlyReturnKeepsInFlightLoadMore() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source) { old, new -> old + new.filter { it !in old } }
+        source.pages[null] = PagedListPage(listOf("a"), "p1")
+        source.pages["p1"] = PagedListPage(listOf("b"), "p2")
+        state.loadFirst()
+        val generationBefore = state.generation
+
+        source.hold(2)
+        val inFlight = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        // 非 force 且已有数据：缓存命中的 loadFirst 必须早退，不得递增 generation、
+        // 不得复位 isLoadingMore，否则在途翻页的结果会被代数守卫整体丢弃。
+        assertEquals(PagedLoadOutcome.Skipped, state.loadFirst())
+        assertTrue(state.isLoadingMore)
+        assertEquals(generationBefore, state.generation)
+
+        source.release(2)
+        inFlight.join()
+
+        assertEquals(listOf("a", "b"), state.items)
+        assertEquals("p2", state.nextUrl)
+        assertFalse(state.isLoadingMore)
+        assertNull(state.loadMoreError)
+        // 早退不重新拉取首页
+        assertEquals(2, source.calls.size)
+    }
+
+    @Test
+    fun loadFirstEarlyReturnKeepsLoadMoreErrorForFooterRetry() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source)
+        source.pages[null] = PagedListPage(listOf("a"), "p1")
+        val pageError = RuntimeException("page fetch failed")
+        source.failOn("p1", pageError)
+        state.loadFirst()
+        state.loadMore()
+        val generationBefore = state.generation
+        assertEquals(PagingFooterPhase.Retry, state.footerState.phase)
+
+        // 重试入口可达但用户未点击时，其它刷新路径（如筛选/重建后的 loadFirst）不得清掉错误
+        assertEquals(PagedLoadOutcome.Skipped, state.loadFirst())
+
+        assertSame(pageError, state.loadMoreError)
+        assertFalse(state.isLoadingMore)
+        assertEquals(PagingFooterPhase.Retry, state.footerState.phase)
+        assertEquals(generationBefore, state.generation)
+        assertEquals(listOf("a"), state.items)
+        assertEquals("p1", state.nextUrl)
+    }
+
+    @Test
+    fun loadMoreFailurePutsFooterInRetryPhase() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source)
+        source.pages[null] = PagedListPage(listOf("a"), "p1")
+        val pageError = RuntimeException("page fetch failed")
+        source.failOn("p1", pageError)
+        state.loadFirst()
+
+        state.loadMore()
+
+        assertSame(pageError, state.loadMoreError)
+        assertFalse(state.isLoadingMore)
+        assertEquals(PagingFooterPhase.Retry, state.footerState.phase)
+    }
+
+    // ---- 搜索结果空列表三态（SearchResultSection 空分支） ----
+
+    @Test
+    fun resolveSearchEmptyPhasePrefersRetryThenLoadingThenEmpty() {
+        // 三类差异化输入：失败优先于可翻页，可翻页优先于空态
+        assertEquals(
+            SearchEmptyPhase.Retry,
+            resolveSearchEmptyPhase(hasMore = true, isLoadingMore = false, hasLoadMoreError = true),
+        )
+        assertEquals(
+            SearchEmptyPhase.LoadingMore,
+            resolveSearchEmptyPhase(hasMore = true, isLoadingMore = false, hasLoadMoreError = false),
+        )
+        assertEquals(
+            SearchEmptyPhase.Empty,
+            resolveSearchEmptyPhase(hasMore = false, isLoadingMore = false, hasLoadMoreError = false),
+        )
+        // 边界：没有下一页但仍在途时按加载中处理
+        assertEquals(
+            SearchEmptyPhase.LoadingMore,
+            resolveSearchEmptyPhase(hasMore = false, isLoadingMore = true, hasLoadMoreError = false),
+        )
     }
 
     // ---- reset 组（登录/账号切换作废旧账号数据） ----
