@@ -459,6 +459,8 @@ object FaStrings : AppStrings {
     override val myProfile = "My Profile"
     override val settingAccountInfo = "اطلاعات حساب"
     override val settingAccountInfoSummary = "Change password, email, token and account deletion"
+    override val settingAccountExpiredHint =
+        "اعتبارنامه ورود شما منقضی شده است. برای حذف یا مدیریت این حساب، دوباره وارد شوید."
     override val logout = "خروج از حساب"
     override val loggingOut = "در حال خروج…"
     override val notLoggedIn = "وارد نشده‌اید"

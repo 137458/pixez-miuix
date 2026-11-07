@@ -103,6 +103,7 @@ interface AppStrings {
     val myProfile: String
     val settingAccountInfo: String
     val settingAccountInfoSummary: String
+    val settingAccountExpiredHint: String
     val logout: String
     val loggingOut: String
     val notLoggedIn: String
@@ -1178,6 +1179,7 @@ object ZhCnStrings : AppStrings {
     override val myProfile = "个人主页"
     override val settingAccountInfo = "账号信息"
     override val settingAccountInfoSummary = "修改密码、邮箱、Token 与账号注销"
+    override val settingAccountExpiredHint = "登录凭证已失效，需重新登录后才能删除或管理该账号"
     override val logout = "退出登录"
     override val loggingOut = "退出中…"
     override val notLoggedIn = "未登录"
@@ -1868,6 +1870,7 @@ object ZhTwStrings : AppStrings {
     override val myProfile = "個人主頁"
     override val settingAccountInfo = "帳號資訊"
     override val settingAccountInfoSummary = "修改密碼、電子郵件、Token 與帳號刪除"
+    override val settingAccountExpiredHint = "登入憑證已失效，需重新登入後才能刪除或管理該帳號"
     override val logout = "登出帳號"
     override val loggingOut = "登出中…"
     override val notLoggedIn = "未登入"
@@ -2569,6 +2572,8 @@ object EnStrings : AppStrings {
     override val myProfile = "My Profile"
     override val settingAccountInfo = "Account Info"
     override val settingAccountInfoSummary = "Change password, email, token and account deletion"
+    override val settingAccountExpiredHint =
+        "Your login credentials have expired. Sign in again to delete or manage this account."
     override val logout = "Log Out"
     override val loggingOut = "Logging out…"
     override val notLoggedIn = "Not Logged In"
@@ -3251,6 +3256,8 @@ object JaStrings : AppStrings {
     override val myProfile = "プロフィール"
     override val settingAccountInfo = "アカウント情報"
     override val settingAccountInfoSummary = "パスワード、メール、Token、アカウント削除"
+    override val settingAccountExpiredHint =
+        "ログイン認証情報の有効期限が切れています。このアカウントを削除・管理するには再ログインしてください。"
     override val logout = "ログアウト"
     override val loggingOut = "ログアウト中…"
     override val notLoggedIn = "未ログイン"
@@ -3940,6 +3947,8 @@ object KoStrings : AppStrings {
     override val myProfile = "프로필"
     override val settingAccountInfo = "계정 정보"
     override val settingAccountInfoSummary = "비밀번호, 이메일, 토큰 및 계정 탈퇴"
+    override val settingAccountExpiredHint =
+        "로그인 자격 증명이 만료되었습니다. 이 계정을 삭제하거나 관리하려면 다시 로그인하세요."
     override val logout = "로그아웃"
     override val loggingOut = "로그아웃 중…"
     override val notLoggedIn = "로그인되지 않음"
@@ -4629,6 +4638,8 @@ object RuStrings : AppStrings {
     override val myProfile = "Мой профиль"
     override val settingAccountInfo = "Данные аккаунта"
     override val settingAccountInfoSummary = "Пароль, почта, токен и удаление аккаунта"
+    override val settingAccountExpiredHint =
+        "Срок действия учётных данных истёк. Чтобы удалить аккаунт или управлять им, войдите снова."
     override val logout = "Выйти из аккаунта"
     override val loggingOut = "Выход…"
     override val notLoggedIn = "Не выполнен вход"
@@ -5318,6 +5329,8 @@ object EsStrings : AppStrings {
     override val myProfile = "Mi perfil"
     override val settingAccountInfo = "Información de la cuenta"
     override val settingAccountInfoSummary = "Contraseña, correo, token y eliminar cuenta"
+    override val settingAccountExpiredHint =
+        "Tus credenciales de inicio de sesión han caducado. Inicia sesión de nuevo para eliminar o gestionar esta cuenta."
     override val logout = "Cerrar sesión"
     override val loggingOut = "Cerrando sesión…"
     override val notLoggedIn = "No iniciado"
@@ -6007,6 +6020,8 @@ object TrStrings : AppStrings {
     override val myProfile = "Profilim"
     override val settingAccountInfo = "Hesap Bilgileri"
     override val settingAccountInfoSummary = "Şifre, e-posta, token ve hesap silme"
+    override val settingAccountExpiredHint =
+        "Giriş bilgilerinizin süresi doldu. Bu hesabı silmek veya yönetmek için tekrar giriş yapın."
     override val logout = "Çıkış Yap"
     override val loggingOut = "Çıkış yapılıyor…"
     override val notLoggedIn = "Giriş Yapılmadı"
@@ -6696,6 +6711,8 @@ object IdStrings : AppStrings {
     override val myProfile = "Profil Saya"
     override val settingAccountInfo = "Info Akun"
     override val settingAccountInfoSummary = "Kata sandi, email, token, dan hapus akun"
+    override val settingAccountExpiredHint =
+        "Kredensial login Anda telah kedaluwarsa. Masuk lagi untuk menghapus atau mengelola akun ini."
     override val logout = "Keluar Akun"
     override val loggingOut = "Keluar…"
     override val notLoggedIn = "Belum Masuk"
@@ -7385,6 +7402,8 @@ object FilStrings : AppStrings {
     override val myProfile = "Aking Profile"
     override val settingAccountInfo = "Impormasyon ng Account"
     override val settingAccountInfoSummary = "Password, email, token, at pagbura ng account"
+    override val settingAccountExpiredHint =
+        "Nag-expire na ang iyong login credentials. Mag-login muli para magbura o pamahalaan ang account na ito."
     override val logout = "Mag-logout"
     override val loggingOut = "Nagla-logout…"
     override val notLoggedIn = "Hindi Naka-login"
@@ -8074,6 +8093,8 @@ object DeStrings : AppStrings {
     override val myProfile = "Mein Profil"
     override val settingAccountInfo = "Kontoinformationen"
     override val settingAccountInfoSummary = "Passwort, E-Mail, Token und Konto löschen"
+    override val settingAccountExpiredHint =
+        "Deine Anmeldedaten sind abgelaufen. Melde dich erneut an, um dieses Konto zu löschen oder zu verwalten."
     override val logout = "Abmelden"
     override val loggingOut = "Abmelden…"
     override val notLoggedIn = "Nicht angemeldet"
@@ -8773,6 +8794,8 @@ object ViStrings : AppStrings {
     override val myProfile = "Hồ sơ của tôi"
     override val settingAccountInfo = "Thông tin tài khoản"
     override val settingAccountInfoSummary = "Đổi mật khẩu, email, token và xóa tài khoản"
+    override val settingAccountExpiredHint =
+        "Thông tin đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại để xóa hoặc quản lý tài khoản này."
     override val logout = "Đăng xuất"
     override val loggingOut = "Đang đăng xuất…"
     override val notLoggedIn = "Chưa đăng nhập"

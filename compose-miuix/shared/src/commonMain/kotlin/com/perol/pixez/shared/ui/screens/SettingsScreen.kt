@@ -234,6 +234,18 @@ fun SettingsScreen(
                             summary = strings.settingAccountInfoSummary,
                             onClick = onAccountEditClick,
                         )
+                    } else if (currentAccount != null) {
+                        // 凭证失效但账号行保留：账号管理入口已隐藏，明确告知需重新登录并给出可点入口。
+                        ArrowPreference(
+                            title = strings.btnRelogin,
+                            summary = strings.settingAccountExpiredHint,
+                            onClick = onLoginClick,
+                        )
+                        ArrowPreference(
+                            title = strings.accountManageTitle,
+                            summary = strings.accountSwitch,
+                            onClick = onAccountManageClick,
+                        )
                     }
                 }
             }
