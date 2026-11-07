@@ -1,9 +1,13 @@
 package com.perol.pixez.shared.data.cache
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -50,16 +54,29 @@ class SessionCacheTest {
     }
 
     @Test
-    fun `单个失效动作失败不阻断其余清理且异常上抛`() = runTest {
+    fun `单个失效动作失败不阻断其余清理且不重抛`() = runTest {
         val sessionCache = SessionCache()
         val cleared = mutableListOf<String>()
         sessionCache.register { throw IllegalStateException("缓存 A 失效失败") }
         sessionCache.register { cleared.add("B") }
 
-        val failure = assertFailsWith<IllegalStateException> { sessionCache.invalidateAll() }
+        // 不重抛是关键：调用方随后还要发出 loginEventFlow，重抛会把它吞掉。
+        sessionCache.invalidateAll()
 
-        assertEquals("缓存 A 失效失败", failure.message)
         assertEquals(listOf("B"), cleared, "前一个缓存失效失败不得跳过后续缓存清理")
+    }
+
+    @Test
+    fun `并发登记不丢失失效动作`() = runTest {
+        val sessionCache = SessionCache()
+
+        withContext(Dispatchers.Default) {
+            coroutineScope {
+                (0 until 200).map { async { sessionCache.register { } } }.awaitAll()
+            }
+        }
+
+        assertEquals(200, sessionCache.registeredCount, "并发登记必须原子追加，不能丢失失效动作")
     }
 
     @Test
