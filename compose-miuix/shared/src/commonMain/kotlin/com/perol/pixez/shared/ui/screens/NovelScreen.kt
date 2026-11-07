@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.NovelRankingMode
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
@@ -98,10 +99,10 @@ fun NovelScreen(
     LaunchedEffect(Unit) {
         // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user != null
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user != null
+            isLoggedIn = user.isLoggedIn
         }
     }
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
@@ -72,10 +73,10 @@ fun UserNovelListScreen(
     var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(Unit) {
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user != null
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user != null
+            isLoggedIn = user.isLoggedIn
         }
     }
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }

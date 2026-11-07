@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.appendDistinct
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
@@ -93,10 +94,10 @@ internal fun SearchIllustResultGrid(
     LaunchedEffect(Unit) {
         // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user != null
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user != null
+            isLoggedIn = user.isLoggedIn
         }
     }
     val searchTarget = filterState.searchTarget
@@ -430,10 +431,10 @@ private fun <T> SearchPagedListColumn(
     LaunchedEffect(Unit) {
         // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user != null
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user != null
+            isLoggedIn = user.isLoggedIn
         }
     }
     // 搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。

@@ -476,7 +476,7 @@ private fun GuideWelcomeStep(
             item {
                 SmallTitle(text = strings.settingSectionAccount)
                 val current = currentAccount
-                if (current != null) {
+                if (current != null && current.hasCredentials) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                     ) {

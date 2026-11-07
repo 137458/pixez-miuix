@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.derivedStateOf
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.MangaSeries
 import com.perol.pixez.shared.data.model.appendDistinct as appendDistinctSeries
 import com.perol.pixez.shared.ui.state.IllustPagedListState
@@ -127,12 +128,12 @@ fun NewScreen(
         currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
             .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "加载当前账号失败(NewScreen)" } }
             .getOrNull()
-        isLoggedIn = currentAccount?.hasCredentials == true
+        isLoggedIn = currentAccount.isLoggedIn
         accountRepository.loginEventFlow.collect {
             currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
                 .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "登录事件后加载当前账号失败(NewScreen)" } }
                 .getOrNull()
-            isLoggedIn = currentAccount?.hasCredentials == true
+            isLoggedIn = currentAccount.isLoggedIn
         }
     }
 

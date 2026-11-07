@@ -27,6 +27,13 @@ data class AccountPersist(
         get() = accessToken.isNotBlank() && refreshToken.isNotBlank()
 }
 
+/**
+ * 登录态判定入口：账号行存在且仍持有可用凭证。
+ * UI 层统一用它判定登录态，不要直接比较账号行是否为 null。
+ */
+val AccountPersist?.isLoggedIn: Boolean
+    get() = this?.hasCredentials == true
+
 @Serializable
 data class BanIllustIdPersist(
     @SerialName("illust_id") val illustId: String,

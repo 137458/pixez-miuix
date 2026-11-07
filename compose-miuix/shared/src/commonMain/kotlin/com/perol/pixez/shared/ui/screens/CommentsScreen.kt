@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.appendDistinct
@@ -119,10 +120,10 @@ fun CommentsScreen(
     LaunchedEffect(Unit) {
         // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user?.hasCredentials == true
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user?.hasCredentials == true
+            isLoggedIn = user.isLoggedIn
         }
     }
     // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。

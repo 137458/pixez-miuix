@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.ui.LocalAccountRepository
@@ -94,10 +95,10 @@ fun HelloScreen(
     LaunchedEffect(Unit) {
         user = accountRepository.currentAccount()
         // 解密失败/被吊销后账号行仍保留但 token 为空，登录态必须看凭证而不是账号行。
-        isLoggedIn = user?.hasCredentials == true
+        isLoggedIn = user.isLoggedIn
         accountRepository.loginEventFlow.collect {
             user = accountRepository.currentAccount()
-            isLoggedIn = user?.hasCredentials == true
+            isLoggedIn = user.isLoggedIn
         }
     }
 

@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.isAndroidPlatform
@@ -214,7 +215,7 @@ fun SettingsScreen(
                         },
                         strings = strings,
                     )
-                    if (currentAccount != null) {
+                    if (currentAccount.isLoggedIn) {
                         val currentUserId = currentAccount?.userId?.toLongOrNull()
                         if (currentUserId != null) {
                             ArrowPreference(
