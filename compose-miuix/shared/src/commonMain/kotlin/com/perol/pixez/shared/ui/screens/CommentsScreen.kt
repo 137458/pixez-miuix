@@ -119,10 +119,10 @@ fun CommentsScreen(
     LaunchedEffect(Unit) {
         // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
         user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user != null
+        isLoggedIn = user?.hasCredentials == true
         accountRepository.loginEventFlow.collect {
             user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user != null
+            isLoggedIn = user?.hasCredentials == true
         }
     }
     // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。

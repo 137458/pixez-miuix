@@ -16,6 +16,8 @@ import io.ktor.http.encodedPath
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -23,6 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 private const val API_HOST = "https://app-api.pixiv.net"
 
@@ -141,6 +144,13 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
         accounts[userId] = current.copy(access_token = accessToken, refresh_token = refreshToken)
     }
 
+    val invalidatedUserIds = mutableListOf<String>()
+
+    override suspend fun invalidateCredentials(userId: String) {
+        invalidatedUserIds += userId
+        accounts[userId]?.let { accounts[userId] = it.copy(access_token = "", refresh_token = "") }
+    }
+
     override suspend fun updateCurrentAccount(transform: suspend (AccountRow?) -> AccountRow?) {
         val updated = transform(accounts[activeUserId]) ?: return
         accounts[updated.user_id] = updated
@@ -195,11 +205,13 @@ class TokenRefreshPluginTest {
     private fun buildClient(
         storage: FakeAuthTokenStorage,
         oauth: FakeOAuthClient,
+        authExpirySignal: AuthExpirySignal? = null,
         handler: MockRequestHandler,
     ): HttpClient = HttpClient(MockEngine) {
         install(TokenRefreshPlugin) {
             this.tokenStorage = storage
             this.oAuthClient = oauth
+            this.authExpirySignal = authExpirySignal
         }
         engine { addHandler(handler) }
     }
@@ -253,7 +265,7 @@ class TokenRefreshPluginTest {
             refreshResult = accountFixture(FRESH_ACCESS_TOKEN, FRESH_REFRESH_TOKEN)
         }
         val requests = mutableListOf<Pair<String, String?>>()
-        val client = buildClient(storage, oauth, recordingHandler(requests))
+        val client = buildClient(storage, oauth, handler = recordingHandler(requests))
 
         val response = client.use {
             runBlocking { client.get("$API_HOST/v1/illust/detail").status }
@@ -297,7 +309,7 @@ class TokenRefreshPluginTest {
         }
         val requests = mutableListOf<Pair<String, String?>>()
         val statuses = mutableMapOf<String, HttpStatusCode>()
-        val client = buildClient(storage, oauth, recordingHandler(requests))
+        val client = buildClient(storage, oauth, handler = recordingHandler(requests))
 
         client.use {
             runBlocking {
@@ -342,7 +354,7 @@ class TokenRefreshPluginTest {
         val refreshError = IllegalStateException("refresh boom")
         val oauth = FakeOAuthClient().apply { this.refreshError = refreshError }
         val requests = mutableListOf<Pair<String, String?>>()
-        val client = buildClient(storage, oauth, recordingHandler(requests))
+        val client = buildClient(storage, oauth, handler = recordingHandler(requests))
 
         val thrown = client.use {
             runBlocking {
@@ -412,7 +424,7 @@ class TokenRefreshPluginTest {
             onRefreshing = { storage.switchAccount("200") }
         }
         val requests = mutableListOf<Pair<String, String?>>()
-        val client = buildClient(storage, oauth, recordingHandler(requests))
+        val client = buildClient(storage, oauth, handler = recordingHandler(requests))
 
         val response = client.use {
             runBlocking { client.get("$API_HOST/v1/illust/detail").status }
@@ -435,6 +447,107 @@ class TokenRefreshPluginTest {
         )
         assertEquals(FRESH_REFRESH_TOKEN, storage.rowOf("100")?.refresh_token, "刷新结果应写回发起刷新的账号 100")
         assertEquals(HttpStatusCode.OK, response, "刷新重放请求不应因并发切换而失败")
+    }
+
+    @Test
+    fun `刷新判定失效时清理凭证发事件并对同账号熔断`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        val client = buildClient(
+            storage,
+            oauth,
+            signal,
+        ) { respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders) }
+
+        client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                val first = assertFailsWith<AuthExpiredException> {
+                    client.get("$API_HOST/first")
+                }
+                assertEquals("100", first.userId, "失效事件应携带当前账号 userId")
+                val second = assertFailsWith<AuthExpiredException> {
+                    client.get("$API_HOST/second")
+                }
+                assertEquals("100", second.userId, "熔断窗口内应直接快速失败")
+                collector.cancel()
+            }
+        }
+
+        assertEquals(1, oauth.refreshCalls, "同一账号 30 秒内不应重复发起 OAuth 刷新")
+        assertEquals(listOf("100"), storage.invalidatedUserIds, "失效后应清空该账号凭证")
+        assertTrue(events.isNotEmpty(), "凭证失效必须发出 authExpired 事件")
+        assertTrue(storage.rowOf("100")?.access_token.isNullOrEmpty(), "失效后 access_token 应为空")
+        assertTrue(storage.rowOf("100")?.refresh_token.isNullOrEmpty(), "失效后 refresh_token 应为空")
+    }
+
+    @Test
+    fun `refresh token 为空时直接判失效不发网络`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, "") }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient()
+        val client = buildClient(
+            storage,
+            oauth,
+            signal,
+        ) { respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders) }
+
+        client.use {
+            runBlocking {
+                // 以 async 挂载一次性收集并 await 结果：事件在 tryEmit 中只是排队恢复收集协程，
+                // 若像旧实现那样在异常抛出后立即 cancel()，排队中的协程会被取消、事件丢失。
+                val collected = async(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.first()
+                }
+                assertFailsWith<AuthExpiredException> { client.get("$API_HOST/no-refresh-token") }
+                assertEquals(
+                    AuthExpiredEvent("100"),
+                    collected.await(),
+                    "无 refresh_token 也必须发出失效事件",
+                )
+            }
+        }
+
+        assertEquals(0, oauth.refreshCalls, "无 refresh_token 时不应发起注定失败的刷新请求")
+        assertEquals(listOf("100"), storage.invalidatedUserIds)
+    }
+
+    @Test
+    fun `网络异常不清理凭证也不发失效事件`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = RuntimeException("offline")
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        val client = buildClient(
+            storage,
+            oauth,
+            signal,
+        ) { respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders) }
+
+        client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                val thrown = assertFailsWith<RuntimeException> { client.get("$API_HOST/offline") }
+                assertEquals("offline", thrown.message, "网络异常应原样抛出")
+                collector.cancel()
+            }
+        }
+
+        assertEquals(1, oauth.refreshCalls, "网络异常不应触发额外刷新")
+        assertTrue(storage.invalidatedUserIds.isEmpty(), "网络异常不得清理凭证，否则离线用户会被误登出")
+        assertTrue(events.isEmpty(), "网络异常不得发出失效事件")
+        assertEquals(STALE_ACCESS_TOKEN, storage.rowOf("100")?.access_token, "网络异常后凭证应保持不变")
+        assertEquals(STALE_REFRESH_TOKEN, storage.rowOf("100")?.refresh_token, "网络异常后 refresh_token 应保持不变")
     }
 
     @Test

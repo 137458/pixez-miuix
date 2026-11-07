@@ -29,6 +29,7 @@ class PixivHttpClient(
     languageProvider: () -> String = { "zh-CN" },
     enableLogging: Boolean = false,
     private val modeProvider: (isOauthHost: Boolean) -> String? = { null },
+    private val authExpirySignal: AuthExpirySignal? = null,
 ) {
     /**
      * 用于 OAuth 登录/刷新 token 的基础客户端，不带 TokenRefreshPlugin。
@@ -50,6 +51,7 @@ class PixivHttpClient(
         languageProvider = languageProvider,
         enableLogging = enableLogging,
         modeProvider = modeProvider,
+        authExpirySignal = authExpirySignal,
     )
 
     /**
@@ -62,6 +64,7 @@ class PixivHttpClient(
         languageProvider = languageProvider,
         enableLogging = enableLogging,
         modeProvider = modeProvider,
+        authExpirySignal = authExpirySignal,
     )
 
     /**
@@ -197,6 +200,7 @@ class PixivHttpClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
             modeProvider: (isOauthHost: Boolean) -> String?,
+            authExpirySignal: AuthExpirySignal? = null,
         ): HttpClient = createPlatformHttpClient(modeProvider) {
             apiTimeouts()
 
@@ -233,6 +237,7 @@ class PixivHttpClient(
             install(TokenRefreshPlugin) {
                 this.tokenStorage = tokenStorage
                 this.oAuthClient = oAuthClient
+                this.authExpirySignal = authExpirySignal
             }
 
             // 响应校验：非 2xx 统一抛出异常。

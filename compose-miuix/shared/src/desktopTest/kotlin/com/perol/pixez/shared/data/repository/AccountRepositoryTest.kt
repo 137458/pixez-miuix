@@ -118,6 +118,15 @@ class AccountRepositoryTest {
             updateTokensCalls++
         }
 
+        val invalidatedUserIds = mutableListOf<String>()
+
+        override suspend fun invalidateCredentials(userId: String) {
+            invalidatedUserIds += userId
+            rows.replaceAll {
+                if (it.user_id == userId) it.copy(access_token = "", refresh_token = "") else it
+            }
+        }
+
         override suspend fun updateCurrentAccount(transform: suspend (AccountRow?) -> AccountRow?) {
             updateCurrentAccountCalls++
             val latest = getCurrentAccount()
@@ -137,6 +146,7 @@ class AccountRepositoryTest {
     private lateinit var oauth: FakeOAuthClient
     private lateinit var storage: FakeTokenStorage
     private lateinit var repository: AccountRepository
+    private lateinit var sessionCache: SessionCache
     private lateinit var illustRepository: IllustRepository
     private lateinit var pixivisionRepository: PixivisionRepository
     private lateinit var pixivisionWebClient: HttpClient
@@ -167,7 +177,7 @@ class AccountRepositoryTest {
         }
         val settingsNode = Preferences.userRoot().node("com/perol/pixez/test/accountrepo/cache")
         settingsNode.clear()
-        val sessionCache = SessionCache()
+        val sessionCache = SessionCache().also { this.sessionCache = it }
         illustRepository = IllustRepository(
             apiClient = HttpClient(),
             settingsRepository = SettingsRepository(PreferencesSettings(settingsNode)),
@@ -348,6 +358,85 @@ class AccountRepositoryTest {
             pixivisionRepository.getCachedSpotlightDetail(SPOTLIGHT_DETAIL_URL),
             "切换账号必须失效 Spotlight 特辑缓存（中-7 拆分后保持原清缓存语义）",
         )
+    }
+
+    @Test
+    fun `loginWithCode 失效会话缓存以防跨账号串数据`() = runBlocking {
+        oauth.exchangeResult = oauthEnvelope(userId = "78")
+        var invalidations = 0
+        sessionCache.register { invalidations++ }
+
+        repository.loginWithCode("code-cache")
+
+        assertEquals(1, invalidations, "登录成功后必须失效全部会话缓存")
+    }
+
+    @Test
+    fun `loginWithToken 失效会话缓存以防跨账号串数据`() = runBlocking {
+        oauth.refreshResult = oauthEnvelope(userId = "79")
+        var invalidations = 0
+        sessionCache.register { invalidations++ }
+
+        repository.loginWithToken("token-cache")
+
+        assertEquals(1, invalidations, "token 登录成功后必须失效全部会话缓存")
+    }
+
+    @Test
+    fun `deleteAccount 失效会话缓存`() = runBlocking {
+        storage.rows.add(rowFixture("1"))
+        storage.rows.add(rowFixture("2"))
+        storage.activeUserId = "1"
+        var invalidations = 0
+        sessionCache.register { invalidations++ }
+
+        repository.deleteAccount("2")
+
+        assertEquals(1, invalidations, "删除账号后必须失效全部会话缓存，避免残留被删账号的数据")
+    }
+
+    @Test
+    fun `refreshSessionState 在账号凭证为空时发出失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = ""))
+        storage.activeUserId = "1"
+        val event = CompletableDeferred<String>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { event.complete(it.userId) }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals("1", withTimeoutOrNull(1_000) { event.await() }, "凭证为空的账号应触发重新登录提示")
+        job.cancel()
+    }
+
+    @Test
+    fun `refreshSessionState 在凭证有效时不发失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1"))
+        storage.activeUserId = "1"
+        var events = 0
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { events++ }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals(0, events, "有效凭证不应触发失效提示")
+        job.cancel()
+    }
+
+    @Test
+    fun `currentAccount 的 hasCredentials 反映凭证是否被清空`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = ""))
+        storage.activeUserId = "1"
+
+        assertEquals(false, repository.currentAccount()?.hasCredentials, "token 被清空后 hasCredentials 必须为 false")
+
+        storage.rows.clear()
+        storage.rows.add(rowFixture("1"))
+        storage.activeUserId = "1"
+
+        assertEquals(true, repository.currentAccount()?.hasCredentials, "完整 token 的账号 hasCredentials 应为 true")
     }
 
     private fun cachedIllustFixture(id: Long): com.perol.pixez.shared.data.model.Illust =

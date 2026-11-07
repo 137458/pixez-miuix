@@ -127,12 +127,12 @@ fun NewScreen(
         currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
             .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "加载当前账号失败(NewScreen)" } }
             .getOrNull()
-        isLoggedIn = currentAccount != null
+        isLoggedIn = currentAccount?.hasCredentials == true
         accountRepository.loginEventFlow.collect {
             currentAccount = suspendRunCatchingNonCancel { accountRepository.currentAccount() }
                 .onFailure { Napier.w(tag = "CurrentAccount", throwable = it) { "登录事件后加载当前账号失败(NewScreen)" } }
                 .getOrNull()
-            isLoggedIn = currentAccount != null
+            isLoggedIn = currentAccount?.hasCredentials == true
         }
     }
 

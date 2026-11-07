@@ -33,6 +33,13 @@ interface AuthTokenStorage {
      */
     suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String)
 
+    /**
+     * 将指定账号的凭证置为失效：清空 access/refresh token 并保留账号轮廓。
+     *
+     * 用于确认 refresh_token 已被吊销/无法解密后的 fail-fast 清理；调用方随后应提示重新登录。
+     */
+    suspend fun invalidateCredentials(userId: String)
+
     suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?)
 
     suspend fun clear()

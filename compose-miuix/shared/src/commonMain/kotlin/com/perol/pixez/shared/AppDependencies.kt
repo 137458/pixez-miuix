@@ -25,6 +25,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.WatchlistRepository
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.HttpClientDefaults
 import com.perol.pixez.shared.network.PixivHttpClient
@@ -134,6 +135,12 @@ class AppDependencies(
     }
 
     /**
+     * 凭证失效信号：TokenRefreshPlugin 与 AccountRepository 共享同一实例，
+     * 保证网络层确认失效后 UI 能收到提示事件。
+     */
+    private val authExpirySignal = AuthExpirySignal()
+
+    /**
      * 网络客户端，包含业务 API 与 OAuth 客户端。
      * 默认关闭网络日志，防止在 release 构建中泄露 Authorization token。
      * Accept-Language 经 platform 层共享解析函数取自语言码表（架构审查 中-1、中-14），
@@ -145,6 +152,7 @@ class AppDependencies(
             languageProvider = { languageCodeForNum(settingsRepository.languageNum) },
             enableLogging = false,
             modeProvider = dnsModeProvider,
+            authExpirySignal = authExpirySignal,
         )
     }
 
@@ -189,6 +197,7 @@ class AppDependencies(
             tokenStorage = tokenStorage,
             accountClient = httpClient.accountClient,
             sessionCache = sessionCache,
+            authExpirySignal = authExpirySignal,
         )
     }
 

@@ -5,6 +5,8 @@ import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.model.Account as OAuthAccount
 import com.perol.pixez.shared.data.model.AccountEditResponse
 import com.perol.pixez.shared.data.model.AccountPersist
+import com.perol.pixez.shared.network.AuthExpiredEvent
+import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.OAuthClient
 import io.ktor.client.HttpClient
@@ -27,14 +29,31 @@ class AccountRepository(
     private val tokenStorage: AuthTokenStorage,
     private val accountClient: HttpClient,
     private val sessionCache: SessionCache,
+    private val authExpirySignal: AuthExpirySignal = AuthExpirySignal(),
 ) {
     private val _loginEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val loginEventFlow: SharedFlow<Unit> = _loginEventFlow.asSharedFlow()
 
     /**
+     * 凭证失效事件：刷新失败或启动自检发现账号凭证为空时发出，UI 根层据此提示重新登录。
+     */
+    val authExpiredFlow: SharedFlow<AuthExpiredEvent> = authExpirySignal.events
+
+    /**
      * 当前已登录账号，未登录返回 null。
      */
     suspend fun currentAccount(): AccountPersist? = tokenStorage.getCurrentAccount()?.toPersist()
+
+    /**
+     * 启动自检：当前账号存在但凭证已被清理（解密失败或刷新判定吊销）时发出失效事件。
+     * 由 UI 根层在订阅 [authExpiredFlow] 之后调用，保证提示不会因时序问题丢失。
+     */
+    suspend fun refreshSessionState() {
+        val account = tokenStorage.getCurrentAccount() ?: return
+        if (!account.hasCredentials()) {
+            authExpirySignal.emit(account.user_id)
+        }
+    }
 
     /**
      * 生成 WebView 登录 URL。
@@ -49,6 +68,8 @@ class AccountRepository(
     suspend fun loginWithCode(code: String): OAuthAccount {
         val account = oAuthClient.exchangeCodeForToken(code)
         tokenStorage.saveAccount(account.response)
+        // 账号身份变化必须失效全部账号相关缓存，避免登录后仍读到上一个账号的数据。
+        sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
         return account
     }
@@ -59,6 +80,8 @@ class AccountRepository(
     suspend fun loginWithToken(token: String): OAuthAccount {
         val account = oAuthClient.refreshToken(token.trim())
         tokenStorage.saveAccount(account.response)
+        // 与授权码登录一致：新账号落库后立即失效全部会话缓存。
+        sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
         return account
     }
@@ -138,6 +161,8 @@ class AccountRepository(
      */
     suspend fun deleteAccount(userId: String) {
         tokenStorage.deleteAccount(userId)
+        // 删除账号同样改变账号身份（可能自动切换到下一个账号），必须失效全部缓存。
+        sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
     }
 
@@ -225,3 +250,10 @@ private fun Account.toPersist(): AccountPersist = AccountPersist(
     xRestrict = x_restrict.toInt(),
     isMailAuthorized = is_mail_authorized.toInt(),
 )
+
+/**
+ * 是否仍持有可用凭证：解密失败或被判定吊销后 token 会被清空，但账号行保留。
+ * 登录态判定必须用它，不能用「账号行是否存在」。
+ */
+private fun Account.hasCredentials(): Boolean =
+    access_token.isNotBlank() && refresh_token.isNotBlank()

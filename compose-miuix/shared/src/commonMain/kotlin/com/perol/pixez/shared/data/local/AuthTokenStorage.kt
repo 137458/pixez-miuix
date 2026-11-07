@@ -187,6 +187,24 @@ class SqlDelightAuthTokenStorage(
     }
 
     /**
+     * 将指定账号的凭证置为失效（清空 access/refresh token、密码恢复占位值），保留账号行。
+     *
+     * 仅影响 [userId] 对应的行；网络层确认 refresh_token 被吊销或无法使用后调用，
+     * 内存缓存指向该账号时同步更新，使登录态判定立即变为「无凭证」。
+     */
+    override suspend fun invalidateCredentials(userId: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val target = queries.selectByUserId(userId).executeAsList().firstOrNull()
+                ?: return@withLock
+            val sanitized = target.sanitizeCredentials()
+            if (cachedAccount?.user_id == userId) {
+                cachedAccount = sanitized
+                isCacheInitialized = true
+            }
+        }
+    }
+
+    /**
      * 原子更新当前账号。
      *
      * 在 Mutex 保护下读取当前账号，调用 [transform] 生成新账号对象，再将结果写回数据库。
@@ -267,7 +285,7 @@ class SqlDelightAuthTokenStorage(
             }
         } catch (e: TokenCipherException) {
             Napier.e("账号($user_id)凭证解密失败，按凭证失效清理：清空 token 并保留账号轮廓，等待重新登录", e)
-            invalidateCredentials()
+            sanitizeCredentials()
         }
     }
 
@@ -275,7 +293,7 @@ class SqlDelightAuthTokenStorage(
      * 将当前账号的凭证字段清空并落库（access/refresh token 置空、密码恢复占位值），
      * 返回清理后的账号对象；调用方持有 [mutex]，后续读取不再触发解密失败。
      */
-    private fun Account.invalidateCredentials(): Account {
+    private fun Account.sanitizeCredentials(): Account {
         val sanitized = this.copy(
             access_token = "",
             refresh_token = "",

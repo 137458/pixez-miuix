@@ -56,7 +56,10 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
+import com.perol.pixez.shared.ui.components.AuthExpiredDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -119,8 +122,20 @@ fun RootContent(
 
     var appReleaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
     var showAppUpdateDialog by remember { mutableStateOf(false) }
+    var showAuthExpiredDialog by remember { mutableStateOf(false) }
     // 根级 Toast：承载更新链接等外链打开失败提示（页面内提示由各页面自持）。
     var rootToastMessage by remember { mutableStateOf<ToastData?>(null) }
+
+    // 凭证失效提示：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
+    // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失。
+    LaunchedEffect(Unit) {
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            registry.accountRepository.authExpiredFlow.collect {
+                showAuthExpiredDialog = true
+            }
+        }
+        registry.accountRepository.refreshSessionState()
+    }
 
     LaunchedEffect(Unit) {
         if (settingsRepository.autoCheckUpdate) {
@@ -166,6 +181,15 @@ fun RootContent(
                         },
                     )
                 }
+
+                AuthExpiredDialog(
+                    show = showAuthExpiredDialog,
+                    onRelogin = {
+                        showAuthExpiredDialog = false
+                        component.onAccountManageClicked()
+                    },
+                    onDismiss = { showAuthExpiredDialog = false },
+                )
 
                 BoxWithConstraints(
                     modifier = modifier

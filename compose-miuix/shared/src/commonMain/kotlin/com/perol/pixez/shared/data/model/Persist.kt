@@ -18,7 +18,14 @@ data class AccountPersist(
     @SerialName("is_premium") val isPremium: Int,
     @SerialName("x_restrict") val xRestrict: Int,
     @SerialName("is_mail_authorized") val isMailAuthorized: Int,
-)
+) {
+    /**
+     * 是否仍持有可用凭证。解密失败或被判定吊销后账号行会保留但 token 被清空，
+     * 登录态判定必须用它而不是「账号行是否存在」。
+     */
+    val hasCredentials: Boolean
+        get() = accessToken.isNotBlank() && refreshToken.isNotBlank()
+}
 
 @Serializable
 data class BanIllustIdPersist(

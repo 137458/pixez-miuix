@@ -93,10 +93,11 @@ fun HelloScreen(
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         user = accountRepository.currentAccount()
-        isLoggedIn = user != null
+        // 解密失败/被吊销后账号行仍保留但 token 为空，登录态必须看凭证而不是账号行。
+        isLoggedIn = user?.hasCredentials == true
         accountRepository.loginEventFlow.collect {
             user = accountRepository.currentAccount()
-            isLoggedIn = user != null
+            isLoggedIn = user?.hasCredentials == true
         }
     }
 
