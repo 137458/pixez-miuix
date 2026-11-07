@@ -20,6 +20,7 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.WatchlistRepository
+import com.perol.pixez.shared.platform.AppUpdateDownloader
 
 /**
  * 各数据仓储的组合注入通道（中-9 单通道收敛）：由 RootContent 在应用根部统一 provide，
@@ -115,6 +116,11 @@ val LocalUpdateRepository = staticCompositionLocalOf<UpdateRepository> {
     error("LocalUpdateRepository not provided")
 }
 
+/** 更新下载通道：更新弹窗与更新设置页观察同一份进程级下载状态。 */
+val LocalUpdateDownloader = staticCompositionLocalOf<AppUpdateDownloader> {
+    error("LocalUpdateDownloader not provided")
+}
+
 /** SauceNAO 以图搜图数据通道：搜索页以图搜图浮层。 */
 val LocalSauceNaoRepository = staticCompositionLocalOf<com.perol.pixez.shared.data.repository.SauceNaoRepository> {
     error("LocalSauceNaoRepository not provided")
@@ -156,6 +162,7 @@ internal fun ProvideRepositories(
         LocalMuteRepository provides registry.muteRepository,
         LocalNovelRepository provides registry.novelRepository,
         LocalUpdateRepository provides registry.updateRepository,
+        LocalUpdateDownloader provides registry.updateDownloader,
         LocalSauceNaoRepository provides registry.sauceNaoRepository,
         LocalWatchlistRepository provides registry.watchlistRepository,
         content = content,

@@ -35,11 +35,16 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import com.perol.pixez.shared.network.createUpdateCheckClient
+import com.perol.pixez.shared.platform.AppUpdateDownloader
 import com.perol.pixez.shared.platform.installErrorLogAntilog
 import com.perol.pixez.shared.platform.languageCodeForNum
 import com.perol.pixez.shared.platform.isDebugBuild
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -169,6 +174,18 @@ class AppDependencies(
      */
     val updateRepository: com.perol.pixez.shared.data.repository.UpdateRepository by lazy {
         com.perol.pixez.shared.data.repository.UpdateRepository(updateCheckClient)
+    }
+
+    /**
+     * 应用级协程作用域：更新包下载必须活过弹窗与页面，因此挂在这里而不是 Compose scope。
+     */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * 进程级更新下载器：弹窗与更新设置页共享同一份状态，关闭弹窗或退到后台都不中止。
+     */
+    val updateDownloader: AppUpdateDownloader by lazy {
+        AppUpdateDownloader(appScope)
     }
 
     /**
@@ -330,6 +347,7 @@ class AppDependencies(
      * 释放数据库与网络资源，应用在退出时调用。
      */
     fun close() {
+        runCatching { appScope.cancel() }
         runCatching { httpClient.close() }
         runCatching { updateCheckClient.close() }
         runCatching { boardHttpClient.close() }

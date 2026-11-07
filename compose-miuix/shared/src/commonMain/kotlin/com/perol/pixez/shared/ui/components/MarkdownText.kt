@@ -17,10 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
@@ -338,11 +341,19 @@ internal fun buildAnnotatedContent(rawText: String, linkColor: Color = Color.Uns
                     val urlEnd = rawText.indexOf(")", linkTextEnd + 2)
                     if (urlEnd != -1) {
                         val label = rawText.substring(i + 1, linkTextEnd)
-                        withStyle(
-                            SpanStyle(
-                                color = if (linkColor != Color.Unspecified) linkColor else Color(0xFF2979FF),
-                                textDecoration = TextDecoration.Underline,
-                                fontWeight = FontWeight.Medium,
+                        val url = rawText.substring(linkTextEnd + 2, urlEnd)
+                        // LinkAnnotation 让 Text 自己处理点击；只保留 PR 说明里约定的三种标记，
+                        // 图片、标题等富文本不在这里解析。
+                        withLink(
+                            LinkAnnotation.Url(
+                                url = url,
+                                styles = TextLinkStyles(
+                                    style = SpanStyle(
+                                        color = if (linkColor != Color.Unspecified) linkColor else Color(0xFF2979FF),
+                                        textDecoration = TextDecoration.Underline,
+                                        fontWeight = FontWeight.Medium,
+                                    ),
+                                ),
                             )
                         ) {
                             append(label)

@@ -18,6 +18,7 @@ import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
 import com.perol.pixez.shared.data.repository.WatchlistRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.AppUpdateDownloader
 
 /**
  * RootContent 链路的仓储聚合容器：将原本 RootContent → RootChildContent → render*
@@ -45,6 +46,8 @@ data class RepositoryRegistry(
     // 可空标注为历史遗留；LocalNovelRepository 快速失败语义要求非空类型。
     val novelRepository: NovelRepository,
     val updateRepository: UpdateRepository,
+    // 进程级更新下载器：弹窗与更新页共享同一份下载状态（不是仓储，但同属长生命周期依赖）。
+    val updateDownloader: AppUpdateDownloader,
     val sauceNaoRepository: SauceNaoRepository,
     val watchlistRepository: WatchlistRepository,
 )

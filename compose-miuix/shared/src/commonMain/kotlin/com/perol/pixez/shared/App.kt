@@ -81,6 +81,7 @@ fun App(
             muteRepository = dependencies.muteRepository,
             novelRepository = dependencies.novelRepository,
             updateRepository = dependencies.updateRepository,
+            updateDownloader = dependencies.updateDownloader,
             sauceNaoRepository = dependencies.sauceNaoRepository,
             watchlistRepository = dependencies.watchlistRepository,
         )

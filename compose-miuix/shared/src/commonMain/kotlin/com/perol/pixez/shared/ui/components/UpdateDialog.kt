@@ -1,65 +1,47 @@
 package com.perol.pixez.shared.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.perol.pixez.shared.platform.AppInstaller
-import com.perol.pixez.shared.platform.AppUpdateDownloader
-import com.perol.pixez.shared.ui.AppConstants
+import androidx.compose.ui.text.font.FontWeight
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.platform.AppInstaller
+import com.perol.pixez.shared.platform.UpdateDownloadState
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalUpdateDownloader
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.i18n.formatFileSize
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.squircle.squircleClip
@@ -67,21 +49,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 /**
- * 更新下载流式状态结构体，收敛零散可变状态。
- */
-private data class DownloadUiState(
-    val isDownloading: Boolean = false,
-    val progress: Float = 0f,
-    val downloadedBytes: Long = 0L,
-    val totalBytes: Long = 0L,
-    val speedText: String = "",
-    val filePath: String? = null,
-    val error: String? = null,
-)
-
-/**
- * 官方 Miuix / HyperOS 规范版本更新弹窗：
- * 支持版本跃迁胶囊卡片、元数据展示、应用内流式测速下载、任务中断取消与无缝回退浏览器。
+ * HyperOS 规范版本更新弹窗。
+ *
+ * 口径与 jm3 整合版一致：标题下只有一行版本跃迁摘要；动作按下载状态推导；说明默认折叠
+ * 12 行，整段说明只用一个滚动容器；忽略降级为说明下方的文字链接。
+ *
+ * 下载状态来自进程级 [Composable] 单例，弹窗只观察不持有任务，关闭弹窗不会取消下载。
  */
 @Composable
 fun UpdateDialog(
@@ -92,322 +65,81 @@ fun UpdateDialog(
     onIgnore: ((version: String) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
-    val coroutineScope = rememberCoroutineScope()
+    val downloader = LocalUpdateDownloader.current
+    val downloadState by downloader.state.collectAsState()
+    val asset = remember(releaseInfo) { releaseInfo.updateAsset() }
 
-    var downloadState by remember { mutableStateOf(DownloadUiState()) }
-    var downloadJob by remember { mutableStateOf<Job?>(null) }
-
-    fun cancelDownload() {
-        downloadJob?.cancel()
-        downloadJob = null
-        downloadState = DownloadUiState()
+    var notesExpanded by remember(show, releaseInfo.tagName) { mutableStateOf(false) }
+    val notesState = remember(releaseInfo.changelog, notesExpanded) {
+        updateDialogNotesState(releaseInfo.changelog, notesExpanded)
+    }
+    val plan = remember(releaseInfo, downloadState, strings, onIgnore, asset) {
+        buildUpdateDialogPlan(
+            currentVersion = AppInfo.VERSION_NAME,
+            release = releaseInfo,
+            downloadState = downloadState,
+            strings = strings,
+            canIgnore = onIgnore != null,
+            canCancelDownload = true,
+        )
     }
 
-    fun startDownload() {
-        val downloadUrl = releaseInfo.downloadUrl
-        val fileName = releaseInfo.fileName
-        if (downloadUrl.isNullOrBlank() || fileName.isNullOrBlank()) {
-            onUpdate(releaseInfo.releaseUrl)
-            onDismiss()
-            return
-        }
-
-        downloadState = DownloadUiState(isDownloading = true)
-
-        downloadJob = coroutineScope.launch {
-            var lastTime = Clock.System.now().toEpochMilliseconds()
-            var lastBytes = 0L
-
-            val result = AppUpdateDownloader().download(
-                downloadUrl = downloadUrl,
-                fileName = fileName,
-                sha256Digest = releaseInfo.digest,
-                onProgress = { progress, downloaded, total ->
-                    val currentTime = Clock.System.now().toEpochMilliseconds()
-                    val timeDiff = currentTime - lastTime
-                    var speed = downloadState.speedText
-                    if (timeDiff >= AppConstants.Update.SPEED_CALCULATION_INTERVAL_MS) {
-                        val bytesDiff = downloaded - lastBytes
-                        if (bytesDiff >= 0 && timeDiff > 0) {
-                            val rate = (bytesDiff * 1000L) / timeDiff
-                            speed = "${formatFileSize(rate)}/s"
-                        }
-                        lastTime = currentTime
-                        lastBytes = downloaded
-                    }
-                    downloadState = downloadState.copy(
-                        progress = progress,
-                        downloadedBytes = downloaded,
-                        totalBytes = total,
-                        speedText = speed,
-                    )
-                },
-            )
-
-            downloadJob = null
-
-            result
-                .onSuccess { path ->
-                    downloadState = downloadState.copy(
-                        isDownloading = false,
-                        filePath = path,
-                    )
-                    AppInstaller().install(path)
-                }
-                .onFailure { error ->
-                    if (error !is CancellationException) {
-                        // 更新包下载失败不透出内部异常细节，直接给本地化固定文案。
-                        downloadState = downloadState.copy(
-                            isDownloading = false,
-                            error = strings.updateDownloadFailed,
-                        )
-                    }
-                }
-        }
-    }
+    val scrollState = rememberScrollState()
+    // 只给还有内容的方向加羽化：滚到顶/底时对应一侧恢复实心，避免“永远有雾”的错误暗示
+    val hasContentAbove by remember { derivedStateOf { scrollState.value > 0 } }
+    val hasContentBelow by remember { derivedStateOf { scrollState.maxValue > scrollState.value } }
 
     WindowDialog(
         show = show,
         title = strings.dialogNewVersionFound,
-        onDismissRequest = {
-            if (downloadState.isDownloading) {
-                cancelDownload()
-            }
-            onDismiss()
-        },
+        summary = plan.summary,
+        onDismissRequest = onDismiss,
     ) {
+        // 说明区是弹窗内唯一的滚动容器；羽化必须在 verticalScroll 外侧，
+        // 在内侧时量到的是内容总高，渐变会落在滚出视口的位置，肉眼看不到羽化。
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = UPDATE_NOTES_MAX_HEIGHT_DP.dp)
+                .verticalEdgeFade(
+                    top = hasContentAbove,
+                    bottom = hasContentBelow,
+                    fade = UPDATE_NOTES_FADE_DP.dp,
+                )
+                .verticalScroll(scrollState),
         ) {
-            // 1. HyperOS 规范版本跃迁与元数据胶囊卡片
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
-                    .background(MiuixTheme.colorScheme.surfaceContainer)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-            ) {
-                Column(
+            if (plan.showProgress) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // 版本流动指示行
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        VersionBadge(
-                            label = strings.updateCurrentVersion,
-                            version = "v${AppInfo.VERSION_NAME}",
-                            isHighlight = false,
-                        )
-
-                        Text(
-                            text = "→",
-                            style = MiuixTheme.textStyles.title4.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                            ),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
-
-                        VersionBadge(
-                            label = strings.updateLatestVersion,
-                            version = "v${releaseInfo.versionName}",
-                            isHighlight = true,
-                        )
-                    }
-
-                    // 元数据标签（更新包大小与发布日期）
-                    val metadataParts = buildList {
-                        val size = releaseInfo.fileSize ?: downloadState.totalBytes.takeIf { it > 0 }
-                        if (size != null && size > 0) {
-                            add(formatFileSize(size))
-                        }
-                        val published = releaseInfo.publishedAt?.take(10)
-                        if (!published.isNullOrBlank()) {
-                            add(published)
-                        }
-                    }
-                    if (metadataParts.isNotEmpty()) {
-                        Text(
-                            text = metadataParts.joinToString("  •  "),
-                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 2. 更新日志卡片（支持扩容展示、动态视口响应、边缘平滑渐隐遮罩与细微滚动指示器）
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val maxAvailable = maxHeight
-                val changelogMaxHeight = remember(maxAvailable) {
-                    if (maxAvailable > 0.dp && maxAvailable != Dp.Infinity) {
-                        (maxAvailable * 0.58f).coerceIn(
-                            minimumValue = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
-                            maximumValue = AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp,
-                        )
-                    } else {
-                        AppConstants.Update.CHANGELOG_MAX_HEIGHT_DP.dp
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(
-                            min = AppConstants.Update.CHANGELOG_MIN_HEIGHT_DP.dp,
-                            max = changelogMaxHeight,
-                        )
-                        .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
-                        .background(MiuixTheme.colorScheme.surfaceContainer),
-                ) {
-                    val scrollState = rememberScrollState()
-
-                    // 滚动视口容器：外挂上下边缘渐变淡出遮罩，padding 移入内侧避免截断
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalFadingEdges(
-                                scrollState = scrollState,
-                                topFadeHeight = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
-                                bottomFadeHeight = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
-                            )
-                            .verticalScroll(scrollState)
-                            .padding(
-                                start = 14.dp,
-                                end = if (scrollState.maxValue > 0) 18.dp else 14.dp,
-                                top = 12.dp,
-                                bottom = 12.dp,
-                            ),
-                    ) {
-                        if (releaseInfo.changelog.isNotBlank()) {
-                            MarkdownText(
-                                markdown = releaseInfo.changelog,
-                                modifier = Modifier.fillMaxWidth(),
-                                baseFontSize = 13,
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = strings.updateChangelogEmpty,
-                                    style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            }
-                        }
-                    }
-
-                    // 右侧贴边细微胶囊滚动指示条
-                    ChangelogScrollbar(
-                        scrollState = scrollState,
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                    )
-                }
-            }
-
-            // 3. 下载进度状态与即时测速
-            AnimatedVisibility(
-                visible = downloadState.isDownloading,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = strings.updateDownloading,
-                            style = MiuixTheme.textStyles.body2.copy(
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            color = MiuixTheme.colorScheme.primary,
-                        )
-
-                        val percentText = if (downloadState.progress >= 0f) "${(downloadState.progress * 100).toInt()}%" else ""
-                        val speedAndPercent = buildList {
-                            if (percentText.isNotEmpty()) add(percentText)
-                            if (downloadState.speedText.isNotEmpty()) add(downloadState.speedText)
-                        }.joinToString("  •  ")
-
-                        Text(
-                            text = speedAndPercent,
-                            style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    if (downloadState.progress >= 0f) {
-                        LinearProgressIndicator(
-                            progress = downloadState.progress,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    val sizeText = if (downloadState.totalBytes > 0) {
-                        "${formatFileSize(downloadState.downloadedBytes)} / ${formatFileSize(downloadState.totalBytes)}"
-                    } else {
-                        formatFileSize(downloadState.downloadedBytes)
-                    }
-
-                    Text(
-                        text = sizeText,
-                        style = MiuixTheme.textStyles.body2.copy(fontSize = 11.sp),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        modifier = Modifier.align(Alignment.End),
-                    )
-                }
-            }
-
-            // 4. 下载成功状态提示
-            if (downloadState.filePath != null && !downloadState.isDownloading) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .squircleClip(AppConstants.Update.BADGE_CORNER_RADIUS_DP.dp)
-                        .background(MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = strings.updateDownloadSuccess,
+                        text = strings.updateDownloading,
                         style = MiuixTheme.textStyles.body2.copy(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                         ),
-                        color = MiuixTheme.colorScheme.onPrimaryContainer,
+                        color = MiuixTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = plan.progressDetail.orEmpty(),
+                        style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                if (plan.progressFraction != null) {
+                    LinearProgressIndicator(
+                        progress = plan.progressFraction,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 5. 错误提示
-            if (downloadState.error != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+            if (plan.errorText != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -416,246 +148,152 @@ fun UpdateDialog(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = downloadState.error ?: "",
+                        text = plan.errorText.orEmpty(),
                         style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                         color = MiuixTheme.colorScheme.error,
                     )
                 }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 6. 底部操作按钮栏（严格遵循 MIUIX 垂直纵向整宽排列规范：主操作置顶、取消置底）
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (downloadState.isDownloading) {
-                    // 下载中状态：提供取消下载操作
-                    TextButton(
-                        text = strings.updateCancelDownload,
-                        onClick = { cancelDownload() },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else if (downloadState.filePath != null) {
-                    // 下载完成：立即安装（主）/ 取消
-                    TextButton(
-                        text = strings.updateInstallNow,
-                        onClick = {
-                            downloadState.filePath?.let { AppInstaller().install(it) }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else if (downloadState.error != null) {
-                    // 下载失败：重试（主）/ 浏览器下载 / 取消
-                    TextButton(
-                        text = strings.retry,
-                        onClick = { startDownload() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                    TextButton(
-                        text = strings.updateOpenInBrowser,
-                        onClick = {
-                            onDismiss()
-                            onUpdate(releaseInfo.releaseUrl)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    // 常规待更新状态：更新（主）/ 浏览器下载 / 取消 / 忽略
-                    val hasDirectDownload = !releaseInfo.downloadUrl.isNullOrBlank() && !releaseInfo.fileName.isNullOrBlank()
-
-                    if (hasDirectDownload) {
-                        TextButton(
-                            text = strings.btnUpdate,
-                            onClick = { startDownload() },
+            if (plan.hasNotes) {
+                SmallTitle(text = strings.updateNotesTitle)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
+                        .background(MiuixTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        MarkdownText(
+                            markdown = notesState.visibleMarkdown,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.textButtonColorsPrimary(),
+                            baseFontSize = 13,
                         )
-                    } else {
-                        // 无直链场景（如桌面端或其他架构），平滑提供浏览器下载
-                        TextButton(
-                            text = strings.updateOpenInBrowser,
-                            onClick = {
-                                onDismiss()
-                                onUpdate(releaseInfo.releaseUrl)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.textButtonColorsPrimary(),
-                        )
-                    }
-
-                    TextButton(
-                        text = strings.cancel,
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    if (onIgnore != null) {
-                        TextButton(
-                            text = strings.btnIgnore,
-                            onClick = { onIgnore(releaseInfo.versionName) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        if (notesState.hiddenLineCount > 0 || notesExpanded) {
+                            TextButton(
+                                text = if (notesExpanded) strings.collapse else strings.expand,
+                                onClick = { notesExpanded = !notesExpanded },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                            )
+                        }
                     }
                 }
+            } else {
+                Text(
+                    text = strings.updateChangelogEmpty,
+                    style = MiuixTheme.textStyles.body2.copy(fontSize = 13.sp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                )
+            }
+
+            if (plan.showIgnore) {
+                // 「忽略此版本」不再与主操作并列，降级为说明下方的一枚文字链接。
+                TextButton(
+                    text = strings.updateDialogIgnore,
+                    onClick = { onIgnore?.invoke(releaseInfo.versionName) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(textColor = MiuixTheme.colorScheme.error),
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = {
+                    when (plan.primaryAction) {
+                        UpdateDialogPrimaryAction.Download,
+                        UpdateDialogPrimaryAction.Retry -> asset?.let(downloader::start)
+                        UpdateDialogPrimaryAction.Install -> {
+                            (downloadState as? UpdateDownloadState.Done)
+                                ?.filePath
+                                ?.let { AppInstaller().install(it) }
+                        }
+                        UpdateDialogPrimaryAction.OpenRelease -> onUpdate(releaseInfo.releaseUrl)
+                    }
+                },
+                enabled = plan.primaryEnabled,
+                colors = ButtonDefaults.buttonColorsPrimary(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = plan.primaryText, style = MiuixTheme.textStyles.button)
+            }
+
+            if (plan.showBrowserFallback) {
+                TextButton(
+                    text = strings.updateOpenInBrowser,
+                    onClick = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (plan.showCancelDownload) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        text = strings.updateCancelDownload,
+                        onClick = downloader::cancel,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        text = plan.dismissText,
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            } else {
+                TextButton(
+                    text = plan.dismissText,
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
 }
 
 /**
- * HyperOS 风格版本徽标胶囊。
+ * 边缘羽化底座：离屏合成后用 DstIn 遮罩把内容在指定边缘淡出。
  */
-@Composable
-private fun VersionBadge(
-    label: String,
-    version: String,
-    isHighlight: Boolean,
-) {
-    val bgColor = if (isHighlight) {
-        MiuixTheme.colorScheme.primaryContainer
-    } else {
-        MiuixTheme.colorScheme.surfaceContainerHigh
-    }
-    val textColor = if (isHighlight) {
-        MiuixTheme.colorScheme.onPrimaryContainer
-    } else {
-        MiuixTheme.colorScheme.onSurface
-    }
-
-    Box(
-        modifier = Modifier
-            .squircleClip(AppConstants.Update.BADGE_CORNER_RADIUS_DP.dp)
-            .background(bgColor)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = label,
-                style = MiuixTheme.textStyles.body2.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-                color = textColor.copy(alpha = 0.75f),
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = version,
-                style = MiuixTheme.textStyles.title4.copy(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                color = textColor,
-            )
-        }
-    }
-}
-
-/**
- * 为垂直滚动内容提供顶部与底部边缘渐变平滑淡出遮罩（Fading Edges）。
- *
- * 避免文字在滚动容器边界处被硬生生横切腰斩，并提供自然的内容未见底流动感知。
- * 当停留在顶端或底端时对应方向不进行多余裁切，保留首行与末行 100% 锐利清晰度。
- */
-fun Modifier.verticalFadingEdges(
-    scrollState: ScrollState,
-    topFadeHeight: Dp = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
-    bottomFadeHeight: Dp = AppConstants.Update.CHANGELOG_FADE_EDGE_DP.dp,
-): Modifier = this
-    .graphicsLayer {
-        compositingStrategy = CompositingStrategy.Offscreen
-    }
-    .drawWithContent {
+internal fun Modifier.edgeFadeMask(brushFactory: DrawScope.() -> Brush): Modifier =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
         drawContent()
-        val topFadePx = topFadeHeight.toPx()
-        val bottomFadePx = bottomFadeHeight.toPx()
-        val hasScrollableContent = scrollState.maxValue > 0
-
-        if (!hasScrollableContent) return@drawWithContent
-
-        val canScrollBackward = scrollState.value > 0
-        val canScrollForward = scrollState.value < scrollState.maxValue
-
-        if (canScrollBackward && topFadePx > 0f) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.Transparent, Color.Black),
-                    startY = 0f,
-                    endY = topFadePx,
-                ),
-                blendMode = BlendMode.DstIn,
-            )
-        }
-        if (canScrollForward && bottomFadePx > 0f) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color.Black, Color.Transparent),
-                    startY = size.height - bottomFadePx,
-                    endY = size.height,
-                ),
-                blendMode = BlendMode.DstIn,
-            )
-        }
+        if (size.width <= 0f || size.height <= 0f) return@drawWithContent
+        drawRect(brush = brushFactory(), blendMode = BlendMode.DstIn)
     }
 
 /**
- * HyperOS 规范细微胶囊滚动指示条。
- * 伴随滚动操作优雅渐现，静止时保持弱化半透，让用户直观掌握更新日志的阅读进度与剩余篇幅。
+ * 竖向边缘羽化：只在 [top] / [bottom] 为 true 的一侧铺渐变，滚到端点时对应侧完全实心。
  */
-@Composable
-private fun BoxScope.ChangelogScrollbar(
-    scrollState: ScrollState,
-    modifier: Modifier = Modifier,
-) {
-    if (scrollState.maxValue <= 0) return
-
-    val isScrolling = scrollState.isScrollInProgress
-    val scrollbarAlpha by animateFloatAsState(
-        targetValue = if (isScrolling) 0.8f else 0.35f,
-        animationSpec = tween(durationMillis = 200),
-        label = "ChangelogScrollbarAlpha",
-    )
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxHeight()
-            .padding(end = 4.dp, top = 8.dp, bottom = 8.dp),
-    ) {
-        val density = LocalDensity.current
-        val trackHeightPx = with(density) { maxHeight.toPx() }
-
-        if (trackHeightPx > 0f) {
-            val totalContentPx = trackHeightPx + scrollState.maxValue.toFloat()
-            val thumbFraction = (trackHeightPx / totalContentPx).coerceIn(0.18f, 0.75f)
-            val thumbHeightDp = maxHeight * thumbFraction
-            val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
-            val maxTravelPx = (trackHeightPx - thumbHeightPx).coerceAtLeast(0f)
-
-            Box(
-                modifier = Modifier
-                    .width(AppConstants.Update.SCROLLBAR_WIDTH_DP.dp)
-                    .height(thumbHeightDp)
-                    .graphicsLayer {
-                        val scrollFraction = (scrollState.value.toFloat() / scrollState.maxValue.toFloat()).coerceIn(0f, 1f)
-                        translationY = maxTravelPx * scrollFraction
-                        alpha = scrollbarAlpha
-                    }
-                    .clip(CircleShape)
-                    .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.6f)),
+internal fun Modifier.verticalEdgeFade(
+    top: Boolean,
+    bottom: Boolean,
+    fade: Dp = UPDATE_NOTES_FADE_DP.dp,
+): Modifier {
+    if (!top && !bottom) return this
+    return edgeFadeMask {
+        val fadePx = fade.toPx().coerceAtMost(size.height / 2f)
+        val stop = (fadePx / size.height).coerceIn(0f, 0.5f)
+        when {
+            top && bottom -> Brush.verticalGradient(
+                0f to Color.Transparent,
+                stop to Color.Black,
+                1f - stop to Color.Black,
+                1f to Color.Transparent,
             )
+            top -> Brush.verticalGradient(0f to Color.Transparent, stop to Color.Black)
+            else -> Brush.verticalGradient(1f - stop to Color.Black, 1f to Color.Transparent)
         }
     }
 }

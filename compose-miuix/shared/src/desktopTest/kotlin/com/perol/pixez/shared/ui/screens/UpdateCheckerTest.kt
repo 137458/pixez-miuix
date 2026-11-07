@@ -5,7 +5,7 @@ import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.hasNewVersion
 import com.perol.pixez.shared.ui.components.MarkdownBlock
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.LinkAnnotation
 import com.perol.pixez.shared.ui.components.buildAnnotatedContent
 import com.perol.pixez.shared.ui.components.parseMarkdownBlocks
 import org.junit.Test
@@ -100,7 +100,8 @@ class UpdateCheckerTest {
         // I-26：链接色必须完全来自调用方传入的令牌色，不允许函数内兜底硬编码
         val linkColor = Color(0xFF123456)
         val annotated = buildAnnotatedContent("[link](https://github.com)", linkColor)
-        val linkSpan = annotated.spanStyles.single { it.item.textDecoration == TextDecoration.Underline }
-        assertEquals(linkColor, linkSpan.item.color)
+        val link = annotated.getLinkAnnotations(0, annotated.length)
+            .single().item as LinkAnnotation.Url
+        assertEquals(linkColor, link.styles?.style?.color)
     }
 }
