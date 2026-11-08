@@ -56,9 +56,9 @@ class PixEzApplication : Application() {
         /**
          * 进程级依赖容器的静态获取入口。
          *
-         * 容器在 [PixEzApplication.onCreate] 构建，先于任何 Activity/Service 启动，
+         * 容器在 [PixEzApplication.onCreate] 构建，先于任何 Activity/Service/广播接收器启动，
          * 因此正常装配下必然非空；未初始化即获取属装配错误，快速失败暴露问题。
-         * Widget 与快捷磁贴复用该容器属待确认项，当前仍各自独立装配，暂不接入。
+         * Widget 与快捷磁贴复用该容器（设置与数据库驱动不再各自独立装配）。
          */
         val dependencies: AppDependencies
             get() = requireNotNull(container) { "PixEzApplication 尚未完成 onCreate，依赖容器不可用" }

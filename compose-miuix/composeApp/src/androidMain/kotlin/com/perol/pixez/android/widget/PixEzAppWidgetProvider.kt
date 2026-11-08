@@ -13,10 +13,8 @@ import android.util.Log
 import android.widget.RemoteViews
 import com.perol.pixez.R
 import com.perol.pixez.android.MainActivity
-import com.perol.pixez.shared.data.local.DriverFactory
+import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.repository.WidgetRepository
-import com.perol.pixez.shared.data.settings.SettingsFactory
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +61,11 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         scope.launch {
             try {
-                val (settings, widgetRepository) = obtainWidgetDependencies(context.applicationContext)
+                val app = requireNotNull(AppDependencies.orNull()) {
+                    "AppDependencies 尚未初始化，无法刷新小组件"
+                }
+                val settings = app.settingsRepository
+                val widgetRepository = widgetRepository
                 val targetType = settings.widgetIllustType.ifBlank { "recom" }
                 val cached = widgetRepository.getOrFetchWidgetIllust(targetType)
 
@@ -216,33 +218,18 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
 
         const val ACTION_REFRESH_WIDGET = "com.perol.pixez.action.REFRESH_WIDGET"
 
-        /** 进程级常驻的小部件依赖（设置仓库 + 缓存仓库）。 */
-        private data class WidgetDependencies(
-            val settingsRepository: SettingsRepository,
-            val widgetRepository: WidgetRepository,
-        )
-
-        @Volatile
-        private var widgetDependencies: WidgetDependencies? = null
-        private val dependenciesMutex = Any()
-
         /**
-         * 首次广播懒创建并常驻进程的依赖单例（P-11）：
-         * AppWidgetProvider 实例每次广播都会重建，旧实现随之每次重建 DB 驱动工厂与设置仓库；
-         * 单例化后数据库驱动只创建一次，随进程退出由系统回收。
+         * 小部件缓存仓库（进程级常驻）。
+         *
+         * 设置与数据库驱动复用 [AppDependencies] 的同一份实例，不再自建
+         * `SettingsRepository` + `DriverFactory`：多份实例会让主应用内改设置后
+         * 小部件的缓存判定滞后，也会增加 SQLITE_BUSY 概率。
          */
-        private fun obtainWidgetDependencies(applicationContext: Context): WidgetDependencies {
-            widgetDependencies?.let { return it }
-            synchronized(dependenciesMutex) {
-                widgetDependencies?.let { return it }
-                val settingsRepository = SettingsRepository(SettingsFactory(applicationContext).createSettings())
-                val dependencies = WidgetDependencies(
-                    settingsRepository = settingsRepository,
-                    widgetRepository = WidgetRepository(DriverFactory(applicationContext), settingsRepository),
-                )
-                widgetDependencies = dependencies
-                return dependencies
+        private val widgetRepository: WidgetRepository by lazy {
+            val app = requireNotNull(AppDependencies.orNull()) {
+                "AppDependencies 尚未初始化，无法构建小组件依赖"
             }
+            WidgetRepository(app.driverFactory, app.settingsRepository)
         }
     }
 }

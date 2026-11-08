@@ -3,6 +3,7 @@ package com.perol.pixez.shared.platform
 import android.content.Context
 import android.content.res.Configuration
 import android.os.LocaleList
+import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.settings.SettingsFactory
 import com.perol.pixez.shared.data.settings.SettingsRepository
 
@@ -19,6 +20,9 @@ internal object AppLanguageContext {
     private var repository: SettingsRepository? = null
 
     private fun settings(context: Context): SettingsRepository {
+        // 进程内已有依赖容器时直接复用同一 Settings 实例：多次装配会各自持有 SQLDelight 驱动，
+        // 写库时增加 SQLITE_BUSY 概率。
+        AppDependencies.orNull()?.let { return it.settingsRepository }
         repository?.let { return it }
         synchronized(this) {
             repository?.let { return it }
