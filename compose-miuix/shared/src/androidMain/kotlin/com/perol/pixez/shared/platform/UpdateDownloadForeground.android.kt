@@ -33,11 +33,16 @@ class UpdateDownloadService : Service() {
                 startForegroundCompat(buildNotification(0L, 0L))
             }
             ACTION_UPDATE -> {
+                val downloaded = intent.getLongExtra(EXTRA_DOWNLOADED, 0L)
+                val total = intent.getLongExtra(EXTRA_TOTAL, 0L)
+                val notification = buildNotification(downloaded, total)
                 if (isForeground) {
-                    val downloaded = intent.getLongExtra(EXTRA_DOWNLOADED, 0L)
-                    val total = intent.getLongExtra(EXTRA_TOTAL, 0L)
                     val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-                    manager?.notify(NOTIFICATION_ID, buildNotification(downloaded, total))
+                    manager?.notify(NOTIFICATION_ID, notification)
+                } else {
+                    // SERVICE 由 startForegroundService 拉起但 START 分支未走到（进程被回收后重建等）：
+                    // 这里补一次 startForeground，满足 5 秒内必须进入前台的契约。
+                    startForegroundCompat(notification)
                 }
             }
             ACTION_STOP -> {
@@ -126,7 +131,11 @@ class UpdateDownloadService : Service() {
         private const val EXTRA_TOTAL = "extra_total"
 
         fun start(context: Context) {
-            dispatch(context, Intent(context, UpdateDownloadService::class.java).setAction(ACTION_START))
+            dispatch(
+                context,
+                Intent(context, UpdateDownloadService::class.java).setAction(ACTION_START),
+                foregroundService = true,
+            )
         }
 
         fun update(context: Context, downloaded: Long, total: Long) {
@@ -134,16 +143,29 @@ class UpdateDownloadService : Service() {
                 .setAction(ACTION_UPDATE)
                 .putExtra(EXTRA_DOWNLOADED, downloaded)
                 .putExtra(EXTRA_TOTAL, total)
-            dispatch(context, intent)
+            dispatch(context, intent, foregroundService = false)
         }
 
         fun stop(context: Context) {
-            dispatch(context, Intent(context, UpdateDownloadService::class.java).setAction(ACTION_STOP))
+            dispatch(
+                context,
+                Intent(context, UpdateDownloadService::class.java).setAction(ACTION_STOP),
+                foregroundService = false,
+            )
         }
 
-        private fun dispatch(context: Context, intent: Intent) {
+        /**
+         * 只有 ACTION_START 需要 startForegroundService；UPDATE/STOP 发给的是已在运行的服务，
+         * 用 startForegroundService 下发会要求服务在 5 秒内 startForeground，否则抛
+         * RemoteServiceException。
+         */
+        private fun dispatch(context: Context, intent: Intent, foregroundService: Boolean) {
             try {
-                ContextCompat.startForegroundService(context, intent)
+                if (foregroundService) {
+                    ContextCompat.startForegroundService(context, intent)
+                } else {
+                    context.startService(intent)
+                }
             } catch (e: Exception) {
                 Napier.w("更新下载前台服务调度失败", e, tag = "UpdateDownloadService")
             }
