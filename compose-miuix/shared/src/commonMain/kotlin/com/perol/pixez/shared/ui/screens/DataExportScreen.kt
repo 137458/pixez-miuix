@@ -27,8 +27,8 @@ import com.perol.pixez.shared.ui.LocalMuteRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -50,7 +50,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 应用数据导入导出页：为搜索标签历史、收藏标签、插画历史、小说历史、屏蔽数据
- * 提供导出/导入入口，操作结果通过 [ToastMessage] 提示。
+ * 提供导出/导入入口，操作结果通过全局 Toast 通道提示。
  *
  * @param onBack 返回上一级页面。
  */
@@ -75,8 +75,7 @@ fun DataExportScreen(
         }
     }
 
-    // 轻量提示文本；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     // 当前弹出的导出/导入对话框；切换后重置，避免旧状态残留。
     var pendingOperation by remember { mutableStateOf<PendingOperation?>(null) }
@@ -127,10 +126,10 @@ fun DataExportScreen(
             val actionStr = if (operation.action == Action.Export) strings.dataExportActionExport else strings.dataExportActionImport
             val typeStr = operation.type.title(strings)
             if (result.isSuccess) {
-                toastMessage = ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success)
+                toastSink(ToastData(strings.dataExportSuccess.format(typeStr, actionStr), ToastType.Success))
             } else {
                 val cause = result.exceptionOrNull()?.dataExportReason(strings) ?: strings.loadFailed
-                toastMessage = ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error)
+                toastSink(ToastData(strings.dataExportFailed.format(typeStr, actionStr, cause), ToastType.Error))
             }
         } finally {
             // 页面退出或协程取消时也必须重置状态，避免对话框/按钮永久禁用。
@@ -213,11 +212,6 @@ fun DataExportScreen(
                     performOperation(operation, path)
                 }
             },
-        )
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
         )
     }
 }

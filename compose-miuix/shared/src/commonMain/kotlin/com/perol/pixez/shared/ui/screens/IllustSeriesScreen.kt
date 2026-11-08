@@ -34,9 +34,9 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -83,7 +83,7 @@ fun IllustSeriesScreen(
     var isTogglingWatchlist by remember { mutableStateOf(false) }
     // 取消追更二次确认弹窗开关。
     var pendingUnwatchConfirm by remember { mutableStateOf(false) }
-    var watchlistToast by remember { mutableStateOf<ToastData?>(null) }
+    val watchlistToast = LocalToastSink.current
     // 高-4c：分页/竞态/加载态收敛到 IllustPagedListState（generation 守卫语义），
     // 过滤链为高-3「原始/过滤」双列表本地重过滤。系列标题在 fetch 闭包内仅于首页请求（nextUrl == null）
     // 时更新：切系列时 remember(seriesId) 重建闭包，旧闭包写入的是旧 State 对象，不污染新页面。
@@ -149,10 +149,12 @@ fun IllustSeriesScreen(
                 }
                     .onFailure { error ->
                         watchlistAdded = currentAdded
-                        watchlistToast = ToastData(
-                            "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                                PixivApiErrorFormatter.format(error, strings),
-                            ToastType.Error,
+                        watchlistToast(
+                            ToastData(
+                                "${strings.watchlistTitle}${strings.failedSuffix}: " +
+                                    PixivApiErrorFormatter.format(error, strings),
+                                ToastType.Error,
+                            ),
                         )
                     }
             } finally {
@@ -263,12 +265,6 @@ fun IllustSeriesScreen(
                     }
                 }
             }
-
-            // 追更操作失败提示。
-            ToastMessage(
-                toast = watchlistToast,
-                onDismiss = { watchlistToast = null },
-            )
 
             // 取消追更二次确认（与动态页追更页签的移除确认同款交互）。
             ConfirmDialog(

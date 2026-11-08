@@ -15,9 +15,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.LocalUserRepository
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -63,8 +63,7 @@ fun UserShowAISettingScreen(
     // 更新操作加载态，防止重复提交。
     var isUpdating by remember { mutableStateOf(false) }
 
-    // 提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     /**
      * 调用服务器接口更新 AI 显示设置，并以返回结果刷新本地状态。
@@ -82,7 +81,7 @@ fun UserShowAISettingScreen(
                 currentShowAI = response.showAI
             }.onFailure { e ->
                 Napier.e("更新 AI 显示设置失败", e)
-                toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
+                toastSink(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
             }
             isUpdating = false
         }
@@ -135,10 +134,5 @@ fun UserShowAISettingScreen(
                 }
             }
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }

@@ -50,8 +50,8 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateDownloader
 import com.perol.pixez.shared.ui.LocalUpdateRepository
 import com.perol.pixez.shared.AppInfo
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.updateAsset
@@ -109,7 +109,7 @@ fun UpdateSettingScreen(
 
     var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
     var isChecking by remember { mutableStateOf(false) }
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
     var showDialog by remember { mutableStateOf(false) }
     var isOs3Effect by remember { mutableStateOf(true) }
 
@@ -136,12 +136,12 @@ fun UpdateSettingScreen(
                     if (info.isNew && userInitiated) {
                         showDialog = true
                     } else if (!info.isNew && userInitiated) {
-                        toastMessage = ToastData(strings.updateLatest.format(AppInfo.VERSION_NAME), ToastType.Normal)
+                        toastSink(ToastData(strings.updateLatest.format(AppInfo.VERSION_NAME), ToastType.Normal))
                     }
                 }
                 .onFailure { error ->
                     if (userInitiated) {
-                        toastMessage = ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error)
+                        toastSink(ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error))
                     }
                 }
         } finally {
@@ -267,7 +267,7 @@ fun UpdateSettingScreen(
                                         if (!installed) {
                                             // 包缺失/为空或系统安装器无法调起：清理旧包并允许重新下载。
                                             updateDownloader.discardCompletedAfterInstallFailure(updateAsset)
-                                            toastMessage = ToastData(strings.updateInstallFailed, ToastType.Error)
+                                            toastSink(ToastData(strings.updateInstallFailed, ToastType.Error))
                                         }
                                     }
                                     UpdatePrimaryAction.OpenBrowser -> {
@@ -278,7 +278,7 @@ fun UpdateSettingScreen(
                                         }
                                         if (!url.isNullOrBlank()) {
                                             openSafeUrl(url, strings, onError = { message ->
-                                                toastMessage = ToastData(message, ToastType.Error)
+                                                toastSink(ToastData(message, ToastType.Error))
                                             })
                                         }
                                     }
@@ -289,13 +289,13 @@ fun UpdateSettingScreen(
                                 val url = releaseInfo?.let { updateBrowserFallbackUrl(it) }.orEmpty()
                                 if (url.isNotBlank()) {
                                     openSafeUrl(url, strings, onError = { message ->
-                                        toastMessage = ToastData(message, ToastType.Error)
+                                        toastSink(ToastData(message, ToastType.Error))
                                     })
                                 }
                             },
                             onLinkClick = { url ->
                                 openSafeUrl(url, strings, onError = { message ->
-                                    toastMessage = ToastData(message, ToastType.Error)
+                                    toastSink(ToastData(message, ToastType.Error))
                                 })
                             },
                         )
@@ -345,7 +345,7 @@ fun UpdateSettingScreen(
                         },
                         onGithubClick = {
                             openSafeUrl(AppConstants.Urls.GITHUB_RELEASES, strings, onError = { message ->
-                                toastMessage = ToastData(message, ToastType.Error)
+                                toastSink(ToastData(message, ToastType.Error))
                             })
                         },
                         onOs3EffectChange = { isOs3Effect = it },
@@ -365,7 +365,7 @@ fun UpdateSettingScreen(
                 onUpdate = { url ->
                     showDialog = false
                     openSafeUrl(url, strings, onError = { message ->
-                        toastMessage = ToastData(message, ToastType.Error)
+                        toastSink(ToastData(message, ToastType.Error))
                     })
                 },
                 onIgnore = { ver ->
@@ -379,11 +379,6 @@ fun UpdateSettingScreen(
                 },
             )
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }
 

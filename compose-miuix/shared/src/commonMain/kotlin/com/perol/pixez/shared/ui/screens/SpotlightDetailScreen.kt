@@ -51,8 +51,8 @@ import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
@@ -89,9 +89,8 @@ fun SpotlightDetailScreen(
     val strings = LocalStrings.current
     var retryKey by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
-    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
-    val showErrorToast: (String) -> Unit = { toastMessage = ToastData(it, ToastType.Error) }
+    val toastSink = LocalToastSink.current
+    val showErrorToast: (String) -> Unit = { toastSink(ToastData(it, ToastType.Error)) }
 
     // 使用已有的内存缓存初始化，避免从画作详情返回时触发页面闪烁与重新请求
     val state = produceState<Result<SpotlightDetail>?>(
@@ -123,9 +122,9 @@ fun SpotlightDetailScreen(
                     onClick = {
                         try {
                             clipboard.copy(article.articleUrl)
-                            toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
+                            toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
                         } catch (_: Throwable) {
-                            toastMessage = ToastData("${strings.copy}${strings.failedSuffix}", ToastType.Error)
+                            toastSink(ToastData("${strings.copy}${strings.failedSuffix}", ToastType.Error))
                         }
                     },
                 ),
@@ -135,7 +134,7 @@ fun SpotlightDetailScreen(
                         try {
                             share.share(article.articleUrl, article.pureTitle.ifBlank { article.title })
                         } catch (_: Throwable) {
-                            toastMessage = ToastData("${strings.share}${strings.failedSuffix}", ToastType.Error)
+                            toastSink(ToastData("${strings.share}${strings.failedSuffix}", ToastType.Error))
                         }
                     },
                 ),
@@ -366,11 +365,6 @@ fun SpotlightDetailScreen(
                 }
             }
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }
 }

@@ -98,9 +98,8 @@ fun IllustCard(
     val downloadRepository = LocalDownloadRepository.current
     val banRepository = LocalBanRepository.current
 
-    // 长按菜单宿主（信息流网格）没有 Toast 承载容器，接入门槛是把 onToast 逐层上抛到每个列表页。
-    // 故此处只统一异常捕获与取消语义，提示仍与抽取前一样保持静默。
-    val silentToastSink: (ToastData) -> Unit = {}
+    // 长按菜单经全局 Toast 通道反馈，列表页无需逐层透传承载容器。
+    val toastSink = LocalToastSink.current
 
     if (showActionMenu) {
         IllustActionMenu(
@@ -120,7 +119,7 @@ fun IllustCard(
                 runClipboardShare(
                     success = ToastData(strings.copiedToClipboard, ToastType.Success),
                     failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = silentToastSink,
+                    onToast = toastSink,
                 ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
             },
             onCopyImage = {
@@ -130,7 +129,7 @@ fun IllustCard(
                     suspendRunClipboardShare(
                         success = ToastData(strings.imageCopySuccess, ToastType.Success),
                         failurePrefix = strings.menuCopyImage,
-                        onToast = silentToastSink,
+                        onToast = toastSink,
                     ) {
                         val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
                         val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings.pictureSource) }
@@ -146,7 +145,7 @@ fun IllustCard(
                 runClipboardShare(
                     success = ToastData(strings.copiedToClipboard, ToastType.Success),
                     failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = silentToastSink,
+                    onToast = toastSink,
                 ) { IllustClipboard().copy(buildIllustShareLink(illust)) }
             },
             onShareLink = {
@@ -154,7 +153,7 @@ fun IllustCard(
                 runClipboardShare(
                     success = ToastData(strings.share, ToastType.Success),
                     failurePrefix = strings.share,
-                    onToast = silentToastSink,
+                    onToast = toastSink,
                 ) { IllustShare().share(buildIllustShareLink(illust), illust.title) }
             },
             onBan = {

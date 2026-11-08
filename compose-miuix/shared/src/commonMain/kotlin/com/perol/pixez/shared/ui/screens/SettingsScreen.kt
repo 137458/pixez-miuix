@@ -47,10 +47,10 @@ import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.AppInfo
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalBoardRepository
@@ -125,7 +125,7 @@ fun SettingsScreen(
     // 清除缓存的加载态与提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember。
     var isClearingCache by remember { mutableStateOf(false) }
     var cacheSizeBytes by remember { mutableLongStateOf(0L) }
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     LaunchedEffect(isClearingCache) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -401,11 +401,13 @@ fun SettingsScreen(
                                 } finally {
                                     isClearingCache = false
                                 }
-                                toastMessage = if (result.isSuccess) {
-                                    ToastData(strings.cacheCleared, ToastType.Success)
-                                } else {
-                                    ToastData(PixivApiErrorFormatter.format(result.exceptionOrNull(), strings), ToastType.Error)
-                                }
+                                toastSink(
+                                    if (result.isSuccess) {
+                                        ToastData(strings.cacheCleared, ToastType.Success)
+                                    } else {
+                                        ToastData(PixivApiErrorFormatter.format(result.exceptionOrNull(), strings), ToastType.Error)
+                                    },
+                                )
                             }
                         },
                     )
@@ -457,11 +459,6 @@ fun SettingsScreen(
         trackPadding = paddingValues,
     )
 }
-
-ToastMessage(
-    toast = toastMessage,
-    onDismiss = { toastMessage = null },
-)
 }
 }
 

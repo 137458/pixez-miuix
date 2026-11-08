@@ -34,9 +34,9 @@ import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -72,7 +72,7 @@ fun AccountManageScreen(
     var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var accountToDelete by remember { mutableStateOf<AccountPersist?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     // 弹窗关闭后延迟清理引用，保证退场动画期间数据完整并不泄漏引用
     DelayedClearEffect(showDeleteDialog, accountToDelete) {
@@ -90,7 +90,7 @@ fun AccountManageScreen(
         scope.launch {
             accountRepository.switchAccount(userId)
             refreshAccounts()
-            toastMessage = ToastData(strings.accountSwitchSuccess, ToastType.Success)
+            toastSink(ToastData(strings.accountSwitchSuccess, ToastType.Success))
         }
     }
 
@@ -267,12 +267,6 @@ fun AccountManageScreen(
                 },
             )
 
-            // Toast 消息
-            ToastMessage(
-                toast = toastMessage,
-                onDismiss = { toastMessage = null },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
-            )
         }
     }
 }

@@ -44,9 +44,9 @@ import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.buildUserCopyInfo
@@ -144,8 +144,7 @@ fun UserDetailScreen(
     // 进行中标志使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免关注按钮被永久禁用。
     var isFollowLoading by remember { mutableStateOf(false) }
     var followError by rememberSaveable { mutableStateOf<String?>(null) }
-    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
@@ -175,7 +174,7 @@ fun UserDetailScreen(
                 share = share,
                 onRelatedUsersClick = onRelatedUsersClick,
                 onUserNovelsClick = onUserNovelsClick,
-                onToast = { toastMessage = it },
+                onToast = toastSink,
             )
         }
     }
@@ -198,7 +197,7 @@ fun UserDetailScreen(
                     }.onFailure { e ->
                         val err = "${strings.follow}: ${PixivApiErrorFormatter.format(e, strings)}"
                         followError = err
-                        toastMessage = ToastData(err, ToastType.Error)
+                        toastSink(ToastData(err, ToastType.Error))
                     }
                 } finally {
                     isFollowLoading = false
@@ -243,9 +242,6 @@ fun UserDetailScreen(
             onFollowerListClick = onFollowerListClick,
             onIllustClick = onIllustClick,
             onRefresh = triggerManualRefresh,
-            toastMessage = toastMessage,
-            onToast = { toastMessage = it },
-            onToastDismiss = { toastMessage = null },
         )
     }
 }
@@ -402,11 +398,9 @@ private fun UserDetailContent(
     onFollowerListClick: (Long) -> Unit,
     onIllustClick: (Long) -> Unit,
     onRefresh: () -> Unit,
-    toastMessage: ToastData?,
-    onToast: (ToastData) -> Unit,
-    onToastDismiss: () -> Unit,
 ) {
     val colorScheme = MiuixTheme.colorScheme
+    val toastSink = LocalToastSink.current
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -439,7 +433,7 @@ private fun UserDetailContent(
                     scrollBehavior = scrollBehavior,
                     isRefreshing = isManualRefreshing,
                     onRefresh = onRefresh,
-                    onToast = onToast,
+                    onToast = toastSink,
                 )
             }
             else -> ErrorPlaceholder(
@@ -450,10 +444,6 @@ private fun UserDetailContent(
                     .padding(paddingValues),
             )
         }
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = onToastDismiss,
-        )
     }
 }
 

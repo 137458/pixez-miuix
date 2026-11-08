@@ -57,8 +57,8 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.state.CollapseGesture
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -233,8 +233,7 @@ private fun IllustDetailSingleContent(
     var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
-    // ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     var showMoreMenu by rememberSaveable(illustId) { mutableStateOf(false) }
@@ -345,7 +344,7 @@ private fun IllustDetailSingleContent(
                         isBookmarked = isBookmarked,
                         coroutineScope = coroutineScope,
                         strings = strings,
-                        onToast = { toastMessage = it },
+                        onToast = { data -> data?.let(toastSink) },
                         onDownloadingChange = { isDownloading = it },
                         onBookmarkedChange = { isBookmarked = it },
                         onFullScreen = { fullScreenPageIndex = it },
@@ -410,7 +409,7 @@ private fun IllustDetailSingleContent(
                 onBookmarkLoadingChange = { isBookmarkLoading = it },
                 onBookmarkErrorChange = { bookmarkError = it },
                 onDownloadingChange = { isDownloading = it },
-                onToast = { toastMessage = it },
+                onToast = { data -> data?.let(toastSink) },
                 onBanSuccess = { isBanned = true },
                 onBack = onBack,
                 modifier = Modifier
@@ -425,20 +424,18 @@ private fun IllustDetailSingleContent(
                 repository = repository,
                 downloadRepository = downloadRepository,
                 detailBackdrop = detailBackdrop,
-                onToast = { toastMessage = it },
+                onToast = toastSink,
                 onDismiss = { fullScreenPageIndex = null },
             )
         }
 
-        // 收藏失败信息由 onBookmarkErrorChange 单独维护，展示时补上 Error 类型。
-        ToastMessage(
-            toast = toastMessage ?: bookmarkError?.let { ToastData(it, ToastType.Error) },
-            backdrop = detailBackdrop,
-            onDismiss = {
-                toastMessage = null
+        // 收藏失败信息由 onBookmarkErrorChange 单独维护，转入全局 Toast 通道后清空。
+        LaunchedEffect(bookmarkError) {
+            bookmarkError?.let {
+                toastSink(ToastData(it, ToastType.Error))
                 bookmarkError = null
-            },
-        )
+            }
+        }
     }
 }
 

@@ -45,10 +45,10 @@ import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -156,7 +156,7 @@ fun NovelViewerScreen(
         )
     }
 
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     fun loadNovel() {
         scope.launch {
@@ -219,12 +219,12 @@ fun NovelViewerScreen(
                 performHapticFeedback(HapticType.Confirm)
                 isBookmarked = !wasBookmarked
                 if (!wasBookmarked) {
-                    toastMessage = ToastData(strings.bookmarked, ToastType.Success)
+                    toastSink(ToastData(strings.bookmarked, ToastType.Success))
                 }
             }.onFailure { err ->
                 performHapticFeedback(HapticType.Reject)
                 Napier.e("小说收藏操作失败 novelId=${target.id}", err, tag = "NovelViewer")
-                toastMessage = ToastData(PixivApiErrorFormatter.format(err, strings), ToastType.Error)
+                toastSink(ToastData(PixivApiErrorFormatter.format(err, strings), ToastType.Error))
             }
         }
     }
@@ -314,7 +314,7 @@ fun NovelViewerScreen(
                                 val currentText = (state as? NovelViewState.Success)?.data?.novelText
                                 if (!currentText.isNullOrBlank()) {
                                     com.perol.pixez.shared.platform.IllustClipboard().copy(currentText)
-                                    toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
+                                    toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
                                 }
                             },
                         ) {
@@ -339,7 +339,7 @@ fun NovelViewerScreen(
                         IconButton(
                             onClick = {
                                 openSafeUrl(AppConstants.Urls.pixivNovelUrl(novelId), strings, onError = { message ->
-                                    toastMessage = ToastData(message, ToastType.Error)
+                                    toastSink(ToastData(message, ToastType.Error))
                                 })
                             },
                         ) {
@@ -491,7 +491,7 @@ fun NovelViewerScreen(
                                                 onIllustClick = onIllustClick,
                                                 onOpenUrl = { url ->
                                                     openSafeUrl(url, strings, onError = { message ->
-                                                        toastMessage = ToastData(message, ToastType.Error)
+                                                        toastSink(ToastData(message, ToastType.Error))
                                                     })
                                                 },
                                             )
@@ -546,10 +546,6 @@ fun NovelViewerScreen(
                     }
                 }
             }
-            ToastMessage(
-                toast = toastMessage,
-                onDismiss = { toastMessage = null },
-            )
         }
     }
 }

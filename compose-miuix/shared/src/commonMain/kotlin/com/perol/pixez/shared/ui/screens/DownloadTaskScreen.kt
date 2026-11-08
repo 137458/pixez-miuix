@@ -52,10 +52,10 @@ import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -102,7 +102,7 @@ fun DownloadTaskScreen(
     // 是否显示清空已完成确认栏。
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
     // Toast 提示；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
     // 正在处理中的任务 ID 集合，用于禁用单条操作按钮防止重复提交。
     // 使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免标志位永久锁定。
     var processingTaskIds by remember { mutableStateOf(setOf<Long>()) }
@@ -229,12 +229,14 @@ fun DownloadTaskScreen(
                                                         suspendRunCatchingNonCancel {
                                                             downloadRepository.retry(task)
                                                         }.onSuccess {
-                                                            toastMessage = ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
+                                                            toastSink(ToastData(strings.downloadTaskRetrySuccess, ToastType.Success))
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = ToastData(
-                                                                strings.downloadTaskRetryFailed.format(PixivApiErrorFormatter.format(it, strings)),
-                                                                ToastType.Error,
+                                                            toastSink(
+                                                                ToastData(
+                                                                    strings.downloadTaskRetryFailed.format(PixivApiErrorFormatter.format(it, strings)),
+                                                                    ToastType.Error,
+                                                                ),
                                                             )
                                                         }
                                                     } finally {
@@ -255,7 +257,7 @@ fun DownloadTaskScreen(
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                                            toastSink(ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -294,7 +296,7 @@ fun DownloadTaskScreen(
                                     }
                                 }.getOrDefault(emptyList())
                                 if (failedTasks.isEmpty()) {
-                                    toastMessage = ToastData(strings.downloadTaskEmptyFailed, ToastType.Normal)
+                                    toastSink(ToastData(strings.downloadTaskEmptyFailed, ToastType.Normal))
                                     return@launch
                                 }
 
@@ -306,21 +308,23 @@ fun DownloadTaskScreen(
                                         .onSuccess { successCount++ }
                                         .onFailure { failureCount++ }
                                 }
-                                toastMessage = when {
-                                    failureCount == 0 ->
-                                        ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
+                                toastSink(
+                                    when {
+                                        failureCount == 0 ->
+                                            ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
 
-                                    successCount == 0 ->
-                                        ToastData(strings.downloadTaskRetryFailed, ToastType.Error)
+                                        successCount == 0 ->
+                                            ToastData(strings.downloadTaskRetryFailed, ToastType.Error)
 
-                                    else ->
-                                        ToastData("${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)", ToastType.Normal)
-                                }
+                                        else ->
+                                            ToastData("${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)", ToastType.Normal)
+                                    },
+                                )
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = ToastData("${strings.downloadTaskRetryFailed}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
+                                toastSink(ToastData("${strings.downloadTaskRetryFailed}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -350,7 +354,7 @@ fun DownloadTaskScreen(
                                     }
                                 }.getOrDefault(emptyList())
                                 if (completedTasks.isEmpty()) {
-                                    toastMessage = ToastData(strings.downloadTaskEmptyCompleted, ToastType.Normal)
+                                    toastSink(ToastData(strings.downloadTaskEmptyCompleted, ToastType.Normal))
                                     return@launch
                                 }
 
@@ -362,12 +366,12 @@ fun DownloadTaskScreen(
                                         }
                                     }
                                 }
-                                toastMessage = ToastData(strings.downloadTaskEmptyCompleted, ToastType.Success)
+                                toastSink(ToastData(strings.downloadTaskEmptyCompleted, ToastType.Success))
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastMessage = ToastData("${strings.btnDelete}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
+                                toastSink(ToastData("${strings.btnDelete}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
                             } finally {
                                 isBatchProcessing = false
                             }
@@ -377,12 +381,6 @@ fun DownloadTaskScreen(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
-
-            // Toast 提示层，覆盖在其他内容之上。
-            ToastMessage(
-                toast = toastMessage,
-                onDismiss = { toastMessage = null },
-            )
         }
     }
 }

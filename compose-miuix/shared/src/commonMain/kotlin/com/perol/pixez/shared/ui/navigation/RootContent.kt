@@ -53,6 +53,7 @@ import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.screens.DEFAULT_SEED_COLOR
 import androidx.compose.runtime.CompositionLocalProvider
 import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
@@ -123,8 +124,9 @@ fun RootContent(
     var appReleaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
     var showAppUpdateDialog by remember { mutableStateOf(false) }
     var showAuthExpiredDialog by remember { mutableStateOf(false) }
-    // 根级 Toast：承载更新链接等外链打开失败提示（页面内提示由各页面自持）。
+    // 全局 Toast 宿主：唯一实例挂在根层，页面与组件通过 LocalToastSink 投递提示。
     var rootToastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val rootToastSink: (ToastData) -> Unit = remember { { rootToastMessage = it } }
 
     // 凭证失效提示：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
     // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失。
@@ -157,6 +159,7 @@ fun RootContent(
         ProvideRepositories(registry) {
             CompositionLocalProvider(
                 LocalBottomBarVisibility provides bottomBarVisible,
+                LocalToastSink provides rootToastSink,
                 LocalStrings provides strings,
                 LocalLayoutDirection provides (if (isRtlLanguage(currentLanguageNum)) LayoutDirection.Rtl else LayoutDirection.Ltr),
                 LocalSharedBoundsRegistry provides sharedBounds,
@@ -172,7 +175,7 @@ fun RootContent(
                         onUpdate = { url ->
                             showAppUpdateDialog = false
                             openSafeUrl(url, strings, onError = { message ->
-                                rootToastMessage = ToastData(message, ToastType.Error)
+                                rootToastSink(ToastData(message, ToastType.Error))
                             })
                         },
                         onIgnore = { ver ->
@@ -277,7 +280,7 @@ fun RootContent(
                         }
                     }
 
-                    // 根级 Toast：承载更新链接等外链打开失败提示（无页面级反馈通道的场景）。
+                    // 全局 Toast：根层唯一实例，承载所有页面与组件投递的提示。
                     ToastMessage(
                         toast = rootToastMessage,
                         onDismiss = { rootToastMessage = null },

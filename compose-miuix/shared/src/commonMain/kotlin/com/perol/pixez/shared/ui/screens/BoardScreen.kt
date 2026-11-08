@@ -33,8 +33,8 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -64,7 +64,7 @@ fun BoardScreen(
     var boardList by remember { mutableStateOf<List<BoardInfo>>(emptyList()) }
     var isRefreshing by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<Throwable?>(null) }
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     /**
      * 加载公告列表。
@@ -80,7 +80,7 @@ fun BoardScreen(
             .onFailure { error ->
                 loadError = error
                 if (boardList.isEmpty()) {
-                    toastMessage = ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error)
+                    toastSink(ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error))
                 }
             }
         isRefreshing = false
@@ -163,7 +163,7 @@ fun BoardScreen(
                                 board = board,
                                 onLinkClick = { url ->
                                     openSafeUrl(url, strings, setOf("http", "https")) {
-                                        toastMessage = ToastData(it, ToastType.Error)
+                                        toastSink(ToastData(it, ToastType.Error))
                                     }
                                 },
                             )
@@ -172,11 +172,6 @@ fun BoardScreen(
                 }
             }
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }
 

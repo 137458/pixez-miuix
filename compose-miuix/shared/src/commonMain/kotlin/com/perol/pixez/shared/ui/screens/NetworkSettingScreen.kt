@@ -22,8 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -66,8 +66,7 @@ fun NetworkSettingScreen(
         )
     }
 
-    // 提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    val toastSink = LocalToastSink.current
 
     // 当前 API 网络模式是否允许选择图片源（standard 模式不显示）。
     val allowsImageSource = apiNetworkMode != NETWORK_MODE_STANDARD
@@ -110,16 +109,15 @@ fun NetworkSettingScreen(
     fun setCustomPictureSource(host: String) {
         val trimmed = host.trim()
         if (trimmed.isEmpty()) {
-            toastMessage = ToastData(strings.hostNotEmpty, ToastType.Error)
+            toastSink(ToastData(strings.hostNotEmpty, ToastType.Error))
             return
         }
         if (trimmed.contains(" ")) {
-            toastMessage = ToastData(strings.hostNoSpace, ToastType.Error)
+            toastSink(ToastData(strings.hostNoSpace, ToastType.Error))
             return
         }
         pictureSource = trimmed
         settingsRepository.pictureSource = trimmed
-        toastMessage = null
     }
 
     // 网络模式选项数据：code -> (label, description)。
@@ -229,11 +227,6 @@ fun NetworkSettingScreen(
                 }
             }
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }
 

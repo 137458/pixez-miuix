@@ -35,8 +35,8 @@ import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -102,8 +102,8 @@ fun AccountEditScreen(
     // 是否显示注销确认对话框。
     var showDeletionConfirm by remember { mutableStateOf(false) }
 
-    // 统一的 Toast 提示文本。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    // 统一的全局 Toast 通道。
+    val toastSink = LocalToastSink.current
 
     val strings = LocalStrings.current
 
@@ -118,7 +118,7 @@ fun AccountEditScreen(
             }
             .onFailure { e ->
                 Napier.e("加载账号信息失败", e)
-                toastMessage = ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error)
+                toastSink(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
             }
     }
 
@@ -213,15 +213,15 @@ fun AccountEditScreen(
                                 onClick = {
                                     if (isSaving) return@Button
                                     if (currentPassword.isBlank()) {
-                                        toastMessage = ToastData(strings.accountEditInputCurrentPassword, ToastType.Error)
+                                        toastSink(ToastData(strings.accountEditInputCurrentPassword, ToastType.Error))
                                         return@Button
                                     }
                                     if (email.isBlank()) {
-                                        toastMessage = ToastData(strings.accountEditInputEmail, ToastType.Error)
+                                        toastSink(ToastData(strings.accountEditInputEmail, ToastType.Error))
                                         return@Button
                                     }
                                     if (!EMAIL_REGEX.matches(email)) {
-                                        toastMessage = ToastData(strings.accountEditEmailFormatError, ToastType.Error)
+                                        toastSink(ToastData(strings.accountEditEmailFormatError, ToastType.Error))
                                         return@Button
                                     }
 
@@ -235,11 +235,11 @@ fun AccountEditScreen(
                                                     newMailAddress = email.takeIf { it.isNotBlank() },
                                                 )
                                             }.onSuccess {
-                                                toastMessage = ToastData(strings.accountEditSaveSuccess, ToastType.Success)
+                                                toastSink(ToastData(strings.accountEditSaveSuccess, ToastType.Success))
                                                 currentPassword = ""
                                                 newPassword = ""
                                             }.onFailure { e ->
-                                                toastMessage = ToastData("${strings.accountEditSaveFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
+                                                toastSink(ToastData("${strings.accountEditSaveFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
                                                 Napier.e("保存账号信息失败", e)
                                             }
                                         } finally {
@@ -269,7 +269,7 @@ fun AccountEditScreen(
                                         runClipboardShare(
                                             success = ToastData(strings.copiedToClipboard, ToastType.Success),
                                             failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                                            onToast = { toastMessage = it },
+                                            onToast = toastSink,
                                         ) { clipboard.copy(token) }.onFailure { e ->
                                             Napier.e("复制 refresh token 失败", e)
                                         }
@@ -309,18 +309,13 @@ fun AccountEditScreen(
                     onClick = {
                         showDeletionConfirm = false
                         openSafeUrl(AppConstants.Urls.PIXIV_LEAVE_ACCOUNT, strings, onError = { message ->
-                            toastMessage = ToastData(message, ToastType.Error)
+                            toastSink(ToastData(message, ToastType.Error))
                         })
                     },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-
-            ToastMessage(
-                toast = toastMessage,
-                onDismiss = { toastMessage = null },
-            )
         }
     }
 }

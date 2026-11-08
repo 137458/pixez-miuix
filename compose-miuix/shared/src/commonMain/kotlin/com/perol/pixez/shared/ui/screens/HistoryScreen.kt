@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.ConfirmDialog
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
@@ -60,7 +61,6 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.SquircleShape
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.datetime.Instant
@@ -108,8 +108,8 @@ fun HistoryScreen(
     var showClearConfirm by rememberSaveable { mutableStateOf(false) }
     // 待删除记录的主键，为 null 时不显示删除确认栏。
     var itemToDelete by rememberSaveable { mutableStateOf<Long?>(null) }
-    // Toast 提示；ToastData 不是 Saveable 支持的原生类型，故用 remember 而非 rememberSaveable。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
+    // 全局 Toast 通道。
+    val toastSink = LocalToastSink.current
     // 删除/清空操作进行中标志，用于禁用确认栏的确定按钮，防止重复提交。
     var isProcessing by remember { mutableStateOf(false) }
 
@@ -289,7 +289,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastMessage = ToastData("${strings.actionClear}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                    toastSink(ToastData("${strings.actionClear}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
@@ -326,7 +326,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastMessage = ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                    toastSink(ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
@@ -336,11 +336,6 @@ fun HistoryScreen(
                     }
                 },
                 onDismiss = { if (!isProcessing) itemToDelete = null },
-            )
-
-            ToastMessage(
-                toast = toastMessage,
-                onDismiss = { toastMessage = null },
             )
         }
     }

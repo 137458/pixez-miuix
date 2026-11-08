@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.dropShadow
@@ -106,6 +107,12 @@ data class ToastData(
     val message: String,
     val type: ToastType = ToastType.Normal,
 )
+
+/**
+ * 全局 Toast 通道：由 UI 根层注入唯一实现，页面与组件调用即可显示提示，
+ * 无需各自持有状态并挂载 [ToastMessage] 实例。
+ */
+val LocalToastSink = staticCompositionLocalOf<(ToastData) -> Unit> { {} }
 
 /**
  * 现代液态玻璃灵动胶囊 Toast 提示。

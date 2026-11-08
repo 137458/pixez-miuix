@@ -41,8 +41,8 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
@@ -77,9 +77,6 @@ fun ThemeSettingScreen(
 
     // 颜色选择对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-
-    // 统一的 Toast 提示文本。
-    var toastMessage by remember { mutableStateOf<ToastData?>(null) }
 
     fun setThemeMode(mode: Int) {
         themeMode = mode
@@ -277,6 +274,7 @@ private fun ColorPickerDialog(
     onColorSelected: (Int) -> Unit,
 ) {
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
+    val toastSink = LocalToastSink.current
 
     // 预设颜色，对齐 Flutter 版 ColorPickPage.skinList。
     val presetColors = listOf(
@@ -291,7 +289,6 @@ private fun ColorPickerDialog(
 
     var selectedColor by remember(show, currentColor) { mutableStateOf(Color(currentColor)) }
     var customHex by remember(show) { mutableStateOf("") }
-    var toastMessage by remember(show) { mutableStateOf<ToastData?>(null) }
 
     OverlayDialog(
         title = strings.dialogPickSeedColor,
@@ -363,7 +360,7 @@ private fun ColorPickerDialog(
                             if (parsed != null) {
                                 onColorSelected(parsed)
                             } else {
-                                toastMessage = ToastData(strings.themeColorFormatError, ToastType.Error)
+                                toastSink(ToastData(strings.themeColorFormatError, ToastType.Error))
                             }
                         } else {
                             onColorSelected(selectedColor.copy(alpha = 1f).toArgb())
@@ -374,11 +371,6 @@ private fun ColorPickerDialog(
                 )
             }
         }
-
-        ToastMessage(
-            toast = toastMessage,
-            onDismiss = { toastMessage = null },
-        )
     }
 }
 

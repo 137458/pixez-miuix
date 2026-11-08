@@ -33,10 +33,10 @@ import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.PagingFooterState
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -184,7 +184,7 @@ fun NewScreen(
     var seriesToRemove by remember { mutableStateOf<MangaSeries?>(null) }
     // 取消追更进行中，禁用确认按钮防重复提交。
     var isRemovingWatchlist by remember { mutableStateOf(false) }
-    var watchlistToast by remember { mutableStateOf<ToastData?>(null) }
+    val watchlistToast = LocalToastSink.current
 
     // 追更列表分页状态机（generation 竞态守卫），按系列 ID 幂等合并去重。
     val watchlistState = remember {
@@ -545,10 +545,12 @@ fun NewScreen(
                                         watchlistRetryCount++
                                     }
                                     .onFailure { error ->
-                                        watchlistToast = ToastData(
-                                            "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                                                PixivApiErrorFormatter.format(error, strings),
-                                            ToastType.Error,
+                                        watchlistToast(
+                                            ToastData(
+                                                "${strings.watchlistTitle}${strings.failedSuffix}: " +
+                                                    PixivApiErrorFormatter.format(error, strings),
+                                                ToastType.Error,
+                                            ),
                                         )
                                     }
                             } finally {
@@ -560,11 +562,6 @@ fun NewScreen(
                     },
                 )
             }
-
-            ToastMessage(
-                toast = watchlistToast,
-                onDismiss = { watchlistToast = null },
-            )
         }
     }
 }
