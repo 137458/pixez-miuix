@@ -11,6 +11,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
+ * 把下载任务与作品信息拼成历史记录行；[id] > 0 表示覆盖已有行。
+ *
+ * 下载状态机与历史仓库共用这一份字段映射，避免「新建任务」与「更新任务」两条路径
+ * 对同一行写出不同字段。
+ */
+internal fun downloadTaskHistoryOf(
+    task: DownloadTask,
+    illust: Illust,
+    id: Long = 0L,
+): DownloadTaskHistory = DownloadTaskHistory(
+    id = id,
+    illustId = task.illustId,
+    pageIndex = task.pageIndex,
+    title = illust.title,
+    userName = illust.user.name,
+    remoteUrl = task.remoteUrl,
+    fileName = task.fileName,
+    status = task.status,
+    sanityLevel = illust.sanityLevel,
+    userId = illust.user.id,
+    medium = illust.imageUrls.medium,
+)
+
+/**
  * 下载任务历史仓库：封装对旧 task.db 的读写，支持记录、查询与清理下载历史。
  * 所有公开方法均为 suspend，内部切到 [Dispatchers.IO] 执行，避免阻塞 UI 线程。
  *
@@ -80,22 +104,7 @@ class DownloadHistoryRepository(
         task: DownloadTask,
         illust: Illust,
         id: Long = 0L,
-    ): DownloadTaskHistory {
-        val history = DownloadTaskHistory(
-            id = id,
-            illustId = task.illustId,
-            pageIndex = task.pageIndex,
-            title = illust.title,
-            userName = illust.user.name,
-            remoteUrl = task.remoteUrl,
-            fileName = task.fileName,
-            status = task.status,
-            sanityLevel = illust.sanityLevel,
-            userId = illust.user.id,
-            medium = illust.imageUrls.medium,
-        )
-        return withContext(Dispatchers.IO) { saveTask(history) }
-    }
+    ): DownloadTaskHistory = saveTask(downloadTaskHistoryOf(task, illust, id))
 
     /**
      * 查询全部历史记录，按时间倒序排列。

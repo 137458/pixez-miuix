@@ -79,9 +79,20 @@ class DownloadRepository(
      * @param pageIndex 页码，单页作品传 0
      * @return 包含最终状态与保存路径/错误信息的下载任务
      */
-    suspend fun download(illust: Illust, pageIndex: Int): DownloadTask {
+    suspend fun download(illust: Illust, pageIndex: Int): DownloadTask =
+        downloadPage(illust, pageIndex).task
+
+    /**
+     * 单页下载的实现（不放保活、不发通知之外的差异）。
+     *
+     * 多页作品逐页执行时由 [downloadAllPages] 统一占用保活与进度通知，
+     * 因此这里的 keepAlive / notify 只在单页作品上开启，与历史行为一致。
+     */
+    private suspend fun downloadPage(illust: Illust, pageIndex: Int): TaskOutcome {
         val remoteUrl = resolveOriginalUrl(illust, pageIndex)
         val fileName = buildFileName(illust, pageIndex, remoteUrl)
+        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
+        val singlePageTask = illust.pageCount <= 1
         val pendingTask = DownloadTask(
             illustId = illust.id,
             pageIndex = pageIndex,
@@ -90,62 +101,19 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
-        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
-
-        // 历史记录 ID；初始写入失败时保持 0，用于判断是否能回写状态。
-        var historyId = 0L
-        if (illust.pageCount <= 1) {
-            com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
-            notifier.notifyProgress(illust.id, illust.title, 0, 1)
-        }
-        return try {
-            // 先写入下载历史，获取数据库 ID 以便后续更新同一行。
-            historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
-            notifyTaskChanged()
+        return runTask(
+            history = downloadTaskHistoryOf(pendingTask, illust),
+            errorCode = AppErrorKind.DOWNLOAD_FAILED.code,
+            keepAlive = singlePageTask,
+            notifyProgress = singlePageTask,
+            notifyFinishedResult = singlePageTask,
+            throwOnFailure = false,
+            startWriteTolerant = false,
+        ) {
             val tempFileName = "dl_temp_${illust.id}_${pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
             val tempPath = downloadToTempFile(remoteUrl, tempFileName)
-            val savedPath = saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
-            Napier.d("下载完成 path=$savedPath")
-            val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            if (historyId > 0 && historyRepository != null) {
-                historyRepository.saveTask(successTask, illust, historyId)
-            }
-            notifyTaskChanged()
-            if (illust.pageCount <= 1) {
-                notifier.notifyFinished(illust.id, illust.title, 1, 0)
-            }
-            successTask
-        } catch (e: CancellationException) {
-            if (illust.pageCount <= 1) {
-                notifier.cancel(illust.id)
-            }
-            // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
-            throw e
-        } catch (e: Exception) {
-            Napier.e("下载失败 illustId=${illust.id} page=$pageIndex", e)
-            val failedTask = pendingTask.copy(
-                status = DownloadStatus.Failed,
-                // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
-                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.DOWNLOAD_FAILED.code,
-            )
-            if (illust.pageCount <= 1) {
-                notifier.notifyFinished(illust.id, illust.title, 0, 1)
-            }
-            if (historyId > 0 && historyRepository != null) {
-                // 历史记录已创建时尽力回写失败状态；不因为回写失败而覆盖原始错误。
-                // 回写失败至少记录日志，便于排查 DB 状态与真实结果不一致的问题。
-                suspendRunCatchingNonCancel { historyRepository.saveTask(failedTask, illust, historyId) }
-                    .onFailure { saveError ->
-                        Napier.e("回写下载历史失败 historyId=$historyId", saveError)
-                        e.addSuppressed(saveError)
-                    }
-            }
-            notifyTaskChanged()
-            failedTask
-        } finally {
-            if (illust.pageCount <= 1) {
-                com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illust.id)
-            }
+            saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
+                .also { Napier.d("下载完成 path=$it") }
         }
     }
 
@@ -166,8 +134,13 @@ class DownloadRepository(
     ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
         if (total <= 0) return@coroutineScope emptyList()
-        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
-        notifier.notifyProgress(illust.id, illust.title, 0, total)
+        // 多页才由聚合层统一占用保活并只发一次结束通知；
+        // 单页作品交给 downloadPage 走单任务路径，避免同一作品被通知两次。
+        val aggregate = total > 1
+        if (aggregate) {
+            com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
+            notifier.notifyProgress(illust.id, illust.title, 0, total)
+        }
         val semaphore = Semaphore(coerceParallelTasks(maxConcurrency))
         val progressMutex = Mutex()
         var completedCount = 0
@@ -175,28 +148,30 @@ class DownloadRepository(
         try {
             val deferredTasks = (0 until total).map { pageIndex ->
                 async {
-                    val task = semaphore.withPermit {
-                        download(illust, pageIndex)
+                    val outcome = semaphore.withPermit {
+                        downloadPage(illust, pageIndex)
                     }
                     progressMutex.withLock {
                         completedCount++
                         val current = completedCount
                         onProgress?.invoke(current, total)
-                        notifier.notifyProgress(illust.id, illust.title, current, total)
+                        if (aggregate) notifier.notifyProgress(illust.id, illust.title, current, total)
                     }
-                    task
+                    outcome.task
                 }
             }
             val results = deferredTasks.awaitAll()
-            val successCount = results.count { it.status == DownloadStatus.Success }
-            val failedCount = results.count { it.status == DownloadStatus.Failed }
-            notifier.notifyFinished(illust.id, illust.title, successCount, failedCount)
+            if (aggregate) {
+                val successCount = results.count { it.status == DownloadStatus.Success }
+                val failedCount = results.count { it.status == DownloadStatus.Failed }
+                notifier.notifyFinished(illust.id, illust.title, successCount, failedCount)
+            }
             results
         } catch (e: CancellationException) {
-            notifier.cancel(illust.id)
+            if (aggregate) notifier.cancel(illust.id)
             throw e
         } finally {
-            com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illust.id)
+            if (aggregate) com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illust.id)
         }
     }
 
@@ -212,62 +187,34 @@ class DownloadRepository(
     suspend fun retry(history: DownloadTaskHistory): DownloadTask {
         // 重试必须对应已持久化的历史记录；ID 不合法时 saveTask 会插入新行，导致重复历史。
         require(history.id > 0) { "重试必须基于已持久化的历史记录" }
+        historyRepository ?: throw IllegalStateException("重试功能需要数据库依赖")
 
-        // 构造待重试任务对象，状态先置为下载中。
-        val pendingTask = DownloadTask(
-            illustId = history.illustId,
-            pageIndex = history.pageIndex,
-            remoteUrl = history.remoteUrl,
-            fileName = history.fileName,
-            status = DownloadStatus.Downloading,
+        val (subDir, customBasePath) = resolveSubDirAndBasePath(
+            userName = history.userName,
+            userId = history.userId,
+            sanityLevel = history.sanityLevel,
         )
 
-        val historyRepo = historyRepository ?: throw IllegalStateException("重试功能需要数据库依赖")
-
-        // 先将历史记录更新为下载中，让用户能在「运行中」标签页看到重试任务。
-        suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Downloading)) }
-            .onFailure { Napier.e("重试时回写下载历史失败 historyId=${history.id}", it) }
-        notifyTaskChanged()
-
-        return try {
-            // 复用已有 HTTP 下载与平台保存逻辑。
-            val tempFileName = "dl_retry_${history.illustId}_${history.pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
+        return runTask(
+            history = history,
+            errorCode = AppErrorKind.DOWNLOAD_FAILED.code,
+            // 重试与首次下载同样占用保活（大文件重试不再裸跑），但不额外发通知，保持原有静默语义。
+            keepAlive = true,
+            notifyProgress = false,
+            notifyFinishedResult = false,
+            throwOnFailure = true,
+            startWriteTolerant = true,
+        ) {
+            val tempFileName =
+                "dl_retry_${history.illustId}_${history.pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
             val tempPath = downloadToTempFile(history.remoteUrl, tempFileName)
-            val (subDir, customBasePath) = resolveSubDirAndBasePath(
-                userName = history.userName,
-                userId = history.userId,
-                sanityLevel = history.sanityLevel,
-            )
-            val savedPath = saver.saveFromTempFile(
+            saver.saveFromTempFile(
                 FileNamePolicy.requireSafeBaseName(history.fileName),
                 tempPath,
                 subDir = subDir,
                 customBasePath = customBasePath,
-            )
-            Napier.d("重试下载完成 path=$savedPath")
-            val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            historyRepo.saveTask(history.copy(status = DownloadStatus.Success))
-            notifyTaskChanged()
-            successTask
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Napier.e("重试下载失败 illustId=${history.illustId}", e)
-            val failedTask = pendingTask.copy(
-                status = DownloadStatus.Failed,
-                // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
-                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.DOWNLOAD_FAILED.code,
-            )
-            // 历史记录已存在时尽力回写失败状态；回写失败则记录日志并将异常附加到原始异常，避免状态不一致被静默吞掉。
-            suspendRunCatchingNonCancel { historyRepo.saveTask(history.copy(status = DownloadStatus.Failed)) }
-                .onFailure { saveError ->
-                    Napier.e("重试失败时回写下载历史失败 historyId=${history.id}", saveError)
-                    e.addSuppressed(saveError)
-                }
-            notifyTaskChanged()
-            // 抛出异常，让调用方感知重试失败，避免 UI 错误地提示「成功」。
-            throw e
-        }
+            ).also { Napier.d("重试下载完成 path=$it") }
+        }.task
     }
 
     /**
@@ -432,6 +379,7 @@ class DownloadRepository(
         saveAction: suspend (fileName: String, subDir: String?, customBasePath: String?) -> String,
     ): String {
         val fileName = "${illust.id}_ugoira.zip"
+        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
         val pendingTask = DownloadTask(
             illustId = illust.id,
             pageIndex = 0,
@@ -440,48 +388,104 @@ class DownloadRepository(
             status = DownloadStatus.Downloading,
         )
 
-        val (subDir, customBasePath) = resolveSubDirAndBasePath(illust)
+        return runTask(
+            history = downloadTaskHistoryOf(pendingTask, illust),
+            errorCode = AppErrorKind.UGOIRA_SAVE_FAILED.code,
+            keepAlive = true,
+            notifyProgress = true,
+            notifyFinishedResult = true,
+            throwOnFailure = true,
+            startWriteTolerant = false,
+        ) {
+            saveAction(fileName, subDir, customBasePath)
+                .also { Napier.d("动图 Zip 保存完成 path=$it") }
+        }.savedPath
+    }
 
-        var historyId = 0L
-        com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
-        notifier.notifyProgress(illust.id, illust.title, 0, 1)
+    /**
+     * 下载/保存任务的唯一执行体：占用保活 → 写历史 → 落盘 → 回写终态 → 发通知。
+     *
+     * 四类入口只在参数与「保存动作」上不同：
+     * - [keepAlive]：是否占用前台保活（多页批量由聚合层统一占用，逐页不重复占用）
+     * - [notifyProgress]：是否发送进度/取消通知（重试保持静默）
+     * - [notifyFinishedResult]：是否由本次执行发送结束通知（批量只在聚合层发一次）
+     * - [throwOnFailure]：失败向上抛出（重试/动图）还是返回 Failed 任务（信息流下载）
+     * - [startWriteTolerant]：起始历史写入失败是否可容忍（重试基于已有行，写失败不中止下载）
+     */
+    private suspend fun runTask(
+        history: DownloadTaskHistory,
+        errorCode: String,
+        keepAlive: Boolean,
+        notifyProgress: Boolean,
+        notifyFinishedResult: Boolean,
+        throwOnFailure: Boolean,
+        startWriteTolerant: Boolean,
+        saveAction: suspend () -> String,
+    ): TaskOutcome {
+        val illustId = history.illustId
+        val pendingTask = DownloadTask(
+            illustId = illustId,
+            pageIndex = history.pageIndex,
+            remoteUrl = history.remoteUrl,
+            fileName = history.fileName,
+            status = DownloadStatus.Downloading,
+        )
+
+        if (keepAlive) com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illustId)
+        if (notifyProgress) notifier.notifyProgress(illustId, history.title, 0, 1)
+
+        // 历史记录 ID；初始写入失败时保持原值（0 表示无法回写状态）。
+        var historyId = history.id
         return try {
-            historyId = historyRepository?.saveTask(pendingTask, illust)?.id ?: 0L
-            notifyTaskChanged()
-            val savedPath = saveAction(fileName, subDir, customBasePath)
-            Napier.d("动图 Zip 保存完成 path=$savedPath")
-            val successTask = pendingTask.copy(status = DownloadStatus.Success)
-            if (historyId > 0 && historyRepository != null) {
-                historyRepository.saveTask(successTask, illust, historyId)
+            val startedHistory = history.copy(status = DownloadStatus.Downloading)
+            if (startWriteTolerant) {
+                suspendRunCatchingNonCancel { historyRepository?.saveTask(startedHistory)?.id }
+                    .onSuccess { writtenId -> if (writtenId != null && writtenId > 0) historyId = writtenId }
+                    .onFailure { Napier.e("回写下载历史失败 historyId=${history.id}", it) }
+            } else {
+                historyRepository?.saveTask(startedHistory)?.let { historyId = it.id }
             }
             notifyTaskChanged()
-            notifier.notifyFinished(illust.id, illust.title, 1, 0)
-            savedPath
+
+            val savedPath = saveAction()
+            val successTask = pendingTask.copy(status = DownloadStatus.Success)
+            if (historyId > 0) {
+                historyRepository?.saveTask(history.copy(id = historyId, status = DownloadStatus.Success))
+            }
+            notifyTaskChanged()
+            if (notifyFinishedResult) notifier.notifyFinished(illustId, history.title, 1, 0)
+            TaskOutcome(successTask, savedPath)
         } catch (e: CancellationException) {
-            notifier.cancel(illust.id)
+            if (notifyProgress) notifier.cancel(illustId)
+            // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
             throw e
         } catch (e: Exception) {
-            Napier.e("动图 Zip 保存失败 illustId=${illust.id}", e)
+            Napier.e("下载任务失败 illustId=$illustId page=${history.pageIndex}", e)
             val failedTask = pendingTask.copy(
                 status = DownloadStatus.Failed,
                 // 高-6b：task.error 只存稳定错误码（原始异常细节仅供上方 Napier 日志）。
-                error = (e as? PixivApiException)?.errorKind?.code ?: AppErrorKind.UGOIRA_SAVE_FAILED.code,
+                error = (e as? PixivApiException)?.errorKind?.code ?: errorCode,
             )
-            notifier.notifyFinished(illust.id, illust.title, 0, 1)
-            if (historyId > 0 && historyRepository != null) {
-                // 回写失败需记录并附加到原始异常，避免失败状态静默丢失（与 retry() 口径一致）。
-                suspendRunCatchingNonCancel { historyRepository.saveTask(failedTask, illust, historyId) }
-                    .onFailure { saveError ->
-                        Napier.e("动图保存失败时回写下载历史失败 historyId=$historyId", saveError)
-                        e.addSuppressed(saveError)
-                    }
+            if (notifyFinishedResult) notifier.notifyFinished(illustId, history.title, 0, 1)
+            if (historyId > 0) {
+                // 回写失败需记录并附加到原始异常，避免失败状态静默丢失。
+                suspendRunCatchingNonCancel {
+                    historyRepository?.saveTask(history.copy(id = historyId, status = DownloadStatus.Failed))
+                }.onFailure { saveError ->
+                    Napier.e("下载失败时回写历史失败 historyId=$historyId", saveError)
+                    e.addSuppressed(saveError)
+                }
             }
             notifyTaskChanged()
-            throw e
+            if (throwOnFailure) throw e
+            TaskOutcome(failedTask, savedPath = "")
         } finally {
-            com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illust.id)
+            if (keepAlive) com.perol.pixez.shared.platform.PlatformDownloadKeeper.release(illustId)
         }
     }
+
+    /** 单次任务执行的产物：最终状态 + 落盘路径（失败时为占位空串）。 */
+    private data class TaskOutcome(val task: DownloadTask, val savedPath: String)
 
     /**
      * 从 URL 路径中提取扩展名；提取失败或不在白名单时返回 jpg。
