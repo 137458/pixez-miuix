@@ -33,8 +33,6 @@ import java.net.URL
  */
 class PixEzAppWidgetProvider : AppWidgetProvider() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         for (appWidgetId in appWidgetIds) {
@@ -59,7 +57,7 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
     }
 
     private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-        scope.launch {
+        refreshScope.launch {
             try {
                 val app = requireNotNull(AppDependencies.orNull()) {
                     "AppDependencies 尚未初始化，无法刷新小组件"
@@ -217,6 +215,14 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_IMAGE_MAX_DIMENSION = 800
 
         const val ACTION_REFRESH_WIDGET = "com.perol.pixez.action.REFRESH_WIDGET"
+
+        /**
+         * 进程级刷新 scope。
+         *
+         * AppWidgetProvider 每次广播都会新建实例，实例级 CoroutineScope 从不 cancel，
+         * 会在每次刷新后留下无用 scope；改为随进程存活的单例 scope。
+         */
+        private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         /**
          * 小部件缓存仓库（进程级常驻）。
