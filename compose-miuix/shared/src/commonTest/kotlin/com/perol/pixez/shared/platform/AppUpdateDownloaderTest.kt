@@ -171,6 +171,7 @@ class AppUpdateDownloaderTest {
                 deletedPaths += path
                 true
             },
+            scanUpdateDir = { emptyList() },
         )
 
         downloader.start(asset)
@@ -183,7 +184,6 @@ class AppUpdateDownloaderTest {
         assertEquals(UpdateDownloadState.Idle, downloader.state.value)
         assertEquals(listOf("/cache/app.apk"), deletedPaths)
         assertNull(downloader.installPathFor(asset))
-
         downloader.start(nextAsset)
         advanceUntilIdle()
         assertEquals(UpdateDownloadState.Done("/cache/app-next.apk", nextAsset.identity), downloader.state.value)
@@ -244,5 +244,78 @@ class AppUpdateDownloaderTest {
         advanceUntilIdle()
         assertEquals(2, downloaded)
         assertEquals("/cache/app.apk", downloader.installPathFor(asset))
+    }
+
+    @Test
+    fun `进程重启后从磁盘恢复完成包并清理半成品`() = runTest {
+        val deletedPaths = mutableListOf<String>()
+        val downloader = AppUpdateDownloader(
+            scope = this,
+            downloadFile = { _, _, _ -> Result.failure(IllegalStateException("不应重新下载")) },
+            sha256OfFile = { "a".repeat(64) },
+            deleteFile = { path ->
+                deletedPaths += path
+                true
+            },
+            scanUpdateDir = {
+                listOf(
+                    UpdateFileEntry("/cache/.app.apk.1.part", ".app.apk.1.part", 100L),
+                    UpdateFileEntry("/cache/app.apk", "app.apk", 1024L),
+                )
+            },
+        )
+
+        downloader.syncTarget(asset)
+        advanceUntilIdle()
+
+        assertEquals(UpdateDownloadState.Done("/cache/app.apk", asset.identity), downloader.state.value)
+        assertEquals(listOf("/cache/.app.apk.1.part"), deletedPaths)
+        assertEquals("/cache/app.apk", downloader.installPathFor(asset))
+    }
+
+    @Test
+    fun `磁盘文件大小不符时不恢复完成态`() = runTest {
+        val deletedPaths = mutableListOf<String>()
+        val downloader = AppUpdateDownloader(
+            scope = this,
+            downloadFile = { _, _, _ -> Result.failure(IllegalStateException("不应重新下载")) },
+            sha256OfFile = { null },
+            deleteFile = { path ->
+                deletedPaths += path
+                true
+            },
+            scanUpdateDir = {
+                listOf(UpdateFileEntry("/cache/app.apk", "app.apk", 512L))
+            },
+        )
+
+        downloader.syncTarget(asset)
+        advanceUntilIdle()
+
+        assertEquals(UpdateDownloadState.Idle, downloader.state.value)
+        assertTrue(deletedPaths.isEmpty(), "大小不符的完成包不应被采用或删除")
+    }
+
+    @Test
+    fun `磁盘文件摘要不符时删除且不恢复`() = runTest {
+        val deletedPaths = mutableListOf<String>()
+        val downloader = AppUpdateDownloader(
+            scope = this,
+            downloadFile = { _, _, _ -> Result.failure(IllegalStateException("不应重新下载")) },
+            sha256OfFile = { "b".repeat(64) },
+            deleteFile = { path ->
+                deletedPaths += path
+                true
+            },
+            scanUpdateDir = {
+                listOf(UpdateFileEntry("/cache/app.apk", "app.apk", 1024L))
+            },
+        )
+
+        downloader.syncTarget(asset.copy(sha256Digest = "sha256:" + "a".repeat(64)))
+        advanceUntilIdle()
+
+        assertEquals(UpdateDownloadState.Idle, downloader.state.value)
+        assertEquals(listOf("/cache/app.apk"), deletedPaths)
     }
 }

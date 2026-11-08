@@ -6,3 +6,6 @@ internal actual suspend fun downloadUpdateFile(
     fileName: String,
     onProgress: (downloaded: Long, total: Long) -> Unit,
 ): Result<String> = Result.failure(UnsupportedOperationException("iOS 暂不支持应用内更新下载"))
+
+/** iOS 不保存更新包，目录扫描恒为空。 */
+internal actual suspend fun scanUpdateDirectory(): List<UpdateFileEntry> = emptyList()

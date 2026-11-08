@@ -100,3 +100,12 @@ private const val BUFFER_SIZE = 32 * 1024
 private const val MAX_REDIRECTS = 5
 private const val MAX_UPDATE_BYTES = 256L * 1024L * 1024L
 private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+
+internal actual suspend fun scanUpdateDirectory(): List<UpdateFileEntry> = withContext(Dispatchers.IO) {
+    val dir = runCatching { File(AppInstaller().getUpdateSaveDir()) }.getOrNull()
+        ?: return@withContext emptyList()
+    dir.listFiles()
+        ?.filter { it.isFile }
+        ?.map { UpdateFileEntry(it.absolutePath, it.name, it.length()) }
+        ?: emptyList()
+}

@@ -104,6 +104,20 @@ fun UpdateDownloadState.installPathFor(asset: UpdateAsset?): String? {
 }
 
 /**
+ * 更新包目录中的一个文件条目。[name] 为不含目录的文件名。
+ *
+ * 作为 [AppUpdateDownloader] 构造参数的可见类型，需与类本身同为 public。
+ */
+data class UpdateFileEntry(val path: String, val name: String, val size: Long)
+
+/**
+ * 更新包保存目录中的残留文件（进程被杀后遗留的完成包与 `.part` 半成品）。
+ *
+ * 只在恢复 [UpdateDownloadState.Done] 时扫描一次；iOS 与应用内更新无关，返回空列表。
+ */
+internal expect suspend fun scanUpdateDirectory(): List<UpdateFileEntry>
+
+/**
  * 进程级更新下载器。
  *
  * 状态挂在应用级单例（[com.perol.pixez.shared.AppDependencies]）上，协程跑在应用级 scope：
@@ -113,7 +127,7 @@ fun UpdateDownloadState.installPathFor(asset: UpdateAsset?): String? {
  * 旧协程可能仍会在取消生效前写出一帧进度，代际号让过期写入直接丢弃。
  * 该代际号会被下载协程（IO 线程）读取，必须用 `@Volatile` 保证跨线程可见性。
  *
- * 取舍：低层传输、文件摘要与删除通过构造参数注入，默认指向各平台 actual 实现；
+ * 取舍：低层传输、文件摘要、删除与目录扫描通过构造参数注入，默认指向各平台 actual 实现；
  * 这样状态机与三态校验能在 commonTest 里用假传输完整覆盖。
  */
 class AppUpdateDownloader(
@@ -125,6 +139,7 @@ class AppUpdateDownloader(
     ) -> Result<String> = ::downloadUpdateFile,
     private val sha256OfFile: (path: String) -> String? = ::sha256HexOfFile,
     private val deleteFile: (path: String) -> Boolean = ::deleteUpdateFile,
+    private val scanUpdateDir: suspend () -> List<UpdateFileEntry> = ::scanUpdateDirectory,
 ) {
 
     private val _state = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
@@ -227,6 +242,8 @@ class AppUpdateDownloader(
      *
      * [asset] 为空或与状态归属不一致时：取消在途任务、删除旧完成包、状态回 Idle。
      * 界面在 release 变化后调用一次，保证渲染前旧的进度/完成态已被清掉。
+     *
+     * 对齐后若处于 Idle，顺带尝试从磁盘恢复上一个进程留下的完成包（见 [restoreCompletedFile]）。
      */
     fun syncTarget(asset: UpdateAsset?) {
         val identity = asset?.identity
@@ -255,6 +272,40 @@ class AppUpdateDownloader(
                 }
             }
         }
+        if (asset != null && _state.value == UpdateDownloadState.Idle) {
+            val token = generation
+            scope.launch { restoreCompletedFile(asset, token) }
+        }
+    }
+
+    /**
+     * 进程重启后的恢复：把磁盘上已下载完成、且与 [asset] 完全匹配的安装包接回 [UpdateDownloadState.Done]，
+     * 并清理中断下载遗留的 `.part` 半成品。
+     *
+     * 只删除本应用命名的 `.part` 临时文件：桌面端保存目录就是用户的 Downloads 目录，
+     * 扩大删除范围会误伤用户文件，因此不在这里清理其它版本的完成包。
+     */
+    private suspend fun restoreCompletedFile(asset: UpdateAsset, token: Long) {
+        if (token != generation || _state.value != UpdateDownloadState.Idle) return
+        val safeName = runCatching { FileNamePolicy.requireSafeBaseName(asset.fileName) }.getOrNull() ?: return
+        val files = runCatching { scanUpdateDir() }.getOrDefault(emptyList())
+        // 扫描是挂起点：期间用户可能已重新开始下载，过期恢复必须丢弃。
+        if (token != generation || _state.value != UpdateDownloadState.Idle) return
+
+        files.filter { it.name.startsWith(".") && it.name.endsWith(PART_FILE_SUFFIX) }
+            .forEach { deleteFile(it.path) }
+
+        val candidate = files.firstOrNull { it.name == safeName && it.size > 0L } ?: return
+        if (asset.size > 0L && candidate.size != asset.size) return
+        val expected = UpdateDigest.expectedSha256(asset.sha256Digest)
+        if (expected != null &&
+            UpdateDigest.verify(expected, sha256OfFile(candidate.path)) is DigestCheck.Mismatched
+        ) {
+            deleteFile(candidate.path)
+            return
+        }
+        if (token != generation) return
+        _state.value = UpdateDownloadState.Done(candidate.path, asset.identity)
     }
 
     /** 仅当前版本已下载完成时返回可安装路径。 */
@@ -295,6 +346,9 @@ class AppUpdateDownloader(
 
 /** 进度回调节流：网络每读一块都更新 StateFlow 会带来大量无效重组。 */
 private const val PROGRESS_REPORT_INTERVAL_MS = 500L
+
+/** 传输中断后遗留的半成品后缀（与各平台 actual 的临时文件命名一致）。 */
+private const val PART_FILE_SUFFIX = ".part"
 
 /**
  * 平台传输实现：下载安装包到本地缓存目录，返回本地绝对路径。
