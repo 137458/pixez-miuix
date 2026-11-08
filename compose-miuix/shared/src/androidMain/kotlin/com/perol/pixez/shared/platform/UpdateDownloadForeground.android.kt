@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.platform
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -10,7 +9,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.perol.pixez.shared.R
 import io.github.aakira.napier.Napier
@@ -54,29 +52,16 @@ class UpdateDownloadService : Service() {
     }
 
     private fun ensureChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.download_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = getString(R.string.download_channel_description)
-            setShowBadge(false)
-            enableLights(false)
-            enableVibration(false)
-            setSound(null, null)
-        }
-        manager.createNotificationChannel(channel)
+        ensureDownloadNotificationChannel(
+            context = this,
+            channelId = CHANNEL_ID,
+            importance = NotificationManager.IMPORTANCE_LOW,
+            nameRes = R.string.download_channel_name,
+            descriptionRes = R.string.download_channel_description,
+        )
     }
 
     private fun buildNotification(downloaded: Long, total: Long): Notification {
-        val percent = if (total > 0L) {
-            ((downloaded * 100L) / total).toInt().coerceIn(0, 100)
-        } else {
-            0
-        }
         val contentIntent = packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             PendingIntent.getActivity(
@@ -86,20 +71,17 @@ class UpdateDownloadService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(getString(R.string.download_channel_name))
-            .setContentText(getString(R.string.download_progress_text, downloaded, total, percent))
-            .setProgress(
-                if (total > 0L) total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0,
-                downloaded.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                total <= 0L,
-            )
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setContentIntent(contentIntent)
-            .build()
+        return buildDownloadProgressNotification(
+            context = this,
+            channelId = CHANNEL_ID,
+            title = getString(R.string.download_channel_name),
+            current = downloaded.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+            total = total.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+            contentIntent = contentIntent,
+            // 更新下载保持低打扰：不参与 Live Status / HyperOS 胶囊（与图片下载通知分渠道的原因相同）。
+            includeLiveStatus = false,
+            indeterminate = total <= 0L,
+        )
     }
 
     private fun startForegroundCompat(notification: Notification) {
@@ -123,7 +105,12 @@ class UpdateDownloadService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "pixez_update_download_channel"
-        private const val NOTIFICATION_ID = 0x00A1_0001
+
+        /**
+         * 取旧值的负数形式：`stableNotificationId` 只会产出非负 Int，
+         * 因此负数 ID 与图片下载通知（按 illustId 派生）永久隔离，不会互相覆盖。
+         */
+        private const val NOTIFICATION_ID = -0x00A1_0001
         private const val ACTION_START = "com.perol.pixez.shared.action.UPDATE_DOWNLOAD_START"
         private const val ACTION_UPDATE = "com.perol.pixez.shared.action.UPDATE_DOWNLOAD_UPDATE"
         private const val ACTION_STOP = "com.perol.pixez.shared.action.UPDATE_DOWNLOAD_STOP"

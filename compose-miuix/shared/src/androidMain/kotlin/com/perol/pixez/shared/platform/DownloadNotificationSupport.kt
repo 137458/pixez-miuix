@@ -1,0 +1,120 @@
+package com.perol.pixez.shared.platform
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.os.Build
+import android.os.Bundle
+import androidx.core.app.NotificationCompat
+import com.perol.pixez.shared.R
+
+/**
+ * 图片下载与应用更新下载共用的通知构建逻辑。
+ *
+ * 两处保留各自的渠道与文案（更新下载是低频后台任务，仍用独立低优先级渠道，
+ * 避免更新包下载触发与图片下载同级的提醒），但渠道创建、进度条与状态栏胶囊 extras
+ * 只维护这一份，防止两边继续分叉。
+ */
+internal fun ensureDownloadNotificationChannel(
+    context: Context,
+    channelId: String,
+    importance: Int,
+    nameRes: Int,
+    descriptionRes: Int,
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+    // 渠道名与描述允许原地更新，故应用内语言变更时也要重建，否则渠道一直停在旧语言。
+    val localized = context.localizedForAppLanguage()
+    val name = localized.getString(nameRes)
+    val existing = manager.getNotificationChannel(channelId)
+    if (existing != null && existing.importance >= importance && existing.name?.toString() == name) return
+    manager.createNotificationChannel(
+        NotificationChannel(channelId, name, importance).apply {
+            description = localized.getString(descriptionRes)
+            setShowBadge(false)
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+        },
+    )
+}
+
+/**
+ * 构建「下载中」进度通知。
+ *
+ * [includeLiveStatus] 为 true 时附带 Android 16 Live Status、MIUI/OPLUS 胶囊 extras；
+ * 图片下载开启，应用更新下载当前不开启（保持更新通知低打扰，见 M8 待确认项）。
+ */
+internal fun buildDownloadProgressNotification(
+    context: Context,
+    channelId: String,
+    title: CharSequence,
+    current: Int,
+    total: Int,
+    contentIntent: PendingIntent?,
+    includeLiveStatus: Boolean,
+    indeterminate: Boolean = total <= 0,
+    liveText: CharSequence? = null,
+): Notification {
+    val localized = context.localizedForAppLanguage()
+    val percent = if (total > 0) (current.toLong() * 100L / total).toInt().coerceIn(0, 100) else 0
+    val percentText = localized.getString(R.string.download_progress_percent, percent)
+
+    val builder = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.stat_sys_download)
+        .setContentTitle(title)
+        .setContentText(localized.getString(R.string.download_progress_text, current, total, percent))
+        .setSubText(if (total > 0) percentText else "")
+        .setProgress(total, current, indeterminate)
+        .setOngoing(true)
+        .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+        .setOnlyAlertOnce(true)
+        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        .setShowWhen(true)
+        .apply {
+            if (contentIntent != null) setContentIntent(contentIntent)
+            if (includeLiveStatus) {
+                setColorized(true)
+                setColor(0xFF2196F3.toInt())
+                addExtras(downloadLiveStatusExtras(localized, title, percent, percentText, liveText ?: percentText))
+            }
+        }
+    return builder.build()
+}
+
+private fun downloadLiveStatusExtras(
+    localized: Context,
+    title: CharSequence,
+    percent: Int,
+    percentText: String,
+    liveText: CharSequence,
+): Bundle = Bundle().apply {
+    // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications / Live Status)
+    putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_STATUS, true)
+    putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE, true)
+    putString(DownloadPlatformDefaults.EXTRA_ANDROID_SUBST_NAME, "PixEz")
+    putCharSequence(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TITLE, title)
+    putCharSequence(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TEXT, liveText)
+    putInt(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_PROGRESS, percent)
+
+    // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
+    putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FOCUS, true)
+    putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_LIVE, true)
+    putInt(DownloadPlatformDefaults.EXTRA_MIUI_LIVE_TYPE, 1)
+    putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_ENABLE_FLOAT, true)
+    putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FLOAT, true)
+    putString(DownloadPlatformDefaults.EXTRA_MIUI_CATEGORY, "download")
+    putString(DownloadPlatformDefaults.EXTRA_MIUI_SUBTEXT, percentText)
+    putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS, percent)
+    putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS_MAX, 100)
+
+    // OPLUS / ColorOS / OxygenOS 智慧胶囊与流体云协议支持
+    putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE, true)
+    putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_ONGOING, true)
+    putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TITLE, title.toString())
+    putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TEXT, percentText)
+    putInt(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
+}

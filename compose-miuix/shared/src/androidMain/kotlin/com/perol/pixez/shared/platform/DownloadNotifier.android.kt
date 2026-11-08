@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.platform
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -31,29 +30,14 @@ actual class DownloadNotifier {
                 // 旧渠道可能本身不存在，删除失败不影响后续实时进度通知
                 Napier.d("删除旧版下载通知渠道失败", e, tag = "DownloadNotifier")
             }
-
-            val existing = manager.getNotificationChannel(channelId)
-            val localized = context.localizedForAppLanguage()
-            val channelName = localized.getString(R.string.download_channel_name)
-            val channelDescription = localized.getString(R.string.download_channel_description)
-            // 渠道名与描述允许原地更新，故应用内语言变更时也要重建，否则渠道一直停在旧语言
-            if (existing == null || existing.importance < NotificationManager.IMPORTANCE_DEFAULT ||
-                existing.name?.toString() != channelName
-            ) {
-                val channel = NotificationChannel(
-                    channelId,
-                    channelName,
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                ).apply {
-                    description = channelDescription
-                    setShowBadge(false)
-                    enableLights(false)
-                    enableVibration(false)
-                    setSound(null, null)
-                }
-                manager.createNotificationChannel(channel)
-            }
         }
+        ensureDownloadNotificationChannel(
+            context = context,
+            channelId = channelId,
+            importance = NotificationManager.IMPORTANCE_DEFAULT,
+            nameRes = R.string.download_channel_name,
+            descriptionRes = R.string.download_channel_description,
+        )
     }
 
     actual fun notifyProgress(id: Long, title: String, current: Int, total: Int) {
@@ -72,58 +56,20 @@ actual class DownloadNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val percent = if (total > 0) (current * 100 / total) else 0
         val localized = context.localizedForAppLanguage()
         val progressTitle = localized.getString(R.string.download_progress_title, title)
-        val percentText = localized.getString(R.string.download_progress_percent, percent)
-        val subText = if (total > 0) percentText else ""
-
-        val notificationBuilder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(progressTitle)
-            .setContentText(localized.getString(R.string.download_progress_text, current, total, percent))
-            .setSubText(subText)
-            .setProgress(total, current, false)
-            .setOngoing(true)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setOnlyAlertOnce(true)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setColorized(true)
-            .setColor(0xFF2196F3.toInt())
-            .setShowWhen(true)
-            .setContentIntent(pendingIntent)
-            .addExtras(android.os.Bundle().apply {
-                // Android 16 (API 36) 原生实时动态状态栏胶囊 (Rich Ongoing Notifications / Live Status)
-                putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_STATUS, true)
-                putBoolean(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE, true)
-                putString(DownloadPlatformDefaults.EXTRA_ANDROID_SUBST_NAME, "PixEz")
-                putCharSequence(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TITLE, progressTitle)
-                putCharSequence(
-                    DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_TEXT,
-                    localized.getString(R.string.download_live_text, current, total, percent),
-                )
-                putInt(DownloadPlatformDefaults.EXTRA_ANDROID_LIVE_PROGRESS, percent)
-
-                // Xiaomi HyperOS / MIUI 焦点通知与灵动胶囊协议支持
-                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FOCUS, true)
-                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_LIVE, true)
-                putInt(DownloadPlatformDefaults.EXTRA_MIUI_LIVE_TYPE, 1)
-                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_ENABLE_FLOAT, true)
-                putBoolean(DownloadPlatformDefaults.EXTRA_MIUI_FLOAT, true)
-                putString(DownloadPlatformDefaults.EXTRA_MIUI_CATEGORY, "download")
-                putString(DownloadPlatformDefaults.EXTRA_MIUI_SUBTEXT, percentText)
-                putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS, percent)
-                putInt(DownloadPlatformDefaults.EXTRA_MIUI_PROGRESS_MAX, 100)
-
-                // OPLUS / ColorOS / OxygenOS 智慧胶囊与流体云协议支持
-                putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE, true)
-                putBoolean(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_ONGOING, true)
-                putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TITLE, progressTitle)
-                putString(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_TEXT, percentText)
-                putInt(DownloadPlatformDefaults.EXTRA_OPLUS_CAPSULE_PROGRESS, percent)
-            })
-
-        val notification = notificationBuilder.build()
+        val percent = if (total > 0) (current * 100 / total) else 0
+        val notification = buildDownloadProgressNotification(
+            context = context,
+            channelId = channelId,
+            title = progressTitle,
+            current = current,
+            total = total,
+            contentIntent = pendingIntent,
+            includeLiveStatus = true,
+            indeterminate = false,
+            liveText = localized.getString(R.string.download_live_text, current, total, percent),
+        )
         manager.notify(stableNotificationId(id), notification)
     }
 
