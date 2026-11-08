@@ -25,6 +25,8 @@ class PixEzApplication : Application() {
             driverFactory = DriverFactory(this),
             settingsFactory = SettingsFactory(this),
         )
+        // 旧版下载通知渠道只在这里清理一次，避免每次进度通知都调系统接口。
+        com.perol.pixez.shared.platform.migrateLegacyDownloadChannels(this)
     }
 
     /**

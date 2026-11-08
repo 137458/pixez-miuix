@@ -21,16 +21,8 @@ actual class DownloadNotifier {
     }
 
     private fun createChannelIfNeeded(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getNotificationManager(context) ?: return
-            // 尝试移除旧版低优先级渠道，确保状态栏实时动态胶囊不受抑制
-            try {
-                manager.deleteNotificationChannel("pixez_download_channel")
-            } catch (e: Throwable) {
-                // 旧渠道可能本身不存在，删除失败不影响后续实时进度通知
-                Napier.d("删除旧版下载通知渠道失败", e, tag = "DownloadNotifier")
-            }
-        }
+        // 旧渠道清理已上移到 Application.onCreate（migrateLegacyDownloadChannels），
+        // 不再在每次进度通知前重复删除。
         ensureDownloadNotificationChannel(
             context = context,
             channelId = channelId,

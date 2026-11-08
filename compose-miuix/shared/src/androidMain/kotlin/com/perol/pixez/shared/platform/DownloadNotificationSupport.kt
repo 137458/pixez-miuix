@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import com.perol.pixez.shared.R
+import io.github.aakira.napier.Napier
 
 /**
  * 图片下载与应用更新下载共用的通知构建逻辑。
@@ -41,6 +42,22 @@ internal fun ensureDownloadNotificationChannel(
         },
     )
 }
+
+/**
+ * 删除旧版低优先级下载渠道（一次性迁移）。
+ *
+ * 在 Application.onCreate 调用一次：旧实现在每次进度通知前都尝试删除，
+ * 等于每 500ms 调一次系统接口，既无意义也会与新建渠道竞争。
+ */
+fun migrateLegacyDownloadChannels(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+    runCatching { manager.deleteNotificationChannel(LEGACY_DOWNLOAD_CHANNEL_ID) }
+        .onFailure { Napier.d("删除旧版下载通知渠道失败", it, tag = "DownloadNotifier") }
+}
+
+/** 已废弃的旧渠道 ID，仅用于启动时清理。 */
+private const val LEGACY_DOWNLOAD_CHANNEL_ID = "pixez_download_channel"
 
 /**
  * 构建「下载中」进度通知。
