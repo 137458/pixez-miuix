@@ -42,6 +42,17 @@ class UpdateDialogPlanTest {
     }
 
     @Test
+    fun `进度详情按模板拼接已下载总量与速度`() {
+        assertEquals("512 B / 1.0 KB · 2.0 KB/s", updateDialogProgressDetail(downloading, strings))
+    }
+
+    @Test
+    fun `总长未知时进度详情只拼接已下载与速度`() {
+        val unknownTotal = downloading.copy(total = 0L)
+        assertEquals("512 B · 2.0 KB/s", updateDialogProgressDetail(unknownTotal, strings))
+    }
+
+    @Test
     fun `有新版本且有安装包时主按钮立即下载`() {
         val plan = buildUpdateDialogPlan(
             currentVersion = "1.9.0",

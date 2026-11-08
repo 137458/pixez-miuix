@@ -13,6 +13,7 @@ import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.AppUpdateDownloader
 import com.perol.pixez.shared.platform.UpdateAsset
 import com.perol.pixez.shared.platform.UpdateDownloadState
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -26,6 +27,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun UpdateDownloadProgressSection(
     state: UpdateDownloadState.Downloading,
     label: String,
+    strings: AppStrings,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -38,7 +40,7 @@ internal fun UpdateDownloadProgressSection(
             color = MiuixTheme.colorScheme.primary,
         )
         Text(
-            text = updateDialogProgressDetail(state),
+            text = updateDialogProgressDetail(state, strings),
             style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )

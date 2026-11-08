@@ -196,13 +196,14 @@ internal fun updateBrowserFallbackUrl(release: ReleaseInfo): String =
 
 internal fun updateDialogProgressDetail(
     state: UpdateDownloadState.Downloading,
+    strings: AppStrings,
 ): String {
     val downloaded = formatFileSize(state.downloaded)
-    val speed = "${formatFileSize(state.speedBytesPerSec)}/s"
+    val speed = formatFileSize(state.speedBytesPerSec)
     return if (state.total > 0L) {
-        "$downloaded / ${formatFileSize(state.total)} · $speed"
+        strings.updateDialogProgressDetail.format(downloaded, formatFileSize(state.total), speed)
     } else {
-        "$downloaded · $speed"
+        strings.updateDialogProgressDetailUnknownTotal.format(downloaded, speed)
     }
 }
 
@@ -232,7 +233,7 @@ internal fun buildUpdateDialogPlan(
         hasNotes = release.changelog.isNotBlank(),
         showProgress = downloading != null,
         progressFraction = downloading?.let { if (it.total > 0L) updateProgressFraction(it.downloaded, it.total) else null },
-        progressDetail = downloading?.let(::updateDialogProgressDetail),
+        progressDetail = downloading?.let { updateDialogProgressDetail(it, strings) },
         errorText = if (state is UpdateDownloadState.Failed) strings.updateDownloadFailed else null,
         installPath = state.installPathFor(asset),
     )

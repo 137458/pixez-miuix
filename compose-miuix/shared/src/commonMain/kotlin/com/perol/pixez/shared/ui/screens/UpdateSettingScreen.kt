@@ -549,6 +549,7 @@ private fun ChangelogCardSection(
                 UpdateDownloadProgressSection(
                     state = downloadState,
                     label = strings.updateDownloading,
+                    strings = strings,
                 )
             }
 

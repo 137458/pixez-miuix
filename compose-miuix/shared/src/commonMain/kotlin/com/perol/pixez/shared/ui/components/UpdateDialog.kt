@@ -117,6 +117,7 @@ fun UpdateDialog(
                 UpdateDownloadProgressSection(
                     state = downloadState,
                     label = strings.updateDownloading,
+                    strings = strings,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }

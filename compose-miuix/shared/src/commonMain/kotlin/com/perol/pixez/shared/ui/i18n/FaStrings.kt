@@ -145,6 +145,8 @@ object FaStrings : AppStrings {
     override val updateDialogLater = "بعداً"
     override val updateDialogBackgroundDownload = "دانلود در پس‌زمینه"
     override val updateDialogDownloadingPercent = "در حال دانلود %d%%"
+    override val updateDialogProgressDetail = "%s / %s · %s/s"
+    override val updateDialogProgressDetailUnknownTotal = "%s · %s/s"
     override val updateDialogIgnore = "نادیده گرفتن این نسخه"
     override val themePresetCyan = "Cyan"
     override val themePresetPink = "Pink"
