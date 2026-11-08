@@ -1,11 +1,9 @@
 package com.perol.pixez.shared.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,10 +41,10 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -157,20 +155,12 @@ fun AccountManageScreen(
                 } else {
                     item {
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                accounts.forEachIndexed { index, account ->
-                                    val isActive = account.userId == currentAccount?.userId
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (!isActive) {
-                                                    performSwitchAccount(account.userId)
-                                                }
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
+                            accounts.forEach { account ->
+                                val isActive = account.userId == currentAccount?.userId
+                                BasicComponent(
+                                    title = account.name,
+                                    summary = "@${account.account} (${account.userId})",
+                                    startAction = {
                                         // 用户头像
                                         PixivAsyncImage(
                                             model = account.userImage,
@@ -179,51 +169,27 @@ fun AccountManageScreen(
                                                 .size(46.dp)
                                                 .clip(CircleShape),
                                         )
-
-                                        Spacer(modifier = Modifier.width(14.dp))
-
-                                        // 用户名与账号信息
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = account.name,
-                                                    style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.SemiBold),
-                                                    color = MiuixTheme.colorScheme.onSurface,
-                                                )
-                                                if (isActive) {
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(6.dp))
-                                                            .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    ) {
-                                                        Text(
-                                                            text = strings.accountCurrentActive,
-                                                            style = MiuixTheme.textStyles.footnote2.copy(fontWeight = FontWeight.Medium),
-                                                            color = MiuixTheme.colorScheme.primary,
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = "@${account.account} (${account.userId})",
-                                                style = MiuixTheme.textStyles.footnote1,
-                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                            )
+                                    },
+                                    onClick = {
+                                        if (!isActive) {
+                                            performSwitchAccount(account.userId)
                                         }
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
+                                    },
+                                    endActions = {
                                         // 操作按钮区
                                         if (isActive) {
-                                            Icon(
-                                                imageVector = MiuixIcons.Ok,
-                                                contentDescription = strings.accountCurrentActive,
-                                                tint = MiuixTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp),
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                            ) {
+                                                Text(
+                                                    text = strings.accountCurrentActive,
+                                                    style = MiuixTheme.textStyles.footnote2.copy(fontWeight = FontWeight.Medium),
+                                                    color = MiuixTheme.colorScheme.primary,
+                                                )
+                                            }
                                         } else {
                                             Button(
                                                 onClick = {
@@ -255,11 +221,8 @@ fun AccountManageScreen(
                                                 modifier = Modifier.size(18.dp),
                                             )
                                         }
-                                    }
-                                    if (index < accounts.lastIndex) {
-                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                                    }
-                                }
+                                    },
+                                )
                             }
                         }
                     }
