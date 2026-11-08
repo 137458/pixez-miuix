@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 /**
  * 登录凭证失效提示：账号行仍在但 token 已被清理/吊销时，由 UI 根层统一弹出。
@@ -20,7 +20,9 @@ fun AuthExpiredDialog(
     onDismiss: () -> Unit,
 ) {
     val strings = LocalStrings.current
-    OverlayDialog(
+    // 该弹窗挂在 UI 根层，是各页面 Scaffold 的兄弟节点；Overlay* 依赖 Scaffold 内的
+    // MiuixPopupHost 渲染，此处没有宿主，必须改用窗口级弹窗。
+    WindowDialog(
         title = strings.dialogAuthExpiredTitle,
         summary = strings.dialogAuthExpiredSummary,
         show = show,
