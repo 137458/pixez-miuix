@@ -14,9 +14,8 @@ import io.github.aakira.napier.Napier
 /**
  * 图片下载与应用更新下载共用的通知构建逻辑。
  *
- * 两处保留各自的渠道与文案（更新下载是低频后台任务，仍用独立低优先级渠道，
- * 避免更新包下载触发与图片下载同级的提醒），但渠道创建、进度条与状态栏胶囊 extras
- * 只维护这一份，防止两边继续分叉。
+ * 两者共用同一个通知渠道（[IMAGE_DOWNLOAD_CHANNEL_ID]），渠道创建、进度条与状态栏胶囊 extras
+ * 只维护这一份，防止两边继续分叉；通知 ID 各自隔离。
  */
 internal fun ensureDownloadNotificationChannel(
     context: Context,
@@ -52,18 +51,26 @@ internal fun ensureDownloadNotificationChannel(
 fun migrateLegacyDownloadChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
-    runCatching { manager.deleteNotificationChannel(LEGACY_DOWNLOAD_CHANNEL_ID) }
-        .onFailure { Napier.d("删除旧版下载通知渠道失败", it, tag = "DownloadNotifier") }
+    listOf(LEGACY_DOWNLOAD_CHANNEL_ID, LEGACY_UPDATE_DOWNLOAD_CHANNEL_ID).forEach { channelId ->
+        runCatching { manager.deleteNotificationChannel(channelId) }
+            .onFailure { Napier.d("删除旧版下载通知渠道失败", it, tag = "DownloadNotifier") }
+    }
 }
 
 /** 已废弃的旧渠道 ID，仅用于启动时清理。 */
 private const val LEGACY_DOWNLOAD_CHANNEL_ID = "pixez_download_channel"
 
+/** 更新下载并入图片下载渠道后废弃的旧渠道 ID，仅用于启动时清理。 */
+private const val LEGACY_UPDATE_DOWNLOAD_CHANNEL_ID = "pixez_update_download_channel"
+
+/** 图片下载与更新下载共用的进行中通知渠道。 */
+internal const val IMAGE_DOWNLOAD_CHANNEL_ID = "pixez_download_live_channel"
+
 /**
  * 构建「下载中」进度通知。
  *
  * [includeLiveStatus] 为 true 时附带 Android 16 Live Status、MIUI/OPLUS 胶囊 extras；
- * 图片下载开启，应用更新下载当前不开启（保持更新通知低打扰，见 M8 待确认项）。
+ * 图片下载与更新下载均开启。
  */
 internal fun buildDownloadProgressNotification(
     context: Context,

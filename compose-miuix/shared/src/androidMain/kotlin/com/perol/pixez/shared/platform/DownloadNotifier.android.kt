@@ -14,7 +14,7 @@ import io.github.aakira.napier.Napier
  * Android 平台实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。
  */
 actual class DownloadNotifier {
-    private val channelId = "pixez_download_live_channel"
+    private val channelId = IMAGE_DOWNLOAD_CHANNEL_ID
 
     private fun getNotificationManager(context: Context): NotificationManager? {
         return context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager

@@ -54,8 +54,8 @@ class UpdateDownloadService : Service() {
     private fun ensureChannel() {
         ensureDownloadNotificationChannel(
             context = this,
-            channelId = CHANNEL_ID,
-            importance = NotificationManager.IMPORTANCE_LOW,
+            channelId = IMAGE_DOWNLOAD_CHANNEL_ID,
+            importance = NotificationManager.IMPORTANCE_DEFAULT,
             nameRes = R.string.download_channel_name,
             descriptionRes = R.string.download_channel_description,
         )
@@ -71,16 +71,20 @@ class UpdateDownloadService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }
+        val current = downloaded.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val totalInt = total.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val percent = if (totalInt > 0) (current.toLong() * 100L / totalInt).toInt() else 0
+        val localized = localizedForAppLanguage()
         return buildDownloadProgressNotification(
             context = this,
-            channelId = CHANNEL_ID,
-            title = getString(R.string.download_channel_name),
-            current = downloaded.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
-            total = total.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+            channelId = IMAGE_DOWNLOAD_CHANNEL_ID,
+            title = localized.getString(R.string.download_channel_name),
+            current = current,
+            total = totalInt,
             contentIntent = contentIntent,
-            // 更新下载保持低打扰：不参与 Live Status / HyperOS 胶囊（与图片下载通知分渠道的原因相同）。
-            includeLiveStatus = false,
+            includeLiveStatus = true,
             indeterminate = total <= 0L,
+            liveText = localized.getString(R.string.download_live_text, current, totalInt, percent),
         )
     }
 
@@ -104,8 +108,6 @@ class UpdateDownloadService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "pixez_update_download_channel"
-
         /**
          * 取旧值的负数形式：`stableNotificationId` 只会产出非负 Int，
          * 因此负数 ID 与图片下载通知（按 illustId 派生）永久隔离，不会互相覆盖。
