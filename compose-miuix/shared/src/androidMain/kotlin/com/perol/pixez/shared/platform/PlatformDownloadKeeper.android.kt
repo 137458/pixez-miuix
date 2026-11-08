@@ -6,14 +6,15 @@ import io.github.aakira.napier.Napier
 import java.util.concurrent.ConcurrentHashMap
 
 actual object PlatformDownloadKeeper {
-    private val activeTasks = ConcurrentHashMap.newKeySet<Long>()
+    /** 任务 ID 到嵌套持有次数的映射：同一作品并发下载（批量 + 单页）时会多次 acquire。 */
+    private val activeTasks = ConcurrentHashMap<Long, Int>()
     private var wakeLock: PowerManager.WakeLock? = null
     private val lock = Any()
 
     actual fun acquire(taskId: Long) {
         val context = BrowserLauncherContext.applicationContext ?: return
         synchronized(lock) {
-            activeTasks.add(taskId)
+            activeTasks.merge(taskId, 1, Int::plus)
             try {
                 if (wakeLock == null) {
                     val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -35,6 +36,12 @@ actual object PlatformDownloadKeeper {
 
     actual fun release(taskId: Long) {
         synchronized(lock) {
+            val remaining = (activeTasks[taskId] ?: 0) - 1
+            if (remaining > 0) {
+                // 仍有外层/同作品任务持有保活，不能提前释放唤醒锁
+                activeTasks[taskId] = remaining
+                return
+            }
             activeTasks.remove(taskId)
             if (activeTasks.isEmpty()) {
                 try {
