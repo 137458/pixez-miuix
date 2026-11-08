@@ -113,7 +113,7 @@ fun QualitySettingScreen(
                 // ── 1. 画质选择 ──
                 item {
                     SmallTitle(text = strings.settingQuality)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         OverlayDropdownPreference(
                             title = strings.feedPreviewQuality,
                             items = feedPreviewQualityOptions,

@@ -157,7 +157,7 @@ fun NetworkSettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.oauthNetworkMode)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         networkModes.forEach { (code, label, description) ->
                             RadioButtonPreference(
                                 title = label,
@@ -171,7 +171,7 @@ fun NetworkSettingScreen(
 
                 item {
                     SmallTitle(text = strings.apiNetworkMode)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         networkModes.forEach { (code, label, description) ->
                             RadioButtonPreference(
                                 title = label,
@@ -186,7 +186,7 @@ fun NetworkSettingScreen(
                 if (allowsImageSource) {
                     item {
                         SmallTitle(text = strings.pictureSource)
-                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                             RadioButtonPreference(
                                 title = DEFAULT_IMAGE_HOST,
                                 summary = DEFAULT_IMAGE_HOST,

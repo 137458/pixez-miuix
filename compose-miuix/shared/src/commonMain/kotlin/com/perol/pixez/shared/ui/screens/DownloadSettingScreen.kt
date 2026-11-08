@@ -144,7 +144,7 @@ fun DownloadSettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.dialogSavePath)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         ArrowPreference(
                             title = strings.dialogSavePath,
                             summary = effectiveStorePath,
@@ -218,7 +218,7 @@ fun DownloadSettingScreen(
 
                 item {
                     SmallTitle(text = strings.dialogSaveFormat)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         ArrowPreference(
                             title = strings.dialogSaveFormat,
                             summary = if (fileNameEval) strings.settingShareFormat else format,
@@ -239,7 +239,7 @@ fun DownloadSettingScreen(
 
                 item {
                     SmallTitle(text = strings.settingSectionBookmarkShare)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         SwitchPreference(
                             title = strings.defaultPrivateLike,
                             summary = if (defaultPrivateLike) strings.defaultPrivateLikeSummaryOn else strings.defaultPrivateLikeSummaryOff,

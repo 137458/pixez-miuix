@@ -93,7 +93,7 @@ fun LanguageSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 12.dp),
                     ) {
                         LANGUAGE_OPTIONS.forEachIndexed { index, option ->
                             RadioButtonPreference(
@@ -115,7 +115,7 @@ fun LanguageSettingScreen(
                         top.yukonga.miuix.kmp.basic.Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = 12.dp),
                         ) {
                             SponsorSection(sponsors = selectedLanguage.sponsors)
                         }

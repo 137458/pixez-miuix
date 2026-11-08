@@ -195,7 +195,7 @@ fun SettingsScreen(
             // ── 1. 账号管理 ──
             item {
                 SmallTitle(text = strings.settingSectionAccount)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     AccountSection(
                         account = currentAccount,
                         isLoggingOut = isLoggingOut,
@@ -253,7 +253,7 @@ fun SettingsScreen(
             // ── 2. 界面与个性化 ──
             item {
                 SmallTitle(text = strings.settingSectionTheme)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = strings.settingTheme,
                         summary = strings.settingThemeSummary,
@@ -290,7 +290,7 @@ fun SettingsScreen(
             // ── 3. 画质与保存 ──
             item {
                 SmallTitle(text = strings.settingSectionQualitySave)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = strings.settingQuality,
                         summary = strings.settingQualitySummary,
@@ -317,7 +317,7 @@ fun SettingsScreen(
             // ── 4. 浏览与交互 ──
             item {
                 SmallTitle(text = strings.settingSectionGeneral)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = strings.interactionSettingTitle,
                         summary = strings.interactionSettingSwipeChange,
@@ -351,7 +351,7 @@ fun SettingsScreen(
             // ── 5. 内容过滤与屏蔽 ──
             item {
                 SmallTitle(text = strings.settingSectionShieldPrivacy)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = strings.settingShield,
                         summary = strings.settingShieldSummary,
@@ -363,7 +363,7 @@ fun SettingsScreen(
             // ── 6. 系统与数据 ──
             item {
                 SmallTitle(text = strings.settingSectionStorage)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     if (isAndroidPlatform()) {
                         BasicComponent(
                             title = strings.platformSettingDefaultOpenLinks,
@@ -420,7 +420,7 @@ fun SettingsScreen(
             // ── 7. 关于与更新 ──
             item {
                 SmallTitle(text = strings.settingSectionAbout)
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     if (!boardList.isNullOrEmpty()) {
                         ArrowPreference(
                             title = strings.settingBoard,

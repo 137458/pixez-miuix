@@ -81,7 +81,7 @@ fun InteractionSettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.interactionSettingTitle)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         SwitchPreference(
                             title = strings.interactionSettingSwipeChange,
                             summary = if (swipeChangeArtwork) strings.interactionSettingSwipeChangeSummaryOn else strings.interactionSettingSwipeChangeSummaryOff,

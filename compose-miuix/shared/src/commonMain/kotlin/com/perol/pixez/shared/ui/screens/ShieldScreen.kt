@@ -179,7 +179,7 @@ fun ShieldScreen(
                 // ── 1. 分级与敏感内容过滤 ──
                 item {
                     SmallTitle(text = strings.settingPrivacy)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         top.yukonga.miuix.kmp.preference.SwitchPreference(
                             title = strings.interactionSettingHNotAllow,
                             summary = if (hIsNotAllow) strings.interactionSettingHNotAllowSummaryOn else strings.interactionSettingHNotAllowSummaryOff,
@@ -204,7 +204,7 @@ fun ShieldScreen(
                 // ── 2. AI 生成内容控制 ──
                 item {
                     SmallTitle(text = strings.filterAi)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         top.yukonga.miuix.kmp.preference.SwitchPreference(
                             title = strings.banAIIllust,
                             summary = strings.banAIIllustSummary,
@@ -248,7 +248,7 @@ fun ShieldScreen(
             // 标签分组：展示、添加、删除。
             item {
                 SmallTitle(text = strings.tags)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -284,7 +284,7 @@ fun ShieldScreen(
             // 画师分组：仅展示与删除。
             item {
                 SmallTitle(text = strings.author)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(
                         text = "${strings.banUserCount.replace("%d", banUsers.size.toString())}",
                         style = MiuixTheme.textStyles.body2,
@@ -306,7 +306,7 @@ fun ShieldScreen(
             // 作品分组：仅展示与删除。
             item {
                 SmallTitle(text = strings.includedWorks)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(
                         text = "${strings.banIllustCount.replace("%d", banIllusts.size.toString())}",
                         style = MiuixTheme.textStyles.body2,

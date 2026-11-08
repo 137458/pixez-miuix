@@ -120,7 +120,7 @@ fun BookTagScreen(
             ) {
             item {
                 SmallTitle(text = strings.tags)
-                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     if (isEmpty) {
                         Text(
                             text = strings.bookTagsEmpty,

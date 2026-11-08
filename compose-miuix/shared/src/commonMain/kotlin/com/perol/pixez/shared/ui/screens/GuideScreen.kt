@@ -185,7 +185,7 @@ private fun GuideLanguageStep(
                 .fillMaxHeight()
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
@@ -233,7 +233,7 @@ private fun GuideLanguageStep(
             item {
                 SmallTitle(text = strings.settingLanguage)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     LANGUAGE_OPTIONS.forEachIndexed { index, option ->
                         RadioButtonPreference(
@@ -281,7 +281,7 @@ private fun GuideNetworkStep(
                 .fillMaxHeight()
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
@@ -311,7 +311,7 @@ private fun GuideNetworkStep(
             item {
                 SmallTitle(text = strings.guideImageSource)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     RadioButtonPreference(
                         title = strings.guideImageMirror,
@@ -338,7 +338,7 @@ private fun GuideNetworkStep(
                 Spacer(modifier = Modifier.height(16.dp))
                 SmallTitle(text = strings.guideStepNetwork)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     RadioButtonPreference(
                         title = strings.guideNetworkDirect,
@@ -366,7 +366,7 @@ private fun GuideNetworkStep(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -423,7 +423,7 @@ private fun GuideWelcomeStep(
                 .fillMaxHeight()
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
@@ -454,7 +454,7 @@ private fun GuideWelcomeStep(
             item {
                 SmallTitle(text = strings.guidePixEzFeatures)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     BasicComponent(
                         title = strings.guideFeatureIllust,
@@ -478,7 +478,7 @@ private fun GuideWelcomeStep(
                 val current = currentAccount
                 if (current != null && current.hasCredentials) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                     ) {
                         Column(
                             modifier = Modifier
@@ -509,7 +509,7 @@ private fun GuideWelcomeStep(
                     }
                 } else if (!isCheckingAccount) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                     ) {
                         Column(
                             modifier = Modifier

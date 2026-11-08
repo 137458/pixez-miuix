@@ -157,7 +157,7 @@ fun ThemeSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 12.dp),
                     ) {
                         RadioButtonPreference(
                             title = strings.themeModeSystem,
@@ -182,7 +182,7 @@ fun ThemeSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 12.dp),
                     ) {
                         SwitchPreference(
                             title = strings.themeAmoled,
@@ -205,7 +205,7 @@ fun ThemeSettingScreen(
                         top.yukonga.miuix.kmp.basic.Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = 12.dp),
                         ) {
                             BasicComponent(
                                 title = strings.dialogPickSeedColor,
@@ -234,7 +234,7 @@ fun ThemeSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 12.dp),
                     ) {
                         OverlayDropdownPreference(
                             title = strings.dialogPaletteStyle,

@@ -88,8 +88,6 @@ internal fun SearchFilterBottomSheet(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    start = 16.dp,
-                    end = 16.dp,
                     top = 8.dp,
                     // 悬浮底栏绘制在抽屉之上，底部需额外让出底栏高度，避免操作按钮被遮挡。
                     bottom = 24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
@@ -102,12 +100,15 @@ internal fun SearchFilterBottomSheet(
                 tabs = targetOptions.map { it.first },
                 selectedIndex = selectedTargetIndex,
                 onTabSelected = { draftState = draftState.copy(searchTarget = targetOptions[it].second) },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SmallTitle(text = strings.interactionSettingHNotAllow)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
                 ) {
                     SwitchPreference(
                         title = strings.interactionSettingHNotAllow,
@@ -121,7 +122,9 @@ internal fun SearchFilterBottomSheet(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SmallTitle(text = strings.filterAi)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
                 ) {
                     SwitchPreference(
                         title = strings.searchAiIncludeWorks,
@@ -135,6 +138,7 @@ internal fun SearchFilterBottomSheet(
                 options = bookmarkOptions,
                 selectedThreshold = draftState.bookmarkThreshold,
                 onSelect = { draftState = draftState.copy(bookmarkThreshold = it) },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
 
             SearchFilterTabGroup(
@@ -142,11 +146,13 @@ internal fun SearchFilterBottomSheet(
                 tabs = ugoiraOptions.map { it.first },
                 selectedIndex = selectedUgoiraIndex,
                 onTabSelected = { draftState = draftState.copy(ugoiraFilter = ugoiraOptions[it].second) },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
 
             SearchFilterRatioTabs(
                 ratioFilter = draftState.ratioFilter,
                 onRatioSelected = { draftState = draftState.copy(ratioFilter = it) },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
 
             SearchFilterDateRange(
@@ -154,6 +160,7 @@ internal fun SearchFilterBottomSheet(
                 endDate = draftState.endDate,
                 onStartDateChange = { draftState = draftState.copy(startDate = it) },
                 onEndDateChange = { draftState = draftState.copy(endDate = it) },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
 
             SearchFilterActionButtons(
@@ -167,6 +174,7 @@ internal fun SearchFilterBottomSheet(
                     )
                     onDismissRequest()
                 },
+                contentModifier = Modifier.padding(horizontal = 12.dp),
             )
         }
     }
@@ -181,6 +189,7 @@ internal fun SearchFilterTabGroup(
     tabs: List<String>,
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit,
+    contentModifier: Modifier = Modifier,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SmallTitle(text = title)
@@ -188,6 +197,7 @@ internal fun SearchFilterTabGroup(
             tabs = tabs,
             selectedTabIndex = selectedIndex,
             onTabSelected = onTabSelected,
+            modifier = contentModifier,
         )
     }
 }
@@ -200,12 +210,13 @@ internal fun SearchFilterBookmarkChips(
     options: List<Pair<String, Int>>,
     selectedThreshold: Int,
     onSelect: (Int) -> Unit,
+    contentModifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SmallTitle(text = strings.userBookmarkTab)
         FlowRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(contentModifier),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -229,6 +240,7 @@ internal fun SearchFilterBookmarkChips(
 internal fun SearchFilterRatioTabs(
     ratioFilter: Int,
     onRatioSelected: (Int) -> Unit,
+    contentModifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
     val ratioOptions: List<Pair<String, Int>> = listOf(
@@ -244,6 +256,7 @@ internal fun SearchFilterRatioTabs(
         tabs = ratioOptions.map { it.first },
         selectedIndex = selectedRatioIndex,
         onTabSelected = { onRatioSelected(ratioOptions[it].second) },
+        contentModifier = contentModifier,
     )
 }
 
@@ -256,12 +269,13 @@ internal fun SearchFilterDateRange(
     endDate: String,
     onStartDateChange: (String) -> Unit,
     onEndDateChange: (String) -> Unit,
+    contentModifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SmallTitle(text = strings.publishDate)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(contentModifier),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -293,11 +307,13 @@ internal fun SearchFilterDateRange(
 internal fun SearchFilterActionButtons(
     onReset: () -> Unit,
     onConfirm: () -> Unit,
+    contentModifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .then(contentModifier)
             .padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

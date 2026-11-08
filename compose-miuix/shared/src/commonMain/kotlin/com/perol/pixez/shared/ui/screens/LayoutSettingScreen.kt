@@ -124,7 +124,7 @@ fun LayoutSettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.floatingBottomBar)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         SwitchPreference(
                             title = strings.floatingBottomBar,
                             summary = if (useFloatingBottomBar) strings.floatingBottomBarSummaryOn else strings.floatingBottomBarSummaryOff,
@@ -140,7 +140,7 @@ fun LayoutSettingScreen(
                 if (isAndroidPlatform()) {
                     item {
                         SmallTitle(text = strings.dialogDisplayMode)
-                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                             OverlayDropdownPreference(
                                 title = strings.dialogDisplayMode,
                                 items = displayModeLabels,
@@ -156,7 +156,7 @@ fun LayoutSettingScreen(
 
                 item {
                     SmallTitle(text = strings.crossCountPortrait)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (crossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,
@@ -191,7 +191,7 @@ fun LayoutSettingScreen(
 
                 item {
                     SmallTitle(text = strings.crossCountLandscape)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         SwitchPreference(
                             title = strings.crossAdaptAuto,
                             summary = if (hCrossAdapt) strings.crossAdaptAutoSummaryOn else strings.crossAdaptAutoSummaryOff,

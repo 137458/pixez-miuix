@@ -116,7 +116,7 @@ fun UserShowAISettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.aiDisplayOptions)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         RadioButtonPreference(
                             title = strings.aiDisplayShow,
                             summary = strings.aiDisplayShowSummary,

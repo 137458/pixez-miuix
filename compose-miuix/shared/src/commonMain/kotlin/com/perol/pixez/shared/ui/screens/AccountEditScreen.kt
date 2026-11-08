@@ -149,7 +149,7 @@ fun AccountEditScreen(
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
                 item {
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
                         AccountInfoSection(
                             account = account,
                             modifier = Modifier.padding(16.dp),
@@ -158,11 +158,8 @@ fun AccountEditScreen(
                 }
 
                 item {
-                    SmallTitle(
-                        text = strings.accountEditSectionInfo,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                    )
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    SmallTitle(text = strings.accountEditSectionInfo)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -262,11 +259,8 @@ fun AccountEditScreen(
                 // 仅已邮箱认证账号展示 Refresh Token 复制入口。
                 if (account?.isMailAuthorized == 1) {
                     item {
-                        SmallTitle(
-                            text = strings.accountEditSectionSecurity,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                        )
-                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        SmallTitle(text = strings.accountEditSectionSecurity)
+                        top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                             BasicComponent(
                                 title = strings.accountEditCopyRefreshToken,
                                 summary = strings.accountEditCopyRefreshTokenSummary,
@@ -287,11 +281,8 @@ fun AccountEditScreen(
                 }
 
                 item {
-                    SmallTitle(
-                        text = strings.accountEditSectionDanger,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                    )
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    SmallTitle(text = strings.accountEditSectionDanger)
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         BasicComponent(
                             title = strings.accountEditLogoutTitle,
                             summary = strings.accountEditLogoutSummary,

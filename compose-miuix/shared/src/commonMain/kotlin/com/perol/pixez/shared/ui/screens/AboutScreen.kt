@@ -158,7 +158,7 @@ fun AboutScreen(
 
                 item {
                     SmallTitle(text = strings.aboutDevelopers, modifier = Modifier.fillMaxWidth())
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         DeveloperRow(
                             name = "Perol_Notsfsssf",
                             message = strings.roleFounderMaintainer,
@@ -176,7 +176,7 @@ fun AboutScreen(
 
                 item {
                     SmallTitle(text = strings.aboutContributors, modifier = Modifier.fillMaxWidth())
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         ContributorsRow(
                             contributors = CONTRIBUTORS,
                             onUrlClick = { url ->
@@ -188,7 +188,7 @@ fun AboutScreen(
 
                 item {
                     SmallTitle(text = strings.aboutProject, modifier = Modifier.fillMaxWidth())
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         BasicComponent(
                             title = strings.aboutRepo,
                             summary = "github.com/137458/pixez-miuix",

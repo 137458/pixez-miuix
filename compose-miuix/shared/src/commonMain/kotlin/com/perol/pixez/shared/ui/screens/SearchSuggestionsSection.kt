@@ -83,7 +83,7 @@ internal fun SearchSuggestions(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
                     if (queryTarget !is SearchQueryTarget.UserId) {
                         Text(
@@ -112,10 +112,7 @@ internal fun SearchSuggestions(
         }
 
         item {
-            SmallTitle(
-                text = strings.searchHotTags,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-            )
+            SmallTitle(text = strings.searchHotTags)
         }
 
         when {
@@ -139,7 +136,7 @@ internal fun SearchSuggestions(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 12.dp),
                 ) {
                     trendTags.forEach { tag ->
                         Text(
@@ -157,17 +154,14 @@ internal fun SearchSuggestions(
 
         if (searchHistory.isNotEmpty()) {
             item {
-                SmallTitle(
-                    text = strings.searchHistory,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                )
+                SmallTitle(text = strings.searchHistory)
             }
 
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 12.dp),
                 ) {
                     searchHistory.forEach { history ->
                         Row(

@@ -96,7 +96,7 @@ fun WidgetRecommendSettingScreen(
                 // ── 1. 内容推荐类型 ──
                 item {
                     SmallTitle(text = strings.settingWidgetFeedSection)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         widgetFeedOptions.forEach { option ->
                             val isSelected = when (option.type) {
                                 "day" -> selectedType == "day" || selectedType == "rank"
@@ -117,7 +117,7 @@ fun WidgetRecommendSettingScreen(
                 // ── 2. 小组件图片代理源 ──
                 item {
                     SmallTitle(text = strings.settingWidgetPictureSourceSection)
-                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         widgetPictureSourceOptions.forEach { option ->
                             RadioButtonPreference(
                                 title = option.label,

@@ -142,8 +142,6 @@ fun LoginScreen(
                     .padding(
                         top = paddingValues.calculateTopPadding(),
                         bottom = paddingValues.calculateBottomPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -203,7 +201,7 @@ fun LoginScreen(
                 // 2. 快捷 OAuth 授权卡片（推荐）
                 SmallTitle(text = strings.loginQuick)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -269,7 +267,7 @@ fun LoginScreen(
                 // 3. Token / 凭证手动登录卡片
                 SmallTitle(text = strings.loginToken)
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -369,7 +367,7 @@ fun LoginScreen(
                 // 4. 网络诊断与排障卡片
                 if (onNetworkSettingClick != null) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         BasicComponent(
                             title = strings.loginTroubleTip,
                             summary = strings.loginTroubleDesc,
@@ -390,7 +388,7 @@ fun LoginScreen(
                 if (errorMessage.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                     ) {
                         Text(
                             text = errorMessage,

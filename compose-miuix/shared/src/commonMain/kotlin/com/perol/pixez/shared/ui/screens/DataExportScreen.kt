@@ -163,7 +163,7 @@ fun DataExportScreen(
                 item {
 
                     SmallTitle(text = strings.settingDataExport)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         DataType.entries.forEach { type ->
                             DataExportRow(
                                 type = type,

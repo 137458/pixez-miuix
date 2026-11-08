@@ -138,7 +138,7 @@ fun CopyTextSettingScreen(
             ) {
                 item {
                     top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionTemplate)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         TextField(
                             value = textFieldValue,
                             onValueChange = { textFieldValue = it },
@@ -152,7 +152,7 @@ fun CopyTextSettingScreen(
                 }
                 item {
                     top.yukonga.miuix.kmp.basic.SmallTitle(text = strings.copyTextFormatSectionChips)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         FlowRow(
                             modifier = Modifier
                                 .fillMaxWidth()

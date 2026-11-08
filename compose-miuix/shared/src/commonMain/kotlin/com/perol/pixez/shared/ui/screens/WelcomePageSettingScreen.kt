@@ -88,7 +88,7 @@ fun WelcomePageSettingScreen(
             ) {
                 item {
                     SmallTitle(text = strings.settingSectionStartup)
-                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         welcomePageOptions.forEach { option ->
                             RadioButtonPreference(
                                 title = option.label,

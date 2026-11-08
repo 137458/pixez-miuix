@@ -213,12 +213,9 @@ fun SpotlightDetailScreen(
                                 .fillMaxSize()
                                 .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(
-                                start = 16.dp,
                                 top = paddingValues.calculateTopPadding() + 12.dp,
-                                end = 16.dp,
                                 bottom = 48.dp,
                             ),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalItemSpacing = 12.dp,
                         ) {
                         // 顶部文章封面与标题
@@ -226,6 +223,7 @@ fun SpotlightDetailScreen(
                             ArticleHeaderCard(
                                 article = article,
                                 detail = detail,
+                                modifier = Modifier.padding(horizontal = 12.dp),
                             )
                         }
 
@@ -233,7 +231,7 @@ fun SpotlightDetailScreen(
                         if (detail.description.isNotBlank()) {
                             item(span = StaggeredGridItemSpan.FullLine) {
                                 Card(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -262,7 +260,6 @@ fun SpotlightDetailScreen(
                             item(span = StaggeredGridItemSpan.FullLine) {
                                 SmallTitle(
                                     text = "${strings.includedArticles} (${detail.subArticles.size})",
-                                    modifier = Modifier.padding(top = 4.dp),
                                 )
                             }
 
@@ -273,6 +270,7 @@ fun SpotlightDetailScreen(
                                 SpotlightArticleCard(
                                     article = subArticle,
                                     onClick = { onArticleClick(subArticle) },
+                                    modifier = Modifier.padding(horizontal = 12.dp),
                                 )
                             }
                         }
@@ -282,7 +280,6 @@ fun SpotlightDetailScreen(
                             item(span = StaggeredGridItemSpan.FullLine) {
                                 SmallTitle(
                                     text = "${strings.includedWorks} (${detail.works.size})",
-                                    modifier = Modifier.padding(top = 4.dp),
                                 )
                             }
 
@@ -299,6 +296,7 @@ fun SpotlightDetailScreen(
                                     onUserClick = {
                                         work.userId?.let(onUserClick)
                                     },
+                                    modifier = Modifier.padding(horizontal = 12.dp),
                                 )
                             }
                         }
@@ -308,6 +306,7 @@ fun SpotlightDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
                                     .clickable { openSafeUrl(article.articleUrl, strings, onError = showErrorToast) },
                             ) {
                                 Row(
