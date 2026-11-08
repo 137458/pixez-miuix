@@ -109,17 +109,24 @@ class StringFormatTest {
         assertEquals("x", "x".format("a", "b"))
     }
 
-    // 存储占用展示：与 SettingsScreen 原私有副本语义一致（KB 起步、GB 两位小数），
-    // 供 ui/screens 接线后删除私有副本。
+    // 存储占用展示：GB 两位小数（由调用方传 gbDecimals = 2），小于 1KB 按字节展示。
     @Test
-    fun testFormatCacheSizeBoundaries() {
-        assertEquals("0 B", formatCacheSize(0L))
-        assertEquals("0 B", formatCacheSize(-5L))
-        assertEquals("0.5 KB", formatCacheSize(512L))
-        assertEquals("1.0 KB", formatCacheSize(1024L))
-        assertEquals("1.5 KB", formatCacheSize(1536L))
-        assertEquals("1.0 MB", formatCacheSize(1024L * 1024L))
-        assertEquals("1.0 GB", formatCacheSize(1024L * 1024L * 1024L))
-        assertEquals("3.45 GB", formatCacheSize((1024L * 1024L * 1024L * 3.456).toLong()))
+    fun testFormatFileSizeWithTwoGbDecimals() {
+        assertEquals("0 B", formatFileSize(0L, gbDecimals = 2))
+        assertEquals("0 B", formatFileSize(-5L, gbDecimals = 2))
+        assertEquals("512 B", formatFileSize(512L, gbDecimals = 2))
+        assertEquals("1.0 KB", formatFileSize(1024L, gbDecimals = 2))
+        assertEquals("1.5 KB", formatFileSize(1536L, gbDecimals = 2))
+        assertEquals("1.0 MB", formatFileSize(1024L * 1024L, gbDecimals = 2))
+        assertEquals("1.0 GB", formatFileSize(1024L * 1024L * 1024L, gbDecimals = 2))
+        assertEquals("3.45 GB", formatFileSize((1024L * 1024L * 1024L * 3.456).toLong(), gbDecimals = 2))
+    }
+
+    // 更新包体积展示：GB 一位小数（默认）。
+    @Test
+    fun testFormatFileSizeDefaultsToOneGbDecimal() {
+        assertEquals("1.0 GB", formatFileSize(1024L * 1024L * 1024L))
+        assertEquals("3.4 GB", formatFileSize((1024L * 1024L * 1024L * 3.456).toLong()))
+        assertEquals("12.5 MB", formatFileSize(12L * 1024L * 1024L + 512L * 1024L))
     }
 }

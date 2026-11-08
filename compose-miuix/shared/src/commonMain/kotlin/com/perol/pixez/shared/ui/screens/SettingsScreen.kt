@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.i18n.formatCacheSize
+import com.perol.pixez.shared.ui.i18n.formatFileSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -381,7 +381,7 @@ fun SettingsScreen(
                         summary = if (isClearingCache) {
                             strings.clearingCache
                         } else {
-                            val sizeStr = formatCacheSize(cacheSizeBytes)
+                            val sizeStr = formatFileSize(cacheSizeBytes, gbDecimals = 2)
                             "${strings.settingClearCacheSummary} ($sizeStr)"
                         },
                         onClick = {

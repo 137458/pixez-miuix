@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.ui.i18n
 
+import kotlin.math.pow
+
 /**
  * 跨平台 String.format 扩展，支持 %s, %d, %f, %1$s, %1$d, %2$s 等标准占位符，
  * 兼容 JVM、Android、iOS、macOS 等全部 Kotlin Multiplatform 目标。
@@ -79,31 +81,25 @@ private fun String.parsePositionalPlaceholder(start: Int): PositionalPlaceholder
 private fun Char.isAsciiLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
 
 /**
- * 存储占用展示（B / KB / MB / GB）：KB、MB 保留一位小数，GB 保留两位小数。
- * 语义与 ui/screens 中长期并存的私有副本一致，供其接线后删除私有副本。
+ * 文件字节大小格式化（B / KB / MB / GB）。
+ *
+ * @param gbDecimals GB 单位保留的小数位：存储占用展示用两位，更新包体积等场景用一位。
  */
-fun formatCacheSize(bytes: Long): String {
-    if (bytes <= 0) return "0 B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "${((kb * 10).toInt() / 10.0)} KB"
-    val mb = kb / 1024.0
-    if (mb < 1024) return "${((mb * 10).toInt() / 10.0)} MB"
-    val gb = mb / 1024.0
-    return "${((gb * 100).toInt() / 100.0)} GB"
-}
-
-/**
- * 跨平台文件字节大小格式化工具（支持 B / KB / MB / GB）。
- */
-fun formatFileSize(bytes: Long): String {
+fun formatFileSize(bytes: Long, gbDecimals: Int = 1): String {
     if (bytes <= 0) return "0 B"
     val kb = bytes / 1024.0
     val mb = kb / 1024.0
     val gb = mb / 1024.0
     return when {
-        gb >= 1.0 -> "${(gb * 10).toInt() / 10.0} GB"
-        mb >= 1.0 -> "${(mb * 10).toInt() / 10.0} MB"
-        kb >= 1.0 -> "${(kb * 10).toInt() / 10.0} KB"
+        gb >= 1.0 -> "${truncateDecimals(gb, gbDecimals)} GB"
+        mb >= 1.0 -> "${truncateDecimals(mb, 1)} MB"
+        kb >= 1.0 -> "${truncateDecimals(kb, 1)} KB"
         else -> "$bytes B"
     }
+}
+
+/** 截断（不四舍五入）到指定小数位，保持既有展示口径。 */
+private fun truncateDecimals(value: Double, decimals: Int): Double {
+    val factor = 10.0.pow(decimals)
+    return (value * factor).toInt() / factor
 }
