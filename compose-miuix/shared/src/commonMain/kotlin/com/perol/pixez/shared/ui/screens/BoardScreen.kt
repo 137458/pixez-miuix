@@ -4,12 +4,10 @@ import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,25 +24,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
+import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.utils.HtmlUtils
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -207,155 +198,15 @@ private fun BoardItem(
             text = board.title,
             style = MiuixTheme.textStyles.title3,
         )
-        HtmlText(
+        HtmlCaptionText(
             html = board.content,
             onLinkClick = onLinkClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
             style = MiuixTheme.textStyles.body2,
+            // 公告需要完整展示，不与作品简介共用折叠逻辑
+            collapsible = false,
         )
     }
 }
-
-/**
- * 简单 HTML 文本组件：解析常见标签并渲染为 AnnotatedString，链接支持点击。
- *
- * 当前支持：
- * - `<a href="...">...</a>`：可点击链接，使用主题主色加下划线标识。
- * - `<br>`、`<p>`：换行与段落分隔。
- * - 常见 HTML 实体转义。
- *
- * 该实现为轻量级解析器，不依赖第三方 HTML 库，优先保证链接可点击。
- */
-@Composable
-private fun HtmlText(
-    html: String,
-    onLinkClick: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    style: TextStyle = MiuixTheme.textStyles.body1,
-) {
-    val linkColor = MiuixTheme.colorScheme.primary
-    val annotatedString = remember(html, linkColor) { parseHtmlToAnnotatedString(html, linkColor) }
-    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-
-    Text(
-        text = annotatedString,
-        style = style,
-        modifier = modifier.pointerInput(annotatedString) {
-            // 通过 pointerInput 手动检测点击位置，再查询该位置是否存在 URL 注解；
-            // 这样可以在不依赖 ClickableText 的情况下实现链接点击。
-            detectTapGestures { offset ->
-                layoutResult.value?.let { layout ->
-                    val position = layout.getOffsetForPosition(offset)
-                    annotatedString
-                        .getStringAnnotations(URL_ANNOTATION_TAG, position, position)
-                        .firstOrNull()
-                        ?.let { annotation -> onLinkClick(annotation.item) }
-                }
-            }
-        },
-        onTextLayout = { layoutResult.value = it },
-    )
-}
-
-/**
- * 将简单 HTML 解析为 AnnotatedString。
- *
- * 解析流程：
- * 1. 先转义常见 HTML 实体，避免标签识别被实体干扰。
- * 2. 顺序扫描字符，遇到 '<' 时提取完整标签。
- * 3. 开标签记录链接起始位置；闭标签写入 URL 注解与链接样式。
- * 4. 普通字符直接追加到输出文本，保证注解范围与实际文本对齐。
- */
-private fun parseHtmlToAnnotatedString(
-    html: String,
-    linkColor: Color,
-): AnnotatedString {
-    return buildAnnotatedString {
-        val normalized = HtmlUtils.decodeHtmlEntities(html)
-        var index = 0
-        var pendingLinkUrl: String? = null
-        var pendingLinkStart = -1
-
-        while (index < normalized.length) {
-            val char = normalized[index]
-            if (char != '<') {
-                append(char)
-                index++
-                continue
-            }
-
-            val tagEnd = normalized.indexOf('>', startIndex = index)
-            if (tagEnd == -1) {
-                // 标签未闭合，按普通文本输出 '<'，继续后续解析。
-                append(char)
-                index++
-                continue
-            }
-
-            val rawTag = normalized.substring(index + 1, tagEnd).trim()
-            index = tagEnd + 1
-
-            if (rawTag.startsWith('/')) {
-                // 处理闭标签：当前只处理 </a> 来结束链接注解，
-                // 同时兼容非标准的 </br> 写法。
-                val tagName = rawTag.substring(1).lowercase().substringBefore(' ')
-                when (tagName) {
-                    "a" -> {
-                        pendingLinkUrl?.let { url ->
-                            addStringAnnotation(URL_ANNOTATION_TAG, url, pendingLinkStart, length)
-                            addStyle(
-                                SpanStyle(
-                                    color = linkColor,
-                                    textDecoration = TextDecoration.Underline,
-                                ),
-                                pendingLinkStart,
-                                length,
-                            )
-                        }
-                        pendingLinkUrl = null
-                        pendingLinkStart = -1
-                    }
-
-                    "br" -> append('\n')
-                }
-            } else {
-                // 处理开标签与空标签，去掉标签名末尾的 '/' 以兼容 <br/>、<br /> 等自闭合写法。
-                val firstSpace = rawTag.indexOf(' ')
-                val tagName = rawTag.substring(0, if (firstSpace == -1) rawTag.length else firstSpace)
-                    .lowercase()
-                    .trimEnd('/')
-                val attributes = if (firstSpace == -1) "" else rawTag.substring(firstSpace + 1)
-
-                when (tagName) {
-                    "br" -> append('\n')
-                    "p" -> {
-                        // 段落之间插入空行，模拟 HTML 段落间距。
-                        if (length > 0) {
-                            append("\n\n")
-                        }
-                    }
-
-                    "a" -> {
-                        val url = extractHref(attributes)
-                        if (url != null) {
-                            pendingLinkUrl = url
-                            pendingLinkStart = length
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * 从标签属性字符串中提取 href 值，支持双引号与单引号包裹。
- */
-private fun extractHref(attributes: String): String? {
-    val regex = Regex("""href\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-    return regex.find(attributes)?.groupValues?.get(1)
-}
-
-private const val URL_ANNOTATION_TAG = "URL"
