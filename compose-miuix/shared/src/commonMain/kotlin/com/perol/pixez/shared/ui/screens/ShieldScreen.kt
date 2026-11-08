@@ -343,7 +343,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("添加屏蔽标签失败", e)
-                            toastMessage = ToastData("${strings.btnAdd}${strings.loadFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
+                            toastMessage = ToastData("${strings.btnAdd}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
                         }
                     } finally {
                         isAddingTag = false
@@ -382,7 +382,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("删除屏蔽项失败", e)
-                            toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
+                            toastMessage = ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)
                         }
                     } finally {
                         isDeleting = false

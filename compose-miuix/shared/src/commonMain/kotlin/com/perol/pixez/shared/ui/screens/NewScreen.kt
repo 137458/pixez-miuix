@@ -546,7 +546,7 @@ fun NewScreen(
                                     }
                                     .onFailure { error ->
                                         watchlistToast = ToastData(
-                                            "${strings.watchlistTitle}${strings.loadFailed}: " +
+                                            "${strings.watchlistTitle}${strings.failedSuffix}: " +
                                                 PixivApiErrorFormatter.format(error, strings),
                                             ToastType.Error,
                                         )

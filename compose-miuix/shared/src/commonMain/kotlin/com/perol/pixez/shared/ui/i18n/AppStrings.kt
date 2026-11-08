@@ -46,6 +46,12 @@ interface AppStrings {
     val loadFailedForbidden: String
     val loadFailedRateLimited: String
     val loadFailedNotFound: String
+
+    /**
+     * 动作失败后缀：与动作名直接拼接为完整失败文案，如「复制」+「失败」、「Copy」+「 failed」。
+     * 与 [loadFailed]（加载失败）语义不同，不得互相复用。
+     */
+    val failedSuffix: String
     val noData: String
     val actionClear: String
     val expand: String
@@ -1147,6 +1153,7 @@ object ZhCnStrings : AppStrings {
     override val openInBrowser = "在浏览器中打开"
     override val loading = "加载中…"
     override val loadFailed = "加载失败"
+    override val failedSuffix = "失败"
     override val loadFailedForbidden = "访问受限（403），请检查网络或稍后再试"
     override val loadFailedRateLimited = "请求过于频繁（429），请稍后再试"
     override val loadFailedNotFound = "内容不存在（404），可能已被删除"
@@ -1848,6 +1855,7 @@ object ZhTwStrings : AppStrings {
     override val openInBrowser = "在瀏覽器中開啟"
     override val loading = "載入中…"
     override val loadFailed = "載入失敗"
+    override val failedSuffix = "失敗"
     override val loadFailedForbidden = "存取受限（403），請檢查網路或稍後再試"
     override val loadFailedRateLimited = "請求過於頻繁（429），請稍後再試"
     override val loadFailedNotFound = "內容不存在（404），可能已被刪除"
@@ -2560,6 +2568,7 @@ object EnStrings : AppStrings {
     override val openInBrowser = "Open in Browser"
     override val loading = "Loading…"
     override val loadFailed = "Failed to load"
+    override val failedSuffix = " failed"
     override val loadFailedForbidden = "Access restricted (403), check your network or try again later"
     override val loadFailedRateLimited = "Too many requests (429), please try again later"
     override val loadFailedNotFound = "Content not found (404), it may have been removed"
@@ -3254,6 +3263,7 @@ object JaStrings : AppStrings {
     override val openInBrowser = "ブラウザで開く"
     override val loading = "読み込み中…"
     override val loadFailed = "読み込み失敗"
+    override val failedSuffix = "に失敗しました"
     override val loadFailedForbidden = "アクセスが制限されています（403）。ネットワークを確認するか、しばらくしてからお試しください"
     override val loadFailedRateLimited = "リクエストが集中しています（429）。しばらくしてからお試しください"
     override val loadFailedNotFound = "コンテンツが見つかりません（404）。削除された可能性があります"
@@ -3955,6 +3965,7 @@ object KoStrings : AppStrings {
     override val openInBrowser = "브라우저에서 열기"
     override val loading = "로딩 중…"
     override val loadFailed = "로드 실패"
+    override val failedSuffix = " 실패"
     override val loadFailedForbidden = "접근이 제한되었습니다(403). 네트워크를 확인하거나 잠시 후 다시 시도해 주세요"
     override val loadFailedRateLimited = "요청이 너무 많습니다(429). 잠시 후 다시 시도해 주세요"
     override val loadFailedNotFound = "콘텐츠를 찾을 수 없습니다(404). 삭제되었을 수 있습니다"
@@ -4656,6 +4667,7 @@ object RuStrings : AppStrings {
     override val openInBrowser = "Открыть в браузере"
     override val loading = "Загрузка…"
     override val loadFailed = "Ошибка загрузки"
+    override val failedSuffix = " не удалось"
     override val loadFailedForbidden = "Доступ ограничен (403), проверьте сеть или попробуйте позже"
     override val loadFailedRateLimited = "Слишком много запросов (429), попробуйте позже"
     override val loadFailedNotFound = "Контент не найден (404), возможно, он удалён"
@@ -5357,6 +5369,7 @@ object EsStrings : AppStrings {
     override val openInBrowser = "Abrir en navegador"
     override val loading = "Cargando…"
     override val loadFailed = "Error al cargar"
+    override val failedSuffix = " falló"
     override val loadFailedForbidden = "Acceso restringido (403), comprueba la red o inténtalo más tarde"
     override val loadFailedRateLimited = "Demasiadas solicitudes (429), inténtalo más tarde"
     override val loadFailedNotFound = "Contenido no encontrado (404), puede haber sido eliminado"
@@ -6058,6 +6071,7 @@ object TrStrings : AppStrings {
     override val openInBrowser = "Tarayıcıda Aç"
     override val loading = "Yükleniyor…"
     override val loadFailed = "Yükleme Başarısız"
+    override val failedSuffix = " başarısız oldu"
     override val loadFailedForbidden = "Erişim kısıtlandı (403), ağı kontrol edin veya daha sonra tekrar deneyin"
     override val loadFailedRateLimited = "Çok fazla istek gönderildi (429), lütfen daha sonra tekrar deneyin"
     override val loadFailedNotFound = "İçerik bulunamadı (404), kaldırılmış olabilir"
@@ -6759,6 +6773,7 @@ object IdStrings : AppStrings {
     override val openInBrowser = "Buka di Peramban"
     override val loading = "Memuat…"
     override val loadFailed = "Gagal memuat"
+    override val failedSuffix = " gagal"
     override val loadFailedForbidden = "Akses dibatasi (403), periksa jaringan atau coba lagi nanti"
     override val loadFailedRateLimited = "Terlalu banyak permintaan (429), silakan coba lagi nanti"
     override val loadFailedNotFound = "Konten tidak ditemukan (404), mungkin telah dihapus"
@@ -7460,6 +7475,7 @@ object FilStrings : AppStrings {
     override val openInBrowser = "Buksan sa Browser"
     override val loading = "Naglo-load…"
     override val loadFailed = "Nabigong i-load"
+    override val failedSuffix = " nabigo"
     override val loadFailedForbidden = "Pinaghihigpitan ang access (403), tingnan ang network o subukan muli mamaya"
     override val loadFailedRateLimited = "Masyadong maraming kahilingan (429), subukan muli mamaya"
     override val loadFailedNotFound = "Hindi natagpuan ang nilalaman (404), maaaring tinanggal na"
@@ -8161,6 +8177,7 @@ object DeStrings : AppStrings {
     override val openInBrowser = "Im Browser öffnen"
     override val loading = "Laden…"
     override val loadFailed = "Laden fehlgeschlagen"
+    override val failedSuffix = " fehlgeschlagen"
     override val loadFailedForbidden = "Zugriff eingeschränkt (403), Netzwerk prüfen oder später erneut versuchen"
     override val loadFailedRateLimited = "Zu viele Anfragen (429), bitte später erneut versuchen"
     override val loadFailedNotFound = "Inhalt nicht gefunden (404), möglicherweise entfernt"
@@ -8872,6 +8889,7 @@ object ViStrings : AppStrings {
     override val openInBrowser = "Mở trong trình duyệt"
     override val loading = "Đang tải…"
     override val loadFailed = "Tải thất bại"
+    override val failedSuffix = " thất bại"
     override val loadFailedForbidden = "Truy cập bị giới hạn (403), kiểm tra mạng hoặc thử lại sau"
     override val loadFailedRateLimited = "Quá nhiều yêu cầu (429), vui lòng thử lại sau"
     override val loadFailedNotFound = "Không tìm thấy nội dung (404), có thể đã bị xóa"

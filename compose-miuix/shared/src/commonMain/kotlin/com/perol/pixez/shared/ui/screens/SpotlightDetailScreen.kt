@@ -125,7 +125,7 @@ fun SpotlightDetailScreen(
                             clipboard.copy(article.articleUrl)
                             toastMessage = ToastData(strings.copiedToClipboard, ToastType.Success)
                         } catch (_: Throwable) {
-                            toastMessage = ToastData("${strings.copy}${strings.loadFailed}", ToastType.Error)
+                            toastMessage = ToastData("${strings.copy}${strings.failedSuffix}", ToastType.Error)
                         }
                     },
                 ),
@@ -135,7 +135,7 @@ fun SpotlightDetailScreen(
                         try {
                             share.share(article.articleUrl, article.pureTitle.ifBlank { article.title })
                         } catch (_: Throwable) {
-                            toastMessage = ToastData("${strings.share}${strings.loadFailed}", ToastType.Error)
+                            toastMessage = ToastData("${strings.share}${strings.failedSuffix}", ToastType.Error)
                         }
                     },
                 ),

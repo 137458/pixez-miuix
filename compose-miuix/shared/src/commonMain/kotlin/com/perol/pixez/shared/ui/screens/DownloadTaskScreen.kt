@@ -255,7 +255,7 @@ fun DownloadTaskScreen(
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                                            toastMessage = ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id

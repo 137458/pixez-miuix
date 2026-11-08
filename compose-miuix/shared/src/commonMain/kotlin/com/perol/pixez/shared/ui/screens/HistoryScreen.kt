@@ -287,7 +287,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastMessage = ToastData("${strings.actionClear}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                    toastMessage = ToastData("${strings.actionClear}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
@@ -321,7 +321,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastMessage = ToastData("${strings.btnDelete}${strings.loadFailed}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
+                                    toastMessage = ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error)
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。

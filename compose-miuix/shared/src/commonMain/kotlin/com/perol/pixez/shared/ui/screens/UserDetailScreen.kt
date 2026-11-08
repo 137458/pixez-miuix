@@ -287,7 +287,7 @@ private fun buildUserMoreDropdownEntry(
                 onClick = {
                     runClipboardShare(
                         success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                        failurePrefix = "${strings.copy}${strings.loadFailed}",
+                        failurePrefix = "${strings.copy}${strings.failedSuffix}",
                         onToast = onToast,
                     ) { clipboard.copy(buildUserCopyInfo(detail)) }
                 }
@@ -299,7 +299,7 @@ private fun buildUserMoreDropdownEntry(
                 onClick = {
                     runClipboardShare(
                         success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                        failurePrefix = "${strings.copy}${strings.loadFailed}",
+                        failurePrefix = "${strings.copy}${strings.failedSuffix}",
                         onToast = onToast,
                     ) { clipboard.copy(AppConstants.Urls.pixivUserUrl(detail.user.id)) }
                 }
@@ -311,7 +311,7 @@ private fun buildUserMoreDropdownEntry(
                 onClick = {
                     runClipboardShare(
                         success = ToastData(strings.share, ToastType.Success),
-                        failurePrefix = "${strings.share}${strings.loadFailed}",
+                        failurePrefix = "${strings.share}${strings.failedSuffix}",
                         onToast = onToast,
                     ) { share.share(AppConstants.Urls.pixivUserUrl(detail.user.id), detail.user.name) }
                 }

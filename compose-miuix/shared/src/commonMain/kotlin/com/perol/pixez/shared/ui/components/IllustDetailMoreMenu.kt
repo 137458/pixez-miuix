@@ -57,7 +57,7 @@ internal fun buildIllustDetailMoreMenuEntries(
                         val text = buildIllustCopyInfo(illust)
                         runClipboardShare(
                             success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                            failurePrefix = "${strings.copy}${strings.failedSuffix}",
                             onToast = onToast,
                         ) { clipboard.copy(text) }
                     },
@@ -92,7 +92,7 @@ internal fun buildIllustDetailMoreMenuEntries(
                         val link = buildIllustShareLink(illust)
                         runClipboardShare(
                             success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                            failurePrefix = "${strings.copy}${strings.failedSuffix}",
                             onToast = onToast,
                         ) { clipboard.copy(link) }
                     },

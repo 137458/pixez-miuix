@@ -268,7 +268,7 @@ fun AccountEditScreen(
                                     account?.refreshToken?.let { token ->
                                         runClipboardShare(
                                             success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                                            failurePrefix = "${strings.copy}${strings.loadFailed}",
+                                            failurePrefix = "${strings.copy}${strings.failedSuffix}",
                                             onToast = { toastMessage = it },
                                         ) { clipboard.copy(token) }.onFailure { e ->
                                             Napier.e("复制 refresh token 失败", e)

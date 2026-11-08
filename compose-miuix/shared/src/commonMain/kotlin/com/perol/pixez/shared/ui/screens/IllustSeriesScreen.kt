@@ -152,7 +152,7 @@ fun IllustSeriesScreen(
                     .onFailure { error ->
                         watchlistAdded = currentAdded
                         watchlistToast = ToastData(
-                            "${strings.watchlistTitle}${strings.loadFailed}: " +
+                            "${strings.watchlistTitle}${strings.failedSuffix}: " +
                                 PixivApiErrorFormatter.format(error, strings),
                             ToastType.Error,
                         )

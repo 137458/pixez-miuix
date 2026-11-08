@@ -413,6 +413,7 @@ object FaStrings : AppStrings {
     override val openInBrowser = "باز کردن در مرورگر"
     override val loading = "در حال بارگذاری…"
     override val loadFailed = "بارگذاری ناموفق بود"
+    override val failedSuffix = " ناموفق بود"
     override val loadFailedForbidden = "Access restricted (403), check your network or try again later"
     override val loadFailedRateLimited = "Too many requests (429), please try again later"
     override val loadFailedNotFound = "Content not found (404), it may have been removed"

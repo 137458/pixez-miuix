@@ -678,7 +678,7 @@ private fun ViewerQuickActionsSection(
                 val link = "${buildIllustShareLink(illust)}$pageAnchor"
                 runClipboardShare(
                     success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
                     onToast = onToast,
                 ) { IllustClipboard().copy(link) }
             },

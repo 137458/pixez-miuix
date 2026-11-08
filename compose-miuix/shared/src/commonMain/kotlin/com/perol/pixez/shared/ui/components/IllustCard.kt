@@ -119,7 +119,7 @@ fun IllustCard(
                 showActionMenu = false
                 runClipboardShare(
                     success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
                     onToast = silentToastSink,
                 ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
             },
@@ -145,7 +145,7 @@ fun IllustCard(
                 showActionMenu = false
                 runClipboardShare(
                     success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.loadFailed}",
+                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
                     onToast = silentToastSink,
                 ) { IllustClipboard().copy(buildIllustShareLink(illust)) }
             },
