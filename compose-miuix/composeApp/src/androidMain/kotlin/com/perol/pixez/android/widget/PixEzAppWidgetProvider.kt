@@ -45,10 +45,10 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        // AppWidgetProvider 已把 ACTION_APPWIDGET_UPDATE 派发给 onUpdate，
+        // 此处只处理自有刷新动作，避免同一次广播触发两轮数据库读取与位图下载。
         super.onReceive(context, intent)
-        if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE ||
-            intent.action == ACTION_REFRESH_WIDGET
-        ) {
+        if (intent.action == ACTION_REFRESH_WIDGET) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val component = ComponentName(context, PixEzAppWidgetProvider::class.java)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(component)
