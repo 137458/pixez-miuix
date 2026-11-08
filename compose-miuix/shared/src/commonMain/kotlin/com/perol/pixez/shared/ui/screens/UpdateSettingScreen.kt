@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.UpdateDownloadState
 import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.platform.installPathFor
@@ -56,11 +55,12 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.updateAsset
 import com.perol.pixez.shared.ui.components.updateBrowserFallbackUrl
-import com.perol.pixez.shared.ui.components.updateDialogProgressDetail
 import com.perol.pixez.shared.ui.components.updateDialogNotesState
 import com.perol.pixez.shared.ui.components.UPDATE_PAGE_PREVIEW_LINES
 import com.perol.pixez.shared.ui.components.updatePrimaryCta
 import com.perol.pixez.shared.ui.components.UpdatePrimaryAction
+import com.perol.pixez.shared.ui.components.UpdateDownloadProgressSection
+import com.perol.pixez.shared.ui.components.runUpdatePrimaryAction
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -259,18 +259,13 @@ fun UpdateSettingScreen(
                             downloadState = downloadState,
                             hasAsset = updateAsset != null,
                             onPrimaryClick = { action ->
-                                when (action) {
-                                    UpdatePrimaryAction.Download -> updateAsset?.let(updateDownloader::start)
-                                    UpdatePrimaryAction.Install -> {
-                                        val path = downloadState.installPathFor(updateAsset)
-                                        val installed = path != null && AppInstaller().install(path)
-                                        if (!installed) {
-                                            // 包缺失/为空或系统安装器无法调起：清理旧包并允许重新下载。
-                                            updateDownloader.discardCompletedAfterInstallFailure(updateAsset)
-                                            toastSink(ToastData(strings.updateInstallFailed, ToastType.Error))
-                                        }
-                                    }
-                                    UpdatePrimaryAction.OpenBrowser -> {
+                                val error = runUpdatePrimaryAction(
+                                    action = action,
+                                    asset = updateAsset,
+                                    downloader = updateDownloader,
+                                    installPath = downloadState.installPathFor(updateAsset),
+                                    installFailedMessage = strings.updateInstallFailed,
+                                    openBrowser = {
                                         val url = if (!hasNew) {
                                             releaseInfo?.releaseUrl
                                         } else {
@@ -281,7 +276,10 @@ fun UpdateSettingScreen(
                                                 toastSink(ToastData(message, ToastType.Error))
                                             })
                                         }
-                                    }
+                                    },
+                                )
+                                if (error != null) {
+                                    toastSink(ToastData(error, ToastType.Error))
                                 }
                             },
                             onCancelClick = updateDownloader::cancel,
@@ -548,32 +546,10 @@ private fun ChangelogCardSection(
 
             if (downloadState is UpdateDownloadState.Downloading) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = strings.updateDownloading,
-                        style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                        color = MiuixTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = updateDialogProgressDetail(downloadState),
-                        style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                if (downloadState.total > 0L) {
-                    top.yukonga.miuix.kmp.basic.LinearProgressIndicator(
-                        progress = downloadState.progress,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    top.yukonga.miuix.kmp.basic.LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                UpdateDownloadProgressSection(
+                    state = downloadState,
+                    label = strings.updateDownloading,
+                )
             }
 
             if (downloadState is UpdateDownloadState.Failed) {

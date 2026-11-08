@@ -31,10 +31,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.UpdateDownloadState
 import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.ui.AppConstants
@@ -44,7 +42,6 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -77,7 +74,7 @@ fun UpdateDialog(
     LaunchedEffect(asset) { downloader.syncTarget(asset) }
 
     var notesExpanded by remember(show, releaseInfo.tagName) { mutableStateOf(false) }
-    var installError by remember(releaseInfo.tagName) { mutableStateOf(false) }
+    var installErrorText by remember(releaseInfo.tagName) { mutableStateOf<String?>(null) }
     val notesState = remember(releaseInfo.changelog, notesExpanded) {
         updateDialogNotesState(releaseInfo.changelog, notesExpanded)
     }
@@ -116,38 +113,16 @@ fun UpdateDialog(
                 )
                 .verticalScroll(scrollState),
         ) {
-            if (plan.showProgress) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = strings.updateDownloading,
-                        style = MiuixTheme.textStyles.body2.copy(
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                        color = MiuixTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = plan.progressDetail.orEmpty(),
-                        style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                if (plan.progressFraction != null) {
-                    LinearProgressIndicator(
-                        progress = plan.progressFraction,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
+            if (downloadState is UpdateDownloadState.Downloading) {
+                UpdateDownloadProgressSection(
+                    state = downloadState,
+                    label = strings.updateDownloading,
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            if (plan.errorText != null || installError) {
+            val errorText = installErrorText ?: plan.errorText
+            if (errorText != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -156,7 +131,7 @@ fun UpdateDialog(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = if (installError) strings.updateInstallFailed else plan.errorText.orEmpty(),
+                        text = errorText,
                         style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                         color = MiuixTheme.colorScheme.error,
                     )
@@ -216,22 +191,15 @@ fun UpdateDialog(
         ) {
             Button(
                 onClick = {
-                    when (plan.primaryAction) {
-                        UpdatePrimaryAction.Download -> {
-                            installError = false
-                            asset?.let(downloader::start)
-                        }
-                        UpdatePrimaryAction.Install -> {
-                            val path = plan.installPath
-                            val installed = path != null && AppInstaller().install(path)
-                            if (!installed) {
-                                // 安装包缺失/为空或系统安装器无法调起：给可见提示并允许重新下载。
-                                installError = true
-                                downloader.discardCompletedAfterInstallFailure(asset)
-                            }
-                        }
-                        UpdatePrimaryAction.OpenBrowser -> onUpdate(updateBrowserFallbackUrl(releaseInfo))
-                    }
+                    // 返回 null 时同时清掉上一次的安装失败提示。
+                    installErrorText = runUpdatePrimaryAction(
+                        action = plan.primaryAction,
+                        asset = asset,
+                        downloader = downloader,
+                        installPath = plan.installPath,
+                        installFailedMessage = strings.updateInstallFailed,
+                        openBrowser = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
+                    )
                 },
                 enabled = plan.primaryEnabled,
                 colors = ButtonDefaults.buttonColorsPrimary(),
