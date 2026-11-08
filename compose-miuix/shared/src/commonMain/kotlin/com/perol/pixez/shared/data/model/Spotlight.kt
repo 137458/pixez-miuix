@@ -35,6 +35,12 @@ data class SpotlightDetail(
     val subArticles: List<SpotlightArticle> = emptyList(),
     val rawUrl: String = "",
 ) {
+    /**
+     * 合集判定只看结构化字段：抓到了子文章才算合集。
+     *
+     * 旧实现还会在「无作品且标题包含中文『合集/合辑』」时判为合集，
+     * 该启发式在非中文语境与改标题后都会失效，且与解析结果无关，故移除。
+     */
     val isCollection: Boolean
-        get() = subArticles.isNotEmpty() || (works.isEmpty() && (title.contains("合集") || title.contains("合辑")))
+        get() = subArticles.isNotEmpty()
 }
