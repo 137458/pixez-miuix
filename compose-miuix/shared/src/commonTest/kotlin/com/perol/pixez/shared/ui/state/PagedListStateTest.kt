@@ -507,6 +507,41 @@ class PagedListStateTest {
         assertEquals("p1", state.nextUrl)
     }
 
+    @Test
+    fun cancellationResetsRefreshAndLoadMoreFlags() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source)
+        source.pages[null] = PagedListPage(listOf("a"), "p1")
+        source.pages["p1"] = PagedListPage(listOf("b"), null)
+        state.loadFirst()
+
+        // 翻页在途被取消：isLoadingMore 必须复位，否则复用状态对象时永久卡在加载态
+        source.hold(2)
+        val loadMoreJob = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        loadMoreJob.cancel()
+        source.release(2)
+        runCurrent()
+        loadMoreJob.join()
+
+        assertFalse(state.isLoadingMore)
+
+        // 差异化第二组：首屏刷新在途被取消时 isRefreshing 同样必须复位
+        source.hold(3)
+        val refreshJob = launch { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+
+        refreshJob.cancel()
+        source.release(3)
+        runCurrent()
+        refreshJob.join()
+
+        assertFalse(state.isRefreshing)
+    }
+
     // ---- 组合透传 ----
 
     @Test

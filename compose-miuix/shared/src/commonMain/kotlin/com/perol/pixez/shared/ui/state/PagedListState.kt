@@ -74,24 +74,29 @@ class PagedListState<T>(
         isRefreshing = true
         if (items == null) initialError = null
         var outcome = PagedLoadOutcome.Discarded
-        suspendRunCatchingNonCancel { fetch(null) }
-            .onSuccess { page ->
-                if (myGeneration == generation) {
-                    items = page.items
-                    nextUrl = page.nextUrl
-                    initialError = null
-                    loadMoreError = null
-                    outcome = PagedLoadOutcome.Written
+        try {
+            suspendRunCatchingNonCancel { fetch(null) }
+                .onSuccess { page ->
+                    if (myGeneration == generation) {
+                        items = page.items
+                        nextUrl = page.nextUrl
+                        initialError = null
+                        loadMoreError = null
+                        outcome = PagedLoadOutcome.Written
+                    }
                 }
-            }
-            .onFailure { error ->
-                if (myGeneration == generation) {
-                    // 已有数据时刷新失败不得清空/报错占位，旧列表原样保留
-                    if (items == null) initialError = error
-                    outcome = PagedLoadOutcome.Failed
+                .onFailure { error ->
+                    if (myGeneration == generation) {
+                        // 已有数据时刷新失败不得清空/报错占位，旧列表原样保留
+                        if (items == null) initialError = error
+                        outcome = PagedLoadOutcome.Failed
+                    }
                 }
-            }
-        if (myGeneration == generation) isRefreshing = false
+        } finally {
+            // 取消异常会从 suspendRunCatchingNonCancel 原样抛出，复位必须放在 finally，
+            // 否则状态对象被复用时永久停在刷新态。
+            if (myGeneration == generation) isRefreshing = false
+        }
         return outcome
     }
 
@@ -109,22 +114,26 @@ class PagedListState<T>(
         isLoadingMore = true
         loadMoreError = null
         var outcome = PagedLoadOutcome.Discarded
-        suspendRunCatchingNonCancel { fetch(currentNextUrl) }
-            .onSuccess { page ->
-                if (myGeneration == generation) {
-                    items = mergeItems(items.orEmpty(), page.items)
-                    nextUrl = page.nextUrl
-                    loadMoreError = null
-                    outcome = PagedLoadOutcome.Written
+        try {
+            suspendRunCatchingNonCancel { fetch(currentNextUrl) }
+                .onSuccess { page ->
+                    if (myGeneration == generation) {
+                        items = mergeItems(items.orEmpty(), page.items)
+                        nextUrl = page.nextUrl
+                        loadMoreError = null
+                        outcome = PagedLoadOutcome.Written
+                    }
                 }
-            }
-            .onFailure { error ->
-                if (myGeneration == generation) {
-                    loadMoreError = error
-                    outcome = PagedLoadOutcome.Failed
+                .onFailure { error ->
+                    if (myGeneration == generation) {
+                        loadMoreError = error
+                        outcome = PagedLoadOutcome.Failed
+                    }
                 }
-            }
-        if (myGeneration == generation) isLoadingMore = false
+        } finally {
+            // 同 loadFirst：取消异常需要复位在途标志。
+            if (myGeneration == generation) isLoadingMore = false
+        }
         return outcome
     }
 
