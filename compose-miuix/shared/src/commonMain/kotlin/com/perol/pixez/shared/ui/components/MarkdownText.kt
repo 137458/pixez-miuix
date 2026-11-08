@@ -45,6 +45,7 @@ fun MarkdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     baseFontSize: Int = 13,
+    onLinkClick: ((String) -> Unit)? = null,
 ) {
     val blocks = remember(markdown) { parseMarkdownBlocks(markdown) }
     val linkColor = MiuixTheme.colorScheme.primary
@@ -87,7 +88,7 @@ fun MarkdownText(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = buildAnnotatedContent(block.text, linkColor),
+                                text = buildAnnotatedContent(block.text, linkColor, onLinkClick),
                                 modifier = Modifier.weight(1f),
                                 style = when (block.level) {
                                     1 -> MiuixTheme.textStyles.title3.copy(
@@ -124,7 +125,7 @@ fun MarkdownText(
                                 .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.85f)),
                         )
                         Text(
-                            text = buildAnnotatedContent(block.text, linkColor),
+                            text = buildAnnotatedContent(block.text, linkColor, onLinkClick),
                             modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
@@ -152,7 +153,7 @@ fun MarkdownText(
                             color = MiuixTheme.colorScheme.primary,
                         )
                         Text(
-                            text = buildAnnotatedContent(block.text, linkColor),
+                            text = buildAnnotatedContent(block.text, linkColor, onLinkClick),
                             modifier = Modifier.weight(1f),
                             style = MiuixTheme.textStyles.body2.copy(
                                 fontSize = baseFontSize.sp,
@@ -165,7 +166,7 @@ fun MarkdownText(
 
                 is MarkdownBlock.Paragraph -> {
                     Text(
-                        text = buildAnnotatedContent(block.text, linkColor),
+                        text = buildAnnotatedContent(block.text, linkColor, onLinkClick),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 2.dp),
@@ -299,7 +300,11 @@ internal fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
     return blocks
 }
 
-internal fun buildAnnotatedContent(rawText: String, linkColor: Color): AnnotatedString {
+internal fun buildAnnotatedContent(
+    rawText: String,
+    linkColor: Color,
+    onLinkClick: ((String) -> Unit)? = null,
+): AnnotatedString {
     return buildAnnotatedString {
         var i = 0
         val len = rawText.length
@@ -343,7 +348,8 @@ internal fun buildAnnotatedContent(rawText: String, linkColor: Color): Annotated
                         val label = rawText.substring(i + 1, linkTextEnd)
                         val url = rawText.substring(linkTextEnd + 2, urlEnd)
                         // LinkAnnotation 让 Text 自己处理点击；只保留 PR 说明里约定的三种标记，
-                        // 图片、标题等富文本不在这里解析。
+                        // 图片、标题等富文本不在这里解析。说明来自远端，点击必须经调用方
+                        // 注入的安全打开逻辑（openSafeUrl）而不是交给系统默认处理。
                         withLink(
                             LinkAnnotation.Url(
                                 url = url,
@@ -354,6 +360,9 @@ internal fun buildAnnotatedContent(rawText: String, linkColor: Color): Annotated
                                         fontWeight = FontWeight.Medium,
                                     ),
                                 ),
+                                linkInteractionListener = onLinkClick?.let { click ->
+                                    { click(url) }
+                                },
                             )
                         ) {
                             append(label)

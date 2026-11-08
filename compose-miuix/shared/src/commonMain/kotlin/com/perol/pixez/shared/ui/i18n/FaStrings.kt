@@ -129,6 +129,7 @@ object FaStrings : AppStrings {
     override val updateInstalling = "Starting installer..."
     override val updateDownloadFailed = "Failed to download update, please retry or open in browser"
     override val updateInstallNow = "Install Now"
+    override val updateInstallFailed = "Installation failed. Please download again and retry."
     override val updateOpenInBrowser = "Download in Browser"
     override val updateCurrentChangelog = "Current Version Changelog (v%s)"
     override val updateCancelDownload = "Cancel Download"

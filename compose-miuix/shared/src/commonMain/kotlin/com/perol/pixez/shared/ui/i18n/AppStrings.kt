@@ -445,6 +445,7 @@ interface AppStrings {
     val updateInstalling: String
     val updateDownloadFailed: String
     val updateInstallNow: String
+    val updateInstallFailed: String
     val updateOpenInBrowser: String
     val updateCurrentChangelog: String
     val updateCancelDownload: String
@@ -898,6 +899,7 @@ object ZhCnStrings : AppStrings {
     override val updateInstalling = "正在启动安装程序…"
     override val updateDownloadFailed = "下载更新失败，请重试或在浏览器中下载"
     override val updateInstallNow = "立即安装"
+    override val updateInstallFailed = "安装失败，请重新下载后重试"
     override val updateOpenInBrowser = "浏览器下载"
     override val updateCurrentChangelog = "当前版本更新日志 (v%s)"
     override val updateCancelDownload = "取消下载"
@@ -1568,6 +1570,7 @@ object ZhTwStrings : AppStrings {
     override val updateInstalling = "正在啟動安裝程式…"
     override val updateDownloadFailed = "下載更新失敗，請重試或在瀏覽器中下載"
     override val updateInstallNow = "立即安裝"
+    override val updateInstallFailed = "安裝失敗，請重新下載後再試"
     override val updateOpenInBrowser = "瀏覽器下載"
     override val updateCurrentChangelog = "目前版本更新日誌 (v%s)"
     override val updateCancelDownload = "取消下載"
@@ -2273,6 +2276,7 @@ object EnStrings : AppStrings {
     override val updateInstalling = "Starting installer..."
     override val updateDownloadFailed = "Failed to download update, please retry or open in browser"
     override val updateInstallNow = "Install Now"
+    override val updateInstallFailed = "Installation failed. Please download again and retry."
     override val updateOpenInBrowser = "Download in Browser"
     override val updateCurrentChangelog = "Current Version Changelog (v%s)"
     override val updateCancelDownload = "Cancel Download"
@@ -3007,6 +3011,7 @@ object JaStrings : AppStrings {
     override val updateInstalling = "インストーラーを起動中…"
     override val updateDownloadFailed = "ダウンロードに失敗しました。再試行するかブラウザで開いてください"
     override val updateInstallNow = "今すぐインストール"
+    override val updateInstallFailed = "インストールに失敗しました。再ダウンロードしてもう一度お試しください。"
     override val updateOpenInBrowser = "ブラウザでダウンロード"
     override val updateCurrentChangelog = "現在のバージョンの更新履歴 (v%s)"
     override val updateCancelDownload = "ダウンロードをキャンセル"
@@ -3724,6 +3729,7 @@ object KoStrings : AppStrings {
     override val updateInstalling = "설치 프로그램 시작 중…"
     override val updateDownloadFailed = "다운로드에 실패했습니다. 다시 시도하거나 브라우저에서 다운로드하세요"
     override val updateInstallNow = "지금 설치"
+    override val updateInstallFailed = "설치에 실패했습니다. 다시 다운로드한 후 다시 시도해 주세요."
     override val updateOpenInBrowser = "브라우저에서 다운로드"
     override val updateCurrentChangelog = "현재 버전 변경 로그 (v%s)"
     override val updateCancelDownload = "다운로드 취소"
@@ -4423,6 +4429,7 @@ object RuStrings : AppStrings {
     override val updateInstalling = "Запуск установщика…"
     override val updateDownloadFailed = "Ошибка загрузки обновления, повторите попытку или откройте в браузере"
     override val updateInstallNow = "Установить сейчас"
+    override val updateInstallFailed = "Не удалось установить. Скачайте обновление заново и попробуйте снова."
     override val updateOpenInBrowser = "Скачать в браузере"
     override val updateCurrentChangelog = "История изменений текущей версии (v%s)"
     override val updateCancelDownload = "Отменить загрузку"
@@ -5124,6 +5131,7 @@ object EsStrings : AppStrings {
     override val updateInstalling = "Iniciando instalador..."
     override val updateDownloadFailed = "Error al descargar la actualización, reintente o descargue en el navegador"
     override val updateInstallNow = "Instalar ahora"
+    override val updateInstallFailed = "Error al instalar. Vuelva a descargar e inténtelo de nuevo."
     override val updateOpenInBrowser = "Descargar en navegador"
     override val updateCurrentChangelog = "Registro de cambios de la versión actual (v%s)"
     override val updateCancelDownload = "Cancelar descarga"
@@ -5823,6 +5831,7 @@ object TrStrings : AppStrings {
     override val updateInstalling = "Yükleyici başlatılıyor..."
     override val updateDownloadFailed = "Güncelleme indirilemedi, lütfen tekrar deneyin veya tarayıcıda açın"
     override val updateInstallNow = "Şimdi Yükle"
+    override val updateInstallFailed = "Yükleme başarısız. Lütfen yeniden indirip tekrar deneyin."
     override val updateOpenInBrowser = "Tarayıcıda İndir"
     override val updateCurrentChangelog = "Geçerli Sürüm Değişiklik Günlüğü (v%s)"
     override val updateCancelDownload = "İndirmeyi İptal Et"
@@ -6524,6 +6533,7 @@ object IdStrings : AppStrings {
     override val updateInstalling = "Memulai penginstal..."
     override val updateDownloadFailed = "Gagal mengunduh pembaruan, silakan coba lagi atau buka di peramban"
     override val updateInstallNow = "Pasang Sekarang"
+    override val updateInstallFailed = "Gagal memasang. Silakan unduh ulang lalu coba lagi."
     override val updateOpenInBrowser = "Unduh di Peramban"
     override val updateCurrentChangelog = "Log Perubahan Versi Saat Ini (v%s)"
     override val updateCancelDownload = "Batalkan Unduhan"
@@ -7224,6 +7234,7 @@ object FilStrings : AppStrings {
     override val updateInstalling = "Sinisimulan ang installer..."
     override val updateDownloadFailed = "Nabigong i-download ang update, pakisubukang muli o buksan sa browser"
     override val updateInstallNow = "I-install Ngayon"
+    override val updateInstallFailed = "Nabigo ang pag-install. Paki-download muli at subukang muli."
     override val updateOpenInBrowser = "I-download sa Browser"
     override val updateCurrentChangelog = "Changelog ng Kasalukuyang Bersyon (v%s)"
     override val updateCancelDownload = "Kanselahin ang Pag-download"
@@ -7924,6 +7935,7 @@ object DeStrings : AppStrings {
     override val updateInstalling = "Installationsprogramm wird gestartet..."
     override val updateDownloadFailed = "Download des Updates fehlgeschlagen, bitte erneut versuchen oder im Browser öffnen"
     override val updateInstallNow = "Jetzt installieren"
+    override val updateInstallFailed = "Installation fehlgeschlagen. Bitte erneut herunterladen und noch einmal versuchen."
     override val updateOpenInBrowser = "Im Browser herunterladen"
     override val updateCurrentChangelog = "Änderungsprotokoll der aktuellen Version (v%s)"
     override val updateCancelDownload = "Download abbrechen"
@@ -8580,6 +8592,7 @@ object ViStrings : AppStrings {
     override val updateInstalling = "Đang mở trình cài đặt..."
     override val updateDownloadFailed = "Tải bản cập nhật thất bại, vui lòng thử lại hoặc mở trong trình duyệt"
     override val updateInstallNow = "Cài đặt ngay"
+    override val updateInstallFailed = "Cài đặt thất bại. Vui lòng tải lại rồi thử lại."
     override val updateOpenInBrowser = "Tải trong trình duyệt"
     override val updateCurrentChangelog = "Nhật ký thay đổi của phiên bản hiện tại (v%s)"
     override val updateCancelDownload = "Hủy tải xuống"

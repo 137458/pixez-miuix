@@ -41,7 +41,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.UpdateDownloadState
+import com.perol.pixez.shared.platform.forAsset
+import com.perol.pixez.shared.platform.installPathFor
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateDownloader
@@ -54,7 +57,10 @@ import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.updateAsset
 import com.perol.pixez.shared.ui.components.updateBrowserFallbackUrl
 import com.perol.pixez.shared.ui.components.updateDialogProgressDetail
-import com.perol.pixez.shared.ui.components.updateDialogPrimaryText
+import com.perol.pixez.shared.ui.components.updateDialogNotesState
+import com.perol.pixez.shared.ui.components.UPDATE_PAGE_PREVIEW_LINES
+import com.perol.pixez.shared.ui.components.updatePrimaryCta
+import com.perol.pixez.shared.ui.components.UpdatePrimaryAction
 import com.perol.pixez.shared.ui.components.BlurredBar
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -112,10 +118,12 @@ fun UpdateSettingScreen(
 
     // 与更新弹窗共享同一个进程级下载器：页面不再自己起协程、也不再另存一套进度状态。
     val updateDownloader = LocalUpdateDownloader.current
-    val downloadState by updateDownloader.state.collectAsState()
-
+    val rawDownloadState by updateDownloader.state.collectAsState()
     val hasNew = releaseInfo?.isNew == true
     val updateAsset = remember(releaseInfo) { releaseInfo?.updateAsset() }
+    // 页面与弹窗同一口径：归属不一致的状态一律按 Idle 呈现，安装入口也只认当前版本。
+    val downloadState = remember(rawDownloadState, updateAsset) { rawDownloadState.forAsset(updateAsset) }
+    LaunchedEffect(updateAsset) { updateDownloader.syncTarget(updateAsset) }
 
     suspend fun doCheck(userInitiated: Boolean = false) {
         if (isChecking) return
@@ -250,22 +258,33 @@ fun UpdateSettingScreen(
                             strings = strings,
                             downloadState = downloadState,
                             hasAsset = updateAsset != null,
-                            onDownloadClick = {
-                                val asset = updateAsset
-                                if (asset != null) {
-                                    updateDownloader.start(asset)
-                                } else {
-                                    releaseInfo?.releaseUrl?.let { url ->
-                                        openSafeUrl(url, strings, onError = { message ->
-                                            toastMessage = ToastData(message, ToastType.Error)
-                                        })
+                            onPrimaryClick = { action ->
+                                when (action) {
+                                    UpdatePrimaryAction.Download -> updateAsset?.let(updateDownloader::start)
+                                    UpdatePrimaryAction.Install -> {
+                                        val path = downloadState.installPathFor(updateAsset)
+                                        val installed = path != null && AppInstaller().install(path)
+                                        if (!installed) {
+                                            // 包缺失/为空或系统安装器无法调起：清理旧包并允许重新下载。
+                                            updateDownloader.discardCompletedAfterInstallFailure(updateAsset)
+                                            toastMessage = ToastData(strings.updateInstallFailed, ToastType.Error)
+                                        }
+                                    }
+                                    UpdatePrimaryAction.OpenBrowser -> {
+                                        val url = if (!hasNew) {
+                                            releaseInfo?.releaseUrl
+                                        } else {
+                                            releaseInfo?.let { updateBrowserFallbackUrl(it) }
+                                        }
+                                        if (!url.isNullOrBlank()) {
+                                            openSafeUrl(url, strings, onError = { message ->
+                                                toastMessage = ToastData(message, ToastType.Error)
+                                            })
+                                        }
                                     }
                                 }
                             },
                             onCancelClick = updateDownloader::cancel,
-                            onInstallClick = { path ->
-                                com.perol.pixez.shared.platform.AppInstaller().install(path)
-                            },
                             onBrowserClick = {
                                 val url = releaseInfo?.let { updateBrowserFallbackUrl(it) }.orEmpty()
                                 if (url.isNotBlank()) {
@@ -273,6 +292,11 @@ fun UpdateSettingScreen(
                                         toastMessage = ToastData(message, ToastType.Error)
                                     })
                                 }
+                            },
+                            onLinkClick = { url ->
+                                openSafeUrl(url, strings, onError = { message ->
+                                    toastMessage = ToastData(message, ToastType.Error)
+                                })
                             },
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -480,10 +504,10 @@ private fun ChangelogCardSection(
     strings: com.perol.pixez.shared.ui.i18n.AppStrings,
     downloadState: UpdateDownloadState,
     hasAsset: Boolean,
-    onDownloadClick: () -> Unit,
+    onPrimaryClick: (UpdatePrimaryAction) -> Unit,
     onCancelClick: () -> Unit,
-    onInstallClick: (String) -> Unit,
     onBrowserClick: () -> Unit,
+    onLinkClick: (String) -> Unit,
 ) {
     val changelogTitle = if (hasNew) {
         strings.updateChangelogTitle.format(versionName)
@@ -508,11 +532,24 @@ private fun ChangelogCardSection(
                 !hasNew && AppInfo.CURRENT_CHANGELOG.isNotBlank() -> AppInfo.CURRENT_CHANGELOG
                 else -> strings.updateChangelogEmpty
             }
+            // 长说明先按行折叠：避免一次组合几百个 Markdown block 的 Text，展开后仍可完整阅读。
+            var notesExpanded by remember(displayChangelog) { mutableStateOf(false) }
+            val notesState = remember(displayChangelog, notesExpanded) {
+                updateDialogNotesState(displayChangelog, notesExpanded, UPDATE_PAGE_PREVIEW_LINES)
+            }
             com.perol.pixez.shared.ui.components.MarkdownText(
-                markdown = displayChangelog,
+                markdown = notesState.visibleMarkdown,
                 modifier = Modifier.fillMaxWidth(),
                 baseFontSize = 14,
+                onLinkClick = onLinkClick,
             )
+            if (notesState.hiddenLineCount > 0 || notesExpanded) {
+                TextButton(
+                    text = if (notesExpanded) strings.collapse else strings.expand,
+                    onClick = { notesExpanded = !notesExpanded },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             if (downloadState is UpdateDownloadState.Downloading) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -555,44 +592,29 @@ private fun ChangelogCardSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            when (downloadState) {
-                is UpdateDownloadState.Done -> {
-                    TextButton(
-                        text = strings.updateInstallNow,
-                        onClick = { onInstallClick(downloadState.filePath) },
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                is UpdateDownloadState.Downloading -> {
-                    TextButton(
-                        text = strings.updateCancelDownload,
-                        onClick = onCancelClick,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                else -> {
-                    // 与弹窗共用同一套状态推导，避免两处按钮口径漂移。
-                    val primaryText = if (hasNew) {
-                        updateDialogPrimaryText(hasAsset, downloadState, strings)
-                    } else {
-                        strings.updateOpenInBrowser
-                    }
-                    TextButton(
-                        text = primaryText,
-                        onClick = onDownloadClick,
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    // 浏览器入口保留为次要按钮：直链可用时优先走应用内下载。
-                    if (hasNew && hasAsset) {
-                        TextButton(
-                            text = strings.updateOpenInBrowser,
-                            onClick = onBrowserClick,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
+            // 与弹窗共用同一个「文案 + 动作」推导：hasNew=false 一定走浏览器，不在这里再猜。
+            val primaryCta = updatePrimaryCta(hasNew, hasAsset, downloadState, strings)
+            if (downloadState is UpdateDownloadState.Downloading) {
+                TextButton(
+                    text = strings.updateCancelDownload,
+                    onClick = onCancelClick,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                TextButton(
+                    text = primaryCta.text,
+                    onClick = { onPrimaryClick(primaryCta.action) },
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            // 浏览器入口保留为次要按钮：直链可用时优先走应用内下载。
+            if (hasNew && hasAsset && downloadState !is UpdateDownloadState.Downloading) {
+                TextButton(
+                    text = strings.updateOpenInBrowser,
+                    onClick = onBrowserClick,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }

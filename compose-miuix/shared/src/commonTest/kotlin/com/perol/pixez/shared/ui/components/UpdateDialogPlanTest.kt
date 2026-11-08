@@ -27,10 +27,13 @@ class UpdateDialogPlanTest {
         digest = "sha256:${"a".repeat(64)}",
     )
 
+    private val asset = release.updateAsset()!!
+
     private val downloading = UpdateDownloadState.Downloading(
         downloaded = 512L,
         total = 1024L,
         speedBytesPerSec = 2048L,
+        target = asset.identity,
     )
 
     @Test
@@ -50,7 +53,7 @@ class UpdateDialogPlanTest {
         )
 
         assertEquals("立即下载", plan.primaryText)
-        assertEquals(UpdateDialogPrimaryAction.Download, plan.primaryAction)
+        assertEquals(UpdatePrimaryAction.Download, plan.primaryAction)
         assertTrue(plan.primaryEnabled)
         assertEquals("稍后", plan.dismissText)
         assertTrue(plan.showIgnore)
@@ -101,14 +104,14 @@ class UpdateDialogPlanTest {
         val plan = buildUpdateDialogPlan(
             currentVersion = "1.9.0",
             release = release,
-            downloadState = UpdateDownloadState.Failed("HTTP 500"),
+            downloadState = UpdateDownloadState.Failed("HTTP 500", asset.identity),
             strings = strings,
             canIgnore = true,
             canCancelDownload = true,
         )
 
         assertEquals("重试", plan.primaryText)
-        assertEquals(UpdateDialogPrimaryAction.Retry, plan.primaryAction)
+        assertEquals(UpdatePrimaryAction.Download, plan.primaryAction)
         assertTrue(plan.primaryEnabled)
         assertTrue(plan.showBrowserFallback)
         assertTrue(plan.showIgnore)
@@ -116,19 +119,36 @@ class UpdateDialogPlanTest {
     }
 
     @Test
+    fun `失败但没有安装包时不会出现假重试`() {
+        val plan = buildUpdateDialogPlan(
+            currentVersion = "1.9.0",
+            release = release.copy(downloadUrl = null, fileName = null),
+            downloadState = UpdateDownloadState.Failed("HTTP 500", asset.identity),
+            strings = strings,
+            canIgnore = true,
+            canCancelDownload = true,
+        )
+
+        assertEquals(strings.updateDialogOpenRelease, plan.primaryText)
+        assertEquals(UpdatePrimaryAction.OpenBrowser, plan.primaryAction)
+        assertFalse(plan.showBrowserFallback)
+    }
+
+    @Test
     fun `下载完成时主按钮为立即安装`() {
         val plan = buildUpdateDialogPlan(
             currentVersion = "1.9.0",
             release = release,
-            downloadState = UpdateDownloadState.Done("/cache/app.apk"),
+            downloadState = UpdateDownloadState.Done("/cache/app.apk", asset.identity),
             strings = strings,
             canIgnore = true,
             canCancelDownload = true,
         )
 
         assertEquals(strings.updateInstallNow, plan.primaryText)
-        assertEquals(UpdateDialogPrimaryAction.Install, plan.primaryAction)
+        assertEquals(UpdatePrimaryAction.Install, plan.primaryAction)
         assertTrue(plan.primaryEnabled)
+        assertEquals("/cache/app.apk", plan.installPath)
     }
 
     @Test
@@ -143,10 +163,37 @@ class UpdateDialogPlanTest {
         )
 
         assertEquals("前往 Releases 页面", plan.primaryText)
-        assertEquals(UpdateDialogPrimaryAction.OpenRelease, plan.primaryAction)
+        assertEquals(UpdatePrimaryAction.OpenBrowser, plan.primaryAction)
         assertTrue(plan.primaryEnabled)
         // 主按钮已是 Releases 页，再从次要位置放一个同目标入口只会重复动作
         assertFalse(plan.showBrowserFallback)
+    }
+
+    @Test
+    fun `不是新版本时文案与动作都必须走浏览器`() {
+        val cta = updatePrimaryCta(
+            hasNew = false,
+            hasAsset = true,
+            downloadState = UpdateDownloadState.Idle,
+            strings = strings,
+        )
+
+        assertEquals(strings.updateOpenInBrowser, cta.text)
+        assertEquals(UpdatePrimaryAction.OpenBrowser, cta.action)
+        assertTrue(cta.enabled)
+        assertFalse(cta.action == UpdatePrimaryAction.Download)
+    }
+
+    @Test
+    fun `不是新版本即使已有失败包也不触发下载`() {
+        val cta = updatePrimaryCta(
+            hasNew = false,
+            hasAsset = true,
+            downloadState = UpdateDownloadState.Failed("HTTP 500", asset.identity),
+            strings = strings,
+        )
+
+        assertEquals(UpdatePrimaryAction.OpenBrowser, cta.action)
     }
 
     @Test
@@ -177,6 +224,53 @@ class UpdateDialogPlanTest {
     }
 
     @Test
+    fun `截断落在代码块内时延伸到闭合围栏`() {
+        // 第 10 行开启代码块，第 14 行闭合；预览上限 12 行时不能把围栏切成半截。
+        val lines = buildList {
+            repeat(9) { add("正文 $it") }
+            add("```")
+            add("code 1")
+            add("code 2")
+            add("code 3")
+            add("```")
+            repeat(5) { add("后续 $it") }
+        }
+        val markdown = lines.joinToString("\n")
+
+        val state = updateDialogNotesState(markdown, expanded = false, previewLines = 12)
+        val visible = state.visibleMarkdown.lines()
+        assertEquals(14, visible.size)
+        assertEquals("```", visible[9])
+        assertEquals("```", visible[13])
+        assertTrue(state.hiddenLineCount > 0)
+    }
+
+    @Test
+    fun `截断落在半截链接时回退到安全行`() {
+        val lines = buildList {
+            repeat(10) { add("正文 $it") }
+            add("详见 [更新")
+            add("说明](https://example.com/release")
+            add(")")
+            add("尾行")
+        }
+        val markdown = lines.joinToString("\n")
+
+        val state = updateDialogNotesState(markdown, expanded = false, previewLines = 12)
+        assertEquals(10, state.visibleMarkdown.lines().size)
+        assertFalse(state.visibleMarkdown.contains("详见 [更新"))
+    }
+
+    @Test
+    fun `更新页长正文用独立的预览行数上限`() {
+        val markdown = (1..30).joinToString("\n") { "第 $it 行" }
+        val collapsed = updateDialogNotesState(markdown, expanded = false, previewLines = UPDATE_PAGE_PREVIEW_LINES)
+        assertEquals(16, collapsed.visibleMarkdown.lines().size)
+        val expanded = updateDialogNotesState(markdown, expanded = true, previewLines = UPDATE_PAGE_PREVIEW_LINES)
+        assertEquals(30, expanded.visibleMarkdown.lines().size)
+    }
+
+    @Test
     fun `说明区高度与羽化尺寸符合统一口径`() {
         assertEquals(12, UPDATE_NOTES_PREVIEW_LINES)
         assertEquals(240, UPDATE_NOTES_MAX_HEIGHT_DP)
@@ -190,6 +284,7 @@ class UpdateDialogPlanTest {
         assertEquals("app.apk", asset?.fileName)
         assertEquals(1024L, asset?.size)
         assertEquals(release.digest, asset?.sha256Digest)
+        assertEquals(release.tagName, asset?.releaseTag)
 
         assertNull(release.copy(downloadUrl = null).updateAsset())
         assertNull(release.copy(fileName = null).updateAsset())

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -35,9 +36,11 @@ import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.AppInstaller
 import com.perol.pixez.shared.platform.UpdateDownloadState
+import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalUpdateDownloader
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
@@ -66,10 +69,14 @@ fun UpdateDialog(
 ) {
     val strings = LocalStrings.current
     val downloader = LocalUpdateDownloader.current
-    val downloadState by downloader.state.collectAsState()
+    val rawDownloadState by downloader.state.collectAsState()
     val asset = remember(releaseInfo) { releaseInfo.updateAsset() }
+    // 渲染前与当前 release 对齐：归属不一致的旧进度/旧完成包一律按 Idle 呈现。
+    val downloadState = remember(rawDownloadState, asset) { rawDownloadState.forAsset(asset) }
+    LaunchedEffect(asset) { downloader.syncTarget(asset) }
 
     var notesExpanded by remember(show, releaseInfo.tagName) { mutableStateOf(false) }
+    var installError by remember(releaseInfo.tagName) { mutableStateOf(false) }
     val notesState = remember(releaseInfo.changelog, notesExpanded) {
         updateDialogNotesState(releaseInfo.changelog, notesExpanded)
     }
@@ -139,7 +146,7 @@ fun UpdateDialog(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            if (plan.errorText != null) {
+            if (plan.errorText != null || installError) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -148,7 +155,7 @@ fun UpdateDialog(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = plan.errorText.orEmpty(),
+                        text = if (installError) strings.updateInstallFailed else plan.errorText.orEmpty(),
                         style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
                         color = MiuixTheme.colorScheme.error,
                     )
@@ -170,6 +177,10 @@ fun UpdateDialog(
                             markdown = notesState.visibleMarkdown,
                             modifier = Modifier.fillMaxWidth(),
                             baseFontSize = 13,
+                            onLinkClick = { url ->
+                                // 说明来自远端，统一走 openSafeUrl 的 scheme 白名单。
+                                openSafeUrl(url, strings, onError = {})
+                            },
                         )
                         if (notesState.hiddenLineCount > 0 || notesExpanded) {
                             TextButton(
@@ -211,14 +222,20 @@ fun UpdateDialog(
             Button(
                 onClick = {
                     when (plan.primaryAction) {
-                        UpdateDialogPrimaryAction.Download,
-                        UpdateDialogPrimaryAction.Retry -> asset?.let(downloader::start)
-                        UpdateDialogPrimaryAction.Install -> {
-                            (downloadState as? UpdateDownloadState.Done)
-                                ?.filePath
-                                ?.let { AppInstaller().install(it) }
+                        UpdatePrimaryAction.Download -> {
+                            installError = false
+                            asset?.let(downloader::start)
                         }
-                        UpdateDialogPrimaryAction.OpenRelease -> onUpdate(releaseInfo.releaseUrl)
+                        UpdatePrimaryAction.Install -> {
+                            val path = plan.installPath
+                            val installed = path != null && AppInstaller().install(path)
+                            if (!installed) {
+                                // 安装包缺失/为空或系统安装器无法调起：给可见提示并允许重新下载。
+                                installError = true
+                                downloader.discardCompletedAfterInstallFailure(asset)
+                            }
+                        }
+                        UpdatePrimaryAction.OpenBrowser -> onUpdate(updateBrowserFallbackUrl(releaseInfo))
                     }
                 },
                 enabled = plan.primaryEnabled,

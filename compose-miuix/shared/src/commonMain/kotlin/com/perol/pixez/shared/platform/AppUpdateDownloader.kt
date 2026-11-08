@@ -8,6 +8,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlin.concurrent.Volatile
+
+/**
+ * 一次可下载更新包的版本归属。
+ *
+ * 下载结果必须绑定到具体 release 与资产，否则切换版本后旧包会被当成新版本安装。
+ */
+data class UpdateAssetIdentity(
+    val releaseTag: String,
+    val fileName: String,
+    val sha256Digest: String?,
+)
 
 /**
  * 一次可下载的更新包信息。
@@ -18,13 +30,21 @@ data class UpdateAsset(
     val size: Long = 0L,
     /** GitHub release 原始 digest（`sha256:<hex>`），为空表示远端未提供摘要。 */
     val sha256Digest: String? = null,
-)
+    /** 资产所属 release 标识（`tagName`），用于进度与安装目标校验。 */
+    val releaseTag: String = "",
+) {
+    val identity: UpdateAssetIdentity
+        get() = UpdateAssetIdentity(releaseTag, fileName, sha256Digest)
+}
 
 /**
  * 应用内更新包下载状态。
  *
  * 用 StateFlow 而不是 Compose Snapshot 状态：下载跑在 IO 线程，StateFlow 本身线程安全，
  * 弹窗与更新页各取一份 collectAsState 即可共享同一份事实源。
+ *
+ * 非 Idle 态一律携带 [UpdateAssetIdentity]：界面渲染前与当前 release 比对，
+ * 标识不一致时按 Idle 处理并删除旧包，安装入口也只认当前版本的文件。
  */
 sealed interface UpdateDownloadState {
 
@@ -39,22 +59,48 @@ sealed interface UpdateDownloadState {
         val downloaded: Long,
         val total: Long,
         val speedBytesPerSec: Long,
+        val target: UpdateAssetIdentity,
     ) : UpdateDownloadState {
         val progress: Float
             get() = updateProgressFraction(downloaded, total)
     }
 
     /** 下载完成，[filePath] 可直接交给 [AppInstaller.install]。 */
-    data class Done(val filePath: String) : UpdateDownloadState
+    data class Done(val filePath: String, val target: UpdateAssetIdentity) : UpdateDownloadState
 
     /** 下载失败，[message] 为内部排查信息，界面使用本地化固定文案。 */
-    data class Failed(val message: String) : UpdateDownloadState
+    data class Failed(val message: String, val target: UpdateAssetIdentity) : UpdateDownloadState
 }
 
 /** 下载进度换算：总长未知时返回 0，越界数据夹到 0..1。 */
 fun updateProgressFraction(downloaded: Long, total: Long): Float {
     if (total <= 0L) return 0f
     return (downloaded.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
+}
+
+/** 当前状态所归属的资产标识；Idle 没有归属。 */
+fun UpdateDownloadState.identityOrNull(): UpdateAssetIdentity? = when (this) {
+    UpdateDownloadState.Idle -> null
+    is UpdateDownloadState.Downloading -> target
+    is UpdateDownloadState.Done -> target
+    is UpdateDownloadState.Failed -> target
+}
+
+/**
+ * 将状态对齐到当前 release 的资产：标识不一致一律按 Idle 处理。
+ *
+ * 纯函数，供弹窗与更新页在渲染前统一调用，避免两处各自判断导致口径漂移。
+ */
+fun UpdateDownloadState.forAsset(asset: UpdateAsset?): UpdateDownloadState {
+    val identity = asset?.identity ?: return UpdateDownloadState.Idle
+    return if (identityOrNull() == identity) this else UpdateDownloadState.Idle
+}
+
+/** 仅当前版本的完成态才返回可安装路径；其它情况一律 null。 */
+fun UpdateDownloadState.installPathFor(asset: UpdateAsset?): String? {
+    val done = this as? UpdateDownloadState.Done ?: return null
+    if (asset == null || done.target != asset.identity) return null
+    return done.filePath
 }
 
 /**
@@ -65,6 +111,7 @@ fun updateProgressFraction(downloaded: Long, total: Long): Float {
  *
  * 代际号 [generation] 防旧协程回写：`Job.cancel()` 是异步的，取消后立刻重新开始时，
  * 旧协程可能仍会在取消生效前写出一帧进度，代际号让过期写入直接丢弃。
+ * 该代际号会被下载协程（IO 线程）读取，必须用 `@Volatile` 保证跨线程可见性。
  *
  * 取舍：低层传输、文件摘要与删除通过构造参数注入，默认指向各平台 actual 实现；
  * 这样状态机与三态校验能在 commonTest 里用假传输完整覆盖。
@@ -83,20 +130,28 @@ class AppUpdateDownloader(
     private val _state = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
     val state: StateFlow<UpdateDownloadState> = _state.asStateFlow()
 
-    /** 当前任务的代际；只增不减，旧任务据此丢弃过期写入。 */
+    /** 当前任务的代际；只增不减，旧任务据此丢弃过期写入。跨线程读取需要可见性保证。 */
+    @Volatile
     private var generation = 0L
     private var job: Job? = null
 
-    /** 开始下载 [asset]；已在下载中直接返回，避免连点重复建任务。 */
+    /** 开始下载 [asset]；同一资产已在下载中直接返回，避免连点重复建任务。 */
     fun start(asset: UpdateAsset) {
-        if (_state.value is UpdateDownloadState.Downloading) return
+        val current = _state.value
+        if (current is UpdateDownloadState.Downloading && current.target == asset.identity) return
         job?.cancel()
+        // 切换到另一个版本：旧版本的完成包不能继续留在缓存里等待被误安装。
+        if (current is UpdateDownloadState.Done && current.target != asset.identity) {
+            deleteFile(current.filePath)
+        }
         val token = ++generation
         _state.value = UpdateDownloadState.Downloading(
             downloaded = 0L,
             total = asset.size.coerceAtLeast(0L),
             speedBytesPerSec = 0L,
+            target = asset.identity,
         )
+        updateDownloadForegroundStart()
         job = scope.launch {
             var lastReportAt = 0L
             var lastBytes = 0L
@@ -121,6 +176,7 @@ class AppUpdateDownloader(
                                 downloaded = downloaded,
                                 total = total.coerceAtLeast(0L),
                                 speedBytesPerSec = speedBytesPerSec,
+                                target = asset.identity,
                             ),
                         )
                     }
@@ -130,29 +186,87 @@ class AppUpdateDownloader(
                     val expected = UpdateDigest.expectedSha256(asset.sha256Digest)
                     if (expected == null) {
                         // 远端没给可用摘要：跳过校验，不拦下载。
-                        publish(token, UpdateDownloadState.Done(path))
+                        publish(token, UpdateDownloadState.Done(path, asset.identity))
                         return@onSuccess
                     }
-                    val actual = sha256OfFile(path)
-                    when (val check = UpdateDigest.verify(expected, actual)) {
-                        is DigestCheck.Skipped -> publish(token, UpdateDownloadState.Done(path))
-                        is DigestCheck.Matched -> publish(token, UpdateDownloadState.Done(path))
-                        is DigestCheck.Mismatched -> {
-                            // 内容与发布信息不一致：删包，绝不把它交给安装器。
-                            deleteFile(path)
-                            publish(token, UpdateDownloadState.Failed(UpdateDigest.mismatchMessage(check.expected, check.actual)))
-                        }
+                    val check = UpdateDigest.verify(expected, sha256OfFile(path))
+                    // 只有 Mismatched 需要拦；Matched 放行，Skipped 已在上面提前返回。
+                    if (check is DigestCheck.Mismatched) {
+                        // 内容与发布信息不一致：删包，绝不把它交给安装器。
+                        deleteFile(path)
+                        publish(
+                            token,
+                            UpdateDownloadState.Failed(
+                                UpdateDigest.mismatchMessage(check.expected, check.actual),
+                                asset.identity,
+                            ),
+                        )
+                    } else {
+                        publish(token, UpdateDownloadState.Done(path, asset.identity))
                     }
                 }.onFailure { error ->
                     if (error is CancellationException) throw error
-                    publish(token, UpdateDownloadState.Failed(error.message ?: "更新包下载失败"))
+                    publish(
+                        token,
+                        UpdateDownloadState.Failed(error.message ?: "更新包下载失败", asset.identity),
+                    )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                publish(token, UpdateDownloadState.Failed(error.message ?: "更新包下载失败"))
+                publish(
+                    token,
+                    UpdateDownloadState.Failed(error.message ?: "更新包下载失败", asset.identity),
+                )
             }
         }
+    }
+
+    /**
+     * 将下载状态对齐到当前 release。
+     *
+     * [asset] 为空或与状态归属不一致时：取消在途任务、删除旧完成包、状态回 Idle。
+     * 界面在 release 变化后调用一次，保证渲染前旧的进度/完成态已被清掉。
+     */
+    fun syncTarget(asset: UpdateAsset?) {
+        val identity = asset?.identity
+        when (val current = _state.value) {
+            UpdateDownloadState.Idle -> Unit
+            is UpdateDownloadState.Downloading -> {
+                if (current.target != identity) {
+                    job?.cancel()
+                    job = null
+                    generation++
+                    updateDownloadForegroundStop()
+                    _state.value = UpdateDownloadState.Idle
+                }
+            }
+            is UpdateDownloadState.Done -> {
+                if (current.target != identity) {
+                    deleteFile(current.filePath)
+                    generation++
+                    _state.value = UpdateDownloadState.Idle
+                }
+            }
+            is UpdateDownloadState.Failed -> {
+                if (current.target != identity) {
+                    generation++
+                    _state.value = UpdateDownloadState.Idle
+                }
+            }
+        }
+    }
+
+    /** 仅当前版本已下载完成时返回可安装路径。 */
+    fun installPathFor(asset: UpdateAsset?): String? = _state.value.installPathFor(asset)
+
+    /** 安装失败后清掉不可用包并回到 Idle，让用户可以直接重新下载。 */
+    fun discardCompletedAfterInstallFailure(asset: UpdateAsset?) {
+        val done = _state.value as? UpdateDownloadState.Done ?: return
+        if (asset == null || done.target != asset.identity) return
+        deleteFile(done.filePath)
+        generation++
+        _state.value = UpdateDownloadState.Idle
     }
 
     /** 取消下载并丢弃半成品，状态回到 [UpdateDownloadState.Idle]。 */
@@ -160,12 +274,21 @@ class AppUpdateDownloader(
         generation++
         job?.cancel()
         job = null
+        updateDownloadForegroundStop()
         _state.value = UpdateDownloadState.Idle
     }
 
     private fun publish(token: Long, state: UpdateDownloadState) {
-        if (token == generation) {
-            _state.value = state
+        if (token != generation) return
+        _state.value = state
+        when (state) {
+            is UpdateDownloadState.Downloading -> {
+                updateDownloadForegroundProgress(state.downloaded, state.total)
+            }
+            is UpdateDownloadState.Done,
+            is UpdateDownloadState.Failed,
+            UpdateDownloadState.Idle,
+            -> updateDownloadForegroundStop()
         }
     }
 }
@@ -184,3 +307,10 @@ internal expect suspend fun downloadUpdateFile(
     fileName: String,
     onProgress: (downloaded: Long, total: Long) -> Unit,
 ): Result<String>
+
+/** 前台保活：Android 以前台服务 + 进度通知呈现；桌面与 iOS 为空实现。 */
+internal expect fun updateDownloadForegroundStart()
+
+internal expect fun updateDownloadForegroundProgress(downloaded: Long, total: Long)
+
+internal expect fun updateDownloadForegroundStop()

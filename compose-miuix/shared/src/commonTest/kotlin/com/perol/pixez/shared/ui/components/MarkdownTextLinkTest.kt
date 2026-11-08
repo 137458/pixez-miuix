@@ -19,6 +19,21 @@ class MarkdownTextLinkTest {
     }
 
     @Test
+    fun `链接点击回调收到原 URL，交给调用方走安全打开`() {
+        var opened: String? = null
+        val annotated = buildAnnotatedContent(
+            rawText = "请看 [更新说明](https://example.com/releases)",
+            linkColor = Color.Unspecified,
+            onLinkClick = { opened = it },
+        )
+
+        val link = annotated.getLinkAnnotations(0, annotated.length).single().item as LinkAnnotation.Url
+        assertTrue(link.linkInteractionListener != null, "链接必须挂点击监听，不能交给系统默认处理")
+        link.linkInteractionListener?.onClick(link)
+        assertEquals("https://example.com/releases", opened)
+    }
+
+    @Test
     fun `粗体与内联代码不产生链接注解`() {
         val annotated = buildAnnotatedContent("**粗体** 与 `code`", Color.Unspecified)
 

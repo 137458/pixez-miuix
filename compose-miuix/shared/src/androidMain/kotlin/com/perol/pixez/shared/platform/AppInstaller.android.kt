@@ -14,8 +14,8 @@ actual class AppInstaller actual constructor() {
             val context = BrowserLauncherContext.applicationContext
                 ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 applicationContext")
             val file = File(filePath)
-            if (!file.exists()) {
-                Napier.e("安装包文件不存在: $filePath")
+            if (!file.exists() || file.length() <= 0L) {
+                Napier.e("安装包文件不存在或为空: $filePath")
                 return false
             }
             val apkUri = FileProvider.getUriForFile(
