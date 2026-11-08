@@ -29,10 +29,12 @@ internal fun detectSystemHasProxy(): Boolean {
 
 actual fun createPlatformHttpClient(
     modeProvider: (isOauthHost: Boolean) -> String?,
+    followRedirects: Boolean,
     block: HttpClientConfig<*>.() -> Unit,
 ): HttpClient = createJvmHttpClient(
     // 高-7：RobustDohDns（含熔断）与连接池构建收敛至 jvmShared，桌面端差异仅保留系统代理探测注入。
     hasProxyProvider = ::detectSystemHasProxy,
     modeProvider = modeProvider,
+    followRedirects = followRedirects,
     block = block,
 )

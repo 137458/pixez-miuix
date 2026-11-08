@@ -100,12 +100,44 @@ class PixivHttpClient(
     }
 
     /**
+     * 应用更新包下载客户端。
+     *
+     * 与 [downloadClient] 共用 DoH / 代理 / 连接池配置，但关闭引擎自动重定向：
+     * 更新包来源是 GitHub Release 资产，重定向目标必须逐跳经
+     * [TrustedUrlPolicy.releaseAssetUrl] 校验后再请求。
+     */
+    val updateDownloadClient: HttpClient = createPlatformHttpClient(
+        modeProvider = modeProvider,
+        followRedirects = false,
+    ) {
+        apiTimeouts()
+        if (enableLogging) {
+            install(Logging) {
+                logger = HttpClientDefaults.napierLogger("PixivUpdateDownload")
+                level = LogLevel.INFO
+            }
+        }
+        // 4xx/5xx 直接抛出，避免把错误页面当作安装包落盘。
+        HttpResponseValidator {
+            validateResponse { response: HttpResponse ->
+                if (response.status.value >= 400) {
+                    throw PixivApiException(
+                        statusCode = response.status.value,
+                        message = "Update download failed: ${response.status}",
+                    )
+                }
+            }
+        }
+    }
+
+    /**
      * 释放所有 Ktor HttpClient 占用的引擎资源。
      */
     fun close() {
         runCatching { apiClient.close() }
         runCatching { accountClient.close() }
         runCatching { downloadClient.close() }
+        runCatching { updateDownloadClient.close() }
         runCatching { baseOAuthClient.close() }
     }
 

@@ -58,6 +58,7 @@ private val sharedCircuitState = DohCircuitState()
 internal fun createJvmHttpClient(
     hasProxyProvider: () -> Boolean,
     modeProvider: (isOauthHost: Boolean) -> String?,
+    followRedirects: Boolean = true,
     block: HttpClientConfig<*>.() -> Unit,
 ): HttpClient =
     HttpClient(OkHttp) {
@@ -74,7 +75,7 @@ internal fun createJvmHttpClient(
                         circuitState = sharedCircuitState,
                     )
                 )
-                followRedirects(true)
+                followRedirects(followRedirects)
                 retryOnConnectionFailure(true)
             }
         }
