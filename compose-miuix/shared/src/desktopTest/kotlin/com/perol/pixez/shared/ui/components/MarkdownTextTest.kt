@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.AppConstants
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,7 +56,7 @@ class MarkdownTextTest {
     @Test
     fun testBuildAnnotatedContent() {
         val raw = "欢迎使用 **PixEz** 客户端，查看 `CHANGELOG.md`。"
-        val annotated = buildAnnotatedContent(raw)
+        val annotated = buildAnnotatedContent(raw, Color.Unspecified)
         assertEquals("欢迎使用 PixEz 客户端，查看 CHANGELOG.md。", annotated.text)
         assertTrue(annotated.spanStyles.isNotEmpty())
     }

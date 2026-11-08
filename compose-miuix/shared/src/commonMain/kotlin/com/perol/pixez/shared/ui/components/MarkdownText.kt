@@ -299,7 +299,7 @@ internal fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
     return blocks
 }
 
-internal fun buildAnnotatedContent(rawText: String, linkColor: Color = Color.Unspecified): AnnotatedString {
+internal fun buildAnnotatedContent(rawText: String, linkColor: Color): AnnotatedString {
     return buildAnnotatedString {
         var i = 0
         val len = rawText.length
@@ -349,7 +349,7 @@ internal fun buildAnnotatedContent(rawText: String, linkColor: Color = Color.Uns
                                 url = url,
                                 styles = TextLinkStyles(
                                     style = SpanStyle(
-                                        color = if (linkColor != Color.Unspecified) linkColor else Color(0xFF2979FF),
+                                        color = linkColor,
                                         textDecoration = TextDecoration.Underline,
                                         fontWeight = FontWeight.Medium,
                                     ),

@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.screens
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
+import androidx.compose.ui.text.style.TextOverflow
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.foundation.Image
@@ -381,6 +382,7 @@ private fun ContributorAvatarItem(
             style = MiuixTheme.textStyles.footnote1,
             color = MiuixTheme.colorScheme.onSurface,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

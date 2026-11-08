@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.Illust
@@ -42,6 +43,9 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.TabRow
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Favorites
+import top.yukonga.miuix.kmp.icon.extended.Search
 
 /**
  * 用户详情页的 Tab 区块集合：作品列表、收藏列表（公开/私密）与共用的列表状态容器。
@@ -232,6 +236,7 @@ internal fun UserBookmarksTab(
         } else {
             strings.userNoBookmarks.format(strings.userPrivateRestrict)
         },
+        emptyIcon = MiuixIcons.Favorites,
         topPadding = topPadding,
         scrollBehavior = scrollBehavior,
         isRefreshing = isRefreshing,
@@ -262,6 +267,7 @@ internal fun IllustTabBody(
     onIllustClick: (Long) -> Unit,
     onRetry: () -> Unit,
     emptyText: String,
+    emptyIcon: ImageVector = MiuixIcons.Search,
     topPadding: Dp = 0.dp,
     scrollBehavior: ScrollBehavior,
     isRefreshing: Boolean = false,
@@ -344,6 +350,7 @@ internal fun IllustTabBody(
                     ) {
                         EmptyPlaceholder(
                             message = emptyText,
+                            icon = emptyIcon,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 32.dp),

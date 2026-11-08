@@ -46,12 +46,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.AppConstants
@@ -311,46 +308,19 @@ fun IllustCard(
                     text = illust.title,
                     style = MiuixTheme.textStyles.body2,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = MiuixTheme.colorScheme.onSurfaceContainer,
                 )
                 Text(
                     text = illust.user.name,
                     style = MiuixTheme.textStyles.footnote1,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
         }
-    }
-}
-
-/**
- * 瀑布流卡片微型液态磨砂玻璃徽标。
- */
-@Composable
-private fun MicroGlassBadge(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .squircleClip(6.dp)
-            .background(Color.Black.copy(alpha = 0.50f))
-            .squircleBorder(
-                width = 0.5.dp,
-                color = Color.White.copy(alpha = 0.30f),
-                cornerRadius = 6.dp,
-            )
-            .padding(horizontal = 5.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            fontSize = 10.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-            color = Color.White,
-        )
     }
 }
 

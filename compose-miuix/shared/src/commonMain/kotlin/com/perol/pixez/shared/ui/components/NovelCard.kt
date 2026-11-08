@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -119,21 +117,12 @@ fun NovelCard(
 
                 // AI 生成标识
                 if (isAI) {
-                    Box(
+                    MicroGlassBadge(
+                        text = "AI",
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color.Black.copy(alpha = 0.65f))
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                    ) {
-                        Text(
-                            text = "AI",
-                            fontSize = 9.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
+                            .padding(4.dp),
+                    )
                 }
             }
 

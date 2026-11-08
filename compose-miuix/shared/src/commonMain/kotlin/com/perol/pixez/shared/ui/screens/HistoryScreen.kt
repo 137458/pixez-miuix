@@ -51,6 +51,7 @@ import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
+import androidx.compose.ui.text.style.TextOverflow
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -503,12 +504,14 @@ private fun HistoryCard(
             text = item.title ?: strings.historyNoTitle,
             style = MiuixTheme.textStyles.body2,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp),
         )
         Text(
             text = item.userName ?: "",
             style = MiuixTheme.textStyles.footnote1,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
         )
     }
@@ -607,6 +610,7 @@ private fun NovelHistoryRow(
                 style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Text(

@@ -129,6 +129,7 @@ fun DownloadHistoryScreen(
                         if (tasks.isEmpty()) {
                             EmptyPlaceholder(
                                 message = strings.downloadHistoryEmpty,
+                                icon = MiuixIcons.Download,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         } else {

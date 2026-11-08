@@ -196,14 +196,15 @@ fun DownloadTaskScreen(
                 )
 
                 when (val result = state.value) {
-                    null -> LoadingPlaceholder(modifier = Modifier.fillMaxSize())
+                    null -> LoadingPlaceholder(modifier = Modifier.weight(1f))
                     else -> when {
                         result.isSuccess -> {
                             val tasks = filteredTasks.orEmpty()
                             if (tasks.isEmpty()) {
                                 EmptyPlaceholder(
                                     message = selectedFilter.emptyMessage(),
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.weight(1f),
+                                    icon = MiuixIcons.Download,
                                 )
                             } else {
                                 LazyColumn(
@@ -270,7 +271,7 @@ fun DownloadTaskScreen(
                         else -> ErrorPlaceholder(
                             error = result.exceptionOrNull(),
                             onRetry = { retryCount++ },
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }

@@ -171,6 +171,7 @@ fun UserFollowerListScreen(
                     currentItems.isEmpty() -> {
                         EmptyPlaceholder(
                             message = strings.userFollowerEmpty,
+                            icon = MiuixIcons.Contacts,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(paddingValues),

@@ -90,7 +90,7 @@ class UpdateCheckerTest {
     @Test
     fun testBuildAnnotatedContentFormatting() {
         val text = "Support **bold** and `code` and [link](https://github.com)"
-        val annotated = buildAnnotatedContent(text)
+        val annotated = buildAnnotatedContent(text, Color.Unspecified)
         assertEquals("Support bold and code and link", annotated.text)
         assertTrue(annotated.spanStyles.isNotEmpty())
     }
