@@ -256,7 +256,6 @@ object AppConstants {
         const val SCROLLBAR_WIDTH_DP = 3
 
         const val SPEED_CALCULATION_INTERVAL_MS = 500L
-        const val CARD_CORNER_RADIUS_DP = 16
         const val BADGE_CORNER_RADIUS_DP = 8
     }
 

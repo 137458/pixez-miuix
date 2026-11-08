@@ -43,6 +43,7 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
@@ -165,13 +166,7 @@ fun UpdateDialog(
 
             if (plan.hasNotes) {
                 SmallTitle(text = strings.updateNotesTitle)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .squircleClip(AppConstants.Update.CARD_CORNER_RADIUS_DP.dp)
-                        .background(MiuixTheme.colorScheme.surfaceContainer)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         MarkdownText(
                             markdown = notesState.visibleMarkdown,
