@@ -82,7 +82,7 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
                 try {
                     val contentUri: Uri = FileProvider.getUriForFile(
                         context,
-                        "com.perol.pixez.miuix.fileprovider",
+                        "${context.packageName}.fileprovider",
                         imageFile,
                     )
                     val uriClip = ClipData.newUri(context.contentResolver, illust.title, contentUri)

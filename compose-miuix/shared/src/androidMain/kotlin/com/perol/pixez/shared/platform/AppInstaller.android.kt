@@ -20,7 +20,9 @@ actual class AppInstaller actual constructor() {
             }
             val apkUri = FileProvider.getUriForFile(
                 context,
-                "com.perol.pixez.miuix.fileprovider",
+                // 与 manifest 的 ${applicationId}.fileprovider 一致；硬编码包名在改 applicationId
+                // 或加 flavor 后会直接抛 IllegalArgumentException，安装入口静默失效。
+                "${context.packageName}.fileprovider",
                 file,
             )
             val intent = Intent(Intent.ACTION_VIEW).apply {
