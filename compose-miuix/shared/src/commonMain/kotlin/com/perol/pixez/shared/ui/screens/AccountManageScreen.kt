@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
@@ -49,10 +50,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -249,34 +248,24 @@ fun AccountManageScreen(
 
             // 移除账号确认弹窗
             val deleteTarget = accountToDelete
-            OverlayDialog(
+            ConfirmDialog(
+                show = showDeleteDialog && deleteTarget != null,
                 title = strings.accountDeleteConfirmTitle,
                 summary = deleteTarget?.let { "${strings.accountDeleteConfirmMsg}\n(${it.name} - @${it.account})" }
                     ?: strings.accountDeleteConfirmMsg,
-                show = showDeleteDialog && deleteTarget != null,
-                onDismissRequest = { showDeleteDialog = false },
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = { showDeleteDialog = false },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    onClick = {
-                        val targetId = deleteTarget?.userId
-                        showDeleteDialog = false
-                        if (targetId != null) {
-                            scope.launch {
-                                accountRepository.deleteAccount(targetId)
-                                refreshAccounts()
-                            }
+                confirmText = strings.confirm,
+                onDismiss = { showDeleteDialog = false },
+                onConfirm = {
+                    val targetId = deleteTarget?.userId
+                    showDeleteDialog = false
+                    if (targetId != null) {
+                        scope.launch {
+                            accountRepository.deleteAccount(targetId)
+                            refreshAccounts()
                         }
-                    },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+                    }
+                },
+            )
 
             // Toast 消息
             ToastMessage(

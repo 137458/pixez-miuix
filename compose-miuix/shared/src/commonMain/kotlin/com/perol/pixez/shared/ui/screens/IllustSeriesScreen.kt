@@ -28,6 +28,7 @@ import com.perol.pixez.shared.ui.LocalWatchlistRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.PagedLoadOutcome
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -39,12 +40,9 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.background
@@ -273,28 +271,18 @@ fun IllustSeriesScreen(
             )
 
             // 取消追更二次确认（与动态页追更页签的移除确认同款交互）。
-            OverlayDialog(
+            ConfirmDialog(
+                show = pendingUnwatchConfirm,
                 title = strings.watchlistTitle,
                 summary = strings.watchlistRemoveConfirm,
-                show = pendingUnwatchConfirm,
-                onDismissRequest = { if (!isTogglingWatchlist) pendingUnwatchConfirm = false },
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = { if (!isTogglingWatchlist) pendingUnwatchConfirm = false },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    enabled = !isTogglingWatchlist,
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        pendingUnwatchConfirm = false
-                        toggleWatchlist()
-                    },
-                )
-            }
+                confirmText = strings.confirm,
+                inProgress = isTogglingWatchlist,
+                onDismiss = { pendingUnwatchConfirm = false },
+                onConfirm = {
+                    pendingUnwatchConfirm = false
+                    toggleWatchlist()
+                },
+            )
         }
     }
 }

@@ -22,16 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.AddTagDialog
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.layout.Box
@@ -201,6 +199,8 @@ fun BookTagScreen(
 
         AddTagDialog(
             show = showAddDialog,
+            title = strings.dialogAddTag,
+            summary = strings.dialogAddTagSummary,
             isLoading = isAdding,
             onDismiss = { showAddDialog = false },
             onConfirm = { name ->
@@ -214,11 +214,13 @@ fun BookTagScreen(
             },
         )
 
-        DeleteConfirmationDialog(
+        ConfirmDialog(
             show = showDeleteDialog && tagToDelete != null,
             title = strings.dialogDeleteConfirm,
             summary = tagToDelete?.let { strings.bookTagsDeleteConfirm.format(it) } ?: "",
-            isLoading = isDeleting,
+            confirmText = if (isDeleting) strings.btnDeleting else strings.btnDelete,
+            inProgress = isDeleting,
+            dismissibleWhileInProgress = true,
             onDismiss = { showDeleteDialog = false },
             onConfirm = {
                 val targetTag = tagToDelete
@@ -229,88 +231,6 @@ fun BookTagScreen(
                 }
                 showDeleteDialog = false
             },
-        )
-    }
-}
-
-/**
- * 添加标签对话框。
- */
-@Composable
-private fun AddTagDialog(
-    show: Boolean,
-    isLoading: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    var name by remember(show) { mutableStateOf("") }
-
-    OverlayDialog(
-        title = strings.dialogAddTag,
-        summary = strings.dialogAddTagSummary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        TextField(
-            value = name,
-            onValueChange = { name = it },
-            label = strings.tags,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-        )
-        TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
-            text = if (isLoading) strings.btnAdding else strings.btnAdd,
-            onClick = {
-                val trimmed = name.trim()
-                if (trimmed.isNotBlank()) {
-                    onConfirm(trimmed)
-                }
-            },
-            enabled = !isLoading,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-/**
- * 删除确认对话框。
- */
-@Composable
-private fun DeleteConfirmationDialog(
-    show: Boolean,
-    title: String,
-    summary: String,
-    isLoading: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-
-    OverlayDialog(
-        title = title,
-        summary = summary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
-            text = if (isLoading) strings.btnDeleting else strings.btnDelete,
-            onClick = onConfirm,
-            enabled = !isLoading,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

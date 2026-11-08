@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 
@@ -65,7 +66,6 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.TabRow
@@ -77,7 +77,6 @@ import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.*
 
 /**
@@ -268,11 +267,14 @@ fun HistoryScreen(
             }
 
             // 清空全部二次确认。
-            HistoryConfirmDialog(
+            ConfirmDialog(
                 show = showClearConfirm,
                 title = strings.actionClear,
                 summary = strings.historyClearConfirm,
-                confirmEnabled = !isProcessing,
+                confirmText = strings.confirm,
+                inProgress = isProcessing,
+                dismissibleWhileInProgress = true,
+                confirmFirst = true,
                 onConfirm = {
                     isProcessing = true
                     coroutineScope.launch {
@@ -301,13 +303,16 @@ fun HistoryScreen(
 
             // 单条删除二次确认。
             val deleteId = itemToDelete
-            HistoryConfirmDialog(
+            ConfirmDialog(
                 show = deleteId != null,
                 title = strings.btnDelete,
                 summary = strings.historyDeleteConfirm,
-                confirmEnabled = !isProcessing,
+                confirmText = strings.confirm,
+                inProgress = isProcessing,
+                dismissibleWhileInProgress = true,
+                confirmFirst = true,
                 onConfirm = {
-                    val id = deleteId ?: return@HistoryConfirmDialog
+                    val id = deleteId ?: return@ConfirmDialog
                     isProcessing = true
                     coroutineScope.launch {
                         try {
@@ -639,39 +644,4 @@ private fun formatNovelHistoryTime(epochMilli: Long): String {
     fun Int.pad2(): String = toString().padStart(2, '0')
     return "${dateTime.year}-${dateTime.monthNumber.pad2()}-${dateTime.dayOfMonth.pad2()} " +
         "${dateTime.hour.pad2()}:${dateTime.minute.pad2()}"
-}
-
-/**
- * 二次确认弹窗：基于 OverlayDialog，确定按钮支持禁用防止重复提交。
- */
-@Composable
-private fun HistoryConfirmDialog(
-    show: Boolean,
-    title: String,
-    summary: String,
-    confirmEnabled: Boolean = true,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    OverlayDialog(
-        title = title,
-        summary = summary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        TextButton(
-            text = strings.confirm,
-            onClick = onConfirm,
-            enabled = confirmEnabled,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
-        TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
 }

@@ -34,6 +34,8 @@ import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.components.AddTagDialog
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
@@ -51,9 +53,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.*
@@ -330,6 +329,8 @@ fun ShieldScreen(
         // 添加标签对话框。
         AddTagDialog(
             show = showAddDialog,
+            title = strings.shieldAddTagTitle,
+            summary = strings.shieldAddTagSummary,
             isLoading = isAddingTag,
             onDismiss = { showAddDialog = false },
             onConfirm = { name ->
@@ -359,14 +360,16 @@ fun ShieldScreen(
             is DeleteTarget.Illust -> strings.shieldDeleteIllustTitle to strings.shieldDeleteIllustConfirm.format(pendingDelete.illust.name)
             null -> "" to ""
         }
-        DeleteConfirmationDialog(
+        ConfirmDialog(
             show = showDeleteDialog && deleteTarget != null,
             title = title,
             summary = summary,
-            isLoading = isDeleting,
+            confirmText = if (isDeleting) strings.btnDeleting else strings.btnDelete,
+            inProgress = isDeleting,
+            dismissibleWhileInProgress = true,
             onDismiss = { showDeleteDialog = false },
             onConfirm = {
-                val target = deleteTarget ?: return@DeleteConfirmationDialog
+                val target = deleteTarget ?: return@ConfirmDialog
                 showDeleteDialog = false
                 coroutineScope.launch {
                     isDeleting = true
@@ -440,88 +443,6 @@ private fun Chip(
         Text(
             text = name,
             style = MiuixTheme.textStyles.footnote2,
-        )
-    }
-}
-
-/**
- * 添加标签对话框，包含标签名输入框与确认/取消按钮。
- */
-@Composable
-private fun AddTagDialog(
-    show: Boolean,
-    isLoading: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    var name by remember(show) { mutableStateOf("") }
-
-    OverlayDialog(
-        title = strings.shieldAddTagTitle,
-        summary = strings.shieldAddTagSummary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        TextField(
-            value = name,
-            onValueChange = { name = it },
-            label = strings.tags,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-        )
-        TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
-            text = if (isLoading) strings.btnAdding else strings.btnAdd,
-            onClick = {
-                val trimmed = name.trim()
-                if (trimmed.isNotBlank()) {
-                    onConfirm(trimmed)
-                }
-            },
-            enabled = !isLoading,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-/**
- * 通用删除确认对话框。
- */
-@Composable
-private fun DeleteConfirmationDialog(
-    show: Boolean,
-    title: String,
-    summary: String,
-    isLoading: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-
-    OverlayDialog(
-        title = title,
-        summary = summary,
-        show = show,
-        onDismissRequest = onDismiss,
-    ) {
-        TextButton(
-            text = strings.cancel,
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        TextButton(
-            text = if (isLoading) strings.btnDeleting else strings.btnDelete,
-            onClick = onConfirm,
-            enabled = !isLoading,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

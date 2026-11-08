@@ -43,19 +43,17 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
+import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -186,38 +184,28 @@ fun DownloadHistoryScreen(
             }
 
             // 清空下载历史二次确认；对齐 HistoryScreen：处理期间确定按钮禁用、不可关闭，成功后才关闭，防止重复提交。
-            OverlayDialog(
+            ConfirmDialog(
+                show = showClearConfirm,
                 title = strings.actionClear,
                 summary = strings.downloadHistoryClearConfirm,
-                show = showClearConfirm,
-                onDismissRequest = { if (!isProcessing) showClearConfirm = false },
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = { if (!isProcessing) showClearConfirm = false },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    enabled = !isProcessing,
-                    onClick = {
-                        isProcessing = true
-                        coroutineScope.launch {
-                            try {
-                                val result = suspendRunCatchingNonCancel { repository.clearAll() }
-                                result.onSuccess { refreshToken++ }
-                                // 处理成功才关闭弹窗；失败保持打开并恢复按钮以便重试。
-                                if (result.isSuccess) showClearConfirm = false
-                            } finally {
-                                // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
-                                isProcessing = false
-                            }
+                confirmText = strings.confirm,
+                inProgress = isProcessing,
+                onDismiss = { showClearConfirm = false },
+                onConfirm = {
+                    isProcessing = true
+                    coroutineScope.launch {
+                        try {
+                            val result = suspendRunCatchingNonCancel { repository.clearAll() }
+                            result.onSuccess { refreshToken++ }
+                            // 处理成功才关闭弹窗；失败保持打开并恢复按钮以便重试。
+                            if (result.isSuccess) showClearConfirm = false
+                        } finally {
+                            // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
+                            isProcessing = false
                         }
-                    },
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+                    }
+                },
+            )
         }
     }
 }
