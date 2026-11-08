@@ -22,24 +22,3 @@ fun sha256File(file: File): String? = runCatching {
         digest().joinToString("") { byte -> (byte.toInt() and 0xFF).toString(16).padStart(2, '0') }
     }
 }.getOrNull()
-
-/**
- * 从 GitHub release 的 digest 字段（"sha256:<hex>"）提取小写 hex；非 sha256 前缀或空值返回 null。
- */
-fun expectedDigestHex(digest: String?): String? =
-    digest
-        ?.takeIf { it.startsWith("sha256:", ignoreCase = true) }
-        ?.substringAfter(':')
-        ?.trim()
-        ?.lowercase()
-        ?.takeIf { it.length == 64 && it.all { c -> c.isDigit() || c in 'a'..'f' } }
-
-/**
- * 校验 [file] 的 SHA-256 是否与 [expectedDigest]（"sha256:<hex>"）一致。
- * [expectedDigest] 为 null（GitHub 未提供）时返回 false，调用方应视为"无法校验"并自行决策。
- */
-fun verifyFileDigest(file: File, expectedDigest: String?): Boolean {
-    val expected = expectedDigestHex(expectedDigest) ?: return false
-    val actual = sha256File(file) ?: return false
-    return actual == expected
-}

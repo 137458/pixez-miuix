@@ -1,9 +1,11 @@
 package com.perol.pixez.shared.network
 
+import com.perol.pixez.shared.platform.DigestCheck
+import com.perol.pixez.shared.platform.UpdateDigest
 import org.junit.Test
 import java.io.File
+import java.security.MessageDigest
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -47,25 +49,30 @@ class Sha256FileDigestTest {
     }
 
     @Test
-    fun `expectedDigestHex 解析 sha256 前缀并忽略大小写`() {
+    fun `UpdateDigest 解析 sha256 前缀并忽略大小写`() {
         assertEquals(
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-            expectedDigestHex("sha256:2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"),
+            UpdateDigest.expectedSha256(
+                "sha256:2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824",
+            ),
         )
-        assertNull(expectedDigestHex("md5:abcdef"), "非 sha256 前缀不支持")
-        assertNull(expectedDigestHex(null))
+        assertNull(UpdateDigest.expectedSha256("md5:abcdef"), "非 sha256 前缀不支持")
+        assertNull(UpdateDigest.expectedSha256(null))
+        assertNull(UpdateDigest.expectedSha256("sha256:not-a-hex"), "非法 hex 视为无摘要")
     }
 
     @Test
-    fun `verifyFileDigest 对正确摘要返回真且对篡改返回假`() {
-        val file = tempFile("hello".encodeToByteArray())
+    fun `UpdateDigest 三态校验区分无摘要与不一致`() {
+        val expected = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        assertEquals(DigestCheck.Matched, UpdateDigest.verify(expected, expected.uppercase()))
         assertTrue(
-            verifyFileDigest(file, "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+            UpdateDigest.verify(expected, "0".repeat(64)) is DigestCheck.Mismatched,
+            "摘要不一致必须判失败",
         )
-        assertFalse(
-            verifyFileDigest(file, "sha256:0000000000000000000000000000000000000000000000000000000000000000"),
+        assertEquals(DigestCheck.Skipped, UpdateDigest.verify(null, null), "无摘要时跳过校验")
+        assertTrue(
+            UpdateDigest.verify(expected, null) is DigestCheck.Mismatched,
+            "拿到摘要却算不出本地摘要不得放行",
         )
-        assertFalse(verifyFileDigest(file, null), "无 digest 时跳过校验返回 false（调用方应视为无法校验）")
-        file.delete()
     }
 }
