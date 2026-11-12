@@ -113,4 +113,39 @@ class UgoiraZipExtractorTest {
 
         assertTrue(frames.isEmpty())
     }
+
+    @Test
+    fun `超过最大条目数限制的 zip 压缩炸弹被拒绝`() {
+        val dir = framesDir()
+        val zipFile = Files.createTempFile("ugoira-many-entries", ".zip")
+        ZipOutputStream(zipFile.toFile().outputStream()).use { zos ->
+            for (i in 0 until 520) {
+                zos.putNextEntry(ZipEntry("%06d.jpg".format(i)))
+                zos.write(byteArrayOf(1))
+                zos.closeEntry()
+            }
+        }
+        val zipPath = zipFile.toAbsolutePath().toString().toPath()
+
+        kotlin.test.assertFailsWith<IllegalStateException>("超过 512 条目应被拒绝") {
+            UgoiraZipExtractor().extractFrames(zipPath, dir)
+        }
+    }
+
+    @Test
+    fun `总解压字节超过 256MB 上限的 zip 被拒绝`() {
+        val dir = framesDir()
+        val chunk = ByteArray(60 * 1024 * 1024)
+        val zipPath = zipOf(
+            "000000.jpg" to chunk,
+            "000001.jpg" to chunk,
+            "000002.jpg" to chunk,
+            "000003.jpg" to chunk,
+            "000004.jpg" to chunk,
+        )
+
+        kotlin.test.assertFailsWith<IllegalStateException>("总解压大小 300MB 超过 256MB 应被拒绝") {
+            UgoiraZipExtractor().extractFrames(zipPath, dir)
+        }
+    }
 }

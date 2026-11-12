@@ -63,7 +63,7 @@ actual object LocalIllustResolver {
                 for (file in files) {
                     if (file.isFile && file.length() > 0) {
                         val name = file.name
-                        if (name.contains(idStr)) {
+                        if (containsExactIllustId(name, idStr)) {
                             if (name.contains(pageMarker) || (pageIndex == 0 && !name.contains("_p"))) {
                                 return@runCatching file.toURI().toString()
                             }

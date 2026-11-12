@@ -143,6 +143,12 @@ internal class SingleInstanceCoordinator private constructor(
             runCatching {
                 tokenPath.parentFile?.mkdirs()
                 java.nio.file.Files.writeString(tokenPath.toPath(), token)
+                runCatching {
+                    java.nio.file.Files.setPosixFilePermissions(
+                        tokenPath.toPath(),
+                        java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"),
+                    )
+                }
             }.getOrElse {
                 lock.release()
                 channel.close()
@@ -197,8 +203,9 @@ internal class SingleInstanceCoordinator private constructor(
                         }
                         writer.newLine()
                         writer.flush()
-                        // FORBIDDEN（鉴权失败）立即放弃且不消耗重试预算
-                        BufferedReader(socket.getInputStream().reader(StandardCharsets.UTF_8)).readLine() == "OK"
+                        val reply = BufferedReader(socket.getInputStream().reader(StandardCharsets.UTF_8)).readLine()
+                        if (reply == "FORBIDDEN") return false
+                        reply == "OK"
                     }
                 }.getOrDefault(false)
                 if (forwarded) return true

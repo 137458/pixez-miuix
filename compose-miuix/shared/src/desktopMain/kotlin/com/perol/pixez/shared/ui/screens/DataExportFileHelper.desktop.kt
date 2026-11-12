@@ -58,21 +58,30 @@ internal actual fun getExportBaseDirectory(): String {
  *
  * 使用 [File.getCanonicalPath] 解析 `../` 等路径，确保目标文件不会穿越到应用目录之外。
  */
+private val approvedPickerPaths: MutableSet<String> =
+    java.util.Collections.synchronizedSet(mutableSetOf())
+
+internal fun approveExportPickerPath(path: String): String {
+    val canonical = File(path).canonicalPath
+    approvedPickerPaths.add(canonical)
+    return canonical
+}
+
 private fun validateExportPath(path: String): String {
     if (path.isBlank()) throw DataExportException(DataExportErrorCode.PathBlank)
     if (!path.endsWith(".json", ignoreCase = true)) {
         throw DataExportException(DataExportErrorCode.PathUnsupportedExtension, path)
     }
     val raw = File(path)
-    // 原生文件选择器返回的绝对路径为用户明确所选，仅归一化后放行
-    if (raw.isAbsolute) return raw.canonicalPath
-    val baseDir = File(getExportBaseDirectory()).canonicalPath
-    val targetFile = File(baseDir, path).canonicalFile
-    val targetPath = targetFile.canonicalPath
-    if (!(targetPath.startsWith(baseDir + File.separator) || targetPath == baseDir)) {
-        throw DataExportException(DataExportErrorCode.PathOutsideExportDir, path)
+    val baseDir = File(getExportBaseDirectory()).canonicalFile
+    val targetFile = if (raw.isAbsolute) raw.canonicalFile else File(baseDir, path).canonicalFile
+    val isInsideBase = targetFile.toPath().normalize().startsWith(baseDir.toPath().normalize())
+    if (isInsideBase) return targetFile.path
+    // 仅允许经由原生文件选择器明确选中的导出目录外绝对路径，阻断手输/注入的任意绝对路径遍历
+    if (raw.isAbsolute && targetFile.path in approvedPickerPaths) {
+        return targetFile.path
     }
-    return targetPath
+    throw DataExportException(DataExportErrorCode.PathOutsideExportDir, path)
 }
 
 /**
@@ -96,7 +105,8 @@ internal actual suspend fun pickExportFilePath(suggestedName: String, forSave: B
                 dialog.isVisible = true
                 val chosen = dialog.file?.let { file ->
                     val dir = dialog.directory.orEmpty()
-                    if (dir.endsWith(File.separator)) dir + file else dir + File.separator + file
+                    val full = if (dir.endsWith(File.separator)) dir + file else dir + File.separator + file
+                    approveExportPickerPath(full)
                 }
                 future.complete(chosen)
             }.onFailure { future.complete(null) }

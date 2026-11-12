@@ -16,7 +16,7 @@
 
 - 消除重复造轮子与跨端冗余实现：
   - 重构 ThreadSafeLruCache 消除伪 LRU 缺陷与 GC 垃圾：修复 get 操作未更新 LinkedHashMap 访问顺序导致热点数据被误淘汰的问题，并消除写操作全量 map.toMap() 造成的频繁内存分配。
-  - 下沉合并 JVM 平台重复代码：将 HashUtils、SecureRandom 与 Sha256File 收敛至 jvmShared 源集，彻底删除 androidMain 与 desktopMain 中 100% 逐字重复的冗余拷贝。
+  - 下沉合并 JVM 平台重复代码：将 HashUtils、SecureRandom、Sha256File、AppUpdateDownloader 下载与目录扫描及 UgoiraZipExtractor 解压校验、LocalIllustResolver 数值边界匹配收敛至 `jvmShared` 源集，彻底消除 `androidMain` 与 `desktopMain` 重复拷贝；统一 `BrowserLauncher` 与 `UrlLauncher` 外链协议白名单常量并复用 `suspendRunCatchingNonCancel`。
   - 收敛 HTML 与 URL 解码清洗工具：新增跨平台 HtmlUtils，统一收敛 BoardScreen、HtmlCaptionText 与 PixivisionParser 分裂手写的 HTML 实体解码与标签过滤逻辑；移除手写脆弱的 decodeUrlPercent，接入 Ktor 标准 decodeURLQueryComponent API。
 - 审查并重构 MIUIX 组件使用规范与高阶交互：
   - 弹窗按钮布局合规：重构版本更新弹窗（UpdateDialog）、下载保存格式编辑弹窗（DownloadSettingScreen）及历史记录、排行榜确认弹窗，严格遵循 MIUIX 纵向堆叠规范（主操作全宽置顶，取消/辅助置底）。
@@ -32,6 +32,12 @@
 
 ### 修复
 
+- 修复了安全边界与跨端文件/重定向校验缺陷：
+  - 新增统一重定向校验插件 `TrustedRedirectPlugin`，为 API、OAuth、图片下载及网页解析客户端关闭自动跨域名重定向，逐跳验证目标协议（HTTPS）与域名白名单，并在图片加载前清洗非受信任外链图片模型。
+  - 剪贴板捕获 `pixiv://account/login?code=` 不再静默直接登录，改为弹出二次确认弹窗（`ClipboardOAuthDialog`）交由用户确认。
+  - 收紧 `UgoiraZipExtractor` 单包文件数（512）与总字节（256MB）上限，并在 `UgoiraSession` 加载帧图片前校验路径规范化归属（防路径穿越）。
+  - 修复 `LocalIllustResolver` 仅做子串包含匹配导致画作 ID 误命中（如 `123456` 误命中 `9123456`），改为数字边界正则校验；将桌面端拖放缓存目录由系统临时目录迁至应用私有缓存目录。
+  - 加固桌面端导出写入白名单路径校验，缩小 `AppUpdateDownloader` 分片临时文件清理范围至当前目标包前缀并用锁保护状态切换；修正 `SingleInstanceCoordinator` 在收到 `FORBIDDEN` 响应时的快速中止及令牌文件权限收缩，完善 `DesktopProxySelector` URI 级代理地址与 IPv6 解析。
 - 修复了登录、Token 刷新与深度链接中的安全及并发问题：
   - `TokenRefreshPlugin` 按发起请求的账号隔离 401/400 自动刷新与重试请求头，并为失效熔断建立按 `user_id` 隔离的窗口，切号后不再阻塞新账号刷新，也不再在刷新期间切号时回写错误凭证。
   - `DeepLinkParser` 将 OAuth 回调匹配收窄至 `https://pixiv.net` / `www.pixiv.net` / `app-api.pixiv.net` 官方回调路径，拒绝第三方域名或查询参数夹带 `callback` 字样触发自动登录。

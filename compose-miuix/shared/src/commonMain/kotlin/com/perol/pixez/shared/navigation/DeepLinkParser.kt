@@ -62,6 +62,23 @@ object DeepLinkParser {
     }
 
     /**
+     * 剪贴板来源专用分发入口：对 [ParsedDeepLink.OAuthLogin] 仅触发二次确认回调，
+     * 严禁未确认直接兑换授权码覆盖当前登录态。
+     */
+    fun dispatchTextFromClipboard(
+        raw: String?,
+        rootComponent: RootComponent,
+        onConfirmOAuthCode: (String) -> Unit,
+    ) {
+        val parsed = parse(raw) ?: return
+        dispatch(
+            parsed = parsed,
+            rootComponent = rootComponent,
+            onOAuthCode = onConfirmOAuthCode,
+        )
+    }
+
+    /**
      * 解析启动参数、URI Scheme (`pixiv://`, `pixez://`)、网页链接或剪贴板文本。
      */
     fun parse(raw: String?): ParsedDeepLink? {

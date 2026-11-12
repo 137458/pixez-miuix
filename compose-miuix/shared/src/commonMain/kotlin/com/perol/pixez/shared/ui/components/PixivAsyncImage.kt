@@ -29,6 +29,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Dimension
 import coil3.size.Precision
+import com.perol.pixez.shared.network.sanitizeRemoteImageModel
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import com.perol.pixez.shared.platform.mapToPictureSource
@@ -158,11 +159,13 @@ fun PixivAsyncImage(
     val changeVersion = settings.changeVersion.collectAsState().value
 
     val transformedModel = remember(model, settings.pictureSource, changeVersion) {
-        (model as? String)?.mapToPictureSource(settings.pictureSource) ?: model
+        val mapped = (model as? String)?.mapToPictureSource(settings.pictureSource) ?: model
+        sanitizeRemoteImageModel(mapped, settings.pictureSource)
     }
 
     val transformedThumbnailCacheKey = remember(thumbnailUrl, settings.pictureSource, changeVersion) {
-        (thumbnailUrl as? String)?.mapToPictureSource(settings.pictureSource) ?: thumbnailUrl
+        val mapped = (thumbnailUrl as? String)?.mapToPictureSource(settings.pictureSource) ?: thumbnailUrl
+        sanitizeRemoteImageModel(mapped, settings.pictureSource)
     }
 
     val hasThumbnail = transformedThumbnailCacheKey != null &&

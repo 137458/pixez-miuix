@@ -9,8 +9,8 @@ expect fun openBrowser(url: String)
 
 internal fun isBrowserUrlAllowed(url: String): Boolean {
     val scheme = url.substringBefore(':', "").lowercase()
-    return scheme in BROWSER_URL_SCHEMES
+    return scheme in DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES
 }
 
-// 与 ui/utils/UrlLauncher 的 DEFAULT_ALLOWED_URL_SCHEMES 保持一致
-private val BROWSER_URL_SCHEMES = setOf("http", "https", "mailto")
+/** 外部浏览器默认允许打开的安全 URL Scheme 白名单，与 `UrlLauncher` 共用单点定义。 */
+internal val DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES: Set<String> = setOf("http", "https", "mailto")

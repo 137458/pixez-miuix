@@ -158,7 +158,15 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
 
     var lastHandledClipboardText by remember { mutableStateOf<String?>(null) }
 
-    fun dispatchDeepLinkText(rawText: String?) {
+    fun dispatchDeepLinkText(rawText: String?, fromClipboard: Boolean = false) {
+        if (fromClipboard) {
+            DeepLinkParser.dispatchTextFromClipboard(
+                raw = rawText,
+                rootComponent = rootComponent,
+                onConfirmOAuthCode = rootComponent::requestClipboardOAuthConfirmation,
+            )
+            return
+        }
         DeepLinkParser.dispatchText(
             raw = rawText,
             rootComponent = rootComponent,
@@ -180,7 +188,7 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         for (arg in arguments) {
             val parsed = com.perol.pixez.shared.navigation.DeepLinkParser.parse(arg)
             if (parsed != null) {
-                dispatchDeepLinkText(arg)
+                dispatchDeepLinkText(arg, fromClipboard = false)
                 return
             }
         }
@@ -195,7 +203,7 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
                 // 二次核对：IO 期间剪贴板可能已变化
                 if (text != lastHandledClipboardText) {
                     lastHandledClipboardText = text
-                    dispatchDeepLinkText(text)
+                    dispatchDeepLinkText(text, fromClipboard = true)
                 }
             }
         }

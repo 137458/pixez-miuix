@@ -25,8 +25,9 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
             val originalUrl = resolveOriginalUrl(illust, pageIndex)
             val extension = extractExtension(originalUrl)
 
-            val userHome = System.getProperty("user.home") ?: "."
-            val dragDir = File(userHome, ".pixez/cache/drag_drops").apply { mkdirs() }
+            val dragDir = (com.perol.pixez.shared.platform.getAppCacheDirectory() / "drag_drops")
+                .toFile()
+                .apply { mkdirs() }
             val imageFile = File(dragDir, "${illust.id}_p${pageIndex}.${extension}")
 
             var readyFile: File? = null

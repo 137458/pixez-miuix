@@ -1,5 +1,6 @@
 ﻿package com.perol.pixez.shared.ui.utils
 
+import com.perol.pixez.shared.platform.DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES
 import com.perol.pixez.shared.platform.openBrowser
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -8,7 +9,7 @@ import io.github.aakira.napier.Napier
 /**
  * 默认允许通过浏览器打开的 URL Scheme 白名单
  */
-val DEFAULT_ALLOWED_URL_SCHEMES: Set<String> = setOf("http", "https", "mailto")
+val DEFAULT_ALLOWED_URL_SCHEMES: Set<String> = DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES
 
 /**
  * 安全打开外部链接，严格校验 URL Scheme，并通过回调优雅返回本地化错误提示。

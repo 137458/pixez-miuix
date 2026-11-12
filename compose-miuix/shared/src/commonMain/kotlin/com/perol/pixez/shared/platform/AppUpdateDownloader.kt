@@ -145,6 +145,9 @@ class AppUpdateDownloader(
     private val _state = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
     val state: StateFlow<UpdateDownloadState> = _state.asStateFlow()
 
+    /** 保护 state/generation/job 的同步锁；挂起调用不得在持锁状态下执行。 */
+    private val stateLock = Any()
+
     /** 当前任务的代际；只增不减，旧任务据此丢弃过期写入。跨线程读取需要可见性保证。 */
     @Volatile
     private var generation = 0L
@@ -152,22 +155,27 @@ class AppUpdateDownloader(
 
     /** 开始下载 [asset]；同一资产已在下载中直接返回，避免连点重复建任务。 */
     fun start(asset: UpdateAsset) {
-        val current = _state.value
-        if (current is UpdateDownloadState.Downloading && current.target == asset.identity) return
-        job?.cancel()
-        // 切换到另一个版本：旧版本的完成包不能继续留在缓存里等待被误安装。
-        if (current is UpdateDownloadState.Done && current.target != asset.identity) {
-            deleteFile(current.filePath)
+        val token: Long
+        var fileToDelete: String? = null
+        synchronized(stateLock) {
+            val current = _state.value
+            if (current is UpdateDownloadState.Downloading && current.target == asset.identity) return
+            job?.cancel()
+            // 切换到另一个版本：旧版本的完成包不能继续留在缓存里等待被误安装。
+            if (current is UpdateDownloadState.Done && current.target != asset.identity) {
+                fileToDelete = current.filePath
+            }
+            token = ++generation
+            _state.value = UpdateDownloadState.Downloading(
+                downloaded = 0L,
+                total = asset.size.coerceAtLeast(0L),
+                speedBytesPerSec = 0L,
+                target = asset.identity,
+            )
+            updateDownloadForegroundStart()
         }
-        val token = ++generation
-        _state.value = UpdateDownloadState.Downloading(
-            downloaded = 0L,
-            total = asset.size.coerceAtLeast(0L),
-            speedBytesPerSec = 0L,
-            target = asset.identity,
-        )
-        updateDownloadForegroundStart()
-        job = scope.launch {
+        fileToDelete?.let { deleteFile(it) }
+        val launched = scope.launch {
             var lastReportAt = 0L
             var lastBytes = 0L
             var speedBytesPerSec = 0L
@@ -235,6 +243,13 @@ class AppUpdateDownloader(
                 )
             }
         }
+        synchronized(stateLock) {
+            if (token == generation && launched.isActive) {
+                job = launched
+            } else if (token != generation) {
+                launched.cancel()
+            }
+        }
     }
 
     /**
@@ -247,33 +262,41 @@ class AppUpdateDownloader(
      */
     fun syncTarget(asset: UpdateAsset?) {
         val identity = asset?.identity
-        when (val current = _state.value) {
-            UpdateDownloadState.Idle -> Unit
-            is UpdateDownloadState.Downloading -> {
-                if (current.target != identity) {
-                    job?.cancel()
-                    job = null
-                    generation++
-                    updateDownloadForegroundStop()
-                    _state.value = UpdateDownloadState.Idle
+        var fileToDelete: String? = null
+        var restoreToken: Long? = null
+        synchronized(stateLock) {
+            when (val current = _state.value) {
+                UpdateDownloadState.Idle -> Unit
+                is UpdateDownloadState.Downloading -> {
+                    if (current.target != identity) {
+                        job?.cancel()
+                        job = null
+                        generation++
+                        updateDownloadForegroundStop()
+                        _state.value = UpdateDownloadState.Idle
+                    }
+                }
+                is UpdateDownloadState.Done -> {
+                    if (current.target != identity) {
+                        fileToDelete = current.filePath
+                        generation++
+                        _state.value = UpdateDownloadState.Idle
+                    }
+                }
+                is UpdateDownloadState.Failed -> {
+                    if (current.target != identity) {
+                        generation++
+                        _state.value = UpdateDownloadState.Idle
+                    }
                 }
             }
-            is UpdateDownloadState.Done -> {
-                if (current.target != identity) {
-                    deleteFile(current.filePath)
-                    generation++
-                    _state.value = UpdateDownloadState.Idle
-                }
-            }
-            is UpdateDownloadState.Failed -> {
-                if (current.target != identity) {
-                    generation++
-                    _state.value = UpdateDownloadState.Idle
-                }
+            if (asset != null && _state.value == UpdateDownloadState.Idle) {
+                restoreToken = generation
             }
         }
-        if (asset != null && _state.value == UpdateDownloadState.Idle) {
-            val token = generation
+        fileToDelete?.let { deleteFile(it) }
+        val token = restoreToken
+        if (asset != null && token != null) {
             scope.launch { restoreCompletedFile(asset, token) }
         }
     }
@@ -282,8 +305,8 @@ class AppUpdateDownloader(
      * 进程重启后的恢复：把磁盘上已下载完成、且与 [asset] 完全匹配的安装包接回 [UpdateDownloadState.Done]，
      * 并清理中断下载遗留的 `.part` 半成品。
      *
-     * 只删除本应用命名的 `.part` 临时文件：桌面端保存目录就是用户的 Downloads 目录，
-     * 扩大删除范围会误伤用户文件，因此不在这里清理其它版本的完成包。
+     * 只删除本应用以 `.{safeName}.` 前缀命名的 `.part` 临时文件：桌面端保存目录就是用户的 Downloads 目录，
+     * 扩大删除范围会误伤用户其它隐藏 `.part` 文件，因此绝不清理无关文件或其它版本完成包。
      */
     private suspend fun restoreCompletedFile(asset: UpdateAsset, token: Long) {
         if (token != generation || _state.value != UpdateDownloadState.Idle) return
@@ -292,7 +315,8 @@ class AppUpdateDownloader(
         // 扫描是挂起点：期间用户可能已重新开始下载，过期恢复必须丢弃。
         if (token != generation || _state.value != UpdateDownloadState.Idle) return
 
-        files.filter { it.name.startsWith(".") && it.name.endsWith(PART_FILE_SUFFIX) }
+        val partPrefix = ".${safeName}."
+        files.filter { it.name.startsWith(partPrefix) && it.name.endsWith(PART_FILE_SUFFIX) }
             .forEach { deleteFile(it.path) }
 
         val candidate = files.firstOrNull { it.name == safeName && it.size > 0L } ?: return
@@ -304,8 +328,10 @@ class AppUpdateDownloader(
             deleteFile(candidate.path)
             return
         }
-        if (token != generation) return
-        _state.value = UpdateDownloadState.Done(candidate.path, asset.identity)
+        synchronized(stateLock) {
+            if (token != generation || _state.value != UpdateDownloadState.Idle) return
+            _state.value = UpdateDownloadState.Done(candidate.path, asset.identity)
+        }
     }
 
     /** 仅当前版本已下载完成时返回可安装路径。 */
@@ -313,33 +339,41 @@ class AppUpdateDownloader(
 
     /** 安装失败后清掉不可用包并回到 Idle，让用户可以直接重新下载。 */
     fun discardCompletedAfterInstallFailure(asset: UpdateAsset?) {
-        val done = _state.value as? UpdateDownloadState.Done ?: return
-        if (asset == null || done.target != asset.identity) return
-        deleteFile(done.filePath)
-        generation++
-        _state.value = UpdateDownloadState.Idle
+        val fileToDelete: String
+        synchronized(stateLock) {
+            val done = _state.value as? UpdateDownloadState.Done ?: return
+            if (asset == null || done.target != asset.identity) return
+            fileToDelete = done.filePath
+            generation++
+            _state.value = UpdateDownloadState.Idle
+        }
+        deleteFile(fileToDelete)
     }
 
     /** 取消下载并丢弃半成品，状态回到 [UpdateDownloadState.Idle]。 */
     fun cancel() {
-        generation++
-        job?.cancel()
-        job = null
-        updateDownloadForegroundStop()
-        _state.value = UpdateDownloadState.Idle
+        synchronized(stateLock) {
+            generation++
+            job?.cancel()
+            job = null
+            updateDownloadForegroundStop()
+            _state.value = UpdateDownloadState.Idle
+        }
     }
 
     private fun publish(token: Long, state: UpdateDownloadState) {
-        if (token != generation) return
-        _state.value = state
-        when (state) {
-            is UpdateDownloadState.Downloading -> {
-                updateDownloadForegroundProgress(state.downloaded, state.total)
+        synchronized(stateLock) {
+            if (token != generation) return
+            _state.value = state
+            when (state) {
+                is UpdateDownloadState.Downloading -> {
+                    updateDownloadForegroundProgress(state.downloaded, state.total)
+                }
+                is UpdateDownloadState.Done,
+                is UpdateDownloadState.Failed,
+                UpdateDownloadState.Idle,
+                -> updateDownloadForegroundStop()
             }
-            is UpdateDownloadState.Done,
-            is UpdateDownloadState.Failed,
-            UpdateDownloadState.Idle,
-            -> updateDownloadForegroundStop()
         }
     }
 }

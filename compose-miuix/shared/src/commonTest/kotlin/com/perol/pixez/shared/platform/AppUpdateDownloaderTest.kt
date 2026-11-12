@@ -274,6 +274,32 @@ class AppUpdateDownloaderTest {
     }
 
     @Test
+    fun `恢复完成包时不得误删非当前更新包命名的其它隐藏 part 文件`() = runTest {
+        val deletedPaths = mutableListOf<String>()
+        val downloader = AppUpdateDownloader(
+            scope = this,
+            downloadFile = { _, _, _ -> Result.failure(IllegalStateException("不应重新下载")) },
+            sha256OfFile = { "a".repeat(64) },
+            deleteFile = { path ->
+                deletedPaths += path
+                true
+            },
+            scanUpdateDir = {
+                listOf(
+                    UpdateFileEntry("/cache/.app.apk.1.part", ".app.apk.1.part", 100L),
+                    UpdateFileEntry("/cache/.user-archive.zip.part", ".user-archive.zip.part", 200L),
+                    UpdateFileEntry("/cache/app.apk", "app.apk", 1024L),
+                )
+            },
+        )
+
+        downloader.syncTarget(asset)
+        advanceUntilIdle()
+
+        assertEquals(listOf("/cache/.app.apk.1.part"), deletedPaths)
+    }
+
+    @Test
     fun `磁盘文件大小不符时不恢复完成态`() = runTest {
         val deletedPaths = mutableListOf<String>()
         val downloader = AppUpdateDownloader(

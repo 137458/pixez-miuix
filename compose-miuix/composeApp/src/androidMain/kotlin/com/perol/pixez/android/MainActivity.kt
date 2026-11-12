@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
         val text = clipboard.getText()?.trim()
         if (!text.isNullOrBlank() && text != lastHandledClipboardText && DeepLinkParser.looksLikeLink(text)) {
             lastHandledClipboardText = text
-            parseAndNavigateUrlOrId(text)
+            parseAndNavigateUrlOrId(text, fromClipboard = true)
         }
     }
 
@@ -175,9 +175,17 @@ class MainActivity : ComponentActivity() {
         parseAndNavigateUrlOrId(uri.toString())
     }
 
-    private fun parseAndNavigateUrlOrId(text: String?) {
+    private fun parseAndNavigateUrlOrId(text: String?, fromClipboard: Boolean = false) {
         if (text.isNullOrBlank()) return
         try {
+            if (fromClipboard) {
+                DeepLinkParser.dispatchTextFromClipboard(
+                    raw = text,
+                    rootComponent = rootComponent,
+                    onConfirmOAuthCode = rootComponent::requestClipboardOAuthConfirmation,
+                )
+                return
+            }
             DeepLinkParser.dispatchText(
                 raw = text,
                 rootComponent = rootComponent,

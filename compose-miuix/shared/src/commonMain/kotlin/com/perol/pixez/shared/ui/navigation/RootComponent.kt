@@ -75,6 +75,25 @@ class RootComponent(
     private val _selectedTab = kotlinx.coroutines.flow.MutableStateFlow(restoredTab)
     val selectedTab: kotlinx.coroutines.flow.StateFlow<MainTab> = _selectedTab
 
+    private val _pendingClipboardOAuthCode = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val pendingClipboardOAuthCode: kotlinx.coroutines.flow.StateFlow<String?> = _pendingClipboardOAuthCode
+
+    fun requestClipboardOAuthConfirmation(code: String) {
+        if (code.isNotBlank()) {
+            _pendingClipboardOAuthCode.value = code
+        }
+    }
+
+    fun dismissClipboardOAuthConfirmation() {
+        _pendingClipboardOAuthCode.value = null
+    }
+
+    fun consumeClipboardOAuthConfirmation(): String? {
+        val code = _pendingClipboardOAuthCode.value
+        _pendingClipboardOAuthCode.value = null
+        return code
+    }
+
     init {
         stateKeeper.register(KEY_SELECTED_TAB, String.serializer()) {
             _selectedTab.value.name

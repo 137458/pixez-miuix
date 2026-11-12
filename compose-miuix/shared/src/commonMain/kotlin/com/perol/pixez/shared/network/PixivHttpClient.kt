@@ -30,6 +30,7 @@ class PixivHttpClient(
     enableLogging: Boolean = false,
     private val modeProvider: (isOauthHost: Boolean) -> String? = { null },
     private val authExpirySignal: AuthExpirySignal? = null,
+    private val mirrorHostProvider: () -> String? = { null },
 ) {
     /**
      * 用于 OAuth 登录/刷新 token 的基础客户端，不带 TokenRefreshPlugin。
@@ -73,9 +74,17 @@ class PixivHttpClient(
      * 不使用 TokenRefreshPlugin，避免图片 401 时触发 OAuth 刷新逻辑；
      * 默认请求头仅包含 Referer，满足 Pixiv 图片防盗链要求。
      */
-    val downloadClient: HttpClient = createPlatformHttpClient(modeProvider) {
+    val downloadClient: HttpClient = createPlatformHttpClient(
+        modeProvider = modeProvider,
+        followRedirects = false,
+    ) {
         apiTimeouts()
         defaultRetry()
+        install(TrustedRedirectPlugin) {
+            validateTarget = { currentUrl, targetUrl ->
+                validateDownloadRedirectTarget(currentUrl, targetUrl, mirrorHostProvider())
+            }
+        }
         if (enableLogging) {
             install(Logging) {
                 logger = HttpClientDefaults.napierLogger("PixivDownload")
@@ -168,8 +177,14 @@ class PixivHttpClient(
             languageProvider: () -> String,
             enableLogging: Boolean,
             modeProvider: (isOauthHost: Boolean) -> String?,
-        ): HttpClient = createPlatformHttpClient(modeProvider) {
+        ): HttpClient = createPlatformHttpClient(
+            modeProvider = modeProvider,
+            followRedirects = false,
+        ) {
             apiTimeouts()
+            install(TrustedRedirectPlugin) {
+                validateTarget = { _, targetUrl -> validateApiRedirectTarget(targetUrl) }
+            }
             defaultRequest {
                 url {
                     protocol = URLProtocol.HTTPS
@@ -233,8 +248,14 @@ class PixivHttpClient(
             enableLogging: Boolean,
             modeProvider: (isOauthHost: Boolean) -> String?,
             authExpirySignal: AuthExpirySignal? = null,
-        ): HttpClient = createPlatformHttpClient(modeProvider) {
+        ): HttpClient = createPlatformHttpClient(
+            modeProvider = modeProvider,
+            followRedirects = false,
+        ) {
             apiTimeouts()
+            install(TrustedRedirectPlugin) {
+                validateTarget = { _, targetUrl -> validateApiRedirectTarget(targetUrl) }
+            }
 
             // 统一使用 HTTPS 与固定 Host。
             defaultRequest {

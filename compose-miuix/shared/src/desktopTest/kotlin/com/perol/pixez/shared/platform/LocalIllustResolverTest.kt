@@ -139,4 +139,30 @@ class LocalIllustResolverTest {
             assertEquals(originalUrl, hitModel)
         }
     }
+
+    @Test
+    fun `testFindDownloadedFileUriRequiresNumericBoundaryMatch`() {
+        val tempDir = java.nio.file.Files.createTempDirectory("local-illust-boundary").toFile()
+        try {
+            // 同目录下存在数字前缀被包含的另一作品文件 9123456_p0.jpg，不应匹配 illustId=123456
+            java.io.File(tempDir, "9123456_p0.jpg").writeBytes(byteArrayOf(1, 2, 3))
+            val resultWithoutExact = LocalIllustResolver.findDownloadedFileUri(
+                illust = createDummyIllust(id = 123456L),
+                pageIndex = 0,
+                customBasePath = tempDir.absolutePath,
+            )
+            kotlin.test.assertNull(resultWithoutExact, "9123456_p0.jpg 不应误匹配 illustId=123456")
+
+            // 插入精确 ID 匹配后应命中精确文件
+            val exactFile = java.io.File(tempDir, "123456_p0.jpg").apply { writeBytes(byteArrayOf(4, 5, 6)) }
+            val resultWithExact = LocalIllustResolver.findDownloadedFileUri(
+                illust = createDummyIllust(id = 123456L),
+                pageIndex = 0,
+                customBasePath = tempDir.absolutePath,
+            )
+            assertEquals(exactFile.toURI().toString(), resultWithExact)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

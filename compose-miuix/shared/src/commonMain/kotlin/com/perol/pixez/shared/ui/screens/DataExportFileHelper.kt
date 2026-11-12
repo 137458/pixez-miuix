@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,7 +87,7 @@ internal suspend fun performExport(
     novelHistoryRepository: NovelHistoryRepository,
     muteRepository: MuteRepository,
     json: Json,
-): Result<Unit> = suspendRunCatching {
+): Result<Unit> = suspendRunCatchingNonCancel {
     val content = when (type) {
         DataType.SearchTagHistory -> {
             // 搜索历史以字符串列表形式保存在 Settings 中。
@@ -135,7 +136,7 @@ internal suspend fun performImport(
     novelHistoryRepository: NovelHistoryRepository,
     muteRepository: MuteRepository,
     json: Json,
-): Result<Unit> = suspendRunCatching {
+): Result<Unit> = suspendRunCatchingNonCancel {
     try {
         when (type) {
             DataType.SearchTagHistory -> {
@@ -178,19 +179,6 @@ internal suspend fun performImport(
         throw DataExportException(DataExportErrorCode.ImportMalformedContent, e.message, e)
     }
 }
-
-/**
- * 协程安全版 runCatching：捕获所有异常但重新抛出 [CancellationException]，
- * 避免协程取消时被误判为导入导出失败。
- */
-private suspend inline fun <T> suspendRunCatching(crossinline block: suspend () -> T): Result<T> =
-    try {
-        Result.success(block())
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Throwable) {
-        Result.failure(e)
-    }
 
 /**
  * 阻塞式文件读取切到 IO 调度器执行，避免占用调用方线程；结果语义与直接调用 [readExportFile] 一致。

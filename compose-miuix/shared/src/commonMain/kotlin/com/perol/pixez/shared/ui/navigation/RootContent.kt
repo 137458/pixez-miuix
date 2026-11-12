@@ -58,7 +58,9 @@ import com.perol.pixez.shared.ui.components.ToastMessage
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UpdateDialog
 import com.perol.pixez.shared.ui.components.AuthExpiredDialog
+import com.perol.pixez.shared.ui.components.ClipboardOAuthDialog
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.utils.openSafeUrl
@@ -184,6 +186,28 @@ fun RootContent(
                         },
                     )
                 }
+
+                val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+                val pendingOAuthCode by component.pendingClipboardOAuthCode.collectAsState()
+                ClipboardOAuthDialog(
+                    show = !pendingOAuthCode.isNullOrBlank(),
+                    onConfirm = {
+                        val code = component.consumeClipboardOAuthConfirmation() ?: return@ClipboardOAuthDialog
+                        coroutineScope.launch {
+                            runCatching { registry.accountRepository.loginWithCode(code) }
+                                .onFailure { error ->
+                                    if (error is kotlinx.coroutines.CancellationException) throw error
+                                    rootToastSink(
+                                        ToastData(
+                                            PixivApiErrorFormatter.format(error, strings),
+                                            ToastType.Error,
+                                        ),
+                                    )
+                                }
+                        }
+                    },
+                    onDismiss = { component.dismissClipboardOAuthConfirmation() },
+                )
 
                 AuthExpiredDialog(
                     show = showAuthExpiredDialog,

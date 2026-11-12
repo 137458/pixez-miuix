@@ -20,6 +20,8 @@ import java.net.URI
  */
 class DesktopProxySelector(
     private val delegate: ProxySelector? = ProxySelector.getDefault(),
+    private val envProvider: (String) -> String? = System::getenv,
+    private val windowsRegistryProxyProvider: ((URI?) -> String?)? = null,
 ) : ProxySelector() {
 
     override fun select(uri: URI?): List<Proxy> {
@@ -30,7 +32,7 @@ class DesktopProxySelector(
         }
 
         // 2. Windows 平台：动态查询 Windows 注册表系统代理配置
-        if (isWindows()) {
+        if (isWindows() || windowsRegistryProxyProvider != null) {
             val winProxy = getWindowsRegistryProxy(uri)
             if (winProxy != null) {
                 return listOf(winProxy)
@@ -41,7 +43,8 @@ class DesktopProxySelector(
         return try {
             val defaultList = delegate?.select(uri)
             if (defaultList.isNullOrEmpty()) listOf(Proxy.NO_PROXY) else defaultList
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Napier.d("委派代理选择器查询异常 uri=$uri", e, tag = "DesktopProxy")
             listOf(Proxy.NO_PROXY)
         }
     }
@@ -56,9 +59,9 @@ class DesktopProxySelector(
     }
 
     private fun getEnvProxy(uri: URI?): Proxy? {
-        val http = System.getenv("HTTP_PROXY") ?: System.getenv("http_proxy")
-        val https = System.getenv("HTTPS_PROXY") ?: System.getenv("https_proxy")
-        val all = System.getenv("ALL_PROXY") ?: System.getenv("all_proxy")
+        val http = envProvider("HTTP_PROXY") ?: envProvider("http_proxy")
+        val https = envProvider("HTTPS_PROXY") ?: envProvider("https_proxy")
+        val all = envProvider("ALL_PROXY") ?: envProvider("all_proxy")
 
         val target = if (uri?.scheme?.equals("https", ignoreCase = true) == true) {
             https ?: all ?: http
@@ -71,6 +74,10 @@ class DesktopProxySelector(
 
     private fun getWindowsRegistryProxy(uri: URI?): Proxy? {
         return try {
+            val injected = windowsRegistryProxyProvider?.invoke(uri)
+            if (injected != null) {
+                return parseProxyAddress(injected)
+            }
             val isEnabled = Advapi32Util.registryGetIntValue(
                 WinReg.HKEY_CURRENT_USER,
                 "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
@@ -104,7 +111,8 @@ class DesktopProxySelector(
             if (!targetProxy.isNullOrBlank()) {
                 parseProxyAddress(targetProxy)
             } else null
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Napier.w("读取 Windows 注册表代理设置失败", t, tag = "DesktopProxy")
             null
         }
     }
@@ -114,21 +122,21 @@ class DesktopProxySelector(
 
     private fun parseProxyAddress(raw: String): Proxy? {
         return try {
-            val isSocks = raw.startsWith("socks://", ignoreCase = true) || raw.startsWith("socks5://", ignoreCase = true)
-            val cleaned = raw
-                .removePrefix("http://")
-                .removePrefix("https://")
-                .removePrefix("socks5://")
-                .removePrefix("socks://")
-                .trim()
-            val colonIndex = cleaned.lastIndexOf(':')
-            if (colonIndex > 0 && colonIndex < cleaned.length - 1) {
-                val host = cleaned.substring(0, colonIndex)
-                val port = cleaned.substring(colonIndex + 1).toIntOrNull() ?: return null
-                val type = if (isSocks) Proxy.Type.SOCKS else Proxy.Type.HTTP
-                Proxy(type, InetSocketAddress(host, port))
-            } else null
-        } catch (_: Exception) {
+            val trimmed = raw.trim()
+            if (trimmed.isEmpty()) return null
+            val hasScheme = trimmed.contains("://")
+            val normalized = if (hasScheme) trimmed else "http://$trimmed"
+            val parsed = URI(normalized)
+            val scheme = parsed.scheme?.lowercase().orEmpty()
+            val isSocks = scheme == "socks" || scheme == "socks5" || scheme == "socks4" || scheme == "socks5h"
+            val rawHost = parsed.host?.takeIf { it.isNotBlank() } ?: return null
+            val host = rawHost.removePrefix("[").removeSuffix("]")
+            val port = parsed.port
+            if (port !in 1..65535) return null
+            val type = if (isSocks) Proxy.Type.SOCKS else Proxy.Type.HTTP
+            Proxy(type, InetSocketAddress(host, port))
+        } catch (e: Exception) {
+            Napier.d("解析代理地址失败: $raw", e, tag = "DesktopProxy")
             null
         }
     }

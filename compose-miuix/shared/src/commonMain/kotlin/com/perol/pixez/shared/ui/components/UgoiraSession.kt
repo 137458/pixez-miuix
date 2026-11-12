@@ -102,9 +102,9 @@ internal class UgoiraFrameProvider(
         }
     }
 
-    /** 从磁盘读取并解码一帧；文件缺失或解码失败时返回 null。 */
+    /** 从磁盘读取并解码一帧；路径越界、文件缺失或解码失败时返回 null。 */
     private fun decodeFrame(frame: UgoiraFrame): ImageBitmap? {
-        val framePath = framesDir / frame.file
+        val framePath = resolveSafeUgoiraFramePath(framesDir, frame.file) ?: return null
         val bytes = runCatching {
             if (FileSystem.SYSTEM.exists(framePath)) {
                 FileSystem.SYSTEM.read(framePath) { readByteArray() }
@@ -388,4 +388,17 @@ private suspend fun cleanupUgoiraSaveTemp(tempPath: Path) {
     withContext(NonCancellable + Dispatchers.IO) {
         runCatching { if (FileSystem.SYSTEM.exists(tempPath)) FileSystem.SYSTEM.delete(tempPath) }
     }
+}
+
+/**
+ * 校验 Ugoira 帧文件名不发生路径穿越：仅允许落在 [framesDir] 根目录下的安全单级文件名。
+ */
+internal fun resolveSafeUgoiraFramePath(framesDir: Path, rawFileName: String): Path? {
+    val trimmed = rawFileName.trim()
+    if (trimmed.isEmpty() || trimmed == "." || trimmed == "..") return null
+    if (trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains(':')) return null
+    val baseNormalized = framesDir.normalized()
+    val resolved = (baseNormalized / trimmed).normalized()
+    if (resolved.parent != baseNormalized) return null
+    return resolved
 }

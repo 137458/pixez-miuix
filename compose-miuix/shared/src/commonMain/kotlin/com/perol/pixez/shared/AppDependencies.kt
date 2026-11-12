@@ -158,6 +158,7 @@ class AppDependencies(
             enableLogging = false,
             modeProvider = dnsModeProvider,
             authExpirySignal = authExpirySignal,
+            mirrorHostProvider = { settingsRepository.pictureSource },
         )
     }
 
@@ -192,7 +193,15 @@ class AppDependencies(
      * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
      */
     val webClient: HttpClient by lazy {
-        com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
+        com.perol.pixez.shared.network.createPlatformHttpClient(
+            modeProvider = dnsModeProvider,
+            followRedirects = false,
+        ) {
+            install(com.perol.pixez.shared.network.TrustedRedirectPlugin) {
+                validateTarget = { currentUrl, targetUrl ->
+                    com.perol.pixez.shared.network.validateWebRedirectTarget(currentUrl, targetUrl)
+                }
+            }
             webTimeouts()
         }
     }
@@ -257,7 +266,13 @@ class AppDependencies(
      * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
      */
     private val boardHttpClient: HttpClient by lazy {
-        com.perol.pixez.shared.network.createPlatformHttpClient(modeProvider = dnsModeProvider) {
+        com.perol.pixez.shared.network.createPlatformHttpClient(
+            modeProvider = dnsModeProvider,
+            followRedirects = false,
+        ) {
+            install(com.perol.pixez.shared.network.TrustedRedirectPlugin) {
+                validateTarget = { _, targetUrl -> com.perol.pixez.shared.network.validateBoardRedirectTarget(targetUrl) }
+            }
             install(ContentNegotiation) {
                 json(HttpClientDefaults.commonJson)
             }

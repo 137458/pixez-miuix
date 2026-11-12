@@ -45,6 +45,52 @@ class SingleInstanceCoordinatorTest {
     }
 
     @Test
+    fun `secondary aborts immediately without retrying when server replies FORBIDDEN`() {
+        val temporaryDirectory = Files.createTempDirectory("pixez-single-instance-forbidden-test").toFile()
+        val lockFile = File(temporaryDirectory, "instance.lock")
+        val tokenFile = File(temporaryDirectory, "pixez-desktop.token").apply { writeText("wrong-token") }
+        java.nio.channels.FileChannel.open(
+            lockFile.toPath(),
+            java.nio.file.StandardOpenOption.CREATE,
+            java.nio.file.StandardOpenOption.WRITE,
+        ).use { channel ->
+            val heldLock = channel.lock()
+            val acceptCount = java.util.concurrent.atomic.AtomicInteger(0)
+            ServerSocket(0, 50, InetAddress.getLoopbackAddress()).use { server ->
+                val serverThread = Thread {
+                    while (!server.isClosed) {
+                        val client = runCatching { server.accept() }.getOrNull() ?: break
+                        acceptCount.incrementAndGet()
+                        client.use {
+                            val reader = it.getInputStream().bufferedReader()
+                            reader.readLine()
+                            reader.readLine()
+                            val writer = it.getOutputStream().bufferedWriter()
+                            writer.write("FORBIDDEN\n")
+                            writer.flush()
+                        }
+                    }
+                }.apply {
+                    isDaemon = true
+                    start()
+                }
+                val result = SingleInstanceCoordinator.acquireOrForward(
+                    listOf("pixez://illust/1"),
+                    lockFile,
+                    server.localPort,
+                    tokenFile,
+                )
+                assertIs<SingleInstanceCoordinator.Acquisition.Unavailable>(result)
+                assertEquals(1, acceptCount.get(), "收到 FORBIDDEN 应立即终止，不再消耗重试预算")
+                server.close()
+                serverThread.join(1000)
+            }
+            heldLock.release()
+        }
+        temporaryDirectory.deleteRecursively()
+    }
+
+    @Test
     fun `secondary instance without valid token is rejected`() {
         val temporaryDirectory = Files.createTempDirectory("pixez-single-instance-test").toFile()
         val lockFile = File(temporaryDirectory, "instance.lock")
