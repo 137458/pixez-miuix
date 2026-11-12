@@ -49,38 +49,16 @@ actual class IllustSaver {
                 Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
             }
 
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, safeFileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-
             val resolver = context.contentResolver
-            runCatching {
-                resolver.delete(
-                    targetUri,
-                    "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND (${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?)",
-                    arrayOf(safeFileName, relativePath, "$relativePath/"),
-                )
-            }
-            val uri = resolver.insert(targetUri, contentValues)
-                ?: throw IllegalStateException("MediaStore 插入失败: $fileName")
-
-            try {
-                resolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(bytes)
-                } ?: throw IllegalStateException("无法打开输出流: $fileName")
-
-                contentValues.clear()
-                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                resolver.update(uri, contentValues, null, null)
-            } catch (e: Exception) {
-                resolver.delete(uri, null, null)
-                throw e
-            }
-
-            uri.toString()
+            saveToMediaStoreQ(
+                resolver = resolver,
+                targetUri = targetUri,
+                safeFileName = safeFileName,
+                displayErrorName = fileName,
+                mimeType = mimeType,
+                relativePath = relativePath,
+                writer = { outputStream -> outputStream.write(bytes) },
+            ).toString()
         } else {
             val baseDir = if (isZip) {
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -155,41 +133,19 @@ actual class IllustSaver {
                     Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
                 }
 
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, safeFileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                }
-
-                val resolver = context.contentResolver
-                runCatching {
-                    resolver.delete(
-                        targetUri,
-                        "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND (${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?)",
-                        arrayOf(safeFileName, relativePath, "$relativePath/"),
-                    )
-                }
-                val uri = resolver.insert(targetUri, contentValues)
-                    ?: throw IllegalStateException("MediaStore 插入失败: $fileName")
-
-                try {
-                    // openOutputStream 与 use 合并为同一表达式，避免取流后临时文件读取抛异常时输出流泄漏。
-                    resolver.openOutputStream(uri)?.use { output ->
+                saveToMediaStoreQ(
+                    resolver = context.contentResolver,
+                    targetUri = targetUri,
+                    safeFileName = safeFileName,
+                    displayErrorName = fileName,
+                    mimeType = mimeType,
+                    relativePath = relativePath,
+                    writer = { output ->
                         tempFile.inputStream().use { input ->
                             input.copyTo(output, bufferSize = 64 * 1024)
                         }
-                    } ?: throw IllegalStateException("无法打开输出流: $fileName")
-
-                    contentValues.clear()
-                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    resolver.update(uri, contentValues, null, null)
-                } catch (e: Exception) {
-                    resolver.delete(uri, null, null)
-                    throw e
-                }
-
-                uri.toString()
+                    },
+                ).toString()
             } else {
                 val baseDir = if (isZip) {
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -230,6 +186,51 @@ actual class IllustSaver {
             }
         } finally {
             runCatching { tempFile.delete() }
+        }
+    }
+
+    private inline fun saveToMediaStoreQ(
+        resolver: android.content.ContentResolver,
+        targetUri: android.net.Uri,
+        safeFileName: String,
+        displayErrorName: String,
+        mimeType: String,
+        relativePath: String,
+        writer: (java.io.OutputStream) -> Unit,
+    ): android.net.Uri {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, safeFileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(targetUri, contentValues)
+            ?: throw IllegalStateException("MediaStore 插入失败: $displayErrorName")
+
+        try {
+            resolver.openOutputStream(uri)?.use(writer)
+                ?: throw IllegalStateException("无法打开输出流: $displayErrorName")
+
+            // 写盘完成后再移除同名旧记录并取消 pending 标记，避免写入失败时误删既有文件。
+            runCatching {
+                resolver.delete(
+                    targetUri,
+                    "${MediaStore.MediaColumns._ID} != ? AND ${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND (${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} = ?)",
+                    arrayOf(
+                        uri.lastPathSegment.orEmpty(),
+                        safeFileName,
+                        relativePath,
+                        "$relativePath/",
+                    ),
+                )
+            }
+            contentValues.clear()
+            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+            return uri
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            throw e
         }
     }
 

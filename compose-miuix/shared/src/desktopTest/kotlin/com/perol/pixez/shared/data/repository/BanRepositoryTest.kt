@@ -278,6 +278,39 @@ class BanRepositoryTest {
         assertEquals(listOf("風景"), kept.map { it.tag })
     }
 
+    @Test
+    fun `insertAllBan 系列批量写入应去重批次内与库中已有记录`() = runBlocking {
+        repository.insertBanIllust(1001L, "existing illust")
+        repository.insertAllBanIllusts(
+            listOf(
+                BanRepository.BanIllust(0L, "1001", "dup"),
+                BanRepository.BanIllust(0L, "1002", "a"),
+                BanRepository.BanIllust(0L, "1002", "b"),
+            ),
+        )
+        assertEquals(2, repository.getAllBanIllusts().size)
+
+        repository.insertBanUser(2001L, "existing user")
+        repository.insertAllBanUsers(
+            listOf(
+                BanRepository.BanUser(0L, "2001", "dup"),
+                BanRepository.BanUser(0L, "2002", "a"),
+                BanRepository.BanUser(0L, "2002", "b"),
+            ),
+        )
+        assertEquals(2, repository.getAllBanUsers().size)
+
+        repository.insertBanTag("dupTag", "重复")
+        repository.insertAllBanTags(
+            listOf(
+                BanRepository.BanTag(0L, "dupTag", "重复2"),
+                BanRepository.BanTag(0L, "newTag", "新标签"),
+                BanRepository.BanTag(0L, "newTag", "新标签2"),
+            ),
+        )
+        assertEquals(2, repository.getAllBanTags().size)
+    }
+
     private fun createTrendIllust(): TrendTagIllust =
         TrendTagIllust(id = 1L, imageUrls = ImageUrls(squareMedium = "", medium = "", large = ""))
 

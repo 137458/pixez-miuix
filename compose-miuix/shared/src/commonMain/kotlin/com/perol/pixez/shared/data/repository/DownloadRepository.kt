@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AppErrorKind
 import com.perol.pixez.shared.network.PixivApiException
 import com.perol.pixez.shared.network.PixivHosts
+import com.perol.pixez.shared.network.StreamingDownload
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.IllustSaver
@@ -15,32 +16,28 @@ import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.HttpHeaders
-import io.ktor.http.Url
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readAvailable
-import okio.FileSystem
-import okio.Path
-import com.perol.pixez.shared.platform.getAppCacheDirectory
-import kotlinx.datetime.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import okio.Path
+import com.perol.pixez.shared.platform.getAppCacheDirectory
+import io.ktor.client.request.prepareGet
+import io.ktor.http.Url
 
 /** 用户未自定义命名模板时的默认文件名格式。 */
 private const val DEFAULT_NAME_FORMAT = "{illust_id}_p{part}"
@@ -64,6 +61,14 @@ class DownloadRepository(
     // UI 层收集后触发列表刷新，替代秒级全表轮询；tryEmit 无订阅者时丢弃（刷新非关键路径）。
     private val _taskEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val taskEventFlow: SharedFlow<Unit> = _taskEventFlow.asSharedFlow()
+
+    /**
+     * 实例级动态并发门控：跨所有并发 download / downloadAllPages / retry 调用共享
+     * [SettingsRepository.maxRunningTask] 上限，避免多次批量下载叠乘放大并发数。
+     */
+    private val downloadGate = DynamicConcurrencyGate {
+        coerceParallelTasks(settingsRepository.maxRunningTask)
+    }
 
     private fun notifyTaskChanged() {
         _taskEventFlow.tryEmit(Unit)
@@ -110,8 +115,7 @@ class DownloadRepository(
             throwOnFailure = false,
             startWriteTolerant = false,
         ) {
-            val tempFileName = "dl_temp_${illust.id}_${pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
-            val tempPath = downloadToTempFile(remoteUrl, tempFileName)
+            val tempPath = downloadToTempFile(remoteUrl, prefix = "dl_temp_${illust.id}_${pageIndex}_")
             saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
                 .also { Napier.d("下载完成 path=$it") }
         }
@@ -205,9 +209,7 @@ class DownloadRepository(
             throwOnFailure = true,
             startWriteTolerant = true,
         ) {
-            val tempFileName =
-                "dl_retry_${history.illustId}_${history.pageIndex}_${Clock.System.now().toEpochMilliseconds()}.tmp"
-            val tempPath = downloadToTempFile(history.remoteUrl, tempFileName)
+            val tempPath = downloadToTempFile(history.remoteUrl, prefix = "dl_retry_${history.illustId}_${history.pageIndex}_")
             saver.saveFromTempFile(
                 FileNamePolicy.requireSafeBaseName(history.fileName),
                 tempPath,
@@ -218,58 +220,29 @@ class DownloadRepository(
     }
 
     /**
-     * 流式下载图片至应用缓存临时文件，配合 64KB 缓冲区边拉取边落盘，避免大图或动图占用 JVM 堆内存。
-     *
-     * 大小防护三重校验：写盘前按声明 Content-Length 预检、流中按累计字节上限拦截、
-     * 结束后核验实收字节与声明长度一致（拒绝被截断的响应）；
-     * 下载失败或取消时清理临时文件，避免缓存目录残留垃圾。
+     * 流式下载图片至应用缓存唯一临时文件，全局受 [downloadGate] 并发限制，
+     * 并复用 [StreamingDownload] 完成状态检查、大小预检与 64KB 分块落盘。
      */
-    private suspend fun downloadToTempFile(url: String, tempFileName: String): Path {
+    private suspend fun downloadToTempFile(url: String, prefix: String): Path {
         val mirrorHost = settingsRepository.pictureSource
         val mappedUrl = url.mapToPictureSource(mirrorHost)
         val trustedUrl = com.perol.pixez.shared.network.TrustedUrlPolicy.imageUrl(mappedUrl, mirrorHost)
-        val cacheDir = getAppCacheDirectory()
-        val tempPath = cacheDir / tempFileName
-
-        try {
+        val tempPath = StreamingDownload.createUniqueTempFile(
+            directory = getAppCacheDirectory(),
+            prefix = prefix,
+            suffix = ".tmp",
+        )
+        return downloadGate.withPermit {
             httpClient.prepareGet(trustedUrl) {
                 header("Referer", PixivHosts.PIXIV_APP_API)
             }.execute { response ->
-                // 写盘前先按声明长度预检，恶意/异常的超大响应不落盘。
-                val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-                require(declaredLength == null || declaredLength <= maxDownloadBytes) {
-                    "下载内容声明大小超过上限: $declaredLength"
-                }
-                val channel: ByteReadChannel = response.bodyAsChannel()
-                // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方（UI 主协程）线程。
-                withContext(Dispatchers.IO) {
-                    FileSystem.SYSTEM.write(tempPath) {
-                        val buffer = ByteArray(64 * 1024)
-                        var totalBytes = 0L
-                        while (!channel.isClosedForRead) {
-                            val read = channel.readAvailable(buffer, 0, buffer.size)
-                            if (read <= 0) break
-                            totalBytes += read
-                            // 写入前校验累计字节，超限立即中止，防止无限流撑爆磁盘。
-                            require(totalBytes <= maxDownloadBytes) {
-                                "下载内容超过大小上限: $totalBytes"
-                            }
-                            write(buffer, 0, read)
-                        }
-                        // 声明长度已知时核验实收字节，拒绝被截断的损坏响应。
-                        require(declaredLength == null || totalBytes == declaredLength) {
-                            "下载内容不完整: 实收 $totalBytes, 声明 $declaredLength"
-                        }
-                    }
-                }
+                StreamingDownload.writeResponseToFile(
+                    response = response,
+                    targetFile = tempPath,
+                    maxBytes = maxDownloadBytes,
+                    failureLabel = "下载图片失败",
+                )
             }
-            return tempPath
-        } catch (e: Throwable) {
-            // 下载失败/取消时清理临时文件；清理本身不可再被取消，异常原样上抛。
-            withContext(NonCancellable + Dispatchers.IO) {
-                FileSystem.SYSTEM.delete(tempPath, mustExist = false)
-            }
-            throw e
         }
     }
 
@@ -457,7 +430,17 @@ class DownloadRepository(
             TaskOutcome(successTask, savedPath)
         } catch (e: CancellationException) {
             if (notifyProgress) notifier.cancel(illustId)
-            // 协程取消时直接抛出，避免被转为 Failed 状态而破坏取消语义。
+            // 协程取消时把已创建的 Downloading 历史记录标为 Failed，防止任务永久卡在 Downloading 态，再原样上抛取消信号。
+            if (historyId > 0) {
+                withContext(NonCancellable) {
+                    suspendRunCatchingNonCancel {
+                        historyRepository?.saveTask(history.copy(id = historyId, status = DownloadStatus.Failed))
+                    }.onFailure { saveError ->
+                        Napier.w("下载取消时更新历史状态失败 historyId=$historyId", saveError)
+                    }
+                }
+            }
+            notifyTaskChanged()
             throw e
         } catch (e: Exception) {
             Napier.e("下载任务失败 illustId=$illustId page=${history.pageIndex}", e)
@@ -494,6 +477,40 @@ class DownloadRepository(
         val path = runCatching { Url(url).encodedPath }.getOrDefault("")
         val ext = path.substringAfterLast('.', "").lowercase()
         return if (ext in SUPPORTED_EXTENSIONS) ext else "jpg"
+    }
+
+    /** 实例级动态并发门控，支持运行期调整并发上限。 */
+    private class DynamicConcurrencyGate(
+        private val limitProvider: () -> Int,
+    ) {
+        private val lock = Mutex()
+        private var activeCount = 0
+        private val waiters = Channel<Unit>(Channel.UNLIMITED)
+
+        suspend fun <T> withPermit(block: suspend () -> T): T {
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val acquired = lock.withLock {
+                    val limit = limitProvider().coerceAtLeast(1)
+                    if (activeCount < limit) {
+                        activeCount++
+                        true
+                    } else {
+                        false
+                    }
+                }
+                if (acquired) break
+                waiters.receive()
+            }
+            return try {
+                block()
+            } finally {
+                lock.withLock {
+                    if (activeCount > 0) activeCount--
+                }
+                waiters.trySend(Unit)
+            }
+        }
     }
 
     companion object {

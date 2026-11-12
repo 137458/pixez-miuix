@@ -162,10 +162,15 @@ class PagedListState<T>(
             hasItems = !items.isNullOrEmpty(),
         )
 
-    /** 快照恢复：直接写入列表与下一页 URL（如特辑分类首屏缓存命中），不改 [generation]。 */
+    /** 快照恢复：直接写入列表与下一页 URL，递增 [generation] 作废在途请求并清空残留加载/错误态。 */
     fun restore(items: List<T>, nextUrl: String?) {
+        generation++
         this.items = items
         this.nextUrl = nextUrl
+        this.initialError = null
+        this.isRefreshing = false
+        this.isLoadingMore = false
+        this.loadMoreError = null
     }
 
     /**

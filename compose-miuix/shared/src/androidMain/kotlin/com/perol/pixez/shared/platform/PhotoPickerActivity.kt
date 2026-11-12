@@ -12,6 +12,8 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -39,6 +41,10 @@ internal object PhotoPickerRegistry {
  */
 class PhotoPickerActivity : ComponentActivity() {
 
+    private companion object {
+        const val MAX_PICKED_PHOTO_BYTES = 20 * 1024 * 1024
+    }
+
     private val pickerLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         val cb = PhotoPickerRegistry.claimCallback()
         if (uri != null) {
@@ -48,7 +54,7 @@ class PhotoPickerActivity : ComponentActivity() {
                 var fileName: String? = null
                 try {
                     withContext(Dispatchers.IO) {
-                        bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        bytes = contentResolver.openInputStream(uri)?.use { readBoundedBytes(it) }
                         contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                             val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                             if (nameIndex >= 0 && cursor.moveToFirst()) {
@@ -80,5 +86,28 @@ class PhotoPickerActivity : ComponentActivity() {
                 finish()
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isFinishing) {
+            PhotoPickerRegistry.claimCallback()?.invoke(null, null)
+        }
+    }
+
+    private fun readBoundedBytes(input: InputStream): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(16 * 1024)
+        var total = 0
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            require(total <= MAX_PICKED_PHOTO_BYTES) {
+                "Picked photo exceeds max size (${MAX_PICKED_PHOTO_BYTES / (1024 * 1024)} MB)"
+            }
+            output.write(buffer, 0, read)
+        }
+        return output.toByteArray()
     }
 }

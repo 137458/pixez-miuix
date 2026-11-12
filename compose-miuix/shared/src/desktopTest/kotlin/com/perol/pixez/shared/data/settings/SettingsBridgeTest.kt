@@ -261,6 +261,32 @@ class SettingsBridgeTest {
         assertTrue(node.getBoolean("h_cross_adapt", false))
         assertEquals(60, node.getInt("h_cross_adapt_width", -1))
     }
+
+    @Test
+    fun `searchHistory bookTagList and low level setters bump changeVersion`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/version_all_mutators")
+        node.clear()
+        val repo = SettingsRepository(PreferencesSettings(node))
+
+        var expectedVersion = repo.changeVersion.value
+        repo.searchHistory = listOf("pixiv", "miuix")
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        repo.bookTagList = listOf("landscape")
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        repo.setString("custom_str", "val")
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        repo.setInt("custom_int", 42)
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        repo.setBoolean("custom_bool", true)
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        repo.setStringList("custom_list", listOf("a", "b"))
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+    }
 }
 
 

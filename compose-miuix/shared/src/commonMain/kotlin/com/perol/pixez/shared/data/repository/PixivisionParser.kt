@@ -174,7 +174,7 @@ object PixivisionParser {
         val titleMatch = Regex("""<h[34][^>]*>(.*?)</h[34]>""", RegexOption.IGNORE_CASE).find(block)
             ?: Regex("""class=["'][^"']*(?:am__title|work__title|illust__title)[^"']*["'][^>]*>(.*?)<""", RegexOption.IGNORE_CASE).find(block)
             ?: Regex("""alt=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
-        val title = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "作品 $artworkId"
+        val title = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "#$artworkId"
 
         // 提取画师名字
         val user = extractUserName(block)
@@ -295,7 +295,7 @@ object PixivisionParser {
                 ?: Regex("""<h[1-4][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)</a></h[1-4]>""", RegexOption.IGNORE_CASE).find(block)
                 ?: Regex("""<a[^>]*title=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
 
-            val rawTitle = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "特辑 $id"
+            val rawTitle = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "#$id"
 
             // 封面图：从 style="background-image: url(...)" 或 <img> 提取
             val bgMatch = Regex("""url\(\s*["']?([^"')]+)["']?\s*\)""", RegexOption.IGNORE_CASE).find(block)
@@ -388,7 +388,7 @@ object PixivisionParser {
                 ?: Regex("""<h[1-4][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)</a></h[1-4]>""", RegexOption.IGNORE_CASE).find(block)
                 ?: Regex("""<a[^>]*title=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)
 
-            val rawTitle = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "特辑 $id"
+            val rawTitle = titleMatch?.let { decodeHtml(stripHtml(it.groupValues[1])).trim() }?.takeIf { it.isNotBlank() } ?: "#$id"
 
             val bgMatch = Regex("""url\(\s*["']?([^"')]+)["']?\s*\)""", RegexOption.IGNORE_CASE).find(block)
             val imgMatch = Regex("""<img\b[^>]*(?:data-src|src)=["']([^"']+)["']""", RegexOption.IGNORE_CASE).find(block)

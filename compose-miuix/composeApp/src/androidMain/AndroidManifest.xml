@@ -43,9 +43,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="pixiv" />
                 <data android:scheme="pixez" />
-                <data android:host="account" />
-                <data android:host="oauth" />
-                <data android:host="app-api.pixiv.net" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

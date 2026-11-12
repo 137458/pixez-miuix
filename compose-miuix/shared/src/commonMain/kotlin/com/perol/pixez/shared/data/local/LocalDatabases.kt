@@ -27,6 +27,7 @@ class LocalDatabase internal constructor(
     val schema: SqlSchema<QueryResult.Value<Unit>>,
     val legacyFileNames: List<String> = emptyList(),
     val legacyRequiredColumns: Map<String, List<String>> = emptyMap(),
+    val legacyRequiredIndexSql: List<String> = emptyList(),
 ) {
     /** 该库在用户设备上可能存在的全部文件名：权威主名优先，历史别名次之。 */
     val candidateFileNames: List<String> = listOf(fileName) + legacyFileNames
@@ -45,6 +46,9 @@ object LocalDatabases {
     val account = LocalDatabase(
         fileName = "account.db",
         schema = AccountDatabase.Schema,
+        legacyRequiredIndexSql = listOf(
+            "CREATE INDEX IF NOT EXISTS idx_account_user_id ON account(user_id)",
+        ),
     )
 
     /** 下载任务库。 */
@@ -52,6 +56,10 @@ object LocalDatabases {
         fileName = "task.db",
         schema = TaskDatabase.Schema,
         legacyRequiredColumns = mapOf("task" to listOf("medium")),
+        legacyRequiredIndexSql = listOf(
+            "CREATE INDEX IF NOT EXISTS idx_task_status_id ON task(status, id)",
+            "CREATE INDEX IF NOT EXISTS idx_task_url ON task(url)",
+        ),
     )
 
     /** 屏蔽作品库。 */
@@ -77,6 +85,10 @@ object LocalDatabases {
         fileName = "illustpersist.db",
         schema = IllustPersistDatabase.Schema,
         legacyRequiredColumns = mapOf("illustpersist" to listOf("title", "user_name")),
+        legacyRequiredIndexSql = listOf(
+            "CREATE INDEX IF NOT EXISTS idx_illustpersist_illust_id ON illustpersist(illust_id)",
+            "CREATE INDEX IF NOT EXISTS idx_illustpersist_time ON illustpersist(time)",
+        ),
     )
 
     /** 小说浏览历史库（旧 Flutter 文件名首字母大写，保持原样以读到老数据）。 */
@@ -92,12 +104,19 @@ object LocalDatabases {
         // 过渡版本的小组件曾自造下划线命名，该文件里的缓存同样属于用户数据，需继续可读。
         legacyFileNames = listOf("glance_illust_persist.db"),
         legacyRequiredColumns = mapOf("glanceillustpersist" to listOf("original_url", "large_url")),
+        legacyRequiredIndexSql = listOf(
+            "CREATE INDEX IF NOT EXISTS idx_glance_ctype_ctime ON glanceillustpersist(ctype, ctime DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_glance_illust_id ON glanceillustpersist(illust_id)",
+        ),
     )
 
     /** 键值缓存库（旧 Flutter 遗留，暂无生产读取方）。 */
     val kvPair = LocalDatabase(
         fileName = "kvpair.db",
         schema = KVPairDatabase.Schema,
+        legacyRequiredIndexSql = listOf(
+            "CREATE INDEX IF NOT EXISTS idx_kvpair_key ON kvpair(key)",
+        ),
     )
 
     /** 全部登记库，按主文件名索引。 */

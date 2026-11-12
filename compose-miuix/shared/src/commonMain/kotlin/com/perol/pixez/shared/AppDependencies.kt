@@ -78,40 +78,54 @@ class AppDependencies(
 
         fun orNull(): AppDependencies? = currentInstance
     }
+    private fun <T> closeIfInitialized(lazyRef: Lazy<T>, closer: (T) -> Unit) {
+        if (lazyRef.isInitialized()) {
+            runCatching { closer(lazyRef.value) }
+        }
+    }
+
+    private val accountDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.account) }
+    private val taskDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.task) }
+    private val banDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.banIllustId) }
+    private val banUserDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.banUserId) }
+    private val banTagDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.banTag) }
+    private val illustPersistDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.illustPersist) }
+    private val novelPersistDriverLazy = lazy { driverFactory.createDriver(LocalDatabases.novelPersist) }
+
     /**
      * 账号数据库驱动，复用旧 Flutter account.db。
      */
-    val accountDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.account) }
+    val accountDriver: SqlDriver get() = accountDriverLazy.value
 
     /**
      * 下载任务数据库驱动，复用旧 Flutter task.db。
      */
-    val taskDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.task) }
+    val taskDriver: SqlDriver get() = taskDriverLazy.value
 
     /**
      * 屏蔽作品数据库驱动，复用旧 Flutter banillustid.db。
      */
-    val banDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banIllustId) }
+    val banDriver: SqlDriver get() = banDriverLazy.value
 
     /**
      * 屏蔽画师数据库驱动，复用旧 Flutter banuserid.db。
      */
-    val banUserDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banUserId) }
+    val banUserDriver: SqlDriver get() = banUserDriverLazy.value
 
     /**
      * 屏蔽标签数据库驱动，复用旧 Flutter bantag.db。
      */
-    val banTagDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.banTag) }
+    val banTagDriver: SqlDriver get() = banTagDriverLazy.value
 
     /**
      * 插画浏览历史数据库驱动，复用旧 Flutter illustpersist.db。
      */
-    val illustPersistDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.illustPersist) }
+    val illustPersistDriver: SqlDriver get() = illustPersistDriverLazy.value
 
     /**
      * 小说浏览历史数据库驱动，复用旧 Flutter Novelpersist.db。
      */
-    val novelPersistDriver: SqlDriver by lazy { driverFactory.createDriver(LocalDatabases.novelPersist) }
+    val novelPersistDriver: SqlDriver get() = novelPersistDriverLazy.value
 
     /**
      * 设置仓库，桥接旧 SharedPreferences / NSUserDefaults。
@@ -151,7 +165,7 @@ class AppDependencies(
      * Accept-Language 经 platform 层共享解析函数取自语言码表（架构审查 中-1、中-14），
      * 装配层不再反向引用 ui.i18n，与小组件后台拉取共用同一解析入口。
      */
-    val httpClient: PixivHttpClient by lazy {
+    private val httpClientLazy = lazy {
         PixivHttpClient(
             tokenStorage = tokenStorage,
             languageProvider = { languageCodeForNum(settingsRepository.languageNum) },
@@ -162,12 +176,16 @@ class AppDependencies(
         )
     }
 
+    val httpClient: PixivHttpClient get() = httpClientLazy.value
+
     /**
      * 更新检查专用 HttpClient，生命周期由应用容器统一管理。
      */
-    val updateCheckClient: HttpClient by lazy {
+    private val updateCheckClientLazy = lazy {
         createUpdateCheckClient(modeProvider = dnsModeProvider)
     }
+
+    val updateCheckClient: HttpClient get() = updateCheckClientLazy.value
 
     /**
      * 更新检查仓库：GitHub Release 拉取与版本比较（架构审查 中-4 收编），
@@ -192,7 +210,7 @@ class AppDependencies(
     /**
      * Pixivision Web 页面抓取专用 HttpClient，生命周期由应用容器统一管理。
      */
-    val webClient: HttpClient by lazy {
+    private val webClientLazy = lazy {
         com.perol.pixez.shared.network.createPlatformHttpClient(
             modeProvider = dnsModeProvider,
             followRedirects = false,
@@ -205,6 +223,8 @@ class AppDependencies(
             webTimeouts()
         }
     }
+
+    val webClient: HttpClient get() = webClientLazy.value
 
     /**
      * 会话作用域缓存失效接缝：各缓存模块构造时自登记，
@@ -265,7 +285,7 @@ class AppDependencies(
     /**
      * 公告板专用 HttpClient，配置 JSON 协商与超时，生命周期由 [AppDependencies] 统一管理。
      */
-    private val boardHttpClient: HttpClient by lazy {
+    private val boardHttpClientLazy = lazy {
         com.perol.pixez.shared.network.createPlatformHttpClient(
             modeProvider = dnsModeProvider,
             followRedirects = false,
@@ -279,6 +299,8 @@ class AppDependencies(
             webTimeouts()
         }
     }
+
+    private val boardHttpClient: HttpClient get() = boardHttpClientLazy.value
 
     /**
      * 公告板仓库，从 GitHub Raw 拉取官方公告 JSON。
@@ -363,17 +385,17 @@ class AppDependencies(
      */
     fun close() {
         runCatching { appScope.cancel() }
-        runCatching { httpClient.close() }
-        runCatching { updateCheckClient.close() }
-        runCatching { boardHttpClient.close() }
-        runCatching { webClient.close() }
-        runCatching { driverFactory.closeDriver(accountDriver) }
-        runCatching { driverFactory.closeDriver(taskDriver) }
-        runCatching { driverFactory.closeDriver(banDriver) }
-        runCatching { driverFactory.closeDriver(banUserDriver) }
-        runCatching { driverFactory.closeDriver(banTagDriver) }
-        runCatching { driverFactory.closeDriver(illustPersistDriver) }
-        runCatching { driverFactory.closeDriver(novelPersistDriver) }
+        closeIfInitialized(httpClientLazy) { it.close() }
+        closeIfInitialized(updateCheckClientLazy) { it.close() }
+        closeIfInitialized(boardHttpClientLazy) { it.close() }
+        closeIfInitialized(webClientLazy) { it.close() }
+        closeIfInitialized(accountDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(taskDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(banDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(banUserDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(banTagDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(illustPersistDriverLazy) { driverFactory.closeDriver(it) }
+        closeIfInitialized(novelPersistDriverLazy) { driverFactory.closeDriver(it) }
         // close 后清理静态单例引用，避免进程存活期间残留悬空容器；
         // 仅当 currentInstance 仍指向本实例时清空，防止旧容器关闭误清新容器的引用。
         if (currentInstance === this) {

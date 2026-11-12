@@ -27,21 +27,27 @@ object LegacyDatabaseMigrations {
         fun tableColumns(table: String): List<String> = queryStringList("PRAGMA table_info($table)")
 
         fun addColumn(table: String, column: String) = execute("ALTER TABLE $table ADD COLUMN $column TEXT")
+
+        fun ensureIndex(createIndexSql: String) = execute(createIndexSql)
     }
 
     /**
-     * 按 [fileName] 补齐旧库缺失列；结构已完整时为无操作，已存在的数据不受影响。
+     * 按 [fileName] 补齐旧库缺失列与查询索引；结构已完整时为无操作，已存在的数据不受影响。
      * 不在登记表内的数据库文件不做任何处理。
      *
      * 缺列清单来自 [LocalDatabases]：主名与历史别名解析到同一登记项，
      * 保证「实际打开的库文件名」与「补列清单」永不脱节（小组件库曾因此永不补列）。
      */
     fun migrateLegacyDatabase(fileName: String, migrator: LegacyColumnMigrator) {
-        LocalDatabases.byFileName(fileName)?.legacyRequiredColumns?.forEach { (table, requiredColumns) ->
+        val dbSpec = LocalDatabases.byFileName(fileName) ?: return
+        dbSpec.legacyRequiredColumns.forEach { (table, requiredColumns) ->
             val existing = migrator.tableColumns(table)
             requiredColumns
                 .filter { it !in existing }
                 .forEach { column -> migrator.addColumn(table, column) }
+        }
+        dbSpec.legacyRequiredIndexSql.forEach { indexSql ->
+            migrator.ensureIndex(indexSql)
         }
     }
 

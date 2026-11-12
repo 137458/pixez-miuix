@@ -4,6 +4,7 @@ import com.perol.pixez.shared.data.cache.IllustMemoryCache
 import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.PixivHosts
+import com.perol.pixez.shared.network.StreamingDownload
 import com.perol.pixez.shared.network.TrustedUrlPolicy
 import com.perol.pixez.shared.platform.mapToPictureSource
 
@@ -62,6 +63,9 @@ class IllustRepository(
     @Volatile
     private var cachedWalkthroughResponse: Walkthrough? = null
 
+    private val recommendedMutex = Mutex()
+    private val walkthroughMutex = Mutex()
+
     /**
      * 清空全部内存缓存（高-5 缓存清理缺失修复）：推荐/匿名推荐响应与插画 LRU 一并失效；
      * Spotlight 列表与详情 LRU 随中-7 拆分迁至 [PixivisionRepository.clearMemoryCache]，
@@ -102,23 +106,33 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Recommend = networkCall("获取推荐插画失败") {
         val isFirstPage = nextUrl.isNullOrBlank()
-        if (isFirstPage) {
-            val cached = cachedRecommendedResponse
-            if (!forceRefresh && cached != null) {
-                return@networkCall cached
+        if (!isFirstPage) {
+            val response: Recommend = apiClient.pagedRequest(nextUrl) {
+                apiClient.get("/v1/illust/recommended") {
+                    parameter("filter", "for_ios")
+                    parameter("include_ranking_label", "true")
+                }.body()
             }
+            cacheIllusts(response.illusts)
+            return@networkCall response
         }
-        val response: Recommend = apiClient.pagedRequest(nextUrl) {
-            apiClient.get("/v1/illust/recommended") {
-                parameter("filter", "for_ios")
-                parameter("include_ranking_label", "true")
-            }.body()
+        if (!forceRefresh) {
+            cachedRecommendedResponse?.let { return@networkCall it }
         }
-        cacheIllusts(response.illusts)
-        if (isFirstPage) {
+        recommendedMutex.withLock {
+            if (!forceRefresh) {
+                cachedRecommendedResponse?.let { return@networkCall it }
+            }
+            val response: Recommend = apiClient.pagedRequest(null) {
+                apiClient.get("/v1/illust/recommended") {
+                    parameter("filter", "for_ios")
+                    parameter("include_ranking_label", "true")
+                }.body()
+            }
+            cacheIllusts(response.illusts)
             cachedRecommendedResponse = response
+            response
         }
-        response
     }
 
     /**
@@ -135,20 +149,27 @@ class IllustRepository(
         forceRefresh: Boolean = false,
     ): Walkthrough = networkCall("获取匿名推荐插画失败") {
         val isFirstPage = nextUrl.isNullOrBlank()
-        if (isFirstPage) {
-            val cached = cachedWalkthroughResponse
-            if (!forceRefresh && cached != null) {
-                return@networkCall cached
+        if (!isFirstPage) {
+            val response: Walkthrough = apiClient.pagedRequest(nextUrl) {
+                apiClient.get("/v1/walkthrough/illusts").body()
             }
+            cacheIllusts(response.illusts)
+            return@networkCall response
         }
-        val response: Walkthrough = apiClient.pagedRequest(nextUrl) {
-            apiClient.get("/v1/walkthrough/illusts").body()
+        if (!forceRefresh) {
+            cachedWalkthroughResponse?.let { return@networkCall it }
         }
-        cacheIllusts(response.illusts)
-        if (isFirstPage) {
+        walkthroughMutex.withLock {
+            if (!forceRefresh) {
+                cachedWalkthroughResponse?.let { return@networkCall it }
+            }
+            val response: Walkthrough = apiClient.pagedRequest(null) {
+                apiClient.get("/v1/walkthrough/illusts").body()
+            }
+            cacheIllusts(response.illusts)
             cachedWalkthroughResponse = response
+            response
         }
-        response
     }
 
     /**
@@ -390,40 +411,18 @@ class IllustRepository(
                 downloadClient.prepareGet(verifiedUrl) {
                     header("Referer", PixivHosts.PIXIV_APP_API)
                 }.execute { response ->
-                    // 写盘前先按声明长度预检，恶意/异常的超大响应不落盘。
-                    val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
-                    require(declaredLength == null || declaredLength <= maxUgoiraZipBytes) {
-                        "下载内容声明大小超过上限: $declaredLength"
-                    }
-                    val channel: ByteReadChannel = response.bodyAsChannel()
-                    // okio 落盘为阻塞 I/O，切至 IO 调度器，避免占用调用方线程。
-                    withContext(Dispatchers.IO) {
-                        FileSystem.SYSTEM.write(targetPath) {
-                            val buffer = ByteArray(64 * 1024)
-                            var totalBytes = 0L
-                            while (!channel.isClosedForRead) {
-                                val read = channel.readAvailable(buffer, 0, buffer.size)
-                                if (read <= 0) break
-                                totalBytes += read
-                                // 写入前校验累计字节，超限立即中止，防止无限流撑爆磁盘。
-                                require(totalBytes <= maxUgoiraZipBytes) {
-                                    "下载内容超过大小上限: $totalBytes"
-                                }
-                                write(buffer, 0, read)
-                            }
-                            // 声明长度已知时核验实收字节，拒绝被截断的损坏响应。
-                            require(declaredLength == null || totalBytes == declaredLength) {
-                                "下载内容不完整: 实收 $totalBytes, 声明 $declaredLength"
-                            }
-                        }
-                    }
+                    StreamingDownload.writeResponseToFile(
+                        response = response,
+                        targetFile = targetPath,
+                        maxBytes = maxUgoiraZipBytes,
+                        failureLabel = "下载动图 Zip 失败",
+                    )
                 }
-            } catch (e: Throwable) {
-                // 失败路径清理半成品文件，避免残留被后续解压当作有效 zip 消费。
-                withContext(NonCancellable + Dispatchers.IO) {
-                    runCatching { if (FileSystem.SYSTEM.exists(targetPath)) FileSystem.SYSTEM.delete(targetPath) }
+            } catch (t: Throwable) {
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+                    FileSystem.SYSTEM.delete(targetPath, mustExist = false)
                 }
-                throw e
+                throw t
             }
             targetPath
         }

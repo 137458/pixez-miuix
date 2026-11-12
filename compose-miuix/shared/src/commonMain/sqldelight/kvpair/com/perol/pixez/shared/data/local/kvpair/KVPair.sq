@@ -6,6 +6,8 @@ CREATE TABLE kvpair (
     date_time INTEGER NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_kvpair_key ON kvpair(key);
+
 selectAll:
 SELECT * FROM kvpair;
 

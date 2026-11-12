@@ -41,10 +41,17 @@ class BanRepository(
     @kotlin.concurrent.Volatile
     private var cachedBanTags: List<BanTag>? = null
 
-    private fun invalidateCache() {
+    private fun invalidateCacheLocked() {
         cachedBannedIllustIds = null
         cachedBannedUserIds = null
         cachedBanTags = null
+    }
+
+    private fun <T> deduplicateByKey(items: List<T>, keyOf: (T) -> String): List<T> {
+        if (items.size <= 1) return items
+        return linkedMapOf<String, T>().apply {
+            items.forEach { put(keyOf(it), it) }
+        }.values.toList()
     }
 
     // region 屏蔽作品
@@ -89,43 +96,56 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanIllust(illustId: Long, name: String) = withContext(Dispatchers.IO) {
-        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
-        illustQueries.transaction {
-            val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
-            if (existing != null) {
-                illustQueries.delete(existing.id)
+        cacheMutex.withLock {
+            // 查删插包同库事务与互斥锁内，避免并发读回填旧缓存。
+            illustQueries.transaction {
+                val existing = illustQueries.selectByIllustId(illustId.toString()).executeAsOneOrNull()
+                if (existing != null) {
+                    illustQueries.delete(existing.id)
+                }
+                illustQueries.insert(illustId.toString(), name)
             }
-            illustQueries.insert(illustId.toString(), name)
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
      * 按主键删除屏蔽作品记录。
      */
     suspend fun deleteBanIllust(id: Long) = withContext(Dispatchers.IO) {
-        illustQueries.delete(id)
-        invalidateCache()
+        cacheMutex.withLock {
+            illustQueries.delete(id)
+            invalidateCacheLocked()
+        }
     }
 
     /**
      * 清空全部屏蔽作品记录。
      */
     suspend fun clearAllBanIllusts() = withContext(Dispatchers.IO) {
-        illustQueries.deleteAll()
-        invalidateCache()
+        cacheMutex.withLock {
+            illustQueries.deleteAll()
+            invalidateCacheLocked()
+        }
     }
 
     /**
-     * 批量导入屏蔽作品记录，事务内逐条写入并替换已存在记录。
+     * 批量导入屏蔽作品记录，去重批次及库中既有同 ID 记录后事务写入。
      */
     suspend fun insertAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
-        illustQueries.transaction {
-            items.forEach { item ->
-                illustQueries.insert(item.illustId, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.illustId }
+        cacheMutex.withLock {
+            illustQueries.transaction {
+                uniqueItems.forEach { item ->
+                    val existing = illustQueries.selectByIllustId(item.illustId).executeAsOneOrNull()
+                    if (existing != null) {
+                        illustQueries.delete(existing.id)
+                    }
+                    illustQueries.insert(item.illustId, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
@@ -133,13 +153,16 @@ class BanRepository(
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
     suspend fun replaceAllBanIllusts(items: List<BanIllust>) = withContext(Dispatchers.IO) {
-        illustQueries.transaction {
-            illustQueries.deleteAll()
-            items.forEach { item ->
-                illustQueries.insert(item.illustId, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.illustId }
+        cacheMutex.withLock {
+            illustQueries.transaction {
+                illustQueries.deleteAll()
+                uniqueItems.forEach { item ->
+                    illustQueries.insert(item.illustId, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     // endregion
@@ -189,35 +212,46 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanUser(userId: Long, name: String) = withContext(Dispatchers.IO) {
-        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
-        userQueries.transaction {
-            val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()
-            if (existing != null) {
-                userQueries.delete(existing.id)
+        cacheMutex.withLock {
+            // 查删插包同库事务与互斥锁内，避免并发读回填旧缓存。
+            userQueries.transaction {
+                val existing = userQueries.selectByUserId(userId.toString()).executeAsOneOrNull()
+                if (existing != null) {
+                    userQueries.delete(existing.id)
+                }
+                userQueries.insert(userId.toString(), name)
             }
-            userQueries.insert(userId.toString(), name)
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
      * 按主键删除屏蔽画师记录。
      */
     suspend fun deleteBanUser(id: Long) = withContext(Dispatchers.IO) {
-        userQueries.delete(id)
-        invalidateCache()
+        cacheMutex.withLock {
+            userQueries.delete(id)
+            invalidateCacheLocked()
+        }
     }
 
     /**
-     * 批量导入屏蔽画师记录，事务内逐条写入并替换已存在记录。
+     * 批量导入屏蔽画师记录，去重批次及库中既有同 ID 记录后事务写入。
      */
     suspend fun insertAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
-        userQueries.transaction {
-            items.forEach { item ->
-                userQueries.insert(item.userId, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.userId }
+        cacheMutex.withLock {
+            userQueries.transaction {
+                uniqueItems.forEach { item ->
+                    val existing = userQueries.selectByUserId(item.userId).executeAsOneOrNull()
+                    if (existing != null) {
+                        userQueries.delete(existing.id)
+                    }
+                    userQueries.insert(item.userId, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
@@ -225,13 +259,16 @@ class BanRepository(
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
     suspend fun replaceAllBanUsers(items: List<BanUser>) = withContext(Dispatchers.IO) {
-        userQueries.transaction {
-            userQueries.deleteAll()
-            items.forEach { item ->
-                userQueries.insert(item.userId, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.userId }
+        cacheMutex.withLock {
+            userQueries.transaction {
+                userQueries.deleteAll()
+                uniqueItems.forEach { item ->
+                    userQueries.insert(item.userId, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     // endregion
@@ -298,35 +335,46 @@ class BanRepository(
      * [ConflictAlgorithm.replace] 行为，避免重复记录。
      */
     suspend fun insertBanTag(name: String, translateName: String) = withContext(Dispatchers.IO) {
-        // 查删插包同库事务，避免进程中断留下重复或丢失记录。
-        tagQueries.transaction {
-            val existing = tagQueries.selectByName(name).executeAsOneOrNull()
-            if (existing != null) {
-                tagQueries.delete(existing.id)
+        cacheMutex.withLock {
+            // 查删插包同库事务与互斥锁内，避免并发读回填旧缓存。
+            tagQueries.transaction {
+                val existing = tagQueries.selectByName(name).executeAsOneOrNull()
+                if (existing != null) {
+                    tagQueries.delete(existing.id)
+                }
+                tagQueries.insert(translateName, name)
             }
-            tagQueries.insert(translateName, name)
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
      * 按主键删除屏蔽标签记录。
      */
     suspend fun deleteBanTag(id: Long) = withContext(Dispatchers.IO) {
-        tagQueries.delete(id)
-        invalidateCache()
+        cacheMutex.withLock {
+            tagQueries.delete(id)
+            invalidateCacheLocked()
+        }
     }
 
     /**
-     * 批量导入屏蔽标签记录，事务内逐条写入并替换已存在记录。
+     * 批量导入屏蔽标签记录，去重批次及库中既有同名记录后事务写入。
      */
     suspend fun insertAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
-        tagQueries.transaction {
-            items.forEach { item ->
-                tagQueries.insert(item.translateName, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.name }
+        cacheMutex.withLock {
+            tagQueries.transaction {
+                uniqueItems.forEach { item ->
+                    val existing = tagQueries.selectByName(item.name).executeAsOneOrNull()
+                    if (existing != null) {
+                        tagQueries.delete(existing.id)
+                    }
+                    tagQueries.insert(item.translateName, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**
@@ -334,13 +382,16 @@ class BanRepository(
      * 若插入失败，旧数据不会被清空，避免导入中途丢失数据。
      */
     suspend fun replaceAllBanTags(items: List<BanTag>) = withContext(Dispatchers.IO) {
-        tagQueries.transaction {
-            tagQueries.deleteAll()
-            items.forEach { item ->
-                tagQueries.insert(item.translateName, item.name)
+        val uniqueItems = deduplicateByKey(items) { it.name }
+        cacheMutex.withLock {
+            tagQueries.transaction {
+                tagQueries.deleteAll()
+                uniqueItems.forEach { item ->
+                    tagQueries.insert(item.translateName, item.name)
+                }
             }
+            invalidateCacheLocked()
         }
-        invalidateCache()
     }
 
     /**

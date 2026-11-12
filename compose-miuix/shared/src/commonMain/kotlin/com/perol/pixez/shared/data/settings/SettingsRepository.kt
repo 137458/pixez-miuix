@@ -1,8 +1,4 @@
 package com.perol.pixez.shared.data.settings
-
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -25,10 +21,6 @@ import kotlinx.serialization.json.Json
 class SettingsRepository(
     private val settings: Settings,
 ) {
-    // P-12：设置 getter 的快照追踪锚点。getter 读取经 tracked() 建立 Compose 快照订阅，
-    // 任何写入（notifyChanged）递增 revision 触发订阅方重组，未在组合中读取时为普通读。
-    private var settingsRevision by mutableIntStateOf(0)
-
     private val _changeVersion = MutableStateFlow(0)
 
     /**
@@ -49,15 +41,11 @@ class SettingsRepository(
     val filterChangeVersion: StateFlow<Int> = _filterChangeVersion.asStateFlow()
 
     fun notifyChanged() {
-        settingsRevision++
         _changeVersion.update { it + 1 }
     }
 
-    /** 供 getter 经此读取底层设置：在组合中调用时建立对 [settingsRevision] 的快照订阅。 */
-    private fun tracked(): Settings {
-        settingsRevision
-        return settings
-    }
+    /** 返回底层设置存储（响应式 UI 通过 [changeVersion] 订阅变更）。 */
+    private fun tracked(): Settings = settings
 
     fun notifyFilterChanged() {
         _filterChangeVersion.update { it + 1 }
@@ -336,6 +324,7 @@ class SettingsRepository(
         set(value) {
             val json = Json.encodeToString(ListSerializer(String.serializer()), value)
             settings[SettingsKeys.SEARCH_HISTORY] = json
+            notifyChanged()
         }
 
 
@@ -662,6 +651,7 @@ class SettingsRepository(
 
     fun setString(key: String, value: String?) {
         settings[key] = value
+        notifyChanged()
     }
 
     fun getInt(key: String, default: Int = 0): Int =
@@ -669,6 +659,7 @@ class SettingsRepository(
 
     fun setInt(key: String, value: Int) {
         settings[key] = value
+        notifyChanged()
     }
 
     fun getBoolean(key: String, default: Boolean = false): Boolean =
@@ -676,6 +667,7 @@ class SettingsRepository(
 
     fun setBoolean(key: String, value: Boolean) {
         settings[key] = value
+        notifyChanged()
     }
 
     /**
@@ -695,6 +687,7 @@ class SettingsRepository(
 
     fun setStringList(key: String, value: List<String>) {
         settings[key] = Json.encodeToString(ListSerializer(String.serializer()), value)
+        notifyChanged()
     }
 
     companion object {

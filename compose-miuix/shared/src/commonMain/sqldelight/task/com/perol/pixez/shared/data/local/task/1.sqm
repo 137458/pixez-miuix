@@ -1,3 +1,5 @@
 -- 旧版 Flutter task1.db 从 v1 升级到 v2 时新增了 medium 列。
 -- SQLDelight 当前 schema 为 v2，因此 1.sqm 描述从 v1 到 v2 的变更。
 ALTER TABLE task ADD COLUMN medium TEXT;
+CREATE INDEX IF NOT EXISTS idx_task_status_id ON task(status, id);
+CREATE INDEX IF NOT EXISTS idx_task_url ON task(url);

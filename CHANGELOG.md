@@ -38,6 +38,11 @@
   - 收紧 `UgoiraZipExtractor` 单包文件数（512）与总字节（256MB）上限，并在 `UgoiraSession` 加载帧图片前校验路径规范化归属（防路径穿越）。
   - 修复 `LocalIllustResolver` 仅做子串包含匹配导致画作 ID 误命中（如 `123456` 误命中 `9123456`），改为数字边界正则校验；将桌面端拖放缓存目录由系统临时目录迁至应用私有缓存目录。
   - 加固桌面端导出写入白名单路径校验，缩小 `AppUpdateDownloader` 分片临时文件清理范围至当前目标包前缀并用锁保护状态切换；修正 `SingleInstanceCoordinator` 在收到 `FORBIDDEN` 响应时的快速中止及令牌文件权限收缩，完善 `DesktopProxySelector` URI 级代理地址与 IPv6 解析。
+- 修复了本地数据库迁移、并发写入、流式下载与 Android 入口生命周期问题：
+  - 统一 `StreamingDownload` 唯一临时文件路径生成与 64KB 流式写入；`DownloadRepository` 共享全局动态并发上限并在任务取消/失败时回写持久化状态为 `Failed`；`IllustSaver` 实现桌面端原子重命名与 Android MediaStore 写入成功后再清理同名旧记录。
+  - 为 `Task`、`GlanceIllustPersist`、`Account`、`KVPair` 及 `1.sqm` / `LegacyDatabaseMigrations` 补齐核心查询索引；`BanRepository` 缓存失效并入互斥锁并消除批量导入重复行；`SettingsRepository` 移除 Compose 运行时依赖并在全量写入入口同步递增 `changeVersion`；`WidgetRepository.getOrFetchWidgetIllust` 切回 `Dispatchers.IO` 执行。
+  - `PagedListState` 与 `IllustPagedListState` 的 `restore()` 同步递增代际并清理旧错误与加载态；`IllustRepository` 为推荐与画廊首屏拉取补充单飞互斥锁；`PixivisionParser` 缺省标题收敛为中性 `#id` 占位；`AppDependencies.close()` 仅关闭已初始化的客户端与数据库驱动。
+  - 放行 `AndroidManifest.xml` 中 `pixiv://` / `pixez://` 自定义深链各主机路径；`MainActivity` 仅在首次创建消费启动 Intent、剪贴板读取迁至 IO 线程并脱敏异常日志；`PhotoPickerActivity` 限制读取字节上限并在 `onDestroy` 清理挂起回调。
 - 修复了登录、Token 刷新与深度链接中的安全及并发问题：
   - `TokenRefreshPlugin` 按发起请求的账号隔离 401/400 自动刷新与重试请求头，并为失效熔断建立按 `user_id` 隔离的窗口，切号后不再阻塞新账号刷新，也不再在刷新期间切号时回写错误凭证。
   - `DeepLinkParser` 将 OAuth 回调匹配收窄至 `https://pixiv.net` / `www.pixiv.net` / `app-api.pixiv.net` 官方回调路径，拒绝第三方域名或查询参数夹带 `callback` 字样触发自动登录。

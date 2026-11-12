@@ -23,6 +23,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -371,5 +372,92 @@ class DownloadRepositoryTest {
         assertContentEquals(stubBody, saved.readBytes(), "保存内容应与响应一致")
         val leftovers = tempFileLeftovers()
         assertTrue(leftovers.isEmpty(), "保存成功后临时文件应被消费，实际残留: $leftovers")
+    }
+
+    @Test
+    fun `下载取消时将持久化任务状态更新为 Failed 而不长期停留在 Downloading`() = runBlocking {
+        val started = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val releaseGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val blockingClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { _ ->
+                    started.complete(Unit)
+                    releaseGate.await()
+                    respond(
+                        content = ByteReadChannel(byteArrayOf(1, 2, 3)),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentLength, "3"),
+                    )
+                }
+            }
+        }
+        val repo = DownloadRepository(
+            httpClient = blockingClient,
+            saver = IllustSaver(),
+            historyRepository = historyRepo,
+            settingsRepository = settingsRepo,
+        )
+        val illust = illustWithUrl("https://i.pximg.net/cancel_target.jpg").copy(id = 777001L)
+        val job = launch { repo.download(illust, pageIndex = 0) }
+        started.await()
+        job.cancel()
+        job.join()
+
+        val recorded = historyRepo.getAllTasks().firstOrNull { it.illustId == 777001L }
+        assertTrue(recorded != null, "取消前应已创建历史记录")
+        assertEquals(DownloadStatus.Failed, recorded.status, "取消后任务状态不得永久停留在 Downloading")
+    }
+
+    @Test
+    fun `并发调用 downloadAllPages 共享全局并发上限`() = runBlocking {
+        settingsRepo.maxRunningTask = 1
+        val activeRequests = java.util.concurrent.atomic.AtomicInteger(0)
+        val maxObservedActive = java.util.concurrent.atomic.AtomicInteger(0)
+        val firstStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val releaseFirst = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val requestSeq = java.util.concurrent.atomic.AtomicInteger(0)
+
+        val concurrencyClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { _ ->
+                    val seq = requestSeq.incrementAndGet()
+                    val cur = activeRequests.incrementAndGet()
+                    maxObservedActive.accumulateAndGet(cur) { a, b -> maxOf(a, b) }
+                    if (cur > 1) {
+                        releaseFirst.complete(Unit)
+                    }
+                    if (seq == 1) {
+                        firstStarted.complete(Unit)
+                        kotlinx.coroutines.withTimeoutOrNull(300) { releaseFirst.await() }
+                    } else {
+                        kotlinx.coroutines.delay(50)
+                    }
+                    activeRequests.decrementAndGet()
+                    respond(
+                        content = ByteReadChannel(byteArrayOf(1, 2, 3, 4)),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentLength, "4"),
+                    )
+                }
+            }
+        }
+        val repo = DownloadRepository(
+            httpClient = concurrencyClient,
+            saver = IllustSaver(),
+            historyRepository = historyRepo,
+            settingsRepository = settingsRepo,
+        )
+        val illust1 = illustWithUrl("https://i.pximg.net/concurrent1.jpg").copy(id = 777002L)
+        val illust2 = illustWithUrl("https://i.pximg.net/concurrent2.jpg").copy(id = 777003L)
+
+        val job1 = launch { repo.downloadAllPages(illust1) }
+        firstStarted.await()
+        val job2 = launch { repo.downloadAllPages(illust2) }
+        kotlinx.coroutines.delay(80)
+        releaseFirst.complete(Unit)
+        job1.join()
+        job2.join()
+
+        assertEquals(1, maxObservedActive.get(), "多次并发 downloadAllPages 共享全局上限=1，不应同时超过 1 个活跃下载")
     }
 }

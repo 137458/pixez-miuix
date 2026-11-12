@@ -2,3 +2,5 @@
 -- SQLDelight 当前 schema 为 v2，因此 1.sqm 描述从 v1 到 v2 的变更。
 ALTER TABLE glanceillustpersist ADD COLUMN original_url TEXT;
 ALTER TABLE glanceillustpersist ADD COLUMN large_url TEXT;
+CREATE INDEX IF NOT EXISTS idx_glance_ctype_ctime ON glanceillustpersist(ctype, ctime DESC);
+CREATE INDEX IF NOT EXISTS idx_glance_illust_id ON glanceillustpersist(illust_id);

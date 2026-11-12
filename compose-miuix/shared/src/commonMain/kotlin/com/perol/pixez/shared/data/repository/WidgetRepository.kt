@@ -13,6 +13,8 @@ import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.languageCodeForNum
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 
 /** 小组件缓存有效期（毫秒），超时后视为过期触发重新拉取（默认 24 小时）。 */
@@ -39,7 +41,7 @@ class WidgetRepository(
      * 缓存命中且未过有效期直接返回最新一行（ctime 倒序）；
      * 过期视为未命中，重新拉取并在写入前清理同类型旧行，避免缓存永不刷新与库无限膨胀。
      */
-    suspend fun getOrFetchWidgetIllust(targetType: String): Glanceillustpersist? {
+    suspend fun getOrFetchWidgetIllust(targetType: String): Glanceillustpersist? = withContext(Dispatchers.IO) {
         val type = targetType.ifBlank { "recom" }
         val cached = try {
             glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
@@ -49,7 +51,7 @@ class WidgetRepository(
             null
         }
         if (cached != null && !isCacheExpired(cached.ctime)) {
-            return cached
+            return@withContext cached
         }
 
         val fetchedList = fetchFromRemote(type)
@@ -78,9 +80,9 @@ class WidgetRepository(
             } catch (e: Exception) {
                 Napier.w("Failed to save widget illusts to db: ${e.message}", tag = "WidgetRepository")
             }
-            return glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
+            return@withContext glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
         }
-        return null
+        null
     }
 
     /**

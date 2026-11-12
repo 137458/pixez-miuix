@@ -14,6 +14,8 @@ CREATE TABLE account (
     is_mail_authorized INTEGER NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_account_user_id ON account(user_id);
+
 selectAll:
 SELECT * FROM account;
 

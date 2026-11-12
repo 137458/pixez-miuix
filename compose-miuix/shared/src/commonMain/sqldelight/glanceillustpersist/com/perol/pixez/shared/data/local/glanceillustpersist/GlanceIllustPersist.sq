@@ -11,6 +11,9 @@ CREATE TABLE glanceillustpersist (
     ctime INTEGER NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_glance_ctype_ctime ON glanceillustpersist(ctype, ctime DESC);
+CREATE INDEX IF NOT EXISTS idx_glance_illust_id ON glanceillustpersist(illust_id);
+
 selectAll:
 SELECT * FROM glanceillustpersist ORDER BY ctime;
 

@@ -17,7 +17,9 @@ import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import android.os.Build
 import android.widget.Toast
@@ -60,7 +62,9 @@ class MainActivity : ComponentActivity() {
         )
         setupBackPressHandler()
         applyDisplayMode()
-        handleIntent(intent)
+        if (savedInstanceState == null) {
+            handleIntent(intent)
+        }
         setContent {
             PixEzApp(
                 dependencies = dependencies,
@@ -119,11 +123,14 @@ class MainActivity : ComponentActivity() {
     private var lastHandledClipboardText: String? = null
 
     private fun checkClipboard() {
-        val clipboard = com.perol.pixez.shared.platform.IllustClipboard()
-        val text = clipboard.getText()?.trim()
-        if (!text.isNullOrBlank() && text != lastHandledClipboardText && DeepLinkParser.looksLikeLink(text)) {
-            lastHandledClipboardText = text
-            parseAndNavigateUrlOrId(text, fromClipboard = true)
+        lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                com.perol.pixez.shared.platform.IllustClipboard().getText()?.trim()
+            }
+            if (!text.isNullOrBlank() && text != lastHandledClipboardText && DeepLinkParser.looksLikeLink(text)) {
+                lastHandledClipboardText = text
+                parseAndNavigateUrlOrId(text, fromClipboard = true)
+            }
         }
     }
 
@@ -203,7 +210,7 @@ class MainActivity : ComponentActivity() {
                 },
             )
         } catch (e: Throwable) {
-            Log.w("MainActivity", "解析跳转文本失败: $text", e)
+            Log.w("MainActivity", "解析跳转文本失败", e)
         }
     }
 

@@ -330,6 +330,29 @@ class PixivisionParserTest {
         val articles = PixivisionParser.parseArticleList(emptyHtml)
         assertTrue(articles.isEmpty())
     }
+
+    @Test
+    fun `缺省作品和特辑标题兜底使用中性序号而不含硬编码中文`() {
+        val html = """
+            <html><body>
+                <article class="am__work">
+                    <a href="https://www.pixiv.net/artworks/12345">link</a>
+                </article>
+            </body></html>
+        """.trimIndent()
+        val detail = PixivisionParser.parse(html, "https://www.pixivision.net/zh/a/999")
+        assertEquals(listOf("#12345"), detail.works.map { it.title })
+
+        val listHtml = """
+            <html><body>
+                <article class="_article-card">
+                    <a href="/zh/a/999">only link</a>
+                </article>
+            </body></html>
+        """.trimIndent()
+        val articles = PixivisionParser.parseArticleList(listHtml)
+        assertEquals(listOf("#999"), articles.map { it.title })
+    }
 }
 
 

@@ -240,4 +240,35 @@ class PagedLoadOutcomeTest {
         failing.loadFirst()
         assertEquals(PagedLoadOutcome.Failed, failing.loadMore())
     }
+
+    @Test
+    fun restoreClearsErrorsAndDiscardsInFlightRequests() = runTest {
+        val source = HoldSource()
+        source.pages[null] = PagedListPage(listOf("stale"), "p1")
+        source.failOn("bad", RuntimeException("boom"))
+        val state = PagedListState(fetch = source::fetch)
+
+        // 先触发首屏失败，使 initialError 非空
+        source.failOn(null, RuntimeException("initial boom"))
+        assertEquals(PagedLoadOutcome.Failed, state.loadFirst())
+
+        // 发起新一次在途 loadFirst 后立即 restore：在途旧响应不得覆盖快照，且错误被清空
+        source.pages[null] = PagedListPage(listOf("stale"), "p1")
+        source.failOn(null, RuntimeException("never"))
+        // Rebuild clean state for deterministic hold
+        val source2 = HoldSource()
+        source2.pages[null] = PagedListPage(listOf("stale-first"), "p-stale")
+        val state2 = PagedListState(fetch = source2::fetch)
+        source2.hold(1)
+        val inFlight = async { state2.loadFirst(force = true) }
+        runCurrent()
+
+        state2.restore(listOf("restored"), "p-restored")
+        source2.release(1)
+
+        assertEquals(PagedLoadOutcome.Discarded, inFlight.await(), "restore 应递增 generation 作废在途 loadFirst")
+        assertEquals(listOf("restored"), state2.items)
+        assertNull(state2.initialError)
+        assertNull(state2.loadMoreError)
+    }
 }

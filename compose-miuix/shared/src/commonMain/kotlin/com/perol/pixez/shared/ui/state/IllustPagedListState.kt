@@ -187,11 +187,17 @@ class IllustPagedListState(
 
     /**
      * 跨页恢复（高-5）：快照按 ID 经仓库 illustsCache 回查得到的原始列表恢复，
-     * 并恢复下一页 URL；恢复后首轮 refilterIfChanged() 强制按当前过滤设置重过滤。
+     * 并恢复下一页 URL；递增 [generation] 作废在途请求并清空残留错误与加载标志；
+     * 恢复后首轮 refilterIfChanged() 强制按当前过滤设置重过滤。
      */
     fun restore(illusts: List<Illust>, nextUrl: String?) {
+        generation++
         filterable.restoreRaw(illusts)
         this.nextUrl = nextUrl
+        this.initialError = null
+        this.isRefreshing = false
+        this.isLoadingMore = false
+        this.loadMoreError = null
     }
 
     /**
