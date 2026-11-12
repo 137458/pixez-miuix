@@ -6,8 +6,6 @@ package com.perol.pixez.shared.platform
  * 各平台实现负责选择正确的系统 API：
  * - Android：使用 `ClipboardManager.setPrimaryClip()`。
  * - Desktop：使用 `java.awt.datatransfer`。
- * - iOS：使用 `UIPasteboard.general.string`。
- * - macOS：使用 `NSPasteboard`。
  */
 expect class IllustClipboard() {
     /**

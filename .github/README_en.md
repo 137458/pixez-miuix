@@ -22,7 +22,7 @@
 
 **PixEz MIUIX** is a rewrite of PixEz, a third-party Pixiv client. The project is built on **Kotlin Multiplatform (KMP)** and **Compose Multiplatform (CMP)**, with the UI based on the MIUIX component library (`top.yukonga.miuix.kmp`).
 
-The current release platforms are Android and Windows Desktop. iOS is compile-verified only, and the macOS target is not enabled.
+The current release platforms are Android and Windows Desktop; the macOS target is not enabled.
 
 The app connects to Pixiv directly from Mainland China without a proxy. It includes SNI direct connection, DoH secure DNS, and an optional image mirror.
 

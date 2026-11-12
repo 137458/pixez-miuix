@@ -113,7 +113,7 @@ data class UpdateFileEntry(val path: String, val name: String, val size: Long)
 /**
  * 更新包保存目录中的残留文件（进程被杀后遗留的完成包与 `.part` 半成品）。
  *
- * 只在恢复 [UpdateDownloadState.Done] 时扫描一次；iOS 与应用内更新无关，返回空列表。
+ * 只在恢复 [UpdateDownloadState.Done] 时扫描一次。
  */
 internal expect suspend fun scanUpdateDirectory(): List<UpdateFileEntry>
 
@@ -362,7 +362,7 @@ internal expect suspend fun downloadUpdateFile(
     onProgress: (downloaded: Long, total: Long) -> Unit,
 ): Result<String>
 
-/** 前台保活：Android 以前台服务 + 进度通知呈现；桌面与 iOS 为空实现。 */
+/** 前台保活：Android 以前台服务 + 进度通知呈现；桌面端为空实现。 */
 internal expect fun updateDownloadForegroundStart()
 
 internal expect fun updateDownloadForegroundProgress(downloaded: Long, total: Long)

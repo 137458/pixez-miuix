@@ -4,7 +4,7 @@ package com.perol.pixez.shared.platform
  * 判断当前是否为 Android 平台。
  *
  * 用于在 UI 层控制 Android 专属设置的显示与隐藏；
- * Desktop/iOS 等其他平台实际返回 false。
+ * Desktop 等其他平台实际返回 false。
  */
 expect fun isAndroidPlatform(): Boolean
 

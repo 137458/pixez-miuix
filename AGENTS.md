@@ -5,7 +5,7 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 ## 工具链与平台矩阵
 
 - **基线**：JDK 17、Gradle 8.14.4、Kotlin 2.4.10、Compose Multiplatform 1.12.0、MIUIX 0.9.4、Coil 3.6.3
-- **平台支持**：Android（API 24+）、Windows Desktop（x64）；iOS（仅 macOS 编译验证）；macOS 未启用（缺少 zoomable 变体）
+- **平台支持**：Android（API 24+）、Windows Desktop（x64）；macOS 未启用（缺少 zoomable 变体）
 - **CI 状态**：无远程 CI，所有验证与打包均在本地执行
 
 ## 构建与验证命令（唯一清单）
@@ -21,7 +21,6 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Windows 单文件 EXE | `./gradlew :composeApp:packageWindowsSingleFileExe` |
 | 桌面端运行 | `./gradlew :composeApp:run` |
-| iOS 编译验证（限 macOS） | `./gradlew :shared:compileKotlinIosSimulatorArm64` |
 
 **发布前全量验证（单行）：**
 ```bash

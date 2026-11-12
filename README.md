@@ -37,7 +37,7 @@
 
 **PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目基于 Kotlin Multiplatform（简称 KMP）与 Compose Multiplatform（简称 CMP）开发。界面使用 MIUIX 组件库（`top.yukonga.miuix.kmp`）。
 
-当前发行平台为 Android 与 Windows Desktop。iOS 仅做编译验证，macOS target 暂未启用。
+当前发行平台为 Android 与 Windows Desktop，macOS target 暂未启用。
 
 应用面向中国大陆网络环境提供免代理直连。内置 SNI 直连、DoH 安全 DNS 与可选图源镜像。
 

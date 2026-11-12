@@ -23,7 +23,7 @@ sealed interface DigestCheck {
  *
  * 只认 GitHub `digest` 字段里的 `sha256:<64 hex>`（前缀大小写不敏感）。GitHub 也可能下发
  * 其它算法，但不认识的算法一律当作“没有摘要”跳过，而不是按错误的算法误判失败。
- * 平台相关的文件流式计算由 androidMain / desktopMain / iosMain 的 actual 提供。
+ * 平台相关的文件流式计算由 androidMain / desktopMain 的 actual 提供。
  */
 object UpdateDigest {
 

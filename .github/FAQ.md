@@ -27,7 +27,7 @@
 
 ## 一、项目声明与版本说明
 
-- **PixEz MIUIX**：基于 Kotlin Multiplatform（KMP）与 Compose Multiplatform（CMP）构建，采用 Miuix 组件库，遵循 Xiaomi HyperOS 设计语言。正式发布 Android 与 Windows Desktop 双端；iOS 仅做编译验证，macOS target 未启用。
+- **PixEz MIUIX**：基于 Kotlin Multiplatform（KMP）与 Compose Multiplatform（CMP）构建，采用 Miuix 组件库，遵循 Xiaomi HyperOS 设计语言。正式发布 Android 与 Windows Desktop 双端，macOS target 未启用。
 - **Flutter v1 归档**：旧 Flutter 代码冻结于 [`archive/flutter-v1/`](../archive/flutter-v1/)，不再参与主线开发。
 - **关于本 FAQ**：本指南面向 PixEz MIUIX 版本的功能、设置项与常见问题。
 - **免责声明与版权提示**：

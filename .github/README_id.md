@@ -4,7 +4,7 @@
 
 > **Compose adalah jalur utama**: PixEz MIUIX dikembangkan dan dirilis dari [`compose-miuix/`](../compose-miuix). Flutter v1 telah diarsipkan di [`archive/flutter-v1/`](../archive/flutter-v1/) untuk penelusuran historis dan perbaikan keamanan. Di Android, Flutter v1 dan versi Compose memakai application ID yang berbeda sehingga tidak dapat ditimpa saat pembaruan.
 
-Klien pihak ketiga Pixiv yang dibangun di atas Kotlin Multiplatform (KMP) dan Compose Multiplatform (CMP), dengan antarmuka berbasis pustaka komponen MIUIX (`top.yukonga.miuix.kmp`). Rilis aktif tersedia untuk Android dan Windows Desktop; iOS hanya diverifikasi kompilasi, dan target macOS belum diaktifkan.
+Klien pihak ketiga Pixiv yang dibangun di atas Kotlin Multiplatform (KMP) dan Compose Multiplatform (CMP), dengan antarmuka berbasis pustaka komponen MIUIX (`top.yukonga.miuix.kmp`). Rilis aktif tersedia untuk Android dan Windows Desktop; target macOS belum diaktifkan.
 
 Koneksi langsung ke Pixiv dari Tiongkok Daratan tanpa proxy: mode SNI langsung, DNS aman DoH, dan mirror sumber gambar opsional.
 

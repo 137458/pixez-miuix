@@ -6,8 +6,6 @@ package com.perol.pixez.shared.platform
  * 各平台实现负责选择正确的系统 API：
  * - Android：使用 `Intent.ACTION_SEND` 启动系统分享选择器。
  * - Desktop：系统分享面板不可用，回退到 `IllustClipboard.copy()` 并提示用户。
- * - iOS：使用 `UIActivityViewController` 展示系统分享面板。
- * - macOS：使用 `NSSharingServicePicker` 展示系统分享面板。
  */
 expect class IllustShare() {
     /**

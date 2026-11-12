@@ -4,7 +4,7 @@ import kotlin.math.pow
 
 /**
  * 跨平台 String.format 扩展，支持 %s, %d, %f, %1$s, %1$d, %2$s 等标准占位符，
- * 兼容 JVM、Android、iOS、macOS 等全部 Kotlin Multiplatform 目标。
+ * 兼容 JVM、Android 等 Kotlin Multiplatform 目标。
  *
  * 实现为一次从左到右的扫描，按 token 位置重建结果：
  * - 参数值只做追加，绝不参与正则替换（旧实现把参数当替换串交给 Regex.replace，

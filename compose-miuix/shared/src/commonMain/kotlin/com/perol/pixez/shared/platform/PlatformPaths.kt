@@ -7,7 +7,6 @@ import okio.Path
  *
  * - Android: 优先使用 context.cacheDir
  * - Desktop: 优先使用 ~/.pixez/cache
- * - iOS / macOS: 优先使用沙盒缓存目录
  */
 expect fun getAppCacheDirectory(): Path
 

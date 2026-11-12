@@ -20,16 +20,6 @@ kotlin {
 
     jvm("desktop")
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "Shared"
-            isStatic = true
-        }
-    }
-
     sourceSets {
         val commonMain by getting
         val desktopMain by getting
@@ -38,7 +28,6 @@ kotlin {
 
         // 高-7：Android 与 Desktop 双端同为 JVM，RobustDohDns（含熔断）与连接池/client 构建逻辑
         // 收敛到本中间源集，双端能力对齐；平台差异（桌面端系统代理探测）由 actual 注入。
-        // iOS（Darwin 引擎自管 DNS）不含本源集。
         val jvmShared by creating
         jvmShared.dependsOn(commonMain)
         androidMain.dependsOn(jvmShared)
@@ -124,10 +113,6 @@ kotlin {
         }
 
         // desktopTest 复用 commonTest 的 kotlin("test")/junit 依赖，无需重复声明
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
-            implementation(libs.sqldelight.native.driver)
-        }
     }
 }
 

@@ -85,7 +85,7 @@ object LocalDatabases {
         schema = NovelPersistDatabase.Schema,
     )
 
-    /** 小组件推荐缓存库（iOS 上该库位于 App Group 的 DB/ 目录）。 */
+    /** 小组件推荐缓存库。 */
     val glanceIllustPersist = LocalDatabase(
         fileName = "glanceillustpersist.db",
         schema = GlanceIllustPersistDatabase.Schema,
