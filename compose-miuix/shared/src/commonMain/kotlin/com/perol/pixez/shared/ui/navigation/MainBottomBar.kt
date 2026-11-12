@@ -43,7 +43,6 @@ fun MainBottomBar(
     onTabSelected: (RootComponent.MainTab) -> Unit,
     modifier: Modifier = Modifier,
     isFloating: Boolean = true,
-    refractionLevel: Int = 2,
     backdrop: Backdrop? = null,
 ) {
     val colorScheme = MiuixTheme.colorScheme

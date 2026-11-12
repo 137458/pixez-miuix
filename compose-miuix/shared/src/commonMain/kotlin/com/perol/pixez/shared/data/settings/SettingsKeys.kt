@@ -80,6 +80,7 @@ internal object SettingsKeys {
     const val USE_FLOATING_BOTTOM_BAR = "use_floating_bottom_bar"
     const val LIQUID_REFRACTION_LEVEL = "liquid_refraction_level"
     const val AUTO_CHECK_UPDATE = "auto_check_update"
+    const val HYPER_OS3_EFFECT = "hyper_os3_effect"
     const val HAS_UNREAD_FEED_BADGE = "has_unread_feed_badge"
     const val ACTIVE_USER_ID = "account_active_user_id"
 

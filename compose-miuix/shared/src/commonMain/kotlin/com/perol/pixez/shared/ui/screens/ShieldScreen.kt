@@ -34,6 +34,7 @@ import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.i18n.format
 import com.perol.pixez.shared.ui.components.AddTagDialog
 import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.DelayedClearEffect
@@ -256,7 +257,7 @@ fun ShieldScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "${strings.banTagCount.replace("%d", banTags.size.toString())}",
+                            text = strings.banTagCount.format(banTags.size),
                             style = MiuixTheme.textStyles.body2,
                         )
                         IconButton(
@@ -285,7 +286,7 @@ fun ShieldScreen(
                 SmallTitle(text = strings.author)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(
-                        text = "${strings.banUserCount.replace("%d", banUsers.size.toString())}",
+                        text = strings.banUserCount.format(banUsers.size),
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -307,7 +308,7 @@ fun ShieldScreen(
                 SmallTitle(text = strings.includedWorks)
                 top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(
-                        text = "${strings.banIllustCount.replace("%d", banIllusts.size.toString())}",
+                        text = strings.banIllustCount.format(banIllusts.size),
                         style = MiuixTheme.textStyles.body2,
                         modifier = Modifier
                             .fillMaxWidth()

@@ -12,5 +12,7 @@
     <locale android:name="id"/>
     <locale android:name="fil"/>
     <locale android:name="de"/>
+    <locale android:name="vi"/>
+    <locale android:name="fa"/>
 </locale-config>
 

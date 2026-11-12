@@ -424,7 +424,7 @@ fun LoginScreen(
                         },
                     )
                     Text(
-                        text = " & ",
+                        text = " · ",
                         style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )

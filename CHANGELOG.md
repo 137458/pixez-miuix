@@ -18,8 +18,13 @@
   - 重构 ThreadSafeLruCache 消除伪 LRU 缺陷与 GC 垃圾：修复 get 操作未更新 LinkedHashMap 访问顺序导致热点数据被误淘汰的问题，并消除写操作全量 map.toMap() 造成的频繁内存分配。
   - 下沉合并 JVM 平台重复代码：将 HashUtils、SecureRandom、Sha256File、AppUpdateDownloader 下载与目录扫描及 UgoiraZipExtractor 解压校验、LocalIllustResolver 数值边界匹配收敛至 `jvmShared` 源集，彻底消除 `androidMain` 与 `desktopMain` 重复拷贝；统一 `BrowserLauncher` 与 `UrlLauncher` 外链协议白名单常量并复用 `suspendRunCatchingNonCancel`。
   - 收敛 HTML 与 URL 解码清洗工具：新增跨平台 HtmlUtils，统一收敛 BoardScreen、HtmlCaptionText 与 PixivisionParser 分裂手写的 HTML 实体解码与标签过滤逻辑；移除手写脆弱的 decodeUrlPercent，接入 Ktor 标准 decodeURLQueryComponent API。
+- 补齐并完善多语言与桌面端运行时响应：
+  - 补全波斯语（`FaStrings`）全部剩余未翻译英文词条并新增 `values-fa/strings.xml`，Android `locales_config.xml` 补齐 `vi` 与 `fa` 共 13 种语言配置，同时移除 `AppStrings` 接口中残留的默认实现以确保编译期强约束。
+  - 桌面端窗口主题、语言托盘与关闭至托盘选项接入 `SettingsRepository.changeVersion` 响应式订阅，修改设置后实时生效无需重启。
+- 统一 MIUIX 弹窗规范与界面细节：
+  - 统一下载格式编辑、排行榜日期选择、主题自定义配色及历史确认弹窗为整宽垂直堆叠且「取消在上、确认在下」的规范布局，同步更新 HyperOS 3 光效开关持久化（`hyper_os3_effect`）与连续曲率圆角（`SquircleShape`/`squircleClip`）。
 - 审查并重构 MIUIX 组件使用规范与高阶交互：
-  - 弹窗按钮布局合规：重构版本更新弹窗（UpdateDialog）、下载保存格式编辑弹窗（DownloadSettingScreen）及历史记录、排行榜确认弹窗，严格遵循 MIUIX 纵向堆叠规范（主操作全宽置顶，取消/辅助置底）。
+  - 弹窗按钮布局合规：重构版本更新弹窗（UpdateDialog）、下载保存格式编辑弹窗（DownloadSettingScreen）及历史记录、排行榜确认弹窗，严格遵循 MIUIX 纵向堆叠规范（取消/辅助全宽置顶，主操作全宽置底）。
   - 下拉菜单现代化：特辑详情页（SpotlightDetailScreen）顶栏升级为高阶 OverlayIconDropdownMenu 并集成 TooltipBox，提供复制链接、分享与浏览器打开功能。
   - 面包屑导航进阶交互：优化下载设置页（DownloadSettingScreen）BreadcrumbBar，点击路径段可直接切换至对应父级目录。
   - 桌面端可用性增强：为排行榜（RankingScreen）、下载任务（DownloadTaskScreen）、特辑详情（SpotlightDetailScreen）顶栏图标按钮统一挂载 TooltipBox，优化桌面端悬浮提示。
@@ -32,6 +37,10 @@
 
 ### 修复
 
+- 修复了 UI 渲染性能、状态依赖与硬编码文本问题：
+  - `SettingsScreen` 磁盘缓存清理迁至 `Dispatchers.IO` 并以加载态守卫重算协程；`FloatingBottomBar` 改用 `DisposableEffect` 回收 `directSelector` 引用并移除 `MainBottomBar` 冗余参数；`BgEffectBackground` 依据实际主题背景亮度而非仅系统暗色开关选择渲染预设。
+  - `UpdateSettingScreen` 消除 Hero 区首次测量导致的 Spacer 高度跳变，`DownloadTaskScreen`、`HistoryScreen`、`UpdateDialog` 与 `UpdateSettingScreen` 补全 `derivedStateOf` 的 `remember` 依赖键；`IllustDetailScreen` 卡片补充稳定列表 `key`，`IllustDetailInfoSection` 对齐默认并发上限为 `2`。
+  - 替换 `CommentsScreen` 回复提示、`LoginScreen` 条款分隔、`NovelViewerScreen` 翻章箭头与 `ShieldScreen` 计数占位符为多语言格式化引用。
 - 修复了安全边界与跨端文件/重定向校验缺陷：
   - 新增统一重定向校验插件 `TrustedRedirectPlugin`，为 API、OAuth、图片下载及网页解析客户端关闭自动跨域名重定向，逐跳验证目标协议（HTTPS）与域名白名单，并在图片加载前清洗非受信任外链图片模型。
   - 剪贴板捕获 `pixiv://account/login?code=` 不再静默直接登录，改为弹出二次确认弹窗（`ClipboardOAuthDialog`）交由用户确认。

@@ -331,6 +331,12 @@ fun DownloadSettingScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(
+                text = strings.cancel,
+                onClick = { showFormatDialog = false },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
                 text = strings.confirm,
                 onClick = {
                     val trimmed = formatFieldValue.text.trim()
@@ -340,12 +346,6 @@ fun DownloadSettingScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
-                text = strings.cancel,
-                onClick = { showFormatDialog = false },
-                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

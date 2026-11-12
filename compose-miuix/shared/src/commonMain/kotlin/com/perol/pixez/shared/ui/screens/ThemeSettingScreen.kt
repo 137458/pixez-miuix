@@ -343,33 +343,28 @@ private fun ColorPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Row(
+            TextButton(
+                text = strings.cancel,
+                onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                TextButton(
-                    text = strings.cancel,
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    text = strings.confirm,
-                    onClick = {
-                        if (customHex.isNotBlank()) {
-                            val parsed = parseHexColor(customHex)
-                            if (parsed != null) {
-                                onColorSelected(parsed)
-                            } else {
-                                toastSink(ToastData(strings.themeColorFormatError, ToastType.Error))
-                            }
+            )
+            TextButton(
+                text = strings.confirm,
+                onClick = {
+                    if (customHex.isNotBlank()) {
+                        val parsed = parseHexColor(customHex)
+                        if (parsed != null) {
+                            onColorSelected(parsed)
                         } else {
-                            onColorSelected(selectedColor.copy(alpha = 1f).toArgb())
+                            toastSink(ToastData(strings.themeColorFormatError, ToastType.Error))
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
+                    } else {
+                        onColorSelected(selectedColor.copy(alpha = 1f).toArgb())
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
         }
     }
 }

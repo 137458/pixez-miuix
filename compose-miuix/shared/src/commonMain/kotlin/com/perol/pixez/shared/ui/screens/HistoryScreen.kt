@@ -126,7 +126,7 @@ fun HistoryScreen(
 
     // 使用 derivedStateOf 缓存过滤结果：搜索输入频繁变化时不会重复计算完整列表，
     // 仅当 query 或历史列表实际变化时才重新过滤。
-    val filteredItems by remember {
+    val filteredItems by remember(historyResult, query) {
         derivedStateOf {
             filterHistoryByQuery(
                 items = historyResult.value?.getOrNull().orEmpty(),
@@ -139,7 +139,7 @@ fun HistoryScreen(
     }
 
     // 小说历史的搜索过滤：按小说 ID、标题或作者名匹配。
-    val filteredNovelItems by remember {
+    val filteredNovelItems by remember(novelHistoryResult, query) {
         derivedStateOf {
             filterHistoryByQuery(
                 items = novelHistoryResult.value?.getOrNull().orEmpty(),
@@ -274,7 +274,6 @@ fun HistoryScreen(
                 confirmText = strings.confirm,
                 inProgress = isProcessing,
                 dismissibleWhileInProgress = true,
-                confirmFirst = true,
                 onConfirm = {
                     isProcessing = true
                     coroutineScope.launch {
@@ -310,7 +309,6 @@ fun HistoryScreen(
                 confirmText = strings.confirm,
                 inProgress = isProcessing,
                 dismissibleWhileInProgress = true,
-                confirmFirst = true,
                 onConfirm = {
                     val id = deleteId ?: return@ConfirmDialog
                     isProcessing = true
@@ -585,7 +583,7 @@ private fun NovelHistoryRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SquircleShape(12.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -128,7 +128,8 @@ fun SettingsScreen(
     val toastSink = LocalToastSink.current
 
     LaunchedEffect(isClearingCache) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        if (isClearingCache) return@LaunchedEffect
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val imageLoader = SingletonImageLoader.get(context)
             cacheSizeBytes = imageLoader.diskCache?.size ?: 0L
         }
@@ -391,7 +392,9 @@ fun SettingsScreen(
                                 val result = try {
                                     val imageLoader = SingletonImageLoader.get(context)
                                     imageLoader.memoryCache?.clear()
-                                    imageLoader.diskCache?.clear()
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        imageLoader.diskCache?.clear()
+                                    }
                                     cacheSizeBytes = 0L
                                     Result.success(Unit)
                                 } catch (e: CancellationException) {

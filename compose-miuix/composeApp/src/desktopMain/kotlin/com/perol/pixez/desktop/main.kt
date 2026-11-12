@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -259,8 +260,13 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
 
     // 托盘文案随 languageNum 实时重建：key(languageNum) 会先 dispose 旧 Tray
     // （Compose Desktop 的 Tray 在 onDispose 中从 SystemTray 移除 TrayIcon），再创建新托盘，避免 AWT 资源泄漏。
-    val trayLanguageNum = dependencies.settingsRepository.languageNum
-    val trayStrings = remember(trayLanguageNum) { AppStrings.fromLanguageNum(trayLanguageNum) }
+    val settingsChangeVersion by dependencies.settingsRepository.changeVersion.collectAsState()
+    val trayLanguageNum = remember(settingsChangeVersion) {
+        dependencies.settingsRepository.languageNum
+    }
+    val trayStrings = remember(trayLanguageNum) {
+        AppStrings.fromLanguageNum(trayLanguageNum)
+    }
     if (trayAvailable) {
         key(trayLanguageNum) {
             Tray(
@@ -282,7 +288,10 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
     if (isWindowVisible) {
         Window(
             onCloseRequest = {
-                if (trayAvailable && dependencies.settingsRepository.closeToTray) {
+                val closeToTray = DesktopWindowPreferences
+                    .resolveRuntimeSettings(dependencies.settingsRepository, isSystemDark = false)
+                    .closeToTray
+                if (trayAvailable && closeToTray) {
                     saveWindowPlacement()
                     isWindowVisible = false
                 } else {
@@ -375,11 +384,13 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
             )
 
             val isSystemDark = isSystemInDarkTheme()
-            val isDark = when (dependencies.settingsRepository.themeMode) {
-                1 -> false
-                2 -> true
-                else -> isSystemDark
+            val runtimeSettings = remember(settingsChangeVersion, isSystemDark) {
+                DesktopWindowPreferences.resolveRuntimeSettings(
+                    settingsRepository = dependencies.settingsRepository,
+                    isSystemDark = isSystemDark,
+                )
             }
+            val isDark = runtimeSettings.isDark
 
             DisposableEffect(window, isDark) {
                 WindowsMica.apply(window, isDark = isDark)

@@ -106,7 +106,7 @@ fun NovelCard(
                 modifier = Modifier
                     .width(84.dp)
                     .aspectRatio(0.75f)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .squircleClip(8.dp),
             ) {
                 PixivAsyncImage(
                     model = novel.imageUrls.medium.ifBlank { novel.imageUrls.squareMedium },

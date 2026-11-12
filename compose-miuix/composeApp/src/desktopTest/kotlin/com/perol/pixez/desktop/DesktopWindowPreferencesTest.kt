@@ -62,4 +62,28 @@ class DesktopWindowPreferencesTest {
         assertEquals(10_000.dp, restored.size.height)
         assertIs<WindowPosition.PlatformDefault>(restored.position)
     }
+
+    @Test
+    fun `resolveRuntimeSettings reflects dynamic changes to language tray and themeMode`() {
+        val node = Preferences.userRoot().node("com/perol/pixez/test/runtime-settings")
+        node.clear()
+        val repository = SettingsRepository(PreferencesSettings(node))
+
+        val initial = DesktopWindowPreferences.resolveRuntimeSettings(repository, isSystemDark = true)
+        assertEquals(repository.languageNum, initial.languageNum)
+        assertEquals(repository.closeToTray, initial.closeToTray)
+        assertEquals(true, initial.isDark)
+
+        repository.languageNum = 12
+        repository.closeToTray = !initial.closeToTray
+        repository.themeMode = 1
+        val lightUpdated = DesktopWindowPreferences.resolveRuntimeSettings(repository, isSystemDark = true)
+        assertEquals(12, lightUpdated.languageNum)
+        assertEquals(!initial.closeToTray, lightUpdated.closeToTray)
+        assertEquals(false, lightUpdated.isDark)
+
+        repository.themeMode = 2
+        val darkForced = DesktopWindowPreferences.resolveRuntimeSettings(repository, isSystemDark = false)
+        assertEquals(true, darkForced.isDark)
+    }
 }

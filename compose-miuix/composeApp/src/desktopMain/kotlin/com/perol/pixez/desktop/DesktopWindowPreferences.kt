@@ -17,6 +17,12 @@ internal data class DesktopWindowPlacement(
  * Persists Desktop window geometry separately from the cross-platform layout settings.
  * Values are expressed in Compose dp so they stay consistent with [WindowPosition].
  */
+internal data class DesktopRuntimeSettings(
+    val languageNum: Int,
+    val closeToTray: Boolean,
+    val isDark: Boolean,
+)
+
 internal object DesktopWindowPreferences {
     private const val WidthKey = "desktop.window.width_dp"
     private const val HeightKey = "desktop.window.height_dp"
@@ -64,6 +70,22 @@ internal object DesktopWindowPreferences {
             settings.setInt(YKey, y)
             settings.setBoolean(HasPositionKey, true)
         }
+    }
+
+    internal fun resolveRuntimeSettings(
+        settingsRepository: SettingsRepository,
+        isSystemDark: Boolean,
+    ): DesktopRuntimeSettings {
+        val isDark = when (settingsRepository.themeMode) {
+            1 -> false
+            2 -> true
+            else -> isSystemDark
+        }
+        return DesktopRuntimeSettings(
+            languageNum = settingsRepository.languageNum,
+            closeToTray = settingsRepository.closeToTray,
+            isDark = isDark,
+        )
     }
 
     private fun isPlausibleCoordinate(value: Int): Boolean = value in -MaximumCoordinate..MaximumCoordinate

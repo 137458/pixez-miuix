@@ -131,7 +131,7 @@ internal fun IllustDetailInfoCard(
                                     onProgress = { completed, total ->
                                         onToast(ToastData("${strings.downloadStatusDownloading} $completed/$total", ToastType.Normal))
                                     },
-                                    maxConcurrency = settings?.maxRunningTask ?: 3,
+                                    maxConcurrency = settings?.maxRunningTask ?: 2,
                                 )
                                 val successCount = tasks.count { it.status == DownloadStatus.Success }
                                 val failedCount = tasks.count { it.status == DownloadStatus.Failed }

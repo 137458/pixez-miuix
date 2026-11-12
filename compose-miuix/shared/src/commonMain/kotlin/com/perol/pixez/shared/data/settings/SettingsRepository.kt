@@ -606,6 +606,14 @@ class SettingsRepository(
         get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.AUTO_CHECK_UPDATE, true)
         set(value) { settings[SettingsKeys.AUTO_CHECK_UPDATE] = value; notifyChanged() }
 
+    /**
+     * 更新页面是否开启 HyperOS 3 动态光效背景。
+     * 默认 true。
+     */
+    var hyperOs3Effect: Boolean
+        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.HYPER_OS3_EFFECT, true)
+        set(value) { settings[SettingsKeys.HYPER_OS3_EFFECT] = value; notifyChanged() }
+
     // region Android 平台专属
     /**
      * 屏幕显示模式索引。

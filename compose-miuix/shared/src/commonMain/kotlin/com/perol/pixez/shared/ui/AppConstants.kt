@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui
 import com.perol.pixez.shared.network.GitHubReleaseEndpoints
 import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
-import com.perol.pixez.shared.platform.DownloadPlatformDefaults
 import com.perol.pixez.shared.platform.TokenCipherDefaults
 
 /**

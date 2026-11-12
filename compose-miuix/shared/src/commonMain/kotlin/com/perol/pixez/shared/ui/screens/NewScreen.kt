@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.derivedStateOf
 import com.perol.pixez.shared.data.model.AccountPersist
@@ -649,7 +650,7 @@ private fun WatchlistSeriesRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .squircleClip(12.dp)
             .clickable(onClick = onClick)
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -663,7 +664,7 @@ private fun WatchlistSeriesRow(
                 modifier = Modifier
                     .width(96.dp)
                     .height(128.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .squircleClip(8.dp),
             )
             Text(
                 text = item.publishedContentCount.toString(),
@@ -672,7 +673,7 @@ private fun WatchlistSeriesRow(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(4.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .squircleClip(8.dp)
                     .background(Color.Black.copy(alpha = 0.3f))
                     .padding(horizontal = 4.dp, vertical = 1.dp),
             )

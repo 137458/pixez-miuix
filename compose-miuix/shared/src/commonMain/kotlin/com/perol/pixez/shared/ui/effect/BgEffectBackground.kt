@@ -3,7 +3,6 @@
 
 package com.perol.pixez.shared.ui.effect
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
@@ -14,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -40,7 +40,7 @@ fun BgEffectBackground(
         modifier = modifier,
     ) {
         val surface = MiuixTheme.colorScheme.surface
-        val isDarkTheme = isSystemInDarkTheme()
+        val isDarkTheme = surface.luminance() < 0.5f
         val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }
 
         // 预设解析一次的单一权威（nav9）：painter 不再自行查表。

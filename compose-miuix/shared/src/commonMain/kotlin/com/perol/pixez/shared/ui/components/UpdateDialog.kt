@@ -91,8 +91,8 @@ fun UpdateDialog(
 
     val scrollState = rememberScrollState()
     // 只给还有内容的方向加羽化：滚到顶/底时对应一侧恢复实心，避免“永远有雾”的错误暗示
-    val hasContentAbove by remember { derivedStateOf { scrollState.value > 0 } }
-    val hasContentBelow by remember { derivedStateOf { scrollState.maxValue > scrollState.value } }
+    val hasContentAbove by remember(scrollState) { derivedStateOf { scrollState.value > 0 } }
+    val hasContentBelow by remember(scrollState) { derivedStateOf { scrollState.maxValue > scrollState.value } }
 
     WindowDialog(
         show = show,

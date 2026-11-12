@@ -286,6 +286,12 @@ class SettingsBridgeTest {
 
         repo.setStringList("custom_list", listOf("a", "b"))
         assertEquals(++expectedVersion, repo.changeVersion.value)
+
+        assertTrue(repo.hyperOs3Effect)
+        repo.hyperOs3Effect = false
+        assertEquals(++expectedVersion, repo.changeVersion.value)
+        assertFalse(repo.hyperOs3Effect)
+        assertFalse(node.getBoolean(SettingsKeys.HYPER_OS3_EFFECT, true))
     }
 }
 

@@ -184,15 +184,15 @@ fun RankingScreen(
                 .padding(bottom = 8.dp),
         )
         TextButton(
-            text = strings.confirm,
+            text = strings.cancel,
             onClick = { showDateDialog = false },
-            colors = ButtonDefaults.textButtonColorsPrimary(),
             modifier = Modifier.fillMaxWidth(),
         )
         androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
         TextButton(
-            text = strings.cancel,
+            text = strings.confirm,
             onClick = { showDateDialog = false },
+            colors = ButtonDefaults.textButtonColorsPrimary(),
             modifier = Modifier.fillMaxWidth(),
         )
     }

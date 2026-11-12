@@ -135,7 +135,7 @@ fun DownloadTaskScreen(
 
     // 通过 derivedStateOf 派生筛选后的列表：只有当底层数据或筛选条件真正改变时才会触发重组，
     // 避免运行中轮询每秒导致全量列表重组。
-    val filteredTasks by remember { derivedStateOf { state.value?.getOrNull()?.filter(selectedFilter::matches) } }
+    val filteredTasks by remember(selectedFilter) { derivedStateOf { state.value?.getOrNull()?.filter(selectedFilter::matches) } }
 
     // P-5：收集下载仓库的任务状态变更事件驱动刷新，替代秒级全表轮询。
     LaunchedEffect(downloadRepository) {

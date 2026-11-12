@@ -533,7 +533,7 @@ fun NovelViewerScreen(
                                                         modifier = Modifier.weight(1f).height(44.dp),
                                                     ) {
                                                         Text(
-                                                            text = "◀ ${strings.novelPrevChapter}",
+                                                            text = strings.novelPrevChapter,
                                                             style = MiuixTheme.textStyles.footnote1,
                                                         )
                                                     }
@@ -547,7 +547,7 @@ fun NovelViewerScreen(
                                                         modifier = Modifier.weight(1f).height(44.dp),
                                                     ) {
                                                         Text(
-                                                            text = "${strings.novelNextChapter} ▶",
+                                                            text = strings.novelNextChapter,
                                                             style = MiuixTheme.textStyles.footnote1,
                                                         )
                                                     }

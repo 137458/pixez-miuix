@@ -39,7 +39,7 @@ interface AppStrings {
     val followed: String
     val copy: String
     val copiedToClipboard: String
-    val imageNoCacheFound: String get() = "Image not found in cache"
+    val imageNoCacheFound: String
     val openInBrowser: String
     val loading: String
     val loadFailed: String
@@ -292,10 +292,10 @@ interface AppStrings {
     val menuShareLink: String
     val menuBanWork: String
     val menuBanUser: String
-    val menuSauceNao: String get() = "SauceNAO"
-    val sauceNaoUploading: String get() = "Uploading and searching SauceNAO…"
-    val sauceNaoPickImage: String get() = "Select Image"
-    val sauceNaoSimilarity: String get() = "Similarity"
+    val menuSauceNao: String
+    val sauceNaoUploading: String
+    val sauceNaoPickImage: String
+    val sauceNaoSimilarity: String
     val imageCopySuccess: String
     val downloadTaskShowInFolder: String
     val dialogAddTag: String
@@ -579,7 +579,7 @@ interface AppStrings {
     val commentsReplyAction: String
     val commentsEmojiPicker: String
     /** 评论内表情贴图（stamp）图片的无障碍描述 */
-    val stamp: String get() = "Stamp"
+    val stamp: String
     val historyEmpty: String
     val historyNoMatch: String
     val historyClearConfirm: String
@@ -595,10 +595,10 @@ interface AppStrings {
     val userFollowEmpty: String
     val userFollowerTitle: String
     val userFollowerEmpty: String
-    val relatedUsers: String get() = "相关用户"
-    val relatedUsersEmpty: String get() = "暂无相关用户"
-    val userNovels: String get() = "小说作品"
-    val userNovelsEmpty: String get() = "暂无小说作品"
+    val relatedUsers: String
+    val relatedUsersEmpty: String
+    val userNovels: String
+    val userNovelsEmpty: String
     val userWorkTab: String
     val userBookmarkTab: String
     val userPublicRestrict: String
@@ -663,71 +663,71 @@ interface AppStrings {
     val loginToken: String
     val loginNewNeedLogin: String
     val loginNewEmpty: String
-    val loginPasteFromClipboard: String get() = "从剪贴板粘贴"
-    val loginTroubleTip: String get() = "无法打开登录页面？"
-    val loginTroubleDesc: String get() = "若打开授权页超时，建议检查网络代理或前往网络设置开启 SNI 绕过。"
-    val loginGoNetworkSetting: String get() = "网络设置"
-    val loginTermsAndPrivacy: String get() = "登录即代表同意 Pixiv"
-    val loginTerms: String get() = "服务条款"
-    val loginPrivacy: String get() = "隐私政策"
-    val guideHeroWelcome: String get() = "欢迎使用 PixEz"
-    val guideHeroWelcomeSub: String get() = "根据您的网络与语言习惯完成初始化配置"
-    val guideGuestExplore: String get() = "暂不登录，游客体验"
-    val guideFeatureIllust: String get() = "海量高清插画与漫画"
-    val guideFeatureIllustDesc: String get() = "每日精选热门作品无缝浏览与高清图集"
-    val guideFeatureRanking: String get() = "全维度热门排行榜单"
-    val guideFeatureRankingDesc: String get() = "实时掌握日榜、周榜、月榜与原创特辑"
-    val guideFeatureDownload: String get() = "高速下载与动图转换"
-    val guideFeatureDownloadDesc: String get() = "多线程并发加速与 Ugoira 动图一键合成"
+    val loginPasteFromClipboard: String
+    val loginTroubleTip: String
+    val loginTroubleDesc: String
+    val loginGoNetworkSetting: String
+    val loginTermsAndPrivacy: String
+    val loginTerms: String
+    val loginPrivacy: String
+    val guideHeroWelcome: String
+    val guideHeroWelcomeSub: String
+    val guideGuestExplore: String
+    val guideFeatureIllust: String
+    val guideFeatureIllustDesc: String
+    val guideFeatureRanking: String
+    val guideFeatureRankingDesc: String
+    val guideFeatureDownload: String
+    val guideFeatureDownloadDesc: String
     val noMoreData: String
     val loadingMore: String
     val loadMoreFailedRetry: String
 
-    val ugoiraLoadingMetadata: String get() = "正在获取动图元数据..."
-    val ugoiraDownloading: String get() = "正在下载动图帧资源..."
-    val ugoiraExtracting: String get() = "正在解压动图数据..."
-    val ugoiraPlay: String get() = "播放"
-    val ugoiraPause: String get() = "暂停"
-    val ugoiraSaveZip: String get() = "保存动图 Zip"
-    val ugoiraSaveZipSuccess: String get() = "动图 Zip 保存成功"
-    val ugoiraLoadFailed: String get() = "动图加载失败，点击重试"
-    val ugoiraClickToPlay: String get() = "点击加载动图"
+    val ugoiraLoadingMetadata: String
+    val ugoiraDownloading: String
+    val ugoiraExtracting: String
+    val ugoiraPlay: String
+    val ugoiraPause: String
+    val ugoiraSaveZip: String
+    val ugoiraSaveZipSuccess: String
+    val ugoiraLoadFailed: String
+    val ugoiraClickToPlay: String
 
-    val accountManageTitle: String get() = "多账号管理"
-    val accountCurrentActive: String get() = "当前账号"
-    val accountSwitch: String get() = "切换至该账号"
-    val accountDelete: String get() = "移除账号"
-    val accountDeleteConfirmTitle: String get() = "确认移除账号"
-    val accountDeleteConfirmMsg: String get() = "确定要从本地移除该账号吗？"
-    val accountAdd: String get() = "添加新账号"
-    val accountEmpty: String get() = "暂无登录账号"
-    val accountSwitchSuccess: String get() = "已切换账号"
+    val accountManageTitle: String
+    val accountCurrentActive: String
+    val accountSwitch: String
+    val accountDelete: String
+    val accountDeleteConfirmTitle: String
+    val accountDeleteConfirmMsg: String
+    val accountAdd: String
+    val accountEmpty: String
+    val accountSwitchSuccess: String
 
-    val ugoiraDecodeFailed: String get() = "未能解码出动图帧"
-    val novelReaderTitle: String get() = "小说阅读"
-    val novelBrowseTitle: String get() = "小说"
-    val novelRecommend: String get() = "小说推荐"
-    val novelRanking: String get() = "小说排行榜"
-    val novelSeries: String get() = "系列"
-    val novelWordsCount: String get() = "字数"
-    val novelTextEmpty: String get() = "小说正文为空"
-    val novelPrevChapter: String get() = "上一章"
-    val novelNextChapter: String get() = "下一章"
-    val novelFontSize: String get() = "字号"
-    val pixivId: String get() = "Pixiv ID"
-    fun formatNovelWordCount(count: Int): String = "$count 字"
+    val ugoiraDecodeFailed: String
+    val novelReaderTitle: String
+    val novelBrowseTitle: String
+    val novelRecommend: String
+    val novelRanking: String
+    val novelSeries: String
+    val novelWordsCount: String
+    val novelTextEmpty: String
+    val novelPrevChapter: String
+    val novelNextChapter: String
+    val novelFontSize: String
+    val pixivId: String
+    fun formatNovelWordCount(count: Int): String
 
-    val refreshRate60Hz: String get() = "60Hz / Default"
-    val refreshRateHigh: String get() = "Follow System High Refresh (120Hz / 144Hz)"
-    val widgetSource: String get() = "Widget Source"
-    val doubleBackToExit: String get() = "Press again to exit PixEz"
-    val guideMirrorRecommendDirect: String get() = "Direct connection recommended for mainland China"
-    val guideOfficialNeedProxy: String get() = "Requires network proxy"
-    val guideSniRecommendCn: String get() = "Recommended for mainland China networks"
-    val guidePixEzFeatures: String get() = "PixEz Features"
-    val commentsPostFailed: String get() = "Failed to post comment"
-    val settingWidgetPictureSourceOfficial: String get() = "i.pximg.net (Pixiv Official)"
-    val settingWidgetPictureSourceMirror: String get() = "i.pixiv.re (Proxy-free Mirror)"
+    val refreshRate60Hz: String
+    val refreshRateHigh: String
+    val widgetSource: String
+    val doubleBackToExit: String
+    val guideMirrorRecommendDirect: String
+    val guideOfficialNeedProxy: String
+    val guideSniRecommendCn: String
+    val guidePixEzFeatures: String
+    val commentsPostFailed: String
+    val settingWidgetPictureSourceOfficial: String
+    val settingWidgetPictureSourceMirror: String
 
     val searchRatioTitle: String
     val searchRatioAll: String

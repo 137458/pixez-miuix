@@ -111,7 +111,9 @@ fun UpdateSettingScreen(
     var isChecking by remember { mutableStateOf(false) }
     val toastSink = LocalToastSink.current
     var showDialog by remember { mutableStateOf(false) }
-    var isOs3Effect by remember { mutableStateOf(true) }
+    var isOs3Effect by remember(settingsRepository) {
+        mutableStateOf(settingsRepository.hyperOs3Effect)
+    }
 
     var ignoredVersion by remember { mutableStateOf(settingsRepository.ignoreUpdateVersion) }
     var autoCheckUpdate by remember { mutableStateOf(settingsRepository.autoCheckUpdate) }
@@ -153,7 +155,7 @@ fun UpdateSettingScreen(
         doCheck(userInitiated = false)
     }
 
-    val scrollProgressState = remember {
+    val scrollProgressState = remember(lazyListState) {
         derivedStateOf {
             when {
                 lazyListState.firstVisibleItemIndex > 0 -> 1f
@@ -171,7 +173,7 @@ fun UpdateSettingScreen(
     val scrollProgress by scrollProgressState
 
     val density = LocalDensity.current
-    var logoHeightDp by remember { mutableStateOf(240.dp) }
+    var logoHeightDp by remember { mutableStateOf(192.dp) }
 
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
@@ -224,7 +226,11 @@ fun UpdateSettingScreen(
                 releaseVersionName = releaseInfo?.versionName ?: "",
                 strings = strings,
                 onHeroSizeMeasured = { size ->
-                    with(density) { logoHeightDp = size.height.toDp() }
+                    val topOffset = innerPadding.calculateTopPadding()
+                    val bodyHeight = with(density) { size.height.toDp() } - topOffset
+                    if (bodyHeight > 0.dp && kotlin.math.abs((bodyHeight - logoHeightDp).value) > 1f) {
+                        logoHeightDp = bodyHeight
+                    }
                 },
             )
 
@@ -346,7 +352,10 @@ fun UpdateSettingScreen(
                                 toastSink(ToastData(message, ToastType.Error))
                             })
                         },
-                        onOs3EffectChange = { isOs3Effect = it },
+                        onOs3EffectChange = {
+                        isOs3Effect = it
+                        settingsRepository.hyperOs3Effect = it
+                    },
                     )
                 }
             }
@@ -411,7 +420,7 @@ private fun UpdateHeroSection(
                 .graphicsLayer {
                     val iconProgress = ((scrollProgress - 0.35f) / 0.15f).coerceIn(0f, 1f)
                     clip = true
-                    shape = RoundedCornerShape(24.dp)
+                    shape = com.perol.pixez.shared.ui.components.SquircleShape(24.dp)
                     alpha = 1 - iconProgress
                     scaleX = 1 - (iconProgress * 0.05f)
                     scaleY = 1 - (iconProgress * 0.05f)

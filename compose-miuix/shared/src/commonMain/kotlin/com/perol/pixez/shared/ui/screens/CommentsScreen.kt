@@ -550,7 +550,7 @@ private fun CommentItem(
         if (comment.parentComment?.user != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "To ${comment.parentComment.user.name}",
+                text = "${strings.commentsReplyAction} @${comment.parentComment.user.name}",
                 style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.primary,
             )

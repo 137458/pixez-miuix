@@ -94,4 +94,38 @@ class AppStringsCompletenessTest {
             "fromLanguageNum 未能覆盖全部语言实现体: " + resolved.map { it::class.simpleName },
         )
     }
+
+    @Test
+    fun `波斯语实现不存在未翻译的英文回退词条`() {
+        val allowedEqualKeys = setOf("pixivId")
+        val arabicScriptRegex = Regex("[\\u0600-\\u06FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]")
+        val untranslated = mutableListOf<String>()
+        for (getter in interfaceGetters) {
+            val key = displayName(getter)
+            if (key in allowedEqualKeys) continue
+            val faValue = FaStrings.javaClass.getMethod(getter).invoke(FaStrings) as? String ?: ""
+            val enValue = EnStrings.javaClass.getMethod(getter).invoke(EnStrings) as? String ?: ""
+            if (faValue == enValue || !arabicScriptRegex.containsMatchIn(faValue)) {
+                untranslated += "$key=\"$faValue\""
+            }
+        }
+        assertEquals(
+            emptyList(),
+            untranslated,
+            "FaStrings 存在未翻译英文词条 ${untranslated.size} 处: ${untranslated.take(10)}",
+        )
+    }
+
+    @Test
+    fun `AppStrings 接口不再残留默认属性实现`() {
+        val defaultImplsClass = runCatching {
+            Class.forName("${AppStrings::class.java.name}\$DefaultImpls")
+        }.getOrNull()
+        val remainingDefaults = defaultImplsClass?.declaredMethods?.map { it.name }.orEmpty()
+        assertEquals(
+            emptyList(),
+            remainingDefaults,
+            "AppStrings 接口不应残留默认实现: $remainingDefaults",
+        )
+    }
 }

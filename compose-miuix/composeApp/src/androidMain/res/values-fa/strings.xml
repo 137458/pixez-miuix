@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PixEz</string>
+    <string name="shortcut_ranking">رتبه‌بندی</string>
+    <string name="shortcut_search">جستجو</string>
+    <string name="shortcut_downloads">دانلودها</string>
+    <string name="shortcut_history">تاریخچه</string>
+    <string name="widget_name">PixEz</string>
+    <string name="widget_description">نمایشگر تصویر ویجت دسکتاپ</string>
+</resources>

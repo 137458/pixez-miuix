@@ -366,8 +366,13 @@ fun FloatingBottomBar(
 
     // 注册点击直驱：组合期把内部弹簧动画器交给外部 holder，点击处同步调用
     if (directSelector != null) {
-        directSelector.select = { index ->
-            dampedDragAnimation.animateToValue(index.toFloat())
+        androidx.compose.runtime.DisposableEffect(directSelector, dampedDragAnimation) {
+            directSelector.select = { index ->
+                dampedDragAnimation.animateToValue(index.toFloat())
+            }
+            onDispose {
+                directSelector.select = null
+            }
         }
     }
 

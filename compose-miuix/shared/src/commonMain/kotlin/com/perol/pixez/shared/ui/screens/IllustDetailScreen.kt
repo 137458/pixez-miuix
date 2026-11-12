@@ -546,7 +546,7 @@ private fun IllustDetailContentList(
 
         // 3. 简介与文案卡片
         if (illust.caption.isNotBlank()) {
-            item {
+            item(key = "caption") {
                 Column(modifier = chromeModifier) {
                     IllustDetailCaptionCard(
                         illust = illust,
@@ -567,7 +567,7 @@ private fun IllustDetailContentList(
 
         // 4. 标签卡片与胶囊包裹（Capsule Chips）
         if (illust.tags.isNotEmpty()) {
-            item {
+            item(key = "tags") {
                 Column(modifier = chromeModifier) {
                     IllustDetailTagsCard(
                         tags = illust.tags,
@@ -579,7 +579,7 @@ private fun IllustDetailContentList(
         }
 
         // 5. 互动操作卡片（评论与相关作品）
-        item {
+        item(key = "interaction") {
             Column(modifier = chromeModifier) {
                 IllustDetailInteractionCard(
                     illust = illust,
