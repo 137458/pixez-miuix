@@ -49,6 +49,30 @@ class DeepLinkParserTest {
         assertIsNullOrNotOAuth(parsed)
     }
 
+    @Test
+    fun `第三方域查询参数夹带 callback 字样不触发 OAuth 登录或剪贴板预筛`() {
+        val smuggled = "https://evil.com/?r=pixiv.net/users/auth/pixiv/callback&code=X"
+        assertIsNullOrNotOAuth(DeepLinkParser.parse(smuggled))
+        assertFalse(DeepLinkParser.looksLikeLink(smuggled))
+
+        val smuggledFull = "https://evil.com/?r=https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback&code=X"
+        assertIsNullOrNotOAuth(DeepLinkParser.parse(smuggledFull))
+        assertFalse(DeepLinkParser.looksLikeLink(smuggledFull))
+    }
+
+    @Test
+    fun `非 HTTPS 或 pixiv me 域名的 callback 路径不触发 OAuth 登录`() {
+        assertIsNullOrNotOAuth(DeepLinkParser.parse("http://www.pixiv.net/users/auth/pixiv/callback?code=X"))
+        assertIsNullOrNotOAuth(DeepLinkParser.parse("https://pixiv.me/users/auth/pixiv/callback?code=X"))
+    }
+
+    @Test
+    fun `app-api pixiv net 官方回调路径提取 OAuth code`() {
+        val parsed = DeepLinkParser.parse("https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback?code=app123")
+        assertIs<ParsedDeepLink.OAuthLogin>(parsed)
+        assertEquals("app123", parsed.code)
+    }
+
     private fun assertIsNullOrNotOAuth(parsed: ParsedDeepLink?) {
         if (parsed is ParsedDeepLink.OAuthLogin) {
             throw AssertionError("非 callback 路径不应触发 OAuth 登录: $parsed")

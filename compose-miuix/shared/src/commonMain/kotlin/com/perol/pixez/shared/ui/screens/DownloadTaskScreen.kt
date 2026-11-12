@@ -115,6 +115,7 @@ fun DownloadTaskScreen(
     val state = produceState<Result<List<DownloadTaskHistory>>?>(
         initialValue = null,
         downloadHistoryRepository,
+        selectedFilter,
         refreshToken,
         retryCount,
     ) {
@@ -314,17 +315,17 @@ fun DownloadTaskScreen(
                                             ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
 
                                         successCount == 0 ->
-                                            ToastData(strings.downloadTaskRetryFailed, ToastType.Error)
+                                            ToastData(strings.downloadTaskRetryFailed.format("$failureCount"), ToastType.Error)
 
                                         else ->
-                                            ToastData("${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed} ($failureCount)", ToastType.Normal)
+                                            ToastData("${strings.downloadTaskRetrySuccess} ($successCount), ${strings.downloadTaskRetryFailed.format("$failureCount")}", ToastType.Normal)
                                     },
                                 )
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastSink(ToastData("${strings.downloadTaskRetryFailed}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
+                                toastSink(ToastData(strings.downloadTaskRetryFailed.format(PixivApiErrorFormatter.format(e, strings)), ToastType.Error))
                             } finally {
                                 isBatchProcessing = false
                             }

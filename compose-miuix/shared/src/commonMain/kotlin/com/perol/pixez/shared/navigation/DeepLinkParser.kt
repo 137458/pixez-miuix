@@ -25,7 +25,12 @@ object DeepLinkParser {
     private val USER_REGEX = Regex("""(?:users/|member\.php\?id=)(\d+)""", RegexOption.IGNORE_CASE)
     private val CODE_PARAM_REGEX = Regex("""(?:[?&]|^)code=([^&#\s]+)""")
     private val TRUSTED_OAUTH_LINK_REGEX = Regex(
-        """(?i)(?:pixez|pixiv)://(?:account|oauth)\b|pixiv\.net/users/auth/pixiv/callback""",
+        """(?i)(?:^|\s)(?:(?:pixez|pixiv)://(?:account|oauth)\b|https://(?:app-api\.|www\.)?pixiv\.net/(?:web/v1/)?users/auth/pixiv/callback(?=[/?#\s]|$))""",
+    )
+    private val OAUTH_CALLBACK_HOSTS = setOf("pixiv.net", "www.pixiv.net", "app-api.pixiv.net")
+    private val OAUTH_CALLBACK_PATHS = setOf(
+        "/users/auth/pixiv/callback",
+        "/web/v1/users/auth/pixiv/callback",
     )
 
     /**
@@ -67,8 +72,10 @@ object DeepLinkParser {
         parseStructuredUri(text)?.let { return it }
 
         // 2. 尝试从混排文本（如分享文案、剪贴板内容）中提取 OAuth code 或作品/画师链接。
-        //    仅当文本携带可信 OAuth 链接特征时才提取 code，防止注入任意 code 触发登录。
-        if (TRUSTED_OAUTH_LINK_REGEX.containsMatchIn(text)) {
+        //    独立 HTTP(S) URL 若未在结构化解析中命中可信 OAuth 路径，禁止再从查询参数夹带中提取 code。
+        val isStandaloneHttpUrl = (text.startsWith("http://", ignoreCase = true) ||
+            text.startsWith("https://", ignoreCase = true)) && !text.any { it.isWhitespace() }
+        if (!isStandaloneHttpUrl && TRUSTED_OAUTH_LINK_REGEX.containsMatchIn(text)) {
             CODE_PARAM_REGEX.find(text)?.groupValues?.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { code ->
                 return ParsedDeepLink.OAuthLogin(decodeComponentSafe(code))
             }
@@ -152,7 +159,7 @@ object DeepLinkParser {
             }
             host == "pixiv.net" || host.endsWith(".pixiv.net") ||
                 host == "pixiv.me" || host.endsWith(".pixiv.me") -> {
-                if (path.contains("/users/auth/pixiv/callback")) {
+                if (scheme == "https" && host in OAUTH_CALLBACK_HOSTS && path in OAUTH_CALLBACK_PATHS) {
                     val code = url.parameters["code"]?.trim().orEmpty()
                     if (code.isNotEmpty()) return ParsedDeepLink.OAuthLogin(code)
                 }

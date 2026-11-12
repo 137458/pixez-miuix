@@ -12,6 +12,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.encodedPath
 import io.ktor.http.HttpStatusCode
 import io.ktor.util.AttributeKey
+import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.network.PixivApiException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -69,62 +70,87 @@ class TokenRefreshPlugin(
 ) {
     private val mutex = Mutex()
 
-    /** 已确认失效的账号与时间点；同账号窗口内直接熔断。 */
-    private var expiredUserId: String? = null
-    private var expiredAt: TimeMark? = null
+    private data class RequestAuthSnapshot(
+        val userId: String,
+        val header: String,
+    )
 
-    private suspend fun getAuthorizationHeader(): String? {
+    /** 已确认失效的账号与时间点（按 userId 隔离）；同账号窗口内直接熔断，不阻塞切号后的新账号。 */
+    private val expiredUsers = mutableMapOf<String, TimeMark>()
+
+    private suspend fun getAuthorizationSnapshot(): RequestAuthSnapshot? {
         val account = tokenStorage.getCurrentAccount() ?: return null
         if (account.access_token.isBlank()) {
             // 凭证已被清理（解密失败或被判定吊销）：不再发送空 Bearer，直接提示重新登录。
             authExpirySignal?.emit(account.user_id)
             return null
         }
-        return "Bearer ${account.access_token}"
+        return RequestAuthSnapshot(
+            userId = account.user_id,
+            header = "Bearer ${account.access_token}",
+        )
     }
 
-    private suspend fun refreshTokenOrThrow() {
-        val staleAccessToken = tokenStorage.getCurrentAccount()?.access_token
-        mutex.withLock {
-            val currentAccount = tokenStorage.getCurrentAccount()
+    private suspend fun resolveAccount(targetUserId: String?): Account? {
+        val current = tokenStorage.getCurrentAccount()
+        if (targetUserId == null || current?.user_id == targetUserId) {
+            return current
+        }
+        return tokenStorage.getAllAccounts().firstOrNull { it.user_id == targetUserId }
+    }
+
+    /**
+     * 为发起本次请求的 [targetUserId]（若未记录则回退当前活跃账号）刷新 token，
+     * 并返回应重新注入到重试请求头的 `Bearer <access_token>`。
+     */
+    private suspend fun refreshTokenOrThrow(
+        targetUserId: String? = null,
+        staleAccessToken: String? = null,
+    ): String {
+        val preLockAccessToken = resolveAccount(targetUserId)?.access_token
+        val initialAccessToken = staleAccessToken ?: preLockAccessToken
+        return mutex.withLock {
+            val targetAccount = resolveAccount(targetUserId)
                 ?: throw IllegalStateException("No logged-in account to refresh token")
-            // 同账号近期已确认失效：熔断，避免每个请求重复发起注定失败的刷新。
-            val breakerActive = expiredUserId == currentAccount.user_id &&
-                expiredAt?.let { it.elapsedNow() < REFRESH_BREAKER_WINDOW } == true
+            // 同账号近期已确认失效：熔断，避免每个请求重复发起注定失败的刷新；不同账号各自独立。
+            val expiredAt = expiredUsers[targetAccount.user_id]
+            val breakerActive = expiredAt != null && expiredAt.elapsedNow() < REFRESH_BREAKER_WINDOW
             if (breakerActive) {
-                authExpirySignal?.emit(currentAccount.user_id)
-                throw AuthExpiredException(currentAccount.user_id)
+                authExpirySignal?.emit(targetAccount.user_id)
+                throw AuthExpiredException(targetAccount.user_id)
             }
-            if (currentAccount.access_token != staleAccessToken && currentAccount.access_token.isNotBlank()) {
+            if (expiredAt != null) {
+                expiredUsers.remove(targetAccount.user_id)
+            }
+            if (targetAccount.access_token != initialAccessToken && targetAccount.access_token.isNotBlank()) {
                 Napier.i("检测到 Token 已由前置并发请求完成刷新，复用最新凭证")
-                return@withLock
+                return@withLock "Bearer ${targetAccount.access_token}"
             }
-            if (currentAccount.refresh_token.isBlank()) {
-                expireCredentials(currentAccount.user_id)
+            if (targetAccount.refresh_token.isBlank()) {
+                expireCredentials(targetAccount.user_id)
             }
             try {
-                val refreshed = oAuthClient.refreshToken(currentAccount.refresh_token)
-                // 锁内已捕获发起刷新的账号，新凭证只写回该账号行；
-                // 刷新往返期间若活跃账号被切换，不得写入切换后的账号（跨账号凭证污染）。
+                val refreshed = oAuthClient.refreshToken(targetAccount.refresh_token)
+                // 锁内按发起刷新的账号精准写回；期间若切换活跃账号，绝不污染新账号也绝不回写错误 token。
                 tokenStorage.updateTokensForUser(
-                    userId = currentAccount.user_id,
+                    userId = targetAccount.user_id,
                     accessToken = refreshed.response.accessToken,
                     refreshToken = refreshed.response.refreshToken,
                 )
-                expiredUserId = null
-                expiredAt = null
+                expiredUsers.remove(targetAccount.user_id)
+                "Bearer ${refreshed.response.accessToken}"
             } catch (e: CancellationException) {
                 throw e
             } catch (e: PixivApiException) {
                 // OAuth 端点明确拒绝（400 invalid_grant / 401）才是凭证失效；其它状态码原样抛出。
                 if (e.statusCode == 400 || e.statusCode == 401) {
-                    expireCredentials(currentAccount.user_id)
+                    expireCredentials(targetAccount.user_id)
                 }
                 Napier.e("刷新 token 失败", e)
                 throw e
             } catch (e: IllegalArgumentException) {
                 // refresh_token 格式非法，等价于凭证失效。
-                expireCredentials(currentAccount.user_id)
+                expireCredentials(targetAccount.user_id)
             } catch (e: Exception) {
                 // 连接失败/超时等网络异常不得清理凭证，否则离线用户会被误判为登出。
                 Napier.e("刷新 token 失败", e)
@@ -138,8 +164,7 @@ class TokenRefreshPlugin(
      * 必须在持有 [mutex] 的上下文中调用。
      */
     private suspend fun expireCredentials(userId: String): Nothing {
-        expiredUserId = userId
-        expiredAt = TimeSource.Monotonic.markNow()
+        expiredUsers[userId] = TimeSource.Monotonic.markNow()
         tokenStorage.invalidateCredentials(userId)
         authExpirySignal?.emit(userId)
         throw AuthExpiredException(userId)
@@ -147,6 +172,7 @@ class TokenRefreshPlugin(
 
     companion object : HttpClientPlugin<Config, TokenRefreshPlugin> {
         override val key: AttributeKey<TokenRefreshPlugin> = AttributeKey("TokenRefreshPlugin")
+        private val REQUEST_USER_ID_KEY = AttributeKey<String>("TokenRefreshPluginUserId")
 
         override fun prepare(block: Config.() -> Unit): TokenRefreshPlugin {
             val config = Config().apply(block)
@@ -158,14 +184,15 @@ class TokenRefreshPlugin(
         }
 
         override fun install(plugin: TokenRefreshPlugin, scope: HttpClient) {
-            // 请求阶段注入 Authorization（walkthrough 等匿名接口除外）。
+            // 请求阶段注入 Authorization（walkthrough 等匿名接口除外），并绑定发起账号 ID。
             scope.requestPipeline.intercept(HttpRequestPipeline.State) {
                 if (!context.url.encodedPath.contains("v1/walkthrough/illusts")) {
-                    val header = plugin.getAuthorizationHeader()
-                    if (header != null) {
+                    val snapshot = plugin.getAuthorizationSnapshot()
+                    if (snapshot != null) {
                         context.headers {
                             if (!contains("Authorization")) {
-                                append("Authorization", header)
+                                append("Authorization", snapshot.header)
+                                context.attributes.put(REQUEST_USER_ID_KEY, snapshot.userId)
                             }
                         }
                     }
@@ -190,12 +217,15 @@ class TokenRefreshPlugin(
                     when (resolveAuthRefreshDecision(status, bodyText)) {
                         AuthRefreshDecision.REFRESH -> {
                             Napier.i("检测到 Pixiv Access Token 失效/过期 (HTTP $status)，正在自动执行 Token 刷新并重试...")
-                            plugin.refreshTokenOrThrow()
-                            // 移除旧的 Authorization，重新注入刷新后的 token。
+                            val targetUserId = request.attributes.getOrNull(REQUEST_USER_ID_KEY)
+                            val staleAccessToken = request.headers["Authorization"]?.removePrefix("Bearer ")
+                            val freshHeader = plugin.refreshTokenOrThrow(
+                                targetUserId = targetUserId,
+                                staleAccessToken = staleAccessToken,
+                            )
+                            // 移除旧的 Authorization，仅注入本次发起账号刷新后的新 token。
                             request.headers.remove("Authorization")
-                            plugin.getAuthorizationHeader()?.let {
-                                request.headers.append("Authorization", it)
-                            }
+                            request.headers.append("Authorization", freshHeader)
                             call = execute(request)
                             val retryStatus = call.response.status
                             if (retryStatus == HttpStatusCode.Unauthorized) {

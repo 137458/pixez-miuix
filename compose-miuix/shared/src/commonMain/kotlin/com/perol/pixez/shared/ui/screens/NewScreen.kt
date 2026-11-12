@@ -582,6 +582,22 @@ private fun WatchlistSeriesList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
+    val shouldLoadMore by remember(state, series.size, hasMore, isLoadingMore, loadMoreError) {
+        derivedStateOf {
+            if (!hasMore || isLoadingMore || loadMoreError != null || series.isEmpty()) {
+                false
+            } else {
+                val lastVisibleIndex = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                lastVisibleIndex >= series.size - AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS
+            }
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            onLoadMore()
+        }
+    }
+
     LazyColumn(
         state = state,
         modifier = modifier.fillMaxSize(),

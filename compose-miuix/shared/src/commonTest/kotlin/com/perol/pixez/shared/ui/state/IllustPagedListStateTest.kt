@@ -511,4 +511,45 @@ class IllustPagedListStateTest {
         assertEquals(listOf(7L), state.filteredIllusts?.map { it.id })
         assertEquals("p9", state.nextUrl)
     }
+
+    @Test
+    fun loadFirstCancelledResetsIsRefreshing() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.hold(1)
+
+        val job = launch { state.loadFirst() }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+
+        job.cancel()
+        job.join()
+
+        assertFalse(state.isRefreshing, "协程取消后 isRefreshing 必须复位，避免状态永久卡死")
+    }
+
+    @Test
+    fun loadMoreCancelledResetsIsLoadingMoreAndAllowsRetry() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(2)), null)
+        state.loadFirst()
+
+        source.hold(2)
+        val job = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        job.cancel()
+        job.join()
+
+        assertFalse(state.isLoadingMore, "协程取消后 isLoadingMore 必须复位")
+        val retryOutcome = state.loadMore()
+        assertEquals(PagedLoadOutcome.Written, retryOutcome, "复位后再次触发 loadMore 应正常写入下一页")
+        assertEquals(listOf(1L, 2L), state.filteredIllusts?.map { it.id })
+    }
 }

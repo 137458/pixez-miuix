@@ -87,28 +87,31 @@ class IllustPagedListState(
             initialError = null
         }
         var outcome = PagedLoadOutcome.Discarded
-        suspendRunCatchingNonCancel { fetch(null) }
-            .onSuccess { page ->
-                if (myGeneration == generation) {
-                    filterable.replace(page.illusts, filterVersionProvider())
-                    nextUrl = page.nextUrl
-                    initialError = null
-                    loadMoreError = null
-                    outcome = PagedLoadOutcome.Written
-                }
-            }
-            .onFailure { error ->
-                if (myGeneration == generation) {
-                    if (filteredIllusts == null) {
-                        initialError = error
+        try {
+            suspendRunCatchingNonCancel { fetch(null) }
+                .onSuccess { page ->
+                    if (myGeneration == generation) {
+                        filterable.replace(page.illusts, filterVersionProvider())
+                        nextUrl = page.nextUrl
+                        initialError = null
+                        loadMoreError = null
+                        outcome = PagedLoadOutcome.Written
                     }
-                    outcome = PagedLoadOutcome.Failed
                 }
+                .onFailure { error ->
+                    if (myGeneration == generation) {
+                        if (filteredIllusts == null) {
+                            initialError = error
+                        }
+                        outcome = PagedLoadOutcome.Failed
+                    }
+                }
+        } finally {
+            // 复位受守卫约束：并发的新一轮刷新在途时，过期的旧调用不得复位其刷新标志
+            // 即使协程在 fetch 阶段被取消，也需要把同代标志位复位，防止卡在加载态。
+            if (myGeneration == generation) {
+                isRefreshing = false
             }
-        // 复位受守卫约束：并发的新一轮刷新在途时，过期的旧调用不得复位其刷新标志
-        // （Screen 内 LaunchedEffect 取消旧协程时本行不触达，行为等价于 RankingScreen.kt:134）。
-        if (myGeneration == generation) {
-            isRefreshing = false
         }
         return outcome
     }
@@ -127,22 +130,25 @@ class IllustPagedListState(
         isLoadingMore = true
         loadMoreError = null
         var outcome = PagedLoadOutcome.Discarded
-        suspendRunCatchingNonCancel { fetch(currentNextUrl) }
-            .onSuccess { page ->
-                if (myGeneration == generation) {
-                    filterable.append(page.illusts, filterVersionProvider())
-                    nextUrl = page.nextUrl
-                    outcome = PagedLoadOutcome.Written
+        try {
+            suspendRunCatchingNonCancel { fetch(currentNextUrl) }
+                .onSuccess { page ->
+                    if (myGeneration == generation) {
+                        filterable.append(page.illusts, filterVersionProvider())
+                        nextUrl = page.nextUrl
+                        outcome = PagedLoadOutcome.Written
+                    }
                 }
-            }
-            .onFailure { error ->
-                if (myGeneration == generation) {
-                    loadMoreError = error
-                    outcome = PagedLoadOutcome.Failed
+                .onFailure { error ->
+                    if (myGeneration == generation) {
+                        loadMoreError = error
+                        outcome = PagedLoadOutcome.Failed
+                    }
                 }
+        } finally {
+            if (myGeneration == generation) {
+                isLoadingMore = false
             }
-        if (myGeneration == generation) {
-            isLoadingMore = false
         }
         return outcome
     }

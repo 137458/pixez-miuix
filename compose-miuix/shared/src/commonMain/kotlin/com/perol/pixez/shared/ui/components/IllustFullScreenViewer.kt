@@ -342,10 +342,19 @@ private fun ViewerPagesSection(
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (pageCount > 1) {
-            // 多 P 相邻页静默预加载（前后各 1 页）
-            LaunchedEffect(pagerState.currentPage, pageCount, zoomQuality, settings.pictureSource) {
+            // 多 P 相邻页静默预加载（前后各 1 页，同时覆盖横向 Pager 与纵向滚动模式）
+            val activePreloadPage by remember(isVerticalScrollMode, pageCount, pagerState, verticalListState) {
+                derivedStateOf {
+                    if (isVerticalScrollMode) {
+                        verticalListState.firstVisibleItemIndex.coerceIn(0, pageCount - 1)
+                    } else {
+                        pagerState.currentPage
+                    }
+                }
+            }
+            LaunchedEffect(activePreloadPage, pageCount, zoomQuality, settings.pictureSource) {
                 val imageLoader = SingletonImageLoader.get(context)
-                val adjacentPages = listOf(pagerState.currentPage + 1, pagerState.currentPage - 1)
+                val adjacentPages = listOf(activePreloadPage + 1, activePreloadPage - 1)
                     .filter { it in 0 until pageCount }
                 // 解析过程涉及目录遍历与磁盘缓存查询，统一切到 IO 线程，避免阻塞主线程
                 withContext(Dispatchers.IO) {

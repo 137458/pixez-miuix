@@ -12,6 +12,7 @@ import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.languageCodeForNum
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.Clock
 
 /** 小组件缓存有效期（毫秒），超时后视为过期触发重新拉取（默认 24 小时）。 */
@@ -25,6 +26,8 @@ private const val CACHE_EXPIRY_MILLIS = 24L * 60 * 60 * 1000
 class WidgetRepository(
     private val driverFactory: DriverFactory,
     private val settingsRepository: SettingsRepository,
+    private val tokenStorage: AuthTokenStorage? = null,
+    private val remoteFetcher: (suspend (type: String, authStorage: AuthTokenStorage) -> List<Illust>)? = null,
 ) {
     // 库名/schema/旧库补列一律取自登记表：主名与旧 Flutter 库一致，避免自造库名读不到老数据。
     private val glanceDriver = driverFactory.createDriver(LocalDatabases.glanceIllustPersist)
@@ -89,48 +92,67 @@ class WidgetRepository(
     }
 
     private suspend fun fetchFromRemote(type: String): List<Illust> {
-        val accountDriver = driverFactory.createDriver(LocalDatabases.account)
-        val tokenStorage = SqlDelightAuthTokenStorage(
-            accountDriver,
+        val ownedAccountDriver = if (tokenStorage == null) {
+            driverFactory.createDriver(LocalDatabases.account)
+        } else {
+            null
+        }
+        val resolvedTokenStorage = tokenStorage ?: SqlDelightAuthTokenStorage(
+            requireNotNull(ownedAccountDriver),
             // 小组件进程经同一设置桥读取活跃账号指针：follow 流需鉴权，须以当前登录账号身份请求；
             // widget 只读账号库，不注入 setActiveUserId（活跃指针自愈分支自然退化为空操作）。
             getActiveUserId = { settingsRepository.activeUserId },
         )
-        val pixivHttpClient = PixivHttpClient(
-            tokenStorage = tokenStorage,
-            // 语言码经共享解析函数取自用户设置（架构审查 中-14），小组件请求语言与 App 内一致。
-            languageProvider = { languageCodeForNum(settingsRepository.languageNum) },
-            // 小组件进程无 AppDependencies 可反查，DoH 模式改由本仓库持有的设置仓库注入（架构审查高-2）。
-            modeProvider = { isOauthHost ->
-                if (isOauthHost) settingsRepository.oauthNetworkMode else settingsRepository.apiNetworkMode
-            },
-        )
+        val pixivHttpClient = if (remoteFetcher == null) {
+            PixivHttpClient(
+                tokenStorage = resolvedTokenStorage,
+                // 语言码经共享解析函数取自用户设置（架构审查 中-14），小组件请求语言与 App 内一致。
+                languageProvider = { languageCodeForNum(settingsRepository.languageNum) },
+                // 小组件进程无 AppDependencies 可反查，DoH 模式改由本仓库持有的设置仓库注入（架构审查高-2）。
+                modeProvider = { isOauthHost ->
+                    if (isOauthHost) settingsRepository.oauthNetworkMode else settingsRepository.apiNetworkMode
+                },
+            )
+        } else {
+            null
+        }
         return try {
-            val illustRepo = IllustRepository(pixivHttpClient.apiClient, settingsRepository = settingsRepository)
             try {
-                when (type) {
-                    "day", "rank" -> illustRepo.getRanking(mode = "day")
-                    "week" -> illustRepo.getRanking(mode = "week")
-                    "month" -> illustRepo.getRanking(mode = "month")
-                    "day_male" -> illustRepo.getRanking(mode = "day_male")
-                    "day_female" -> illustRepo.getRanking(mode = "day_female")
-                    "news" -> illustRepo.getRanking(mode = "day")
-                    "follow" -> illustRepo.getFollowIllusts()
-                    else -> {
-                        try {
-                            illustRepo.getRecommended(forceRefresh = true)
-                        } catch (_: Exception) {
-                            illustRepo.getWalkthroughIllusts(forceRefresh = true)
-                        }
-                    }
-                }
+                remoteFetcher?.invoke(type, resolvedTokenStorage)
+                    ?: fetchDefaultRemote(type, requireNotNull(pixivHttpClient))
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 Napier.w("Failed to fetch widget illusts for type $type: ${e.message}", tag = "WidgetRepository")
                 emptyList()
             }
         } finally {
-            runCatching { pixivHttpClient.close() }
-            runCatching { driverFactory.closeDriver(accountDriver) }
+            pixivHttpClient?.let { runCatching { it.close() } }
+            ownedAccountDriver?.let { driver ->
+                runCatching { driverFactory.closeDriver(driver) }
+            }
+        }
+    }
+
+    private suspend fun fetchDefaultRemote(type: String, pixivHttpClient: PixivHttpClient): List<Illust> {
+        val illustRepo = IllustRepository(pixivHttpClient.apiClient, settingsRepository = settingsRepository)
+        return when (type) {
+            "day", "rank" -> illustRepo.getRanking(mode = "day")
+            "week" -> illustRepo.getRanking(mode = "week")
+            "month" -> illustRepo.getRanking(mode = "month")
+            "day_male" -> illustRepo.getRanking(mode = "day_male")
+            "day_female" -> illustRepo.getRanking(mode = "day_female")
+            "news" -> illustRepo.getRanking(mode = "day")
+            "follow" -> illustRepo.getFollowIllusts()
+            else -> {
+                try {
+                    illustRepo.getRecommended(forceRefresh = true)
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (_: Exception) {
+                    illustRepo.getWalkthroughIllusts(forceRefresh = true)
+                }
+            }
         }
     }
 

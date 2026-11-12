@@ -439,6 +439,17 @@ class AccountRepositoryTest {
         assertEquals(true, repository.currentAccount()?.hasCredentials, "完整 token 的账号 hasCredentials 应为 true")
     }
 
+    @Test
+    fun `login 在 token 分支被取消时不吞掉取消也不降级调用 loginWithCode`() = runBlocking {
+        oauth.refreshError = kotlinx.coroutines.CancellationException("cancelled")
+        oauth.exchangeResult = oauthEnvelope()
+
+        assertFailsWith<kotlinx.coroutines.CancellationException> {
+            repository.login("plain-token-or-code")
+        }
+        assertTrue(oauth.receivedCodes.isEmpty(), "CancellationException 不得被降级为 loginWithCode")
+    }
+
     private fun cachedIllustFixture(id: Long): com.perol.pixez.shared.data.model.Illust =
         com.perol.pixez.shared.data.model.Illust(
             id = id,

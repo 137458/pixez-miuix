@@ -447,6 +447,50 @@ class TokenRefreshPluginTest {
         )
         assertEquals(FRESH_REFRESH_TOKEN, storage.rowOf("100")?.refresh_token, "刷新结果应写回发起刷新的账号 100")
         assertEquals(HttpStatusCode.OK, response, "刷新重放请求不应因并发切换而失败")
+        assertEquals(
+            listOf<Pair<String, String?>>(
+                "/v1/illust/detail" to "Bearer $STALE_ACCESS_TOKEN",
+                "/v1/illust/detail" to "Bearer $FRESH_ACCESS_TOKEN",
+            ),
+            requests,
+            "重放原请求必须使用发起账号 100 刷新后的凭证，严禁携带切号后账号 200 的 token",
+        )
+    }
+
+    @Test
+    fun `账号 100 触发失效熔断后切到账号 200 仍可独立刷新`() {
+        val storage = FakeAuthTokenStorage().apply {
+            login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN)
+            addUser("200", "stale-200", "rt-200")
+        }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        }
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth, signal) { request ->
+            val auth = request.headers["Authorization"]
+            requests.add(request.url.encodedPath to auth)
+            if (auth == "Bearer $STALE_ACCESS_TOKEN" || auth == "Bearer stale-200") {
+                respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders)
+            } else {
+                respond(OK_BODY, HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+
+        client.use {
+            runBlocking {
+                assertFailsWith<AuthExpiredException> {
+                    client.get("$API_HOST/user100")
+                }
+                storage.switchAccount("200")
+                oauth.refreshError = null
+                oauth.refreshResult = accountFixture("fresh-200", "fresh-rt-200")
+                val status200 = client.get("$API_HOST/user200").status
+                assertEquals(HttpStatusCode.OK, status200, "账号 200 不应被账号 100 的熔断状态阻断")
+            }
+        }
+        assertEquals("fresh-200", storage.rowOf("200")?.access_token)
     }
 
     @Test

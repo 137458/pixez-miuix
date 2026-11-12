@@ -235,7 +235,11 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
             val app = requireNotNull(AppDependencies.orNull()) {
                 "AppDependencies 尚未初始化，无法构建小组件依赖"
             }
-            WidgetRepository(app.driverFactory, app.settingsRepository)
+            WidgetRepository(
+                driverFactory = app.driverFactory,
+                settingsRepository = app.settingsRepository,
+                tokenStorage = app.tokenStorage,
+            )
         }
     }
 }

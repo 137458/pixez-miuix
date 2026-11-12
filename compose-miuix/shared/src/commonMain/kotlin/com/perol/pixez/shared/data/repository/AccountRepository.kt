@@ -17,6 +17,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.Parameters
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -128,9 +129,13 @@ class AccountRepository(
         // 4. 优先尝试作为 Refresh Token 登录；若失败则降级尝试作为授权码登录
         return try {
             loginWithToken(clean)
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (tokenEx: Exception) {
             try {
                 loginWithCode(clean)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (codeEx: Exception) {
                 // 如果两项均失败，抛出最具诊断价值的异常信息
                 throw tokenEx

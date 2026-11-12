@@ -3,10 +3,16 @@ package com.perol.pixez.shared.data.repository
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.LocalDatabases
+import com.perol.pixez.shared.data.local.account.Account
 import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
+import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.AuthTokenStorage
 import com.russhwolf.settings.PreferencesSettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
+import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -116,5 +122,49 @@ class WidgetRepositoryCacheTest {
 
         assertEquals(2L, result?.illust_id, "应返回 ctime 最新的缓存行")
         assertTrue(result != null)
+    }
+
+    @Test
+    fun `fetchFromRemote 遭遇 CancellationException 时向上传播而不吞成 null`(): Unit = runBlocking {
+        val repo = WidgetRepository(
+            driverFactory = DriverFactory(),
+            settingsRepository = SettingsRepository(PreferencesSettings(node)),
+            tokenStorage = StubAuthTokenStorage,
+            remoteFetcher = { _, _ -> throw CancellationException("widget refresh cancelled") },
+        )
+
+        assertFailsWith<CancellationException> {
+            repo.getOrFetchWidgetIllust("recom")
+        }
+    }
+
+    @Test
+    fun `传入共享 tokenStorage 时直接复用该实例`(): Unit = runBlocking {
+        var capturedStorage: AuthTokenStorage? = null
+        val repo = WidgetRepository(
+            driverFactory = DriverFactory(),
+            settingsRepository = SettingsRepository(PreferencesSettings(node)),
+            tokenStorage = StubAuthTokenStorage,
+            remoteFetcher = { _, storage ->
+                capturedStorage = storage
+                emptyList()
+            },
+        )
+
+        repo.getOrFetchWidgetIllust("recom")
+
+        assertSame(StubAuthTokenStorage, capturedStorage)
+    }
+
+    private object StubAuthTokenStorage : AuthTokenStorage {
+        override suspend fun getCurrentAccount(): Account? = null
+        override suspend fun saveAccount(account: AccountResponse, password: String, deviceToken: String) {}
+        override suspend fun getAllAccounts(): List<Account> = emptyList()
+        override suspend fun switchAccount(userId: String): Account = error("unused")
+        override suspend fun deleteAccount(userId: String) {}
+        override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {}
+        override suspend fun invalidateCredentials(userId: String) {}
+        override suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) {}
+        override suspend fun clear() {}
     }
 }

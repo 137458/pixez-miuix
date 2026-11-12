@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,6 +68,7 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -233,13 +237,19 @@ fun NovelViewerScreen(
         loadNovel()
     }
 
+    val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
 
     Scaffold(
         topBar = {
-            BlurredBar(backdrop = backdrop) {
+            BlurredBar(
+                backdrop = backdrop,
+                scrollBehavior = scrollBehavior,
+            ) {
                 TopAppBar(
                     title = strings.novelReaderTitle,
+                    scrollBehavior = scrollBehavior,
+                    color = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
@@ -356,13 +366,14 @@ fun NovelViewerScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .blurBackdropSource(backdrop),
         ) {
             when (val st = state) {
                 is NovelViewState.Loading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                         contentAlignment = Alignment.Center,
                     ) {
                         InfiniteProgressIndicator(
@@ -373,7 +384,9 @@ fun NovelViewerScreen(
                 }
                 is NovelViewState.Error -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                         contentAlignment = Alignment.Center,
                     ) {
                         Card(modifier = Modifier.padding(24.dp)) {
@@ -413,11 +426,17 @@ fun NovelViewerScreen(
                                 .fillMaxHeight()
                                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp),
                         ) {
                             androidx.compose.foundation.text.selection.SelectionContainer {
                                 LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                                    contentPadding = PaddingValues(
+                                        top = innerPadding.calculateTopPadding() + 12.dp,
+                                        bottom = innerPadding.calculateBottomPadding() + 12.dp,
+                                    ),
                                 ) {
                                     item { Spacer(modifier = Modifier.height(16.dp)) }
 

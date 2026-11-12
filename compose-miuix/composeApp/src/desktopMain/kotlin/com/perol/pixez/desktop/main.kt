@@ -71,16 +71,17 @@ private object PixEzTrayPainter : Painter() {
  * Desktop(JVM) 应用入口，集成系统代理、单实例回调转发、托盘与 Windows 11 Mica 材质。
  */
 fun main(args: Array<String>) {
-    // 顶层未捕获异常兜底：jpackage 发布版无控制台，崩溃信息写日志文件避免静默丢失
+    // 顶层未捕获异常兜底：jpackage 发布版无控制台，崩溃信息经脱敏与滚动保留后落盘，
+    // 控制台回显同步使用已脱敏内容，避免异常消息或 URL 查询串泄露令牌与 user_id。
     Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-        runCatching {
-            java.nio.file.Files.createDirectories(java.nio.file.Path.of(System.getProperty("user.home"), ".pixez", "logs"))
-            java.nio.file.Files.writeString(
-                java.nio.file.Path.of(System.getProperty("user.home"), ".pixez", "logs", "crash-" + System.currentTimeMillis() + ".log"),
-                "Thread: " + thread.name + "\n" + throwable.stackTraceToString(),
-            )
-        }
-        System.err.println("Uncaught exception on ${thread.name}: ${throwable.stackTraceToString()}")
+        val crashFile = runCatching {
+            val logDir = com.perol.pixez.shared.platform.errorLogDirectory()?.let { java.io.File(it) }
+                ?: java.nio.file.Path.of(System.getProperty("user.home"), ".pixez", "logs").toFile()
+            com.perol.pixez.shared.platform.ErrorLogFiles.writeCrashLog(logDir, thread.name, throwable)
+        }.getOrNull()
+        val sanitizedStack = runCatching { crashFile?.readText() }.getOrNull()
+            ?: "${throwable::class.simpleName}"
+        System.err.println("Uncaught exception on ${thread.name}: $sanitizedStack")
     }
     System.setProperty("skiko.fps", "0")
     System.setProperty("skiko.vsync.enabled", "true")
