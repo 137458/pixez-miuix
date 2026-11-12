@@ -113,7 +113,6 @@ class SingleInstanceCoordinatorTest {
                 secondary::class,
                 "伪造 token 的转发应被 FORBIDDEN 拒绝",
             )
-            Thread.sleep(300)
             assertEquals(false, listenerInvoked, "鉴权失败不得触发任何启动监听器")
         }
         primary.coordinator.close()

@@ -96,8 +96,6 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.okhttp.dnsoverhttps)
             implementation(libs.sqldelight.android.driver)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
@@ -105,11 +103,14 @@ kotlin {
         }
 
         desktopMain.dependencies {
-            implementation(libs.ktor.client.okhttp)
-            implementation(libs.okhttp.dnsoverhttps)
             implementation(libs.sqldelight.sqlite.driver)
             // 桌面端凭据加密走 Windows DPAPI（CryptProtectData），非 Windows JVM 运行时回退明文
             implementation(libs.jna.platform)
+        }
+
+        val androidUnitTest by getting
+        androidUnitTest.dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
         }
 
         // desktopTest 复用 commonTest 的 kotlin("test")/junit 依赖，无需重复声明
@@ -155,10 +156,8 @@ sqldelight {
         // 文件路径与表结构均与旧版保持一致。
         // 每个数据库通过 srcDirs 限定只编译自己的 .sq 文件，避免生成类重名。
         //
-        // TODO(M2 后续或 M3): 旧 Flutter 还有以下数据库未接入迁移，对应功能历史数据会暂时缺失：
-        //  - illustpersist.db（表 illustpersist）
+        // 以下旧 Flutter 数据库仍按需预留：
         //  - tag.db（表 tag）
-        //  - Novelpersist.db（表 novelpersist）
         //  - NovelViewerPersist.db（表 novel_viewer_persist）
         //  - banncommentid.db（表 ban_comment_persist）
         create("AccountDatabase") {

@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
  */
 class NovelHistoryRepository(
     driver: SqlDriver,
+    private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
     private val queries = NovelPersistDatabase(driver).novelPersistQueries
 
@@ -26,7 +27,7 @@ class NovelHistoryRepository(
      * 若该小说已存在历史记录，则更新其时间并前置到最新位置。
      */
     suspend fun insert(novel: Novel) = withContext(Dispatchers.IO) {
-        val now = Clock.System.now().toEpochMilliseconds()
+        val now = nowMillis()
         queries.transaction {
             queries.deleteByNovelId(novel.id)
             queries.insertHistory(

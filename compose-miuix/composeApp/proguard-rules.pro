@@ -48,18 +48,24 @@
 -dontwarn com.arkivanov.decompose.**
 -dontwarn com.arkivanov.essenty.**
 -keep class com.perol.pixez.shared.ui.navigation.RootComponent$Config** { *; }
--keep class com.perol.pixez.shared.data.model.** { *; }
+-keep @kotlinx.serialization.Serializable class com.perol.pixez.shared.data.model.** {
+    <init>(...);
+}
+-keepclassmembers class com.perol.pixez.shared.data.model.**$Companion {
+    public kotlinx.serialization.KSerializer serializer(...);
+}
 
 # ------------------------------------------------------------------------------
 # 5. SQLDelight 数据库
 # ------------------------------------------------------------------------------
 -dontwarn app.cash.sqldelight.**
--keep class com.perol.pixez.shared.data.local.** { *; }
--keep class * extends app.cash.sqldelight.db.SqlDriver { *; }
+-keep class * extends app.cash.sqldelight.db.SqlDriver {
+    <init>(...);
+}
 -keep class * extends app.cash.sqldelight.db.SqlSchema { *; }
 
 # ------------------------------------------------------------------------------
-# 6. Ktor 3 & OkHttp 客户端
+# 6. Ktor 3 & OkHttp 客户端（第三方库自带 consumer rules，仅屏蔽可选依赖告警）
 # ------------------------------------------------------------------------------
 -dontwarn io.ktor.**
 -dontwarn okhttp3.**
@@ -70,34 +76,26 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 
--keep class io.ktor.** { *; }
--keep class okhttp3.** { *; }
-
 # ------------------------------------------------------------------------------
 # 7. Coil 3 图像加载
 # ------------------------------------------------------------------------------
 -dontwarn coil3.**
--keep class coil3.** { *; }
 
 # ------------------------------------------------------------------------------
 # 8. MIUIX 与 Backdrop 特效组件
 # ------------------------------------------------------------------------------
 -dontwarn top.yukonga.miuix.**
 -dontwarn com.kyant.backdrop.**
--keep class top.yukonga.miuix.** { *; }
--keep class com.kyant.backdrop.** { *; }
 
 # ------------------------------------------------------------------------------
 # 9. Napier 日志
 # ------------------------------------------------------------------------------
 -dontwarn io.github.aakira.napier.**
--keep class io.github.aakira.napier.** { *; }
 
 # ------------------------------------------------------------------------------
 # 10. Multiplatform Settings
 # ------------------------------------------------------------------------------
 -dontwarn com.russhwolf.settings.**
--keep class com.russhwolf.settings.** { *; }
 
 # ------------------------------------------------------------------------------
 # 11. Release 剥离冗余调试日志 (Log Stripping)
@@ -106,4 +104,6 @@
     public static boolean isLoggable(java.lang.String, int);
     public static int v(...);
     public static int d(...);
+    public static int i(...);
+    public static int w(...);
 }

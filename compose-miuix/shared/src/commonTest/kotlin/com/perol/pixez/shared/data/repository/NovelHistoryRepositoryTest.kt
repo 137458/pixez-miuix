@@ -23,11 +23,14 @@ class NovelHistoryRepositoryTest {
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var repository: NovelHistoryRepository
 
+    private var fakeNowMillis = 1_000L
+
     @Before
     fun setUp() {
         driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         NovelPersistDatabase.Schema.create(driver)
-        repository = NovelHistoryRepository(driver)
+        fakeNowMillis = 1_000L
+        repository = NovelHistoryRepository(driver) { fakeNowMillis++ }
     }
 
     @After
@@ -80,7 +83,6 @@ class NovelHistoryRepositoryTest {
     @Test
     fun `insert 后 getAllDesc 按时间降序返回并映射字段`() = runBlocking {
         repository.insert(novel(1))
-        delay(2)
         repository.insert(novel(2))
 
         val items = repository.getAllDesc()
@@ -93,15 +95,13 @@ class NovelHistoryRepositoryTest {
         assertEquals("user-2", first.userName)
         assertEquals(902L, first.userId)
         assertEquals("https://img/2.jpg", first.pictureUrl, "封面应取 squareMedium")
-        assertTrue(first.time >= items[1].time)
+        assertTrue(first.time > items[1].time)
     }
 
     @Test
     fun `重复浏览同一小说前置且不产生重复记录`() = runBlocking {
         repository.insert(novel(1))
-        delay(2)
         repository.insert(novel(2))
-        delay(2)
         repository.insert(novel(1))
 
         val items = repository.getAllDesc()
@@ -115,7 +115,6 @@ class NovelHistoryRepositoryTest {
     fun `getAllDesc 的 limit 上限生效`() = runBlocking {
         for (id in 1L..5L) {
             repository.insert(novel(id))
-            delay(1)
         }
 
         val limited = repository.getAllDesc(limit = 3)
@@ -128,7 +127,6 @@ class NovelHistoryRepositoryTest {
     @Test
     fun `deleteById 仅删除目标主键行`() = runBlocking {
         repository.insert(novel(1))
-        delay(2)
         repository.insert(novel(2))
         val target = repository.getAllDesc().first { it.novelId == 1L }
         val targetId = checkNotNull(target.id) { "insert 生成的历史记录应有自增主键" }

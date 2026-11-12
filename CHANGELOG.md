@@ -8,6 +8,12 @@
 
 ### 优化
 
+- 收紧 Android Release ProGuard/R8 混淆与日志裁剪规则，并加固桌面端与测试基建：
+  - `proguard-rules.pro` 移除 `io.ktor.**`、`okhttp3.**`、`coil3.**`、`top.yukonga.miuix.**` 等过宽整包 keep 规则，收敛为仅保留序列化、`SqlDriver`/`SqlSchema` 与 Android 组件入口，同时剥离 Release 态 `Log.v/d/i/w` 调用。
+  - 加固 Windows 单文件自包含启动器（`packageWindowsSingleFileExe`）：基于 EXE SHA-256 前缀分目录解压与临时目录原子切换避免覆盖运行中实例或 ZipSlip 路径穿越，补全 Windows `CommandLineToArgvW` 参数引号与反斜杠转义。
+  - 移除 `shared/build.gradle.kts` 中与 `jvmShared` 重复声明的网络依赖并清理已接入的 SQLDelight TODO 注释；`HistoryRepository` 与 `NovelHistoryRepository` 支持可注入单调时钟以消除测试中的 `Thread.sleep` 与时间竞态，`SingleInstanceCoordinatorTest` 移除固定睡眠等待。
+  - 补充多页作品下载全链路测试（`DownloadRepository.downloadAllPages` 并发/部分失败/进度回调校验）及 `shared` / `composeApp` 的 Android `androidUnitTest` 用例覆盖。
+  - 更新中/英/印尼语 README 中的 `*Screen.kt` 数量说明（`44`）。
 - 移除未发行的 iOS 编译目标及相关构建配置（`iosArm64`、`iosSimulatorArm64`）、`shared/src/iosMain` 占位实现与原生依赖（`ktor-client-darwin`、`sqldelight-native-driver`），聚焦 Android 与 Desktop 双端维护。
 - 优化多图作品全屏大图查看页顶栏布局与操作收敛：
   - 精简顶栏层级与视觉负荷：将平铺的复制图片、复制链接、分享、以图搜图等次级操作收纳至「更多操作」下拉菜单（OverlayDropdownPopup），右侧操作区由最多 6 个按钮精简为 3 个（多图）或 2 个（单图）。

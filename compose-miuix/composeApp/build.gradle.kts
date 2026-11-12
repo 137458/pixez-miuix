@@ -114,6 +114,12 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.junit)
         }
+
+        val androidUnitTest by getting
+        androidUnitTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.junit)
+        }
     }
 }
 
@@ -333,45 +339,163 @@ tasks.register("packageWindowsSingleFileExe") {
             using System.IO;
             using System.IO.Compression;
             using System.Reflection;
+            using System.Security.Cryptography;
+            using System.Text;
 
             namespace PixEzLauncher
             {
                 static class Program
                 {
+                    private static string ComputeSha256Prefix(string filePath)
+                    {
+                        using (FileStream fs = File.OpenRead(filePath))
+                        using (SHA256 sha = SHA256.Create())
+                        {
+                            byte[] hash = sha.ComputeHash(fs);
+                            StringBuilder sb = new StringBuilder(16);
+                            for (int i = 0; i < 8 && i < hash.Length; i++)
+                            {
+                                sb.Append(hash[i].ToString("x2"));
+                            }
+                            return sb.ToString();
+                        }
+                    }
+
+                    private static string QuoteWindowsArg(string arg)
+                    {
+                        if (arg == null || arg.Length == 0)
+                        {
+                            return "\"\"";
+                        }
+                        bool needsQuotes = false;
+                        for (int i = 0; i < arg.Length; i++)
+                        {
+                            char c = arg[i];
+                            if (c == ' ' || c == '\t' || c == '"')
+                            {
+                                needsQuotes = true;
+                                break;
+                            }
+                        }
+                        if (!needsQuotes)
+                        {
+                            return arg;
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append('"');
+                        int backslashes = 0;
+                        for (int i = 0; i < arg.Length; i++)
+                        {
+                            char c = arg[i];
+                            if (c == '\\')
+                            {
+                                backslashes++;
+                            }
+                            else if (c == '"')
+                            {
+                                sb.Append('\\', backslashes * 2 + 1);
+                                sb.Append('"');
+                                backslashes = 0;
+                            }
+                            else
+                            {
+                                if (backslashes > 0)
+                                {
+                                    sb.Append('\\', backslashes);
+                                    backslashes = 0;
+                                }
+                                sb.Append(c);
+                            }
+                        }
+                        if (backslashes > 0)
+                        {
+                            sb.Append('\\', backslashes * 2);
+                        }
+                        sb.Append('"');
+                        return sb.ToString();
+                    }
+
                     [STAThread]
                     static int Main(string[] args)
                     {
                         try
                         {
                             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                            string appDir = Path.Combine(localAppData, "PixEz", "standalone_runtime");
-                            string targetExe = Path.Combine(appDir, "PixEz", "PixEz.exe");
+                            string runtimeRoot = Path.Combine(localAppData, "PixEz", "standalone_runtime");
+                            Directory.CreateDirectory(runtimeRoot);
 
-                            string stampFile = Path.Combine(appDir, ".version_stamp");
                             string currentExePath = Assembly.GetExecutingAssembly().Location;
-                            string exeStamp = File.GetLastWriteTimeUtc(currentExePath).Ticks.ToString();
+                            string versionHash = ComputeSha256Prefix(currentExePath);
+                            string appDir = Path.Combine(runtimeRoot, versionHash);
+                            string targetExe = Path.Combine(appDir, "PixEz", "PixEz.exe");
+                            string readyFile = Path.Combine(appDir, ".ready");
 
-                            if (!File.Exists(targetExe) || !File.Exists(stampFile) || File.ReadAllText(stampFile) != exeStamp)
+                            if (!File.Exists(targetExe) || !File.Exists(readyFile))
                             {
-                                if (Directory.Exists(appDir))
+                                string stagingDir = Path.Combine(runtimeRoot, versionHash + ".tmp-" + Guid.NewGuid().ToString("N"));
+                                string stagingFull = Path.GetFullPath(stagingDir) + Path.DirectorySeparatorChar;
+                                Directory.CreateDirectory(stagingDir);
+                                try
                                 {
-                                    try { Directory.Delete(appDir, true); } catch { }
+                                    using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip"))
+                                    {
+                                        if (stream == null)
+                                        {
+                                            throw new Exception("Embedded runtime payload not found.");
+                                        }
+                                        using (ZipArchive archive = new ZipArchive(stream))
+                                        {
+                                            foreach (ZipArchiveEntry entry in archive.Entries)
+                                            {
+                                                string destPath = Path.GetFullPath(Path.Combine(stagingDir, entry.FullName));
+                                                if (!destPath.StartsWith(stagingFull, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    throw new InvalidDataException("Unsafe archive entry: " + entry.FullName);
+                                                }
+                                                if (string.IsNullOrEmpty(entry.Name))
+                                                {
+                                                    Directory.CreateDirectory(destPath);
+                                                    continue;
+                                                }
+                                                Directory.CreateDirectory(Path.GetDirectoryName(destPath));
+                                                entry.ExtractToFile(destPath, true);
+                                            }
+                                        }
+                                    }
+                                    File.WriteAllText(Path.Combine(stagingDir, ".ready"), versionHash);
+                                    if (!Directory.Exists(appDir))
+                                    {
+                                        Directory.Move(stagingDir, appDir);
+                                    }
+                                    else if (!File.Exists(readyFile))
+                                    {
+                                        try { Directory.Delete(appDir, true); } catch { }
+                                        if (!Directory.Exists(appDir))
+                                        {
+                                            Directory.Move(stagingDir, appDir);
+                                        }
+                                    }
                                 }
-                                Directory.CreateDirectory(appDir);
-
-                                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip"))
+                                finally
                                 {
-                                    if (stream == null)
+                                    if (Directory.Exists(stagingDir))
                                     {
-                                        throw new Exception("Embedded runtime payload not found.");
-                                    }
-                                    using (ZipArchive archive = new ZipArchive(stream))
-                                    {
-                                        archive.ExtractToDirectory(appDir);
+                                        try { Directory.Delete(stagingDir, true); } catch { }
                                     }
                                 }
-                                try { File.WriteAllText(stampFile, exeStamp); } catch { }
                             }
+
+                            try
+                            {
+                                foreach (string dir in Directory.GetDirectories(runtimeRoot))
+                                {
+                                    if (!string.Equals(dir, appDir, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        try { Directory.Delete(dir, true); } catch { }
+                                    }
+                                }
+                            }
+                            catch { }
 
                             ProcessStartInfo psi = new ProcessStartInfo();
                             psi.FileName = targetExe;
@@ -380,7 +504,7 @@ tasks.register("packageWindowsSingleFileExe") {
 
                             if (args != null && args.Length > 0)
                             {
-                                psi.Arguments = string.Join(" ", Array.ConvertAll(args, a => a.Contains(" ") ? "\"" + a + "\"" : a));
+                                psi.Arguments = string.Join(" ", Array.ConvertAll(args, QuoteWindowsArg));
                             }
 
                             using (Process proc = Process.Start(psi))

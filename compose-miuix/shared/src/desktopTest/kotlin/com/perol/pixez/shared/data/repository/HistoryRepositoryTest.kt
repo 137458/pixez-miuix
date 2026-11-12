@@ -21,11 +21,14 @@ class HistoryRepositoryTest {
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var repository: HistoryRepository
 
+    private var fakeNowMillis = 1_000L
+
     @Before
     fun setUp() {
         driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         IllustPersistDatabase.Schema.create(driver)
-        repository = HistoryRepository(driver)
+        fakeNowMillis = 1_000L
+        repository = HistoryRepository(driver) { fakeNowMillis++ }
     }
 
     @After
@@ -62,7 +65,6 @@ class HistoryRepositoryTest {
     @Test
     fun `insert 后 getAll 按时间降序返回并映射字段`() = runBlocking {
         repository.insert(illust(1))
-        Thread.sleep(2)
         repository.insert(illust(2))
 
         val items = repository.getAll()
@@ -75,15 +77,13 @@ class HistoryRepositoryTest {
         assertEquals("user-2", first.userName)
         assertEquals(902L, first.userId)
         assertEquals("https://img/2.jpg", first.pictureUrl)
-        assertTrue(first.time >= items[1].time)
+        assertTrue(first.time > items[1].time)
     }
 
     @Test
     fun `重复浏览同一作品前置且不产生重复记录`() = runBlocking {
         repository.insert(illust(1))
-        Thread.sleep(2)
         repository.insert(illust(2))
-        Thread.sleep(2)
         repository.insert(illust(1))
 
         val items = repository.getAll()
@@ -97,7 +97,6 @@ class HistoryRepositoryTest {
     fun `getAll 的 limit 上限生效`() = runBlocking {
         for (id in 1L..5L) {
             repository.insert(illust(id))
-            Thread.sleep(1)
         }
 
         val limited = repository.getAll(limit = 3)
@@ -110,7 +109,6 @@ class HistoryRepositoryTest {
     @Test
     fun `deleteById 仅删除目标主键行`() = runBlocking {
         repository.insert(illust(1))
-        Thread.sleep(2)
         repository.insert(illust(2))
         val target = repository.getAll().first { it.illustId == 1L }
 

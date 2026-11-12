@@ -38,7 +38,7 @@ The app connects to Pixiv directly from Mainland China without a proxy. It inclu
 - Tablets and wide screens enable a multi-column staggered grid. The floating bottom bar is width-capped and centered (max 540 dp); the content area is capped at 760 dp.
 
 ### Multiplatform Architecture
-- `shared/src/commonMain` contains 20 `*Repository.kt` and 42 `*Screen.kt`.
+- `shared/src/commonMain` contains 20 `*Repository.kt` and 44 `*Screen.kt`.
 - Decompose for routing and navigation.
 - Ktor Client for networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
 - SQLDelight for the local database; Coil 3 for image loading.

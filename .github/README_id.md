@@ -26,7 +26,7 @@ Android 7.0 (API 24) atau lebih baru, untuk ponsel dan tablet. EXE Windows dapat
 
 # Tentang repositori ini
 
-PixEz MIUIX adalah versi tulis-ulang dari PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 20 berkas `*Repository.kt` dan 42 berkas `*Screen.kt`.
+PixEz MIUIX adalah versi tulis-ulang dari PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 20 berkas `*Repository.kt` dan 44 berkas `*Screen.kt`.
 
 Komponen utama:
 

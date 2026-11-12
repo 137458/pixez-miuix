@@ -16,6 +16,7 @@ import kotlinx.datetime.Clock
  */
 class HistoryRepository(
     driver: SqlDriver,
+    private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
     private val queries = IllustPersistDatabase(driver).illustPersistQueries
 
@@ -30,7 +31,7 @@ class HistoryRepository(
             ?: illust.metaPages.firstOrNull()?.imageUrls?.medium
             ?: illust.metaPages.firstOrNull()?.imageUrls?.large
             ?: ""
-        val now = Clock.System.now().toEpochMilliseconds()
+        val now = nowMillis()
         queries.transaction {
             queries.deleteByIllustId(illust.id)
             queries.insertHistory(

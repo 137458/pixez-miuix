@@ -9,6 +9,8 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.ImageUrls
 import com.perol.pixez.shared.data.model.IllustUser
 import com.perol.pixez.shared.data.model.IllustProfileImageUrls
+import com.perol.pixez.shared.data.model.MetaPage
+import com.perol.pixez.shared.data.model.MetaPageImageUrls
 import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AppErrorKind
@@ -459,5 +461,109 @@ class DownloadRepositoryTest {
         job2.join()
 
         assertEquals(1, maxObservedActive.get(), "多次并发 downloadAllPages 共享全局上限=1，不应同时超过 1 个活跃下载")
+    }
+
+    @Test
+    fun `downloadAllPages 多页作品保存全部页面并依次上报进度`() = runBlocking {
+        val multiPageClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    val pageTag = request.url.encodedPath.substringAfterLast('/').encodeToByteArray()
+                    respond(
+                        content = ByteReadChannel(pageTag),
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentLength, pageTag.size.toString()),
+                    )
+                }
+            }
+        }
+        val repo = DownloadRepository(
+            httpClient = multiPageClient,
+            saver = IllustSaver(),
+            historyRepository = historyRepo,
+            settingsRepository = settingsRepo,
+        )
+        val pages = (0 until 3).map { p ->
+            val url = "https://i.pximg.net/img-original/img/888001_p$p.png"
+            MetaPage(
+                imageUrls = MetaPageImageUrls(
+                    squareMedium = url,
+                    medium = url,
+                    large = url,
+                    original = url,
+                ),
+            )
+        }
+        val illust = createDummyIllust(id = 888001L).copy(
+            pageCount = 3,
+            metaPages = pages,
+        )
+
+        val progressEvents = java.util.Collections.synchronizedList(mutableListOf<Pair<Int, Int>>())
+        val tasks = repo.downloadAllPages(illust, onProgress = { completed, total ->
+            progressEvents += completed to total
+        })
+
+        assertEquals(3, tasks.size)
+        assertTrue(tasks.all { it.status == DownloadStatus.Success }, "多页下载应全部成功")
+        assertEquals(setOf(1 to 3, 2 to 3, 3 to 3), progressEvents.toSet())
+        (0 until 3).forEach { p ->
+            val task = tasks[p]
+            assertEquals(p, task.pageIndex)
+            val savedFile = tempDir.walkTopDown().firstOrNull { it.isFile && it.name == task.fileName }
+                ?: fail("第 $p 页目标文件未落盘: ${task.fileName}")
+            assertEquals("888001_p$p.png", savedFile.readText(), "第 $p 页文件内容应与源响应一致")
+        }
+    }
+
+    @Test
+    fun `downloadAllPages 部分页面失败时其余页面仍正常保存且失败页记录状态`() = runBlocking {
+        val partialFailClient = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    if (request.url.encodedPath.endsWith("_p1.png")) {
+                        respond(
+                            content = ByteReadChannel("not found"),
+                            status = HttpStatusCode.NotFound,
+                        )
+                    } else {
+                        val bytes = byteArrayOf(7, 8, 9)
+                        respond(
+                            content = ByteReadChannel(bytes),
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentLength, bytes.size.toString()),
+                        )
+                    }
+                }
+            }
+        }
+        val repo = DownloadRepository(
+            httpClient = partialFailClient,
+            saver = IllustSaver(),
+            historyRepository = historyRepo,
+            settingsRepository = settingsRepo,
+        )
+        val pages = (0 until 3).map { p ->
+            val url = "https://i.pximg.net/img-original/img/888002_p$p.png"
+            MetaPage(
+                imageUrls = MetaPageImageUrls(
+                    squareMedium = url,
+                    medium = url,
+                    large = url,
+                    original = url,
+                ),
+            )
+        }
+        val illust = createDummyIllust(id = 888002L).copy(
+            pageCount = 3,
+            metaPages = pages,
+        )
+
+        val tasks = repo.downloadAllPages(illust)
+
+        assertEquals(3, tasks.size)
+        assertEquals(DownloadStatus.Success, tasks[0].status)
+        assertEquals(DownloadStatus.Failed, tasks[1].status)
+        assertEquals(DownloadStatus.Success, tasks[2].status)
     }
 }
