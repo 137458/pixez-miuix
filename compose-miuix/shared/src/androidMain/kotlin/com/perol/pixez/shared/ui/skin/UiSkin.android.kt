@@ -44,6 +44,7 @@ import com.itos.coui.theme.CouiTypography
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
+import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
 import top.yukonga.miuix.kmp.theme.Colors
@@ -246,6 +247,16 @@ internal actual fun CouiMainTabPage(
         RootComponent.MainTab.Spotlight -> {
             CouiSpotlightScreen(
                 onArticleClick = component::onSpotlightArticleClicked,
+            )
+        }
+        RootComponent.MainTab.New -> {
+            val reselectFlow = remember(tab) { component.reselectFlowOf(tab) }
+            CouiNewScreen(
+                onIllustClick = component::onIllustClicked,
+                onUserClick = component::onUserClicked,
+                onLoginClick = component::onLoginClicked,
+                onSeriesClick = component::onIllustSeriesClicked,
+                reselectFlow = reselectFlow,
             )
         }
         // 其余标签尚未迁移：走 MIUIX 回退，功能与既有页面完全一致。
