@@ -6,6 +6,14 @@
 
 ## [未发布]
 
+### 新增
+
+- 接入 COUI（ColorOS）皮肤，Android 端可在 HyperOS（MIUIX）与 ColorOS 间切换：
+  - 版本目录新增 `io.github.itoseo:coui:0.0.1-alpha11` 及版本对齐所需的 `compose-bom-alpha:2026.08.01`、`core-ktx:1.19.1`，仅注入 `androidMain`，Desktop 依赖树不受影响；Android `minSdk` 提升至 31（COUI AAR 固定 `minSdkVersion=31`）。
+  - 新增界面皮肤设置项与 13 语言词条，`ui_skin` 持久化后由 `RootContent` 经 `LocalUiSkin` 下发；Desktop 端强制回退 HyperOS。
+  - COUI 主题由 MIUIX 色板派生；筛选胶囊与底栏在 API 34+ 使用官方 `ChipTabRow`/`NavigationBar`（含凝光背景），低版本退回首屏可用的自绘平替。
+  - 推荐、排行榜、特辑三个一级标签接入 COUI 页面，分页/恢复/刷新逻辑复用皮肤无关状态（`HelloFeedState`、`RankingFeedState`、`SpotlightFeedState`），未迁移标签保持 MIUIX 回退。
+
 ### 优化
 
 - 收紧 Android Release ProGuard/R8 混淆与日志裁剪规则，并加固桌面端与测试基建：

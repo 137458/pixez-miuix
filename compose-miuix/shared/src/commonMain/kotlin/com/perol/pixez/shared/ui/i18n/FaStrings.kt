@@ -497,6 +497,10 @@ object FaStrings : AppStrings {
 
     override val settingTheme = "تم"
     override val settingThemeSummary = "حالت پوسته، تاریک AMOLED، رنگ پویا، رنگ پایه"
+    override val settingUiSkin = "پوسته رابط"
+    override val settingUiSkinSummary = "جابه‌جایی بین سبک ظاهری HyperOS و ColorOS (فقط اندروید)"
+    override val skinHyperOs = "HyperOS (هایپر او اس)"
+    override val skinColorOs = "ColorOS (کالر او اس)"
     override val settingNetwork = "تنظیمات شبکه"
     override val settingNetworkSummary = "حالت شبکه، منابع آینه تصویر"
 

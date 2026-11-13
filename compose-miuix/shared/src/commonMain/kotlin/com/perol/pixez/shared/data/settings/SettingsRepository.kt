@@ -95,6 +95,14 @@ class SettingsRepository(
         get() = tracked().getIntWithLegacyFallback(SettingsKeys.THEME_MODE, 0)
         set(value) { settings[SettingsKeys.THEME_MODE] = value; notifyChanged() }
 
+    /**
+     * 界面皮肤索引：0=HyperOS（MIUIX），1=ColorOS（COUI）。
+     * COUI 只在 Android 提供，Desktop 读取到该值时由 UI 层强制回退 HyperOS。
+     */
+    var uiSkinIndex: Int
+        get() = tracked().getIntWithLegacyFallback(SettingsKeys.UI_SKIN, 0).coerceIn(0, 1)
+        set(value) { settings[SettingsKeys.UI_SKIN] = value.coerceIn(0, 1); notifyChanged() }
+
     var useDynamicColor: Boolean
         get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.USE_DYNAMIC_COLOR, false)
         set(value) { settings[SettingsKeys.USE_DYNAMIC_COLOR] = value; notifyChanged() }

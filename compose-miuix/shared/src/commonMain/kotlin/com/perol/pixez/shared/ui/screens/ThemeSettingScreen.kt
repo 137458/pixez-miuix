@@ -49,6 +49,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.skin.UiSkin
+import com.perol.pixez.shared.ui.skin.isCouiSkinSupported
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
@@ -74,6 +76,7 @@ fun ThemeSettingScreen(
     var seedColor by remember { mutableStateOf(settingsRepository.seedColor ?: 0xFF2196F3.toInt()) }
     var paletteStyle by remember { mutableStateOf(settingsRepository.miuixPaletteStyle) }
     var useSpec2025 by remember { mutableStateOf(settingsRepository.miuixUseSpec2025) }
+    var uiSkinIndex by remember { mutableStateOf(settingsRepository.uiSkinIndex) }
 
     // 颜色选择对话框显示状态。
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
@@ -170,6 +173,41 @@ fun ThemeSettingScreen(
                             title = strings.themeModeDark,
                             selected = themeMode == 2,
                             onClick = { setThemeMode(2) },
+                        )
+                    }
+                }
+
+                if (isCouiSkinSupported) {
+                    item {
+                        SmallTitle(text = strings.settingUiSkin)
+                        top.yukonga.miuix.kmp.basic.Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                        ) {
+                            RadioButtonPreference(
+                                title = strings.skinHyperOs,
+                                selected = uiSkinIndex == UiSkin.HYPEROS.storageIndex,
+                                onClick = {
+                                    uiSkinIndex = UiSkin.HYPEROS.storageIndex
+                                    settingsRepository.uiSkinIndex = UiSkin.HYPEROS.storageIndex
+                                },
+                            )
+                            RadioButtonPreference(
+                                title = strings.skinColorOs,
+                                selected = uiSkinIndex == UiSkin.COLOROS.storageIndex,
+                                onClick = {
+                                    uiSkinIndex = UiSkin.COLOROS.storageIndex
+                                    settingsRepository.uiSkinIndex = UiSkin.COLOROS.storageIndex
+                                },
+                            )
+                        }
+                    }
+                    item {
+                        Text(
+                            text = strings.settingUiSkinSummary,
+                            style = MiuixTheme.textStyles.footnote2,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                         )
                     }
                 }

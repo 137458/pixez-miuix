@@ -32,6 +32,7 @@ internal object SettingsKeys {
     const val LEGACY_DISABLE_BYPASS_SNI = "disable_bypass_sni"
     const val IS_HELPLESS_WAY = "is_helplessway"
     const val THEME_MODE = "theme_mode"
+    const val UI_SKIN = "ui_skin"
     const val MIUIX_PALETTE_STYLE = "miuix_palette_style"
     const val MIUIX_USE_SPEC_2025 = "miuix_use_spec_2025"
     const val SAVE_MODE = "save_mode"

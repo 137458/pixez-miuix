@@ -1,0 +1,541 @@
+package com.perol.pixez.shared.ui.coui.component
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import android.os.Build
+import androidx.annotation.RequiresApi
+import com.itos.coui.backdrop.rememberCouiBackdrop
+import com.itos.coui.chip.ChipTabRow
+import com.itos.coui.chip.CouiChipTabItem
+import com.itos.coui.layout.Scaffold
+import com.itos.coui.text.CouiTextKind
+import com.itos.coui.text.Text
+import com.itos.coui.theme.CouiTheme
+import com.itos.coui.theme.LocalCouiTextStyle
+import com.itos.coui.topappbar.CouiTopAppBarDefaults
+import com.itos.coui.topappbar.LargeTopAppBar
+import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.model.isR18
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
+import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
+import com.perol.pixez.shared.ui.state.PagingFooterState
+import com.perol.pixez.shared.ui.state.shouldPreloadMore
+
+/**
+ * COUI 一级页面骨架：折叠大标题顶栏 + 动作槽，正文使用 COUI 页面底色。
+ */
+@Composable
+internal fun CouiPageScaffold(
+    title: String,
+    actions: @Composable RowScope.() -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val colors = CouiTopAppBarDefaults.colors(
+        backgroundColor = CouiTheme.colorScheme.background,
+        dark = CouiTheme.isDark,
+    )
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = CouiTheme.colorScheme.background,
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    BasicText(
+                        text = title,
+                        style = LocalCouiTextStyle.current,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                actions = actions,
+                colors = colors,
+            )
+        },
+    ) { padding ->
+        content(padding)
+    }
+}
+
+/** 顶栏动作图标：40dp 圆形触区，不依赖 COUI 原厂按钮的 API 34 窗口特性。 */
+@Composable
+internal fun CouiActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = rememberVectorPainter(icon),
+            contentDescription = contentDescription,
+            colorFilter = ColorFilter.tint(CouiTheme.colorScheme.onSurface),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+/** COUI 插画卡片：封面 + 标题/作者；长按操作菜单暂未迁移（见交付报告）。 */
+@Composable
+internal fun CouiIllustCard(
+    illust: Illust,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val settings = LocalSettingsRepository.current
+    val changeVersion = settings.changeVersion.collectAsState().value
+    val previewUrl = remember(illust, settings.feedPreviewQuality, changeVersion) {
+        resolveIllustCoverUrl(illust.imageUrls, settings.feedPreviewQuality)
+    }
+    val isAI = remember(illust.illustAIType) { illust.illustAIType == 2 }
+    val showAIBadge = remember(isAI, settings.feedAIBadge) { settings.feedAIBadge && isAI }
+    val isNsfw = remember(illust, settings.nsfwMask, changeVersion) {
+        settings.nsfwMask && illust.isR18()
+    }
+    val ratio = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.5f, 2.0f)
+        } else {
+            1.0f
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(CouiTheme.colorScheme.card)
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(ratio),
+        ) {
+            if (isNsfw) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(CouiTheme.colorScheme.container),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "R-18",
+                        kind = CouiTextKind.ItemTitle,
+                        color = CouiTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                PixivAsyncImage(
+                    model = previewUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            if (!isNsfw && illust.pageCount > 1) {
+                CouiCardBadge(
+                    text = "${illust.pageCount}P",
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp),
+                )
+            }
+            if (!isNsfw && showAIBadge) {
+                CouiCardBadge(
+                    text = "AI",
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp),
+                )
+            }
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = illust.title,
+                kind = CouiTextKind.ItemTitle,
+                color = CouiTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+            Text(
+                text = illust.user.name,
+                kind = CouiTextKind.ItemSummary,
+                color = CouiTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CouiCardBadge(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(text = text, kind = CouiTextKind.ItemSummary, color = Color.White, maxLines = 1)
+    }
+}
+
+/** COUI 瀑布流：自适应列宽、触底预加载与三态 footer。 */
+@Composable
+internal fun CouiIllustGrid(
+    illusts: List<Illust>,
+    state: LazyStaggeredGridState,
+    onIllustClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(12.dp),
+    hasMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    loadMoreError: Throwable? = null,
+    onLoadMore: (() -> Unit)? = null,
+) {
+    if (onLoadMore != null) {
+        val shouldLoadMore by remember(hasMore, isLoadingMore, loadMoreError, illusts, state) {
+            derivedStateOf {
+                shouldPreloadMore(
+                    itemCount = illusts.size,
+                    hasMore = hasMore,
+                    isLoadingMore = isLoadingMore,
+                    hasLoadMoreError = loadMoreError != null,
+                    lastVisibleItemIndex = state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+                    thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
+                )
+            }
+        }
+        LaunchedEffect(shouldLoadMore) {
+            if (shouldLoadMore) onLoadMore()
+        }
+    }
+
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
+        state = state,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalItemSpacing = 10.dp,
+    ) {
+        items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
+            CouiIllustCard(
+                illust = illust,
+                onClick = { onIllustClick(illust.id) },
+            )
+        }
+        if (onLoadMore != null && (hasMore || isLoadingMore || loadMoreError != null)) {
+            item(
+                key = "coui_load_more_footer",
+                span = StaggeredGridItemSpan.FullLine,
+                contentType = "coui_load_more_footer",
+            ) {
+                CouiLoadMoreFooter(
+                    isLoading = isLoadingMore,
+                    error = loadMoreError,
+                    onRetry = onLoadMore,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CouiLoadMoreFooter(
+    isLoading: Boolean,
+    error: Throwable?,
+    onRetry: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            isLoading -> Text(
+                text = strings.loading,
+                kind = CouiTextKind.ItemSummary,
+                color = CouiTheme.colorScheme.onSurfaceVariant,
+            )
+            error != null -> Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable(onClick = onRetry)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = strings.retry,
+                    kind = CouiTextKind.ItemTitle,
+                    color = CouiTheme.colorScheme.accent,
+                )
+            }
+        }
+    }
+}
+
+/** COUI 首屏加载/错误/空态：单卡片提示，保留重试入口。 */
+@Composable
+internal fun CouiStatePlaceholder(
+    message: String,
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(CouiTheme.colorScheme.container)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+        ) {
+            Text(
+                text = message,
+                kind = CouiTextKind.ItemTitle,
+                color = CouiTheme.colorScheme.onSurface,
+            )
+            if (actionText != null && onAction != null) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable(onClick = onAction)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = actionText,
+                        kind = CouiTextKind.ItemTitle,
+                        color = CouiTheme.colorScheme.accent,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** COUI 可滚动筛选胶囊的数据项。 */
+internal data class CouiFilterChip(
+    val key: String,
+    val label: String,
+)
+
+/** COUI 库 ChipTabRow 的系统门槛。 */
+private const val COUI_CHIP_TAB_MIN_SDK = 34
+
+/**
+ * COUI 筛选胶囊栏：API 34+ 使用原厂 ChipTabRow（滚动胶囊 + 凝光材质），
+ * 低版本按能力边界清单退回同版式自绘胶囊栏。
+ */
+@Composable
+internal fun CouiFilterChipBar(
+    chips: List<CouiFilterChip>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (Build.VERSION.SDK_INT >= COUI_CHIP_TAB_MIN_SDK) {
+        CouiLibraryChipBar(chips, selectedKey, onSelect, modifier)
+    } else {
+        CouiPlainChipBar(chips, selectedKey, onSelect, modifier)
+    }
+}
+
+@RequiresApi(COUI_CHIP_TAB_MIN_SDK)
+@Composable
+private fun CouiLibraryChipBar(
+    chips: List<CouiFilterChip>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier,
+) {
+    val items = remember(chips) {
+        chips.map { chip -> CouiChipTabItem(key = chip.key, label = chip.label) }
+    }
+    ChipTabRow(
+        modifier = modifier.fillMaxWidth(),
+        items = items,
+        selectedKey = selectedKey,
+        onSelectedKeyChange = { key -> (key as? String)?.let(onSelect) },
+        backdrop = rememberCouiBackdrop(),
+    )
+}
+
+/** 低版本平替：与 ChipTabRow 同版式的横向滚动胶囊栏。 */
+@Composable
+private fun CouiPlainChipBar(
+    chips: List<CouiFilterChip>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier,
+) {
+    val scheme = CouiTheme.colorScheme
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(chips, key = { it.key }) { chip ->
+            val selected = chip.key == selectedKey
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) scheme.accent else scheme.container)
+                    .clickable { onSelect(chip.key) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = chip.label,
+                    kind = CouiTextKind.ItemSummary,
+                    color = if (selected) scheme.onAccent else scheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** COUI 翻页 footer：与 [PagingFooterState] 三态对齐的纯文本实现。 */
+@Composable
+internal fun CouiPagingFooter(
+    state: PagingFooterState,
+    onRetry: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    val phase = state.phase
+    if (phase == PagingFooterPhase.Hidden) return
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (phase) {
+            PagingFooterPhase.Loading -> Text(
+                text = strings.loadingMore,
+                kind = CouiTextKind.ItemSummary,
+                color = CouiTheme.colorScheme.onSurfaceVariant,
+            )
+            PagingFooterPhase.Retry -> Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable(onClick = onRetry)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = strings.retry,
+                    kind = CouiTextKind.ItemTitle,
+                    color = CouiTheme.colorScheme.accent,
+                )
+            }
+            PagingFooterPhase.NoMore -> Text(
+                text = strings.noMoreData,
+                kind = CouiTextKind.ItemSummary,
+                color = CouiTheme.colorScheme.onSurfaceVariant,
+            )
+            PagingFooterPhase.Hidden -> Unit
+        }
+    }
+}
+
+/** COUI Spotlight 文章卡片：16:9 封面 + 标题/副标题。 */
+@Composable
+internal fun CouiSpotlightCard(
+    article: SpotlightArticle,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(CouiTheme.colorScheme.card)
+            .clickable(onClick = onClick),
+    ) {
+        PixivAsyncImage(
+            model = article.thumbnail,
+            contentDescription = article.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = article.title,
+                kind = CouiTextKind.ItemTitle,
+                color = CouiTheme.colorScheme.onSurface,
+                maxLines = 2,
+            )
+            if (article.pureTitle.isNotBlank() && article.pureTitle != article.title) {
+                Text(
+                    text = article.pureTitle,
+                    kind = CouiTextKind.ItemSummary,
+                    color = CouiTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+        }
+    }
+}

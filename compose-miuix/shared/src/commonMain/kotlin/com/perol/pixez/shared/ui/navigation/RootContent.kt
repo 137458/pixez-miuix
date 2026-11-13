@@ -69,6 +69,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.theme.AppThemeSettings
 import com.perol.pixez.shared.ui.theme.resolveAppThemeSpec
 import com.perol.pixez.shared.ui.theme.toThemeController
+import com.perol.pixez.shared.ui.skin.CouiMainNavigationBar
+import com.perol.pixez.shared.ui.skin.CouiSkinHost
+import com.perol.pixez.shared.ui.skin.LocalUiSkin
+import com.perol.pixez.shared.ui.skin.SkinNavItem
+import com.perol.pixez.shared.ui.skin.UiSkin
+import com.perol.pixez.shared.ui.skin.isCouiSkinSupported
 
 /**
  * 根 UI：在 Decompose 页面栈外层包裹主题，并在一级页面底部显示导航栏。
@@ -104,6 +110,15 @@ fun RootContent(
     }
     val themeController = remember(appThemeSpec, changeVersion) {
         appThemeSpec.toThemeController()
+    }
+
+    // 皮肤：COUI 仅 Android 提供；桌面端即便读到 COLOROS 也强制回退 HyperOS。
+    val uiSkin = remember(changeVersion, isCouiSkinSupported) {
+        if (isCouiSkinSupported) {
+            UiSkin.fromIndex(settingsRepository.uiSkinIndex)
+        } else {
+            UiSkin.HYPEROS
+        }
     }
 
     val stack by component.stack.subscribeAsState()
@@ -156,10 +171,13 @@ fun RootContent(
     val appExtraColors = if (appThemeSpec.resolvedDark) darkAppExtraColors else lightAppExtraColors
 
     MiuixTheme(controller = themeController) {
+        // 皮肤主题宿主：ColorOS 时由 androidMain 叠加 COUI 配色与排版，其余平台/皮肤直接透传。
+        CouiSkinHost(enabled = uiSkin == UiSkin.COLOROS) {
         // 仓储通道统一由 RepositoryRegistry 展开（nav3/DN14）：组合根不再逐条 provides 仓储 Local，
         // 新增仓储只需改 AppDependencies 字段 / Registry 字段 / ui.LocalRepositories.kt 的 provide 一行。
         ProvideRepositories(registry) {
             CompositionLocalProvider(
+                LocalUiSkin provides uiSkin,
                 LocalBottomBarVisibility provides bottomBarVisible,
                 LocalToastSink provides rootToastSink,
                 LocalStrings provides strings,
@@ -311,6 +329,7 @@ fun RootContent(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -546,6 +565,18 @@ private fun MainChildSection(
     // 中-9：设置仓储经 LocalSettingsRepository 读取（RootContent 根部 provide）。
     val settingsRepository = LocalSettingsRepository.current
     val mainChangeVersion = settingsRepository.changeVersion.collectAsState().value
+    val uiSkin = LocalUiSkin.current
+    val strings = LocalStrings.current
+    val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
+    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab, uiSkin) {
+        MAIN_TAB_DESCRIPTORS.map { descriptor ->
+            SkinNavItem(
+                title = descriptor.label(strings),
+                icon = descriptor.icon,
+                showBadge = shouldShowUnreadFeedBadge(descriptor, activeTab, hasUnreadFeedBadge),
+            )
+        }
+    }
     // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
     // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
     // 回落为 CompositionLocal 默认值 16.dp。
@@ -557,7 +588,7 @@ private fun MainChildSection(
                 .fillMaxSize()
                 .background(MiuixTheme.colorScheme.surface),
         ) {
-            if (showNavigationRailInMain) {
+            if (showNavigationRailInMain && uiSkin != UiSkin.COLOROS) {
                 MainNavigationRail(
                     activeTab = activeTab,
                     onTabSelected = component::onMainTabSelected,
@@ -579,14 +610,30 @@ private fun MainChildSection(
                         feedRestore = feedRestore,
                     )
                 }
-                if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
-                    MainBottomBar(
-                        activeTab = activeTab,
-                        onTabSelected = component::onMainTabSelected,
-                        isFloating = useFloatingBottomBar,
-                        backdrop = floatingBackdrop,
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
+                if (bottomBarVisible.value) {
+                    if (uiSkin == UiSkin.COLOROS) {
+                        // COUI 底栏：API 34+ 官方浮动栏，31-33 由 androidMain 自绘平替。
+                        CouiMainNavigationBar(
+                            items = couiNavItems,
+                            selectedIndex = MAIN_TAB_DESCRIPTORS
+                                .indexOfFirst { it.tab == activeTab }
+                                .coerceAtLeast(0),
+                            onSelect = { index ->
+                                MAIN_TAB_DESCRIPTORS.getOrNull(index)?.let {
+                                    component.onMainTabSelected(it.tab)
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    } else if (!isWideScreen || useFloatingBottomBar) {
+                        MainBottomBar(
+                            activeTab = activeTab,
+                            onTabSelected = component::onMainTabSelected,
+                            isFloating = useFloatingBottomBar,
+                            backdrop = floatingBackdrop,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
                 }
             }
         }

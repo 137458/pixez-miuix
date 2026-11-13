@@ -133,6 +133,12 @@ interface AppStrings {
 
     val settingTheme: String
     val settingThemeSummary: String
+
+    // 界面皮肤（HyperOS / ColorOS，仅 Android 提供切换）
+    val settingUiSkin: String
+    val settingUiSkinSummary: String
+    val skinHyperOs: String
+    val skinColorOs: String
     val settingNetwork: String
     val settingNetworkSummary: String
 
@@ -1242,6 +1248,10 @@ object ZhCnStrings : AppStrings {
 
     override val settingTheme = "主题设置"
     override val settingThemeSummary = "主题模式、AMOLED、动态颜色、种子色"
+    override val settingUiSkin = "界面皮肤"
+    override val settingUiSkinSummary = "在 HyperOS 与 ColorOS 视觉风格之间切换（仅 Android）"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "网络设置"
     override val settingNetworkSummary = "网络模式、图片源"
 
@@ -1949,6 +1959,10 @@ object ZhTwStrings : AppStrings {
 
     override val settingTheme = "主題設定"
     override val settingThemeSummary = "主題模式、AMOLED、動態色彩、種子色"
+    override val settingUiSkin = "介面皮膚"
+    override val settingUiSkinSummary = "在 HyperOS 與 ColorOS 視覺風格之間切換（僅 Android）"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "網路設定"
     override val settingNetworkSummary = "網路模式、圖片來源"
 
@@ -2668,6 +2682,10 @@ object EnStrings : AppStrings {
 
     override val settingTheme = "Theme Settings"
     override val settingThemeSummary = "Theme mode, AMOLED dark, dynamic color, seed color"
+    override val settingUiSkin = "Interface skin"
+    override val settingUiSkinSummary = "Switch between HyperOS and ColorOS visual styles (Android only)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Network Settings"
     override val settingNetworkSummary = "Network mode, image mirror sources"
 
@@ -3368,6 +3386,10 @@ object JaStrings : AppStrings {
 
     override val settingTheme = "テーマ設定"
     override val settingThemeSummary = "テーマモード、AMOLED、ダイナミックカラー、シードカラー"
+    override val settingUiSkin = "画面スキン"
+    override val settingUiSkinSummary = "HyperOS と ColorOS の外観を切り替えます（Android のみ）"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "ネットワーク設定"
     override val settingNetworkSummary = "ネットワークモード、画像ミラーソース"
 
@@ -4075,6 +4097,10 @@ object KoStrings : AppStrings {
 
     override val settingTheme = "테마 설정"
     override val settingThemeSummary = "테마 모드, AMOLED, 다이내믹 컬러, 시드 컬러"
+    override val settingUiSkin = "인터페이스 스킨"
+    override val settingUiSkinSummary = "HyperOS와 ColorOS 시각 스타일 전환(Android 전용)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "네트워크 설정"
     override val settingNetworkSummary = "네트워크 모드, 이미지 미러 소스"
 
@@ -4782,6 +4808,10 @@ object RuStrings : AppStrings {
 
     override val settingTheme = "Настройки темы"
     override val settingThemeSummary = "Режим темы, AMOLED, динамические цвета, цвет семени"
+    override val settingUiSkin = "Оформление интерфейса"
+    override val settingUiSkinSummary = "Переключение между стилями HyperOS и ColorOS (только Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Настройки сети"
     override val settingNetworkSummary = "Режим сети, зеркала изображений"
 
@@ -5489,6 +5519,10 @@ object EsStrings : AppStrings {
 
     override val settingTheme = "Ajustes de tema"
     override val settingThemeSummary = "Modo de tema, AMOLED, color dinámico, color base"
+    override val settingUiSkin = "Aspecto de la interfaz"
+    override val settingUiSkinSummary = "Cambia entre los estilos visuales HyperOS y ColorOS (solo Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Ajustes de red"
     override val settingNetworkSummary = "Modo de red, espejos de imágenes"
 
@@ -6196,6 +6230,10 @@ object TrStrings : AppStrings {
 
     override val settingTheme = "Tema Ayarları"
     override val settingThemeSummary = "Tema modu, AMOLED, dinamik renk, tohum rengi"
+    override val settingUiSkin = "Arayüz görünümü"
+    override val settingUiSkinSummary = "HyperOS ve ColorOS görsel stilleri arasında geçiş yapın (yalnızca Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Ağ Ayarları"
     override val settingNetworkSummary = "Ağ modu, resim ayna kaynakları"
 
@@ -6903,6 +6941,10 @@ object IdStrings : AppStrings {
 
     override val settingTheme = "Pengaturan Tema"
     override val settingThemeSummary = "Mode tema, AMOLED, warna dinamis, warna dasar"
+    override val settingUiSkin = "Tampilan antarmuka"
+    override val settingUiSkinSummary = "Beralih antara gaya visual HyperOS dan ColorOS (khusus Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Pengaturan Jaringan"
     override val settingNetworkSummary = "Mode jaringan, cermin gambar"
 
@@ -7610,6 +7652,10 @@ object FilStrings : AppStrings {
 
     override val settingTheme = "Mga Setting ng Tema"
     override val settingThemeSummary = "Mode ng tema, AMOLED, dynamic color, seed color"
+    override val settingUiSkin = "Itsura ng interface"
+    override val settingUiSkinSummary = "Lumipat sa pagitan ng HyperOS at ColorOS visual styles (Android lamang)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Mga Setting ng Network"
     override val settingNetworkSummary = "Mode ng network, mirror sources"
 
@@ -8317,6 +8363,10 @@ object DeStrings : AppStrings {
 
     override val settingTheme = "Design-Einstellungen"
     override val settingThemeSummary = "Designmodus, AMOLED, dynamische Farben, Startfarbe"
+    override val settingUiSkin = "Oberflächen-Design"
+    override val settingUiSkinSummary = "Zwischen den Oberflächenstilen HyperOS und ColorOS wechseln (nur Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Netzwerk-Einstellungen"
     override val settingNetworkSummary = "Netzwerkmodus, Bildspiegelquellen"
 
@@ -9033,6 +9083,10 @@ object ViStrings : AppStrings {
 
     override val settingTheme = "Cài đặt chủ đề"
     override val settingThemeSummary = "Chế độ chủ đề, tối AMOLED, màu động, màu chủ đạo"
+    override val settingUiSkin = "Giao diện"
+    override val settingUiSkinSummary = "Chuyển đổi giữa phong cách HyperOS và ColorOS (chỉ Android)"
+    override val skinHyperOs = "HyperOS"
+    override val skinColorOs = "ColorOS"
     override val settingNetwork = "Cài đặt mạng"
     override val settingNetworkSummary = "Chế độ mạng, máy chủ gương ảnh"
 

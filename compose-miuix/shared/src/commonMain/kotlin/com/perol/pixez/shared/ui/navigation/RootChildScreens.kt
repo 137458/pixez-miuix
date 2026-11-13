@@ -13,6 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.skin.CouiMainTabPage
+import com.perol.pixez.shared.ui.skin.LocalUiSkin
+import com.perol.pixez.shared.ui.skin.UiSkin
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
 import com.perol.pixez.shared.ui.screens.AccountManageScreen
@@ -135,7 +138,18 @@ internal fun MainContent(
         modifier = Modifier.fillMaxSize(),
     ) { page ->
         val descriptor = MAIN_TAB_DESCRIPTORS[page]
-        descriptor.content(component, feedRestore)
+        if (LocalUiSkin.current == UiSkin.COLOROS) {
+            // 皮肤差异收敛在页面宿主：COUI 标签用 Android 实现，未迁移标签执行 fallback。
+            CouiMainTabPage(
+                tab = descriptor.tab,
+                component = component,
+                feedRestore = feedRestore,
+            ) {
+                descriptor.content(component, feedRestore)
+            }
+        } else {
+            descriptor.content(component, feedRestore)
+        }
     }
 }
 
