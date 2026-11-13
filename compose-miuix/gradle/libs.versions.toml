@@ -7,6 +7,11 @@ android-gradle-plugin = "8.13.0"
 # MIUIX
 miuix = "0.9.4"
 
+# COUI（ColorOS 皮肤，仅 Android）
+coui = "0.0.1-alpha11"
+androidx-compose-bom-alpha = "2026.08.01"
+androidx-core-ktx = "1.19.1"
+
 # KMP / Android 基础
 androidx-activity-compose = "1.10.1"
 androidx-lifecycle = "2.9.4"
@@ -55,6 +60,11 @@ miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui", version.ref = "miuix" }
 miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference", version.ref = "miuix" }
 miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons", version.ref = "miuix" }
 miuix-blur = { module = "top.yukonga.miuix.kmp:miuix-blur", version.ref = "miuix" }
+
+# COUI（仅 Android source set 引用）
+coui = { module = "io.github.itoseo:coui", version.ref = "coui" }
+androidx-compose-bom-alpha = { module = "androidx.compose:compose-bom-alpha", version.ref = "androidx-compose-bom-alpha" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 
 # Compose Android
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }

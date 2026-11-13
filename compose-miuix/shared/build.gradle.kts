@@ -95,6 +95,11 @@ kotlin {
         }
 
         androidMain.dependencies {
+            // COUI 仅落到 Android：BOM 与 AAR 只在本 source set 参与解析，Desktop 依赖树不受影响。
+            implementation(project.dependencies.platform(libs.androidx.compose.bom.alpha))
+            implementation(libs.androidx.core.ktx)
+            implementation(libs.coui)
+
             implementation(libs.androidx.activity.compose)
             implementation(libs.sqldelight.android.driver)
             implementation(libs.androidx.lifecycle.viewmodel)
@@ -123,7 +128,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        minSdk = 24
+        // COUI AAR 清单固定 minSdkVersion=31（Android 12），整体抬齐而非使用 overrideLibrary 门控。
+        minSdk = 31
     }
 
     compileOptions {
