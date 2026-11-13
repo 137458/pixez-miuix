@@ -32,7 +32,7 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
-import com.perol.pixez.shared.ui.state.PagedLoadOutcome
+import com.perol.pixez.shared.ui.state.rememberHelloFeedState
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
@@ -74,165 +74,38 @@ fun HelloScreen(
     feedRestore: IllustFeedRestoreCache,
     reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
-    // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
-    val repository = LocalIllustRepository.current
-    val accountRepository = LocalAccountRepository.current
-    val banRepository = LocalBanRepository.current
-    val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
     val bottomBarPadding = LocalBottomBarContentPadding.current
-    // retryCount 作为 produceState 的 key，手动刷新或点击重试时自增触发重新加载。
-    var retryCount by rememberSaveable { mutableIntStateOf(0) }
-    var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
-
-    // 登录状态：页面进入时检测一次，未登录显示登录入口。
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
-
-    // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
-    var showLoginDialog by rememberSaveable { mutableStateOf(false) }
-    var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        user = accountRepository.currentAccount()
-        // 解密失败/被吊销后账号行仍保留但 token 为空，登录态必须看凭证而不是账号行。
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = accountRepository.currentAccount()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
-
-    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false && !hasPromptedLogin) {
-            showLoginDialog = true
-            hasPromptedLogin = true
-        }
-    }
-
-    // 过滤被屏蔽作品与画师
-    // 统一 UI 状态机（单向数据流 UDF），首帧优先取恢复快照，防止退出详情页返回时白屏闪烁与列表位置重置。
-    // 高-4b：分页/竞态/加载态收敛到 IllustPagedListState（RankingScreen 版 generation 守卫），
-    // 过滤链仍为高-3「原始/过滤」双列表本地重过滤。登录态由 fetch 闭包动态读取；
-    // 首页 forceRefresh 依赖 forceNextFetch 标志：loadFirst 不透传 force 给 fetch，
-    // 以同一协程内先写后读保持原 getRecommendedResponse(forceRefresh = force) 语义。
-    // 高-5：跨页恢复快照来自 UI 层恢复缓存（随 Main child 的 InstanceKeeper 存活整个会话，
-    // 登录成功栈重置或进程死亡时释放；过期过滤结果由 restoreRaw 强制重过滤化解），只存原始
-    // ID 列表，经仓库 illustsCache 回查原始数据（LRU 淘汰项跳过；回源策略见架构审查待确认项）。
-    var forceNextFetch by remember { mutableStateOf(false) }
-    val listState = remember {
-        IllustPagedListState(
-            fetch = { nextUrl ->
-                if (isLoggedIn == true) {
-                    val response = repository.getRecommendedResponse(
-                        nextUrl = nextUrl,
-                        forceRefresh = forceNextFetch,
-                    )
-                    IllustPagedPage(response.illusts, response.nextUrl)
-                } else {
-                    // 未登录 walkthrough 匿名推荐无分页：nextUrl 恒为 null。
-                    val response = repository.getWalkthroughResponse(forceRefresh = forceNextFetch)
-                    IllustPagedPage(response.illusts, null)
-                }
-            },
-            filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
-            filterVersionProvider = { settingsRepository.filterChangeVersion.value },
-        ).also { state ->
-            feedRestore.snapshot?.let { snapshot ->
-                val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
-                if (snapshot.illustIds.isEmpty() || raw.isNotEmpty()) {
-                    state.restore(raw, snapshot.nextUrl)
-                }
-            }
-        }
-    }
-    val coroutineScope = rememberCoroutineScope()
-    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
-    val hapticFeedback = androidx.compose.ui.platform.LocalHapticFeedback.current
-
-    // 加载或刷新推荐插画数据
-    val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
-    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
-    val accountUnloaded = remember { Any() }
-    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
-    LaunchedEffect(isLoggedIn, user, retryCount, filterChangeVersion) {
-        // 登录态未检测完成（null）时不发起加载；登录分支在 fetch 闭包内动态读取。
-        if (isLoggedIn == null) return@LaunchedEffect
-        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
-        if (accountSwitched) listState.reset()
-        loadedForAccount = user
-        val force = isManualRefreshing
-        // 高-3：过滤条件变化且已持有原始列表时，仅对原始列表本地重过滤（零网络），不重新请求。
-        // 本地重过滤不改变原始列表与下一页 URL，恢复快照无需更新。
-        if (!force && listState.refilterIfChanged()) {
-            return@LaunchedEffect
-        }
-        if (!force && listState.filteredIllusts != null && listState.initialError == null) {
-            return@LaunchedEffect
-        }
-        forceNextFetch = force
-        val outcome = listState.loadFirst(force = force)
-        forceNextFetch = false
-        // 对齐原实现：请求结束（成功或失败）即复位手动刷新指示；协程被取消时到不了此处，
-        // 指示保留并由下一轮 force 刷新复位（与原 isManualRefreshing 语义一致）。
-        isManualRefreshing = false
-        // UI-8：写入成功由状态机回报，不再比较列表引用；失败与竞态失配都不写恢复快照、不回顶。
-        if (outcome == PagedLoadOutcome.Written) {
-            listState.rawIllusts?.let { feedRestore.update(it, listState.nextUrl) }
-            if (force && gridState.firstVisibleItemIndex > 0) {
-                gridState.scrollToItem(0)
-            }
-        }
-    }
-
-    LaunchedEffect(reselectFlow) {
-        reselectFlow?.collect {
-            hapticFeedback.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-            if (gridState.firstVisibleItemIndex > 0) {
-                gridState.animateScrollToItem(0)
-            } else {
-                isManualRefreshing = true
-                retryCount++
-            }
-        }
-    }
-
-    fun loadMore() {
-        coroutineScope.launch {
-            // UI-8：翻页写入成功才写恢复快照；失败/被拒绝/竞态失配都不写。
-            if (listState.loadMore() == PagedLoadOutcome.Written) {
-                listState.rawIllusts?.let { feedRestore.update(it, listState.nextUrl) }
-            }
-        }
-    }
+    // 推荐页业务状态由皮肤无关的 HelloFeedState 提供，MIUIX/COUI 只替换 UI 壳。
+    val feed = rememberHelloFeedState(feedRestore, reselectFlow, onLoginClick)
+    val listState = feed.listState
+    val gridState = feed.gridState
+    val isManualRefreshing = feed.isManualRefreshing
+    val user = feed.user
+    val isLoggedIn = feed.isLoggedIn
+    val showLoginDialog = feed.showLoginDialog
 
     // 未登录提示对话框：位于 Scaffold 外层，确保能覆盖整个页面。
     OverlayDialog(
         title = strings.dialogNeedLogin,
         summary = strings.dialogNeedLoginSummary,
         show = showLoginDialog,
-        onDismissRequest = { showLoginDialog = false },
+        onDismissRequest = { feed.dismissLoginDialog() },
     ) {
         TextButton(
             text = strings.btnCancelLogin,
-            onClick = { showLoginDialog = false },
+            onClick = { feed.dismissLoginDialog() },
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(
             text = strings.btnGoLogin,
-            onClick = {
-                showLoginDialog = false
-                onLoginClick()
-            },
+            onClick = { feed.goLogin() },
             colors = ButtonDefaults.textButtonColorsPrimary(),
             modifier = Modifier.fillMaxWidth(),
         )
     }
 
-    val triggerManualRefresh: () -> Unit = {
-        isManualRefreshing = true
-        retryCount++
-    }
+    val triggerManualRefresh: () -> Unit = feed.refresh
 
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -346,7 +219,7 @@ fun HelloScreen(
                                 hasMore = listState.nextUrl != null,
                                 isLoadingMore = listState.isLoadingMore,
                                 loadMoreError = listState.loadMoreError,
-                                onLoadMore = ::loadMore,
+                                onLoadMore = feed.loadMore,
                             )
                         }
                     }
