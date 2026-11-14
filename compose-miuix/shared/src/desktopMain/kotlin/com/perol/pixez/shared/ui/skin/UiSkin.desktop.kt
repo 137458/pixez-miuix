@@ -354,3 +354,13 @@ internal actual fun CouiAccountManagePage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiNovelPage(
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onUserClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

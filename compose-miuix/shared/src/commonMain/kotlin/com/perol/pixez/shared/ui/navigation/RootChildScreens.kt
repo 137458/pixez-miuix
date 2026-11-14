@@ -31,6 +31,7 @@ import com.perol.pixez.shared.ui.skin.CouiUserNovelListPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
+import com.perol.pixez.shared.ui.skin.CouiNovelPage
 import com.perol.pixez.shared.ui.skin.CouiNetworkSettingPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiShieldPage
@@ -967,11 +968,23 @@ internal fun renderAccountManage(
 internal fun renderNovel(
     component: RootComponent,
 ) {
-    NovelScreen(
-        onBack = component::onBack,
-        onNovelClick = component::onNovelClicked,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        NovelScreen(
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiNovelPage(
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

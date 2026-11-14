@@ -64,6 +64,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiIllustSeriesScreen
 import com.perol.pixez.shared.ui.coui.page.CouiInteractionSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLoginScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNetworkSettingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiNovelScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
@@ -679,6 +680,20 @@ internal actual fun CouiAccountManagePage(
     CouiAccountManageScreen(
         onBack = onBack,
         onAddAccount = onAddAccount,
+    )
+}
+
+@Composable
+internal actual fun CouiNovelPage(
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onUserClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    CouiNovelScreen(
+        onBack = onBack,
+        onNovelClick = onNovelClick,
+        onUserClick = onUserClick,
     )
 }
 

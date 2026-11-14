@@ -254,7 +254,7 @@ internal fun CouiUserNovelListScreen(
 
 /** COUI 小说卡：3:4 封面 + 系列/标题/作者/字数与收藏统计，AI 作品带角标。 */
 @Composable
-private fun CouiNovelCard(
+internal fun CouiNovelCard(
     novel: Novel,
     onClick: () -> Unit,
     onUserClick: ((Long) -> Unit)?,
