@@ -241,19 +241,17 @@ private fun CouiGuideLanguageStep(
 
         item(key = "coui_guide_language") {
             CouiSettingSection(title = strings.settingLanguage) {
-                CouiCard {
-                    Column {
-                        LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                            CouiRadioRow(
-                                title = "${option.nativeName} (${option.displayName})",
-                                summary = option.code,
-                                selected = selectedIndex == index,
-                                onClick = {
-                                    selectedIndex = index
-                                    settingsRepository.languageNum = index
-                                },
-                            )
-                        }
+                Column {
+                    LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                        CouiRadioRow(
+                            title = "${option.nativeName} (${option.displayName})",
+                            summary = option.code,
+                            selected = selectedIndex == index,
+                            onClick = {
+                                selectedIndex = index
+                                settingsRepository.languageNum = index
+                            },
+                        )
                     }
                 }
             }
@@ -289,56 +287,52 @@ private fun CouiGuideNetworkStep(
 
         item(key = "coui_guide_image_source") {
             CouiSettingSection(title = strings.guideImageSource) {
-                CouiCard {
-                    Column {
-                        CouiRadioRow(
-                            title = strings.guideImageMirror,
-                            summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
-                            selected = isMirrorEnabled,
-                            onClick = {
-                                isMirrorEnabled = true
-                                settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
-                            },
-                        )
-                        CouiRadioRow(
-                            title = strings.guideImageOfficial,
-                            summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
-                            selected = !isMirrorEnabled,
-                            onClick = {
-                                isMirrorEnabled = false
-                                settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
-                            },
-                        )
-                    }
+                Column {
+                    CouiRadioRow(
+                        title = strings.guideImageMirror,
+                        summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
+                        selected = isMirrorEnabled,
+                        onClick = {
+                            isMirrorEnabled = true
+                            settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
+                        },
+                    )
+                    CouiRadioRow(
+                        title = strings.guideImageOfficial,
+                        summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
+                        selected = !isMirrorEnabled,
+                        onClick = {
+                            isMirrorEnabled = false
+                            settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
+                        },
+                    )
                 }
             }
         }
 
         item(key = "coui_guide_network_mode") {
             CouiSettingSection(title = strings.guideStepNetwork) {
-                CouiCard {
-                    Column {
-                        CouiRadioRow(
-                            title = strings.guideNetworkDirect,
-                            summary = strings.guideNetworkDirectDesc,
-                            selected = currentNetworkMode == "direct",
-                            onClick = {
-                                currentNetworkMode = "direct"
-                                settingsRepository.apiNetworkMode = "direct"
-                                settingsRepository.oauthNetworkMode = "direct"
-                            },
-                        )
-                        CouiRadioRow(
-                            title = strings.guideNetworkSni,
-                            summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
-                            selected = currentNetworkMode == "sni",
-                            onClick = {
-                                currentNetworkMode = "sni"
-                                settingsRepository.apiNetworkMode = "sni"
-                                settingsRepository.oauthNetworkMode = "sni"
-                            },
-                        )
-                    }
+                Column {
+                    CouiRadioRow(
+                        title = strings.guideNetworkDirect,
+                        summary = strings.guideNetworkDirectDesc,
+                        selected = currentNetworkMode == "direct",
+                        onClick = {
+                            currentNetworkMode = "direct"
+                            settingsRepository.apiNetworkMode = "direct"
+                            settingsRepository.oauthNetworkMode = "direct"
+                        },
+                    )
+                    CouiRadioRow(
+                        title = strings.guideNetworkSni,
+                        summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
+                        selected = currentNetworkMode == "sni",
+                        onClick = {
+                            currentNetworkMode = "sni"
+                            settingsRepository.apiNetworkMode = "sni"
+                            settingsRepository.oauthNetworkMode = "sni"
+                        },
+                    )
                 }
             }
         }
@@ -401,12 +395,10 @@ private fun CouiGuideWelcomeStep(
 
         item(key = "coui_guide_features") {
             CouiSettingSection(title = strings.guidePixEzFeatures) {
-                CouiCard {
-                    Column {
-                        CouiGuideFeatureRow(strings.guideFeatureIllust, strings.guideFeatureIllustDesc)
-                        CouiGuideFeatureRow(strings.guideFeatureRanking, strings.guideFeatureRankingDesc)
-                        CouiGuideFeatureRow(strings.guideFeatureDownload, strings.guideFeatureDownloadDesc)
-                    }
+                Column {
+                    CouiGuideFeatureRow(strings.guideFeatureIllust, strings.guideFeatureIllustDesc)
+                    CouiGuideFeatureRow(strings.guideFeatureRanking, strings.guideFeatureRankingDesc)
+                    CouiGuideFeatureRow(strings.guideFeatureDownload, strings.guideFeatureDownloadDesc)
                 }
             }
         }
@@ -415,67 +407,63 @@ private fun CouiGuideWelcomeStep(
             CouiSettingSection(title = strings.settingSectionAccount) {
                 val current = currentAccount
                 when {
-                    current != null && current.hasCredentials -> CouiCard {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                text = strings.guideLoggedInStatus,
-                                kind = CouiTextKind.ItemTitle,
-                                color = scheme.accent,
-                            )
-                            Text(
-                                text = "${current.name} (@${current.account})",
-                                kind = CouiTextKind.ItemSummary,
-                                color = scheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                            CouiTextAction(
-                                text = strings.guideSwitchAccount,
-                                color = scheme.accent,
-                                onClick = onLoginClick,
-                                modifier = Modifier.padding(top = 10.dp),
-                            )
-                        }
+                    current != null && current.hasCredentials -> Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = strings.guideLoggedInStatus,
+                            kind = CouiTextKind.ItemTitle,
+                            color = scheme.accent,
+                        )
+                        Text(
+                            text = "${current.name} (@${current.account})",
+                            kind = CouiTextKind.ItemSummary,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                        CouiTextAction(
+                            text = strings.guideSwitchAccount,
+                            color = scheme.accent,
+                            onClick = onLoginClick,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
                     }
 
-                    !isCheckingAccount -> CouiCard {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                text = strings.guideNotLoggedIn,
-                                kind = CouiTextKind.ItemTitle,
-                                color = scheme.onSurface,
-                            )
-                            Text(
-                                text = strings.guideLoginBenefits,
-                                kind = CouiTextKind.ItemSummary,
-                                color = scheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                            CouiGuideButton(
-                                text = strings.guideLoginNow,
-                                onClick = {
-                                    onLoginClick()
-                                },
-                                modifier = Modifier.padding(top = 14.dp),
-                            )
-                            CouiTextAction(
-                                text = strings.guideGuestExplore,
-                                onClick = onFinish,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                        }
+                    !isCheckingAccount -> Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = strings.guideNotLoggedIn,
+                            kind = CouiTextKind.ItemTitle,
+                            color = scheme.onSurface,
+                        )
+                        Text(
+                            text = strings.guideLoginBenefits,
+                            kind = CouiTextKind.ItemSummary,
+                            color = scheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                        CouiGuideButton(
+                            text = strings.guideLoginNow,
+                            onClick = {
+                                onLoginClick()
+                            },
+                            modifier = Modifier.padding(top = 14.dp),
+                        )
+                        CouiTextAction(
+                            text = strings.guideGuestExplore,
+                            onClick = onFinish,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
                     }
                 }
             }
