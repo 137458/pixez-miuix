@@ -1,8 +1,6 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,11 +50,11 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.format
@@ -234,11 +232,11 @@ internal fun CouiShieldScreen(
                                 settingsRepository.feedAIBadge = checked
                             },
                         )
-                        CouiArrowRow(
+                        CouiNavigationRow(
                             title = strings.userAISettings,
                             summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
                             onClick = {
-                                if (isLoadingAISetting) return@CouiArrowRow
+                                if (isLoadingAISetting) return@CouiNavigationRow
                                 coroutineScope.launch {
                                     isLoadingAISetting = true
                                     suspendRunCatchingNonCancel {
@@ -415,47 +413,6 @@ internal fun CouiShieldScreen(
                 onClick = { if (!deleting) deleteTarget = null },
             ),
         )
-    }
-}
-
-/** 可点击的可选行：标题 + 摘要。 */
-@Composable
-private fun CouiArrowRow(
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    val scheme = CouiTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(interactionSource)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = summary,
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 

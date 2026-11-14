@@ -19,6 +19,7 @@ import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiCopyTextSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
+import com.perol.pixez.shared.ui.skin.CouiDownloadSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
@@ -588,9 +589,19 @@ internal fun renderNetworkSetting(
 internal fun renderDownloadSetting(
     onBack: () -> Unit,
 ) {
-    DownloadSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        DownloadSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiDownloadSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

@@ -294,3 +294,11 @@ internal actual fun CouiCopyTextSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiDownloadSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

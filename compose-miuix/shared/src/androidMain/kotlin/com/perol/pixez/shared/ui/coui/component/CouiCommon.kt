@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import android.os.Build
@@ -995,6 +996,52 @@ internal fun CouiSelectRow(
                 expanded = false
                 (item.value as? String)?.toIntOrNull()?.let(onSelect)
             },
+        )
+    }
+}
+
+/**
+ * COUI 导航行：标题 + 摘要，整行可点击。
+ *
+ * 与开关行、选择行配合构成设置页的三类基础行；摘要为空时不占位。
+ */
+@Composable
+internal fun CouiNavigationRow(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = CouiTheme.colorScheme
+    val pressInteraction = remember { MutableInteractionSource() }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = title,
+            kind = CouiTextKind.ItemTitle,
+            color = scheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = summary,
+            kind = CouiTextKind.ItemSummary,
+            color = scheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.End,
         )
     }
 }
