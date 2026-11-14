@@ -389,14 +389,14 @@ fun DownloadTaskScreen(
 /**
  * 下载任务筛选条件，替代 Int 常量以提升类型安全。
  */
-private enum class TaskFilter {
+internal enum class TaskFilter {
     All,
     Running,
     Completed,
     Failed,
 }
 
-private fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String = when (this) {
+internal fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings): String = when (this) {
     TaskFilter.All -> strings.downloadTaskFilterAll
     TaskFilter.Running -> strings.downloadTaskFilterRunning
     TaskFilter.Completed -> strings.downloadTaskFilterCompleted
@@ -406,7 +406,7 @@ private fun TaskFilter.label(strings: com.perol.pixez.shared.ui.i18n.AppStrings)
 /**
  * 用于 [rememberSaveable] 保存/恢复 [TaskFilter] 的 [Saver]。
  */
-private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
+internal val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
     save = { it.name },
     restore = { name -> TaskFilter.entries.find { it.name == name } ?: TaskFilter.All },
 )
@@ -415,7 +415,7 @@ private val TaskFilterSaver: Saver<TaskFilter, String> = Saver(
  * 根据当前筛选条件返回空态提示文案（exhaustive when）。
  */
 @Composable
-private fun TaskFilter.emptyMessage(): String {
+internal fun TaskFilter.emptyMessage(): String {
     val strings = LocalStrings.current
     return when (this) {
         TaskFilter.All -> strings.downloadTaskEmptyAll
@@ -430,7 +430,7 @@ private fun TaskFilter.emptyMessage(): String {
  *
  * 「运行中」同时包含正在下载与等待中的任务，避免 Pending 任务在分类视图中不可见。
  */
-private fun TaskFilter.matches(task: DownloadTaskHistory): Boolean = when (this) {
+internal fun TaskFilter.matches(task: DownloadTaskHistory): Boolean = when (this) {
     TaskFilter.All -> true
     TaskFilter.Running -> task.status == DownloadStatus.Downloading || task.status == DownloadStatus.Pending
     TaskFilter.Completed -> task.status == DownloadStatus.Success

@@ -180,8 +180,15 @@ internal fun CouiActionButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: Color? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val iconTint = when {
+        !enabled -> CouiTheme.colorScheme.onSurfaceVariant
+        tint != null -> tint
+        else -> CouiTheme.colorScheme.onSurface
+    }
     Box(
         modifier = Modifier
             .size(40.dp)
@@ -189,12 +196,13 @@ internal fun CouiActionButton(
             .couiButtonFeedback(
                 dark = CouiTheme.isDark,
                 interactionSource = interactionSource,
-                enabled = true,
+                enabled = enabled,
                 list = false,
             )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
@@ -202,7 +210,7 @@ internal fun CouiActionButton(
         Image(
             painter = rememberVectorPainter(icon),
             contentDescription = contentDescription,
-            colorFilter = ColorFilter.tint(CouiTheme.colorScheme.onSurface),
+            colorFilter = ColorFilter.tint(iconTint),
             modifier = Modifier.size(22.dp),
         )
     }

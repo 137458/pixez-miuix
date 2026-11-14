@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
+import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
@@ -564,10 +565,21 @@ internal fun renderHistory(
 internal fun renderDownloadTask(
     component: RootComponent,
 ) {
-    DownloadTaskScreen(
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        DownloadTaskScreen(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiDownloadTaskPage(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

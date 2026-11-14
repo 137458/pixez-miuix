@@ -100,6 +100,15 @@ internal actual fun CouiRelatedIllustsPage(
 }
 
 @Composable
+internal actual fun CouiDownloadTaskPage(
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
+
+@Composable
 internal actual fun CouiHistoryPage(
     onBack: () -> Unit,
     onIllustClick: (Long) -> Unit,
