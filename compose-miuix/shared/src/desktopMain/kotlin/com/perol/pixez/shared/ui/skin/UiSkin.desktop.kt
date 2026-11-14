@@ -337,3 +337,11 @@ internal actual fun CouiBookTagPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiThemeSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

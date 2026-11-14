@@ -405,3 +405,13 @@ internal expect fun CouiBookTagPage(
     onTagSearch: (String) -> Unit,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 主题设置页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiThemeSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+)

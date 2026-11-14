@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBookTagScreen
+import com.perol.pixez.shared.ui.coui.page.CouiThemeSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCopyTextSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadHistoryScreen
@@ -658,6 +659,14 @@ internal actual fun CouiBookTagPage(
         onBack = onBack,
         onTagSearch = onTagSearch,
     )
+}
+
+@Composable
+internal actual fun CouiThemeSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiThemeSettingScreen(onBack = onBack)
 }
 
 @Composable

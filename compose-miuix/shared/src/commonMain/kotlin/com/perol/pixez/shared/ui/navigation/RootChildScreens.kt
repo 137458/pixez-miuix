@@ -34,6 +34,7 @@ import com.perol.pixez.shared.ui.skin.CouiNetworkSettingPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiShieldPage
 import com.perol.pixez.shared.ui.skin.CouiThanksPage
+import com.perol.pixez.shared.ui.skin.CouiThemeSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
@@ -575,9 +576,19 @@ internal fun renderAISetting(
 internal fun renderThemeSetting(
     onBack: () -> Unit,
 ) {
-    ThemeSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        ThemeSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiThemeSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

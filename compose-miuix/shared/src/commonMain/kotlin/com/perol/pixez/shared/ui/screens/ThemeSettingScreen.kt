@@ -455,7 +455,7 @@ private fun ColorPresetItem(
  *
  * @return 解析成功返回 ARGB Int；失败返回 null。
  */
-private fun parseHexColor(hex: String): Int? {
+internal fun parseHexColor(hex: String): Int? {
     val trimmed = hex.trim()
     if (trimmed.isBlank()) return null
     val withoutHash = if (trimmed.startsWith("#")) trimmed.substring(1) else trimmed
