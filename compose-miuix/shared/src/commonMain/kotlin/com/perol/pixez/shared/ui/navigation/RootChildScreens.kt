@@ -18,6 +18,7 @@ import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
 import com.perol.pixez.shared.ui.skin.CouiUserListPage
+import com.perol.pixez.shared.ui.skin.CouiUserNovelListPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
@@ -790,11 +791,25 @@ internal fun renderUserNovelList(
     instance: Config.UserNovelList,
     component: RootComponent,
 ) {
-    UserNovelListScreen(
-        userId = instance.userId,
-        authorName = instance.authorName,
-        onBack = component::onBack,
-        onNovelClick = component::onNovelClicked,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserNovelListScreen(
+            userId = instance.userId,
+            authorName = instance.authorName,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUserNovelListPage(
+            userId = instance.userId,
+            authorName = instance.authorName,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
