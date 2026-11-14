@@ -63,7 +63,7 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 /**
  * 简单邮箱格式校验正则，用于保存前的基础格式检查。
  */
-private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+internal val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
 /**
  * 账号信息编辑页。

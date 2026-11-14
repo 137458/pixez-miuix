@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
+import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadTaskScreen
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
@@ -391,6 +392,14 @@ internal actual fun CouiRelatedIllustsPage(
         onBack = onBack,
         onIllustClick = onIllustClick,
     )
+}
+
+@Composable
+internal actual fun CouiAccountEditPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiAccountEditScreen(onBack = onBack)
 }
 
 @Composable

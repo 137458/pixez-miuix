@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
@@ -586,9 +587,19 @@ internal fun renderUpdateSetting(
 internal fun renderAccountEdit(
     component: RootComponent,
 ) {
-    AccountEditScreen(
-        onBack = component::onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        AccountEditScreen(
+            onBack = component::onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiAccountEditPage(
+            onBack = component::onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

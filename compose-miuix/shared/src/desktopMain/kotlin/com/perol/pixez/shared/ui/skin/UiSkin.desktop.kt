@@ -100,6 +100,14 @@ internal actual fun CouiRelatedIllustsPage(
 }
 
 @Composable
+internal actual fun CouiAccountEditPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
+
+@Composable
 internal actual fun CouiLoginPage(
     onBack: () -> Unit,
     onLoginSuccess: () -> Unit,
