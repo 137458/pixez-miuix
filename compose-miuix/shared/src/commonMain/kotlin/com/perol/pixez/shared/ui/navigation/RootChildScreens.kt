@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
+import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
@@ -484,10 +485,21 @@ internal fun renderSearch(
 internal fun renderDownloadHistory(
     component: RootComponent,
 ) {
-    DownloadHistoryScreen(
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        DownloadHistoryScreen(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiDownloadHistoryPage(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
