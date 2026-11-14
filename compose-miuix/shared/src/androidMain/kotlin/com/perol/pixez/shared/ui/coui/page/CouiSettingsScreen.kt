@@ -392,7 +392,7 @@ internal fun CouiSettingsScreen(
 
 /** 分组：标题 + COUI 卡片。 */
 @Composable
-private fun CouiSettingSection(
+internal fun CouiSettingSection(
     title: String,
     content: @Composable () -> Unit,
 ) {

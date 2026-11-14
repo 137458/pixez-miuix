@@ -228,3 +228,12 @@ internal actual fun CouiRecomUserPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiShieldPage(
+    onBack: () -> Unit,
+    onAISettingClick: (showAI: Boolean) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

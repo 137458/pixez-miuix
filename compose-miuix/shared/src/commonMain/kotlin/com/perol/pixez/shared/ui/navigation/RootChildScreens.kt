@@ -26,6 +26,7 @@ import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
+import com.perol.pixez.shared.ui.skin.CouiShieldPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
@@ -519,10 +520,21 @@ internal fun renderDownloadHistory(
 internal fun renderShield(
     component: RootComponent,
 ) {
-    ShieldScreen(
-        onBack = component::onBack,
-        onAISettingClick = component::onAISettingClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        ShieldScreen(
+            onBack = component::onBack,
+            onAISettingClick = component::onAISettingClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiShieldPage(
+            onBack = component::onBack,
+            onAISettingClick = component::onAISettingClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

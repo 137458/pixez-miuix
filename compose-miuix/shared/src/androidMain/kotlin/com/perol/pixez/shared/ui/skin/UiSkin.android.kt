@@ -56,6 +56,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustSeriesScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLoginScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
+import com.perol.pixez.shared.ui.coui.page.CouiShieldScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserNovelListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
@@ -522,6 +523,18 @@ internal actual fun CouiRecomUserPage(
     CouiRecomUserScreen(
         onBack = onBack,
         onUserClick = onUserClick,
+    )
+}
+
+@Composable
+internal actual fun CouiShieldPage(
+    onBack: () -> Unit,
+    onAISettingClick: (showAI: Boolean) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiShieldScreen(
+        onBack = onBack,
+        onAISettingClick = onAISettingClick,
     )
 }
 

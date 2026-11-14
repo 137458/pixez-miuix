@@ -364,7 +364,7 @@ private fun CouiFilterSection(
 }
 
 @Composable
-private fun CouiSwitchRow(
+internal fun CouiSwitchRow(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
