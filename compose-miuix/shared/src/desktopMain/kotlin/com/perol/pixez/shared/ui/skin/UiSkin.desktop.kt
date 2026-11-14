@@ -219,3 +219,12 @@ internal actual fun CouiBoardPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiRecomUserPage(
+    onBack: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

@@ -264,7 +264,7 @@ internal fun CouiUserListScreen(
 
 /** 用户预览卡：头像 + 昵称/账号 + 最近作品缩略图（沿用 MIUIX 的过滤口径）。 */
 @Composable
-private fun CouiUserPreviewRow(
+internal fun CouiUserPreviewRow(
     preview: UserPreview,
     onClick: () -> Unit,
 ) {

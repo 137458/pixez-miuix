@@ -89,7 +89,7 @@ internal fun CouiSearchUserResultList(
         },
         mergeItems = { old, new -> old.appendDistinct(new) },
     ) { preview ->
-        CouiUserPreviewRow(
+        CouiSearchUserRow(
             preview = preview,
             onClick = { onUserClick(preview.user.id) },
         )
@@ -235,7 +235,7 @@ private fun <T> CouiSearchPagedColumn(
 
 /** COUI 画师结果行：头像、名称与账号，附最近三张作品预览（按设置过滤 R18/AI）。 */
 @Composable
-private fun CouiUserPreviewRow(
+private fun CouiSearchUserRow(
     preview: UserPreview,
     onClick: () -> Unit,
 ) {

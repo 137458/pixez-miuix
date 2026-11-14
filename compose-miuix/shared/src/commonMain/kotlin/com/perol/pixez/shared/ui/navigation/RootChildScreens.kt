@@ -25,6 +25,7 @@ import com.perol.pixez.shared.ui.skin.CouiUserNovelListPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
+import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
@@ -392,10 +393,21 @@ internal fun renderUserFollowerList(
 internal fun renderRecomUserList(
     component: RootComponent,
 ) {
-    RecomUserScreen(
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        RecomUserScreen(
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiRecomUserPage(
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
