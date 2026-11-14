@@ -134,16 +134,27 @@ internal fun CouiNewScreen(
                 val account = feed.currentAccount
                 val targetUserId = account?.userId?.toLongOrNull()
                 if (account != null && targetUserId != null) {
-                    PixivAsyncImage(
-                        model = account.userImage,
-                        contentDescription = strings.myProfile,
-                        contentScale = ContentScale.Crop,
+                    val pressInteraction = remember { MutableInteractionSource() }
+                    Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .size(32.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .clickable { onUserClick(targetUserId) },
-                    )
+                            .couiPressFeedback(pressInteraction, list = false)
+                            .clickable(
+                                interactionSource = pressInteraction,
+                                indication = null,
+                            ) { onUserClick(targetUserId) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        PixivAsyncImage(
+                            model = account.userImage,
+                            contentDescription = strings.myProfile,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
+                        )
+                    }
                 }
             }
         },
