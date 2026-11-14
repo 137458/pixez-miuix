@@ -12,11 +12,12 @@
   - 版本目录新增 `io.github.itoseo:coui:0.0.1-alpha11` 及版本对齐所需的 `compose-bom-alpha:2026.08.01`、`core-ktx:1.19.1`，仅注入 `androidMain`，Desktop 依赖树不受影响；Android `minSdk` 提升至 31（COUI AAR 固定 `minSdkVersion=31`）。
   - 新增界面皮肤设置项与 13 语言词条，`ui_skin` 持久化后由 `RootContent` 经 `LocalUiSkin` 下发；Desktop 端强制回退 HyperOS。
   - COUI 主题由 MIUIX 色板派生；筛选胶囊与底栏在 API 34+ 使用官方 `ChipTabRow`/`NavigationBar`（含凝光背景），低版本退回首屏可用的自绘平替。
-  - 推荐、排行榜、特辑、动态四个一级标签接入 COUI 页面，分页/恢复/刷新逻辑复用皮肤无关状态（`HelloFeedState`、`RankingFeedState`、`SpotlightFeedState`、`NewFeedState`），搜索标签保持 MIUIX 回退。
+  - 推荐、排行榜、特辑、动态、搜索五个一级标签接入 COUI 页面，分页/恢复/刷新逻辑复用皮肤无关状态（`HelloFeedState`、`RankingFeedState`、`SpotlightFeedState`、`NewFeedState`、`SearchCoreState`、`SearchIllustResultsState`）。
   - 动态页皮肤无关状态下沉为 `NewFeedState`：登录态、动态可见性筛选、动态与追更分页、取消追更统一由同一实现承载，MIUIX 与 COUI 双页面共用；COUI 页使用官方 `Dialog`（API 33+ 且窗口具备背景采样时启用玻璃材质，否则退回不透明弹窗）承载未登录提示与取消追更确认。
   - COUI 插画卡片补齐长按操作菜单：下载、复制信息、复制图片、复制链接、分享链接、屏蔽作品；动作编排抽取为皮肤无关的 `rememberIllustQuickActions`，MIUIX 底部菜单与 COUI 官方 `Dialog` 菜单共用同一套行为与 Toast 反馈，覆盖推荐、排行榜、动态三页。
   - COUI 弹窗材质、排布与主操作配色收敛为 `CouiCommon.kt` 内的共享辅助，动态页与长按菜单统一遵循「API 33+ 且有背景采样启用玻璃，否则退回不透明」策略。
   - 排行榜日期筛选弹窗由自绘容器换回 COUI 官方 `Dialog`：输入区作为自定义内容，格式错误改由弹窗 message 呈现，取消/确认使用官方动作位。
+  - 搜索页接入 COUI 皮肤：官方 `SearchBar` + 折叠 `LargeTopAppBar` 承载输入与搜索态，搜索类型用 `ChipTabRow` 胶囊切换，排序/AI 过滤/收藏门槛/筛选入口收敛为可独立选中的辅助胶囊；未搜索时展示 ID/URL 直达入口、热门标签与搜索历史，插画结果复用共享分页状态与 COUI 瀑布流。查询词、筛选条件、历史与热搜统一下沉为 `SearchCoreState`，插画结果分页下沉为 `SearchIllustResultsState`，MIUIX 与 COUI 双页面共用同一实现；画师/小说结果与筛选抽屉、SauceNAO 抽屉本阶段暂复用既有实现。
 
 ### 优化
 

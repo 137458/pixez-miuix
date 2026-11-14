@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
 import top.yukonga.miuix.kmp.theme.Colors
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -257,6 +258,13 @@ internal actual fun CouiMainTabPage(
                 onLoginClick = component::onLoginClicked,
                 onSeriesClick = component::onIllustSeriesClicked,
                 reselectFlow = reselectFlow,
+            )
+        }
+        RootComponent.MainTab.Search -> {
+            CouiSearchScreen(
+                onIllustClick = component::onIllustClicked,
+                onUserClick = component::onUserClicked,
+                onNovelClick = component::onNovelClicked,
             )
         }
         // 其余标签尚未迁移：走 MIUIX 回退，功能与既有页面完全一致。

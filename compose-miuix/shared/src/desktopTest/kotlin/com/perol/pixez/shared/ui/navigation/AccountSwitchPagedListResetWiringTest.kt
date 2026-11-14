@@ -21,14 +21,19 @@ import kotlin.test.assertTrue
  */
 class AccountSwitchPagedListResetWiringTest {
 
-    /** 页面源文件 → 其分页状态机变量名（SearchResultSection 含插画结果与画师结果两套状态机）。 */
+    /**
+     * 页面源文件 → 其分页状态机变量名。
+     * 搜索结果的两套状态机已按皮肤无关状态下沉拆分：插画结果在 SearchResultsState，
+     * 画师/小说结果在 SearchResultSection，各自独立守护。
+     */
     private val pages: List<Pair<String, List<String>>> = listOf(
         "NovelScreen.kt" to listOf("pagedList"),
         "CommentsScreen.kt" to listOf("pagedList"),
         "RecomUserScreen.kt" to listOf("pagedList"),
         "UserFollowListScreen.kt" to listOf("pagedList"),
         "UserFollowerListScreen.kt" to listOf("pagedList"),
-        "SearchResultSection.kt" to listOf("listState", "pagedList"),
+        "SearchResultsState.kt" to listOf("listState"),
+        "SearchResultSection.kt" to listOf("pagedList"),
     )
 
     /** 从 Gradle 测试工作目录向上定位 ui/screens 源码目录。 */

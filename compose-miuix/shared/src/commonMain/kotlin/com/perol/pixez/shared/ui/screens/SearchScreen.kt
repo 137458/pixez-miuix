@@ -82,92 +82,13 @@ fun SearchScreen(
     var currentSauceNaoBytes by remember { mutableStateOf<ByteArray?>(null) }
     var currentSauceNaoName by remember { mutableStateOf<String?>(null) }
 
-    var query by rememberSaveable { mutableStateOf(initialQuery) }
-    // 存在初始查询词或点击标签后进入搜索结果模式。
-    var isSearching by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
-
-    // 搜索类型：0 = 作品，1 = 画师，2 = 小说。
-    var searchTypeIndex by rememberSaveable { mutableIntStateOf(0) }
-    val searchTypes = listOf(strings.searchTypeIllust, strings.searchTypeUser, strings.searchTypeNovel)
-
-    // 搜索筛选状态：排序、搜索目标、AI 类型、收藏数阈值、Ugoira 过滤与时间范围（仅作品搜索有效）。
-    var sort by rememberSaveable {
-        mutableStateOf(settingsRepository.searchSort)
-    }
-    var searchTarget by rememberSaveable {
-        mutableStateOf(settingsRepository.searchTarget)
-    }
-    var searchAiType by rememberSaveable {
-        mutableIntStateOf(settingsRepository.searchAiType)
-    }
-    var bookmarkThreshold by rememberSaveable {
-        mutableIntStateOf(settingsRepository.searchBookmarkThreshold)
-    }
-    var ugoiraFilter by rememberSaveable {
-        mutableIntStateOf(settingsRepository.searchUgoiraFilter)
-    }
-    var ratioFilter by rememberSaveable {
-        mutableIntStateOf(0)
-    }
-    var startDate by rememberSaveable {
-        mutableStateOf(settingsRepository.searchStartDate)
-    }
-    var endDate by rememberSaveable {
-        mutableStateOf(settingsRepository.searchEndDate)
-    }
-
-    // 筛选条件变化时持久化回写设置。
-    // 首帧的值本身就来自设置，比较后再写入，避免重复持久化与 changeVersion 无谓自增。
-    LaunchedEffect(sort) {
-        if (settingsRepository.searchSort != sort) settingsRepository.searchSort = sort
-    }
-    LaunchedEffect(searchTarget) {
-        if (settingsRepository.searchTarget != searchTarget) settingsRepository.searchTarget = searchTarget
-    }
-    LaunchedEffect(searchAiType) {
-        if (settingsRepository.searchAiType != searchAiType) settingsRepository.searchAiType = searchAiType
-    }
-    LaunchedEffect(bookmarkThreshold) {
-        if (settingsRepository.searchBookmarkThreshold != bookmarkThreshold) {
-            settingsRepository.searchBookmarkThreshold = bookmarkThreshold
-        }
-    }
-    LaunchedEffect(ugoiraFilter) {
-        if (settingsRepository.searchUgoiraFilter != ugoiraFilter) {
-            settingsRepository.searchUgoiraFilter = ugoiraFilter
-        }
-    }
-    LaunchedEffect(startDate) {
-        if (settingsRepository.searchStartDate != startDate) settingsRepository.searchStartDate = startDate
-    }
-    LaunchedEffect(endDate) {
-        if (settingsRepository.searchEndDate != endDate) settingsRepository.searchEndDate = endDate
-    }
-
-    // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
-    var trendRetryCount by rememberSaveable { mutableIntStateOf(0) }
-
-    // 进入页面时加载真实热门标签。
-    val trendState = produceState<Result<List<TrendTag>>?>(
-        initialValue = null,
-        repository,
-        trendRetryCount,
-    ) {
-        value = suspendRunCatchingNonCancel {
-            val tags = repository.getTrendTags()
-            // 热门标签同样受屏蔽标签规则约束（含原生名、翻译名及正则规则），避免已屏蔽内容被再次推荐。
-            banRepository.filterBannedTags(banRepository.getAllBanTags(), tags) { listOfNotNull(it.tag, it.translatedName) }
-        }
-    }
-
-    // 搜索历史从设置中读取并持久化回写。
-    var searchHistory by rememberSaveable {
-        mutableStateOf(settingsRepository.searchHistory)
-    }
-    val updateHistory: (List<String>) -> Unit = { newHistory ->
-        searchHistory = newHistory
-        settingsRepository.searchHistory = newHistory
-    }
+    // 查询词、搜索态、筛选条件、历史与热搜统一由皮肤无关状态承载。
+    val core = rememberSearchCoreState(
+        initialQuery = initialQuery,
+        onIllustClick = onIllustClick,
+        onUserClick = onUserClick,
+        onNovelClick = onNovelClick,
+    )
 
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -203,14 +124,7 @@ fun SearchScreen(
         }
     }
 
-    // 纯数字 ID 按当前搜索类型分流：1 = 画师，2 = 小说，其余（含 0）= 作品。
-    val onNumericIdClick: (Long) -> Unit = { id ->
-        when (searchTypeIndex) {
-            1 -> onUserClick(id)
-            2 -> onNovelClick(id)
-            else -> onIllustClick(id)
-        }
-    }
+    val searchTypes = listOf(strings.searchTypeIllust, strings.searchTypeUser, strings.searchTypeNovel)
 
     val suggestionsListState = rememberLazyListState()
     val illustGridState = rememberLazyStaggeredGridState()
@@ -219,12 +133,12 @@ fun SearchScreen(
 
     var isSearchCollapsed by rememberSaveable { mutableStateOf(false) }
 
-    val isCurrentListAtTop by remember(isSearching, query, searchTypeIndex) {
+    val isCurrentListAtTop by remember(core.isSearching, core.query, core.searchTypeIndex) {
         derivedStateOf {
-            if (!isSearching || query.isBlank()) {
+            if (!core.isSearching || core.query.isBlank()) {
                 suggestionsListState.isScrolledToTop()
             } else {
-                when (searchTypeIndex) {
+                when (core.searchTypeIndex) {
                     0 -> illustGridState.isScrolledToTop()
                     1 -> userListState.isScrolledToTop()
                     else -> novelListState.isScrolledToTop()
@@ -282,19 +196,10 @@ fun SearchScreen(
         bottomBarVisibility.value = !showFilterSheet
     }
 
-    val currentTopBarTitle = if (isSearching && query.isNotBlank()) query else strings.tabSearch
+    val currentTopBarTitle = if (core.isSearching && core.query.isNotBlank()) core.query else strings.tabSearch
 
     // 当前筛选条件快照：顶部筛选标签行、结果区与筛选抽屉共用同一份值对象。
-    val currentFilterState = SearchFilterState(
-        searchTarget = searchTarget,
-        searchAiType = searchAiType,
-        bookmarkThreshold = bookmarkThreshold,
-        ugoiraFilter = ugoiraFilter,
-        ratioFilter = ratioFilter,
-        startDate = startDate,
-        endDate = endDate,
-        hIsNotAllow = settingsRepository.hIsNotAllow,
-    )
+    val currentFilterState = core.filterState
 
     // 顶栏返回 / 展开时统一归零滚动偏移，让大标题与搜索框平滑复位。
     val onResetSearchScroll: () -> Unit = {
@@ -316,11 +221,10 @@ fun SearchScreen(
                         title = currentTopBarTitle,
                         scrollBehavior = scrollBehavior,
                         backdrop = backdrop,
-                        isSearching = isSearching,
+                        isSearching = core.isSearching,
                         isSearchCollapsed = isSearchCollapsed,
                         onBack = {
-                            isSearching = false
-                            query = ""
+                            core.onExitSearch()
                             isSearchCollapsed = false
                             onResetSearchScroll()
                         },
@@ -330,51 +234,28 @@ fun SearchScreen(
                         },
                     )
 
-                    val queryTarget = remember(query) { parseSearchQueryTarget(query) }
+                    val queryTarget = core.queryTarget
 
                     SearchInputBar(
                         isSearchCollapsed = isSearchCollapsed,
-                        query = query,
-                        onQueryChange = {
-                            query = it
-                            if (it.isBlank()) isSearching = false
-                        },
-                        onSearch = {
-                            val trimmed = query.trim()
-                            if (trimmed.isNotBlank()) {
-                                // 将新搜索词加入历史（去重，最多保留 20 条）。
-                                updateHistory(
-                                    (listOf(trimmed) + searchHistory.filter { it != trimmed }).take(20)
-                                )
-                                when (val target = parseSearchQueryTarget(trimmed)) {
-                                    is SearchQueryTarget.IllustId -> onIllustClick(target.id)
-                                    is SearchQueryTarget.UserId -> onUserClick(target.id)
-                                    is SearchQueryTarget.NumericId -> onNumericIdClick(target.id)
-                                    null -> isSearching = true
-                                }
-                            }
-                        },
+                        query = core.query,
+                        onQueryChange = core.onQueryChange,
+                        onSearch = core.onSearch,
                         onSauceNao = launchPickPhoto,
                     )
 
-                    if (isSearching && query.isNotBlank()) {
+                    if (core.isSearching && core.query.isNotBlank()) {
                         SearchResultFilterBar(
                             isSearchCollapsed = isSearchCollapsed,
                             searchTypes = searchTypes,
-                            searchTypeIndex = searchTypeIndex,
-                            onSearchTypeSelected = { searchTypeIndex = it },
-                            sort = sort,
-                            onSortClick = {
-                                sort = when (sort) {
-                                    "date_desc" -> "popular_desc"
-                                    "popular_desc" -> "date_asc"
-                                    else -> "date_desc"
-                                }
-                            },
-                            searchAiType = searchAiType,
-                            onAiTypeClick = { searchAiType = if (searchAiType == 0) 1 else 0 },
-                            bookmarkThreshold = bookmarkThreshold,
-                            onClearBookmarkThreshold = { bookmarkThreshold = 0 },
+                            searchTypeIndex = core.searchTypeIndex,
+                            onSearchTypeSelected = core.onSearchTypeSelected,
+                            sort = core.sort,
+                            onSortClick = core.onSortClick,
+                            searchAiType = currentFilterState.searchAiType,
+                            onAiTypeClick = core.onAiTypeClick,
+                            bookmarkThreshold = currentFilterState.bookmarkThreshold,
+                            onClearBookmarkThreshold = core.onClearBookmarkThreshold,
                             hasActiveFilters = currentFilterState.hasActiveFilters,
                             onOpenFilter = { showFilterSheet = true },
                             backdrop = backdrop,
@@ -399,11 +280,11 @@ fun SearchScreen(
                 .blurBackdropSource(backdrop)
                 .nestedScroll(searchNestedScrollConnection),
         ) {
-            if (isSearching && query.isNotBlank()) {
-                when (searchTypeIndex) {
+            if (core.isSearching && core.query.isNotBlank()) {
+                when (core.searchTypeIndex) {
                     0 -> SearchIllustResultGrid(
-                        query = query,
-                        sort = sort,
+                        query = core.query,
+                        sort = core.sort,
                         filterState = currentFilterState,
                         repository = repository,
                         banRepository = banRepository,
@@ -414,7 +295,7 @@ fun SearchScreen(
                         contentPadding = effectiveContentPadding,
                     )
                     1 -> SearchUserResultList(
-                        query = query,
+                        query = core.query,
                         repository = repository,
                         settingsRepository = settingsRepository,
                         onUserClick = onUserClick,
@@ -423,7 +304,7 @@ fun SearchScreen(
                         contentPadding = effectiveContentPadding,
                     )
                     2 -> SearchNovelResultList(
-                        query = query,
+                        query = core.query,
                         novelRepository = novelRepository,
                         onNovelClick = onNovelClick,
                         onUserClick = onUserClick,
@@ -437,26 +318,15 @@ fun SearchScreen(
                     SearchFilterBottomSheet(
                         onDismissRequest = { showFilterSheet = false },
                         filterState = currentFilterState,
-                        onApply = { newState ->
-                            searchTarget = newState.searchTarget
-                            searchAiType = newState.searchAiType
-                            bookmarkThreshold = newState.bookmarkThreshold
-                            ugoiraFilter = newState.ugoiraFilter
-                            ratioFilter = newState.ratioFilter
-                            startDate = newState.startDate
-                            endDate = newState.endDate
-                            settingsRepository.hIsNotAllow = newState.hIsNotAllow
-                        },
+                        onApply = core.onApplyFilters,
                     )
                 }
             } else {
-                val trendResult = trendState.value
-                val currentTarget = remember(query) { parseSearchQueryTarget(query) }
                 SearchSuggestions(
-                    trendTags = trendResult?.getOrNull().orEmpty(),
-                    searchHistory = searchHistory,
-                    isLoadingTrend = trendResult == null,
-                    trendError = trendResult?.exceptionOrNull(),
+                    trendTags = core.trendTags.orEmpty(),
+                    searchHistory = core.searchHistory,
+                    isLoadingTrend = core.isTrendLoading,
+                    trendError = core.trendError,
                     scrollBehavior = scrollBehavior,
                     listState = suggestionsListState,
                     contentPadding = PaddingValues(
@@ -465,27 +335,13 @@ fun SearchScreen(
                         end = 0.dp,
                         bottom = LocalBottomBarContentPadding.current,
                     ),
-                    queryTarget = currentTarget,
+                    queryTarget = core.queryTarget,
                     onIllustIdClick = onIllustClick,
                     onUserIdClick = onUserClick,
-                    onTagClick = { tag ->
-                        val target = parseSearchQueryTarget(tag)
-                        if (target != null) {
-                            when (target) {
-                                is SearchQueryTarget.IllustId -> onIllustClick(target.id)
-                                is SearchQueryTarget.UserId -> onUserClick(target.id)
-                                is SearchQueryTarget.NumericId -> onNumericIdClick(target.id)
-                            }
-                        } else {
-                            query = tag
-                            isSearching = true
-                        }
-                    },
-                    onHistoryRemove = { history ->
-                        updateHistory(searchHistory.filter { it != history })
-                    },
-                    onClearHistory = { updateHistory(emptyList()) },
-                    onRetryTrend = { trendRetryCount++ },
+                    onTagClick = core.onTagClick,
+                    onHistoryRemove = core.onHistoryRemove,
+                    onClearHistory = core.onClearHistory,
+                    onRetryTrend = core.onRetryTrend,
                 )
             }
 

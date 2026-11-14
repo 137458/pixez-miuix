@@ -583,6 +583,35 @@ private fun CouiPlainChipBar(
     }
 }
 
+/**
+ * COUI 辅助胶囊：可独立选中，用于互不排斥的快捷筛选（排序、AI 过滤、筛选入口）。
+ * 与 [CouiFilterChipBar] 的区别是不做互斥选择，选中态只由调用方给定。
+ */
+@Composable
+internal fun CouiAssistChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = CouiTheme.colorScheme
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) scheme.accent else scheme.container)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            kind = CouiTextKind.ItemSummary,
+            color = if (selected) scheme.onAccent else scheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
+
 /** COUI 翻页 footer：与 [PagingFooterState] 三态对齐的纯文本实现。 */
 @Composable
 internal fun CouiPagingFooter(
