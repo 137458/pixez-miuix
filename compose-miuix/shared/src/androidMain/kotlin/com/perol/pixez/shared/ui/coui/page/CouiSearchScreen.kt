@@ -523,6 +523,7 @@ private fun CouiSearchSuggestions(
             item(key = "coui_search_history_list") {
                 CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
                     core.searchHistory.forEach { history ->
+                        val pressInteraction = remember { MutableInteractionSource() }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -536,7 +537,11 @@ private fun CouiSearchSuggestions(
                                 maxLines = 1,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable { core.onTagClick(history) }
+                                    .couiPressFeedback(pressInteraction)
+                                    .clickable(
+                                        interactionSource = pressInteraction,
+                                        indication = null,
+                                    ) { core.onTagClick(history) }
                                     .padding(vertical = 10.dp),
                             )
                             CouiActionButton(
