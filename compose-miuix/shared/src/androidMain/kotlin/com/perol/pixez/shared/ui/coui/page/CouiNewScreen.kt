@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
@@ -188,7 +189,7 @@ internal fun CouiNewScreen(
                                 message = strings.loading,
                             )
                             currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                                message = feed.listState.initialError?.message ?: strings.retry,
+                                message = couiErrorMessage(feed.listState.initialError),
                                 actionText = strings.retry,
                                 onAction = feed.refresh,
                             )
@@ -236,7 +237,7 @@ private fun CouiWatchlistContent(
             message = strings.loading,
         )
         series == null && feed.watchlistState.initialError != null -> CouiStatePlaceholder(
-            message = feed.watchlistState.initialError?.message ?: strings.retry,
+            message = couiErrorMessage(feed.watchlistState.initialError),
             actionText = strings.retry,
             onAction = feed.refresh,
         )

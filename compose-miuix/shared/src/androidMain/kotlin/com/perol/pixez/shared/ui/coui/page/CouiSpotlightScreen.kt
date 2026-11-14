@@ -25,6 +25,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.CouiSpotlightCard
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.SpotlightCategory
 import com.perol.pixez.shared.ui.screens.labelFor
@@ -78,7 +79,7 @@ internal fun CouiSpotlightScreen(
                         message = strings.loading,
                     )
                     articles == null && feed.initialError != null -> CouiStatePlaceholder(
-                        message = feed.initialError.message ?: strings.retry,
+                        message = couiErrorMessage(feed.initialError),
                         actionText = strings.retry,
                         onAction = feed.refresh,
                     )

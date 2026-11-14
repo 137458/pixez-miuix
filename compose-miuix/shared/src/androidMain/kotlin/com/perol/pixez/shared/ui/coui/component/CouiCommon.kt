@@ -78,6 +78,7 @@ import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.rememberIllustQuickActions
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -118,6 +119,16 @@ internal fun CouiPageScaffold(
     ) { padding ->
         content(padding)
     }
+}
+
+/**
+ * COUI 占位区的错误文案：统一走 [PixivApiErrorFormatter] 本地化，
+ * 避免 `Throwable.message` 这类原始异常文本直透 UI（与 MIUIX 占位组件同口径）。
+ */
+@Composable
+internal fun couiErrorMessage(error: Throwable?): String {
+    val strings = LocalStrings.current
+    return error?.let { PixivApiErrorFormatter.format(it, strings) } ?: strings.retry
 }
 
 /** 顶栏动作图标：40dp 圆形触区，不依赖 COUI 原厂按钮的 API 34 窗口特性。 */

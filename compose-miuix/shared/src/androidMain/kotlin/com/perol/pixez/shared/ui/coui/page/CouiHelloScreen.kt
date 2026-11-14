@@ -21,6 +21,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.rememberHelloFeedState
@@ -103,7 +104,7 @@ internal fun CouiHelloScreen(
                     modifier = Modifier.padding(padding),
                 )
                 currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                    message = feed.listState.initialError?.message ?: strings.retry,
+                    message = couiErrorMessage(feed.listState.initialError),
                     actionText = strings.retry,
                     onAction = feed.refresh,
                     modifier = Modifier.padding(padding),

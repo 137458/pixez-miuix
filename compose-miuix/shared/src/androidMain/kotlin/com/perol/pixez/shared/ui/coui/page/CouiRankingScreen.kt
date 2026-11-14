@@ -41,6 +41,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
@@ -118,7 +119,7 @@ internal fun CouiRankingScreen(
                         message = strings.loading,
                     )
                     currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                        message = feed.listState.initialError?.message ?: strings.retry,
+                        message = couiErrorMessage(feed.listState.initialError),
                         actionText = strings.retry,
                         onAction = feed.refresh,
                     )
