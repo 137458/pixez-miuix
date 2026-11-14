@@ -24,6 +24,7 @@ import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
+import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
@@ -241,11 +242,23 @@ internal fun renderUserDetail(
 internal fun renderLogin(
     component: RootComponent,
 ) {
-    LoginScreen(
-        onBack = component::onBack,
-        onLoginSuccess = component::onLoginSuccess,
-        onNetworkSettingClick = component::onNetworkSettingClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        LoginScreen(
+            onBack = component::onBack,
+            onLoginSuccess = component::onLoginSuccess,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiLoginPage(
+            onBack = component::onBack,
+            onLoginSuccess = component::onLoginSuccess,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

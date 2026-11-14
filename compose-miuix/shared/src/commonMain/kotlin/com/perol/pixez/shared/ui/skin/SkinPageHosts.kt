@@ -113,6 +113,18 @@ internal expect fun CouiRelatedIllustsPage(
 )
 
 /**
+ * 登录页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiLoginPage(
+    onBack: () -> Unit,
+    onLoginSuccess: () -> Unit,
+    onNetworkSettingClick: (() -> Unit)?,
+    fallback: @Composable () -> Unit,
+)
+
+/**
  * 插画系列页的 COUI 宿主：抢先渲染 COUI 版本；
  * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
  */

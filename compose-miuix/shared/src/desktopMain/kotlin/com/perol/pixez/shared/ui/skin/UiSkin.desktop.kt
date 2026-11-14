@@ -100,6 +100,16 @@ internal actual fun CouiRelatedIllustsPage(
 }
 
 @Composable
+internal actual fun CouiLoginPage(
+    onBack: () -> Unit,
+    onLoginSuccess: () -> Unit,
+    onNetworkSettingClick: (() -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
+
+@Composable
 internal actual fun CouiIllustSeriesPage(
     seriesId: Long,
     onBack: () -> Unit,

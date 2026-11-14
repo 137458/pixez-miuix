@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiDownloadTaskScreen
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
 import com.perol.pixez.shared.ui.coui.page.CouiHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustSeriesScreen
+import com.perol.pixez.shared.ui.coui.page.CouiLoginScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserNovelListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
@@ -389,6 +390,20 @@ internal actual fun CouiRelatedIllustsPage(
         illustId = illustId,
         onBack = onBack,
         onIllustClick = onIllustClick,
+    )
+}
+
+@Composable
+internal actual fun CouiLoginPage(
+    onBack: () -> Unit,
+    onLoginSuccess: () -> Unit,
+    onNetworkSettingClick: (() -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    CouiLoginScreen(
+        onBack = onBack,
+        onLoginSuccess = onLoginSuccess,
+        onNetworkSettingClick = onNetworkSettingClick,
     )
 }
 
