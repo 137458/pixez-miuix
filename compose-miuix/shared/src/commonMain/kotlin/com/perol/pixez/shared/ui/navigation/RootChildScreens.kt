@@ -17,6 +17,7 @@ import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
 import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
 import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
+import com.perol.pixez.shared.ui.skin.CouiCopyTextSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
@@ -783,9 +784,19 @@ internal fun renderQualitySetting(
 internal fun renderCopyTextSetting(
     onBack: () -> Unit,
 ) {
-    CopyTextSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        CopyTextSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiCopyTextSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

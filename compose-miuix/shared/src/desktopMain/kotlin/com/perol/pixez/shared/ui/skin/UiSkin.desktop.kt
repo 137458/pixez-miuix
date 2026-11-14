@@ -286,3 +286,11 @@ internal actual fun CouiLanguageSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiCopyTextSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

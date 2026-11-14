@@ -213,7 +213,7 @@ private fun InsertChip(
  * 若存在选区则替换选区内容，否则在光标处插入。
  * 插入完成后将光标置于插入文本末尾。
  */
-private fun insertTextAtSelection(
+internal fun insertTextAtSelection(
     textFieldValue: TextFieldValue,
     insertText: String,
 ): TextFieldValue {
@@ -233,5 +233,5 @@ private fun insertTextAtSelection(
 /**
  * 默认分享格式模板，与原 Flutter 版保持一致。
  */
-private const val DEFAULT_COPY_TEXT_FORMAT = SettingsRepository.DEFAULT_COPY_TEXT_FORMAT
+internal const val DEFAULT_COPY_TEXT_FORMAT = SettingsRepository.DEFAULT_COPY_TEXT_FORMAT
 

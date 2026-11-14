@@ -379,25 +379,3 @@ private fun FormatInsertChip(
         )
     }
 }
-
-/**
- * 在 TextFieldValue 的当前选区位置插入文本。
- * 若存在选区则替换选区内容，否则在光标处插入。
- * 插入完成后将光标置于插入文本末尾。
- */
-private fun insertTextAtSelection(
-    textFieldValue: TextFieldValue,
-    insertText: String,
-): TextFieldValue {
-    val selection = textFieldValue.selection
-    val newText = textFieldValue.text.replaceRange(
-        selection.start,
-        selection.end,
-        insertText,
-    )
-    val newCursor = selection.start + insertText.length
-    return textFieldValue.copy(
-        text = newText,
-        selection = TextRange(newCursor, newCursor),
-    )
-}

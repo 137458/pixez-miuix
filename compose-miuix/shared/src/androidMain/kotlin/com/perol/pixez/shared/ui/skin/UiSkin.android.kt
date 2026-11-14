@@ -50,6 +50,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
+import com.perol.pixez.shared.ui.coui.page.CouiCopyTextSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadTaskScreen
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
@@ -594,6 +595,14 @@ internal actual fun CouiLanguageSettingPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiLanguageSettingScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiCopyTextSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiCopyTextSettingScreen(onBack = onBack)
 }
 
 @Composable
