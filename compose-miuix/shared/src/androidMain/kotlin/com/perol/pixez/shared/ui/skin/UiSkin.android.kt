@@ -47,6 +47,7 @@ import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
+import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadHistoryScreen
@@ -535,6 +536,18 @@ internal actual fun CouiShieldPage(
     CouiShieldScreen(
         onBack = onBack,
         onAISettingClick = onAISettingClick,
+    )
+}
+
+@Composable
+internal actual fun CouiAiSettingPage(
+    showAI: Boolean,
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiAiSettingScreen(
+        showAI = showAI,
+        onBack = onBack,
     )
 }
 

@@ -237,3 +237,12 @@ internal actual fun CouiShieldPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiAiSettingPage(
+    showAI: Boolean,
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

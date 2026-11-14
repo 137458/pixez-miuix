@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
+import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
 import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
@@ -542,10 +543,21 @@ internal fun renderAISetting(
     instance: Config.AISetting,
     component: RootComponent,
 ) {
-    UserShowAISettingScreen(
-        showAI = instance.showAI,
-        onBack = component::onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserShowAISettingScreen(
+            showAI = instance.showAI,
+            onBack = component::onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiAiSettingPage(
+            showAI = instance.showAI,
+            onBack = component::onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
