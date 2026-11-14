@@ -302,3 +302,11 @@ internal actual fun CouiDownloadSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiNetworkSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

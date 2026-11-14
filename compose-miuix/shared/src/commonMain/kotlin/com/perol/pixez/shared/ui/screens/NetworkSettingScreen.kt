@@ -233,14 +233,14 @@ fun NetworkSettingScreen(
 /**
  * 默认图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-private const val DEFAULT_IMAGE_HOST = AppConstants.Network.HOST_PXIMG
+internal const val DEFAULT_IMAGE_HOST = AppConstants.Network.HOST_PXIMG
 
 /**
  * 镜像图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-private const val MIRROR_IMAGE_HOST = AppConstants.Network.HOST_PIXIV_RE
+internal const val MIRROR_IMAGE_HOST = AppConstants.Network.HOST_PIXIV_RE
 
 /**
  * standard 网络模式 code：该模式下不显示图片源选择。
  */
-private const val NETWORK_MODE_STANDARD = "standard"
+internal const val NETWORK_MODE_STANDARD = "standard"
