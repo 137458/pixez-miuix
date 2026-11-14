@@ -95,7 +95,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.itos.coui.theme.LocalCouiTextStyle
 
 /**
  * COUI 用户详情页（画师详情）：固定顶栏 + 资料区 +「作品 / 收藏」瀑布流。
@@ -613,7 +613,7 @@ private fun CouiUserProfileHeader(
                 html = bio,
                 onIllustClick = onIllustClick,
                 onLinkClick = openExternalUrl,
-                style = MiuixTheme.textStyles.footnote2,
+                style = LocalCouiTextStyle.current,
                 color = scheme.onSurfaceVariant,
                 collapsible = true,
                 collapsedMaxLines = 2,

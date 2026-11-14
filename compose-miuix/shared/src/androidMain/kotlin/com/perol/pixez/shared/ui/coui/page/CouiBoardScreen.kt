@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.itos.coui.theme.LocalCouiTextStyle
 
 /**
  * COUI 公告板页：固定顶栏 + 公告卡片列表。
@@ -202,7 +202,7 @@ private fun CouiBoardItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 14.dp, end = 14.dp, bottom = 12.dp, top = 8.dp),
-            style = MiuixTheme.textStyles.body2,
+            style = LocalCouiTextStyle.current,
             color = scheme.onSurface,
             linkColor = scheme.accent,
             // 公告需要完整展示，不与作品简介共用折叠逻辑。

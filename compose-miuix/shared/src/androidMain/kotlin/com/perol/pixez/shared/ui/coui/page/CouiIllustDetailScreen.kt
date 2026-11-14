@@ -132,7 +132,7 @@ import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Show
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.itos.coui.theme.LocalCouiTextStyle
 
 /**
  * COUI 插画详情页（第一期）：骨架、顶栏、图片区、作者行、操作区与简介/标签。
@@ -752,7 +752,7 @@ private fun CouiIllustDetailList(
                         onLinkClick = { url ->
                             openSafeUrl(url, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
                         },
-                        style = MiuixTheme.textStyles.body2,
+                        style = LocalCouiTextStyle.current,
                     )
                 }
             }

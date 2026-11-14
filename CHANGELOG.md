@@ -108,6 +108,7 @@
 
 ### 修复
 
+- 修复 COUI 公告详情、插画详情与画师详情中富文本说明残留的 MIUIX 字号体系：富文本说明改取 COUI 文本样式，不再混用 MIUIX 排版。
 - 修复 COUI 首次启动引导页语言、图源、网络模式、特性说明与账号状态区块的卡片嵌套：`CouiSettingSection` 已内置卡片容器，内层重复的 `CouiCard` 导致双层底板与额外内边距，现已回归单层分组卡片。
 - 修复了 UI 渲染性能、状态依赖与硬编码文本问题：
   - `SettingsScreen` 磁盘缓存清理迁至 `Dispatchers.IO` 并以加载态守卫重算协程；`FloatingBottomBar` 改用 `DisposableEffect` 回收 `directSelector` 引用并移除 `MainBottomBar` 冗余参数；`BgEffectBackground` 依据实际主题背景亮度而非仅系统暗色开关选择渲染预设。
