@@ -45,12 +45,14 @@ import com.itos.coui.theme.CouiTypography
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
+import com.perol.pixez.shared.ui.coui.page.CouiUserDetailScreen
 import top.yukonga.miuix.kmp.theme.Colors
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.itos.coui.theme.CouiTheme as CouiKitTheme
@@ -302,5 +304,31 @@ internal actual fun CouiIllustDetailPage(
         onTagClick = onTagClick,
         onIllustClick = onIllustClick,
         onNovelClick = onNovelClick,
+    )
+}
+
+@Composable
+internal actual fun CouiUserDetailPage(
+    userId: Long,
+    pageState: UserDetailPageState,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onFollowListClick: (Long) -> Unit,
+    onFollowerListClick: (Long) -> Unit,
+    onRelatedUsersClick: ((Long) -> Unit)?,
+    onUserNovelsClick: ((Long, String) -> Unit)?,
+    initialTab: Int,
+    fallback: @Composable () -> Unit,
+) {
+    CouiUserDetailScreen(
+        userId = userId,
+        pageState = pageState,
+        onBack = onBack,
+        onIllustClick = onIllustClick,
+        onFollowListClick = onFollowListClick,
+        onFollowerListClick = onFollowerListClick,
+        onRelatedUsersClick = onRelatedUsersClick,
+        onUserNovelsClick = onUserNovelsClick,
+        initialTab = initialTab,
     )
 }

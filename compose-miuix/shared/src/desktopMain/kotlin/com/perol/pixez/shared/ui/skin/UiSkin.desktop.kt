@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.UserDetailPageState
 
 actual val isCouiSkinSupported: Boolean = false
 
@@ -43,6 +44,22 @@ internal actual fun CouiIllustDetailPage(
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)?,
     onNovelClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
+
+@Composable
+internal actual fun CouiUserDetailPage(
+    userId: Long,
+    pageState: UserDetailPageState,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onFollowListClick: (Long) -> Unit,
+    onFollowerListClick: (Long) -> Unit,
+    onRelatedUsersClick: ((Long) -> Unit)?,
+    onUserNovelsClick: ((Long, String) -> Unit)?,
+    initialTab: Int,
     fallback: @Composable () -> Unit,
 ) {
     fallback()

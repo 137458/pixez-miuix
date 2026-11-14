@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.UserDetailPageState
 
 /** 底栏单项：文案与图标由一级标签目录求值后传入，避免皮肤层反向依赖导航目录。 */
 internal data class SkinNavItem(
@@ -50,5 +51,23 @@ internal expect fun CouiIllustDetailPage(
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)?,
     onNovelClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+)
+
+/**
+ * 用户详情页（画师详情）的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiUserDetailPage(
+    userId: Long,
+    pageState: UserDetailPageState,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onFollowListClick: (Long) -> Unit,
+    onFollowerListClick: (Long) -> Unit,
+    onRelatedUsersClick: ((Long) -> Unit)?,
+    onUserNovelsClick: ((Long, String) -> Unit)?,
+    initialTab: Int,
     fallback: @Composable () -> Unit,
 )

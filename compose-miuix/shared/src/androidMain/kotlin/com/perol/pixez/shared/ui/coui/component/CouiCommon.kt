@@ -347,6 +347,7 @@ internal fun CouiIllustGrid(
     onIllustClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(12.dp),
+    header: (@Composable () -> Unit)? = null,
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     loadMoreError: Throwable? = null,
@@ -380,6 +381,15 @@ internal fun CouiIllustGrid(
         verticalItemSpacing = 10.dp,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
+        if (header != null) {
+            item(
+                key = "coui_grid_header",
+                span = StaggeredGridItemSpan.FullLine,
+                contentType = "coui_grid_header",
+            ) {
+                header()
+            }
+        }
         items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
             val menuAnchor = rememberCouiMenuAnchor()
             var menuExpanded by remember { mutableStateOf(false) }

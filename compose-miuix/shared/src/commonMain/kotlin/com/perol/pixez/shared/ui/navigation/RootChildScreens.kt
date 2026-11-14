@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
+import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
 import com.perol.pixez.shared.ui.screens.AboutScreen
@@ -195,17 +196,35 @@ internal fun renderUserDetail(
     component: UserDetailComponent,
     root: RootComponent,
 ) {
-    UserDetailScreen(
-        userId = component.userId,
-        pageState = component.pageState,
-        onBack = root::onBack,
-        onIllustClick = root::onIllustClicked,
-        onFollowListClick = root::onUserFollowListClicked,
-        onFollowerListClick = root::onUserFollowerListClicked,
-        onRelatedUsersClick = root::onUserRelatedListClicked,
-        onUserNovelsClick = root::onUserNovelListClicked,
-        initialTab = component.config.initialTab,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserDetailScreen(
+            userId = component.userId,
+            pageState = component.pageState,
+            onBack = root::onBack,
+            onIllustClick = root::onIllustClicked,
+            onFollowListClick = root::onUserFollowListClicked,
+            onFollowerListClick = root::onUserFollowerListClicked,
+            onRelatedUsersClick = root::onUserRelatedListClicked,
+            onUserNovelsClick = root::onUserNovelListClicked,
+            initialTab = component.config.initialTab,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUserDetailPage(
+            userId = component.userId,
+            pageState = component.pageState,
+            onBack = root::onBack,
+            onIllustClick = root::onIllustClicked,
+            onFollowListClick = root::onUserFollowListClicked,
+            onFollowerListClick = root::onUserFollowerListClicked,
+            onRelatedUsersClick = root::onUserRelatedListClicked,
+            onUserNovelsClick = root::onUserNovelListClicked,
+            initialTab = component.config.initialTab,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
