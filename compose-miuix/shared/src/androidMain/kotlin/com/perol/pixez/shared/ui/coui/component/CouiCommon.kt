@@ -5,6 +5,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,7 @@ import com.itos.coui.dialog.CouiDialogActionColors
 import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.dialog.CouiDialogMaterial
 import com.itos.coui.dialog.CouiDialogPlacement
+import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.layout.Scaffold
 import com.itos.coui.menu.CouiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
@@ -150,18 +152,33 @@ internal fun couiErrorMessage(error: Throwable?): String {
     return error?.let { PixivApiErrorFormatter.format(it, strings) } ?: strings.retry
 }
 
-/** 顶栏动作图标：40dp 圆形触区，不依赖 COUI 原厂按钮的 API 34 窗口特性。 */
+/**
+ * 顶栏动作图标：40dp 圆形触区，不依赖 COUI 原厂按钮的 API 34 窗口特性。
+ * 按压反馈走库的 [couiButtonFeedback]：hover/focus/press 蒙层与顶栏按钮同口径，
+ * 点击指示器置空，避免在圆形实底上再叠一层涟漪。
+ */
 @Composable
 internal fun CouiActionButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .couiButtonFeedback(
+                dark = CouiTheme.isDark,
+                interactionSource = interactionSource,
+                enabled = true,
+                list = false,
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Image(

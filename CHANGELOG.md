@@ -24,6 +24,7 @@
   - 修复 COUI 页面占位区直接展示原始异常文本的问题：推荐、排行榜、动态、特辑的加载失败文案统一经 `PixivApiErrorFormatter` 本地化，与 MIUIX 占位组件口径一致。
   - COUI 插画长按菜单由弹窗改为官方锚点菜单：`couiMenuAnchor` + `Menu` 贴着被按卡片弹出，动作列表复用 `rememberIllustQuickActions`，下载/复制/分享/屏蔽行为不变；移除已无调用方的弹窗动作行。
   - COUI 一级页面骨架接入顶栏折叠：推荐、排行榜、特辑、动态四页共用 `CouiPageScaffold` 的 nestedScroll 与折叠 `LargeTopAppBar`，正文留白随折叠位移实时收缩；页面无需各自挂接滚动行为。
+  - COUI 顶栏动作图标与列表行图标按钮接入库的 `couiButtonFeedback` 按压蒙层，点击指示器置空，悬停/聚焦/按下反馈与 COUI 原生顶栏按钮一致。
 
 ### 优化
 
