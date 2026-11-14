@@ -28,7 +28,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.itos.coui.dialog.CouiDialogAction
+import com.itos.coui.dialog.CouiDialogActionStyle
+import com.itos.coui.dialog.Dialog
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -39,6 +41,9 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
+import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
+import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingMode
@@ -164,8 +169,8 @@ private fun CouiTopBarTextAction(
 }
 
 /**
- * 日期筛选弹窗：COUI 库 Dialog 的玻璃材质需 API 33+ 窗口背景才可用，
- * 这里按能力边界清单退回自绘容器，输入与动作保持 COUI 配色。
+ * 日期筛选弹窗：使用 COUI 官方 Dialog，输入区作为自定义内容，
+ * 玻璃材质按能力边界自动降级为不透明。
  */
 @Composable
 private fun CouiRankingDateDialog(
@@ -177,115 +182,81 @@ private fun CouiRankingDateDialog(
     val scheme = CouiTheme.colorScheme
     // 与 MIUIX 版一致：日期格式校验仅在非空时生效。
     val isValid = date.isEmpty() || date.matches(RankingDateRegex)
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(scheme.container)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+    Dialog(
+        onDismissRequest = onDismiss,
+        visible = true,
+        material = couiDialogMaterialOrNull(),
+        title = strings.rankingDateLabel,
+        message = if (isValid) null else strings.rankingDateFormatError,
+        placement = couiDialogPlacement(),
+        confirmAction = CouiDialogAction(
+            text = strings.confirm,
+            onClick = onDismiss,
+            style = CouiDialogActionStyle.Primary,
+            colors = couiPrimaryActionColors(),
+        ),
+        dismissAction = CouiDialogAction(text = strings.cancel, onClick = onDismiss),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = strings.rankingDateLabel,
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(scheme.surface)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                contentAlignment = Alignment.CenterStart,
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(scheme.surface)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (date.isEmpty()) {
-                        Text(
-                            text = strings.rankingDateLabel,
-                            kind = CouiTextKind.ItemSummary,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
-                    }
-                    BasicTextField(
-                        value = date,
-                        onValueChange = onDateChange,
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            color = scheme.onSurface,
-                            fontSize = 15.sp,
-                        ),
-                        cursorBrush = SolidColor(scheme.accent),
-                        modifier = Modifier.fillMaxWidth(),
+                if (date.isEmpty()) {
+                    Text(
+                        text = strings.rankingDateLabel,
+                        kind = CouiTextKind.ItemSummary,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                CouiDialogTextButton(
-                    text = strings.actionClear,
-                    enabled = date.isNotEmpty(),
-                    onClick = {
-                        onDateChange("")
-                        onDismiss()
-                    },
+                BasicTextField(
+                    value = date,
+                    onValueChange = onDateChange,
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = scheme.onSurface,
+                        fontSize = 15.sp,
+                    ),
+                    cursorBrush = SolidColor(scheme.accent),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (!isValid) {
-                Text(
-                    text = strings.rankingDateFormatError,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.accent,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                CouiDialogTextButton(
-                    text = strings.cancel,
-                    onClick = onDismiss,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                CouiDialogTextButton(
-                    text = strings.confirm,
-                    onClick = onDismiss,
-                    primary = true,
-                )
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            CouiDialogTextButton(
+                text = strings.actionClear,
+                enabled = date.isNotEmpty(),
+                onClick = {
+                    onDateChange("")
+                    onDismiss()
+                },
+            )
         }
     }
 }
 
-/** COUI 弹窗文本按钮：库无通用 Button，按能力边界清单自绘胶囊并保持 >= 44dp 热区。 */
+/** COUI 弹窗内的内联文本按钮：库无通用 Button，自绘胶囊并保持 >= 44dp 热区。 */
 @Composable
 private fun CouiDialogTextButton(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    primary: Boolean = false,
 ) {
     val scheme = CouiTheme.colorScheme
-    val background = when {
-        !enabled -> scheme.container
-        primary -> scheme.accent
-        else -> scheme.container
-    }
-    val contentColor = when {
-        !enabled -> scheme.onSurfaceVariant
-        primary -> scheme.onAccent
-        else -> scheme.onSurface
-    }
+    val contentColor = if (enabled) scheme.onSurface else scheme.onSurfaceVariant
     Box(
         modifier = Modifier
             .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(50))
-            .background(background)
+            .background(scheme.container)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
