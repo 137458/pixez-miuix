@@ -73,6 +73,7 @@
 
 ### 优化
 
+- COUI 二级页顶栏统一抽取为公共固定顶栏组件：返回按钮、单行标题与尾部动作槽集中实现，37 个页面移除内联重复的 56dp 顶栏代码，状态栏避让、横向内边距与动作间距保持原值，视觉与交互不变。
 - 收紧 Android Release ProGuard/R8 混淆与日志裁剪规则，并加固桌面端与测试基建：
   - `proguard-rules.pro` 移除 `io.ktor.**`、`okhttp3.**`、`coil3.**`、`top.yukonga.miuix.**` 等过宽整包 keep 规则，收敛为仅保留序列化、`SqlDriver`/`SqlSchema` 与 Android 组件入口，同时剥离 Release 态 `Log.v/d/i/w` 调用。
   - 加固 Windows 单文件自包含启动器（`packageWindowsSingleFileExe`）：基于 EXE SHA-256 前缀分目录解压与临时目录原子切换避免覆盖运行中实例或 ZipSlip 路径穿越，补全 Windows `CommandLineToArgvW` 参数引号与反斜杠转义。

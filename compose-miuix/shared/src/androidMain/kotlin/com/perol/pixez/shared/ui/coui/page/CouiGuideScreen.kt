@@ -1,8 +1,8 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,36 +10,36 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,22 +51,23 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.LocalAccountRepository
-import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.LocalAccountRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.ic_pixez_logo
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import pixez_miuix.shared.generated.resources.Res
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /** 引导页分步切换的转场时长（毫秒）。 */
 private const val COUI_GUIDE_PAGE_TRANSITION_MILLIS = 300
@@ -98,37 +99,18 @@ internal fun CouiGuideScreen(
             .fillMaxSize()
             .background(scheme.background),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(scheme.background)
-                .statusBarsPadding()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (currentStep > 0) {
-                CouiActionButton(
-                    icon = MiuixIcons.Back,
-                    contentDescription = strings.back,
-                    onClick = { currentStep-- },
-                )
+        CouiFixedTopBar(
+            title = when (currentStep) {
+                0 -> "1. ${strings.guideStepLanguage}"
+                1 -> "2. ${strings.guideStepNetwork}"
+                else -> "3. ${strings.guideStepWelcome}"
+            },
+            onBack = if (currentStep > 0) {
+                { currentStep-- }
             } else {
-                Spacer(modifier = Modifier.width(40.dp))
-            }
-            Text(
-                text = when (currentStep) {
-                    0 -> "1. ${strings.guideStepLanguage}"
-                    1 -> "2. ${strings.guideStepNetwork}"
-                    else -> "3. ${strings.guideStepWelcome}"
-                },
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+                null
+            },
+        ) {
             CouiTextAction(
                 text = strings.guideSkipLogin,
                 onClick = finishGuide,

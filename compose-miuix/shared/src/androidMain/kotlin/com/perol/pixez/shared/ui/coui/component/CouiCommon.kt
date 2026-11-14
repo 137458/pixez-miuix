@@ -220,6 +220,41 @@ internal fun CouiActionButton(
 }
 
 /**
+ * COUI 浮层圆形动作按钮：半透明黑底保证图片上的图标对比度。
+ */
+@Composable
+internal fun CouiOverlayActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: Color = Color.White,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.38f))
+            .couiPressFeedback(interactionSource, enabled = enabled, list = false)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = rememberVectorPainter(icon),
+            contentDescription = contentDescription,
+            colorFilter = ColorFilter.tint(if (enabled) tint else tint.copy(alpha = 0.5f)),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+/**
  * 顶栏文本动作：无图标容器，只有按压反馈与文字，供「清空」「追更」这类低频动作使用。
  */
 @Composable

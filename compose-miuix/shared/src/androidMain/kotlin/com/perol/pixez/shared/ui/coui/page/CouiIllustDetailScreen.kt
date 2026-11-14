@@ -5,37 +5,36 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -44,26 +43,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import com.itos.coui.menu.CouiMenuAnchor
+import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
-import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.rememberCouiMenuAnchor
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
+import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustTag
@@ -75,39 +75,41 @@ import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
+import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
+import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
+import com.perol.pixez.shared.ui.components.buildIllustShareLink
+import com.perol.pixez.shared.ui.components.buildSauceNaoUrl
+import com.perol.pixez.shared.ui.components.extractCachedImageBytes
+import com.perol.pixez.shared.ui.components.HtmlCaptionText
+import com.perol.pixez.shared.ui.components.LocalToastSink
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
+import com.perol.pixez.shared.ui.components.runClipboardShare
+import com.perol.pixez.shared.ui.components.suspendRunClipboardShare
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
+import com.perol.pixez.shared.ui.components.UgoiraPlayer
+import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
+import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
+import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.CouiOverlayActionButton
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalBookmarkRepository
 import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.components.HtmlCaptionText
-import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
-import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.components.UgoiraPlayer
-import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
-import com.perol.pixez.shared.ui.components.buildIllustShareLink
-import com.perol.pixez.shared.ui.components.buildSauceNaoUrl
-import com.perol.pixez.shared.ui.components.extractCachedImageBytes
-import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
-import com.perol.pixez.shared.ui.components.runClipboardShare
-import com.perol.pixez.shared.ui.components.suspendRunClipboardShare
-import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
-import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.IllustDetailFullScreenOverlay
@@ -123,7 +125,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Favorites
@@ -132,7 +133,7 @@ import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Show
-import com.itos.coui.theme.LocalCouiTextStyle
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 插画详情页（第一期）：骨架、顶栏、图片区、作者行、操作区与简介/标签。
@@ -449,28 +450,11 @@ private fun CouiIllustDetailTopBar(
             .fillMaxWidth()
             .background(background),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        CouiFixedTopBar(
+            title = if (scrolled) illust?.title.orEmpty() else "",
+            onBack = onBack,
+            overlayBack = true,
         ) {
-            CouiOverlayActionButton(
-                icon = MiuixIcons.Back,
-                contentDescription = strings.back,
-                onClick = onBack,
-            )
-            Text(
-                text = if (scrolled) illust?.title.orEmpty() else "",
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
             CouiOverlayActionButton(
                 icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
                 contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
@@ -507,39 +491,6 @@ private fun CouiIllustDetailTopBar(
                 }
             }
         }
-    }
-}
-
-/** COUI 浮层圆形动作按钮：半透明黑底保证图片上的图标对比度。 */
-@Composable
-private fun CouiOverlayActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    tint: Color = Color.White,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.38f))
-            .couiPressFeedback(interactionSource, enabled = enabled, list = false)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        androidx.compose.foundation.Image(
-            painter = rememberVectorPainter(icon),
-            contentDescription = contentDescription,
-            colorFilter = ColorFilter.tint(if (enabled) tint else tint.copy(alpha = 0.5f)),
-            modifier = Modifier.size(22.dp),
-        )
     }
 }
 
