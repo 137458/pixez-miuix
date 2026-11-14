@@ -16,6 +16,8 @@ import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
+import com.perol.pixez.shared.ui.skin.CouiUserListKind
+import com.perol.pixez.shared.ui.skin.CouiUserListPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
@@ -311,11 +313,24 @@ internal fun renderUserFollowList(
     instance: Config.UserFollowList,
     component: RootComponent,
 ) {
-    UserFollowListScreen(
-        userId = instance.userId,
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserFollowListScreen(
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUserListPage(
+            kind = CouiUserListKind.Following,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
@@ -323,11 +338,24 @@ internal fun renderUserFollowerList(
     instance: Config.UserFollowerList,
     component: RootComponent,
 ) {
-    UserFollowerListScreen(
-        userId = instance.userId,
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserFollowerListScreen(
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUserListPage(
+            kind = CouiUserListKind.Followers,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
@@ -737,11 +765,24 @@ internal fun renderUserRelatedList(
     instance: Config.UserRelatedList,
     component: RootComponent,
 ) {
-    UserRelatedListScreen(
-        userId = instance.userId,
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UserRelatedListScreen(
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUserListPage(
+            kind = CouiUserListKind.Related,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
