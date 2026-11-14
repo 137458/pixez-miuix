@@ -17,7 +17,8 @@
   - COUI 插画卡片补齐长按操作菜单：下载、复制信息、复制图片、复制链接、分享链接、屏蔽作品；动作编排抽取为皮肤无关的 `rememberIllustQuickActions`，MIUIX 底部菜单与 COUI 官方 `Dialog` 菜单共用同一套行为与 Toast 反馈，覆盖推荐、排行榜、动态三页。
   - COUI 弹窗材质、排布与主操作配色收敛为 `CouiCommon.kt` 内的共享辅助，动态页与长按菜单统一遵循「API 33+ 且有背景采样启用玻璃，否则退回不透明」策略。
   - 排行榜日期筛选弹窗由自绘容器换回 COUI 官方 `Dialog`：输入区作为自定义内容，格式错误改由弹窗 message 呈现，取消/确认使用官方动作位。
-  - 搜索页接入 COUI 皮肤：官方 `SearchBar` + 折叠 `LargeTopAppBar` 承载输入与搜索态，搜索类型用 `ChipTabRow` 胶囊切换，排序/AI 过滤/收藏门槛/筛选入口收敛为可独立选中的辅助胶囊；未搜索时展示 ID/URL 直达入口、热门标签与搜索历史，插画结果复用共享分页状态与 COUI 瀑布流。查询词、筛选条件、历史与热搜统一下沉为 `SearchCoreState`，插画结果分页下沉为 `SearchIllustResultsState`，MIUIX 与 COUI 双页面共用同一实现；画师/小说结果与筛选抽屉、SauceNAO 抽屉本阶段暂复用既有实现。
+  - 搜索页接入 COUI 皮肤：官方 `SearchBar` + 折叠 `LargeTopAppBar` 承载输入与搜索态，搜索类型用 `ChipTabRow` 胶囊切换，排序/AI 过滤/收藏门槛/筛选入口收敛为可独立选中的辅助胶囊；未搜索时展示 ID/URL 直达入口、热门标签与搜索历史，插画结果复用共享分页状态与 COUI 瀑布流。查询词、筛选条件、历史与热搜统一下沉为 `SearchCoreState`，插画结果分页下沉为 `SearchIllustResultsState`，MIUIX 与 COUI 双页面共用同一实现。
+  - COUI 搜索页的画师与小说结果改为 COUI 实现：共用分页骨架（账号切换作废、触底预加载、重试计数与 `PagedListState` 一致），画师行展示头像/昵称/最近作品预览，小说行展示封面、系列、标题、作者与字数收藏统计；筛选抽屉与 SauceNAO 抽屉暂复用既有 MIUIX 实现。
 
 ### 优化
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
@@ -581,6 +582,23 @@ private fun CouiPlainChipBar(
             }
         }
     }
+}
+
+/**
+ * COUI 卡片容器：卡片底色 + 连续圆角裁切，列表分组与结果行共用。
+ */
+@Composable
+internal fun CouiCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(CouiTheme.colorScheme.card),
+        content = content,
+    )
 }
 
 /**

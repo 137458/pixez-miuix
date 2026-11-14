@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +57,7 @@ import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
+import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
@@ -69,15 +69,12 @@ import com.perol.pixez.shared.ui.screens.SearchCoreState
 import com.perol.pixez.shared.ui.screens.SearchEmptyPhase
 import com.perol.pixez.shared.ui.screens.SearchFilterBottomSheet
 import com.perol.pixez.shared.ui.screens.SearchFilterState
-import com.perol.pixez.shared.ui.screens.SearchNovelResultList
 import com.perol.pixez.shared.ui.screens.SearchQueryTarget
-import com.perol.pixez.shared.ui.screens.SearchUserResultList
 import com.perol.pixez.shared.ui.screens.applySearchClientFilters
 import com.perol.pixez.shared.ui.screens.rememberSearchCoreState
 import com.perol.pixez.shared.ui.screens.rememberSearchIllustResultsState
 import com.perol.pixez.shared.ui.screens.resolveSearchEmptyPhase
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
@@ -161,7 +158,6 @@ internal fun CouiSearchScreen(
     val scrollBehavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val showingResults = core.isSearching && core.query.isNotBlank()
     val suggestionsListState = rememberLazyListState()
-    val miuixScrollBehavior = MiuixScrollBehavior()
     val searchTypeChips = remember(strings) {
         listOf(
             CouiFilterChip(key = "0", label = strings.searchTypeIllust),
@@ -275,20 +271,18 @@ internal fun CouiSearchScreen(
                             onIllustClick = onIllustClick,
                             contentPadding = resultPadding,
                         )
-                        1 -> SearchUserResultList(
+                        1 -> CouiSearchUserResultList(
                             query = core.query,
                             repository = searchRepository,
                             settingsRepository = settingsRepository,
                             onUserClick = onUserClick,
-                            scrollBehavior = miuixScrollBehavior,
                             contentPadding = resultPadding,
                         )
-                        else -> SearchNovelResultList(
+                        else -> CouiSearchNovelResultList(
                             query = core.query,
                             novelRepository = novelRepository,
                             onNovelClick = onNovelClick,
                             onUserClick = onUserClick,
-                            scrollBehavior = miuixScrollBehavior,
                             contentPadding = resultPadding,
                         )
                     }
@@ -479,7 +473,7 @@ private fun CouiSearchSuggestions(
     ) {
         if (queryTarget != null) {
             item(key = "coui_search_target") {
-                CouiGroupCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+                CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
                     if (queryTarget !is SearchQueryTarget.UserId) {
                         CouiSuggestionRow(
                             text = "${strings.copyTextChipIllustId}: ${queryTarget.id}",
@@ -524,7 +518,7 @@ private fun CouiSearchSuggestions(
                 CouiSectionTitle(text = strings.searchHistory)
             }
             item(key = "coui_search_history_list") {
-                CouiGroupCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+                CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
                     core.searchHistory.forEach { history ->
                         Row(
                             modifier = Modifier
@@ -579,7 +573,7 @@ private fun CouiTrendTagCard(
     tags: List<TrendTag>,
     onTagClick: (String) -> Unit,
 ) {
-    CouiGroupCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
         tags.forEach { tag ->
             CouiSuggestionRow(
                 text = tag.translatedName ?: tag.tag,
@@ -587,21 +581,6 @@ private fun CouiTrendTagCard(
             )
         }
     }
-}
-
-/** 推荐区整组卡片：COUI 卡片底 + 圆角裁切。 */
-@Composable
-private fun CouiGroupCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CouiTheme.colorScheme.card),
-        content = content,
-    )
 }
 
 @Composable
@@ -639,7 +618,7 @@ private fun CouiHintRow(
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    CouiGroupCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
