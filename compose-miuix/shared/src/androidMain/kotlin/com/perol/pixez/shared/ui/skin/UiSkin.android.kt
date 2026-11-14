@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import com.itos.coui.theme.CouiColorScheme
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.CouiTypography
 import com.perol.pixez.shared.ui.navigation.RootComponent
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
@@ -175,12 +177,16 @@ private fun CouiPlainNavigationBar(
     ) {
         items.forEachIndexed { index, item ->
             val selected = index == selectedIndex
+            val pressInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(64.dp)
+                    .couiPressFeedback(pressInteraction)
                     .selectable(
                         selected = selected,
+                        interactionSource = pressInteraction,
+                        indication = null,
                         onClick = { onSelect(index) },
                         role = Role.Tab,
                     ),

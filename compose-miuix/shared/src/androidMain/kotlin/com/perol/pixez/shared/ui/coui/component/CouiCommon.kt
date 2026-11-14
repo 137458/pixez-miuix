@@ -627,11 +627,16 @@ private fun CouiPlainChipBar(
     ) {
         items(chips, key = { it.key }) { chip ->
             val selected = chip.key == selectedKey
+            val pressInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(if (selected) scheme.accent else scheme.container)
-                    .clickable { onSelect(chip.key) }
+                    .couiPressFeedback(pressInteraction)
+                    .clickable(
+                        interactionSource = pressInteraction,
+                        indication = null,
+                    ) { onSelect(chip.key) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
