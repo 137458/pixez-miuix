@@ -65,6 +65,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
 import com.perol.pixez.shared.ui.coui.page.CouiShieldScreen
+import com.perol.pixez.shared.ui.coui.page.CouiThanksScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserNovelListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiWelcomePageScreen
@@ -636,6 +637,14 @@ internal actual fun CouiAboutPage(
         onThanksClick = onThanksClick,
         onUpdateClick = onUpdateClick,
     )
+}
+
+@Composable
+internal actual fun CouiThanksPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiThanksScreen(onBack = onBack)
 }
 
 @Composable

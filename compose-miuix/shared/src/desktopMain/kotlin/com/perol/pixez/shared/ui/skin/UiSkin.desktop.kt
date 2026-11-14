@@ -320,3 +320,11 @@ internal actual fun CouiAboutPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiThanksPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

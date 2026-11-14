@@ -32,6 +32,7 @@ import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiNetworkSettingPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiShieldPage
+import com.perol.pixez.shared.ui.skin.CouiThanksPage
 import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
@@ -878,9 +879,19 @@ internal fun renderBookTag(
 internal fun renderThanks(
     component: RootComponent,
 ) {
-    ThanksScreen(
-        onBack = component::onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        ThanksScreen(
+            onBack = component::onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiThanksPage(
+            onBack = component::onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
