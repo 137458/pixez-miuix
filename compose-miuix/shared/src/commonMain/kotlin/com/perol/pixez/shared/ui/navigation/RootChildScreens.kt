@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiAboutPage
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
+import com.perol.pixez.shared.ui.skin.CouiAccountManagePage
 import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
 import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiBookTagPage
@@ -945,10 +946,21 @@ internal fun renderGuide(
 internal fun renderAccountManage(
     component: RootComponent,
 ) {
-    AccountManageScreen(
-        onBack = component::onBack,
-        onAddAccount = component::onLoginClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        AccountManageScreen(
+            onBack = component::onBack,
+            onAddAccount = component::onLoginClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiAccountManagePage(
+            onBack = component::onBack,
+            onAddAccount = component::onLoginClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

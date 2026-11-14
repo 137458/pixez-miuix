@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiAboutScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
+import com.perol.pixez.shared.ui.coui.page.CouiAccountManageScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBookTagScreen
@@ -667,6 +668,18 @@ internal actual fun CouiThemeSettingPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiThemeSettingScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiAccountManagePage(
+    onBack: () -> Unit,
+    onAddAccount: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiAccountManageScreen(
+        onBack = onBack,
+        onAddAccount = onAddAccount,
+    )
 }
 
 @Composable

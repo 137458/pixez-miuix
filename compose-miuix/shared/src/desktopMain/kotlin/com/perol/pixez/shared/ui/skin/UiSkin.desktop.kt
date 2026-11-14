@@ -345,3 +345,12 @@ internal actual fun CouiThemeSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiAccountManagePage(
+    onBack: () -> Unit,
+    onAddAccount: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
