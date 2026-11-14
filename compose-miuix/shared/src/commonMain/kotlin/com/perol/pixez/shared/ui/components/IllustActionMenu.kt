@@ -2,9 +2,21 @@ package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.platform.IllustClipboard
+import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
@@ -82,6 +94,104 @@ fun IllustActionMenu(
             }
         }
     }
+}
+
+/**
+ * 插画卡片快捷操作集合：下载、复制信息/图片/链接、分享链接、屏蔽作品。
+ *
+ * 只描述动作，不承担菜单视觉；MIUIX 用 [IllustActionMenu] + `WindowBottomSheet`，
+ * COUI 用官方 Dialog 承载同一批动作，避免两套皮肤各写一份编排逻辑。
+ */
+internal class IllustQuickActions(
+    val onDownload: () -> Unit,
+    val onCopyInfo: () -> Unit,
+    val onCopyImage: () -> Unit,
+    val onCopyLink: () -> Unit,
+    val onShareLink: () -> Unit,
+    val onBan: () -> Unit,
+)
+
+/**
+ * 构造插画快捷操作。动作执行后统一调用 [onDismiss] 关闭所在菜单。
+ */
+@Composable
+internal fun rememberIllustQuickActions(
+    illust: Illust,
+    onDismiss: () -> Unit,
+): IllustQuickActions {
+    val strings = LocalStrings.current
+    val settings = LocalSettingsRepository.current
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalPlatformContext.current
+    val downloadRepository = LocalDownloadRepository.current
+    val banRepository = LocalBanRepository.current
+    // 长按菜单经全局 Toast 通道反馈，列表页无需逐层透传承载容器。
+    val toastSink = LocalToastSink.current
+
+    return IllustQuickActions(
+        onDownload = {
+            onDismiss()
+            coroutineScope.launch {
+                suspendRunCatchingNonCancel {
+                    downloadRepository.download(illust, pageIndex = 0)
+                }
+            }
+        },
+        onCopyInfo = {
+            onDismiss()
+            runClipboardShare(
+                success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                failurePrefix = "${strings.copy}${strings.failedSuffix}",
+                onToast = toastSink,
+            ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
+        },
+        onCopyImage = {
+            onDismiss()
+            coroutineScope.launch {
+                // 缩略图降级沿用卡片自身的 pictureSource 改写，缓存缺失时静默不复制。
+                suspendRunClipboardShare(
+                    success = ToastData(strings.imageCopySuccess, ToastType.Success),
+                    failurePrefix = strings.menuCopyImage,
+                    onToast = toastSink,
+                ) {
+                    val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
+                    val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings.pictureSource) }
+                    withContext(Dispatchers.IO) {
+                        val bytes = extractCachedImageBytes(context, transformedUrls)
+                        bytes?.let { IllustClipboard().copyImage(it) }
+                    }
+                }
+            }
+        },
+        onCopyLink = {
+            onDismiss()
+            runClipboardShare(
+                success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                failurePrefix = "${strings.copy}${strings.failedSuffix}",
+                onToast = toastSink,
+            ) { IllustClipboard().copy(buildIllustShareLink(illust)) }
+        },
+        onShareLink = {
+            onDismiss()
+            runClipboardShare(
+                success = ToastData(strings.share, ToastType.Success),
+                failurePrefix = strings.share,
+                onToast = toastSink,
+            ) { IllustShare().share(buildIllustShareLink(illust), illust.title) }
+        },
+        onBan = {
+            onDismiss()
+            coroutineScope.launch {
+                suspendRunCatchingNonCancel {
+                    banRepository.insertBanIllust(
+                        illustId = illust.id,
+                        name = illust.title,
+                    )
+                    settings.notifyFilterChanged()
+                }
+            }
+        },
+    )
 }
 
 /**

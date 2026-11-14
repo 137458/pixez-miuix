@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,17 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
-import com.itos.coui.dialog.CouiDialogActionColors
 import com.itos.coui.dialog.CouiDialogActionStyle
-import com.itos.coui.dialog.CouiDialogDefaults
-import com.itos.coui.dialog.CouiDialogMaterial
-import com.itos.coui.dialog.CouiDialogPlacement
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.menu.rememberCouiWindowBackdrop
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -52,6 +45,9 @@ import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
+import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
+import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
@@ -424,28 +420,3 @@ private fun CouiRemoveWatchlistDialog(
     ) {}
 }
 
-@Composable
-private fun couiDialogMaterialOrNull(): CouiDialogMaterial? =
-    if (Build.VERSION.SDK_INT >= 33 && rememberCouiWindowBackdrop() != null) {
-        CouiDialogDefaults.material(CouiTheme.isDark)
-    } else {
-        null
-    }
-
-@Composable
-private fun couiDialogPlacement(): CouiDialogPlacement =
-    if (LocalConfiguration.current.screenWidthDp >= 600) {
-        CouiDialogPlacement.Center
-    } else {
-        CouiDialogPlacement.Bottom
-    }
-
-@Composable
-private fun couiPrimaryActionColors(danger: Boolean = false): CouiDialogActionColors {
-    val accent = if (danger) {
-        CouiDialogDefaults.colors(CouiTheme.isDark).destructive
-    } else {
-        CouiTheme.colorScheme.accent
-    }
-    return CouiDialogDefaults.primaryActionColors(accent)
-}

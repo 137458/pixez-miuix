@@ -14,6 +14,8 @@
   - COUI 主题由 MIUIX 色板派生；筛选胶囊与底栏在 API 34+ 使用官方 `ChipTabRow`/`NavigationBar`（含凝光背景），低版本退回首屏可用的自绘平替。
   - 推荐、排行榜、特辑、动态四个一级标签接入 COUI 页面，分页/恢复/刷新逻辑复用皮肤无关状态（`HelloFeedState`、`RankingFeedState`、`SpotlightFeedState`、`NewFeedState`），搜索标签保持 MIUIX 回退。
   - 动态页皮肤无关状态下沉为 `NewFeedState`：登录态、动态可见性筛选、动态与追更分页、取消追更统一由同一实现承载，MIUIX 与 COUI 双页面共用；COUI 页使用官方 `Dialog`（API 33+ 且窗口具备背景采样时启用玻璃材质，否则退回不透明弹窗）承载未登录提示与取消追更确认。
+  - COUI 插画卡片补齐长按操作菜单：下载、复制信息、复制图片、复制链接、分享链接、屏蔽作品；动作编排抽取为皮肤无关的 `rememberIllustQuickActions`，MIUIX 底部菜单与 COUI 官方 `Dialog` 菜单共用同一套行为与 Toast 反馈，覆盖推荐、排行榜、动态三页。
+  - COUI 弹窗材质、排布与主操作配色收敛为 `CouiCommon.kt` 内的共享辅助，动态页与长按菜单统一遵循「API 33+ 且有背景采样启用玻璃，否则退回不透明」策略。
 
 ### 优化
 

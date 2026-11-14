@@ -1,8 +1,10 @@
 package com.perol.pixez.shared.ui.coui.component
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +30,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +40,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import android.os.Build
@@ -44,7 +56,14 @@ import androidx.annotation.RequiresApi
 import com.itos.coui.backdrop.rememberCouiBackdrop
 import com.itos.coui.chip.ChipTabRow
 import com.itos.coui.chip.CouiChipTabItem
+import com.itos.coui.dialog.CouiDialogAction
+import com.itos.coui.dialog.CouiDialogActionColors
+import com.itos.coui.dialog.CouiDialogDefaults
+import com.itos.coui.dialog.CouiDialogMaterial
+import com.itos.coui.dialog.CouiDialogPlacement
+import com.itos.coui.dialog.Dialog
 import com.itos.coui.layout.Scaffold
+import com.itos.coui.menu.rememberCouiWindowBackdrop
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -57,6 +76,7 @@ import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.rememberIllustQuickActions
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
@@ -121,13 +141,17 @@ internal fun CouiActionButton(
     }
 }
 
-/** COUI 插画卡片：封面 + 标题/作者；长按操作菜单暂未迁移（见交付报告）。 */
+/** COUI 插画卡片：封面 + 标题/作者，支持点击进入详情与长按操作菜单。 */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun CouiIllustCard(
     illust: Illust,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
+    val hapticFeedback = LocalHapticFeedback.current
     val settings = LocalSettingsRepository.current
     val changeVersion = settings.changeVersion.collectAsState().value
     val previewUrl = remember(illust, settings.feedPreviewQuality, changeVersion) {
@@ -151,7 +175,22 @@ internal fun CouiIllustCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
-            .clickable(onClick = onClick),
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                customActions = listOf(
+                    CustomAccessibilityAction(label = strings.menuMoreActions) {
+                        onLongClick()
+                        true
+                    },
+                )
+            }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            ),
     ) {
         Box(
             modifier = Modifier
@@ -261,6 +300,9 @@ internal fun CouiIllustGrid(
         }
     }
 
+    // 长按菜单一次只服务一张卡片，状态上提到栅格层，避免每张卡片各挂一个弹窗。
+    var menuIllust by remember { mutableStateOf<Illust?>(null) }
+
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
         state = state,
@@ -273,6 +315,7 @@ internal fun CouiIllustGrid(
             CouiIllustCard(
                 illust = illust,
                 onClick = { onIllustClick(illust.id) },
+                onLongClick = { menuIllust = illust },
             )
         }
         if (onLoadMore != null && (hasMore || isLoadingMore || loadMoreError != null)) {
@@ -289,6 +332,95 @@ internal fun CouiIllustGrid(
             }
         }
     }
+
+    val actionIllust = menuIllust
+    if (actionIllust != null) {
+        CouiIllustActionDialog(
+            illust = actionIllust,
+            onDismiss = { menuIllust = null },
+        )
+    }
+}
+
+/**
+ * COUI 插画长按菜单：官方 Dialog + 动作列表，动作编排复用
+ * [rememberIllustQuickActions]，与 MIUIX 卡片保持同一套行为与反馈。
+ */
+@Composable
+private fun CouiIllustActionDialog(
+    illust: Illust,
+    onDismiss: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    val actions = rememberIllustQuickActions(illust, onDismiss)
+    Dialog(
+        onDismissRequest = onDismiss,
+        visible = true,
+        material = couiDialogMaterialOrNull(),
+        title = strings.menuMoreActions,
+        placement = couiDialogPlacement(),
+        confirmAction = CouiDialogAction(text = strings.cancel, onClick = onDismiss),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            CouiDialogActionRow(text = strings.download, onClick = actions.onDownload)
+            CouiDialogActionRow(text = strings.menuCopyInfo, onClick = actions.onCopyInfo)
+            CouiDialogActionRow(text = strings.menuCopyImage, onClick = actions.onCopyImage)
+            CouiDialogActionRow(text = strings.menuCopyLink, onClick = actions.onCopyLink)
+            CouiDialogActionRow(text = strings.menuShareLink, onClick = actions.onShareLink)
+            CouiDialogActionRow(text = strings.menuBanWork, onClick = actions.onBan)
+        }
+    }
+}
+
+/** COUI 弹窗内的整行动作条目。 */
+@Composable
+private fun CouiDialogActionRow(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = text,
+            kind = CouiTextKind.ItemTitle,
+            color = CouiTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+/** COUI 弹窗材质：API 33+ 且窗口具备背景采样时启用玻璃，否则退回不透明。 */
+@Composable
+internal fun couiDialogMaterialOrNull(): CouiDialogMaterial? =
+    if (Build.VERSION.SDK_INT >= 33 && rememberCouiWindowBackdrop() != null) {
+        CouiDialogDefaults.material(CouiTheme.isDark)
+    } else {
+        null
+    }
+
+/** COUI 弹窗排布：宽屏居中，手机底部弹出。 */
+@Composable
+internal fun couiDialogPlacement(): CouiDialogPlacement =
+    if (LocalConfiguration.current.screenWidthDp >= 600) {
+        CouiDialogPlacement.Center
+    } else {
+        CouiDialogPlacement.Bottom
+    }
+
+/** 主操作配色：破坏性操作使用库内 destructive 色。 */
+@Composable
+internal fun couiPrimaryActionColors(danger: Boolean = false): CouiDialogActionColors {
+    val accent = if (danger) {
+        CouiDialogDefaults.colors(CouiTheme.isDark).destructive
+    } else {
+        CouiTheme.colorScheme.accent
+    }
+    return CouiDialogDefaults.primaryActionColors(accent)
 }
 
 @Composable

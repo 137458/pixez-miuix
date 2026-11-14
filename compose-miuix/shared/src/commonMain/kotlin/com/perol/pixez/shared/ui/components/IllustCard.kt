@@ -17,24 +17,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import coil3.compose.LocalPlatformContext
-import coil3.SingletonImageLoader
-import com.perol.pixez.shared.ui.LocalBanRepository
-import com.perol.pixez.shared.ui.LocalDownloadRepository
-import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.mapToPictureSource
-import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okio.FileSystem
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -93,81 +80,19 @@ fun IllustCard(
 
     val hapticFeedback = LocalHapticFeedback.current
     var showActionMenu by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalPlatformContext.current
-    val downloadRepository = LocalDownloadRepository.current
-    val banRepository = LocalBanRepository.current
-
-    // 长按菜单经全局 Toast 通道反馈，列表页无需逐层透传承载容器。
-    val toastSink = LocalToastSink.current
 
     if (showActionMenu) {
+        val actions = rememberIllustQuickActions(illust) { showActionMenu = false }
         IllustActionMenu(
-            show = showActionMenu,
+            show = true,
             showBan = true,
             onDismissRequest = { showActionMenu = false },
-            onDownload = {
-                showActionMenu = false
-                coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        downloadRepository.download(illust, pageIndex = 0)
-                    }
-                }
-            },
-            onCopyInfo = {
-                showActionMenu = false
-                runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = toastSink,
-                ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
-            },
-            onCopyImage = {
-                showActionMenu = false
-                coroutineScope.launch {
-                    // 缩略图降级沿用卡片自身的 pictureSource 改写，缓存缺失时静默不复制。
-                    suspendRunClipboardShare(
-                        success = ToastData(strings.imageCopySuccess, ToastType.Success),
-                        failurePrefix = strings.menuCopyImage,
-                        onToast = toastSink,
-                    ) {
-                        val candidateUrls = listOf(illust.imageUrls.large, illust.imageUrls.medium, illust.imageUrls.squareMedium)
-                        val transformedUrls = candidateUrls.map { it.mapToPictureSource(settings.pictureSource) }
-                        withContext(Dispatchers.IO) {
-                            val bytes = extractCachedImageBytes(context, transformedUrls)
-                            bytes?.let { IllustClipboard().copyImage(it) }
-                        }
-                    }
-                }
-            },
-            onCopyLink = {
-                showActionMenu = false
-                runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = toastSink,
-                ) { IllustClipboard().copy(buildIllustShareLink(illust)) }
-            },
-            onShareLink = {
-                showActionMenu = false
-                runClipboardShare(
-                    success = ToastData(strings.share, ToastType.Success),
-                    failurePrefix = strings.share,
-                    onToast = toastSink,
-                ) { IllustShare().share(buildIllustShareLink(illust), illust.title) }
-            },
-            onBan = {
-                showActionMenu = false
-                coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanIllust(
-                            illustId = illust.id,
-                            name = illust.title,
-                        )
-                        settings.notifyFilterChanged()
-                    }
-                }
-            },
+            onDownload = actions.onDownload,
+            onCopyInfo = actions.onCopyInfo,
+            onCopyImage = actions.onCopyImage,
+            onCopyLink = actions.onCopyLink,
+            onShareLink = actions.onShareLink,
+            onBan = actions.onBan,
         )
     }
 
