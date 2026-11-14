@@ -50,6 +50,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiAboutScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
+import com.perol.pixez.shared.ui.coui.page.CouiBookTagScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCopyTextSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadHistoryScreen
@@ -645,6 +646,18 @@ internal actual fun CouiThanksPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiThanksScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiBookTagPage(
+    onBack: () -> Unit,
+    onTagSearch: (String) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiBookTagScreen(
+        onBack = onBack,
+        onTagSearch = onTagSearch,
+    )
 }
 
 @Composable

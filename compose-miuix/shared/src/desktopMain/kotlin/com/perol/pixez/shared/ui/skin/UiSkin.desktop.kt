@@ -328,3 +328,12 @@ internal actual fun CouiThanksPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiBookTagPage(
+    onBack: () -> Unit,
+    onTagSearch: (String) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

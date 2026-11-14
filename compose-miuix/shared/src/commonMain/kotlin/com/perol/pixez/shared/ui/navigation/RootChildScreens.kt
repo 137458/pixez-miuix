@@ -17,6 +17,7 @@ import com.perol.pixez.shared.ui.skin.CouiAboutPage
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
 import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
 import com.perol.pixez.shared.ui.skin.CouiBoardPage
+import com.perol.pixez.shared.ui.skin.CouiBookTagPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiCopyTextSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
@@ -869,10 +870,21 @@ internal fun renderAbout(
 internal fun renderBookTag(
     component: RootComponent,
 ) {
-    BookTagScreen(
-        onBack = component::onBack,
-        onTagSearch = component::onSearchClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        BookTagScreen(
+            onBack = component::onBack,
+            onTagSearch = component::onSearchClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiBookTagPage(
+            onBack = component::onBack,
+            onTagSearch = component::onSearchClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
