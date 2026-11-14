@@ -64,10 +64,8 @@ import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
-import com.perol.pixez.shared.ui.screens.SauceNaoBottomSheet
 import com.perol.pixez.shared.ui.screens.SearchCoreState
 import com.perol.pixez.shared.ui.screens.SearchEmptyPhase
-import com.perol.pixez.shared.ui.screens.SearchFilterBottomSheet
 import com.perol.pixez.shared.ui.screens.SearchFilterState
 import com.perol.pixez.shared.ui.screens.SearchQueryTarget
 import com.perol.pixez.shared.ui.screens.applySearchClientFilters
@@ -300,15 +298,15 @@ internal fun CouiSearchScreen(
     }
 
     if (showFilterSheet) {
-        SearchFilterBottomSheet(
-            onDismissRequest = { showFilterSheet = false },
+        CouiSearchFilterDialog(
             filterState = core.filterState,
+            onDismissRequest = { showFilterSheet = false },
             onApply = core.onApplyFilters,
         )
     }
 
     if (showSauceNaoSheet) {
-        SauceNaoBottomSheet(
+        CouiSauceNaoDialog(
             isLoading = isSauceNaoLoading,
             error = sauceNaoError,
             results = sauceNaoResults,
