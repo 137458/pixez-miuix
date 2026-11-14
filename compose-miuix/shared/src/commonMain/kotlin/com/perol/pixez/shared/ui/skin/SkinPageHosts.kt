@@ -34,3 +34,21 @@ internal expect fun CouiMainTabPage(
     feedRestore: MainFeedRestore,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 插画详情页的 COUI 宿主：抢先在 [fallback] 之前渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiIllustDetailPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
+    onTagClick: (String) -> Unit,
+    onIllustClick: ((Long) -> Unit)?,
+    onNovelClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+)

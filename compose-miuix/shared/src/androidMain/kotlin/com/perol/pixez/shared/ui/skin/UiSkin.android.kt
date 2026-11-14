@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
+import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
@@ -276,4 +277,30 @@ internal actual fun CouiMainTabPage(
         // 其余标签尚未迁移：走 MIUIX 回退，功能与既有页面完全一致。
         else -> fallback()
     }
+}
+
+@Composable
+internal actual fun CouiIllustDetailPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
+    onTagClick: (String) -> Unit,
+    onIllustClick: ((Long) -> Unit)?,
+    onNovelClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    CouiIllustDetailScreen(
+        illustId = illustId,
+        onBack = onBack,
+        onUserClick = onUserClick,
+        onCommentsClick = onCommentsClick,
+        onRelatedIllustsClick = onRelatedIllustsClick,
+        onIllustSeriesClick = onIllustSeriesClick,
+        onTagClick = onTagClick,
+        onIllustClick = onIllustClick,
+        onNovelClick = onNovelClick,
+    )
 }

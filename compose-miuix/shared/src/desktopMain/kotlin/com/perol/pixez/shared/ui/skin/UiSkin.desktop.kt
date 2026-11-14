@@ -31,3 +31,19 @@ internal actual fun CouiMainTabPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiIllustDetailPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustSeriesClick: (Long) -> Unit,
+    onTagClick: (String) -> Unit,
+    onIllustClick: ((Long) -> Unit)?,
+    onNovelClick: ((Long) -> Unit)?,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

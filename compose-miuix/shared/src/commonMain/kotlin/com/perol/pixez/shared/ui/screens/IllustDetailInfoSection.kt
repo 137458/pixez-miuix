@@ -24,21 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustTag
-import com.perol.pixez.shared.data.repository.BookmarkRepository
-import com.perol.pixez.shared.data.repository.DownloadRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -61,17 +52,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun IllustDetailInfoCard(
     illust: Illust,
     isDownloading: Boolean,
-    isBookmarked: Boolean,
-    settings: SettingsRepository?,
     strings: AppStrings,
-    downloadRepository: DownloadRepository,
-    bookmarkRepository: BookmarkRepository,
-    coroutineScope: CoroutineScope,
-    onToast: (ToastData?) -> Unit,
-    onDownloadingChange: (Boolean) -> Unit,
-    onBookmarkedChange: (Boolean) -> Unit,
     onUserClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
+    onDownloadAll: () -> Unit,
 ) {
     Spacer(modifier = Modifier.height(12.dp))
     Card(
@@ -123,41 +107,7 @@ internal fun IllustDetailInfoCard(
                     summary = "${illust.pageCount} P",
                     onClick = {
                         if (isDownloading) return@BasicComponent
-                        coroutineScope.launch {
-                            try {
-                                onDownloadingChange(true)
-                                val tasks = downloadRepository.downloadAllPages(
-                                    illust = illust,
-                                    onProgress = { completed, total ->
-                                        onToast(ToastData("${strings.downloadStatusDownloading} $completed/$total", ToastType.Normal))
-                                    },
-                                    maxConcurrency = settings?.maxRunningTask ?: 2,
-                                )
-                                val successCount = tasks.count { it.status == DownloadStatus.Success }
-                                val failedCount = tasks.count { it.status == DownloadStatus.Failed }
-                                if (successCount > 0 && settings?.starAfterSave == true && !isBookmarked) {
-                                    coroutineScope.launch {
-                                        suspendRunCatchingNonCancel {
-                                            bookmarkRepository.addBookmark(
-                                                illustId = illust.id,
-                                                isPrivate = settings.defaultPrivateLike,
-                                            )
-                                        }.onSuccess {
-                                            onBookmarkedChange(true)
-                                        }
-                                    }
-                                }
-                                onToast(
-                                    when {
-                                        failedCount == 0 -> ToastData("${strings.downloadStatusSuccess}: $successCount/${tasks.size}", ToastType.Success)
-                                        successCount == 0 -> ToastData(strings.downloadStatusFailed, ToastType.Error)
-                                        else -> ToastData("${strings.downloadStatusSuccess}: $successCount, ${strings.downloadStatusFailed} $failedCount", ToastType.Normal)
-                                    },
-                                )
-                            } finally {
-                                onDownloadingChange(false)
-                            }
-                        }
+                        onDownloadAll()
                     },
                 )
             }

@@ -328,6 +328,23 @@ private fun IllustDetailSingleContent(
                         }
                     }
 
+                    val detailActions = rememberIllustDetailActions(
+                        illust = illust,
+                        isBookmarked = isBookmarked,
+                        isDownloading = isDownloading,
+                        settings = settings,
+                        strings = strings,
+                        coroutineScope = coroutineScope,
+                        repository = repository,
+                        bookmarkRepository = bookmarkRepository,
+                        downloadRepository = downloadRepository,
+                        onBookmarkedChange = { isBookmarked = it },
+                        onBookmarkLoadingChange = { isBookmarkLoading = it },
+                        onBookmarkErrorChange = { bookmarkError = it },
+                        onDownloadingChange = { isDownloading = it },
+                        onToast = { data -> data?.let(toastSink) },
+                    )
+
                     IllustDetailContentList(
                         illust = illust,
                         illustAspectRatio = illustAspectRatio,
@@ -338,15 +355,12 @@ private fun IllustDetailSingleContent(
                         detailBackdrop = detailBackdrop,
                         detailChromeAlpha = if (listState.firstVisibleItemIndex == 0) detailChromeAlpha else 1f,
                         repository = repository,
-                        bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
                         isDownloading = isDownloading,
-                        isBookmarked = isBookmarked,
                         coroutineScope = coroutineScope,
                         strings = strings,
                         onToast = { data -> data?.let(toastSink) },
-                        onDownloadingChange = { isDownloading = it },
-                        onBookmarkedChange = { isBookmarked = it },
+                        onDownloadAll = detailActions::downloadAll,
                         onFullScreen = { fullScreenPageIndex = it },
                         onUserClick = onUserClick,
                         onCommentsClick = onCommentsClick,
@@ -455,15 +469,12 @@ private fun IllustDetailContentList(
     detailBackdrop: LayerBackdrop?,
     detailChromeAlpha: Float = 1f,
     repository: IllustRepository,
-    bookmarkRepository: BookmarkRepository,
     downloadRepository: DownloadRepository,
     isDownloading: Boolean,
-    isBookmarked: Boolean,
     coroutineScope: CoroutineScope,
     strings: AppStrings,
     onToast: (ToastData?) -> Unit,
-    onDownloadingChange: (Boolean) -> Unit,
-    onBookmarkedChange: (Boolean) -> Unit,
+    onDownloadAll: () -> Unit,
     onFullScreen: (Int) -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
@@ -529,17 +540,10 @@ private fun IllustDetailContentList(
                 IllustDetailInfoCard(
                     illust = illust,
                     isDownloading = isDownloading,
-                    isBookmarked = isBookmarked,
-                    settings = settings,
                     strings = strings,
-                    downloadRepository = downloadRepository,
-                    bookmarkRepository = bookmarkRepository,
-                    coroutineScope = coroutineScope,
-                    onToast = onToast,
-                    onDownloadingChange = onDownloadingChange,
-                    onBookmarkedChange = onBookmarkedChange,
                     onUserClick = onUserClick,
                     onIllustSeriesClick = onIllustSeriesClick,
+                    onDownloadAll = onDownloadAll,
                 )
             }
         }

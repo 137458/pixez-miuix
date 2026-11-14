@@ -4,35 +4,23 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.platform.HapticType
-import com.perol.pixez.shared.platform.performHapticFeedback
-import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.components.IllustDetailTopBar
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.components.saveUgoiraIllust
-import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
 import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 /**
- * 作品详情页统一顶栏区块：封装「收藏 / 取消收藏」与「下载」两项业务操作逻辑，
- * 并将其接入 [IllustDetailTopBar]。
+ * 作品详情页统一顶栏区块：把收藏 / 下载动作接入 [IllustDetailTopBar]。
  *
- * 收藏态、下载态等页面级状态仍由 [IllustDetailSingleContent] 持有，
- * 此组件通过参数读取当前值、通过回调提交更新，自身不持有任何状态。
+ * 两项动作的实现收敛在 [rememberIllustDetailActions]，与 COUI 详情页共用同一份业务逻辑；
+ * 收藏态、下载态等页面级状态仍由页面持有，此组件仅读取并按结果回调提交。
  */
 @Composable
 internal fun IllustDetailTopBarSection(
@@ -60,143 +48,22 @@ internal fun IllustDetailTopBarSection(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // 提取通用业务操作逻辑
-    val performBookmark: () -> Unit = {
-        illust?.let { targetIllust ->
-            coroutineScope.launch {
-                try {
-                    onBookmarkLoadingChange(true)
-                    onBookmarkErrorChange(null)
-                    val wasBookmarked = isBookmarked
-                    suspendRunCatchingNonCancel {
-                        if (wasBookmarked) {
-                            bookmarkRepository.deleteBookmark(targetIllust.id)
-                        } else {
-                            val autoTags = if (settings?.autoTagWhenStar == true) {
-                                targetIllust.tags.map { tag -> tag.name }.take(10).joinToString(" ").ifBlank { null }
-                            } else null
-                            bookmarkRepository.addBookmark(
-                                illustId = targetIllust.id,
-                                isPrivate = settings?.defaultPrivateLike ?: false,
-                                tags = autoTags,
-                            )
-                        }
-                    }.onSuccess {
-                        performHapticFeedback(HapticType.Confirm)
-                        onBookmarkedChange(!wasBookmarked)
-                        if (!wasBookmarked) {
-                            if (settings?.saveAfterStar == true) {
-                                coroutineScope.launch {
-                                    onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
-                                    val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                                    onToast(
-                                        when (task.status) {
-                                            DownloadStatus.Success ->
-                                                ToastData(strings.downloadStatusSuccess, ToastType.Success)
-                                            DownloadStatus.Failed ->
-                                                ToastData(
-                                                    "${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}",
-                                                    ToastType.Error,
-                                                )
-                                            else -> null
-                                        },
-                                    )
-                                }
-                            }
-                            if (settings?.followAfterStar == true) {
-                                coroutineScope.launch {
-                                    suspendRunCatchingNonCancel {
-                                        bookmarkRepository.followUser(targetIllust.user.id)
-                                    }
-                                }
-                            }
-                        }
-                    }.onFailure { e ->
-                        performHapticFeedback(HapticType.Reject)
-                        onBookmarkErrorChange(PixivApiErrorFormatter.format(e, strings))
-                    }
-                } finally {
-                    onBookmarkLoadingChange(false)
-                }
-            }
-        }
-    }
-
-    val performDownload: () -> Unit = {
-        if (!isDownloading && illust != null) {
-            val targetIllust = illust
-            coroutineScope.launch {
-                try {
-                    onDownloadingChange(true)
-                    performHapticFeedback(HapticType.GestureStart)
-                    onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
-                    if (IllustType.isUgoira(targetIllust.type)) {
-                        val savedPath = saveUgoiraIllust(
-                            illust = targetIllust,
-                            illustRepository = repository,
-                            downloadRepository = downloadRepository,
-                        ).getOrThrow()
-                        if (settings?.starAfterSave == true && !isBookmarked) {
-                            coroutineScope.launch {
-                                suspendRunCatchingNonCancel {
-                                    bookmarkRepository.addBookmark(
-                                        illustId = targetIllust.id,
-                                        isPrivate = settings.defaultPrivateLike,
-                                    )
-                                }.onSuccess {
-                                    onBookmarkedChange(true)
-                                }
-                            }
-                        }
-                        performHapticFeedback(HapticType.Confirm)
-                        onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
-                    } else {
-                        val task = downloadRepository.download(targetIllust, pageIndex = 0)
-                        onToast(
-                            when (task.status) {
-                                DownloadStatus.Success -> {
-                                    performHapticFeedback(HapticType.Confirm)
-                                    if (settings?.starAfterSave == true && !isBookmarked) {
-                                        coroutineScope.launch {
-                                            suspendRunCatchingNonCancel {
-                                                bookmarkRepository.addBookmark(
-                                                    illustId = targetIllust.id,
-                                                    isPrivate = settings.defaultPrivateLike,
-                                                )
-                                            }.onSuccess {
-                                                onBookmarkedChange(true)
-                                            }
-                                        }
-                                    }
-                                    ToastData(strings.downloadStatusSuccess, ToastType.Success)
-                                }
-                                DownloadStatus.Failed -> {
-                                    performHapticFeedback(HapticType.Reject)
-                                    ToastData(
-                                        "${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}",
-                                        ToastType.Error,
-                                    )
-                                }
-                                else -> null
-                            },
-                        )
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    performHapticFeedback(HapticType.Reject)
-                    onToast(
-                        ToastData(
-                            PixivApiErrorFormatter.format(e, strings),
-                            ToastType.Error,
-                        ),
-                    )
-                } finally {
-                    onDownloadingChange(false)
-                }
-            }
-        }
-    }
+    val actions = rememberIllustDetailActions(
+        illust = illust,
+        isBookmarked = isBookmarked,
+        isDownloading = isDownloading,
+        settings = settings,
+        strings = strings,
+        coroutineScope = coroutineScope,
+        repository = repository,
+        bookmarkRepository = bookmarkRepository,
+        downloadRepository = downloadRepository,
+        onBookmarkedChange = onBookmarkedChange,
+        onBookmarkLoadingChange = onBookmarkLoadingChange,
+        onBookmarkErrorChange = onBookmarkErrorChange,
+        onDownloadingChange = onDownloadingChange,
+        onToast = onToast,
+    )
 
     // ── 统一锚点单层顶栏与液态玻璃操作菜单 ──
     IllustDetailTopBar(
@@ -206,9 +73,9 @@ internal fun IllustDetailTopBarSection(
         isBookmarked = isBookmarked,
         isBookmarkLoading = isBookmarkLoading,
         bookmarkHeartScale = bookmarkHeartScale,
-        onBookmarkClick = performBookmark,
+        onBookmarkClick = actions::bookmark,
         isDownloading = isDownloading,
-        onDownloadClick = performDownload,
+        onDownloadClick = actions::download,
         onBack = onBack,
         isBanned = isBanned,
         banRepository = banRepository,

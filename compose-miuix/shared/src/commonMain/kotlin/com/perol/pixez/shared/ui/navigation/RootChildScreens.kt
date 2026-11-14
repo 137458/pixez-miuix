@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -157,18 +158,36 @@ internal fun MainContent(
 internal fun renderIllustDetail(
     component: IllustDetailComponent,
 ) {
-    IllustDetailScreen(
-        illustId = component.illustId,
-        // Screen 的 onBack 为 () -> Unit，组件回调返回消费与否的 Boolean，此处丢弃返回值。
-        onBack = { component.onBack() },
-        onUserClick = component.onUserClick,
-        onCommentsClick = component.onCommentsClick,
-        onRelatedIllustsClick = component.onRelatedIllustsClick,
-        onIllustSeriesClick = component.onIllustSeriesClick,
-        onTagClick = component.onTagClick,
-        onIllustClick = component.onIllustClick,
-        onNovelClick = component.onNovelClick,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        IllustDetailScreen(
+            illustId = component.illustId,
+            // Screen 的 onBack 为 () -> Unit，组件回调返回消费与否的 Boolean，此处丢弃返回值。
+            onBack = { component.onBack() },
+            onUserClick = component.onUserClick,
+            onCommentsClick = component.onCommentsClick,
+            onRelatedIllustsClick = component.onRelatedIllustsClick,
+            onIllustSeriesClick = component.onIllustSeriesClick,
+            onTagClick = component.onTagClick,
+            onIllustClick = component.onIllustClick,
+            onNovelClick = component.onNovelClick,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiIllustDetailPage(
+            illustId = component.illustId,
+            onBack = { component.onBack() },
+            onUserClick = component.onUserClick,
+            onCommentsClick = component.onCommentsClick,
+            onRelatedIllustsClick = component.onRelatedIllustsClick,
+            onIllustSeriesClick = component.onIllustSeriesClick,
+            onTagClick = component.onTagClick,
+            onIllustClick = component.onIllustClick,
+            onNovelClick = component.onNovelClick,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
