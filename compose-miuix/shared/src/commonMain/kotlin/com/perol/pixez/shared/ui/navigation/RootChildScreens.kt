@@ -25,6 +25,7 @@ import com.perol.pixez.shared.ui.skin.CouiDataExportPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
+import com.perol.pixez.shared.ui.skin.CouiGuidePage
 import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
 import com.perol.pixez.shared.ui.skin.CouiUserListPage
@@ -985,10 +986,21 @@ internal fun renderSpotlightDetail(
 internal fun renderGuide(
     component: RootComponent,
 ) {
-    GuideScreen(
-        onLoginClick = component::onLoginClicked,
-        onFinish = component::onGuideFinished,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        GuideScreen(
+            onLoginClick = component::onLoginClicked,
+            onFinish = component::onGuideFinished,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiGuidePage(
+            onLoginClick = { component.onLoginClicked() },
+            onFinish = { component.onGuideFinished() },
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

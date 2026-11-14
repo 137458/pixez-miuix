@@ -68,6 +68,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiNetworkSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNovelScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDataExportScreen
+import com.perol.pixez.shared.ui.coui.page.CouiGuideScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLayoutSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUpdateSettingScreen
@@ -641,6 +642,18 @@ internal actual fun CouiSpotlightDetailPage(
         onIllustClick = onIllustClick,
         onUserClick = onUserClick,
         onArticleClick = onArticleClick,
+    )
+}
+
+@Composable
+internal actual fun CouiGuidePage(
+    onLoginClick: () -> Unit,
+    onFinish: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiGuideScreen(
+        onLoginClick = onLoginClick,
+        onFinish = onFinish,
     )
 }
 

@@ -401,3 +401,12 @@ internal actual fun CouiSpotlightDetailPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiGuidePage(
+    onLoginClick: () -> Unit,
+    onFinish: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
