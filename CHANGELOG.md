@@ -26,6 +26,7 @@
   - COUI 一级页面骨架接入顶栏折叠：推荐、排行榜、特辑、动态四页共用 `CouiPageScaffold` 的 nestedScroll 与折叠 `LargeTopAppBar`，正文留白随折叠位移实时收缩；页面无需各自挂接滚动行为。
   - COUI 顶栏动作图标与列表行图标按钮接入库的 `couiButtonFeedback` 按压蒙层，点击指示器置空，悬停/聚焦/按下反馈与 COUI 原生顶栏按钮一致。
   - COUI 自绘可点表面去除 Compose 默认涟漪：插画卡片、Spotlight 卡片、辅助胶囊、重试与占位动作统一改走 `couiPressFeedback` 按压蒙层，重试按钮抽为共享的内联文本按钮。
+  - COUI 搜索、排行榜、动态页的列表行与文本动作同步改用 `couiPressFeedback`：搜索建议/清空历史、画师与小说结果行、追更行、排行榜日期入口与弹窗文字按钮不再出现默认涟漪。
 
 ### 优化
 

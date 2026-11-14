@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingMode
@@ -153,10 +155,16 @@ private fun CouiTopBarTextAction(
     text: String,
     onClick: () -> Unit,
 ) {
+    val pressInteraction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction, list = false)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -253,12 +261,19 @@ private fun CouiDialogTextButton(
 ) {
     val scheme = CouiTheme.colorScheme
     val contentColor = if (enabled) scheme.onSurface else scheme.onSurfaceVariant
+    val pressInteraction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(50))
             .background(scheme.container)
-            .clickable(enabled = enabled, onClick = onClick)
+            .couiPressFeedback(pressInteraction, enabled = enabled)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {

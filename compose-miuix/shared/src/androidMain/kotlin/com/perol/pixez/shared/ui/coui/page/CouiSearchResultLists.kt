@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +57,7 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -249,10 +251,16 @@ private fun CouiUserPreviewRow(
         }.take(3)
     }
 
+    val pressInteraction = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -303,10 +311,16 @@ private fun CouiNovelRow(
     val strings = LocalStrings.current
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
 
+    val pressInteraction = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

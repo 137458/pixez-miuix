@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
@@ -305,12 +307,18 @@ private fun CouiWatchlistRow(
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
+    val pressInteraction = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),

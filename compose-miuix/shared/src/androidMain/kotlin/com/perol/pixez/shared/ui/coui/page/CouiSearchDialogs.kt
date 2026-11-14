@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
@@ -438,6 +440,7 @@ private fun CouiDialogTextAction(
     onClick: () -> Unit,
     primary: Boolean = false,
 ) {
+    val pressInteraction = remember { MutableInteractionSource() }
     Text(
         text = text,
         kind = CouiTextKind.ItemTitle,
@@ -445,7 +448,12 @@ private fun CouiDialogTextAction(
         maxLines = 1,
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction, list = false)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
@@ -460,10 +468,17 @@ private fun CouiSauceNaoResultRow(
     // 缩略图加载路径同口径闸门：非 HTTPS / 带凭据 / 非白名单 host 一律回退占位，不送入 coil。
     val safeThumbnail = remember(item.thumbnail) { SauceNaoParser.safeThumbnailUrl(item.thumbnail) }
 
-    CouiCard(modifier = Modifier.clickable(onClick = onClick)) {
+    val pressInteraction = remember { MutableInteractionSource() }
+    CouiCard {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .couiPressFeedback(pressInteraction)
+                .clickable(
+                    interactionSource = pressInteraction,
+                    indication = null,
+                    onClick = onClick,
+                )
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),

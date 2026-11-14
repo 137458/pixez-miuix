@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.ui.screens.SearchCoreState
@@ -547,13 +549,19 @@ private fun CouiSearchSuggestions(
                 }
             }
             item(key = "coui_search_history_clear") {
+                val pressInteraction = remember { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(CouiTheme.colorScheme.card)
-                        .clickable(onClick = core.onClearHistory)
+                        .couiPressFeedback(pressInteraction)
+                        .clickable(
+                            interactionSource = pressInteraction,
+                            indication = null,
+                            onClick = core.onClearHistory,
+                        )
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -600,6 +608,7 @@ private fun CouiSuggestionRow(
     text: String,
     onClick: () -> Unit,
 ) {
+    val pressInteraction = remember { MutableInteractionSource() }
     Text(
         text = text,
         kind = CouiTextKind.ItemTitle,
@@ -607,7 +616,12 @@ private fun CouiSuggestionRow(
         maxLines = 1,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 16.dp, vertical = 14.dp),
     )
 }
@@ -632,12 +646,19 @@ private fun CouiHintRow(
                 color = CouiTheme.colorScheme.onSurfaceVariant,
             )
             if (actionText != null && onAction != null) {
+                val pressInteraction = remember { MutableInteractionSource() }
                 Text(
                     text = actionText,
                     kind = CouiTextKind.ItemTitle,
                     color = CouiTheme.colorScheme.accent,
                     maxLines = 1,
-                    modifier = Modifier.clickable(onClick = onAction),
+                    modifier = Modifier
+                        .couiPressFeedback(pressInteraction)
+                        .clickable(
+                            interactionSource = pressInteraction,
+                            indication = null,
+                            onClick = onAction,
+                        ),
                 )
             }
         }
