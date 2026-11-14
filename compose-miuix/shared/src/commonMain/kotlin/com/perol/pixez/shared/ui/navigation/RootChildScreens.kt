@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
+import com.perol.pixez.shared.ui.skin.CouiHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
@@ -538,13 +539,25 @@ internal fun renderAccountEdit(
 internal fun renderHistory(
     component: RootComponent,
 ) {
-    HistoryScreen(
-        onBack = component::onBack,
-        // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
-        // 导航层仍使用 Int，在此处做类型转换。
-        onIllustClick = { component.onIllustClicked(it) },
-        onNovelClick = component::onNovelClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        HistoryScreen(
+            onBack = component::onBack,
+            // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
+            // 导航层仍使用 Int，在此处做类型转换。
+            onIllustClick = { component.onIllustClicked(it) },
+            onNovelClick = component::onNovelClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiHistoryPage(
+            onBack = component::onBack,
+            onIllustClick = { component.onIllustClicked(it) },
+            onNovelClick = component::onNovelClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
+import com.perol.pixez.shared.ui.coui.page.CouiHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNovelViewerScreen
@@ -384,6 +385,20 @@ internal actual fun CouiRelatedIllustsPage(
         illustId = illustId,
         onBack = onBack,
         onIllustClick = onIllustClick,
+    )
+}
+
+@Composable
+internal actual fun CouiHistoryPage(
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onNovelClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiHistoryScreen(
+        onBack = onBack,
+        onIllustClick = onIllustClick,
+        onNovelClick = onNovelClick,
     )
 }
 

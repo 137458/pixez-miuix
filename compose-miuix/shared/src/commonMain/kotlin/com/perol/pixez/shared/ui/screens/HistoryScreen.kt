@@ -346,7 +346,7 @@ fun HistoryScreen(
  * 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
  */
 @Composable
-private fun <T> rememberHistoryResult(
+internal fun <T> rememberHistoryResult(
     repository: Any?,
     refreshToken: Int,
     load: suspend () -> List<T>,
@@ -359,7 +359,7 @@ private fun <T> rememberHistoryResult(
  * 历史搜索过滤的公共脚手架：关键词去首尾空白后为空时返回全量，否则按谓词过滤。
  * 仅供 derivedStateOf 闭包调用，query 与结果 State 的读取保持在派生作用域内。
  */
-private fun <T> filterHistoryByQuery(
+internal fun <T> filterHistoryByQuery(
     items: List<T>,
     query: String,
     matches: (item: T, keyword: String) -> Boolean,
@@ -371,7 +371,7 @@ private fun <T> filterHistoryByQuery(
 /**
  * 按当前页签分发仓储操作：0 = 插画，其余 = 小说；清空与单条删除共用同一分发。
  */
-private suspend fun forActiveHistory(
+internal suspend fun forActiveHistory(
     selectedType: Int,
     onIllust: suspend () -> Unit,
     onNovel: suspend () -> Unit,
@@ -631,7 +631,7 @@ private fun NovelHistoryRow(
 /**
  * 将浏览时间的 epoch 毫秒格式化为本地时区的 yyyy-MM-dd HH:mm。
  */
-private fun formatNovelHistoryTime(epochMilli: Long): String {
+internal fun formatNovelHistoryTime(epochMilli: Long): String {
     val dateTime = Instant.fromEpochMilliseconds(epochMilli)
         .toLocalDateTime(TimeZone.currentSystemDefault())
     fun Int.pad2(): String = toString().padStart(2, '0')
