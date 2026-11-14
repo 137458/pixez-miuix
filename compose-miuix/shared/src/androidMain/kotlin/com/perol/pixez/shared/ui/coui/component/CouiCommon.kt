@@ -57,13 +57,16 @@ import androidx.annotation.RequiresApi
 import com.itos.coui.backdrop.rememberCouiBackdrop
 import com.itos.coui.chip.ChipTabRow
 import com.itos.coui.chip.CouiChipTabItem
-import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionColors
 import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.dialog.CouiDialogMaterial
 import com.itos.coui.dialog.CouiDialogPlacement
-import com.itos.coui.dialog.Dialog
 import com.itos.coui.layout.Scaffold
+import com.itos.coui.menu.CouiMenuAnchor
+import com.itos.coui.menu.CouiMenuItem
+import com.itos.coui.menu.Menu
+import com.itos.coui.menu.couiMenuAnchor
+import com.itos.coui.menu.rememberCouiMenuAnchor
 import com.itos.coui.menu.rememberCouiWindowBackdrop
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
@@ -313,9 +316,7 @@ internal fun CouiIllustGrid(
         }
     }
 
-    // 长按菜单一次只服务一张卡片，状态上提到栅格层，避免每张卡片各挂一个弹窗。
-    var menuIllust by remember { mutableStateOf<Illust?>(null) }
-
+    // 长按菜单用官方锚点菜单贴着被按卡片弹出：入栈到条目自身，随卡片回收一起销毁。
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
         state = state,
@@ -326,11 +327,21 @@ internal fun CouiIllustGrid(
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
-            CouiIllustCard(
-                illust = illust,
-                onClick = { onIllustClick(illust.id) },
-                onLongClick = { menuIllust = illust },
-            )
+            val menuAnchor = rememberCouiMenuAnchor()
+            var menuExpanded by remember { mutableStateOf(false) }
+            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+                CouiIllustCard(
+                    illust = illust,
+                    onClick = { onIllustClick(illust.id) },
+                    onLongClick = { menuAnchor.open { menuExpanded = true } },
+                )
+                CouiIllustActionMenu(
+                    illust = illust,
+                    expanded = menuExpanded,
+                    anchor = menuAnchor,
+                    onDismiss = { menuExpanded = false },
+                )
+            }
         }
         if (onLoadMore != null && (hasMore || isLoadingMore || loadMoreError != null)) {
             item(
@@ -346,66 +357,46 @@ internal fun CouiIllustGrid(
             }
         }
     }
-
-    val actionIllust = menuIllust
-    if (actionIllust != null) {
-        CouiIllustActionDialog(
-            illust = actionIllust,
-            onDismiss = { menuIllust = null },
-        )
-    }
 }
 
 /**
- * COUI 插画长按菜单：官方 Dialog + 动作列表，动作编排复用
+ * COUI 插画长按菜单：官方锚点菜单贴着卡片弹出，动作编排复用
  * [rememberIllustQuickActions]，与 MIUIX 卡片保持同一套行为与反馈。
  */
 @Composable
-private fun CouiIllustActionDialog(
+private fun CouiIllustActionMenu(
     illust: Illust,
+    expanded: Boolean,
+    anchor: CouiMenuAnchor,
     onDismiss: () -> Unit,
 ) {
     val strings = LocalStrings.current
     val actions = rememberIllustQuickActions(illust, onDismiss)
-    Dialog(
+    Menu(
+        expanded = expanded,
         onDismissRequest = onDismiss,
-        visible = true,
-        material = couiDialogMaterialOrNull(),
-        title = strings.menuMoreActions,
-        placement = couiDialogPlacement(),
-        confirmAction = CouiDialogAction(text = strings.cancel, onClick = onDismiss),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            CouiDialogActionRow(text = strings.download, onClick = actions.onDownload)
-            CouiDialogActionRow(text = strings.menuCopyInfo, onClick = actions.onCopyInfo)
-            CouiDialogActionRow(text = strings.menuCopyImage, onClick = actions.onCopyImage)
-            CouiDialogActionRow(text = strings.menuCopyLink, onClick = actions.onCopyLink)
-            CouiDialogActionRow(text = strings.menuShareLink, onClick = actions.onShareLink)
-            CouiDialogActionRow(text = strings.menuBanWork, onClick = actions.onBan)
-        }
-    }
-}
-
-/** COUI 弹窗内的整行动作条目。 */
-@Composable
-private fun CouiDialogActionRow(
-    text: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = text,
-            kind = CouiTextKind.ItemTitle,
-            color = CouiTheme.colorScheme.onSurface,
-            maxLines = 1,
-        )
-    }
+        anchor = anchor,
+        headerText = strings.menuMoreActions,
+        items = listOf(
+            CouiMenuItem(value = "download", text = strings.download),
+            CouiMenuItem(value = "copy_info", text = strings.menuCopyInfo),
+            CouiMenuItem(value = "copy_image", text = strings.menuCopyImage),
+            CouiMenuItem(value = "copy_link", text = strings.menuCopyLink),
+            CouiMenuItem(value = "share", text = strings.menuShareLink),
+            CouiMenuItem(value = "ban", text = strings.menuBanWork, dividerBefore = true),
+        ),
+        onItemClick = { item ->
+            onDismiss()
+            when (item.value) {
+                "download" -> actions.onDownload()
+                "copy_info" -> actions.onCopyInfo()
+                "copy_image" -> actions.onCopyImage()
+                "copy_link" -> actions.onCopyLink()
+                "share" -> actions.onShareLink()
+                "ban" -> actions.onBan()
+            }
+        },
+    )
 }
 
 /** COUI 弹窗材质：API 33+ 且窗口具备背景采样时启用玻璃，否则退回不透明。 */

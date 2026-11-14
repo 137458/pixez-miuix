@@ -22,6 +22,7 @@
   - 搜索筛选与 SauceNAO 抽屉改为 COUI 官方 `Dialog`：筛选草稿态涵盖匹配目标、H 不显示、AI 作品、收藏门槛、动图与比例过滤、发布时间范围，确认时统一提交；SauceNAO 覆盖上传中、失败重试、空结果与结果列表四态，错误文案与缩略图安全校验口径不变。
   - COUI 页面的滚动容器统一接入官方 `rememberCouiOverscrollEffect`：作品瀑布流、动态追更、特辑、搜索结果、推荐区与快捷筛选行改用 COUI 原生弹性回弹，替换 Compose 默认过滚动效果。
   - 修复 COUI 页面占位区直接展示原始异常文本的问题：推荐、排行榜、动态、特辑的加载失败文案统一经 `PixivApiErrorFormatter` 本地化，与 MIUIX 占位组件口径一致。
+  - COUI 插画长按菜单由弹窗改为官方锚点菜单：`couiMenuAnchor` + `Menu` 贴着被按卡片弹出，动作列表复用 `rememberIllustQuickActions`，下载/复制/分享/屏蔽行为不变；移除已无调用方的弹窗动作行。
 
 ### 优化
 
