@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +24,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.rememberHelloFeedState
@@ -73,16 +76,27 @@ internal fun CouiHelloScreen(
                 val currentUser = feed.user
                 val targetUserId = currentUser?.userId?.toLongOrNull()
                 if (currentUser != null && targetUserId != null) {
-                    PixivAsyncImage(
-                        model = currentUser.userImage,
-                        contentDescription = strings.myProfile,
-                        contentScale = ContentScale.Crop,
+                    val pressInteraction = remember { MutableInteractionSource() }
+                    Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .size(32.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .clickable { onUserClick(targetUserId) },
-                    )
+                            .couiPressFeedback(pressInteraction, list = false)
+                            .clickable(
+                                interactionSource = pressInteraction,
+                                indication = null,
+                            ) { onUserClick(targetUserId) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        PixivAsyncImage(
+                            model = currentUser.userImage,
+                            contentDescription = strings.myProfile,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
+                        )
+                    }
                 }
             }
             CouiActionButton(
