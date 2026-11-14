@@ -47,6 +47,7 @@ import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
+import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
 import com.perol.pixez.shared.ui.coui.page.CouiCommentsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDownloadTaskScreen
@@ -501,6 +502,14 @@ internal actual fun CouiHistoryPage(
         onIllustClick = onIllustClick,
         onNovelClick = onNovelClick,
     )
+}
+
+@Composable
+internal actual fun CouiBoardPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiBoardScreen(onBack = onBack)
 }
 
 @Composable

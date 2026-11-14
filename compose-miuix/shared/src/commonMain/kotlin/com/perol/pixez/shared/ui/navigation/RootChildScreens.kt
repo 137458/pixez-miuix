@@ -14,6 +14,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
+import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
@@ -673,9 +674,19 @@ internal fun renderDataExport(
 internal fun renderBoard(
     component: RootComponent,
 ) {
-    BoardScreen(
-        onBack = component::onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        BoardScreen(
+            onBack = component::onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiBoardPage(
+            onBack = component::onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

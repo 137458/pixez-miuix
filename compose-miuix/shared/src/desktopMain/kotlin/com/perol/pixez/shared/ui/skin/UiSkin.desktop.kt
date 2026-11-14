@@ -211,3 +211,11 @@ internal actual fun CouiSettingsPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiBoardPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
