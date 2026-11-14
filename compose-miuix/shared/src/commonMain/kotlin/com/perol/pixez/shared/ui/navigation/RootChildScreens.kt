@@ -28,6 +28,7 @@ import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiShieldPage
+import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
@@ -747,9 +748,19 @@ internal fun renderCopyTextSetting(
 internal fun renderWelcomePageSetting(
     onBack: () -> Unit,
 ) {
-    WelcomePageSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        WelcomePageSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiWelcomePageSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

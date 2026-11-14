@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -865,6 +866,71 @@ internal fun CouiSpotlightCard(
                     kind = CouiTextKind.ItemSummary,
                     color = CouiTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * COUI 单选行：标题（+可选摘要）与行尾圆点指示。
+ *
+ * COUI 库无单选行原语，按主题令牌自绘；选中态用 accent 圆点表达。
+ */
+@Composable
+internal fun CouiRadioRow(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    enabled: Boolean = true,
+) {
+    val scheme = CouiTheme.colorScheme
+    val pressInteraction = remember { MutableInteractionSource() }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .couiPressFeedback(pressInteraction, enabled = enabled)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                kind = CouiTextKind.ItemTitle,
+                color = if (enabled) scheme.onSurface else scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (summary != null) {
+                Text(
+                    text = summary,
+                    kind = CouiTextKind.ItemSummary,
+                    color = scheme.onSurfaceVariant,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(if (selected) scheme.accent else scheme.container),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(scheme.onAccent),
                 )
             }
         }

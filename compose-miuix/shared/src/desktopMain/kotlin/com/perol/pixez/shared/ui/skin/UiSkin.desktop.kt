@@ -246,3 +246,11 @@ internal actual fun CouiAiSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiWelcomePageSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
