@@ -42,6 +42,7 @@ import com.perol.pixez.shared.ui.skin.CouiThemeSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
+import com.perol.pixez.shared.ui.skin.CouiSearchPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiInteractionSettingPage
 import com.perol.pixez.shared.ui.skin.CouiLanguageSettingPage
@@ -507,12 +508,25 @@ internal fun renderSearch(
     instance: Config.Search,
     component: RootComponent,
 ) {
-    SearchScreen(
-        onIllustClick = component::onIllustClicked,
-        onUserClick = component::onUserClicked,
-        onNovelClick = component::onNovelClicked,
-        initialQuery = instance.query,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        SearchScreen(
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onNovelClick = component::onNovelClicked,
+            initialQuery = instance.query,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiSearchPage(
+            initialQuery = instance.query,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onNovelClick = component::onNovelClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

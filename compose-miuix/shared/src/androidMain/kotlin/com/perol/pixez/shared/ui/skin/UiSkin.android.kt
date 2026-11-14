@@ -71,6 +71,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiDataExportScreen
 import com.perol.pixez.shared.ui.coui.page.CouiGuideScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLayoutSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightDetailScreen
+import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUpdateSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
@@ -654,6 +655,22 @@ internal actual fun CouiGuidePage(
     CouiGuideScreen(
         onLoginClick = onLoginClick,
         onFinish = onFinish,
+    )
+}
+
+@Composable
+internal actual fun CouiSearchPage(
+    initialQuery: String,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onNovelClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiSearchScreen(
+        initialQuery = initialQuery,
+        onIllustClick = onIllustClick,
+        onUserClick = onUserClick,
+        onNovelClick = onNovelClick,
     )
 }
 

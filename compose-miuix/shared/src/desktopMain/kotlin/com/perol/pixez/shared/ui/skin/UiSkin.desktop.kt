@@ -410,3 +410,14 @@ internal actual fun CouiGuidePage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiSearchPage(
+    initialQuery: String,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onNovelClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
