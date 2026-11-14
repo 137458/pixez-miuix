@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiHistoryScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustSeriesScreen
 import com.perol.pixez.shared.ui.coui.page.CouiInteractionSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLoginScreen
+import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
 import com.perol.pixez.shared.ui.coui.page.CouiShieldScreen
@@ -585,6 +586,14 @@ internal actual fun CouiQualitySettingPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiQualitySettingScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiLanguageSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiLanguageSettingScreen(onBack = onBack)
 }
 
 @Composable

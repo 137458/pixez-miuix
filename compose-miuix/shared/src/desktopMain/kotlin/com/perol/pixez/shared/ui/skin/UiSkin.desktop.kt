@@ -278,3 +278,11 @@ internal actual fun CouiQualitySettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiLanguageSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
