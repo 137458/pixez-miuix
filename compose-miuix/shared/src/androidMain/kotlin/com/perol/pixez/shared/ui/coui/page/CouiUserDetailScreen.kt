@@ -77,6 +77,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
+import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
@@ -530,12 +531,14 @@ private fun CouiUserProfileHeader(
         openSafeUrl(url, strings, onError = { message -> onToast(ToastData(message, ToastType.Error)) })
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    // 阅读列：资料区在平板上收进可读宽度，避免账号/签名行横跨整屏。
+    CouiReadableColumn {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -616,6 +619,7 @@ private fun CouiUserProfileHeader(
                 collapsedMaxLines = 2,
             )
         }
+    }
     }
 }
 

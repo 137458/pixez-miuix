@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -60,6 +62,7 @@ import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.components.CommentEmojiText
@@ -235,8 +238,16 @@ internal fun CouiCommentsScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            when {
+            // 阅读列：列表与三态占位统一收敛到平板可读宽度。
+            Box(
+                modifier = Modifier
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+            ) {
+                when {
                 currentComments == null && pagedList.initialError == null -> CouiStatePlaceholder(
                     message = strings.loading,
                     modifier = Modifier.fillMaxSize(),
@@ -281,6 +292,7 @@ internal fun CouiCommentsScreen(
                     }
                 }
             }
+        }
         }
 
         CouiCommentInputBar(

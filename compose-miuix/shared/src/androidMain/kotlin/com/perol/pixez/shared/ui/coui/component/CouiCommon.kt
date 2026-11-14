@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
@@ -676,6 +677,30 @@ internal fun CouiCard(
             .background(CouiTheme.colorScheme.card),
         content = content,
     )
+}
+
+/**
+ * COUI 阅读列：内容居中并限制到 [AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP]。
+ *
+ * 用于阅读型内容（评论列表、用户资料区）与占位/空态，避免平板上的超长文本行；
+ * 画廊型页面不套这一层，列宽交给自适应网格。
+ */
+@Composable
+internal fun CouiReadableColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .fillMaxWidth(),
+            content = content,
+        )
+    }
 }
 
 /**
