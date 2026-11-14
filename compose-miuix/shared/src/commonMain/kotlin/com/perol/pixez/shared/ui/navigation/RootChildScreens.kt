@@ -33,6 +33,7 @@ import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiInteractionSettingPage
+import com.perol.pixez.shared.ui.skin.CouiQualitySettingPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
@@ -752,9 +753,19 @@ internal fun renderBoard(
 internal fun renderQualitySetting(
     onBack: () -> Unit,
 ) {
-    QualitySettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        QualitySettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiQualitySettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

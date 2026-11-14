@@ -936,3 +936,65 @@ internal fun CouiRadioRow(
         }
     }
 }
+
+/**
+ * COUI 下拉选择行：标题 + 当前值，点击贴着本行弹出官方菜单。
+ *
+ * COUI 库无下拉选择原语，用 [Menu] 锚点实现，选中项由调用方按索引回写。
+ */
+@Composable
+internal fun CouiSelectRow(
+    title: String,
+    items: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = CouiTheme.colorScheme
+    val anchor = rememberCouiMenuAnchor()
+    var expanded by remember { mutableStateOf(false) }
+    val pressInteraction = remember { MutableInteractionSource() }
+    Box(modifier = modifier.couiMenuAnchor(anchor)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .couiPressFeedback(pressInteraction)
+                .clickable(
+                    interactionSource = pressInteraction,
+                    indication = null,
+                    onClick = { anchor.open { expanded = true } },
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = title,
+                kind = CouiTextKind.ItemTitle,
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = items.getOrNull(selectedIndex).orEmpty(),
+                kind = CouiTextKind.ItemSummary,
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        Menu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            anchor = anchor,
+            headerText = title,
+            items = items.mapIndexed { index, label ->
+                CouiMenuItem(value = index.toString(), text = label)
+            },
+            onItemClick = { item ->
+                expanded = false
+                (item.value as? String)?.toIntOrNull()?.let(onSelect)
+            },
+        )
+    }
+}

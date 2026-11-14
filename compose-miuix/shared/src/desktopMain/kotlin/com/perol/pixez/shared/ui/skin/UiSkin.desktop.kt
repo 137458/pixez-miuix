@@ -270,3 +270,11 @@ internal actual fun CouiInteractionSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiQualitySettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
