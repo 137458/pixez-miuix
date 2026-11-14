@@ -47,6 +47,7 @@ import com.perol.pixez.shared.ui.skin.CouiLayoutSettingPage
 import com.perol.pixez.shared.ui.skin.CouiQualitySettingPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
+import com.perol.pixez.shared.ui.skin.CouiUpdateSettingPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -712,9 +713,19 @@ internal fun renderInteractionSetting(
 internal fun renderUpdateSetting(
     onBack: () -> Unit,
 ) {
-    UpdateSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        UpdateSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiUpdateSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
