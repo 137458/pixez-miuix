@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
@@ -244,12 +245,25 @@ internal fun renderComments(
     instance: Config.Comments,
     component: RootComponent,
 ) {
-    CommentsScreen(
-        illustId = instance.illustId,
-        onBack = component::onBack,
-        onUserClick = component::onUserClicked,
-        isNovel = instance.isNovel,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        CommentsScreen(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            isNovel = instance.isNovel,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiCommentsPage(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            isNovel = instance.isNovel,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

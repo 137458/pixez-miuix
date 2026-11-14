@@ -77,3 +77,14 @@ internal actual fun CouiNovelViewerPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiCommentsPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    isNovel: Boolean,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

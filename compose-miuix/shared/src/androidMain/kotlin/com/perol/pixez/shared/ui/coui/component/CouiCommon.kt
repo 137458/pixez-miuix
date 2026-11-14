@@ -718,6 +718,7 @@ internal fun CouiAssistChip(
 internal fun CouiPagingFooter(
     state: PagingFooterState,
     onRetry: () -> Unit,
+    noMoreText: String? = null,
 ) {
     val strings = LocalStrings.current
     val phase = state.phase
@@ -739,7 +740,7 @@ internal fun CouiPagingFooter(
                 onClick = onRetry,
             )
             PagingFooterPhase.NoMore -> Text(
-                text = strings.noMoreData,
+                text = noMoreText ?: strings.noMoreData,
                 kind = CouiTextKind.ItemSummary,
                 color = CouiTheme.colorScheme.onSurfaceVariant,
             )
