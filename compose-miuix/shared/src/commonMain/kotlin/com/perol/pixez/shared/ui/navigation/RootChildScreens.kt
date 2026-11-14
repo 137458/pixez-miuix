@@ -32,6 +32,7 @@ import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
 import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
+import com.perol.pixez.shared.ui.skin.CouiInteractionSettingPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
@@ -630,9 +631,19 @@ internal fun renderWidgetRecommendSetting(
 internal fun renderInteractionSetting(
     onBack: () -> Unit,
 ) {
-    InteractionSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        InteractionSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiInteractionSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable
