@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -96,6 +97,7 @@ internal fun CouiSpotlightScreen(
                         ),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalItemSpacing = 12.dp,
+                        overscrollEffect = rememberCouiOverscrollEffect(),
                     ) {
                         itemsIndexed(
                             items = articles,

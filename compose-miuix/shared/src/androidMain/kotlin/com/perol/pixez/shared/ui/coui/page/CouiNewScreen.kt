@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -269,6 +270,7 @@ private fun CouiWatchlistContent(
                     bottom = bottomBarPadding + 8.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                overscrollEffect = rememberCouiOverscrollEffect(),
             ) {
                 items(items = series, key = { it.id }, contentType = { "coui_watchlist" }) { item ->
                     CouiWatchlistRow(

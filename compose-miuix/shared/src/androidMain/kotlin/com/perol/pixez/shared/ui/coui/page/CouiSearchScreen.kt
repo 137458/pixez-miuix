@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.itos.coui.layout.Scaffold
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.search.SearchBar
 import com.itos.coui.search.rememberCouiSearchBarState
 import com.itos.coui.text.CouiTextKind
@@ -339,6 +340,7 @@ private fun CouiSearchQuickFilterRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         item(key = "sort") {
             CouiAssistChip(
@@ -468,6 +470,7 @@ private fun CouiSearchSuggestions(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 4.dp, bottom = bottomBarPadding + 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
+        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         if (queryTarget != null) {
             item(key = "coui_search_target") {

@@ -36,6 +36,7 @@ import coil3.compose.AsyncImage
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.switch.Switch
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
@@ -326,6 +327,7 @@ internal fun CouiSauceNaoDialog(
                             .fillMaxWidth()
                             .heightIn(max = 400.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
+                        overscrollEffect = rememberCouiOverscrollEffect(),
                     ) {
                         items(results, key = { it.illustId }) { item ->
                             CouiSauceNaoResultRow(

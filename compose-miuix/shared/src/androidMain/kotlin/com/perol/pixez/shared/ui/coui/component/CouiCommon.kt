@@ -65,6 +65,7 @@ import com.itos.coui.dialog.CouiDialogPlacement
 import com.itos.coui.dialog.Dialog
 import com.itos.coui.layout.Scaffold
 import com.itos.coui.menu.rememberCouiWindowBackdrop
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -311,6 +312,7 @@ internal fun CouiIllustGrid(
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 10.dp,
+        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
             CouiIllustCard(

@@ -20,6 +20,7 @@
   - 搜索页接入 COUI 皮肤：官方 `SearchBar` + 折叠 `LargeTopAppBar` 承载输入与搜索态，搜索类型用 `ChipTabRow` 胶囊切换，排序/AI 过滤/收藏门槛/筛选入口收敛为可独立选中的辅助胶囊；未搜索时展示 ID/URL 直达入口、热门标签与搜索历史，插画结果复用共享分页状态与 COUI 瀑布流。查询词、筛选条件、历史与热搜统一下沉为 `SearchCoreState`，插画结果分页下沉为 `SearchIllustResultsState`，MIUIX 与 COUI 双页面共用同一实现。
   - COUI 搜索页的画师与小说结果改为 COUI 实现：共用分页骨架（账号切换作废、触底预加载、重试计数与 `PagedListState` 一致），画师行展示头像/昵称/最近作品预览，小说行展示封面、系列、标题、作者与字数收藏统计。
   - 搜索筛选与 SauceNAO 抽屉改为 COUI 官方 `Dialog`：筛选草稿态涵盖匹配目标、H 不显示、AI 作品、收藏门槛、动图与比例过滤、发布时间范围，确认时统一提交；SauceNAO 覆盖上传中、失败重试、空结果与结果列表四态，错误文案与缩略图安全校验口径不变。
+  - COUI 页面的滚动容器统一接入官方 `rememberCouiOverscrollEffect`：作品瀑布流、动态追更、特辑、搜索结果、推荐区与快捷筛选行改用 COUI 原生弹性回弹，替换 Compose 默认过滚动效果。
 
 ### 优化
 
