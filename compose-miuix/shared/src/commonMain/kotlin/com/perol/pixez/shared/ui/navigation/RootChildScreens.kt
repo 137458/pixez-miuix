@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.skin.CouiAboutPage
 import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
 import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
 import com.perol.pixez.shared.ui.skin.CouiBoardPage
@@ -844,11 +845,23 @@ internal fun renderWelcomePageSetting(
 internal fun renderAbout(
     component: RootComponent,
 ) {
-    AboutScreen(
-        onBack = component::onBack,
-        onThanksClick = component::onThanksClicked,
-        onUpdateClick = component::onUpdateSettingClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        AboutScreen(
+            onBack = component::onBack,
+            onThanksClick = component::onThanksClicked,
+            onUpdateClick = component::onUpdateSettingClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiAboutPage(
+            onBack = component::onBack,
+            onThanksClick = component::onThanksClicked,
+            onUpdateClick = component::onUpdateSettingClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

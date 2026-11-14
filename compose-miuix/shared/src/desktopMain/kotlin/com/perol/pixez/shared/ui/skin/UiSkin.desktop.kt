@@ -310,3 +310,13 @@ internal actual fun CouiNetworkSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiAboutPage(
+    onBack: () -> Unit,
+    onThanksClick: () -> Unit,
+    onUpdateClick: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

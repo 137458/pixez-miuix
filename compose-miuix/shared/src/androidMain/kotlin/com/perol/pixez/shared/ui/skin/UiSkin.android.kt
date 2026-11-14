@@ -46,6 +46,7 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
+import com.perol.pixez.shared.ui.coui.page.CouiAboutScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAiSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiBoardScreen
@@ -621,6 +622,20 @@ internal actual fun CouiNetworkSettingPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiNetworkSettingScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiAboutPage(
+    onBack: () -> Unit,
+    onThanksClick: () -> Unit,
+    onUpdateClick: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiAboutScreen(
+        onBack = onBack,
+        onThanksClick = onThanksClick,
+        onUpdateClick = onUpdateClick,
+    )
 }
 
 @Composable
