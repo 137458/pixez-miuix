@@ -153,6 +153,23 @@ internal fun couiErrorMessage(error: Throwable?): String {
 }
 
 /**
+ * COUI 自绘可点表面的统一按压反馈：配合 `clickable(indication = null)` 使用，
+ * 去掉 Compose 默认涟漪，只保留库的 hover/focus/press 蒙层。
+ * [list] 保持默认的列表行口径：整卡/整行不做顶栏按钮那档强反馈。
+ */
+@Composable
+internal fun Modifier.couiPressFeedback(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean = true,
+    list: Boolean = true,
+): Modifier = couiButtonFeedback(
+    dark = CouiTheme.isDark,
+    interactionSource = interactionSource,
+    enabled = enabled,
+    list = list,
+)
+
+/**
  * 顶栏动作图标：40dp 圆形触区，不依赖 COUI 原厂按钮的 API 34 窗口特性。
  * 按压反馈走库的 [couiButtonFeedback]：hover/focus/press 蒙层与顶栏按钮同口径，
  * 点击指示器置空，避免在圆形实底上再叠一层涟漪。
@@ -201,6 +218,7 @@ internal fun CouiIllustCard(
 ) {
     val strings = LocalStrings.current
     val hapticFeedback = LocalHapticFeedback.current
+    val pressInteraction = remember { MutableInteractionSource() }
     val settings = LocalSettingsRepository.current
     val changeVersion = settings.changeVersion.collectAsState().value
     val previewUrl = remember(illust, settings.feedPreviewQuality, changeVersion) {
@@ -224,6 +242,7 @@ internal fun CouiIllustCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
+            .couiPressFeedback(pressInteraction)
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 customActions = listOf(
@@ -234,6 +253,8 @@ internal fun CouiIllustCard(
                 )
             }
             .combinedClickable(
+                interactionSource = pressInteraction,
+                indication = null,
                 onClick = onClick,
                 onLongClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -480,18 +501,10 @@ private fun CouiLoadMoreFooter(
                 kind = CouiTextKind.ItemSummary,
                 color = CouiTheme.colorScheme.onSurfaceVariant,
             )
-            error != null -> Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable(onClick = onRetry)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = strings.retry,
-                    kind = CouiTextKind.ItemTitle,
-                    color = CouiTheme.colorScheme.accent,
-                )
-            }
+            error != null -> CouiTextActionButton(
+                text = strings.retry,
+                onClick = onRetry,
+            )
         }
     }
 }
@@ -522,20 +535,32 @@ internal fun CouiStatePlaceholder(
                 color = CouiTheme.colorScheme.onSurface,
             )
             if (actionText != null && onAction != null) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable(onClick = onAction)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Text(
-                        text = actionText,
-                        kind = CouiTextKind.ItemTitle,
-                        color = CouiTheme.colorScheme.accent,
-                    )
-                }
+                CouiTextActionButton(text = actionText, onClick = onAction)
             }
         }
+    }
+}
+
+/** COUI 内联文本按钮：无底色，按下走库的按压蒙层，用于重试与占位动作。 */
+@Composable
+private fun CouiTextActionButton(text: String, onClick: () -> Unit) {
+    val pressInteraction = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = text,
+            kind = CouiTextKind.ItemTitle,
+            color = CouiTheme.colorScheme.accent,
+        )
     }
 }
 
@@ -650,11 +675,17 @@ internal fun CouiAssistChip(
     modifier: Modifier = Modifier,
 ) {
     val scheme = CouiTheme.colorScheme
+    val pressInteraction = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(50))
             .background(if (selected) scheme.accent else scheme.container)
-            .clickable(onClick = onClick)
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -688,18 +719,10 @@ internal fun CouiPagingFooter(
                 kind = CouiTextKind.ItemSummary,
                 color = CouiTheme.colorScheme.onSurfaceVariant,
             )
-            PagingFooterPhase.Retry -> Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable(onClick = onRetry)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = strings.retry,
-                    kind = CouiTextKind.ItemTitle,
-                    color = CouiTheme.colorScheme.accent,
-                )
-            }
+            PagingFooterPhase.Retry -> CouiTextActionButton(
+                text = strings.retry,
+                onClick = onRetry,
+            )
             PagingFooterPhase.NoMore -> Text(
                 text = strings.noMoreData,
                 kind = CouiTextKind.ItemSummary,
@@ -717,12 +740,18 @@ internal fun CouiSpotlightCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val pressInteraction = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
-            .clickable(onClick = onClick),
+            .couiPressFeedback(pressInteraction)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                onClick = onClick,
+            ),
     ) {
         PixivAsyncImage(
             model = article.thumbnail,
