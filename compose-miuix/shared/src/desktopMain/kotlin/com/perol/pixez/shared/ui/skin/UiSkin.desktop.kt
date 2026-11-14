@@ -98,3 +98,37 @@ internal actual fun CouiRelatedIllustsPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiSettingsPage(
+    onBack: () -> Unit,
+    onAboutClick: () -> Unit,
+    onShieldClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onDownloadHistoryClick: () -> Unit,
+    onThemeSettingClick: () -> Unit,
+    onNetworkSettingClick: () -> Unit,
+    onDownloadSettingClick: () -> Unit,
+    onLayoutSettingClick: () -> Unit,
+    onLanguageSettingClick: () -> Unit,
+    onWidgetRecommendSettingClick: () -> Unit,
+    onInteractionSettingClick: () -> Unit,
+    onQualitySettingClick: () -> Unit,
+    onCopyTextSettingClick: () -> Unit,
+    onWelcomePageSettingClick: () -> Unit,
+    onBookTagClick: () -> Unit,
+    onUpdateSettingClick: () -> Unit,
+    onAccountEditClick: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onDownloadTaskClick: () -> Unit,
+    onDataExportClick: () -> Unit,
+    onBoardClick: () -> Unit,
+    onGuideClick: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onUserBookmarksClick: (Long) -> Unit,
+    onAccountManageClick: () -> Unit,
+    onNovelBrowseClick: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

@@ -18,6 +18,7 @@ import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
+import com.perol.pixez.shared.ui.skin.CouiSettingsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -341,35 +342,71 @@ internal fun renderRecomUserList(
 internal fun renderSettingsPage(
     component: RootComponent,
 ) {
-    SettingsScreen(
-        onBack = component::onBack,
-        onUserClick = { userId -> component.onUserClicked(userId, 0) },
-        onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
-        onAboutClick = component::onAboutClicked,
-        onShieldClick = component::onShieldClicked,
-        onLoginClick = component::onLoginClicked,
-        onDownloadHistoryClick = component::onDownloadHistoryClicked,
-        onThemeSettingClick = component::onThemeSettingClicked,
-        onNetworkSettingClick = component::onNetworkSettingClicked,
-        onDownloadSettingClick = component::onDownloadSettingClicked,
-        onLayoutSettingClick = component::onLayoutSettingClicked,
-        onLanguageSettingClick = component::onLanguageSettingClicked,
-        onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
-        onInteractionSettingClick = component::onInteractionSettingClicked,
-        onQualitySettingClick = component::onQualitySettingClicked,
-        onCopyTextSettingClick = component::onCopyTextSettingClicked,
-        onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
-        onBookTagClick = component::onBookTagClicked,
-        onUpdateSettingClick = component::onUpdateSettingClicked,
-        onAccountEditClick = component::onAccountEditClicked,
-        onAccountManageClick = component::onAccountManageClicked,
-        onNovelBrowseClick = component::onNovelBrowseClicked,
-        onHistoryClick = component::onHistoryClicked,
-        onDownloadTaskClick = component::onDownloadTaskClicked,
-        onDataExportClick = component::onDataExportClicked,
-        onBoardClick = component::onBoardClicked,
-        onGuideClick = component::onGuideClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        SettingsScreen(
+            onBack = component::onBack,
+            onUserClick = { userId -> component.onUserClicked(userId, 0) },
+            onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
+            onAboutClick = component::onAboutClicked,
+            onShieldClick = component::onShieldClicked,
+            onLoginClick = component::onLoginClicked,
+            onDownloadHistoryClick = component::onDownloadHistoryClicked,
+            onThemeSettingClick = component::onThemeSettingClicked,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+            onDownloadSettingClick = component::onDownloadSettingClicked,
+            onLayoutSettingClick = component::onLayoutSettingClicked,
+            onLanguageSettingClick = component::onLanguageSettingClicked,
+            onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
+            onInteractionSettingClick = component::onInteractionSettingClicked,
+            onQualitySettingClick = component::onQualitySettingClicked,
+            onCopyTextSettingClick = component::onCopyTextSettingClicked,
+            onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
+            onBookTagClick = component::onBookTagClicked,
+            onUpdateSettingClick = component::onUpdateSettingClicked,
+            onAccountEditClick = component::onAccountEditClicked,
+            onAccountManageClick = component::onAccountManageClicked,
+            onNovelBrowseClick = component::onNovelBrowseClicked,
+            onHistoryClick = component::onHistoryClicked,
+            onDownloadTaskClick = component::onDownloadTaskClicked,
+            onDataExportClick = component::onDataExportClicked,
+            onBoardClick = component::onBoardClicked,
+            onGuideClick = component::onGuideClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiSettingsPage(
+            onBack = component::onBack,
+            onAboutClick = component::onAboutClicked,
+            onShieldClick = component::onShieldClicked,
+            onLoginClick = component::onLoginClicked,
+            onDownloadHistoryClick = component::onDownloadHistoryClicked,
+            onThemeSettingClick = component::onThemeSettingClicked,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+            onDownloadSettingClick = component::onDownloadSettingClicked,
+            onLayoutSettingClick = component::onLayoutSettingClicked,
+            onLanguageSettingClick = component::onLanguageSettingClicked,
+            onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
+            onInteractionSettingClick = component::onInteractionSettingClicked,
+            onQualitySettingClick = component::onQualitySettingClicked,
+            onCopyTextSettingClick = component::onCopyTextSettingClicked,
+            onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
+            onBookTagClick = component::onBookTagClicked,
+            onUpdateSettingClick = component::onUpdateSettingClicked,
+            onAccountEditClick = component::onAccountEditClicked,
+            onHistoryClick = component::onHistoryClicked,
+            onDownloadTaskClick = component::onDownloadTaskClicked,
+            onDataExportClick = component::onDataExportClicked,
+            onBoardClick = component::onBoardClicked,
+            onGuideClick = component::onGuideClicked,
+            onUserClick = { userId -> component.onUserClicked(userId, 0) },
+            onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
+            onAccountManageClick = component::onAccountManageClicked,
+            onNovelBrowseClick = component::onNovelBrowseClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

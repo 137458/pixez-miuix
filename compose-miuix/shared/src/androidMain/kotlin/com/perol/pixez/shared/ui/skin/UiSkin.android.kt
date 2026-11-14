@@ -54,6 +54,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiNovelViewerScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRelatedIllustsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
+import com.perol.pixez.shared.ui.coui.page.CouiSettingsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserDetailScreen
 import top.yukonga.miuix.kmp.theme.Colors
@@ -383,5 +384,67 @@ internal actual fun CouiRelatedIllustsPage(
         illustId = illustId,
         onBack = onBack,
         onIllustClick = onIllustClick,
+    )
+}
+
+@Composable
+internal actual fun CouiSettingsPage(
+    onBack: () -> Unit,
+    onAboutClick: () -> Unit,
+    onShieldClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onDownloadHistoryClick: () -> Unit,
+    onThemeSettingClick: () -> Unit,
+    onNetworkSettingClick: () -> Unit,
+    onDownloadSettingClick: () -> Unit,
+    onLayoutSettingClick: () -> Unit,
+    onLanguageSettingClick: () -> Unit,
+    onWidgetRecommendSettingClick: () -> Unit,
+    onInteractionSettingClick: () -> Unit,
+    onQualitySettingClick: () -> Unit,
+    onCopyTextSettingClick: () -> Unit,
+    onWelcomePageSettingClick: () -> Unit,
+    onBookTagClick: () -> Unit,
+    onUpdateSettingClick: () -> Unit,
+    onAccountEditClick: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onDownloadTaskClick: () -> Unit,
+    onDataExportClick: () -> Unit,
+    onBoardClick: () -> Unit,
+    onGuideClick: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onUserBookmarksClick: (Long) -> Unit,
+    onAccountManageClick: () -> Unit,
+    onNovelBrowseClick: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiSettingsScreen(
+        onBack = onBack,
+        onAboutClick = onAboutClick,
+        onShieldClick = onShieldClick,
+        onLoginClick = onLoginClick,
+        onDownloadHistoryClick = onDownloadHistoryClick,
+        onThemeSettingClick = onThemeSettingClick,
+        onNetworkSettingClick = onNetworkSettingClick,
+        onDownloadSettingClick = onDownloadSettingClick,
+        onLayoutSettingClick = onLayoutSettingClick,
+        onLanguageSettingClick = onLanguageSettingClick,
+        onWidgetRecommendSettingClick = onWidgetRecommendSettingClick,
+        onInteractionSettingClick = onInteractionSettingClick,
+        onQualitySettingClick = onQualitySettingClick,
+        onCopyTextSettingClick = onCopyTextSettingClick,
+        onWelcomePageSettingClick = onWelcomePageSettingClick,
+        onBookTagClick = onBookTagClick,
+        onUpdateSettingClick = onUpdateSettingClick,
+        onAccountEditClick = onAccountEditClick,
+        onHistoryClick = onHistoryClick,
+        onDownloadTaskClick = onDownloadTaskClick,
+        onDataExportClick = onDataExportClick,
+        onBoardClick = onBoardClick,
+        onGuideClick = onGuideClick,
+        onUserClick = onUserClick,
+        onUserBookmarksClick = onUserBookmarksClick,
+        onAccountManageClick = onAccountManageClick,
+        onNovelBrowseClick = onNovelBrowseClick,
     )
 }

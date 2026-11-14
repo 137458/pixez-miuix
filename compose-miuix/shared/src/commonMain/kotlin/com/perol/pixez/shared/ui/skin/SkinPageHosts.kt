@@ -111,3 +111,39 @@ internal expect fun CouiRelatedIllustsPage(
     onIllustClick: (Long) -> Unit,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 设置页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiSettingsPage(
+    onBack: () -> Unit,
+    onAboutClick: () -> Unit,
+    onShieldClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onDownloadHistoryClick: () -> Unit,
+    onThemeSettingClick: () -> Unit,
+    onNetworkSettingClick: () -> Unit,
+    onDownloadSettingClick: () -> Unit,
+    onLayoutSettingClick: () -> Unit,
+    onLanguageSettingClick: () -> Unit,
+    onWidgetRecommendSettingClick: () -> Unit,
+    onInteractionSettingClick: () -> Unit,
+    onQualitySettingClick: () -> Unit,
+    onCopyTextSettingClick: () -> Unit,
+    onWelcomePageSettingClick: () -> Unit,
+    onBookTagClick: () -> Unit,
+    onUpdateSettingClick: () -> Unit,
+    onAccountEditClick: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onDownloadTaskClick: () -> Unit,
+    onDataExportClick: () -> Unit,
+    onBoardClick: () -> Unit,
+    onGuideClick: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onUserBookmarksClick: (Long) -> Unit,
+    onAccountManageClick: () -> Unit,
+    onNovelBrowseClick: () -> Unit,
+    fallback: @Composable () -> Unit,
+)
