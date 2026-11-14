@@ -29,6 +29,7 @@ import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
 import com.perol.pixez.shared.ui.skin.CouiShieldPage
 import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
+import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
@@ -610,9 +611,19 @@ internal fun renderLanguageSetting(
 internal fun renderWidgetRecommendSetting(
     onBack: () -> Unit,
 ) {
-    WidgetRecommendSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        WidgetRecommendSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiWidgetRecommendPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

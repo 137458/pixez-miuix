@@ -254,3 +254,11 @@ internal actual fun CouiWelcomePageSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiWidgetRecommendPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
