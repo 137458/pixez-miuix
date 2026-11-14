@@ -66,6 +66,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiLoginScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNetworkSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNovelScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiDataExportScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLayoutSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUpdateSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
@@ -613,6 +614,14 @@ internal actual fun CouiUpdateSettingPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiUpdateSettingScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiDataExportPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiDataExportScreen(onBack = onBack)
 }
 
 @Composable

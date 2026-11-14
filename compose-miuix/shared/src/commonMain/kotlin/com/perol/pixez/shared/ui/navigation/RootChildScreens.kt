@@ -21,6 +21,7 @@ import com.perol.pixez.shared.ui.skin.CouiBoardPage
 import com.perol.pixez.shared.ui.skin.CouiBookTagPage
 import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiCopyTextSettingPage
+import com.perol.pixez.shared.ui.skin.CouiDataExportPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadSettingPage
 import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
@@ -797,9 +798,19 @@ internal fun renderDownloadTask(
 internal fun renderDataExport(
     component: RootComponent,
 ) {
-    DataExportScreen(
-        onBack = component::onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        DataExportScreen(
+            onBack = component::onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiDataExportPage(
+            onBack = { component.onBack() },
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

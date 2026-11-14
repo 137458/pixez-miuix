@@ -380,3 +380,11 @@ internal actual fun CouiUpdateSettingPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiDataExportPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
