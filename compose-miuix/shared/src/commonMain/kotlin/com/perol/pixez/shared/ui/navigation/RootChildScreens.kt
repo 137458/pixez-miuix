@@ -43,6 +43,7 @@ import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiInteractionSettingPage
 import com.perol.pixez.shared.ui.skin.CouiLanguageSettingPage
+import com.perol.pixez.shared.ui.skin.CouiLayoutSettingPage
 import com.perol.pixez.shared.ui.skin.CouiQualitySettingPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
@@ -635,9 +636,19 @@ internal fun renderDownloadSetting(
 internal fun renderLayoutSetting(
     onBack: () -> Unit,
 ) {
-    LayoutSettingScreen(
-        onBack = onBack,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        LayoutSettingScreen(
+            onBack = onBack,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiLayoutSettingPage(
+            onBack = onBack,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

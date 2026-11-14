@@ -364,3 +364,11 @@ internal actual fun CouiNovelPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiLayoutSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

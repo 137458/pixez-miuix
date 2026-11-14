@@ -438,3 +438,13 @@ internal expect fun CouiNovelPage(
     onUserClick: ((Long) -> Unit)?,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 布局设置页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiLayoutSettingPage(
+    onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+)
