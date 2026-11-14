@@ -78,6 +78,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
@@ -197,9 +198,10 @@ internal fun CouiHistoryScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            CouiHistoryTopBarAction(
+            CouiTextAction(
                 text = strings.actionClear,
                 enabled = hasHistory,
+                color = if (hasHistory) CouiTheme.colorScheme.accent else null,
                 onClick = { showClearConfirm = true },
             )
         }
@@ -338,38 +340,6 @@ internal fun CouiHistoryScreen(
                 text = strings.cancel,
                 onClick = { if (!isProcessing) itemToDelete = null },
             ),
-        )
-    }
-}
-
-/** 顶栏文本动作：无历史可清时置灰，保持与 MIUIX 版的可用态一致。 */
-@Composable
-private fun CouiHistoryTopBarAction(
-    text: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val scheme = CouiTheme.colorScheme
-    val pressInteraction = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .heightIn(min = 40.dp)
-            .clip(RoundedCornerShape(50))
-            .couiPressFeedback(pressInteraction, enabled = enabled, list = false)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            kind = CouiTextKind.ItemTitle,
-            color = if (enabled) scheme.accent else scheme.onSurfaceVariant,
-            maxLines = 1,
         )
     }
 }

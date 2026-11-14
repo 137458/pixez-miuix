@@ -23,6 +23,7 @@ import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
+import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
@@ -302,11 +303,23 @@ internal fun renderIllustSeries(
     instance: Config.IllustSeries,
     component: RootComponent,
 ) {
-    IllustSeriesScreen(
-        seriesId = instance.seriesId,
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        IllustSeriesScreen(
+            seriesId = instance.seriesId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiIllustSeriesPage(
+            seriesId = instance.seriesId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

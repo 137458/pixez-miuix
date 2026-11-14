@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
@@ -212,6 +213,42 @@ internal fun CouiActionButton(
             contentDescription = contentDescription,
             colorFilter = ColorFilter.tint(iconTint),
             modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+/**
+ * 顶栏文本动作：无图标容器，只有按压反馈与文字，供「清空」「追更」这类低频动作使用。
+ */
+@Composable
+internal fun CouiTextAction(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    color: Color? = null,
+) {
+    val scheme = CouiTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .heightIn(min = 40.dp)
+            .clip(RoundedCornerShape(50))
+            .couiPressFeedback(interactionSource, enabled = enabled, list = false)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            kind = CouiTextKind.ItemTitle,
+            color = color ?: if (enabled) scheme.onSurface else scheme.onSurfaceVariant,
+            maxLines = 1,
         )
     }
 }
