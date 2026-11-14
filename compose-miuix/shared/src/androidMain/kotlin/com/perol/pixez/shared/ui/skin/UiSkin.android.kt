@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.perol.pixez.shared.data.model.SpotlightArticle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -68,6 +69,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiNovelScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLanguageSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiDataExportScreen
 import com.perol.pixez.shared.ui.coui.page.CouiLayoutSettingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiSpotlightDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUpdateSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
@@ -622,6 +624,24 @@ internal actual fun CouiDataExportPage(
     fallback: @Composable () -> Unit,
 ) {
     CouiDataExportScreen(onBack = onBack)
+}
+
+@Composable
+internal actual fun CouiSpotlightDetailPage(
+    article: SpotlightArticle,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onArticleClick: (SpotlightArticle) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiSpotlightDetailScreen(
+        article = article,
+        onBack = onBack,
+        onIllustClick = onIllustClick,
+        onUserClick = onUserClick,
+        onArticleClick = onArticleClick,
+    )
 }
 
 @Composable

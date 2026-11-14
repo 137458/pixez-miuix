@@ -48,6 +48,7 @@ import com.perol.pixez.shared.ui.skin.CouiLayoutSettingPage
 import com.perol.pixez.shared.ui.skin.CouiQualitySettingPage
 import com.perol.pixez.shared.ui.skin.CouiLoginPage
 import com.perol.pixez.shared.ui.skin.CouiSettingsPage
+import com.perol.pixez.shared.ui.skin.CouiSpotlightDetailPage
 import com.perol.pixez.shared.ui.skin.CouiUpdateSettingPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
@@ -957,13 +958,27 @@ internal fun renderSpotlightDetail(
     instance: Config.SpotlightDetail,
     component: RootComponent,
 ) {
-    SpotlightDetailScreen(
-        article = instance.article,
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-        onUserClick = component::onUserClicked,
-        onArticleClick = component::onSpotlightArticleClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        SpotlightDetailScreen(
+            article = instance.article,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onArticleClick = component::onSpotlightArticleClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiSpotlightDetailPage(
+            article = instance.article,
+            onBack = { component.onBack() },
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onArticleClick = component::onSpotlightArticleClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

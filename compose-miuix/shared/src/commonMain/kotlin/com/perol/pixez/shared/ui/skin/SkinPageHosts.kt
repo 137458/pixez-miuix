@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.skin
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
@@ -466,5 +467,19 @@ internal expect fun CouiUpdateSettingPage(
 @Composable
 internal expect fun CouiDataExportPage(
     onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+)
+
+/**
+ * Spotlight 特辑详情页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiSpotlightDetailPage(
+    article: SpotlightArticle,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onArticleClick: (SpotlightArticle) -> Unit,
     fallback: @Composable () -> Unit,
 )

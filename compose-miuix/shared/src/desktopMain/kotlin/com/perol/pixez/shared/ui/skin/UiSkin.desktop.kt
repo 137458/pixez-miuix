@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.skin
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
@@ -384,6 +385,18 @@ internal actual fun CouiUpdateSettingPage(
 @Composable
 internal actual fun CouiDataExportPage(
     onBack: () -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}
+
+@Composable
+internal actual fun CouiSpotlightDetailPage(
+    article: SpotlightArticle,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onArticleClick: (SpotlightArticle) -> Unit,
     fallback: @Composable () -> Unit,
 ) {
     fallback()
