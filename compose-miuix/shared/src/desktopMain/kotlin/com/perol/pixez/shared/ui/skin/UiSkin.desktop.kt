@@ -88,3 +88,13 @@ internal actual fun CouiCommentsPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiRelatedIllustsPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

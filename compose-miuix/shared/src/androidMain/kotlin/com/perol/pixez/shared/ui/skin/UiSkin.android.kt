@@ -52,6 +52,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNovelViewerScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiRelatedIllustsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserDetailScreen
@@ -368,5 +369,19 @@ internal actual fun CouiCommentsPage(
         onBack = onBack,
         onUserClick = onUserClick,
         isNovel = isNovel,
+    )
+}
+
+@Composable
+internal actual fun CouiRelatedIllustsPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiRelatedIllustsScreen(
+        illustId = illustId,
+        onBack = onBack,
+        onIllustClick = onIllustClick,
     )
 }

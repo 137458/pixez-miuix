@@ -17,6 +17,7 @@ import com.perol.pixez.shared.ui.skin.CouiCommentsPage
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
 import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
+import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -271,11 +272,23 @@ internal fun renderRelatedIllusts(
     instance: Config.RelatedIllusts,
     component: RootComponent,
 ) {
-    RelatedIllustsScreen(
-        illustId = instance.illustId,
-        onBack = component::onBack,
-        onIllustClick = component::onIllustClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        RelatedIllustsScreen(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiRelatedIllustsPage(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

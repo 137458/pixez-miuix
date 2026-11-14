@@ -99,3 +99,15 @@ internal expect fun CouiCommentsPage(
     isNovel: Boolean,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 相关作品页的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiRelatedIllustsPage(
+    illustId: Long,
+    onBack: () -> Unit,
+    onIllustClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+)
