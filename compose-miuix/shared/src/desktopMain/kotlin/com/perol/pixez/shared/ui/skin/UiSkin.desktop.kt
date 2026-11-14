@@ -64,3 +64,16 @@ internal actual fun CouiUserDetailPage(
 ) {
     fallback()
 }
+
+@Composable
+internal actual fun CouiNovelViewerPage(
+    novelId: Long,
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    fallback()
+}

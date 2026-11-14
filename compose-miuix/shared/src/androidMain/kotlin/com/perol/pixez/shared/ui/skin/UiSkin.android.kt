@@ -49,6 +49,7 @@ import com.perol.pixez.shared.ui.state.UserDetailPageState
 import com.perol.pixez.shared.ui.coui.page.CouiHelloScreen
 import com.perol.pixez.shared.ui.coui.page.CouiIllustDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiNewScreen
+import com.perol.pixez.shared.ui.coui.page.CouiNovelViewerScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
@@ -330,5 +331,25 @@ internal actual fun CouiUserDetailPage(
         onRelatedUsersClick = onRelatedUsersClick,
         onUserNovelsClick = onUserNovelsClick,
         initialTab = initialTab,
+    )
+}
+
+@Composable
+internal actual fun CouiNovelViewerPage(
+    novelId: Long,
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+) {
+    CouiNovelViewerScreen(
+        novelId = novelId,
+        onBack = onBack,
+        onNovelClick = onNovelClick,
+        onIllustClick = onIllustClick,
+        onUserClick = onUserClick,
+        onCommentsClick = onCommentsClick,
     )
 }

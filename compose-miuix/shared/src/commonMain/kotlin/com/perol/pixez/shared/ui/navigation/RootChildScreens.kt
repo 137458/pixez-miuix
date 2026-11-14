@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
 import com.perol.pixez.shared.ui.skin.CouiMainTabPage
+import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
 import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -617,14 +618,29 @@ internal fun renderNovelViewer(
     instance: Config.NovelViewer,
     component: RootComponent,
 ) {
-    NovelViewerScreen(
-        novelId = instance.novelId,
-        onBack = component::onBack,
-        onNovelClick = component::onNovelClicked,
-        onIllustClick = component::onIllustClicked,
-        onUserClick = component::onUserClicked,
-        onCommentsClick = component::onNovelCommentsClicked,
-    )
+    val renderMiuix: @Composable () -> Unit = {
+        NovelViewerScreen(
+            novelId = instance.novelId,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onCommentsClick = component::onNovelCommentsClicked,
+        )
+    }
+    if (LocalUiSkin.current == UiSkin.COLOROS) {
+        CouiNovelViewerPage(
+            novelId = instance.novelId,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onCommentsClick = component::onNovelCommentsClicked,
+            fallback = renderMiuix,
+        )
+    } else {
+        renderMiuix()
+    }
 }
 
 @Composable

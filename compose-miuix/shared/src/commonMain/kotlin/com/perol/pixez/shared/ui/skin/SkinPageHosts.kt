@@ -71,3 +71,18 @@ internal expect fun CouiUserDetailPage(
     initialTab: Int,
     fallback: @Composable () -> Unit,
 )
+
+/**
+ * 小说阅读器（小说详情）的 COUI 宿主：抢先渲染 COUI 版本；
+ * 平台不支持或 COUI 版不可用时执行 [fallback] 的 MIUIX 页面。
+ */
+@Composable
+internal expect fun CouiNovelViewerPage(
+    novelId: Long,
+    onBack: () -> Unit,
+    onNovelClick: (Long) -> Unit,
+    onIllustClick: (Long) -> Unit,
+    onUserClick: (Long) -> Unit,
+    onCommentsClick: (Long) -> Unit,
+    fallback: @Composable () -> Unit,
+)
