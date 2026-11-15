@@ -294,10 +294,11 @@ private fun CouiAdapterWidthSlider(
                 }
             }
 
-            // 库 Slider 的分工正好对上原自绘滑块：onValueChange 连续回传只在本地更新预览，
+            // 库 Slider 的分工与自绘滑块一致：onValueChange 连续回传只在本地更新预览，
             // onValueChangeFinished 在抬手/取消时触发，落盘只发生一次。
-            // colors 不传即库默认令牌（CouiSliderDefaults.colors(accent, isDark, enabled)），
-            // 不再自绘轨道配色，避免与 COUI 其他控件色板漂移。
+            // 库控件自带 disabled 与 Progress 语义（javap 见 SemanticsPropertiesKt.disabled/setProgress），
+            // 读屏可播报并调节数值；colors 不传即库默认令牌
+            // （CouiSliderDefaults.colors(accent, isDark, enabled)），不再自绘轨道配色。
             Slider(
                 modifier = Modifier.fillMaxWidth(),
                 value = sliderValue,

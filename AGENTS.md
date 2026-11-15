@@ -43,3 +43,5 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 | 路线追踪 | `Global_TODO.md` | 优先级任务清单、架构决策结论、历史落地归档 |
 | 跨会话状态 | `CONTEXT.md` | 本地会话记忆、系统安全不变量、环境踩坑与构建调优 |
 | 发版规范 | `RELEASE_NOTES_GUIDE.md` | CHANGELOG 维护准则、发版流程与 Release 模板 |
+
+> `MIUIX_Spec.md`、`Code_Wiki.md`、`Global_TODO.md`、`CONTEXT.md` 由 `.gitignore` 忽略，只存在于本地工作区、不随仓库分发；改动这些文档不会进入提交，修改后需本地留存。
