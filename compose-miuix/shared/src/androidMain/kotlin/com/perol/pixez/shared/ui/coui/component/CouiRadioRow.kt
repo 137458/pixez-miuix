@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.radiobutton.RadioButton
@@ -27,6 +29,9 @@ import com.itos.coui.theme.CouiTheme
  * 点击语义挂在整行上（[selectable] 自带 role = [Role.RadioButton]），行尾的库
  * [RadioButton] 只传 selected 作视觉指示：库控件没有 onClick 参数，正好避免出现
  * 第二个可点目标让读屏焦点与点击热区分散。
+ *
+ * 行尾指示器的语义被清除（[Box] + [clearAndSetSemantics]，只清语义、不影响绘制与测量），
+ * 读屏只播报整行的单选状态与标题，不会因库控件自带选中语义而重复播报。
  */
 @Composable
 internal fun CouiRadioRow(
@@ -71,6 +76,8 @@ internal fun CouiRadioRow(
                 )
             }
         }
-        RadioButton(selected = selected, enabled = enabled)
+        Box(modifier = Modifier.clearAndSetSemantics { }) {
+            RadioButton(selected = selected, enabled = enabled)
+        }
     }
 }
