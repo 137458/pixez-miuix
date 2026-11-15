@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.utils.insertTextAtSelection
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -206,28 +207,6 @@ private fun InsertChip(
             style = MiuixTheme.textStyles.footnote2,
         )
     }
-}
-
-/**
- * 在 TextFieldValue 的当前选区位置插入文本。
- * 若存在选区则替换选区内容，否则在光标处插入。
- * 插入完成后将光标置于插入文本末尾。
- */
-internal fun insertTextAtSelection(
-    textFieldValue: TextFieldValue,
-    insertText: String,
-): TextFieldValue {
-    val selection = textFieldValue.selection
-    val newText = textFieldValue.text.replaceRange(
-        selection.start,
-        selection.end,
-        insertText,
-    )
-    val newCursor = selection.start + insertText.length
-    return textFieldValue.copy(
-        text = newText,
-        selection = TextRange(newCursor, newCursor),
-    )
 }
 
 /**

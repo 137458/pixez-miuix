@@ -62,6 +62,8 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.SquircleShape
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
+import com.perol.pixez.shared.ui.utils.rememberHistoryResult
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -337,35 +339,6 @@ fun HistoryScreen(
             )
         }
     }
-}
-
-/**
- * 通用历史记录加载：以仓储实例与 [refreshToken] 为 key 的 [produceState] 包装，
- * 插画与小说两页签共用；value 为 null 表示首次加载中。
- *
- * 仓库内部已切换 IO 调度器，调用方无需再包 withContext。
- */
-@Composable
-internal fun <T> rememberHistoryResult(
-    repository: Any?,
-    refreshToken: Int,
-    load: suspend () -> List<T>,
-): State<Result<List<T>>?> =
-    produceState<Result<List<T>>?>(initialValue = null, repository, refreshToken) {
-        value = suspendRunCatchingNonCancel { load() }
-    }
-
-/**
- * 历史搜索过滤的公共脚手架：关键词去首尾空白后为空时返回全量，否则按谓词过滤。
- * 仅供 derivedStateOf 闭包调用，query 与结果 State 的读取保持在派生作用域内。
- */
-internal fun <T> filterHistoryByQuery(
-    items: List<T>,
-    query: String,
-    matches: (item: T, keyword: String) -> Boolean,
-): List<T> {
-    val trimmed = query.trim()
-    return if (trimmed.isEmpty()) items else items.filter { matches(it, trimmed) }
 }
 
 /**
