@@ -81,18 +81,21 @@ fun IllustCard(
     val hapticFeedback = LocalHapticFeedback.current
     var showActionMenu by remember { mutableStateOf(false) }
 
+    // 快捷操作无条件组合：helper 内部持有 rememberCoroutineScope，
+    // 若挂在 showActionMenu 条件组内，菜单关闭瞬间作用域随之取消，
+    // 长按后发起的下载/复制图片协程会被中途取消。
+    val quickActions = rememberIllustQuickActions(illust) { showActionMenu = false }
     if (showActionMenu) {
-        val actions = rememberIllustQuickActions(illust) { showActionMenu = false }
         IllustActionMenu(
             show = true,
             showBan = true,
             onDismissRequest = { showActionMenu = false },
-            onDownload = actions.onDownload,
-            onCopyInfo = actions.onCopyInfo,
-            onCopyImage = actions.onCopyImage,
-            onCopyLink = actions.onCopyLink,
-            onShareLink = actions.onShareLink,
-            onBan = actions.onBan,
+            onDownload = quickActions.onDownload,
+            onCopyInfo = quickActions.onCopyInfo,
+            onCopyImage = quickActions.onCopyImage,
+            onCopyLink = quickActions.onCopyLink,
+            onShareLink = quickActions.onShareLink,
+            onBan = quickActions.onBan,
         )
     }
 
