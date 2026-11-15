@@ -13,7 +13,7 @@ import com.perol.pixez.shared.ui.AppConstants
  * Android 原生快捷设置瓷贴服务（Quick Settings Tile）。
  *
  * 点击后秒级唤起 PixEz 并直达插画与漫画搜索页面。
- * 原生兼容 Android 7.0 (API 24) 及以上所有终端设备。
+ * 原生兼容 Android 12 (API 31) 及以上所有终端设备。
  */
 class PixEzQuickSearchTileService : TileService() {
 

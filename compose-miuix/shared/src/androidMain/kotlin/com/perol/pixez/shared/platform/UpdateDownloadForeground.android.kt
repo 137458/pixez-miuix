@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import com.perol.pixez.shared.R
@@ -89,21 +88,14 @@ class UpdateDownloadService : Service() {
     }
 
     private fun startForegroundCompat(notification: Notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        // minSdk 31 恒高于 Q（29）：带类型的 startForeground 恒可用，旧的无类型重载不再需要。
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         isForeground = true
     }
 
-    @Suppress("DEPRECATION")
     private fun stopForegroundCompat() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            stopForeground(true)
-        }
+        // minSdk 31 恒高于 N（24），带标志位的 stopForeground 恒可用，不再回退到已废弃的布尔重载。
+        stopForeground(STOP_FOREGROUND_REMOVE)
         isForeground = false
     }
 

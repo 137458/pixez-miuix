@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import com.perol.pixez.shared.R
@@ -24,7 +23,6 @@ internal fun ensureDownloadNotificationChannel(
     nameRes: Int,
     descriptionRes: Int,
 ) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
     // 渠道名与描述允许原地更新，故应用内语言变更时也要重建，否则渠道一直停在旧语言。
     val localized = context.localizedForAppLanguage()
@@ -49,7 +47,6 @@ internal fun ensureDownloadNotificationChannel(
  * 等于每 500ms 调一次系统接口，既无意义也会与新建渠道竞争。
  */
 fun migrateLegacyDownloadChannels(context: Context) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
     listOf(LEGACY_DOWNLOAD_CHANNEL_ID, LEGACY_UPDATE_DOWNLOAD_CHANNEL_ID).forEach { channelId ->
         runCatching { manager.deleteNotificationChannel(channelId) }

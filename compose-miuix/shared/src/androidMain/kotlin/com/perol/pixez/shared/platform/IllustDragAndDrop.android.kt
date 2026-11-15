@@ -3,8 +3,6 @@ package com.perol.pixez.shared.platform
 import android.content.ClipData
 import android.content.Context
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
 import android.view.View
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.runtime.Composable
@@ -98,11 +96,8 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
                 ClipData.newPlainText(illust.title, url)
             }
 
-            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
-            } else {
-                0
-            }
+            // minSdk 31 恒高于 N（24），全局拖拽标志恒可用，不再保留 0 回退。
+            val flags = View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
 
             DragAndDropTransferData(
                 clipData = clipData,
