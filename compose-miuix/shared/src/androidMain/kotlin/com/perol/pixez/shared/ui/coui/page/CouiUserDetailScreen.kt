@@ -44,6 +44,7 @@ import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
 import com.itos.coui.menu.rememberCouiMenuAnchor
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -52,7 +53,6 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -92,7 +92,6 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -887,6 +886,7 @@ private fun CouiUserTabPlaceholderList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
+        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         item(key = "coui_user_tab_header", contentType = "coui_user_tab_header") {
             header()

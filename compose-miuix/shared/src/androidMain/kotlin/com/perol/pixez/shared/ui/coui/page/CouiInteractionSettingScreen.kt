@@ -14,16 +14,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 交互设置页：固定顶栏 + 开关分组卡片。

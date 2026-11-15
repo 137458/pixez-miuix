@@ -9,17 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,11 +38,9 @@ import com.itos.coui.switch.Switch
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.data.model.SauceNaoParser
 import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
@@ -55,6 +49,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.SearchFilterState
@@ -397,7 +392,7 @@ internal fun CouiSwitchRow(
     }
 }
 
-/** COUI 风格日期输入框：COUI 无文本输入原语，用 `BasicTextField` 套官方容器样式。 */
+/** COUI 风格日期输入框：统一走 CouiTextInput，弹窗里铺 surface 底色以区分弹层背景。 */
 @Composable
 private fun CouiDateField(
     value: String,
@@ -405,32 +400,13 @@ private fun CouiDateField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scheme = CouiTheme.colorScheme
-    Box(
-        modifier = modifier
-            .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(scheme.surface)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (value.isEmpty()) {
-            Text(
-                text = placeholder,
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            textStyle = LocalCouiTextStyle.current.copy(color = scheme.onSurface),
-            cursorBrush = SolidColor(scheme.accent),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    CouiTextInput(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        modifier = modifier.fillMaxWidth(),
+        containerColor = CouiTheme.colorScheme.surface,
+    )
 }
 
 /** 弹窗内的文字动作：主次两档，主档用强调色。 */

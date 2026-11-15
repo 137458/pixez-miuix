@@ -7,7 +7,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -31,7 +29,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -45,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -53,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -61,7 +58,6 @@ import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
 import com.perol.pixez.shared.data.model.isLoggedIn
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.CommentEmojiText
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -74,8 +70,10 @@ import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
+import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
@@ -88,7 +86,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.emoji_304
 import pixez_miuix.shared.generated.resources.Res
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Send
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -222,12 +219,7 @@ internal fun CouiCommentsScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             // 阅读列：列表与三态占位统一收敛到平板可读宽度。
-            Box(
-                modifier = Modifier
-                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                    .fillMaxWidth()
-                    .fillMaxHeight(),
-            ) {
+            CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
                 when {
                 currentComments == null && pagedList.initialError == null -> CouiStatePlaceholder(
                     message = strings.loading,
@@ -246,6 +238,7 @@ internal fun CouiCommentsScreen(
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
                     contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -376,36 +369,24 @@ private fun CouiCommentInputBar(
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(50))
-                    .background(scheme.container)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-            ) {
-                if (text.isEmpty()) {
-                    Text(
-                        text = when {
-                            isLoggedIn == false -> strings.commentsLoginToComment
-                            replyTarget != null -> strings.commentsReplyPlaceholder
-                            else -> strings.commentsPublishPlaceholder
-                        },
-                        kind = CouiTextKind.ItemSummary,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                BasicTextField(
-                    value = text,
-                    onValueChange = onTextChange,
-                    enabled = inputEnabled,
-                    textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp, lineHeight = 20.sp),
-                    cursorBrush = SolidColor(scheme.accent),
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            CouiTextInput(
+                value = text,
+                onValueChange = onTextChange,
+                // 占位文案要区分未登录、回复与普通发布三种语境。
+                placeholder = when {
+                    isLoggedIn == false -> strings.commentsLoginToComment
+                    replyTarget != null -> strings.commentsReplyPlaceholder
+                    else -> strings.commentsPublishPlaceholder
+                },
+                enabled = inputEnabled,
+                singleLine = false,
+                maxLines = 3,
+                textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp, lineHeight = 20.sp),
+                modifier = Modifier.weight(1f),
+                // 输入框与输入栏其它圆角控件统一成胶囊。
+                shape = RoundedCornerShape(50),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            )
             Spacer(modifier = Modifier.width(8.dp))
             CouiSendButton(
                 isSending = isSending,

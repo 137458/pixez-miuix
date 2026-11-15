@@ -1,9 +1,7 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,24 +27,20 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
+import com.itos.coui.slider.Slider
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -64,14 +57,13 @@ import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import kotlin.math.max
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 布局设置页：固定顶栏 + 分组卡片。
  *
  * 底栏模式、平板模式、竖屏/横屏列数与自适应阈值的取值与回写口径与 MIUIX 版一致。
- * COUI 库无滑块原语，自适应阈值用自绘轨道滑块 + 数值行内输入保留连续调节与精确输入。
+ * 自适应阈值用 COUI 库 Slider + 数值行内输入保留连续调节与精确输入：拖动中只更新预览值，松手才落盘，
+ * 与 MIUIX 版的写入时机一致（每帧写设置会让阈值抖动且放大磁盘写入）。
  */
 @Composable
 internal fun CouiLayoutSettingScreen(
@@ -302,11 +294,16 @@ private fun CouiAdapterWidthSlider(
                 }
             }
 
-            CouiTrackSlider(
+            // 库 Slider 的分工正好对上原自绘滑块：onValueChange 连续回传只在本地更新预览，
+            // onValueChangeFinished 在抬手/取消时触发，落盘只发生一次。
+            // colors 不传即库默认令牌（CouiSliderDefaults.colors(accent, isDark, enabled)），
+            // 不再自绘轨道配色，避免与 COUI 其他控件色板漂移。
+            Slider(
+                modifier = Modifier.fillMaxWidth(),
                 value = sliderValue,
+                onValueChange = { sliderValue = it },
                 valueRange = SettingsRepository.CROSS_ADAPTER_WIDTH_MIN.toFloat()..
                     SettingsRepository.CROSS_ADAPTER_WIDTH_MAX.toFloat(),
-                onValueChange = { sliderValue = it },
                 onValueChangeFinished = { onWidthChangeFinished(sliderValue.toInt()) },
             )
 
@@ -387,78 +384,6 @@ private fun CouiAdapterWidthSlider(
             }
         }
     }
-}
-
-/** COUI 轨道滑块：自绘轨道与圆点，拖动水平连续回传取值。 */
-@Composable
-private fun CouiTrackSlider(
-    value: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = CouiTheme.colorScheme
-    val currentOnValueChange by rememberUpdatedState(onValueChange)
-    val currentOnFinished by rememberUpdatedState(onValueChangeFinished)
-    val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start))
-        .coerceIn(0f, 1f)
-
-    BoxWithConstraints(modifier = modifier
-        .fillMaxWidth()
-        .height(40.dp)) {
-        val widthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(valueRange) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset ->
-                            currentOnValueChange(valueAt(offset.x, widthPx, valueRange))
-                        },
-                        onHorizontalDrag = { change, _ ->
-                            currentOnValueChange(valueAt(change.position.x, widthPx, valueRange))
-                        },
-                        onDragEnd = { currentOnFinished() },
-                        onDragCancel = { currentOnFinished() },
-                    )
-                },
-        ) {
-            val thumbRadius = 9.dp.toPx()
-            val trackHeight = 4.dp.toPx()
-            val startX = thumbRadius
-            val endX = size.width - thumbRadius
-            val centerX = startX + (endX - startX) * fraction
-            val top = size.height / 2 - trackHeight / 2
-            drawRoundRect(
-                color = scheme.container,
-                topLeft = Offset(startX, top),
-                size = Size(endX - startX, trackHeight),
-                cornerRadius = CornerRadius(trackHeight / 2),
-            )
-            drawRoundRect(
-                color = scheme.accent,
-                topLeft = Offset(startX, top),
-                size = Size((centerX - startX).coerceAtLeast(0f), trackHeight),
-                cornerRadius = CornerRadius(trackHeight / 2),
-            )
-            drawCircle(
-                color = scheme.accent,
-                radius = thumbRadius,
-                center = Offset(centerX, size.height / 2),
-            )
-        }
-    }
-}
-
-/** 触点横坐标映射到取值区间。 */
-private fun valueAt(
-    x: Float,
-    widthPx: Float,
-    range: ClosedFloatingPointRange<Float>,
-): Float {
-    val fraction = (x / widthPx).coerceIn(0f, 1f)
-    return range.start + fraction * (range.endInclusive - range.start)
 }
 
 /** 简易网格预览：纯色方块展示当前阈值下的列数效果。 */

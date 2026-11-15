@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -50,7 +49,6 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
@@ -62,8 +60,6 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import pixez_miuix.shared.generated.resources.Res
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 关于页：固定顶栏 + 品牌头图 + 开发者/贡献者/项目三组卡片。

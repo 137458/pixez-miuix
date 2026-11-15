@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,7 +31,6 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
@@ -42,11 +39,11 @@ import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.format
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.ExpandLess
 import top.yukonga.miuix.kmp.icon.extended.ExpandMore
@@ -249,7 +246,7 @@ private fun CouiBookTagRow(
     }
 }
 
-/** 添加标签弹窗：COUI 无文本输入原语，用 `BasicTextField` 套官方容器样式自绘。 */
+/** 添加标签弹窗：输入框统一走 CouiTextInput，与全仓其它输入框保持同一观感。 */
 @Composable
 private fun CouiBookTagAddDialog(
     onDismiss: () -> Unit,
@@ -279,32 +276,11 @@ private fun CouiBookTagAddDialog(
             onClick = onDismiss,
         ),
     ) {
-        val scheme = CouiTheme.colorScheme
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(scheme.container)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (name.isEmpty()) {
-                Text(
-                    text = strings.tags,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            BasicTextField(
-                value = name,
-                onValueChange = { name = it },
-                textStyle = LocalCouiTextStyle.current.copy(color = scheme.onSurface),
-                cursorBrush = SolidColor(scheme.accent),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        CouiTextInput(
+            value = name,
+            onValueChange = { name = it },
+            placeholder = strings.tags,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,8 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,7 +29,6 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
@@ -42,6 +38,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalHistoryRepository
@@ -56,8 +53,6 @@ import com.perol.pixez.shared.ui.screens.performImport
 import com.perol.pixez.shared.ui.screens.pickExportFilePath
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 数据导入导出页：固定顶栏 + 单张数据类型卡片。
@@ -244,7 +239,7 @@ private fun CouiDataExportRow(
     }
 }
 
-/** 路径输入弹窗：COUI 无文本输入原语，使用主题化 BasicTextField。 */
+/** 路径输入弹窗：输入框统一走 CouiTextInput，圆角与内边距与其它输入框一致。 */
 @Composable
 private fun CouiPathInputDialog(
     operation: CouiPendingOperation,
@@ -292,18 +287,14 @@ private fun CouiPathInputDialog(
                 kind = CouiTextKind.ItemSummary,
                 color = scheme.onSurfaceVariant,
             )
-            BasicTextField(
+            CouiTextInput(
                 value = path,
                 onValueChange = { path = it },
-                textStyle = LocalCouiTextStyle.current.copy(color = scheme.onSurface),
-                cursorBrush = SolidColor(scheme.accent),
-                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                containerColor = scheme.surface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(scheme.surface)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(top = 6.dp),
             )
         }
     }

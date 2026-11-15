@@ -41,15 +41,13 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.DEFAULT_IMAGE_HOST
 import com.perol.pixez.shared.ui.screens.MIRROR_IMAGE_HOST
 import com.perol.pixez.shared.ui.screens.NETWORK_MODE_STANDARD
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 网络设置页：固定顶栏 + OAuth/API 模式单选卡片 + 图片源卡片。
  *
  * 模式切换与图片源重置、自定义 Host 校验口径完全保留；
  * 切到 standard 时清空自定义输入并回落到默认 Host；
- * COUI 库无单选与输入原语，分别使用共用 [CouiRadioRow] 与自绘输入框。
+ * 单选由共用 [CouiRadioRow] 承担（库 RadioButton 作指示器）；COUI 库无输入原语，输入框仍为自绘。
  */
 @Composable
 internal fun CouiNetworkSettingScreen(

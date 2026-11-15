@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -58,6 +55,7 @@ import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.screens.EMAIL_REGEX
@@ -65,7 +63,6 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Hide
 import top.yukonga.miuix.kmp.icon.extended.Show
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -306,7 +303,7 @@ private fun CouiAccountEditSectionTitle(text: String) {
     )
 }
 
-/** 只读/普通文本输入框：容器胶囊 + 占位文字。 */
+/** 只读/普通文本输入框：统一走 CouiTextInput，禁用态靠底色区分。 */
 @Composable
 private fun CouiAccountEditField(
     value: String,
@@ -316,44 +313,22 @@ private fun CouiAccountEditField(
     modifier: Modifier = Modifier,
 ) {
     val scheme = CouiTheme.colorScheme
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (enabled) scheme.container else scheme.card)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (value.isEmpty()) {
-                Text(
-                    text = placeholder,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                enabled = enabled,
-                singleLine = true,
-                textStyle = TextStyle(
-                    color = if (enabled) scheme.onSurface else scheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                ),
-                cursorBrush = SolidColor(scheme.accent),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    CouiTextInput(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        enabled = enabled,
+        // 禁用态换底色而不是换文字色：整块灰下去比只灰字更容易看出不可编辑。
+        containerColor = if (enabled) scheme.container else scheme.card,
+        textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
+        modifier = modifier.fillMaxWidth(),
+        minHeight = 48.dp,
+        shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+    )
 }
 
-/** 密码输入框：视觉变换 + 可见性切换。 */
+/** 密码输入框：CouiTextInput 承载视觉变换，可见性切换走尾部插槽。 */
 @Composable
 private fun CouiAccountEditPasswordField(
     value: String,
@@ -364,41 +339,8 @@ private fun CouiAccountEditPasswordField(
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.container)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (value.isEmpty()) {
-                Text(
-                    text = placeholder,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
-                cursorBrush = SolidColor(scheme.accent),
-                visualTransformation = if (visible) {
-                    VisualTransformation.None
-                } else {
-                    PasswordVisualTransformation()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+    // 可见性按钮作为尾部插槽，命中区 32dp 与其它图标按钮统一。
+    val visibilityToggle: @Composable () -> Unit = {
         val pressInteraction = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
@@ -424,6 +366,23 @@ private fun CouiAccountEditPasswordField(
             )
         }
     }
+    CouiTextInput(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        singleLine = true,
+        textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
+        visualTransformation = if (visible) {
+            VisualTransformation.None
+        } else {
+            PasswordVisualTransformation()
+        },
+        modifier = Modifier.fillMaxWidth(),
+        minHeight = 48.dp,
+        shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        trailing = visibilityToggle,
+    )
 }
 
 /** 主要动作按钮：COUI 无按钮原语，按令牌自绘胶囊。 */

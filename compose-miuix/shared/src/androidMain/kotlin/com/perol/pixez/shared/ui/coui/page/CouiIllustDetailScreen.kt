@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +49,6 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
@@ -60,6 +57,7 @@ import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
 import com.itos.coui.menu.rememberCouiMenuAnchor
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -69,9 +67,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
-import com.perol.pixez.shared.data.repository.HistoryRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
@@ -80,17 +76,11 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
-import com.perol.pixez.shared.ui.components.buildIllustCopyInfo
-import com.perol.pixez.shared.ui.components.buildIllustShareLink
-import com.perol.pixez.shared.ui.components.buildSauceNaoUrl
-import com.perol.pixez.shared.ui.components.extractCachedImageBytes
+import com.perol.pixez.shared.ui.components.buildIllustDetailMoreMenuEntries
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
-import com.perol.pixez.shared.ui.components.runClipboardShare
-import com.perol.pixez.shared.ui.components.suspendRunClipboardShare
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
@@ -99,6 +89,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.CouiOverlayActionButton
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
@@ -118,14 +109,12 @@ import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
 import com.perol.pixez.shared.ui.screens.resolveIllustDetailImageWidthPx
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
+import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
@@ -382,7 +371,6 @@ private fun CouiIllustDetailSingle(
                 isBanned = isBanned,
                 scrolled = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0,
                 strings = strings,
-                settings = settings,
                 coroutineScope = coroutineScope,
                 banRepository = banRepository,
                 actions = actions,
@@ -424,7 +412,6 @@ private fun CouiIllustDetailTopBar(
     isBanned: Boolean,
     scrolled: Boolean,
     strings: AppStrings,
-    settings: SettingsRepository,
     coroutineScope: CoroutineScope,
     banRepository: BanRepository,
     actions: IllustDetailActions,
@@ -445,57 +432,55 @@ private fun CouiIllustDetailTopBar(
         Color.White
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(background),
+    // 底色只在顶栏内部绘制一次：外层再涂一层会让同一块背景画两遍，
+    // 且未滚动时的透明色会被外层不透明底盖住，浮层渐变永远看不见。
+    CouiFixedTopBar(
+        title = if (scrolled) illust?.title.orEmpty() else "",
+        onBack = onBack,
+        overlayBack = true,
+        background = background,
     ) {
-        CouiFixedTopBar(
-            title = if (scrolled) illust?.title.orEmpty() else "",
-            onBack = onBack,
-            overlayBack = true,
-        ) {
-            CouiOverlayActionButton(
-                icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-                contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-                onClick = actions::bookmark,
-                enabled = !isBookmarkLoading && illust != null,
-                tint = bookmarkTint,
-            )
-            CouiOverlayActionButton(
-                icon = MiuixIcons.Download,
-                contentDescription = strings.download,
-                onClick = actions::download,
-                enabled = !isDownloading && illust != null,
-            )
-            if (illust != null) {
-                Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                    CouiOverlayActionButton(
-                        icon = MiuixIcons.More,
-                        contentDescription = strings.menuMoreActions,
-                        onClick = { menuAnchor.open { menuExpanded = true } },
-                    )
-                    CouiDetailMoreMenu(
-                        illust = illust,
-                        expanded = menuExpanded,
-                        anchor = menuAnchor,
-                        isBanned = isBanned,
-                        settings = settings,
-                        strings = strings,
-                        coroutineScope = coroutineScope,
-                        banRepository = banRepository,
-                        onDismiss = { menuExpanded = false },
-                        onBanSuccess = onBanSuccess,
-                        onToast = onToast,
-                    )
-                }
+        CouiOverlayActionButton(
+            icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+            contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+            onClick = actions::bookmark,
+            enabled = !isBookmarkLoading && illust != null,
+            tint = bookmarkTint,
+        )
+        CouiOverlayActionButton(
+            icon = MiuixIcons.Download,
+            contentDescription = strings.download,
+            onClick = actions::download,
+            enabled = !isDownloading && illust != null,
+        )
+        if (illust != null) {
+            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+                CouiOverlayActionButton(
+                    icon = MiuixIcons.More,
+                    contentDescription = strings.menuMoreActions,
+                    onClick = { menuAnchor.open { menuExpanded = true } },
+                )
+                CouiDetailMoreMenu(
+                    illust = illust,
+                    expanded = menuExpanded,
+                    anchor = menuAnchor,
+                    isBanned = isBanned,
+                    strings = strings,
+                    coroutineScope = coroutineScope,
+                    banRepository = banRepository,
+                    onDismiss = { menuExpanded = false },
+                    onBanSuccess = onBanSuccess,
+                    onToast = onToast,
+                )
             }
         }
     }
 }
 
 /**
- * COUI 更多操作菜单：与 MIUIX 版同一批动作（复制信息/图片/链接、分享、浏览器、SauceNAO、屏蔽作品/画师）。
+ * COUI 更多操作菜单：复制/分享/浏览器/SauceNAO/屏蔽的动作编排统一取自共享构建器
+ * buildIllustDetailMoreMenuEntries，这里只保留 COUI 自己的锚点弹层与条目材质。
+ * 之前整份复制一份 when 分支，文案、屏蔽流程、异常提示会随 MIUIX 版各自漂移。
  */
 @Composable
 private fun CouiDetailMoreMenu(
@@ -503,7 +488,6 @@ private fun CouiDetailMoreMenu(
     expanded: Boolean,
     anchor: CouiMenuAnchor,
     isBanned: Boolean,
-    settings: SettingsRepository,
     strings: AppStrings,
     coroutineScope: CoroutineScope,
     banRepository: BanRepository,
@@ -514,20 +498,36 @@ private fun CouiDetailMoreMenu(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val context = LocalPlatformContext.current
-
+    val entries = buildIllustDetailMoreMenuEntries(
+        strings = strings,
+        illust = illust,
+        isBanned = isBanned,
+        banRepository = banRepository,
+        onBanSuccess = onBanSuccess,
+        onToast = onToast,
+        clipboard = clipboard,
+        share = share,
+        context = context,
+        coroutineScope = coroutineScope,
+    )
+    // CouiMenuItem 只有 value/text/分隔线，没有图标槽，因此把共享条目按组拍平，
+    // 用下标回查动作；分隔线按共享分组边界（非首组的第一项）还原。
+    val flatItems = entries.flatMap { it.items }
     val items = buildList {
-        add(CouiMenuItem(value = "copy_info", text = strings.menuCopyInfo))
-        add(CouiMenuItem(value = "copy_image", text = strings.menuCopyImage))
-        add(CouiMenuItem(value = "copy_link", text = strings.menuCopyLink))
-        add(CouiMenuItem(value = "share", text = strings.share, dividerBefore = true))
-        add(CouiMenuItem(value = "browser", text = strings.openInBrowser))
-        add(CouiMenuItem(value = "saucenao", text = strings.menuSauceNao))
-        if (!isBanned) {
-            add(CouiMenuItem(value = "ban_work", text = strings.menuBanWork, dividerBefore = true))
-            add(CouiMenuItem(value = "ban_user", text = strings.menuBanUser))
+        var index = 0
+        entries.forEachIndexed { entryIndex, entry ->
+            entry.items.forEachIndexed { itemIndex, item ->
+                add(
+                    CouiMenuItem(
+                        value = index.toString(),
+                        text = item.text,
+                        dividerBefore = itemIndex == 0 && entryIndex > 0,
+                    ),
+                )
+                index += 1
+            }
         }
     }
-
     Menu(
         expanded = expanded,
         onDismissRequest = onDismiss,
@@ -536,83 +536,8 @@ private fun CouiDetailMoreMenu(
         items = items,
         onItemClick = { item ->
             onDismiss()
-            when (item.value) {
-                "copy_info" -> runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = { onToast(it) },
-                ) { clipboard.copy(buildIllustCopyInfo(illust)) }
-                "copy_image" -> coroutineScope.launch {
-                    suspendRunClipboardShare(
-                        success = ToastData(strings.imageCopySuccess, ToastType.Success),
-                        failurePrefix = strings.menuCopyImage,
-                        onToast = { onToast(it) },
-                    ) {
-                        withContext(Dispatchers.IO) {
-                            val candidateUrls = listOf(
-                                illust.imageUrls.large,
-                                illust.imageUrls.medium,
-                                illust.imageUrls.squareMedium,
-                            )
-                            val bytes = extractCachedImageBytes(context, candidateUrls)
-                            bytes?.let { clipboard.copyImage(it) }
-                                ?: throw IllegalStateException(strings.imageNoCacheFound)
-                        }
-                    }
-                }
-                "copy_link" -> runClipboardShare(
-                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                    onToast = { onToast(it) },
-                ) { clipboard.copy(buildIllustShareLink(illust)) }
-                "share" -> {
-                    val successMsg = if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
-                        strings.copiedToClipboard
-                    } else {
-                        strings.share
-                    }
-                    runClipboardShare(
-                        success = ToastData(successMsg, ToastType.Success),
-                        failurePrefix = strings.share,
-                        onToast = { onToast(it) },
-                    ) { share.share(buildIllustShareLink(illust), illust.title) }
-                }
-                "browser" -> openSafeUrl(
-                    buildIllustShareLink(illust),
-                    strings,
-                    onError = { onToast(ToastData(it, ToastType.Error)) },
-                )
-                "saucenao" -> {
-                    val imgUrl = illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                    openSafeUrl(
-                        buildSauceNaoUrl(imgUrl),
-                        strings,
-                        onError = { onToast(ToastData(it, ToastType.Error)) },
-                    )
-                }
-                "ban_work" -> coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanIllust(illust.id, illust.title)
-                    }.fold(
-                        onSuccess = {
-                            onBanSuccess()
-                            onToast(ToastData(strings.menuBanWork, ToastType.Success))
-                        },
-                        onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
-                    )
-                }
-                "ban_user" -> coroutineScope.launch {
-                    suspendRunCatchingNonCancel {
-                        banRepository.insertBanUser(illust.user.id, illust.user.name)
-                    }.fold(
-                        onSuccess = {
-                            onBanSuccess()
-                            onToast(ToastData(strings.menuBanUser, ToastType.Success))
-                        },
-                        onFailure = { e -> onToast(ToastData("${strings.menuBanUser}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
-                    )
-                }
-            }
+            // value 是外部库的不透明类型，这里按值相等回查，不依赖它的具体类型。
+            flatItems.getOrNull(items.indexOfFirst { it.value == item.value })?.onClick?.invoke()
         },
     )
 }
@@ -646,6 +571,7 @@ private fun CouiIllustDetailList(
         modifier = Modifier
             .fillMaxSize()
             .navigationBarsPadding(),
+        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         if (illust.metaPages.isNotEmpty()) {
             items(
@@ -720,15 +646,17 @@ private fun CouiIllustDetailList(
         item(key = "coui_interaction", contentType = "coui_interaction") {
             Spacer(modifier = Modifier.height(10.dp))
             CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                CouiDetailNavRow(
+                CouiNavigationRow(
                     title = strings.commentsTitle,
                     summary = "${illust.totalComments ?: 0}",
                     onClick = { onCommentsClick(illust.id) },
+                    verticalPadding = 14.dp,
                 )
-                CouiDetailNavRow(
+                CouiNavigationRow(
                     title = strings.relatedIllusts,
                     summary = "",
                     onClick = { onRelatedIllustsClick(illust.id) },
+                    verticalPadding = 14.dp,
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
@@ -954,7 +882,7 @@ private fun CouiDetailInfoCard(
             ) {
                 CouiDetailMetric(icon = MiuixIcons.Show, text = illust.totalView.toString())
                 CouiDetailMetric(icon = MiuixIcons.Favorites, text = illust.totalBookmarks.toString())
-                CouiDetailMetric(icon = MiuixIcons.Recent, text = illust.createDate.take(10))
+                CouiDetailMetric(icon = MiuixIcons.Recent, text = formatPixivDate(illust.createDate))
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -966,20 +894,22 @@ private fun CouiDetailInfoCard(
             CouiDetailArtistRow(illust = illust, strings = strings, onUserClick = onUserClick)
             if (illust.pageCount > 1) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CouiDetailNavRow(
+                CouiNavigationRow(
                     title = strings.downloadTaskFilterAll,
                     summary = "${illust.pageCount} P",
                     onClick = {
                         if (!isDownloading) onDownloadAll()
                     },
+                    verticalPadding = 14.dp,
                 )
             }
             illust.series?.let { series ->
                 Spacer(modifier = Modifier.height(4.dp))
-                CouiDetailNavRow(
+                CouiNavigationRow(
                     title = series.title.orEmpty(),
                     summary = "",
                     onClick = { onIllustSeriesClick(series.id) },
+                    verticalPadding = 14.dp,
                 )
             }
         }
@@ -1074,45 +1004,6 @@ private fun CouiDetailSectionCard(
             )
             Spacer(modifier = Modifier.height(10.dp))
             content()
-        }
-    }
-}
-
-/** 列表行：标题 + 右侧摘要，整行可点。 */
-@Composable
-private fun CouiDetailNavRow(
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(interactionSource)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            kind = CouiTextKind.ItemTitle,
-            color = CouiTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (summary.isNotBlank()) {
-            Text(
-                text = summary,
-                kind = CouiTextKind.ItemSummary,
-                color = CouiTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
         }
     }
 }

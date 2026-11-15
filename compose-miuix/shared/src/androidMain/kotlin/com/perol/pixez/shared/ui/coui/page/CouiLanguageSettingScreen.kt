@@ -36,14 +36,12 @@ import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.Sponsor
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 语言设置页：固定顶栏 + 语言单选分组卡片 + 当前语言的 Sponsor。
  *
  * 语言索引持久化口径不变（只写 [SettingsRepository.languageNum]，不做应用内实时切换）；
- * COUI 库无单选控件，选中态走共用 [CouiRadioRow] 的圆点指示。
+ * 选中态由共用 [CouiRadioRow] 承担：整行 selectable 提供点击与无障碍语义，指示器用 COUI 库 RadioButton。
  */
 @Composable
 internal fun CouiLanguageSettingScreen(

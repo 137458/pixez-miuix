@@ -14,8 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
@@ -24,14 +22,12 @@ import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 桌面小组件设置页：固定顶栏 + 两个单选分组卡片。
  *
  * 内容来源与独立图源的取值、以及 `rank` 归并到「日榜」的选中口径保持不变；
- * COUI 库无单选控件，选中态走共用 [CouiRadioRow] 的圆点指示。
+ * 选中态由共用 [CouiRadioRow] 承担：整行 selectable 提供点击与无障碍语义，指示器用 COUI 库 RadioButton。
  */
 @Composable
 internal fun CouiWidgetRecommendScreen(

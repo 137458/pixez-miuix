@@ -2,19 +2,15 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -23,8 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
@@ -34,7 +28,6 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
@@ -42,7 +35,6 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
@@ -50,6 +42,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.format
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBanRepository
@@ -58,8 +51,6 @@ import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /** 删除目标：标签、画师或作品。 */
 private sealed class CouiShieldDeleteTarget {
@@ -419,7 +410,7 @@ private fun <T> CouiShieldChips(
     }
 }
 
-/** 添加屏蔽标签弹窗：COUI 无文本输入原语，用 `BasicTextField` 套官方容器样式自绘。 */
+/** 添加屏蔽标签弹窗：输入框统一走 CouiTextInput，与全仓其它输入框保持同一观感。 */
 @Composable
 private fun CouiAddBanTagDialog(
     isAdding: Boolean,
@@ -466,31 +457,10 @@ private fun CouiShieldInputField(
     placeholder: String,
     onValueChange: (String) -> Unit,
 ) {
-    val scheme = CouiTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(scheme.container)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (value.isEmpty()) {
-            Text(
-                text = placeholder,
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            textStyle = LocalCouiTextStyle.current.copy(color = scheme.onSurface),
-            cursorBrush = SolidColor(scheme.accent),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    CouiTextInput(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = placeholder,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

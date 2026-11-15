@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
 import com.itos.coui.menu.rememberCouiMenuAnchor
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -62,6 +64,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -77,14 +80,12 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
-import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.icon.extended.Remove
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 private sealed interface CouiNovelViewState {
@@ -314,8 +315,16 @@ private fun CouiNovelViewerTopBar(
                 onLongClick = onBookmarkLongClick,
             )
         }
-        CouiFontSizeButton(text = "A-", onClick = onFontDecrease)
-        CouiFontSizeButton(text = "A+", onClick = onFontIncrease)
+        CouiFontSizeButton(
+            icon = MiuixIcons.Remove,
+            contentDescription = strings.novelFontSize + " -",
+            onClick = onFontDecrease,
+        )
+        CouiFontSizeButton(
+            icon = MiuixIcons.Add,
+            contentDescription = strings.novelFontSize + " +",
+            onClick = onFontIncrease,
+        )
         Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
             CouiActionButton(
                 icon = MiuixIcons.More,
@@ -378,10 +387,17 @@ private fun CouiNovelBookmarkButton(
     }
 }
 
-/** 字号调节按钮：文本型动作，与图标动作共用 40dp 触区。 */
+/**
+ * 字号调节按钮：与图标动作共用 40dp 触区。
+ *
+ * 用 [MiuixIcons.Add] / [MiuixIcons.Remove] 取代原先的加减号文本按钮：
+ * 图标随字号缩放不会错位，且无障碍描述能带上方向（AppStrings 没有"增大/减小"词条，
+ * 故以通用正负号后缀区分两个按钮，避免读屏把两个按钮读成同一个名字）。
+ */
 @Composable
 private fun CouiFontSizeButton(
-    text: String,
+    icon: ImageVector,
+    contentDescription: String,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -397,11 +413,11 @@ private fun CouiFontSizeButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = text,
-            kind = CouiTextKind.ItemTitle,
-            color = CouiTheme.colorScheme.accent,
-            maxLines = 1,
+        Image(
+            painter = rememberVectorPainter(icon),
+            contentDescription = contentDescription,
+            colorFilter = ColorFilter.tint(CouiTheme.colorScheme.accent),
+            modifier = Modifier.size(22.dp),
         )
     }
 }
@@ -426,14 +442,10 @@ private fun CouiNovelBody(
         if (novelText.isBlank()) emptyList() else buildNovelViewerItems(novelText)
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
                 .clip(RoundedCornerShape(18.dp))
@@ -443,6 +455,7 @@ private fun CouiNovelBody(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
                 ) {
                     novelDetail?.let { detail ->
                         item {

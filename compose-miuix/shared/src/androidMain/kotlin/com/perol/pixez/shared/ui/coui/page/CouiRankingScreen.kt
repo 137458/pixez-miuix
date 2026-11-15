@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.coui.page
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,12 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.itos.coui.dialog.CouiDialogAction
@@ -42,6 +38,7 @@ import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -210,35 +207,17 @@ private fun CouiRankingDateDialog(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(scheme.surface)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (date.isEmpty()) {
-                    Text(
-                        text = strings.rankingDateLabel,
-                        kind = CouiTextKind.ItemSummary,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
-                BasicTextField(
-                    value = date,
-                    onValueChange = onDateChange,
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        color = scheme.onSurface,
-                        fontSize = 15.sp,
-                    ),
-                    cursorBrush = SolidColor(scheme.accent),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            CouiTextInput(
+                value = date,
+                onValueChange = onDateChange,
+                placeholder = strings.rankingDateLabel,
+                containerColor = scheme.surface,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = scheme.onSurface,
+                    fontSize = 15.sp,
+                ),
+                modifier = Modifier.weight(1f),
+            )
             Spacer(modifier = Modifier.width(8.dp))
             CouiDialogTextButton(
                 text = strings.actionClear,

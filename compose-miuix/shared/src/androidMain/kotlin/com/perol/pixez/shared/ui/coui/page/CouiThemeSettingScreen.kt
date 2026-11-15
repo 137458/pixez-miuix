@@ -58,8 +58,6 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.parseHexColor
 import com.perol.pixez.shared.ui.skin.isCouiSkinSupported
 import com.perol.pixez.shared.ui.skin.UiSkin
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 主题设置页：固定顶栏 + 主题/皮肤/显示/个性化四组卡片。

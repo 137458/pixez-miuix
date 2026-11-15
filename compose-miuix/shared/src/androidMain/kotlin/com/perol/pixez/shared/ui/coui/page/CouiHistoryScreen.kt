@@ -12,13 +12,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.items
@@ -26,7 +23,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -39,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -80,17 +75,17 @@ import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
-import com.perol.pixez.shared.ui.screens.filterHistoryByQuery
+import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
 import com.perol.pixez.shared.ui.screens.forActiveHistory
 import com.perol.pixez.shared.ui.screens.formatNovelHistoryTime
-import com.perol.pixez.shared.ui.screens.rememberHistoryResult
+import com.perol.pixez.shared.ui.utils.rememberHistoryResult
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Search
@@ -324,7 +319,7 @@ internal fun CouiHistoryScreen(
     }
 }
 
-/** 搜索输入：COUI 无文本输入原语，用 `BasicTextField` 套官方容器样式自绘胶囊。 */
+/** 搜索输入：统一走 CouiTextInput，搜索图标与清空按钮走前后插槽。 */
 @Composable
 private fun CouiHistorySearchField(
     query: String,
@@ -333,46 +328,11 @@ private fun CouiHistorySearchField(
     clearDescription: String,
 ) {
     val scheme = CouiTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(50))
-            .background(scheme.container)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            painter = rememberVectorPainter(MiuixIcons.Search),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (query.isEmpty()) {
-                Text(
-                    text = placeholder,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
-                cursorBrush = SolidColor(scheme.accent),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        if (query.isNotEmpty()) {
+    // 清空按钮只在有输入时出现；自带 32dp 命中区，交给 CouiTextInput 的尾部插槽。
+    val trailingSlot: (@Composable () -> Unit)? = if (query.isEmpty()) {
+        null
+    } else {
+        {
             val pressInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
@@ -394,6 +354,27 @@ private fun CouiHistorySearchField(
             }
         }
     }
+    CouiTextInput(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = placeholder,
+        textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        // 搜索框保持胶囊观感：50% 圆角 + 14dp 横向内边距。
+        shape = RoundedCornerShape(50),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        leading = {
+            Image(
+                painter = rememberVectorPainter(MiuixIcons.Search),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
+                modifier = Modifier.size(18.dp),
+            )
+        },
+        trailing = trailingSlot,
+    )
 }
 
 @Composable

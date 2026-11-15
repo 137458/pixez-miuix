@@ -53,7 +53,6 @@ import com.perol.pixez.shared.ui.components.UPDATE_PAGE_PREVIEW_LINES
 import com.perol.pixez.shared.ui.components.updateAsset
 import com.perol.pixez.shared.ui.components.updateBrowserFallbackUrl
 import com.perol.pixez.shared.ui.components.updateDialogNotesState
-import com.perol.pixez.shared.ui.components.UpdatePrimaryAction
 import com.perol.pixez.shared.ui.components.updatePrimaryCta
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -73,8 +72,6 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import pixez_miuix.shared.generated.resources.Res
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 更新设置页：固定顶栏 + 应用信息、更新日志、更新设置与版本通道四段。

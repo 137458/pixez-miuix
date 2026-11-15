@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
+import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -45,13 +45,13 @@ import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -65,8 +65,6 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 设置页：固定顶栏 + 分组卡片。
@@ -158,17 +156,13 @@ internal fun CouiSettingsScreen(
             onBack = onBack,
         )
 
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopCenter,
-        ) {
+        // 阅读列：设置分组统一收敛到平板可读宽度。
+        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
+                overscrollEffect = rememberCouiOverscrollEffect(),
             ) {
                 // ── 1. 账号管理 ──
                 item {

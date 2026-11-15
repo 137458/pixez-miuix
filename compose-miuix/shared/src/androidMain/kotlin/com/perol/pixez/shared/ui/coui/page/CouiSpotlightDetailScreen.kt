@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -27,6 +28,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,9 +63,10 @@ import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
+import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -316,7 +320,7 @@ private fun CouiArticleHeader(
                 )
                 if (article.publishDate.isNotBlank()) {
                     Text(
-                        text = article.publishDate.take(10),
+                        text = formatPixivDate(article.publishDate),
                         kind = CouiTextKind.ItemSummary,
                         color = scheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 6.dp),
@@ -407,10 +411,12 @@ private fun CouiSpotlightWorkCard(
                     modifier = Modifier.weight(1f),
                 )
                 if (work.userId != null) {
-                    Text(
-                        text = "›",
-                        kind = CouiTextKind.GroupTitle,
-                        color = scheme.onSurfaceVariant,
+                    // 行本身可点击进画师主页，箭头只是"还有下文"的视觉提示，故不给读屏描述（避免重复念一次）。
+                    Image(
+                        painter = rememberVectorPainter(MiuixIcons.ChevronForward),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }

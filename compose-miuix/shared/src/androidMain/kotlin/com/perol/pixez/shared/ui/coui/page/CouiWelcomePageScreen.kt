@@ -14,8 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
@@ -23,14 +21,12 @@ import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 欢迎页设置：固定顶栏 + 单选分组卡片。
  *
  * 选项编码与 [com.perol.pixez.shared.data.settings.SettingsRepository.welcomePageType] 保持一致；
- * COUI 库无单选控件，选中态走共用 [CouiRadioRow] 的圆点指示。
+ * 选中态由共用 [CouiRadioRow] 承担：整行 selectable 提供点击与无障碍语义，指示器用 COUI 库 RadioButton。
  */
 @Composable
 internal fun CouiWelcomePageScreen(
