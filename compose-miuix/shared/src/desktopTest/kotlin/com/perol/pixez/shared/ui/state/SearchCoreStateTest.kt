@@ -1,8 +1,12 @@
 package com.perol.pixez.shared.ui.state
 
+import com.perol.pixez.shared.ui.screens.SEARCH_HISTORY_LIMIT
 import com.perol.pixez.shared.ui.screens.SearchFilterState
 import com.perol.pixez.shared.ui.screens.SearchQueryTarget
+import com.perol.pixez.shared.ui.screens.mergeSearchHistory
+import com.perol.pixez.shared.ui.screens.normalizeSearchWord
 import com.perol.pixez.shared.ui.screens.parseSearchQueryTarget
+import com.perol.pixez.shared.ui.screens.shouldPersistFilter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -18,21 +22,18 @@ import kotlin.test.assertTrue
  *
  * 因此分三层锁定：
  * 1. 生产纯函数直测：parseSearchQueryTarget（分流规则）、SearchFilterState.hasActiveFilters
- *    （筛选是否生效的判定，决定顶栏高亮与筛选按钮文案）——测试直接调用真实实现。
- * 2. 内联行为复刻：算子体内无法抽出的内联逻辑（历史去重取 20 条、onSearch 分流顺序、
- *    排序循环、设置回写守卫）在测试内以同名同语义的小函数复刻，用差异化数据驱动，
- *    并配合第 3 层守护保证复刻与源码一致；复刻函数逐条标注源码行号。
- * 3. 源码接线守护：断言 SearchCoreState.kt 仍保留上述内联表达式原文，防止复刻与实现脱节。
+ *    （筛选是否生效的判定，决定顶栏高亮与筛选按钮文案）、normalizeSearchWord 与
+ *    mergeSearchHistory（提交词归一化、历史置顶去重取 20 条）、shouldPersistFilter
+ *    （筛选回写守卫）——测试直接调用算子使用的真实实现。
+ * 2. 交互顺序复刻：算子体内仍是内联实现的「先写历史再分流」顺序、数字 ID 跳转去向与
+ *    排序/AI 开关循环，在测试内以同名同语义的小函数复刻，用差异化数据驱动，
+ *    并由第 3 层守护保证复刻与源码一致；复刻函数逐条标注源码行号。
+ * 3. 源码接线守护：断言 SearchCoreState.kt 仍调用上述生产纯函数、且每个筛选项的回写都经过
+ *    shouldPersistFilter，防止算子绕过已抽取的实现。
  */
 class SearchCoreStateTest {
 
     // ---------------------------------------------------------------- 复刻逻辑
-
-    /**
-     * 复刻 SearchCoreState.kt:150 的搜索历史写入语义：新词置顶、去重、最多保留 20 条。
-     */
-    private fun addToHistory(history: List<String>, entry: String): List<String> =
-        (listOf(entry) + history.filter { it != entry }).take(20)
 
     /**
      * 一次搜索提交的结果，对应算子内 onSearch 的三个可观测后果：
@@ -45,21 +46,21 @@ class SearchCoreStateTest {
     )
 
     /**
-     * 复刻 SearchCoreState.kt:146-158 的 onSearch 分流：
-     * 先写历史，再判断查询词是否为作品/画师/数字 ID 直达目标；非直达才置 isSearching。
-     * 数字 ID 的导航去向取决于 searchTypeIndex（:130-136：1 画师、2 小说、其余作品）。
+     * 复刻 SearchCoreState.kt:155-168 的 onSearch 分流：
+     * 先用 normalizeSearchWord 归一化（空白词忽略），再用 mergeSearchHistory 写历史，
+     * 最后判断查询词是否为作品/画师/数字 ID 直达目标；非直达才置 isSearching。
+     * 数字 ID 的导航去向取决于 searchTypeIndex（1 画师、2 小说、其余作品）。
+     * 归一化与历史合并均直接调用生产纯函数，复刻的只是「写入与分流的先后顺序」。
      */
     private fun submitSearch(
         query: String,
         history: List<String>,
         searchTypeIndex: Int = 0,
     ): SearchSubmission {
-        val trimmed = query.trim()
-        if (trimmed.isBlank()) {
-            return SearchSubmission(isSearching = false, history = history, navigatedTo = null)
-        }
-        val newHistory = addToHistory(history, trimmed)
-        val target = parseSearchQueryTarget(trimmed)
+        val word = normalizeSearchWord(query)
+            ?: return SearchSubmission(isSearching = false, history = history, navigatedTo = null)
+        val newHistory = mergeSearchHistory(history, word)
+        val target = parseSearchQueryTarget(word)
             ?: return SearchSubmission(isSearching = true, history = newHistory, navigatedTo = null)
         val route = when (target) {
             is SearchQueryTarget.IllustId -> "illust:${target.id}"
@@ -73,75 +74,11 @@ class SearchCoreStateTest {
         return SearchSubmission(isSearching = false, history = newHistory, navigatedTo = route)
     }
 
-    /** 复刻 SearchCoreState.kt:217-223 的排序点击循环：date_desc → popular_desc → date_asc → date_desc。 */
+    /** 复刻 SearchCoreState.kt:227-233 的排序点击循环：date_desc → popular_desc → date_asc → date_desc。 */
     private fun nextSort(current: String): String = when (current) {
         "date_desc" -> "popular_desc"
         "popular_desc" -> "date_asc"
         else -> "date_desc"
-    }
-
-    /**
-     * 复刻 SearchCoreState.kt:80-104 的筛选回写守卫：算子内每个筛选项各有一个 LaunchedEffect，
-     * 首帧值取自设置本身，因此比较后才写入，避免无谓持久化与 filterChangeVersion 自增。
-     */
-    private class FakeSearchSettings {
-        var searchSort = "date_desc"
-        var searchTarget = "partial_match_for_tags"
-        var searchAiType = 0
-        var searchBookmarkThreshold = 0
-        var searchUgoiraFilter = 0
-        var searchStartDate = ""
-        var searchEndDate = ""
-        val writeLog = mutableListOf<String>()
-
-        fun persistSort(value: String) {
-            if (searchSort != value) {
-                searchSort = value
-                writeLog += "sort=$value"
-            }
-        }
-
-        fun persistTarget(value: String) {
-            if (searchTarget != value) {
-                searchTarget = value
-                writeLog += "target=$value"
-            }
-        }
-
-        fun persistAiType(value: Int) {
-            if (searchAiType != value) {
-                searchAiType = value
-                writeLog += "aiType=$value"
-            }
-        }
-
-        fun persistBookmarkThreshold(value: Int) {
-            if (searchBookmarkThreshold != value) {
-                searchBookmarkThreshold = value
-                writeLog += "bookmarkThreshold=$value"
-            }
-        }
-
-        fun persistUgoiraFilter(value: Int) {
-            if (searchUgoiraFilter != value) {
-                searchUgoiraFilter = value
-                writeLog += "ugoira=$value"
-            }
-        }
-
-        fun persistStartDate(value: String) {
-            if (searchStartDate != value) {
-                searchStartDate = value
-                writeLog += "startDate=$value"
-            }
-        }
-
-        fun persistEndDate(value: String) {
-            if (searchEndDate != value) {
-                searchEndDate = value
-                writeLog += "endDate=$value"
-            }
-        }
     }
 
     // ---------------------------------------------------------------- 初始态与筛选判定
@@ -196,17 +133,17 @@ class SearchCoreStateTest {
         val existing = listOf("初音ミク", "ブルーアーカイブ", "原神")
         assertEquals(
             listOf("Fate", "初音ミク", "ブルーアーカイブ", "原神"),
-            addToHistory(existing, "Fate"),
+            mergeSearchHistory(existing, "Fate"),
             "新搜索词应置顶且保留既有顺序",
         )
         assertEquals(
             listOf("ブルーアーカイブ", "初音ミク", "原神"),
-            addToHistory(existing, "ブルーアーカイブ"),
+            mergeSearchHistory(existing, "ブルーアーカイブ"),
             "已在历史中的词应移动到首位而不是产生第二条副本",
         )
         assertEquals(
             listOf("初音ミク"),
-            addToHistory(listOf("初音ミク"), "初音ミク"),
+            mergeSearchHistory(listOf("初音ミク"), "初音ミク"),
             "重复提交同一词时历史应保持不变",
         )
     }
@@ -214,7 +151,7 @@ class SearchCoreStateTest {
     @Test
     fun `搜索历史最多保留二十条且最旧一条被挤出`() {
         val full = (1..20).map { "q$it" }
-        val afterNewEntry = addToHistory(full, "q21")
+        val afterNewEntry = mergeSearchHistory(full, "q21")
         assertEquals(20, afterNewEntry.size, "历史条数上限应为 20")
         assertEquals("q21", afterNewEntry.first(), "新搜索词应位于首位")
         assertEquals("q1", afterNewEntry[1], "既有历史应整体后移一位")
@@ -222,12 +159,55 @@ class SearchCoreStateTest {
         assertFalse("q20" in afterNewEntry, "第 20 条旧历史应被挤出")
 
         // 边界：历史已满时重复提交中段的词，仍保持 20 条并把该词提到首位。
-        val afterDuplicate = addToHistory(full, "q5")
+        val afterDuplicate = mergeSearchHistory(full, "q5")
         assertEquals(20, afterDuplicate.size, "去重后条数不应减少")
         assertEquals("q5", afterDuplicate.first())
         assertFalse(afterDuplicate.drop(1).any { it == "q5" }, "中段重复词不应残留副本")
         // 去重只替换位置、总数仍为 20，未超过上限，因此最旧一条不应被挤出。
         assertTrue("q20" in afterDuplicate, "满额去重不应挤出最旧一条")
+    }
+
+    @Test
+    fun `搜索历史恰好达到上限时不截断且显式上限参数生效`() {
+        // 边界：合并后条数恰好等于上限 20，不应丢任何条目。
+        val nineteen = (1..19).map { "q$it" }
+        assertEquals(20, SEARCH_HISTORY_LIMIT, "历史条数上限常量应为 20")
+        assertEquals(
+            listOf("q0") + nineteen,
+            mergeSearchHistory(nineteen, "q0"),
+            "合并后恰好 20 条时不应截断",
+        )
+        // 常规：显式 limit 参数覆盖默认上限，按传入值截断。
+        assertEquals(
+            listOf("e", "a", "b"),
+            mergeSearchHistory(listOf("a", "b", "c", "d"), "e", limit = 3),
+            "显式 limit 应覆盖默认上限并保留置顶后的前 3 条",
+        )
+        // 边界：limit 大于可用条数时不补齐空位。
+        assertEquals(listOf("e", "a"), mergeSearchHistory(listOf("a"), "e", limit = 10))
+        // 边界：limit = 1 只保留新词；空历史时新词成为唯一条目。
+        assertEquals(listOf("e"), mergeSearchHistory(listOf("a", "b"), "e", limit = 1))
+        assertEquals(listOf("初音ミク"), mergeSearchHistory(emptyList(), "初音ミク"))
+    }
+
+    @Test
+    fun `搜索词归一化去除首尾空白并忽略纯空白词`() {
+        // 常规：仅去掉首尾空白，词内空格保留。
+        assertEquals("初音ミク", normalizeSearchWord("初音ミク"))
+        assertEquals("初音ミク", normalizeSearchWord("  初音ミク  "))
+        assertEquals("初音 ミク", normalizeSearchWord("\t初音 ミク\n"))
+        // 边界：空串与各类纯空白词返回 null，表示本次提交被算子忽略。
+        for (blank in listOf("", " ", "   ", "\n\t")) {
+            assertNull(normalizeSearchWord(blank), "纯空白词应返回 null：长度 ${blank.length}")
+        }
+        // 边界：与合并函数串联时空白词不会进入历史（对应算子 onSearch 的分支顺序）。
+        val history = listOf("原神")
+        val word = normalizeSearchWord("   ")
+        assertEquals(
+            history,
+            word?.let { mergeSearchHistory(history, it) } ?: history,
+            "空白词不应改动历史",
+        )
     }
 
     // ---------------------------------------------------------------- 提交分流
@@ -313,29 +293,60 @@ class SearchCoreStateTest {
     // ---------------------------------------------------------------- 筛选回写与交互
 
     @Test
+    fun `筛选回写守卫仅在值与已持久化值不同时成立`() {
+        // 常规：整型筛选项（收藏阈值、UGira 筛选、AI 类型）。
+        assertFalse(shouldPersistFilter(0, 0), "收藏阈值未变不应回写")
+        assertTrue(shouldPersistFilter(0, 500), "收藏阈值 0 → 500 应回写")
+        assertTrue(shouldPersistFilter(500, 0), "收藏阈值 500 → 0 应回写（清空阈值）")
+        assertFalse(shouldPersistFilter(2, 2), "Ugoira 筛选未变不应回写")
+        assertTrue(shouldPersistFilter(2, 0), "Ugoira 筛选 2 → 0 应回写")
+        // 边界：字符串筛选项（排序、搜索目标、起止日期）。
+        assertFalse(shouldPersistFilter("date_desc", "date_desc"), "排序未变不应回写")
+        assertTrue(shouldPersistFilter("date_desc", "popular_desc"), "排序切换应回写")
+        assertFalse(shouldPersistFilter("", ""), "日期为空且未变不应回写")
+        assertTrue(shouldPersistFilter("", "2026-01-01"), "设置起始日期应回写")
+        assertTrue(shouldPersistFilter("2026-01-01", ""), "清空起始日期应回写")
+        // 边界：布尔筛选项（屏蔽 H）走同一泛型守卫。
+        assertFalse(shouldPersistFilter(false, false), "屏蔽 H 未变不应回写")
+        assertTrue(shouldPersistFilter(false, true), "开启屏蔽 H 应回写")
+        assertTrue(shouldPersistFilter(true, false), "关闭屏蔽 H 应回写")
+    }
+
+    @Test
     fun `筛选设置仅在值变化时回写一次`() {
-        val settings = FakeSearchSettings()
+        // 设置存储的当前值，与算子首帧读取的初值同源；回写守卫来自生产纯函数 shouldPersistFilter。
+        val stored = mutableMapOf<String, Any>(
+            "sort" to "date_desc",
+            "target" to "partial_match_for_tags",
+            "aiType" to 0,
+            "bookmarkThreshold" to 0,
+            "ugoira" to 0,
+            "startDate" to "",
+            "endDate" to "",
+        )
+        val writes = mutableListOf<String>()
+
+        fun persist(key: String, value: Any) {
+            if (!shouldPersistFilter(stored[key], value)) return
+            stored[key] = value
+            writes += "$key=$value"
+        }
+
         // 首帧：算子初值取自设置本身，回写守卫应完全静默。
-        settings.persistSort(settings.searchSort)
-        settings.persistTarget(settings.searchTarget)
-        settings.persistAiType(settings.searchAiType)
-        settings.persistBookmarkThreshold(settings.searchBookmarkThreshold)
-        settings.persistUgoiraFilter(settings.searchUgoiraFilter)
-        settings.persistStartDate(settings.searchStartDate)
-        settings.persistEndDate(settings.searchEndDate)
-        assertEquals(emptyList(), settings.writeLog, "首帧值等于设置值时不应用任何持久化")
+        for ((key, value) in stored.toMap()) persist(key, value)
+        assertEquals(emptyList(), writes, "首帧值等于设置值时不应用任何持久化")
 
         // 常规：用户改动两个筛选项 → 各写一次。
-        settings.persistBookmarkThreshold(500)
-        settings.persistSort("popular_desc")
-        assertEquals(listOf("bookmarkThreshold=500", "sort=popular_desc"), settings.writeLog)
-        assertEquals(500, settings.searchBookmarkThreshold, "改动应落到设置存储")
-        assertEquals("popular_desc", settings.searchSort)
+        persist("bookmarkThreshold", 500)
+        persist("sort", "popular_desc")
+        assertEquals(listOf("bookmarkThreshold=500", "sort=popular_desc"), writes)
+        assertEquals(500, stored["bookmarkThreshold"], "改动应落到设置存储")
+        assertEquals("popular_desc", stored["sort"])
 
         // 边界：同一值重复提交（重组/重新进入页面）不应重复写入。
-        settings.persistBookmarkThreshold(500)
-        settings.persistSort("popular_desc")
-        assertEquals(2, settings.writeLog.size, "重复提交相同值不应新增写入")
+        persist("bookmarkThreshold", 500)
+        persist("sort", "popular_desc")
+        assertEquals(2, writes.size, "重复提交相同值不应新增写入")
     }
 
     @Test
@@ -373,12 +384,13 @@ class SearchCoreStateTest {
     // ---------------------------------------------------------------- 源码接线守护
 
     @Test
-    fun `算子源码保留复刻所依赖的内联接线`() {
+    fun `算子源码仍接入生产纯函数而非内联实现`() {
         val source = StateSourceReader.readUi("screens/SearchCoreState.kt")
         val requiredFragments = listOf(
-            "updateHistory((listOf(trimmed) + searchHistory.filter { it != trimmed }).take(20))" to
-                "搜索历史去重取 20 条的内联实现",
-            "val target = parseSearchQueryTarget(trimmed)" to "提交时解析直达目标",
+            "val word = normalizeSearchWord(query)" to "提交前用生产纯函数归一化查询词",
+            "updateHistory(mergeSearchHistory(searchHistory, word))" to
+                "历史置顶去重取 20 条改用生产纯函数 mergeSearchHistory",
+            "val target = parseSearchQueryTarget(word)" to "提交时解析直达目标",
             "if (target == null) {" to "非直达才进入搜索结果模式",
             "banRepository.filterBannedTags(banRepository.getAllBanTags(), tags) { listOfNotNull(it.tag, it.translatedName) }" to
                 "热门标签同样受屏蔽规则约束",
@@ -394,9 +406,12 @@ class SearchCoreStateTest {
             assertTrue(fragment in source, "SearchCoreState.kt 应保留$reason：$fragment")
         }
 
-        // 七个筛选项各有一个带 != 守卫的回写，计数必须为 7，新增筛选项时需同步本测试。
-        val guardCount = Regex(Regex.escape("if (settingsRepository.")).findAll(source).count()
-        assertEquals(7, guardCount, "每个筛选项都应有一个 \"值不同才回写\" 的守卫")
+        // 七个筛选项各有一个经生产纯函数守卫的回写，计数必须为 7，新增筛选项时需同步本测试。
+        val guardCount = Regex(Regex.escape("if (shouldPersistFilter(settingsRepository.")).findAll(source).count()
+        assertEquals(7, guardCount, "每个筛选项都应经过 shouldPersistFilter 的值变化守卫")
+        // 旧的内联 != 守卫写法不应再出现，否则说明有筛选项绕过了生产纯函数。
+        val inlineGuardCount = Regex(Regex.escape("if (settingsRepository.")).findAll(source).count()
+        assertEquals(0, inlineGuardCount, "筛选项回写守卫应统一走 shouldPersistFilter")
 
         // 搜索目标解析是生产纯函数，测试直接调用它；守护其仍为 internal 顶层函数且返回可空 sealed.
         val searchScreen = StateSourceReader.readUi("screens/SearchScreen.kt")

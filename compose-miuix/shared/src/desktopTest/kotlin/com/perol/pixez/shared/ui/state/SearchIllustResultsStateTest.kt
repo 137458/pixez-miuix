@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.state
 
 import com.perol.pixez.shared.ui.screens.applySearchClientFilters
+import com.perol.pixez.shared.ui.screens.buildSearchWord
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,25 +17,17 @@ import kotlinx.coroutines.test.runTest
  * 纯 JVM 测试无法启动组合，也无法打桩这些具体类。
  *
  * 分层锁定：
- * 1. 真实生产函数直测：applySearchClientFilters（展示阶段的动图/比例本地过滤）。
+ * 1. 真实生产函数直测：buildSearchWord（收藏阈值搜索词构造）、applySearchClientFilters
+ *    （展示阶段的动图/比例本地过滤）——测试直接调用算子使用的实现。
  * 2. 分层状态机直测：算子内部真正的分页状态机 IllustPagedListState 以 suspend lambda 注入，
  *    可在 JVM 上以「记录请求 + 固定返回」的假请求源驱动，覆盖首屏、追加去重、失败保留、
  *    reset 清空、refilterIfChanged 零网络重过滤。
- * 3. 内联逻辑复刻 + 源码接线守护：searchWord 构造、切号重置顺序、refilter 提前返回等
- *    内联在算子体内的逻辑按源码同语义复刻测试，并由守护测试断言源码原文仍在。
+ * 3. 顺序复刻 + 源码接线守护：切号重置顺序、refilter 提前返回等仍内联在算子体内的控制流，
+ *    在测试内按同语义复刻，并由守护测试断言源码仍调用上述生产纯函数、且保留这些接线。
  */
 class SearchIllustResultsStateTest {
 
-    // ---------------------------------------------------------------- 复刻逻辑与假请求源
-
-    /**
-     * 复刻 SearchResultsState.kt:67-70 的搜索词构造：先清除 `\s*\d+users入り` 后缀，
-     * 再按收藏阈值追加 `" Nusers入り"`，避免重复筛选词叠加。
-     */
-    private fun buildSearchWord(query: String, bookmarkThreshold: Int): String {
-        val cleanQuery = query.replace(Regex("""\s*\d+users入り"""), "").trim()
-        return if (bookmarkThreshold > 0) "$cleanQuery ${bookmarkThreshold}users入り" else cleanQuery
-    }
+    // ---------------------------------------------------------------- 假请求源与装配
 
     /** 一次搜索请求的可观测参数：搜索词、排序、游标。 */
     private data class SearchRequest(val word: String, val sort: String, val nextUrl: String?)
@@ -83,6 +76,14 @@ class SearchIllustResultsStateTest {
             Triple("初音ミク 500users入り", 1000, "初音ミク 1000users入り"),
             Triple("初音ミク 500users入り", 0, "初音ミク"),
             Triple("  初音ミク 10users入り  ", 100, "初音ミク 100users入り"),
+            // 边界：检索词已带同一阈值后缀时不叠加第二个筛选词。
+            Triple("初音ミク 1000users入り", 1000, "初音ミク 1000users入り"),
+            // 边界：无空格的旧后缀（历史/链接常见写法）同样被替换。
+            Triple("初音ミク10000users入り", 1000, "初音ミク 1000users入り"),
+            // 边界：只有首尾空格、不含后缀时先 trim 再按需追加。
+            Triple("  初音ミク  ", 0, "初音ミク"),
+            // 常规：多词查询保留词内空格，只在末尾追加阈值后缀。
+            Triple("初音ミク ボーカロイド", 500, "初音ミク ボーカロイド 500users入り"),
         )
         for ((query, threshold, expected) in cases) {
             assertEquals(
@@ -100,6 +101,14 @@ class SearchIllustResultsStateTest {
         // 阈值恰好为 1（最小正阈值）是「是否追加后缀」的分界点。
         assertEquals("初音ミク 1users入り", buildSearchWord("初音ミク", 1), "阈值 1 应追加后缀")
         assertEquals("初音ミク", buildSearchWord("初音ミク", 0), "阈值 0 应清除后缀")
+        // 边界：首尾空格 + 阈值 100 时，后缀以单个空格连接 trim 后的检索词。
+        assertEquals("初音ミク 100users入り", buildSearchWord("  初音ミク  ", 100), "首尾空格不应带入后缀拼接")
+        // 边界：带拖尾空格的旧后缀在阈值 1 下被替换，不残留第二次空格。
+        assertEquals(
+            "初音ミク 1users入り",
+            buildSearchWord("初音ミク 500users入り  ", 1),
+            "带拖尾空格的旧后缀应整体替换",
+        )
     }
 
     // ---------------------------------------------------------------- 展示阶段客户端过滤
@@ -274,7 +283,7 @@ class SearchIllustResultsStateTest {
             assertEquals(listOf(11L), state.ids())
             assertEquals("p2", state.nextUrl)
 
-            // 复刻算子 :134-136：检测到切号后先 reset()，再由同一 LaunchedEffect 调 loadFirst()。
+            // 复刻算子的切号处理顺序：检测到切号后先 reset()，再由同一 LaunchedEffect 调 loadFirst()。
             state.reset()
             assertNull(state.rawIllusts, "reset 应清空原始列表")
             assertNull(state.filteredIllusts, "reset 应清空过滤列表")
@@ -316,7 +325,7 @@ class SearchIllustResultsStateTest {
             assertEquals(listOf(1L, 2L, 3L), state.ids(), "未开启屏蔽时原始与过滤列表一致")
             assertEquals(1, fetch.callCount)
 
-            // 复刻算子 :139：版本变化时 refilterIfChanged 返回 true 并提前 return，不再 loadFirst。
+            // 复刻算子的提前返回：版本变化时 refilterIfChanged 返回 true 并提前 return，不再 loadFirst。
             hideR18 = true
             version = 1
             assertTrue(state.refilterIfChanged(), "筛选版本变化应触发本地重过滤")
@@ -330,13 +339,10 @@ class SearchIllustResultsStateTest {
     // ---------------------------------------------------------------- 源码接线守护
 
     @Test
-    fun `算子源码保留复刻所依赖的内联接线`() {
+    fun `算子源码接入生产纯函数并保留分页接线`() {
         val source = StateSourceReader.readUi("screens/SearchResultsState.kt")
         val requiredFragments = listOf(
-            "val cleanQuery = query.replace(Regex(" to "清理检索词后缀的起点",
-            """\s*\d+users入り""" to "清除既有 users入り 后缀的正则",
-            "if (bookmarkThreshold > 0)" to "按收藏阈值决定是否追加后缀",
-            "users入り\" else cleanQuery" to "阈值为 0 时回落到清理后的检索词",
+            "buildSearchWord(query, bookmarkThreshold)" to "搜索词改由生产纯函数构建",
             "val searchWord = remember(query, bookmarkThreshold) {" to "搜索词随查询词与阈值变化",
             "val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user" to
                 "账号身份跟踪（未加载哨兵参与比较）",
@@ -351,6 +357,16 @@ class SearchIllustResultsStateTest {
         for ((fragment, reason) in requiredFragments) {
             assertTrue(fragment in source, "SearchResultsState.kt 应保留$reason：$fragment")
         }
+
+        // 搜索词构造是生产纯函数，测试直接调用它；守护其签名与后缀清理都只在该函数内。
+        assertTrue(
+            "internal fun buildSearchWord(word: String, bookmarkThreshold: Int): String {" in source,
+            "buildSearchWord 应保持 internal 顶层函数签名（本测试直接调用真实实现）",
+        )
+        assertFalse(
+            "val cleanQuery = query.replace(Regex(" in source,
+            "检索词后缀清理不应再内联在算子体内（已抽到 buildSearchWord）",
+        )
 
         // 展示阶段的客户端过滤必须由页面在收集到的列表上调用（否则筛选按钮无效果）。
         val section = StateSourceReader.readUi("screens/SearchResultSection.kt")

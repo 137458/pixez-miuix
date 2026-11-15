@@ -76,31 +76,40 @@ internal fun rememberSearchCoreState(
     var endDate by rememberSaveable { mutableStateOf(settingsRepository.searchEndDate) }
 
     // 筛选条件变化时持久化回写设置。
-    // 首帧的值本身就来自设置，比较后再写入，避免重复持久化与 changeVersion 无谓自增。
+    // 首帧的值本身就来自设置，判定见 shouldPersistFilter：值未变化时不写入，
+    // 避免重复持久化与 filterChangeVersion 无谓自增（写入会触发下游本地重过滤）。
     LaunchedEffect(sort) {
-        if (settingsRepository.searchSort != sort) settingsRepository.searchSort = sort
+        if (shouldPersistFilter(settingsRepository.searchSort, sort)) settingsRepository.searchSort = sort
     }
     LaunchedEffect(searchTarget) {
-        if (settingsRepository.searchTarget != searchTarget) settingsRepository.searchTarget = searchTarget
+        if (shouldPersistFilter(settingsRepository.searchTarget, searchTarget)) {
+            settingsRepository.searchTarget = searchTarget
+        }
     }
     LaunchedEffect(searchAiType) {
-        if (settingsRepository.searchAiType != searchAiType) settingsRepository.searchAiType = searchAiType
+        if (shouldPersistFilter(settingsRepository.searchAiType, searchAiType)) {
+            settingsRepository.searchAiType = searchAiType
+        }
     }
     LaunchedEffect(bookmarkThreshold) {
-        if (settingsRepository.searchBookmarkThreshold != bookmarkThreshold) {
+        if (shouldPersistFilter(settingsRepository.searchBookmarkThreshold, bookmarkThreshold)) {
             settingsRepository.searchBookmarkThreshold = bookmarkThreshold
         }
     }
     LaunchedEffect(ugoiraFilter) {
-        if (settingsRepository.searchUgoiraFilter != ugoiraFilter) {
+        if (shouldPersistFilter(settingsRepository.searchUgoiraFilter, ugoiraFilter)) {
             settingsRepository.searchUgoiraFilter = ugoiraFilter
         }
     }
     LaunchedEffect(startDate) {
-        if (settingsRepository.searchStartDate != startDate) settingsRepository.searchStartDate = startDate
+        if (shouldPersistFilter(settingsRepository.searchStartDate, startDate)) {
+            settingsRepository.searchStartDate = startDate
+        }
     }
     LaunchedEffect(endDate) {
-        if (settingsRepository.searchEndDate != endDate) settingsRepository.searchEndDate = endDate
+        if (shouldPersistFilter(settingsRepository.searchEndDate, endDate)) {
+            settingsRepository.searchEndDate = endDate
+        }
     }
 
     // 热门标签重试计数，作为 produceState 的 key 触发重新加载。
@@ -144,11 +153,12 @@ internal fun rememberSearchCoreState(
     }
 
     val onSearch: () -> Unit = {
-        val trimmed = query.trim()
-        if (trimmed.isNotBlank()) {
-            // 将新搜索词加入历史（去重，最多保留 20 条）。
-            updateHistory((listOf(trimmed) + searchHistory.filter { it != trimmed }).take(20))
-            val target = parseSearchQueryTarget(trimmed)
+        // 归一化后再写入历史与解析直达目标：空白词由 normalizeSearchWord 判定为忽略。
+        val word = normalizeSearchWord(query)
+        if (word != null) {
+            // 将新搜索词加入历史（置顶去重，最多保留 SEARCH_HISTORY_LIMIT 条）。
+            updateHistory(mergeSearchHistory(searchHistory, word))
+            val target = parseSearchQueryTarget(word)
             if (target == null) {
                 isSearching = true
             } else {
@@ -225,3 +235,29 @@ internal fun rememberSearchCoreState(
         onClearBookmarkThreshold = { bookmarkThreshold = 0 },
     )
 }
+
+/** 搜索历史保留条数上限。 */
+internal const val SEARCH_HISTORY_LIMIT = 20
+
+/**
+ * 归一化一次搜索提交的输入词：去掉首尾空白，空白词返回 null 表示本次提交被忽略。
+ */
+internal fun normalizeSearchWord(raw: String): String? = raw.trim().takeIf { it.isNotBlank() }
+
+/**
+ * 把新搜索词写入历史：置顶、去重（先剔除历史中的同词，只保留新位置），并按 [limit] 截断。
+ */
+internal fun mergeSearchHistory(
+    history: List<String>,
+    word: String,
+    limit: Int = SEARCH_HISTORY_LIMIT,
+): List<String> = (listOf(word) + history.filter { it != word }).take(limit)
+
+/**
+ * 筛选设置回写判定：仅当算子内的值与已持久化的值不同才需要写入。
+ *
+ * 算子初值取自设置本身，若不加判定，首帧与每次重组都会重复写设置，
+ * 进而自增 filterChangeVersion 触发下游无谓的本地重过滤。
+ */
+internal fun <T> shouldPersistFilter(persisted: T, local: T): Boolean = persisted != local
+

@@ -63,10 +63,9 @@ internal fun rememberSearchIllustResultsState(
     val startDate = filterState.startDate.takeIf { it.isNotBlank() }
     val endDate = filterState.endDate.takeIf { it.isNotBlank() }
 
-    // 根据收藏数阈值构建实际搜索词：先清除原有 \d+users入り，再按需追加 " ${bookmarkThreshold}users入り"。
+    // 根据收藏数阈值构建实际搜索词（构造规则见 buildSearchWord）。
     val searchWord = remember(query, bookmarkThreshold) {
-        val cleanQuery = query.replace(Regex("""\s*\d+users入り"""), "").trim()
-        if (bookmarkThreshold > 0) "$cleanQuery ${bookmarkThreshold}users入り" else cleanQuery
+        buildSearchWord(query, bookmarkThreshold)
     }
 
     // 搜索结果重试计数，作为 LaunchedEffect 的 key 触发重新加载。
@@ -162,6 +161,21 @@ internal fun applySearchClientFilters(list: List<Illust>, ugoira: Int, ratio: In
         else -> res
     }
     return res
+}
+
+/** 检索词中既有收藏数后缀的匹配式（如 "1000users入り"、"10000users入り"）。 */
+private val SearchUsersIriSuffixRegex = Regex("""\s*\d+users入り""")
+
+/**
+ * 按收藏数阈值构造实际搜索词。
+ *
+ * 先清除检索词内既有的 [SearchUsersIriSuffixRegex] 后缀再去掉首尾空白，然后仅在阈值大于 0 时
+ * 追加 " ${bookmarkThreshold}users入り"。清除旧后缀是必须的：用户从历史/链接带回的检索词可能已带
+ * 旧阈值后缀，直接追加会叠加成两个筛选词而检索不到结果。
+ */
+internal fun buildSearchWord(word: String, bookmarkThreshold: Int): String {
+    val cleanWord = word.replace(SearchUsersIriSuffixRegex, "").trim()
+    return if (bookmarkThreshold > 0) "$cleanWord ${bookmarkThreshold}users入り" else cleanWord
 }
 
 /** 搜索日期输入防抖时长（毫秒）。 */
