@@ -1,0 +1,369 @@
+package com.perol.pixez.shared.ui.skin
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.ui.navigation.RootComponent
+import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.UserDetailPageState
+
+/** 底栏单项：文案与图标由一级标签目录求值后传入，避免皮肤层反向依赖导航目录。 */
+internal data class SkinNavItem(
+    val title: String,
+    val icon: ImageVector,
+    val showBadge: Boolean,
+)
+
+/** 用户列表的三种来源：关注 / 粉丝 / 相关画师，三页共用一套 COUI 实现。 */
+internal enum class CouiUserListKind {
+    Following,
+    Followers,
+    Related,
+}
+
+/**
+ * COUI 皮肤提供的页面实现集合。
+ *
+ * 皮肤差异只在这一次接缝上表达：调用方读 [LocalSkinPages]，非 null 就调这里的方法，否则直接渲染 MIUIX 原页面。
+ * 方法签名与 MIUIX 同名页面保持一致，调用点因而能在 if/else 两支里复用同一组实参表达式。
+ */
+internal interface SkinPages {
+    /**
+     * COUI 底栏。Android 在 API 34+ 使用 COUI 官方 NavigationBar，API 31-33 用自绘胶囊平替。
+     */
+    @Composable
+    fun navigationBar(
+        items: List<SkinNavItem>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        modifier: Modifier = Modifier,
+    )
+
+    /**
+     * 一级标签页的 COUI 宿主：COUI 实现不可用时（或标签尚未迁移）执行 [fallback] 的 MIUIX 页面。
+     */
+    @Composable
+    fun mainTabPage(
+        tab: RootComponent.MainTab,
+        component: RootComponent,
+        feedRestore: MainFeedRestore,
+        fallback: @Composable () -> Unit,
+    )
+
+    /** 插画详情页的 COUI 实现。 */
+    @Composable
+    fun illustDetail(
+        illustId: Long,
+        onBack: () -> Unit,
+        onUserClick: (Long) -> Unit,
+        onCommentsClick: (Long) -> Unit,
+        onRelatedIllustsClick: (Long) -> Unit,
+        onIllustSeriesClick: (Long) -> Unit,
+        onTagClick: (String) -> Unit,
+        onIllustClick: ((Long) -> Unit)?,
+        onNovelClick: ((Long) -> Unit)?,
+    )
+
+    /** 用户详情页（画师详情）的 COUI 实现。 */
+    @Composable
+    fun userDetail(
+        userId: Long,
+        pageState: UserDetailPageState,
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+        onFollowListClick: (Long) -> Unit,
+        onFollowerListClick: (Long) -> Unit,
+        onRelatedUsersClick: ((Long) -> Unit)?,
+        onUserNovelsClick: ((Long, String) -> Unit)?,
+        initialTab: Int,
+    )
+
+    /** 小说阅读器（小说详情）的 COUI 实现。 */
+    @Composable
+    fun novelViewer(
+        novelId: Long,
+        onBack: () -> Unit,
+        onNovelClick: (Long) -> Unit,
+        onIllustClick: (Long) -> Unit,
+        onUserClick: (Long) -> Unit,
+        onCommentsClick: (Long) -> Unit,
+    )
+
+    /** 评论页的 COUI 实现。 */
+    @Composable
+    fun comments(
+        illustId: Long,
+        onBack: () -> Unit,
+        onUserClick: (Long) -> Unit,
+        isNovel: Boolean,
+    )
+
+    /** 相关作品页的 COUI 实现。 */
+    @Composable
+    fun relatedIllusts(
+        illustId: Long,
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+    )
+
+    /** 下载历史页的 COUI 实现。 */
+    @Composable
+    fun downloadHistory(
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+    )
+
+    /** 账号编辑页的 COUI 实现。 */
+    @Composable
+    fun accountEdit(
+        onBack: () -> Unit,
+    )
+
+    /** 登录页的 COUI 实现。 */
+    @Composable
+    fun login(
+        onBack: () -> Unit,
+        onLoginSuccess: () -> Unit,
+        onNetworkSettingClick: (() -> Unit)?,
+    )
+
+    /** 插画系列页的 COUI 实现。 */
+    @Composable
+    fun illustSeries(
+        seriesId: Long,
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+    )
+
+    /** 用户小说列表页的 COUI 实现。 */
+    @Composable
+    fun userNovelList(
+        userId: Long,
+        authorName: String,
+        onBack: () -> Unit,
+        onNovelClick: (Long) -> Unit,
+        onUserClick: ((Long) -> Unit)?,
+    )
+
+    /** 用户列表页的 COUI 实现。 */
+    @Composable
+    fun userList(
+        kind: CouiUserListKind,
+        userId: Long,
+        onBack: () -> Unit,
+        onUserClick: (Long) -> Unit,
+    )
+
+    /** 下载任务页的 COUI 实现。 */
+    @Composable
+    fun downloadTask(
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+    )
+
+    /** 历史页的 COUI 实现。 */
+    @Composable
+    fun history(
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+        onNovelClick: (Long) -> Unit,
+    )
+
+    /** 设置页的 COUI 实现。 */
+    @Composable
+    fun settings(
+        onBack: () -> Unit,
+        onAboutClick: () -> Unit,
+        onShieldClick: () -> Unit,
+        onLoginClick: () -> Unit,
+        onDownloadHistoryClick: () -> Unit,
+        onThemeSettingClick: () -> Unit,
+        onNetworkSettingClick: () -> Unit,
+        onDownloadSettingClick: () -> Unit,
+        onLayoutSettingClick: () -> Unit,
+        onLanguageSettingClick: () -> Unit,
+        onWidgetRecommendSettingClick: () -> Unit,
+        onInteractionSettingClick: () -> Unit,
+        onQualitySettingClick: () -> Unit,
+        onCopyTextSettingClick: () -> Unit,
+        onWelcomePageSettingClick: () -> Unit,
+        onBookTagClick: () -> Unit,
+        onUpdateSettingClick: () -> Unit,
+        onAccountEditClick: () -> Unit,
+        onHistoryClick: () -> Unit,
+        onDownloadTaskClick: () -> Unit,
+        onDataExportClick: () -> Unit,
+        onBoardClick: () -> Unit,
+        onGuideClick: () -> Unit,
+        onUserClick: (Long) -> Unit,
+        onUserBookmarksClick: (Long) -> Unit,
+        onAccountManageClick: () -> Unit,
+        onNovelBrowseClick: () -> Unit,
+    )
+
+    /** 公告板页的 COUI 实现。 */
+    @Composable
+    fun board(
+        onBack: () -> Unit,
+    )
+
+    /** 推荐画师页的 COUI 实现。 */
+    @Composable
+    fun recomUser(
+        onBack: () -> Unit,
+        onUserClick: (Long) -> Unit,
+    )
+
+    /** 屏蔽设置页的 COUI 实现。 */
+    @Composable
+    fun shield(
+        onBack: () -> Unit,
+        onAISettingClick: (showAI: Boolean) -> Unit,
+    )
+
+    /** AI 作品显示设置页的 COUI 实现。 */
+    @Composable
+    fun aiSetting(
+        showAI: Boolean,
+        onBack: () -> Unit,
+    )
+
+    /** 欢迎页设置页的 COUI 实现。 */
+    @Composable
+    fun welcomePageSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 桌面小组件设置页的 COUI 实现。 */
+    @Composable
+    fun widgetRecommend(
+        onBack: () -> Unit,
+    )
+
+    /** 交互设置页的 COUI 实现。 */
+    @Composable
+    fun interactionSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 画质设置页的 COUI 实现。 */
+    @Composable
+    fun qualitySetting(
+        onBack: () -> Unit,
+    )
+
+    /** 语言设置页的 COUI 实现。 */
+    @Composable
+    fun languageSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 分享格式设置页的 COUI 实现。 */
+    @Composable
+    fun copyTextSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 下载设置页的 COUI 实现。 */
+    @Composable
+    fun downloadSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 网络设置页的 COUI 实现。 */
+    @Composable
+    fun networkSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 关于页的 COUI 实现。 */
+    @Composable
+    fun about(
+        onBack: () -> Unit,
+        onThanksClick: () -> Unit,
+        onUpdateClick: () -> Unit,
+    )
+
+    /** 致谢页的 COUI 实现。 */
+    @Composable
+    fun thanks(
+        onBack: () -> Unit,
+    )
+
+    /** 收藏标签页的 COUI 实现。 */
+    @Composable
+    fun bookTag(
+        onBack: () -> Unit,
+        onTagSearch: (String) -> Unit,
+    )
+
+    /** 主题设置页的 COUI 实现。 */
+    @Composable
+    fun themeSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 账号管理页的 COUI 实现。 */
+    @Composable
+    fun accountManage(
+        onBack: () -> Unit,
+        onAddAccount: () -> Unit,
+    )
+
+    /** 小说浏览页的 COUI 实现。 */
+    @Composable
+    fun novel(
+        onBack: () -> Unit,
+        onNovelClick: (Long) -> Unit,
+        onUserClick: ((Long) -> Unit)?,
+    )
+
+    /** 布局设置页的 COUI 实现。 */
+    @Composable
+    fun layoutSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 更新设置页的 COUI 实现。 */
+    @Composable
+    fun updateSetting(
+        onBack: () -> Unit,
+    )
+
+    /** 数据导入导出页的 COUI 实现。 */
+    @Composable
+    fun dataExport(
+        onBack: () -> Unit,
+    )
+
+    /** Spotlight 特辑详情页的 COUI 实现。 */
+    @Composable
+    fun spotlightDetail(
+        article: SpotlightArticle,
+        onBack: () -> Unit,
+        onIllustClick: (Long) -> Unit,
+        onUserClick: (Long) -> Unit,
+        onArticleClick: (SpotlightArticle) -> Unit,
+    )
+
+    /** 首次启动引导页的 COUI 实现。 */
+    @Composable
+    fun guide(
+        onLoginClick: () -> Unit,
+        onFinish: () -> Unit,
+    )
+
+    /** 搜索页的 COUI 实现。 */
+    @Composable
+    fun search(
+        initialQuery: String,
+        onIllustClick: (Long) -> Unit,
+        onUserClick: (Long) -> Unit,
+        onNovelClick: (Long) -> Unit,
+    )
+}
+
+/** 当前平台与皮肤提供的页面实现；为 null 表示不提供替换实现，调用方走 MIUIX 原页面。 */
+internal val LocalSkinPages = staticCompositionLocalOf<SkinPages?> { null }

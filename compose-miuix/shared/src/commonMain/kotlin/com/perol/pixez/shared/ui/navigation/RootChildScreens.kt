@@ -13,48 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.ui.state.MainFeedRestore
-import com.perol.pixez.shared.ui.skin.CouiAboutPage
-import com.perol.pixez.shared.ui.skin.CouiAccountEditPage
-import com.perol.pixez.shared.ui.skin.CouiAccountManagePage
-import com.perol.pixez.shared.ui.skin.CouiAiSettingPage
-import com.perol.pixez.shared.ui.skin.CouiBoardPage
-import com.perol.pixez.shared.ui.skin.CouiBookTagPage
-import com.perol.pixez.shared.ui.skin.CouiCommentsPage
-import com.perol.pixez.shared.ui.skin.CouiCopyTextSettingPage
-import com.perol.pixez.shared.ui.skin.CouiDataExportPage
-import com.perol.pixez.shared.ui.skin.CouiDownloadHistoryPage
-import com.perol.pixez.shared.ui.skin.CouiDownloadSettingPage
-import com.perol.pixez.shared.ui.skin.CouiDownloadTaskPage
-import com.perol.pixez.shared.ui.skin.CouiGuidePage
-import com.perol.pixez.shared.ui.skin.CouiHistoryPage
+import com.perol.pixez.shared.ui.skin.LocalSkinPages
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
-import com.perol.pixez.shared.ui.skin.CouiUserListPage
-import com.perol.pixez.shared.ui.skin.CouiUserNovelListPage
-import com.perol.pixez.shared.ui.skin.CouiIllustDetailPage
-import com.perol.pixez.shared.ui.skin.CouiMainTabPage
-import com.perol.pixez.shared.ui.skin.CouiNovelViewerPage
-import com.perol.pixez.shared.ui.skin.CouiNovelPage
-import com.perol.pixez.shared.ui.skin.CouiNetworkSettingPage
-import com.perol.pixez.shared.ui.skin.CouiRecomUserPage
-import com.perol.pixez.shared.ui.skin.CouiShieldPage
-import com.perol.pixez.shared.ui.skin.CouiThanksPage
-import com.perol.pixez.shared.ui.skin.CouiThemeSettingPage
-import com.perol.pixez.shared.ui.skin.CouiWelcomePageSettingPage
-import com.perol.pixez.shared.ui.skin.CouiWidgetRecommendPage
-import com.perol.pixez.shared.ui.skin.CouiRelatedIllustsPage
-import com.perol.pixez.shared.ui.skin.CouiSearchPage
-import com.perol.pixez.shared.ui.skin.CouiIllustSeriesPage
-import com.perol.pixez.shared.ui.skin.CouiInteractionSettingPage
-import com.perol.pixez.shared.ui.skin.CouiLanguageSettingPage
-import com.perol.pixez.shared.ui.skin.CouiLayoutSettingPage
-import com.perol.pixez.shared.ui.skin.CouiQualitySettingPage
-import com.perol.pixez.shared.ui.skin.CouiLoginPage
-import com.perol.pixez.shared.ui.skin.CouiSettingsPage
-import com.perol.pixez.shared.ui.skin.CouiSpotlightDetailPage
-import com.perol.pixez.shared.ui.skin.CouiUpdateSettingPage
-import com.perol.pixez.shared.ui.skin.CouiUserDetailPage
-import com.perol.pixez.shared.ui.skin.LocalUiSkin
-import com.perol.pixez.shared.ui.skin.UiSkin
 import com.perol.pixez.shared.ui.screens.AboutScreen
 import com.perol.pixez.shared.ui.screens.AccountEditScreen
 import com.perol.pixez.shared.ui.screens.AccountManageScreen
@@ -177,9 +137,10 @@ internal fun MainContent(
         modifier = Modifier.fillMaxSize(),
     ) { page ->
         val descriptor = MAIN_TAB_DESCRIPTORS[page]
-        if (LocalUiSkin.current == UiSkin.COLOROS) {
-            // 皮肤差异收敛在页面宿主：COUI 标签用 Android 实现，未迁移标签执行 fallback。
-            CouiMainTabPage(
+        val skinPages = LocalSkinPages.current
+        if (skinPages != null) {
+            // 皮肤接缝收敛在页面宿主：COUI 标签走皮肤实现，未迁移标签执行 fallback。
+            skinPages.mainTabPage(
                 tab = descriptor.tab,
                 component = component,
                 feedRestore = feedRestore,
@@ -196,7 +157,20 @@ internal fun MainContent(
 internal fun renderIllustDetail(
     component: IllustDetailComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.illustDetail(
+            illustId = component.illustId,
+            onBack = { component.onBack() },
+            onUserClick = component.onUserClick,
+            onCommentsClick = component.onCommentsClick,
+            onRelatedIllustsClick = component.onRelatedIllustsClick,
+            onIllustSeriesClick = component.onIllustSeriesClick,
+            onTagClick = component.onTagClick,
+            onIllustClick = component.onIllustClick,
+            onNovelClick = component.onNovelClick,
+        )
+    } else {
         IllustDetailScreen(
             illustId = component.illustId,
             // Screen 的 onBack 为 () -> Unit，组件回调返回消费与否的 Boolean，此处丢弃返回值。
@@ -210,22 +184,6 @@ internal fun renderIllustDetail(
             onNovelClick = component.onNovelClick,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiIllustDetailPage(
-            illustId = component.illustId,
-            onBack = { component.onBack() },
-            onUserClick = component.onUserClick,
-            onCommentsClick = component.onCommentsClick,
-            onRelatedIllustsClick = component.onRelatedIllustsClick,
-            onIllustSeriesClick = component.onIllustSeriesClick,
-            onTagClick = component.onTagClick,
-            onIllustClick = component.onIllustClick,
-            onNovelClick = component.onNovelClick,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
@@ -233,7 +191,20 @@ internal fun renderUserDetail(
     component: UserDetailComponent,
     root: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.userDetail(
+            userId = component.userId,
+            pageState = component.pageState,
+            onBack = root::onBack,
+            onIllustClick = root::onIllustClicked,
+            onFollowListClick = root::onUserFollowListClicked,
+            onFollowerListClick = root::onUserFollowerListClicked,
+            onRelatedUsersClick = root::onUserRelatedListClicked,
+            onUserNovelsClick = root::onUserNovelListClicked,
+            initialTab = component.config.initialTab,
+        )
+    } else {
         UserDetailScreen(
             userId = component.userId,
             pageState = component.pageState,
@@ -246,44 +217,25 @@ internal fun renderUserDetail(
             initialTab = component.config.initialTab,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUserDetailPage(
-            userId = component.userId,
-            pageState = component.pageState,
-            onBack = root::onBack,
-            onIllustClick = root::onIllustClicked,
-            onFollowListClick = root::onUserFollowListClicked,
-            onFollowerListClick = root::onUserFollowerListClicked,
-            onRelatedUsersClick = root::onUserRelatedListClicked,
-            onUserNovelsClick = root::onUserNovelListClicked,
-            initialTab = component.config.initialTab,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
 internal fun renderLogin(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.login(
+            onBack = component::onBack,
+            onLoginSuccess = component::onLoginSuccess,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+        )
+    } else {
         LoginScreen(
             onBack = component::onBack,
             onLoginSuccess = component::onLoginSuccess,
             onNetworkSettingClick = component::onNetworkSettingClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiLoginPage(
-            onBack = component::onBack,
-            onLoginSuccess = component::onLoginSuccess,
-            onNetworkSettingClick = component::onNetworkSettingClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -292,24 +244,21 @@ internal fun renderComments(
     instance: Config.Comments,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.comments(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+            isNovel = instance.isNovel,
+        )
+    } else {
         CommentsScreen(
             illustId = instance.illustId,
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
             isNovel = instance.isNovel,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiCommentsPage(
-            illustId = instance.illustId,
-            onBack = component::onBack,
-            onUserClick = component::onUserClicked,
-            isNovel = instance.isNovel,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -318,22 +267,19 @@ internal fun renderRelatedIllusts(
     instance: Config.RelatedIllusts,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.relatedIllusts(
+            illustId = instance.illustId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    } else {
         RelatedIllustsScreen(
             illustId = instance.illustId,
             onBack = component::onBack,
             onIllustClick = component::onIllustClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiRelatedIllustsPage(
-            illustId = instance.illustId,
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -342,22 +288,19 @@ internal fun renderIllustSeries(
     instance: Config.IllustSeries,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.illustSeries(
+            seriesId = instance.seriesId,
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    } else {
         IllustSeriesScreen(
             seriesId = instance.seriesId,
             onBack = component::onBack,
             onIllustClick = component::onIllustClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiIllustSeriesPage(
-            seriesId = instance.seriesId,
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -366,23 +309,20 @@ internal fun renderUserFollowList(
     instance: Config.UserFollowList,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.userList(
+            kind = CouiUserListKind.Following,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         UserFollowListScreen(
             userId = instance.userId,
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUserListPage(
-            kind = CouiUserListKind.Following,
-            userId = instance.userId,
-            onBack = component::onBack,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -391,23 +331,20 @@ internal fun renderUserFollowerList(
     instance: Config.UserFollowerList,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.userList(
+            kind = CouiUserListKind.Followers,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         UserFollowerListScreen(
             userId = instance.userId,
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUserListPage(
-            kind = CouiUserListKind.Followers,
-            userId = instance.userId,
-            onBack = component::onBack,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -415,20 +352,17 @@ internal fun renderUserFollowerList(
 internal fun renderRecomUserList(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.recomUser(
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         RecomUserScreen(
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiRecomUserPage(
-            onBack = component::onBack,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -436,7 +370,38 @@ internal fun renderRecomUserList(
 internal fun renderSettingsPage(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.settings(
+            onBack = component::onBack,
+            onAboutClick = component::onAboutClicked,
+            onShieldClick = component::onShieldClicked,
+            onLoginClick = component::onLoginClicked,
+            onDownloadHistoryClick = component::onDownloadHistoryClicked,
+            onThemeSettingClick = component::onThemeSettingClicked,
+            onNetworkSettingClick = component::onNetworkSettingClicked,
+            onDownloadSettingClick = component::onDownloadSettingClicked,
+            onLayoutSettingClick = component::onLayoutSettingClicked,
+            onLanguageSettingClick = component::onLanguageSettingClicked,
+            onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
+            onInteractionSettingClick = component::onInteractionSettingClicked,
+            onQualitySettingClick = component::onQualitySettingClicked,
+            onCopyTextSettingClick = component::onCopyTextSettingClicked,
+            onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
+            onBookTagClick = component::onBookTagClicked,
+            onUpdateSettingClick = component::onUpdateSettingClicked,
+            onAccountEditClick = component::onAccountEditClicked,
+            onHistoryClick = component::onHistoryClicked,
+            onDownloadTaskClick = component::onDownloadTaskClicked,
+            onDataExportClick = component::onDataExportClicked,
+            onBoardClick = component::onBoardClicked,
+            onGuideClick = component::onGuideClicked,
+            onUserClick = { userId -> component.onUserClicked(userId, 0) },
+            onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
+            onAccountManageClick = component::onAccountManageClicked,
+            onNovelBrowseClick = component::onNovelBrowseClicked,
+        )
+    } else {
         SettingsScreen(
             onBack = component::onBack,
             onUserClick = { userId -> component.onUserClicked(userId, 0) },
@@ -467,40 +432,6 @@ internal fun renderSettingsPage(
             onGuideClick = component::onGuideClicked,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiSettingsPage(
-            onBack = component::onBack,
-            onAboutClick = component::onAboutClicked,
-            onShieldClick = component::onShieldClicked,
-            onLoginClick = component::onLoginClicked,
-            onDownloadHistoryClick = component::onDownloadHistoryClicked,
-            onThemeSettingClick = component::onThemeSettingClicked,
-            onNetworkSettingClick = component::onNetworkSettingClicked,
-            onDownloadSettingClick = component::onDownloadSettingClicked,
-            onLayoutSettingClick = component::onLayoutSettingClicked,
-            onLanguageSettingClick = component::onLanguageSettingClicked,
-            onWidgetRecommendSettingClick = component::onWidgetRecommendSettingClicked,
-            onInteractionSettingClick = component::onInteractionSettingClicked,
-            onQualitySettingClick = component::onQualitySettingClicked,
-            onCopyTextSettingClick = component::onCopyTextSettingClicked,
-            onWelcomePageSettingClick = component::onWelcomePageSettingClicked,
-            onBookTagClick = component::onBookTagClicked,
-            onUpdateSettingClick = component::onUpdateSettingClicked,
-            onAccountEditClick = component::onAccountEditClicked,
-            onHistoryClick = component::onHistoryClicked,
-            onDownloadTaskClick = component::onDownloadTaskClicked,
-            onDataExportClick = component::onDataExportClicked,
-            onBoardClick = component::onBoardClicked,
-            onGuideClick = component::onGuideClicked,
-            onUserClick = { userId -> component.onUserClicked(userId, 0) },
-            onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
-            onAccountManageClick = component::onAccountManageClicked,
-            onNovelBrowseClick = component::onNovelBrowseClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
@@ -508,7 +439,15 @@ internal fun renderSearch(
     instance: Config.Search,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.search(
+            initialQuery = instance.query,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onNovelClick = component::onNovelClicked,
+        )
+    } else {
         SearchScreen(
             onIllustClick = component::onIllustClicked,
             onUserClick = component::onUserClicked,
@@ -516,37 +455,23 @@ internal fun renderSearch(
             initialQuery = instance.query,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiSearchPage(
-            initialQuery = instance.query,
-            onIllustClick = component::onIllustClicked,
-            onUserClick = component::onUserClicked,
-            onNovelClick = component::onNovelClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
 internal fun renderDownloadHistory(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.downloadHistory(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    } else {
         DownloadHistoryScreen(
             onBack = component::onBack,
             onIllustClick = component::onIllustClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiDownloadHistoryPage(
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -554,20 +479,17 @@ internal fun renderDownloadHistory(
 internal fun renderShield(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.shield(
+            onBack = component::onBack,
+            onAISettingClick = component::onAISettingClicked,
+        )
+    } else {
         ShieldScreen(
             onBack = component::onBack,
             onAISettingClick = component::onAISettingClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiShieldPage(
-            onBack = component::onBack,
-            onAISettingClick = component::onAISettingClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -576,20 +498,17 @@ internal fun renderAISetting(
     instance: Config.AISetting,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.aiSetting(
+            showAI = instance.showAI,
+            onBack = component::onBack,
+        )
+    } else {
         UserShowAISettingScreen(
             showAI = instance.showAI,
             onBack = component::onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiAiSettingPage(
-            showAI = instance.showAI,
-            onBack = component::onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -597,18 +516,15 @@ internal fun renderAISetting(
 internal fun renderThemeSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.themeSetting(
+            onBack = onBack,
+        )
+    } else {
         ThemeSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiThemeSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -616,18 +532,15 @@ internal fun renderThemeSetting(
 internal fun renderNetworkSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.networkSetting(
+            onBack = onBack,
+        )
+    } else {
         NetworkSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiNetworkSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -635,18 +548,15 @@ internal fun renderNetworkSetting(
 internal fun renderDownloadSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.downloadSetting(
+            onBack = onBack,
+        )
+    } else {
         DownloadSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiDownloadSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -654,18 +564,15 @@ internal fun renderDownloadSetting(
 internal fun renderLayoutSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.layoutSetting(
+            onBack = onBack,
+        )
+    } else {
         LayoutSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiLayoutSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -673,18 +580,15 @@ internal fun renderLayoutSetting(
 internal fun renderLanguageSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.languageSetting(
+            onBack = onBack,
+        )
+    } else {
         LanguageSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiLanguageSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -692,18 +596,15 @@ internal fun renderLanguageSetting(
 internal fun renderWidgetRecommendSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.widgetRecommend(
+            onBack = onBack,
+        )
+    } else {
         WidgetRecommendSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiWidgetRecommendPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -711,18 +612,15 @@ internal fun renderWidgetRecommendSetting(
 internal fun renderInteractionSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.interactionSetting(
+            onBack = onBack,
+        )
+    } else {
         InteractionSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiInteractionSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -730,18 +628,15 @@ internal fun renderInteractionSetting(
 internal fun renderUpdateSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.updateSetting(
+            onBack = onBack,
+        )
+    } else {
         UpdateSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUpdateSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -749,18 +644,15 @@ internal fun renderUpdateSetting(
 internal fun renderAccountEdit(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.accountEdit(
+            onBack = component::onBack,
+        )
+    } else {
         AccountEditScreen(
             onBack = component::onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiAccountEditPage(
-            onBack = component::onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -768,7 +660,14 @@ internal fun renderAccountEdit(
 internal fun renderHistory(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.history(
+            onBack = component::onBack,
+            onIllustClick = { component.onIllustClicked(it) },
+            onNovelClick = component::onNovelClicked,
+        )
+    } else {
         HistoryScreen(
             onBack = component::onBack,
             // 历史记录使用 Long 保存作品 ID 以避免数据库溢出，
@@ -777,36 +676,23 @@ internal fun renderHistory(
             onNovelClick = component::onNovelClicked,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiHistoryPage(
-            onBack = component::onBack,
-            onIllustClick = { component.onIllustClicked(it) },
-            onNovelClick = component::onNovelClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
 internal fun renderDownloadTask(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.downloadTask(
+            onBack = component::onBack,
+            onIllustClick = component::onIllustClicked,
+        )
+    } else {
         DownloadTaskScreen(
             onBack = component::onBack,
             onIllustClick = component::onIllustClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiDownloadTaskPage(
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -814,18 +700,15 @@ internal fun renderDownloadTask(
 internal fun renderDataExport(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.dataExport(
+            onBack = { component.onBack() },
+        )
+    } else {
         DataExportScreen(
             onBack = component::onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiDataExportPage(
-            onBack = { component.onBack() },
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -833,18 +716,15 @@ internal fun renderDataExport(
 internal fun renderBoard(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.board(
+            onBack = component::onBack,
+        )
+    } else {
         BoardScreen(
             onBack = component::onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiBoardPage(
-            onBack = component::onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -852,18 +732,15 @@ internal fun renderBoard(
 internal fun renderQualitySetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.qualitySetting(
+            onBack = onBack,
+        )
+    } else {
         QualitySettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiQualitySettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -871,18 +748,15 @@ internal fun renderQualitySetting(
 internal fun renderCopyTextSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.copyTextSetting(
+            onBack = onBack,
+        )
+    } else {
         CopyTextSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiCopyTextSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -890,18 +764,15 @@ internal fun renderCopyTextSetting(
 internal fun renderWelcomePageSetting(
     onBack: () -> Unit,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.welcomePageSetting(
+            onBack = onBack,
+        )
+    } else {
         WelcomePageSettingScreen(
             onBack = onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiWelcomePageSettingPage(
-            onBack = onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -909,22 +780,19 @@ internal fun renderWelcomePageSetting(
 internal fun renderAbout(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.about(
+            onBack = component::onBack,
+            onThanksClick = component::onThanksClicked,
+            onUpdateClick = component::onUpdateSettingClicked,
+        )
+    } else {
         AboutScreen(
             onBack = component::onBack,
             onThanksClick = component::onThanksClicked,
             onUpdateClick = component::onUpdateSettingClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiAboutPage(
-            onBack = component::onBack,
-            onThanksClick = component::onThanksClicked,
-            onUpdateClick = component::onUpdateSettingClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -932,20 +800,17 @@ internal fun renderAbout(
 internal fun renderBookTag(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.bookTag(
+            onBack = component::onBack,
+            onTagSearch = component::onSearchClicked,
+        )
+    } else {
         BookTagScreen(
             onBack = component::onBack,
             onTagSearch = component::onSearchClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiBookTagPage(
-            onBack = component::onBack,
-            onTagSearch = component::onSearchClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -953,18 +818,15 @@ internal fun renderBookTag(
 internal fun renderThanks(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.thanks(
+            onBack = component::onBack,
+        )
+    } else {
         ThanksScreen(
             onBack = component::onBack,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiThanksPage(
-            onBack = component::onBack,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -973,7 +835,16 @@ internal fun renderSpotlightDetail(
     instance: Config.SpotlightDetail,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.spotlightDetail(
+            article = instance.article,
+            onBack = { component.onBack() },
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onArticleClick = component::onSpotlightArticleClicked,
+        )
+    } else {
         SpotlightDetailScreen(
             article = instance.article,
             onBack = component::onBack,
@@ -982,38 +853,23 @@ internal fun renderSpotlightDetail(
             onArticleClick = component::onSpotlightArticleClicked,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiSpotlightDetailPage(
-            article = instance.article,
-            onBack = { component.onBack() },
-            onIllustClick = component::onIllustClicked,
-            onUserClick = component::onUserClicked,
-            onArticleClick = component::onSpotlightArticleClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
 internal fun renderGuide(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.guide(
+            onLoginClick = { component.onLoginClicked() },
+            onFinish = { component.onGuideFinished() },
+        )
+    } else {
         GuideScreen(
             onLoginClick = component::onLoginClicked,
             onFinish = component::onGuideFinished,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiGuidePage(
-            onLoginClick = { component.onLoginClicked() },
-            onFinish = { component.onGuideFinished() },
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -1021,20 +877,17 @@ internal fun renderGuide(
 internal fun renderAccountManage(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.accountManage(
+            onBack = component::onBack,
+            onAddAccount = component::onLoginClicked,
+        )
+    } else {
         AccountManageScreen(
             onBack = component::onBack,
             onAddAccount = component::onLoginClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiAccountManagePage(
-            onBack = component::onBack,
-            onAddAccount = component::onLoginClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -1042,22 +895,19 @@ internal fun renderAccountManage(
 internal fun renderNovel(
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.novel(
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         NovelScreen(
             onBack = component::onBack,
             onNovelClick = component::onNovelClicked,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiNovelPage(
-            onBack = component::onBack,
-            onNovelClick = component::onNovelClicked,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -1066,7 +916,17 @@ internal fun renderNovelViewer(
     instance: Config.NovelViewer,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.novelViewer(
+            novelId = instance.novelId,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onIllustClick = component::onIllustClicked,
+            onUserClick = component::onUserClicked,
+            onCommentsClick = component::onNovelCommentsClicked,
+        )
+    } else {
         NovelViewerScreen(
             novelId = instance.novelId,
             onBack = component::onBack,
@@ -1076,19 +936,6 @@ internal fun renderNovelViewer(
             onCommentsClick = component::onNovelCommentsClicked,
         )
     }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiNovelViewerPage(
-            novelId = instance.novelId,
-            onBack = component::onBack,
-            onNovelClick = component::onNovelClicked,
-            onIllustClick = component::onIllustClicked,
-            onUserClick = component::onUserClicked,
-            onCommentsClick = component::onNovelCommentsClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
-    }
 }
 
 @Composable
@@ -1096,23 +943,20 @@ internal fun renderUserRelatedList(
     instance: Config.UserRelatedList,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.userList(
+            kind = CouiUserListKind.Related,
+            userId = instance.userId,
+            onBack = component::onBack,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         UserRelatedListScreen(
             userId = instance.userId,
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUserListPage(
-            kind = CouiUserListKind.Related,
-            userId = instance.userId,
-            onBack = component::onBack,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }
 
@@ -1121,7 +965,16 @@ internal fun renderUserNovelList(
     instance: Config.UserNovelList,
     component: RootComponent,
 ) {
-    val renderMiuix: @Composable () -> Unit = {
+    val skinPages = LocalSkinPages.current
+    if (skinPages != null) {
+        skinPages.userNovelList(
+            userId = instance.userId,
+            authorName = instance.authorName,
+            onBack = component::onBack,
+            onNovelClick = component::onNovelClicked,
+            onUserClick = component::onUserClicked,
+        )
+    } else {
         UserNovelListScreen(
             userId = instance.userId,
             authorName = instance.authorName,
@@ -1129,17 +982,5 @@ internal fun renderUserNovelList(
             onNovelClick = component::onNovelClicked,
             onUserClick = component::onUserClicked,
         )
-    }
-    if (LocalUiSkin.current == UiSkin.COLOROS) {
-        CouiUserNovelListPage(
-            userId = instance.userId,
-            authorName = instance.authorName,
-            onBack = component::onBack,
-            onNovelClick = component::onNovelClicked,
-            onUserClick = component::onUserClicked,
-            fallback = renderMiuix,
-        )
-    } else {
-        renderMiuix()
     }
 }

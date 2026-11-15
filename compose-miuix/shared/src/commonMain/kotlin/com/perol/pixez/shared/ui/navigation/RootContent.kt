@@ -25,7 +25,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.geometry.Rect
 import com.perol.pixez.shared.platform.isRtlLanguage
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
@@ -69,7 +68,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.theme.AppThemeSettings
 import com.perol.pixez.shared.ui.theme.resolveAppThemeSpec
 import com.perol.pixez.shared.ui.theme.toThemeController
-import com.perol.pixez.shared.ui.skin.CouiMainNavigationBar
+import com.perol.pixez.shared.ui.skin.LocalSkinPages
 import com.perol.pixez.shared.ui.skin.CouiSkinHost
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.SkinNavItem
@@ -565,10 +564,10 @@ private fun MainChildSection(
     // 中-9：设置仓储经 LocalSettingsRepository 读取（RootContent 根部 provide）。
     val settingsRepository = LocalSettingsRepository.current
     val mainChangeVersion = settingsRepository.changeVersion.collectAsState().value
-    val uiSkin = LocalUiSkin.current
+    val skinPages = LocalSkinPages.current
     val strings = LocalStrings.current
     val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
-    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab, uiSkin) {
+    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab) {
         MAIN_TAB_DESCRIPTORS.map { descriptor ->
             SkinNavItem(
                 title = descriptor.label(strings),
@@ -588,7 +587,7 @@ private fun MainChildSection(
                 .fillMaxSize()
                 .background(MiuixTheme.colorScheme.surface),
         ) {
-            if (showNavigationRailInMain && uiSkin != UiSkin.COLOROS) {
+            if (showNavigationRailInMain) {
                 MainNavigationRail(
                     activeTab = activeTab,
                     onTabSelected = component::onMainTabSelected,
@@ -611,9 +610,10 @@ private fun MainChildSection(
                     )
                 }
                 if (bottomBarVisible.value) {
-                    if (uiSkin == UiSkin.COLOROS) {
-                        // COUI 底栏：API 34+ 官方浮动栏，31-33 由 androidMain 自绘平替。
-                        CouiMainNavigationBar(
+                    // 浮动底栏且皮肤提供自家底栏时交给皮肤（未读红点由皮肤层自绘，见 UiSkinNavigationBar.kt）；
+                    // 其余情况一律用 MIUIX 底栏，宽屏非浮动时上面已有侧栏，底栏自然不参与。
+                    if (useFloatingBottomBar && skinPages != null) {
+                        skinPages.navigationBar(
                             items = couiNavItems,
                             selectedIndex = MAIN_TAB_DESCRIPTORS
                                 .indexOfFirst { it.tab == activeTab }
