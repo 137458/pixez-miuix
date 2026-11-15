@@ -83,7 +83,7 @@
 
 ### Android
 
-下载 `PixEz-MIUIX-v*.apk` 并在设备上直接安装。支持 Android 7.0（API 24）及以上系统，适配手机与平板。
+下载 `PixEz-MIUIX-v*.apk` 并在设备上直接安装。支持 Android 12（API 31）及以上系统，适配手机与平板。
 
 ### Windows 桌面端（无需预装 Java 环境）
 
@@ -149,7 +149,7 @@ pixez-flutter-MIUIX/
 ### 环境要求
 
 - JDK 17。
-- Android SDK：`compileSdk = 36`、`minSdk = 24`。
+- Android SDK：`compileSdk = 36`、`minSdk = 31`。
 - 构建通过 Gradle Wrapper（Gradle 8.14.4）执行。
 - Windows 单文件 EXE 打包依赖 .NET Framework 的 `csc.exe`。
 
