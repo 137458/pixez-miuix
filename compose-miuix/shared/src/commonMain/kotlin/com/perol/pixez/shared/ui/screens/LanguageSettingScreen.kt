@@ -39,7 +39,6 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import androidx.compose.foundation.background
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 语言设置页：选择应用显示语言。

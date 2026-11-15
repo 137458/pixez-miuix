@@ -1,12 +1,10 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -34,7 +32,6 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 

@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.animation
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle

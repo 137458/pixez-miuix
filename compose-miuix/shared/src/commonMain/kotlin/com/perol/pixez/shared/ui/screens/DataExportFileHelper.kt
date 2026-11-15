@@ -9,7 +9,6 @@ import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException

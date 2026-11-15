@@ -22,7 +22,6 @@ import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.foundation.background
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 致谢页：展示项目感谢人员名单。

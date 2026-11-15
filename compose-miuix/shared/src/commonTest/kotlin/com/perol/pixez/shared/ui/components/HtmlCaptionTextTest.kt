@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.components
 import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class HtmlCaptionTextTest {
 

@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.network.PixivHosts
-import com.perol.pixez.shared.utils.HtmlUtils
 import com.perol.pixez.shared.data.model.AmWork
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.model.SpotlightDetail

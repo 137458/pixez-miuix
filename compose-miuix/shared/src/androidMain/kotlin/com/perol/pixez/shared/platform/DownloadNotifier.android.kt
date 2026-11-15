@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.perol.pixez.shared.R
-import io.github.aakira.napier.Napier
 
 /**
  * Android 平台实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。

@@ -54,7 +54,6 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import androidx.compose.foundation.background
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 用户好P友/粉丝列表页：支持流式分页与下拉刷新。

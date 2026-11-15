@@ -6,7 +6,6 @@ import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.data.model.NovelImageUrls
 import com.perol.pixez.shared.data.model.NovelProfileImageUrls
 import com.perol.pixez.shared.data.model.NovelUser
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before

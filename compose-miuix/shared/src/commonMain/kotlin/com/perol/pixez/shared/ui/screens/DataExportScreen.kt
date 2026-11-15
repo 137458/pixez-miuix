@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalMuteRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
@@ -46,7 +45,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * 应用数据导入导出页：为搜索标签历史、收藏标签、插画历史、小说历史、屏蔽数据

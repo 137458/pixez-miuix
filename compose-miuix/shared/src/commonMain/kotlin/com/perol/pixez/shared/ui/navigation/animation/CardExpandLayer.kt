@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color

@@ -37,7 +37,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.background
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * AI 作品显示设置页：展示并更新 Pixiv 账号级 AI 作品显示偏好。

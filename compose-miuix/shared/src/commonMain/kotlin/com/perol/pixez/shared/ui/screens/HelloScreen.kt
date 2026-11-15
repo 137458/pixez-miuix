@@ -11,26 +11,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.isLoggedIn
-import com.perol.pixez.shared.data.model.Illust
-import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.ui.LocalAccountRepository
-import com.perol.pixez.shared.ui.LocalBanRepository
-import com.perol.pixez.shared.ui.LocalIllustRepository
-import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.state.IllustPagedListState
-import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.rememberHelloFeedState
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -42,7 +27,6 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.runtime.remember
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -57,8 +41,6 @@ import top.yukonga.miuix.kmp.icon.extended.Contacts
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.extended.Settings
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 
 /**
