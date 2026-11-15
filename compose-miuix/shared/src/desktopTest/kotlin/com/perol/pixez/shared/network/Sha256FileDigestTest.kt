@@ -4,7 +4,6 @@ import com.perol.pixez.shared.platform.DigestCheck
 import com.perol.pixez.shared.platform.UpdateDigest
 import org.junit.Test
 import java.io.File
-import java.security.MessageDigest
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

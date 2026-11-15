@@ -1,6 +1,5 @@
 package com.perol.pixez.shared.platform
 
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Files
 import java.util.zip.ZipEntry

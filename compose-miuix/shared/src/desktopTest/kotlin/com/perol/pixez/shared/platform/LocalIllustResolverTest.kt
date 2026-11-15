@@ -3,7 +3,6 @@ package com.perol.pixez.shared.platform
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import coil3.asImage
 import coil3.memory.MemoryCache
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustProfileImageUrls

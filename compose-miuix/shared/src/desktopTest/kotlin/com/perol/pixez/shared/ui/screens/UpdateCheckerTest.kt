@@ -11,7 +11,6 @@ import com.perol.pixez.shared.ui.components.parseMarkdownBlocks
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UpdateCheckerTest {
