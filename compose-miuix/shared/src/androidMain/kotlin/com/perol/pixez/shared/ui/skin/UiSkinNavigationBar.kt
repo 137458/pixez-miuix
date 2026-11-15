@@ -101,17 +101,15 @@ private fun CouiLibraryNavigationBar(
 /**
  * 未读红点叠层。
  *
- * 几何常量逐条抄自 COUI-Kit 0.0.1-alpha11 的 navigation/NavigationBar.kt，
- * 用来复算官方底栏每个条目的位置：外框上 16、左右 16，底部留白 16 加系统可点击区判断；
- * 内层可用宽上限 = 最大菜单宽 + 136（左右各 56 的圆钮再留 24），行高 56，条目高 48，
- * 胶囊水平内边距 12、条目间距 8、条目内图标顶部留白 4、图标 24 居中。
- * 库里没有可复用的定位接口，升级库后必须复核这些数字；本层只画点，不接管点击与无障碍语义。
+ * 库的条目只接受图标与标题、没有内容槽，红点塞不进条目内部，只能在底栏之上另叠一层，按库的版式
+ * 复算每个条目的位置。几何常量集中在 [CouiNavigationBarMetrics]，由 NavigationBarBadgeMetricsTest
+ * 校验公式与边界；本层只画点，不接管点击与无障碍语义。
  */
 @RequiresApi(34)
 @Composable
 private fun BoxScope.CouiLibraryBadgeLayer(items: List<SkinNavItem>) {
     val scheme = CouiTheme.colorScheme
-    val maximumMenuWidth = 24.dp + 70.dp * items.size + 8.dp * (items.size - 1)
+    val maxMenuWidth = CouiNavigationBarMetrics.maximumMenuWidth(items.size)
     val bottomMargin = couiLibraryBottomMargin()
     Box(
         modifier = Modifier
@@ -119,37 +117,46 @@ private fun BoxScope.CouiLibraryBadgeLayer(items: List<SkinNavItem>) {
             .windowInsetsPadding(
                 WindowInsets.tappableElement.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
             )
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + bottomMargin),
+            .padding(
+                start = CouiNavigationBarMetrics.contentPadding,
+                end = CouiNavigationBarMetrics.contentPadding,
+                top = CouiNavigationBarMetrics.contentPadding,
+                bottom = CouiNavigationBarMetrics.contentPadding + bottomMargin,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         BoxWithConstraints(
             modifier = Modifier
-                .widthIn(max = maximumMenuWidth + 136.dp)
+                .widthIn(max = maxMenuWidth + CouiNavigationBarMetrics.innerExtraWidth)
                 .fillMaxWidth(),
         ) {
-            val menuWidth = (maxWidth - 136.dp).coerceAtLeast(0.dp)
+            val menuWidth = CouiNavigationBarMetrics.menuWidth(maxWidth)
             Row(
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(CouiNavigationBarMetrics.rowHeight),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Spacer(Modifier.width(56.dp))
+                Spacer(Modifier.width(CouiNavigationBarMetrics.sideButtonWidth))
                 Row(
                     modifier = Modifier
                         .width(menuWidth)
-                        .height(56.dp)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .height(CouiNavigationBarMetrics.rowHeight)
+                        .padding(horizontal = CouiNavigationBarMetrics.menuHorizontalPadding),
+                    horizontalArrangement = Arrangement.spacedBy(CouiNavigationBarMetrics.itemSpacing),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     items.forEach { item ->
-                        Box(modifier = Modifier.weight(1f).height(48.dp)) {
+                        Box(modifier = Modifier.weight(1f).height(CouiNavigationBarMetrics.itemHeight)) {
                             if (item.showBadge) {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopCenter)
-                                        // 图标 24 居中，红点右边贴图标右边：中心右移 12 - 3.5 = 8.5；竖向沿用条目内图标顶部 4 的留白。
-                                        .offset(x = 8.5.dp, y = 4.dp)
-                                        .size(7.dp)
+                                        // 图标 24 居中、红点 7：红点右边贴图标右边，中心右移 12 - 3.5 = 8.5；
+                                        // 竖向沿用条目内图标顶部 4 的留白。
+                                        .offset(
+                                            x = CouiNavigationBarMetrics.badgeOffsetX(),
+                                            y = CouiNavigationBarMetrics.badgeOffsetY(),
+                                        )
+                                        .size(CouiNavigationBarMetrics.badgeSize)
                                         .clip(RoundedCornerShape(50))
                                         .background(scheme.accent),
                                 )
@@ -157,7 +164,7 @@ private fun BoxScope.CouiLibraryBadgeLayer(items: List<SkinNavItem>) {
                         }
                     }
                 }
-                Spacer(Modifier.width(56.dp))
+                Spacer(Modifier.width(CouiNavigationBarMetrics.sideButtonWidth))
             }
         }
     }
