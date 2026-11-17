@@ -25,11 +25,10 @@ import kotlin.test.assertTrue
  *    CouiUserListScreen / CouiUserNovelListScreen。COUI 侧不复用 MIUIX 页面实现，各自复制了一份
  *    切号重置逻辑，必须单独纳入守护，否则只改 MIUIX 侧仍会出现「切号后残留上一账号列表」。
  *
- * 每个文件锁定四要素，缺一即判定接线缺失：
- * 1. import：显式 import com.perol.pixez.shared.ui.LocalAccountRepository；
- * 2. 注入：读取 LocalAccountRepository.current；
- * 3. 收集：收集 loginEventFlow（登录/登出/切号信号源，比照 HelloScreen）；
- * 4. 重置：以 loadedForAccount 跟踪账号身份检测 accountSwitched，并在检测到切号时对
+ * 每个页面锁定两个要素，缺一即判定接线缺失：
+ * 1. 信号源：经 rememberAccountSession() 读取当前账号并跟随 loginEventFlow 刷新
+ *    （唯一实现在 ui/state/AccountSession.kt，由下方独立用例守护其内部要素）；
+ * 2. 重置：以 loadedForAccount 跟踪账号身份检测 accountSwitched，并在检测到切号时对
  *    该页每个分页状态机调用 reset()。
  *
  * 测试形态说明：shared 模块未引入 compose ui-test 依赖（纯 JVM 测试无法驱动组合），
@@ -56,6 +55,9 @@ class AccountSwitchPagedListResetWiringTest {
 
     private val couiPagesRoot =
         "shared/src/androidMain/kotlin/com/perol/pixez/shared/ui/coui/page"
+
+    private val accountSessionSource =
+        "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/state/AccountSession.kt"
 
     /** 皮肤无关页面：commonMain ui/screens。 */
     private val miuixPages: List<GuardedPage> = listOf(
@@ -102,28 +104,47 @@ class AccountSwitchPagedListResetWiringTest {
         repoRoot().resolve(page.sourceRoot).resolve(page.fileName)
 
     @Test
-    fun `受守护来源均显式 import 账号仓库并收集登录事件作为切换信号源`() {
+    fun `受守护来源均经共享会话组件读取账号并跟踪账号身份变化`() {
         for (page in pages) {
             val file = sourcePath(page)
             assertTrue(file.exists(), "缺少待守护源码：${file}")
             val source = file.readText()
             assertTrue(
-                "import com.perol.pixez.shared.ui.LocalAccountRepository" in source,
-                "${page.fileName} 应显式 import LocalAccountRepository（四要素之一：依赖可见）",
-            )
-            assertTrue(
-                "LocalAccountRepository.current" in source,
-                "${page.fileName} 应注入 LocalAccountRepository 以观测账号身份",
-            )
-            assertTrue(
-                "loginEventFlow.collect" in source,
-                "${page.fileName} 应收集 loginEventFlow（登录/登出/切号信号源，比照 HelloScreen）",
+                "rememberAccountSession()" in source,
+                "${page.fileName} 应经 rememberAccountSession() 读取账号，禁止各自复制读取与订阅样板",
             )
             assertTrue(
                 "loadedForAccount != " in source,
                 "${page.fileName} 应以 loadedForAccount != 账号对象 跟踪账号身份变化",
             )
         }
+    }
+
+    /**
+     * 单点守护：账号信号源收敛到 AccountSession.kt 后，读取必须容忍账号存储异常（密钥丢失不能崩页面），
+     * 且必须跟随登录事件，否则切号后各页仍会显示上一账号的数据。
+     */
+    @Test
+    fun `共享会话组件读取账号时吞掉存储异常并跟随登录事件`() {
+        val file = repoRoot().resolve(accountSessionSource)
+        assertTrue(file.exists(), "缺少账号会话组件：$file")
+        val source = file.readText()
+        assertTrue(
+            "import com.perol.pixez.shared.ui.LocalAccountRepository" in source,
+            "AccountSession.kt 应显式 import LocalAccountRepository",
+        )
+        assertTrue(
+            "LocalAccountRepository.current" in source,
+            "AccountSession.kt 应读取 LocalAccountRepository.current",
+        )
+        assertTrue(
+            "loginEventFlow.collect" in source,
+            "AccountSession.kt 应收集 loginEventFlow（登录/登出/切号信号源）",
+        )
+        assertTrue(
+            "suspendRunCatchingNonCancel" in source,
+            "AccountSession.kt 应包 suspendRunCatchingNonCancel，避免账号存储异常抛给 Recomposer",
+        )
     }
 
     @Test

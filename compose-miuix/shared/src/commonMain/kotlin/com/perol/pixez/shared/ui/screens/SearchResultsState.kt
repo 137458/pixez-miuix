@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -17,10 +16,9 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants.IllustType
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.delay
 
 /**
@@ -44,18 +42,8 @@ internal fun rememberSearchIllustResultsState(
     settingsRepository: SettingsRepository,
 ): SearchIllustResultsState {
     // 登录状态与账号身份跟踪：登录/登出/切号（loginEventFlow）到达时作废旧账号结果并重拉首屏。
-    val accountRepository = LocalAccountRepository.current
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
+    val (user, isLoggedIn) = rememberAccountSession()
 
     val searchTarget = filterState.searchTarget
     val searchAiType = filterState.searchAiType

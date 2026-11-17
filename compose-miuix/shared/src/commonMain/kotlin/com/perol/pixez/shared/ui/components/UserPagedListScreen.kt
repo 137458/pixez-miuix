@@ -27,15 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -82,7 +80,6 @@ internal fun <T> UserPagedListScreen(
     contentPadding: (PaddingValues) -> PaddingValues = { it },
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
 ) {
-    val accountRepository = LocalAccountRepository.current
 
     // 数据源与合并策略经 rememberUpdatedState 取最新值：状态机按 pageKey 记忆，
     // 但宿主每次重组都会重建 lambda，不能让状态机继续调用首帧那份。
@@ -90,17 +87,8 @@ internal fun <T> UserPagedListScreen(
     val currentMergeItems by rememberUpdatedState(mergeItems)
 
     // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
+    val (user, isLoggedIn) = rememberAccountSession()
 
     var retryCount by rememberSaveable(pageKey) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(pageKey) { mutableStateOf(false) }

@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.LocalUpdateRepository
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -115,8 +116,6 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
 
-    // 当前账号信息，登出后手动置 null。
-    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
 
     // 清除缓存的加载态与提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember。
@@ -132,12 +131,10 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        currentAccount = accountRepository.currentAccount()
-        accountRepository.loginEventFlow.collect {
-            currentAccount = accountRepository.currentAccount()
-        }
-    }
+    // 当前账号信息来自统一会话；登出成功后要立即本地置空，故仍保留一份可变副本，由会话值回灌。
+    val (sessionAccount, _) = rememberAccountSession()
+    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
+    LaunchedEffect(sessionAccount) { currentAccount = sessionAccount }
 
     // 公告板入口动态状态：仅在公告列表非空时显示。
     var boardList by remember { mutableStateOf<List<BoardInfo>?>(null) }

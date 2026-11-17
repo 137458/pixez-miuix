@@ -40,7 +40,6 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.appendDistinct
@@ -49,7 +48,6 @@ import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -61,7 +59,7 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
 
 /**
@@ -148,18 +146,8 @@ private fun <T> CouiSearchPagedColumn(
     val coroutineScope = rememberCoroutineScope()
 
     // 登录状态与账号身份跟踪：登录/登出/切号（loginEventFlow）到达时作废旧账号结果并重拉首屏。
-    val accountRepository = LocalAccountRepository.current
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
+    val (user, isLoggedIn) = rememberAccountSession()
 
     var retryCount by rememberSaveable(query) { mutableIntStateOf(0) }
 

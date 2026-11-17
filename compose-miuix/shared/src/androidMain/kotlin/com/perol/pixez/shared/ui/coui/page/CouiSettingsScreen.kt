@@ -61,6 +61,7 @@ import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateRepository
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
@@ -113,7 +114,6 @@ internal fun CouiSettingsScreen(
     val strings = LocalStrings.current
     val toastSink = LocalToastSink.current
 
-    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
     var isClearingCache by remember { mutableStateOf(false) }
     var cacheSizeBytes by remember { mutableLongStateOf(0L) }
@@ -128,12 +128,11 @@ internal fun CouiSettingsScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        currentAccount = accountRepository.currentAccount()
-        accountRepository.loginEventFlow.collect {
-            currentAccount = accountRepository.currentAccount()
-        }
-    }
+    // 账号卡片的当前账号：经 rememberAccountSession 读取，账号存储异常时回落到未登录而不是让设置页崩溃；
+    // 登出成功后要立即本地置空，故保留一份可变副本，由会话值回灌。
+    val (sessionAccount, _) = rememberAccountSession()
+    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
+    LaunchedEffect(sessionAccount) { currentAccount = sessionAccount }
 
     LaunchedEffect(boardRepository) {
         boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }
