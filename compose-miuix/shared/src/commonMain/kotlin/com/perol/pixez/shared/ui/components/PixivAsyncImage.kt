@@ -27,6 +27,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.size.Dimension
 import coil3.size.Precision
+import com.perol.pixez.shared.network.HttpEngineDefaults
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.network.sanitizeRemoteImageModel
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.configurePlatformOptimizations
@@ -36,13 +38,13 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 
 private val StandardHeaders = NetworkHeaders.Builder()
-    .set("Referer", AppConstants.Urls.PIXIV_APP_API)
-    .set("User-Agent", AppConstants.Network.IMAGE_REQUEST_USER_AGENT)
+    .set("Referer", PixivHosts.PIXIV_APP_API)
+    .set("User-Agent", HttpEngineDefaults.IMAGE_REQUEST_USER_AGENT)
     .build()
 
 private val PixivisionHeaders = NetworkHeaders.Builder()
-    .set("Referer", AppConstants.Network.REFERER_PIXIVISION)
-    .set("User-Agent", AppConstants.Network.IMAGE_REQUEST_USER_AGENT)
+    .set("Referer", PixivHosts.REFERER_PIXIVISION)
+    .set("User-Agent", HttpEngineDefaults.IMAGE_REQUEST_USER_AGENT)
     .build()
 
 /**
@@ -54,6 +56,15 @@ private const val ORIGINAL_SIZE_CACHE_KEY_SUFFIX = "#original_size"
 
 /** 调用方未接管错误时的静默重试次数（瞬时网络/代理抖动自愈）。 */
 internal const val SILENT_ERROR_MAX_RETRIES = 1
+
+/**
+ * 判断图片地址是否来自 Pixivision 站点。
+ *
+ * 该站点的图片带防盗链，必须换用 Pixivision 的 Referer，否则一律 403；
+ * 判定依据与 [com.perol.pixez.shared.network.TrustedRedirectPlugin] 的白名单同一组域名常量。
+ */
+private fun isPixivisionImageHost(url: String): Boolean =
+    url.contains(PixivHosts.PIXIVISION_BARE_HOST) || url.contains(PixivHosts.PIXIVISION_EMBED_HOST)
 
 /**
  * 裁决一次引擎错误回调该怎么处理。
@@ -170,9 +181,9 @@ fun PixivAsyncImage(
         transformedThumbnailCacheKey.toString().isNotBlank()
 
     val decodeDimension = if (loadOriginalSize) {
-        AppConstants.Network.IMAGE_MAX_DECODE_DIMENSION
+        AppConstants.Image.MAX_DECODE_DIMENSION
     } else {
-        AppConstants.Network.IMAGE_STANDARD_DECODE_DIMENSION
+        AppConstants.Image.STANDARD_DECODE_DIMENSION
     }
 
     // 静默重试预算：真实错误时递增，计数变化用 key() 强制销毁重建 AsyncImage 节点重启加载。
@@ -189,7 +200,7 @@ fun PixivAsyncImage(
         memoryCacheCommitCount,
     ) {
         val isLocalFile = transformedModel is String && transformedModel.startsWith("file:")
-        val isPixivision = transformedModel is String && (transformedModel.contains("pixivision") || transformedModel.contains("embed.pixiv.net"))
+        val isPixivision = transformedModel is String && isPixivisionImageHost(transformedModel)
         val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
         ImageRequest.Builder(context)
             .data(transformedModel)
@@ -236,7 +247,7 @@ fun PixivAsyncImage(
             null
         } else {
             val isLocalFile = transformedThumbnailCacheKey is String && transformedThumbnailCacheKey.startsWith("file:")
-            val isPixivision = transformedThumbnailCacheKey is String && (transformedThumbnailCacheKey.contains("pixivision") || transformedThumbnailCacheKey.contains("embed.pixiv.net"))
+            val isPixivision = transformedThumbnailCacheKey is String && isPixivisionImageHost(transformedThumbnailCacheKey)
             val headers = if (isPixivision) PixivisionHeaders else StandardHeaders
             ImageRequest.Builder(context)
                 .data(transformedThumbnailCacheKey)
@@ -253,7 +264,7 @@ fun PixivAsyncImage(
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
-                .size(Dimension(AppConstants.Network.IMAGE_STANDARD_DECODE_DIMENSION), Dimension(AppConstants.Network.IMAGE_STANDARD_DECODE_DIMENSION))
+                .size(Dimension(AppConstants.Image.STANDARD_DECODE_DIMENSION), Dimension(AppConstants.Image.STANDARD_DECODE_DIMENSION))
                 .precision(Precision.INEXACT)
                 .configurePlatformOptimizations()
                 .build()
