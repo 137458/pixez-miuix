@@ -121,6 +121,12 @@
 - 拆分职责过载文件：1102 行的全屏查看器拆为 `IllustFullScreenViewer`（页面骨架与手势）、`ZoomableImage`（单个缩放图片单元）与 `IllustViewerLogic`（目标图地址、分享信息、模式切换与菜单装配等纯函数）。
 - 收敛仓库装配：`AppDependencies.toRepositoryRegistry()` 一次投影生成 `RepositoryRegistry`，组合根不再逐字段搬运 19 个仓储，新增仓储只需改一处。
 - 依赖与构建清理：移除 `multiplatform-settings-coroutines`、`sqldelight-coroutines-extensions`、`compose.components.uiToolingPreview`、`io.github.kyant0:backdrop` 四项零使用依赖及其失效的 ProGuard `-dontwarn` 规则；`compose.runtime` 等改用版本目录直连坐标（`libs.compose.*`）消除编译器弃用告警；关闭 KMP 默认层级模板（`kotlin.mpp.applyDefaultHierarchyTemplate=false`），保留 `jvmShared` 中间源集并消除构建告警；桌面图标加载改用 `ImageIO` + `toComposeImageBitmap`，MIUIX 扩展图标由通配 import 改为具名 import。
+- 收敛 COUI 侧的重复骨架：
+  - 15 个 COUI 设置页逐字复制的列表骨架收敛为 `CouiSettingsLazyColumn`（横向 12 dp、顶部 8 dp 留白、卡片间距 12 dp、底部让开悬浮底栏、统一回弹），边距或回弹策略调整只改一处。
+  - 账号身份的读取与订阅收敛为 `rememberAccountSession()`：首次读取包 `suspendRunCatchingNonCancel`，随后跟随登录事件刷新，12 处逐字复制的「读当前账号 + 收集登录事件」样板（MIUIX 5 页、COUI 6 页与共享列表骨架）各只剩一行取值。
+  - 交错网格的触底预加载接入 `rememberPagingPreload` 重载，删除 COUI 列表页与插画网格各一份手写 `derivedStateOf + LaunchedEffect`。
+  - 列表内逐项收集设置变更改为列表层收集一次并经参数下传，卡片回归无状态渲染。
+  - `IllustSaver` 的保存目标推导（文件名清洗、MIME、MediaStore 相对路径）由两处逐字重复合并为 `resolveSaveTarget`。
 
 ### 修复
 
@@ -179,6 +185,13 @@
 - 修复了桌面小组件刷新泄漏 HTTP 引擎的问题：下载客户端未传入时每次刷新新建 Ktor 引擎且从不关闭，现复用共享客户端。
 - 修复了更新包下载与安装期间在主线程做文件删除、以及目录扫描失败会吞掉协程取消的问题：删除动作移交后台协程，可取消的挂起调用改用 `suspendRunCatchingNonCancel`。
 - 修复了客户端预热、token 响应体读取与小组件写入处协程取消被吞的问题，一并改用 `suspendRunCatchingNonCancel`。
+- 修复了屏蔽标签添加与删除失败提示的两处硬编码拼接：改走统一的 `actionFailureToast`，与其余入口的措辞与标点一致。
+- 修复了设置页在账号存储密钥丢失时崩溃或账号区块永久空白的问题：当前账号读取未包 `suspendRunCatchingNonCancel`，异常会沿协程抛给 Recomposer；现按「读失败即按未登录展示」处理。
+- 修复了登录页凭证被写入 Activity 恢复状态、以及进程恢复后登录按钮永久置灰的问题：token 输入与加载态不再随 `savedInstanceState` 持久化，恢复后按未加载态重新开始。
+- 修复了评论区在本地新增评论（无服务端 id）且内容重复时列表崩溃的问题：列表键在 id 缺失时改用「本地前缀 + 下标」，不再以内容哈希作为键。
+- 修复了清空已完成下载任务后提示「暂无已完成的任务」的语义反转问题：新增「已清空已完成的任务」词条（13 语言）并接入两个入口。
+- 修复了 Android 桌面小组件封面全尺寸解码导致的峰值内存问题：改为先读图片尺寸再用 `inSampleSize` 按 800 px 上限降采样解码。
+- 修复了更新包下载器在设置与安装两步的清理逻辑对主线程做文件删除的问题：删除动作移交后台协程，形参 `ext` 等未使用参数一并清理。
 
 ### 破坏性变更
 
