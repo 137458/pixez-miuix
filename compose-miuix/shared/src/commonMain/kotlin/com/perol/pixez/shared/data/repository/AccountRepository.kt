@@ -41,6 +41,18 @@ class AccountRepository(
     val authExpiredFlow: SharedFlow<AuthExpiredEvent> = authExpirySignal.events
 
     /**
+     * 账号身份发生变化后的统一收尾：失效全部已登记会话缓存并通知 UI 重新加载。
+     *
+     * 登录、切换、删除、登出都会改变当前账号身份，任何按账号维度缓存的数据
+     * （收藏标记、用户资料、关注列表等）都必须整体作废，否则会读到上一个账号的残留。
+     * 缓存清单由各模块向 [SessionCache] 自登记，新增缓存自动被覆盖清理。
+     */
+    private suspend fun onSessionIdentityChanged() {
+        sessionCache.invalidateAll()
+        _loginEventFlow.tryEmit(Unit)
+    }
+
+    /**
      * 当前已登录账号，未登录返回 null。
      */
     suspend fun currentAccount(): AccountPersist? = tokenStorage.getCurrentAccount()?.toPersist()
@@ -69,9 +81,7 @@ class AccountRepository(
     suspend fun loginWithCode(code: String): OAuthAccount {
         val account = oAuthClient.exchangeCodeForToken(code)
         tokenStorage.saveAccount(account.response)
-        // 账号身份变化必须失效全部账号相关缓存，避免登录后仍读到上一个账号的数据。
-        sessionCache.invalidateAll()
-        _loginEventFlow.tryEmit(Unit)
+        onSessionIdentityChanged()
         return account
     }
 
@@ -81,9 +91,7 @@ class AccountRepository(
     suspend fun loginWithToken(token: String): OAuthAccount {
         val account = oAuthClient.refreshToken(token.trim())
         tokenStorage.saveAccount(account.response)
-        // 与授权码登录一致：新账号落库后立即失效全部会话缓存。
-        sessionCache.invalidateAll()
-        _loginEventFlow.tryEmit(Unit)
+        onSessionIdentityChanged()
         return account
     }
 
@@ -143,7 +151,6 @@ class AccountRepository(
         }
     }
 
-
     /**
      * 获取本地所有已登录账号列表。
      */
@@ -155,10 +162,7 @@ class AccountRepository(
      */
     suspend fun switchAccount(userId: String) {
         tokenStorage.switchAccount(userId)
-        // 账号身份变化必须失效全部账号相关缓存（含按账号状态缓存的收藏标记），
-        // 清单由各缓存模块在 SessionCache 自登记，新增缓存自动被清理（架构审查 DN4）。
-        sessionCache.invalidateAll()
-        _loginEventFlow.tryEmit(Unit)
+        onSessionIdentityChanged()
     }
 
     /**
@@ -166,9 +170,7 @@ class AccountRepository(
      */
     suspend fun deleteAccount(userId: String) {
         tokenStorage.deleteAccount(userId)
-        // 删除账号同样改变账号身份（可能自动切换到下一个账号），必须失效全部缓存。
-        sessionCache.invalidateAll()
-        _loginEventFlow.tryEmit(Unit)
+        onSessionIdentityChanged()
     }
 
     /**
@@ -176,9 +178,7 @@ class AccountRepository(
      */
     suspend fun logout() {
         tokenStorage.clear()
-        // 登出同 switchAccount：一次失效全部已登记缓存。
-        sessionCache.invalidateAll()
-        _loginEventFlow.tryEmit(Unit)
+        onSessionIdentityChanged()
     }
 
     /**

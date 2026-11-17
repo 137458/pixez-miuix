@@ -24,12 +24,7 @@ enum class NovelRankingMode(val value: String) {
     DayMaleR18("day_male_r18"),
     DayFemaleR18("day_female_r18"),
     WeekR18("week_r18"),
-    WeekR18G("week_r18g");
-
-    companion object {
-        fun fromValue(value: String): NovelRankingMode =
-            entries.firstOrNull { it.value.equals(value, ignoreCase = true) } ?: Day
-    }
+    WeekR18G("week_r18g"),
 }
 
 /**

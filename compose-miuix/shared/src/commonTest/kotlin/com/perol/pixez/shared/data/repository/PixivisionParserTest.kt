@@ -62,7 +62,7 @@ class PixivisionParserTest {
         assertEquals(12345678L, firstWork.illustId)
         assertEquals(87654321L, firstWork.userId)
         assertNotNull(firstWork.showImage)
-        assertTrue(firstWork.showImage?.contains("12345678") == true)
+        assertTrue(firstWork.showImage.contains("12345678"))
 
         val secondWork = detail.works[1]
         assertEquals("云端之上", secondWork.title)

@@ -25,12 +25,8 @@ class HistoryRepository(
      * 若该作品已存在历史记录，则更新其时间并前置到最新位置。
      */
     suspend fun insert(illust: Illust) = withContext(Dispatchers.IO) {
+        // medium 恒非空，历史封面统一用该尺寸，与列表卡片保持同一档位。
         val pictureUrl = illust.imageUrls.medium
-            ?: illust.imageUrls.large
-            ?: illust.metaSinglePage?.originalImageUrl
-            ?: illust.metaPages.firstOrNull()?.imageUrls?.medium
-            ?: illust.metaPages.firstOrNull()?.imageUrls?.large
-            ?: ""
         val now = nowMillis()
         queries.transaction {
             queries.deleteByIllustId(illust.id)
@@ -52,7 +48,7 @@ class HistoryRepository(
      *
      * @param limit 最大返回条数，防止一次性加载过多历史记录导致内存/卡顿问题。
      */
-    suspend fun getAll(limit: Long = 1000L): List<HistoryItem> = withContext(Dispatchers.IO) {
+    suspend fun getAll(limit: Long = HISTORY_QUERY_LIMIT): List<HistoryItem> = withContext(Dispatchers.IO) {
         queries.selectAll(limit).executeAsList().map { it.toHistoryItem() }
     }
 

@@ -11,6 +11,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivHttpClient
 import com.perol.pixez.shared.platform.languageCodeForNum
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +58,9 @@ class WidgetRepository(
         val fetchedList = fetchFromRemote(type)
         if (fetchedList.isNotEmpty()) {
             val now = Clock.System.now().toEpochMilliseconds()
-            try {
+            // 写入失败只记告警、不影响返回内存数据（降级语义与原先 try/catch 一致）；
+            // 用 suspendRunCatchingNonCancel 而非常规 runCatching，避免协程取消被吞成"保存失败"。
+            val saveResult = suspendRunCatchingNonCancel {
                 glanceDatabase.glanceIllustPersistQueries.transaction {
                     // 先清理同类型旧行再写入，避免每次刷新净增一整页导致库无限膨胀。
                     glanceDatabase.glanceIllustPersistQueries.deleteByType(type)
@@ -77,8 +80,9 @@ class WidgetRepository(
                         )
                     }
                 }
-            } catch (e: Exception) {
-                Napier.w("Failed to save widget illusts to db: ${e.message}", tag = "WidgetRepository")
+            }
+            saveResult.exceptionOrNull()?.let { error ->
+                Napier.w("Failed to save widget illusts to db: ${error.message}", tag = "WidgetRepository")
             }
             return@withContext glanceDatabase.glanceIllustPersistQueries.selectByType(type).executeAsList().firstOrNull()
         }
@@ -137,7 +141,12 @@ class WidgetRepository(
     }
 
     private suspend fun fetchDefaultRemote(type: String, pixivHttpClient: PixivHttpClient): List<Illust> {
-        val illustRepo = IllustRepository(pixivHttpClient.apiClient, settingsRepository = settingsRepository)
+        // 复用本次拉取自建的下载 client：其生命周期由 fetchFromRemote 的 finally 关闭，避免另建引擎后无人回收。
+        val illustRepo = IllustRepository(
+            apiClient = pixivHttpClient.apiClient,
+            settingsRepository = settingsRepository,
+            downloadClient = pixivHttpClient.downloadClient,
+        )
         return when (type) {
             "day", "rank" -> illustRepo.getRanking(mode = "day")
             "week" -> illustRepo.getRanking(mode = "week")

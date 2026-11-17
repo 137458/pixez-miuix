@@ -161,9 +161,26 @@ class NovelHistoryRepositoryTest {
         val all = repository.getAll()
         assertEquals(2, all.size)
         assertEquals(3L, all.first { it.novelId == 11L }.id, "导入的显式 id 应原样保留")
-        // 既有契约：无 id 导入按 id=0L 落库（INSERT OR REPLACE 语义，不生成自增 id）
-        assertEquals(0L, all.first { it.novelId == 12L }.id)
+        // 无 id 导入必须落成自增主键：退化成 id=0L 会让多条无 id 记录在 INSERT OR REPLACE 下互相覆盖。
+        val generatedId = all.first { it.novelId == 12L }.id
+        assertTrue(generatedId != null && generatedId > 0L, "无 id 导入应生成自增主键")
         assertEquals("t-11", all.first { it.novelId == 11L }.title)
+    }
+
+    @Test
+    fun `replaceAll 无 id 的多条导入不相互折叠`() = runBlocking {
+        val imported = listOf(
+            item(id = null, novelId = 21L, time = 100L),
+            item(id = null, novelId = 22L, time = 200L),
+            item(id = null, novelId = 23L, time = 300L),
+        )
+
+        repository.replaceAll(imported)
+
+        val all = repository.getAll()
+        assertEquals(3, all.size, "无 id 的导入记录必须各自生成自增主键，不能因 id=0 相互覆盖")
+        assertEquals(listOf(21L, 22L, 23L), all.map { it.novelId })
+        assertTrue(all.all { (it.id ?: 0L) > 0L }, "自增主键必须为正数")
     }
 
     @Test
@@ -179,7 +196,7 @@ class NovelHistoryRepositoryTest {
 
     @Test
     fun `getAll 按时间升序且 limit 上限生效`() = runBlocking {
-        // 显式 id 避免既有 id=0 折叠语义干扰本用例的行数断言
+        // 显式 id 让本用例专注排序与 limit 语义，不依赖自增主键生成
         val items = (1..5).map { item(id = it.toLong(), novelId = it.toLong(), time = it.toLong()) }
         repository.replaceAll(items)
 

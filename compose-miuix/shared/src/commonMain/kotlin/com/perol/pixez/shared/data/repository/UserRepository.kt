@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.cache.IllustMemoryCache
-import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.ShowAIResponse
 import com.perol.pixez.shared.data.model.UserDetail
 import com.perol.pixez.shared.data.model.UserIllusts

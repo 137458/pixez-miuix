@@ -127,13 +127,11 @@ class DownloadRepository(
      *
      * @param illust 目标作品
      * @param onProgress 进度回调，参数为 (已完成数量, 总页数)
-     * @param maxConcurrency 最大并发下载数，限制在 1..6 之间，默认 3
      * @return 按原页码顺序排列的下载任务列表
      */
     suspend fun downloadAllPages(
         illust: Illust,
         onProgress: ((completed: Int, total: Int) -> Unit)? = null,
-        maxConcurrency: Int = settingsRepository.maxRunningTask,
     ): List<DownloadTask> = coroutineScope {
         val total = illust.pageCount
         if (total <= 0) return@coroutineScope emptyList()
@@ -144,7 +142,9 @@ class DownloadRepository(
             com.perol.pixez.shared.platform.PlatformDownloadKeeper.acquire(illust.id)
             notifier.notifyProgress(illust.id, illust.title, 0, total)
         }
-        val semaphore = Semaphore(coerceParallelTasks(maxConcurrency))
+        // 页级扇出与 IO 级门控共用 [SettingsRepository.maxRunningTask] 这一个来源；
+        // 不再接受调用方自带的并发参数，避免两套上限互相覆盖导致设置项形同虚设。
+        val semaphore = Semaphore(coerceParallelTasks(settingsRepository.maxRunningTask))
         val progressMutex = Mutex()
         var completedCount = 0
 
@@ -521,8 +521,7 @@ class DownloadRepository(
         /**
          * 并发下载上限（含）：设置项档位与运行时夹取的唯一权威（架构审查 R5）。
          *
-         * 历史上该上限有三份互不一致的声明（AppConstants.MAX_TASK_OPTIONS=1/2/3/5/8/10、
-         * 设置页本地列表 1..6、仓库 coerceIn(1,6)），此处收敛为单一来源。
+         * 设置页选项、仓库夹取范围都从本常量派生，不得另存一份字面量。
          */
         const val MAX_PARALLEL_TASKS: Int = 6
 

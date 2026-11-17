@@ -63,15 +63,6 @@ class ThreadSafeLruCache<K, V>(val maxCapacity: Int) {
     }
 
     /**
-     * 手动将 [key] 标记为最近使用。
-     */
-    suspend fun touch(key: K): Boolean = synchronized(lock) {
-        val value = map.remove(key) ?: return false
-        map[key] = value
-        true
-    }
-
-    /**
      * 移除指定 [key] 的缓存项。
      */
     suspend fun remove(key: K): V? = synchronized(lock) {

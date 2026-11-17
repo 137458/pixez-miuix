@@ -111,7 +111,7 @@ class DownloadHistoryRepository(
      *
      * @param limit 最大返回条数，防止重度用户数万行历史一次性物化（对齐 HistoryRepository）。
      */
-    suspend fun getAllTasks(limit: Long = DEFAULT_QUERY_LIMIT): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+    suspend fun getAllTasks(limit: Long = HISTORY_QUERY_LIMIT): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
         queries.selectAllPagedDesc(
             value_ = limit,
             value__ = 0L,
@@ -121,7 +121,7 @@ class DownloadHistoryRepository(
     /**
      * 按状态查询历史记录，按时间倒序排列。
      */
-    suspend fun getTasksByStatus(status: DownloadStatus, limit: Long = DEFAULT_QUERY_LIMIT): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
+    suspend fun getTasksByStatus(status: DownloadStatus, limit: Long = HISTORY_QUERY_LIMIT): List<DownloadTaskHistory> = withContext(Dispatchers.IO) {
         queries.selectByStatusPagedDesc(
             status = status.toDbValue(),
             value_ = limit,
@@ -191,10 +191,5 @@ class DownloadHistoryRepository(
         2L -> DownloadStatus.Success
         3L -> DownloadStatus.Failed
         else -> DownloadStatus.Failed
-    }
-
-    companion object {
-        /** 列表查询默认上限，防止重度用户数万行历史一次性物化。 */
-        const val DEFAULT_QUERY_LIMIT = 1000L
     }
 }

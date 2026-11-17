@@ -42,12 +42,20 @@ import okio.Path
  */
 class IllustRepository(
     private val apiClient: HttpClient,
-    private val downloadClient: HttpClient = HttpClient(),
+    downloadClient: HttpClient? = null,
     private val settingsRepository: SettingsRepository,
     private val maxUgoiraZipBytes: Long = DownloadRepository.DEFAULT_MAX_DOWNLOAD_BYTES,
     private val illustCache: IllustMemoryCache = IllustMemoryCache(),
     sessionCache: SessionCache? = null,
 ) {
+    /**
+     * 下载专用客户端：仅当 ugoira 下载链路真正被调用时才创建。
+     *
+     * 调用方未注入时首次下载才新建引擎；推荐、排行榜、详情等不涉及下载的调用方
+     * （例如小组件刷新）永不创建 Ktor 引擎，避免每次刷新新建一个从不关闭的客户端。
+     */
+    private val lazyDownloadClient: HttpClient by lazy { downloadClient ?: HttpClient() }
+
     init {
         // 会话缓存接缝：账号身份变化时由 SessionCache 统一失效本仓库全部内存缓存。
         sessionCache?.register { clearMemoryCache() }
@@ -101,8 +109,7 @@ class IllustRepository(
         nextUrl: String? = null,
         forceRefresh: Boolean = false,
     ): Recommend = networkCall("获取推荐插画失败") {
-        val isFirstPage = nextUrl.isNullOrBlank()
-        if (!isFirstPage) {
+        if (!nextUrl.isNullOrBlank()) {
             val response: Recommend = apiClient.pagedRequest(nextUrl) {
                 apiClient.get("/v1/illust/recommended") {
                     parameter("filter", "for_ios")
@@ -112,23 +119,22 @@ class IllustRepository(
             cacheIllusts(response.illusts)
             return@networkCall response
         }
-        if (!forceRefresh) {
-            cachedRecommendedResponse?.let { return@networkCall it }
-        }
-        recommendedMutex.withLock {
-            if (!forceRefresh) {
-                cachedRecommendedResponse?.let { return@networkCall it }
-            }
-            val response: Recommend = apiClient.pagedRequest(null) {
-                apiClient.get("/v1/illust/recommended") {
-                    parameter("filter", "for_ios")
-                    parameter("include_ranking_label", "true")
-                }.body()
-            }
-            cacheIllusts(response.illusts)
-            cachedRecommendedResponse = response
-            response
-        }
+        firstPageCached(
+            forceRefresh = forceRefresh,
+            mutex = recommendedMutex,
+            readCache = { cachedRecommendedResponse },
+            writeCache = { cachedRecommendedResponse = it },
+            fetch = {
+                val response: Recommend = apiClient.pagedRequest(null) {
+                    apiClient.get("/v1/illust/recommended") {
+                        parameter("filter", "for_ios")
+                        parameter("include_ranking_label", "true")
+                    }.body()
+                }
+                response
+            },
+            illustsOf = { it.illusts },
+        )
     }
 
     /**
@@ -144,28 +150,26 @@ class IllustRepository(
         nextUrl: String? = null,
         forceRefresh: Boolean = false,
     ): Walkthrough = networkCall("获取匿名推荐插画失败") {
-        val isFirstPage = nextUrl.isNullOrBlank()
-        if (!isFirstPage) {
+        if (!nextUrl.isNullOrBlank()) {
             val response: Walkthrough = apiClient.pagedRequest(nextUrl) {
                 apiClient.get("/v1/walkthrough/illusts").body()
             }
             cacheIllusts(response.illusts)
             return@networkCall response
         }
-        if (!forceRefresh) {
-            cachedWalkthroughResponse?.let { return@networkCall it }
-        }
-        walkthroughMutex.withLock {
-            if (!forceRefresh) {
-                cachedWalkthroughResponse?.let { return@networkCall it }
-            }
-            val response: Walkthrough = apiClient.pagedRequest(null) {
-                apiClient.get("/v1/walkthrough/illusts").body()
-            }
-            cacheIllusts(response.illusts)
-            cachedWalkthroughResponse = response
-            response
-        }
+        firstPageCached(
+            forceRefresh = forceRefresh,
+            mutex = walkthroughMutex,
+            readCache = { cachedWalkthroughResponse },
+            writeCache = { cachedWalkthroughResponse = it },
+            fetch = {
+                val response: Walkthrough = apiClient.pagedRequest(null) {
+                    apiClient.get("/v1/walkthrough/illusts").body()
+                }
+                response
+            },
+            illustsOf = { it.illusts },
+        )
     }
 
     /**
@@ -173,6 +177,40 @@ class IllustRepository(
      */
     suspend fun getWalkthroughIllusts(forceRefresh: Boolean = false): List<Illust> =
         getWalkthroughResponse(nextUrl = null, forceRefresh = forceRefresh).illusts
+
+    /**
+     * 首屏响应的双检缓存：缓存命中直接返回，未命中则在 [mutex] 内二次检查后请求、写缓存并回填插画 LRU。
+     *
+     * [forceRefresh] 为 true 时跳过读缓存但仍持锁请求并覆盖缓存；缓存命中时不发请求。
+     *
+     * @param readCache 读取当前缓存快照
+     * @param writeCache 回填缓存快照
+     * @param fetch 首屏请求
+     * @param illustsOf 从响应中取出插画列表，用于写入插画 LRU
+     */
+    private suspend fun <T : Any> firstPageCached(
+        forceRefresh: Boolean,
+        mutex: Mutex,
+        readCache: () -> T?,
+        writeCache: (T) -> Unit,
+        fetch: suspend () -> T,
+        illustsOf: (T) -> List<Illust>,
+    ): T {
+        if (!forceRefresh) {
+            readCache()?.let { return it }
+        }
+        return mutex.withLock {
+            val cached = if (forceRefresh) null else readCache()
+            if (cached != null) {
+                cached
+            } else {
+                val response = fetch()
+                cacheIllusts(illustsOf(response))
+                writeCache(response)
+                response
+            }
+        }
+    }
 
     /**
      * 获取排行榜插画响应（含 nextUrl）。
@@ -279,20 +317,13 @@ class IllustRepository(
         comment: String,
         parentCommentId: Long? = null,
     ): Unit = networkCall("发表评论失败 illustId=$illustId") {
-        apiClient.post("/v1/illust/comment/add") {
-            header("Content-Type", "application/x-www-form-urlencoded")
-            setBody(
-                FormDataContent(
-                    Parameters.build {
-                        append("illust_id", illustId.toString())
-                        append("comment", comment)
-                        if (parentCommentId != null) {
-                            append("parent_comment_id", parentCommentId.toString())
-                        }
-                    },
-                ),
-            )
-        }
+        postCommentTo(
+            path = "/v1/illust/comment/add",
+            idField = "illust_id",
+            targetId = illustId,
+            comment = comment,
+            parentCommentId = parentCommentId,
+        )
     }
 
     /**
@@ -321,12 +352,38 @@ class IllustRepository(
         comment: String,
         parentCommentId: Long? = null,
     ): Unit = networkCall("发表小说评论失败 novelId=$novelId") {
-        apiClient.post("/v1/novel/comment/add") {
+        postCommentTo(
+            path = "/v1/novel/comment/add",
+            idField = "novel_id",
+            targetId = novelId,
+            comment = comment,
+            parentCommentId = parentCommentId,
+        )
+    }
+
+    /**
+     * 提交评论或回复：作品与小说评论接口只有提交路径与目标 ID 的表单字段名不同，故共用此实现。
+     * 失败提示标签由各公开方法自带的 networkCall 承载，此处只负责请求体。
+     *
+     * @param path 评论提交端点
+     * @param idField 目标 ID 的表单字段名（illust_id / novel_id）
+     * @param targetId 目标作品或小说 ID
+     * @param comment 评论内容
+     * @param parentCommentId 被回复的评论 ID；为空时发表普通评论
+     */
+    private suspend fun postCommentTo(
+        path: String,
+        idField: String,
+        targetId: Long,
+        comment: String,
+        parentCommentId: Long?,
+    ) {
+        apiClient.post(path) {
             header("Content-Type", "application/x-www-form-urlencoded")
             setBody(
                 FormDataContent(
                     Parameters.build {
-                        append("novel_id", novelId.toString())
+                        append(idField, targetId.toString())
                         append("comment", comment)
                         if (parentCommentId != null) {
                             append("parent_comment_id", parentCommentId.toString())
@@ -384,7 +441,7 @@ class IllustRepository(
      */
     suspend fun downloadUgoiraZip(zipUrl: String): ByteArray =
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
-            downloadClient.get(resolveUgoiraZipUrl(zipUrl)) {
+            lazyDownloadClient.get(resolveUgoiraZipUrl(zipUrl)) {
                 header("Referer", PixivHosts.PIXIV_APP_API)
             }.body()
         }
@@ -404,7 +461,7 @@ class IllustRepository(
         networkCall("下载动图 Zip 失败 url=$zipUrl") {
             val verifiedUrl = resolveUgoiraZipUrl(zipUrl)
             try {
-                downloadClient.prepareGet(verifiedUrl) {
+                lazyDownloadClient.prepareGet(verifiedUrl) {
                     header("Referer", PixivHosts.PIXIV_APP_API)
                 }.execute { response ->
                     StreamingDownload.writeResponseToFile(
@@ -415,7 +472,7 @@ class IllustRepository(
                     )
                 }
             } catch (t: Throwable) {
-                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+                withContext(NonCancellable + Dispatchers.IO) {
                     FileSystem.SYSTEM.delete(targetPath, mustExist = false)
                 }
                 throw t

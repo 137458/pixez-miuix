@@ -48,7 +48,7 @@ class NovelHistoryRepository(
      *
      * @param limit 最大返回条数，防止一次性加载过多历史记录导致内存/卡顿问题。
      */
-    suspend fun getAllDesc(limit: Long = 1000L): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
+    suspend fun getAllDesc(limit: Long = HISTORY_QUERY_LIMIT): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
         queries.selectAllDesc(limit).executeAsList().map { it.toNovelHistoryItem() }
     }
 
@@ -76,9 +76,9 @@ class NovelHistoryRepository(
      *
      * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
      *
-     * @param limit 最大返回条数，默认 1000，与插画历史导出上限语义统一。
+     * @param limit 最大返回条数，与其余历史表的查询上限同源。
      */
-    suspend fun getAll(limit: Long = 1000L): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
+    suspend fun getAll(limit: Long = HISTORY_QUERY_LIMIT): List<NovelHistoryItem> = withContext(Dispatchers.IO) {
         queries.selectAll(limit).executeAsList().map { it.toNovelHistoryItem() }
     }
 
@@ -86,21 +86,36 @@ class NovelHistoryRepository(
      * 导入时批量替换小说浏览历史。
      *
      * 先清空旧记录，再按导入数据重新写入，避免重复记录与主键冲突。
+     * 导入项带有效 id 时原样保留；不带 id 时由数据库自增生成，不会彼此折叠。
      * 操作在 [Dispatchers.IO] 中执行并在事务内完成。
      */
     suspend fun replaceAll(items: List<NovelHistoryItem>) = withContext(Dispatchers.IO) {
         queries.transaction {
             queries.deleteAll()
             items.forEach { item ->
-                queries.insertOrReplace(
-                    id = item.id ?: 0L,
-                    novel_id = item.novelId,
-                    user_id = item.userId,
-                    picture_url = item.pictureUrl,
-                    title = item.title,
-                    user_name = item.userName,
-                    time = item.time,
-                )
+                val importedId = item.id
+                if (importedId == null || importedId <= 0L) {
+                    // 无 id 的导入交给 AUTOINCREMENT 生成主键：写成 id = 0 会让多条无 id 记录
+                    // 在 INSERT OR REPLACE 下互相覆盖，最终只剩最后一条。
+                    queries.insertHistory(
+                        novel_id = item.novelId,
+                        user_id = item.userId,
+                        picture_url = item.pictureUrl,
+                        title = item.title,
+                        user_name = item.userName,
+                        time = item.time,
+                    )
+                } else {
+                    queries.insertOrReplace(
+                        id = importedId,
+                        novel_id = item.novelId,
+                        user_id = item.userId,
+                        picture_url = item.pictureUrl,
+                        title = item.title,
+                        user_name = item.userName,
+                        time = item.time,
+                    )
+                }
             }
         }
     }

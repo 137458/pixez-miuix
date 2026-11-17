@@ -5,7 +5,6 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.Search
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.model.TrendingTag
-import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.UserPreviewsResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -93,12 +92,6 @@ class SearchRepository(
         }
     }
 
-    /**
-     * 按关键词搜索画师（仅返回第一页列表，兼容旧调用）。
-     */
-    suspend fun searchUser(
-        word: String,
-    ): List<UserPreview> = searchUserResponse(word).userPreviews
 }
 
 

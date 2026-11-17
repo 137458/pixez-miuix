@@ -251,8 +251,8 @@ class DownloadRepositoryTest {
 
         assertEquals(DownloadStatus.Failed, task.status)
         assertFalse(task.error.isNullOrBlank())
-        assertFalse(task.error!!.contains("不受信任"), "error 不得透出内部异常消息: ${task.error}")
-        assertFalse(task.error!!.contains("Exception"), "error 不得透出异常类型名: ${task.error}")
+        assertFalse(task.error.contains("不受信任"), "error 不得透出内部异常消息: ${task.error}")
+        assertFalse(task.error.contains("Exception"), "error 不得透出异常类型名: ${task.error}")
     }
 
     @Test

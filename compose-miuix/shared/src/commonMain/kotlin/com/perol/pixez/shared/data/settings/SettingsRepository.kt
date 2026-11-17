@@ -335,17 +335,6 @@ class SettingsRepository(
             notifyChanged()
         }
 
-
-    /**
-     * 插画详情页点击保存按钮直接保存，无需长按。
-     */
-    var illustDetailSaveSkipLongPress: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(
-            SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS,
-            false,
-        )
-        set(value) { settings[SettingsKeys.ILLUST_DETAIL_SAVE_SKIP_LONG_PRESS] = value; notifyChanged() }
-
     /**
      * 收藏作品时自动使用收藏标签。
      */
@@ -378,13 +367,6 @@ class SettingsRepository(
             settings[SettingsKeys.WIDGET_PICTURE_SOURCE] = value
             notifyChanged()
         }
-
-    /**
-     * 适配刘海/挖孔屏（异形屏）。
-     */
-    var isBangs: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.IS_BANGS, false)
-        set(value) { settings[SettingsKeys.IS_BANGS] = value; notifyChanged() }
 
     /**
      * 是否限制 R18 内容展示（H 是不行的）。
@@ -454,16 +436,6 @@ class SettingsRepository(
             false,
         )
         set(value) { settings[SettingsKeys.IS_FOLLOW_AFTER_STAR] = value; notifyChanged() }
-
-    /**
-     * 使用 WebView 打开 SauceNAO 搜索结果。
-     */
-    var useSaunceNaoWebview: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(
-            SettingsKeys.USE_SAUNCE_NAO_WEBVIEW,
-            false,
-        )
-        set(value) { settings[SettingsKeys.USE_SAUNCE_NAO_WEBVIEW] = value; notifyChanged() }
 
     /**
      * 竖屏是否启用按宽度自适应网格列数（默认开启，以实现全尺寸设备开箱自适应）。
@@ -631,27 +603,6 @@ class SettingsRepository(
         get() = tracked().getIntWithLegacyFallback(SettingsKeys.DISPLAY_MODE, 0)
         set(value) { settings[SettingsKeys.DISPLAY_MODE] = value; notifyChanged() }
 
-    /**
-     * 图片选择器类型。
-     * 任务要求暴露为 String，但旧版 Flutter 用 `image_picker_type_renew` 键存 int 0/1。
-     * 读取时优先按 String，再兼容旧版 int，最后回退到空字符串；写入统一用新键 String。
-     */
-    var imagePickerType: String
-        get() = tracked().getStringOrIntLegacyFallback(
-            SettingsKeys.IMAGE_PICKER_TYPE,
-            "",
-        )
-        set(value) { settings[SettingsKeys.IMAGE_PICKER_TYPE] = value; notifyChanged() }
-
-    /**
-     * 是否已开启「默认打开链接」（Android 12+）。
-     * 旧版 Flutter 无此持久化键，仅通过 OpenSettingPlugin 跳转系统设置；
-     * 新版增加布尔记录，用于在平台设置页展示开关状态。
-     */
-    var openByDefault: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.OPEN_BY_DEFAULT, false)
-        set(value) { settings[SettingsKeys.OPEN_BY_DEFAULT] = value; notifyChanged() }
-
     // endregion
 
     // region 低级访问
@@ -742,120 +693,70 @@ class SettingsRepository(
 }
 
 /**
+ * 读取单个设置键的原值；类型失配按缺失处理。
+ *
+ * Android 的 SharedPreferences 对类型失配的键抛 ClassCastException，桌面 Preferences 后端则静默返回 null。
+ * 这里统一收敛成 null，让调用方继续走 `flutter.` 旧键与默认值分支；下面的多类型探测兼容函数
+ * （先 int 再 bool、先 float 再 double 再 int）都以此为基础，不再各写一份 try/catch。
+ */
+private inline fun <reified T : Any> Settings.readOrNull(key: String): T? =
+    try { this[key] } catch (_: Exception) { null }
+
+/**
  * 带旧版 `flutter.` 前缀回退的读取辅助函数。
  * 优先读取新键；若不存在则读取带 `flutter.` 前缀的旧键；仍不存在则返回默认值。
- *
- * 所有主键读取均包 try/catch：Android SharedPreferences 对类型失配的键抛
- * ClassCastException（桌面 Preferences 后端静默回退），失配时按缺失处理走旧键/默认值，
- * 写法与下方 getBooleanWithIntLegacyFallback 等兼容函数一致。
  */
-private fun Settings.getStringWithLegacyFallback(key: String, default: String): String {
-    val value: String? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    val legacy: String? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-    return legacy ?: default
-}
+private fun Settings.getStringWithLegacyFallback(key: String, default: String): String =
+    readOrNull<String>(key) ?: readOrNull<String>(SettingsRepository_LegacyPrefix + key) ?: default
 
-private fun Settings.getStringWithLegacyFallbackOrNull(key: String): String? {
-    val value: String? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-}
+private fun Settings.getStringWithLegacyFallbackOrNull(key: String): String? =
+    readOrNull<String>(key) ?: readOrNull<String>(SettingsRepository_LegacyPrefix + key)
 
-private fun Settings.getIntWithLegacyFallback(key: String, default: Int): Int {
-    val value: Int? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    val legacy: Int? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-    return legacy ?: default
-}
+private fun Settings.getIntWithLegacyFallback(key: String, default: Int): Int =
+    readOrNull<Int>(key) ?: readOrNull<Int>(SettingsRepository_LegacyPrefix + key) ?: default
 
-private fun Settings.getIntWithLegacyFallbackOrNull(key: String): Int? {
-    val value: Int? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-}
+private fun Settings.getIntWithLegacyFallbackOrNull(key: String): Int? =
+    readOrNull<Int>(key) ?: readOrNull<Int>(SettingsRepository_LegacyPrefix + key)
 
-private fun Settings.getIntWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Int): Int {
-    val value: Int? = this.getIntWithLegacyFallbackOrNull(key)
-    if (value != null) return value
-    return this.getIntWithLegacyFallback(fallbackKey, default)
-}
+private fun Settings.getIntWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Int): Int =
+    getIntWithLegacyFallbackOrNull(key) ?: getIntWithLegacyFallback(fallbackKey, default)
 
-private fun Settings.getBooleanWithLegacyFallback(key: String, default: Boolean): Boolean {
-    val value: Boolean? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    val legacy: Boolean? = try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-    return legacy ?: default
-}
+private fun Settings.getBooleanWithLegacyFallback(key: String, default: Boolean): Boolean =
+    readOrNull<Boolean>(key) ?: readOrNull<Boolean>(SettingsRepository_LegacyPrefix + key) ?: default
 
-private fun Settings.getBooleanWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Boolean): Boolean {
-    val value: Boolean? = this.getBooleanWithLegacyFallbackOrNull(key)
-    if (value != null) return value
-    return this.getBooleanWithLegacyFallback(fallbackKey, default)
-}
+private fun Settings.getBooleanWithKeyAndLegacyFallback(key: String, fallbackKey: String, default: Boolean): Boolean =
+    getBooleanWithLegacyFallbackOrNull(key) ?: getBooleanWithLegacyFallback(fallbackKey, default)
 
 /**
  * 兼容旧版将 boolean 存为 int 0/1 的键。
- * 旧版 file_name_eval 在 Android/iOS 用 int 0/1 存储，直接按布尔读取可能因类型不匹配崩溃，
+ * 旧版 file_name_eval 在 Android/iOS 用 int 0/1 存储，直接按布尔读取会因类型不匹配失败，
  * 因此先尝试 int 再尝试 bool；新版统一用 bool 存储。
- * 对带 flutter. 前缀的旧键做同样回退。
+ * 对带 `flutter.` 前缀的旧键做同样回退。
  */
 private fun Settings.getBooleanWithIntLegacyFallback(key: String, default: Boolean): Boolean {
-    // 先尝试读取旧版 int 0/1
-    val intValue: Int? = try { this[key] } catch (_: Exception) { null }
-    if (intValue != null) return intValue == 1
-    // 再尝试新版 bool
-    val boolValue: Boolean? = try { this[key] } catch (_: Exception) { null }
-    if (boolValue != null) return boolValue
-    // 带 flutter. 前缀的旧键同样先 int 后 bool
+    readOrNull<Int>(key)?.let { return it == 1 }
+    readOrNull<Boolean>(key)?.let { return it }
     val legacyKey = SettingsRepository_LegacyPrefix + key
-    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyInt != null) return legacyInt == 1
-    val legacyBool: Boolean? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyBool != null) return legacyBool
+    readOrNull<Int>(legacyKey)?.let { return it == 1 }
+    readOrNull<Boolean>(legacyKey)?.let { return it }
     return default
 }
 
-private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? {
-    val value: Boolean? = try { this[key] } catch (_: Exception) { null }
-    if (value != null) return value
-    return try { this[SettingsRepository_LegacyPrefix + key] } catch (_: Exception) { null }
-}
+private fun Settings.getBooleanWithLegacyFallbackOrNull(key: String): Boolean? =
+    readOrNull<Boolean>(key) ?: readOrNull<Boolean>(SettingsRepository_LegacyPrefix + key)
 
 /**
- * 兼容旧版将图片选择器类型存为 int 0/1 的键。
- * 新版统一按 String 存储，读取时若当前键为 String 则直接返回；
- * 若不存在则尝试读取 int 并转换为 "0"/"1"；带 `flutter.` 前缀的旧键同样处理。
+ * 兼容旧版把字号存为 double / int 的键；新版统一用 float。
+ * 相同键在多后端下的历史类型都试一遍，全部缺失时返回 [default]。
  */
-private fun Settings.getStringOrIntLegacyFallback(key: String, default: String): String {
-    val stringValue: String? = try { this[key] } catch (_: Exception) { null }
-    if (stringValue != null) return stringValue
-    val intValue: Int? = try { this[key] } catch (_: Exception) { null }
-    if (intValue != null) return intValue.toString()
-    val legacyKey = SettingsRepository_LegacyPrefix + key
-    val legacyString: String? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyString != null) return legacyString
-    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyInt != null) return legacyInt.toString()
-    return default
-}
-
 private fun Settings.getFloatWithLegacyFallback(key: String, default: Float): Float {
-    val floatVal: Float? = try { this[key] } catch (_: Exception) { null }
-    if (floatVal != null) return floatVal
-    val doubleVal: Double? = try { this[key] } catch (_: Exception) { null }
-    if (doubleVal != null) return doubleVal.toFloat()
-    val intVal: Int? = try { this[key] } catch (_: Exception) { null }
-    if (intVal != null) return intVal.toFloat()
-
+    readOrNull<Float>(key)?.let { return it }
+    readOrNull<Double>(key)?.let { return it.toFloat() }
+    readOrNull<Int>(key)?.let { return it.toFloat() }
     val legacyKey = SettingsRepository_LegacyPrefix + key
-    val legacyFloat: Float? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyFloat != null) return legacyFloat
-    val legacyDouble: Double? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyDouble != null) return legacyDouble.toFloat()
-    val legacyInt: Int? = try { this[legacyKey] } catch (_: Exception) { null }
-    if (legacyInt != null) return legacyInt.toFloat()
-
+    readOrNull<Float>(legacyKey)?.let { return it }
+    readOrNull<Double>(legacyKey)?.let { return it.toFloat() }
+    readOrNull<Int>(legacyKey)?.let { return it.toFloat() }
     return default
 }
 

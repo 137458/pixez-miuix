@@ -1,9 +1,9 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.testutil.CapturedRequest
 import com.perol.pixez.shared.testutil.StubEngine
-import com.perol.pixez.shared.ui.AppConstants
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.ContentType
@@ -203,7 +203,7 @@ class IllustRepositoryTest {
         val request = downloadCaptured.single()
         assertEquals("/img-zip-ugoira/v1/77.zip", request.path)
         assertEquals(
-            AppConstants.Urls.PIXIV_APP_API,
+            PixivHosts.PIXIV_APP_API,
             request.headers["Referer"],
             "动图 Zip 下载应携带 app-api Referer",
         )
@@ -226,7 +226,7 @@ class IllustRepositoryTest {
             val request = downloadCaptured.single()
             assertEquals("/img-zip-ugoira/v1/88.zip", request.path)
             assertEquals(
-                AppConstants.Urls.PIXIV_APP_API,
+                PixivHosts.PIXIV_APP_API,
                 request.headers["Referer"],
                 "动图 Zip 下载应携带 app-api Referer",
             )
