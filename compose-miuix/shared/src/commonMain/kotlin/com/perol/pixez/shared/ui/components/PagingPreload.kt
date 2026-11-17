@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.shouldPreloadMore
 
 /**
  * 触底预加载统一入口：把「末项索引 → 状态机四条件守卫 → 触发 loadMore」这段样板收敛到一处。
@@ -34,6 +35,48 @@ internal fun rememberPagingPreload(
         derivedStateOf {
             pagedList.shouldPreloadMore(
                 lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
+            )
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            currentOnLoadMore()
+        }
+    }
+}
+
+/**
+ * 交错网格等不持有 [PagedListState]、只持有条目数与分页标志的列表用这个重载。
+ *
+ * 守卫条件与上面同源（同一个 [shouldPreloadMore]），差别只是输入由调用方直接给出：
+ * 网格的分页标志散在形参上，阈值也按交错布局的密度另取。
+ *
+ * @param lastVisibleItemIndex 每次求值都重新读取可视末项索引，故经 [rememberUpdatedState] 取最新闭包。
+ */
+@Composable
+internal fun rememberPagingPreload(
+    itemCount: Int,
+    hasMore: Boolean,
+    isLoadingMore: Boolean,
+    loadMoreError: Throwable?,
+    lastVisibleItemIndex: () -> Int,
+    thresholdItems: Int,
+    onLoadMore: () -> Unit,
+) {
+    val currentOnLoadMore by rememberUpdatedState(onLoadMore)
+    val currentLastVisibleItemIndex by rememberUpdatedState(lastVisibleItemIndex)
+
+    // 键含分页标志与条目数：标志翻转或长度变化都要重算，否则派生值会停在旧判定上。
+    val shouldLoadMore by remember(itemCount, hasMore, isLoadingMore, loadMoreError, thresholdItems) {
+        derivedStateOf {
+            shouldPreloadMore(
+                itemCount = itemCount,
+                hasMore = hasMore,
+                isLoadingMore = isLoadingMore,
+                hasLoadMoreError = loadMoreError != null,
+                lastVisibleItemIndex = currentLastVisibleItemIndex(),
+                thresholdItems = thresholdItems,
             )
         }
     }

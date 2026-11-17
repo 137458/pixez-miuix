@@ -13,8 +13,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,8 +29,9 @@ import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.state.shouldPreloadMore
 
 /** 作品瀑布流：网格布局、预加载门槛与加载更多页脚在此，卡片本体见 CouiIllustCard.kt。 */
 
@@ -49,22 +49,19 @@ internal fun CouiIllustGrid(
     loadMoreError: Throwable? = null,
     onLoadMore: (() -> Unit)? = null,
 ) {
+    // 设置变更版本由列表统一收集一次：卡片只做无状态渲染，避免每张卡片各挂一个收集器。
+    val changeVersion = LocalSettingsRepository.current.changeVersion.collectAsState().value
+
     if (onLoadMore != null) {
-        val shouldLoadMore by remember(hasMore, isLoadingMore, loadMoreError, illusts, state) {
-            derivedStateOf {
-                shouldPreloadMore(
-                    itemCount = illusts.size,
-                    hasMore = hasMore,
-                    isLoadingMore = isLoadingMore,
-                    hasLoadMoreError = loadMoreError != null,
-                    lastVisibleItemIndex = state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-                    thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
-                )
-            }
-        }
-        LaunchedEffect(shouldLoadMore) {
-            if (shouldLoadMore) onLoadMore()
-        }
+        rememberPagingPreload(
+            itemCount = illusts.size,
+            hasMore = hasMore,
+            isLoadingMore = isLoadingMore,
+            loadMoreError = loadMoreError,
+            lastVisibleItemIndex = { state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1 },
+            thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
+            onLoadMore = onLoadMore,
+        )
     }
 
     // 长按菜单用官方锚点菜单贴着被按卡片弹出：入栈到条目自身，随卡片回收一起销毁。
@@ -92,6 +89,7 @@ internal fun CouiIllustGrid(
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
                 CouiIllustCard(
                     illust = illust,
+                    changeVersion = changeVersion,
                     onClick = { onIllustClick(illust.id) },
                     onLongClick = { menuAnchor.open { menuExpanded = true } },
                 )

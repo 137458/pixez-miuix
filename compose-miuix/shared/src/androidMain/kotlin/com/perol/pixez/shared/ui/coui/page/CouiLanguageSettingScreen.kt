@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -24,14 +22,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.Sponsor
@@ -65,17 +62,7 @@ internal fun CouiLanguageSettingScreen(
         )
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_language", contentType = "section") {
                     CouiSettingSection(title = strings.settingLanguage) {
                         LANGUAGE_OPTIONS.forEachIndexed { index, option ->

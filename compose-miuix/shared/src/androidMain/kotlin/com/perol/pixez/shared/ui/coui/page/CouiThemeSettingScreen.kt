@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
@@ -36,15 +34,14 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiTextStyle
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
@@ -106,17 +103,7 @@ internal fun CouiThemeSettingScreen(
         )
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_theme_mode", contentType = "section") {
                     CouiSettingSection(title = strings.settingTheme) {
                         CouiRadioRow(

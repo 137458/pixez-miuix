@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
@@ -23,18 +21,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiTextStyle
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -126,17 +123,7 @@ internal fun CouiNetworkSettingScreen(
         )
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_network_oauth", contentType = "section") {
                     CouiSettingSection(title = strings.oauthNetworkMode) {
                         networkModes.forEach { (code, label, description) ->

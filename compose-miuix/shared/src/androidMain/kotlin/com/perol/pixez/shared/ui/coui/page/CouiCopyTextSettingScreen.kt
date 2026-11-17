@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,14 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -102,17 +99,7 @@ internal fun CouiCopyTextSettingScreen(
         }
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_copy_text_template", contentType = "section") {
                     CouiSettingSection(title = strings.copyTextFormatSectionTemplate) {
                         CouiCopyTextField(

@@ -3,16 +3,13 @@ package com.perol.pixez.shared.ui.coui.page
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,12 +24,11 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
@@ -93,17 +89,7 @@ internal fun CouiBookTagScreen(
         }
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_book_tag_list", contentType = "section") {
                     CouiSettingSection(title = strings.tags) {
                         if (bookTags.isEmpty()) {

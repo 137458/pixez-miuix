@@ -235,9 +235,11 @@ internal fun CouiUpdateSettingScreen(
         }
     }
 
-    if (showDialog && releaseInfo != null) {
+    // 委托属性无法智能转换，先落到局部变量再做非空判断。
+    val dialogReleaseInfo = releaseInfo
+    if (showDialog && dialogReleaseInfo != null) {
         CouiUpdateDialog(
-            releaseInfo = releaseInfo!!,
+            releaseInfo = dialogReleaseInfo,
             onDismiss = { showDialog = false },
             onIgnore = { version ->
                 coroutineScope.launch {

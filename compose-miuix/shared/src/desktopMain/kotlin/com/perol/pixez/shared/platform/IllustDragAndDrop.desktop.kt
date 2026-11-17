@@ -34,7 +34,7 @@ actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Mod
 
             try {
                 // 1. 优先检索 Pictures/PixEz 目录中已下载的真实原图
-                val localFile = findLocalDownloadedOriginal(illust, pageIndex, extension)
+                val localFile = findLocalDownloadedOriginal(illust, pageIndex)
                 if (localFile != null && localFile.exists() && localFile.length() > 0) {
                     readyFile = localFile
                 }
@@ -99,7 +99,7 @@ private fun extractExtension(url: String): String {
     }
 }
 
-private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int, ext: String): File? {
+private fun findLocalDownloadedOriginal(illust: Illust, pageIndex: Int): File? {
     val customBasePath = com.perol.pixez.shared.AppDependencies.orNull()?.settingsRepository?.storePath
     val uri = LocalIllustResolver.findDownloadedFileUri(illust, pageIndex, customBasePath) ?: return null
     return runCatching {

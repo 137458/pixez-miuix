@@ -17,40 +17,18 @@ actual class IllustSaver {
         subDir: String?,
         customBasePath: String?,
     ): String = withContext(Dispatchers.IO) {
-        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
+        val target = resolveSaveTarget(fileName, subDir, customBasePath)
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 applicationContext")
 
-        val isZip = fileName.endsWith(".zip", ignoreCase = true)
-        val mimeType = if (isZip) "application/zip" else getMimeType(fileName)
-        val relativeSubDir = if (!subDir.isNullOrBlank()) {
-            File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
-        } else ""
-
-        val baseFolderName = customBasePath?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
-            FileNamePolicy.sanitizeSegment(File(raw).name).takeIf { it.isNotBlank() }
-        } ?: "PixEz"
-
         // minSdk 31 恒高于 Q（29）：分区存储恒可用，旧的公共目录直写 + MediaStore 刷新回退已删除。
-        val targetUri = if (isZip) {
-            MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        }
-        val relativePath = if (isZip) {
-            Environment.DIRECTORY_DOWNLOADS + File.separator + baseFolderName + relativeSubDir
-        } else {
-            Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
-        }
-
-        val resolver = context.contentResolver
         saveToMediaStoreQ(
-            resolver = resolver,
-            targetUri = targetUri,
-            safeFileName = safeFileName,
+            resolver = context.contentResolver,
+            targetUri = target.uri,
+            safeFileName = target.safeFileName,
             displayErrorName = fileName,
-            mimeType = mimeType,
-            relativePath = relativePath,
+            mimeType = target.mimeType,
+            relativePath = target.relativePath,
             writer = { outputStream -> outputStream.write(bytes) },
         ).toString()
     }
@@ -61,43 +39,22 @@ actual class IllustSaver {
         subDir: String?,
         customBasePath: String?,
     ): String = withContext(Dispatchers.IO) {
-        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
+        val target = resolveSaveTarget(fileName, subDir, customBasePath)
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 applicationContext")
-
-        val isZip = fileName.endsWith(".zip", ignoreCase = true)
-        val mimeType = if (isZip) "application/zip" else getMimeType(fileName)
-        val relativeSubDir = if (!subDir.isNullOrBlank()) {
-            File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
-        } else ""
-
-        val baseFolderName = customBasePath?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
-            FileNamePolicy.sanitizeSegment(File(raw).name).takeIf { it.isNotBlank() }
-        } ?: "PixEz"
 
         val tempFile = File(tempFilePath.toString())
         require(tempFile.exists() && tempFile.length() > 0) { "临时文件不存在或为空: $tempFilePath" }
 
         try {
             // minSdk 31 恒高于 Q（29）：同 save()，分区存储单路径即可。
-            val targetUri = if (isZip) {
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI
-            } else {
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            }
-            val relativePath = if (isZip) {
-                Environment.DIRECTORY_DOWNLOADS + File.separator + baseFolderName + relativeSubDir
-            } else {
-                Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir
-            }
-
             saveToMediaStoreQ(
                 resolver = context.contentResolver,
-                targetUri = targetUri,
-                safeFileName = safeFileName,
+                targetUri = target.uri,
+                safeFileName = target.safeFileName,
                 displayErrorName = fileName,
-                mimeType = mimeType,
-                relativePath = relativePath,
+                mimeType = target.mimeType,
+                relativePath = target.relativePath,
                 writer = { output ->
                     tempFile.inputStream().use { input ->
                         input.copyTo(output, bufferSize = 64 * 1024)
@@ -108,6 +65,43 @@ actual class IllustSaver {
             runCatching { tempFile.delete() }
         }
     }
+
+    /**
+     * 文件名、MIME、目标集合与相对目录的推导在 [save] 与 [saveFromTempFile] 之间原本逐行重复两份，
+     * 两处都改才正确；这里收敛成一份，两条路径都只消费结果。
+     */
+    private fun resolveSaveTarget(fileName: String, subDir: String?, customBasePath: String?): SaveTarget {
+        val safeFileName = FileNamePolicy.requireSafeBaseName(fileName)
+        val isZip = fileName.endsWith(".zip", ignoreCase = true)
+        val relativeSubDir = if (!subDir.isNullOrBlank()) {
+            File.separator + FileNamePolicy.sanitizeSegment(subDir.trim())
+        } else ""
+        val baseFolderName = customBasePath?.trim()?.takeIf { it.isNotBlank() }?.let { raw ->
+            FileNamePolicy.sanitizeSegment(File(raw).name).takeIf { it.isNotBlank() }
+        } ?: "PixEz"
+        return if (isZip) {
+            SaveTarget(
+                safeFileName = safeFileName,
+                mimeType = "application/zip",
+                uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                relativePath = Environment.DIRECTORY_DOWNLOADS + File.separator + baseFolderName + relativeSubDir,
+            )
+        } else {
+            SaveTarget(
+                safeFileName = safeFileName,
+                mimeType = getMimeType(fileName),
+                uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                relativePath = Environment.DIRECTORY_PICTURES + File.separator + baseFolderName + relativeSubDir,
+            )
+        }
+    }
+
+    private class SaveTarget(
+        val safeFileName: String,
+        val mimeType: String,
+        val uri: android.net.Uri,
+        val relativePath: String,
+    )
 
     private inline fun saveToMediaStoreQ(
         resolver: android.content.ContentResolver,

@@ -16,13 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +38,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.slider.Slider
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
@@ -49,10 +47,10 @@ import com.perol.pixez.shared.data.settings.parseCrossAdapterWidthInput
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiSelectRow
+import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -107,17 +105,7 @@ internal fun CouiLayoutSettingScreen(
         )
 
         CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = LocalBottomBarContentPadding.current,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
+            CouiSettingsLazyColumn {
                 item(key = "coui_layout_bottom_bar", contentType = "section") {
                     CouiSettingSection(title = strings.floatingBottomBar) {
                         CouiSwitchRow(

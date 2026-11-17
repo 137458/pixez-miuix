@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +67,7 @@ private enum class CouiIllustAction {
 @Composable
 internal fun CouiIllustCard(
     illust: Illust,
+    changeVersion: Int,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,7 +76,6 @@ internal fun CouiIllustCard(
     val hapticFeedback = LocalHapticFeedback.current
     val pressInteraction = remember { MutableInteractionSource() }
     val settings = LocalSettingsRepository.current
-    val changeVersion = settings.changeVersion.collectAsState().value
     val previewUrl = remember(illust, settings.feedPreviewQuality, changeVersion) {
         resolveIllustCoverUrl(illust.imageUrls, settings.feedPreviewQuality)
     }

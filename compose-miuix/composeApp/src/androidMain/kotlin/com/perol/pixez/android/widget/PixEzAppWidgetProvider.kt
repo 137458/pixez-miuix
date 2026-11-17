@@ -180,11 +180,22 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    /**
+     * 解码小组件位图：先读字节、用一遍 inJustDecodeBounds 取尺寸算出 [inSampleSize]，再按降采样解码。
+     *
+     * 直接整幅解码再 createScaledBitmap 会让 4000×6000 的封面先以约 96 MB 的 ARGB 位图常驻，
+     * 而 RemoteViews 只用到 800px；降采样在解码阶段就削减内存，缩放仍保留以落到精确边长。
+     */
     private fun decodeWidgetBitmap(input: java.io.InputStream): Bitmap? {
+        val bytes = input.readBytes()
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         val options = BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.RGB_565
+            inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight)
         }
-        val originalBitmap = BitmapFactory.decodeStream(input, null, options) ?: return null
+        val originalBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
         if (originalBitmap.width <= WIDGET_IMAGE_MAX_DIMENSION && originalBitmap.height <= WIDGET_IMAGE_MAX_DIMENSION) {
             return originalBitmap
         }
@@ -196,6 +207,17 @@ class PixEzAppWidgetProvider : AppWidgetProvider() {
             originalBitmap.recycle()
         }
         return scaled
+    }
+
+    /** 取 2 的幂次采样率：降采样后仍不小于 [WIDGET_IMAGE_MAX_DIMENSION]，留给随后的精确缩放收尾。 */
+    private fun calculateInSampleSize(width: Int, height: Int): Int {
+        var sampleSize = 1
+        while (width / (sampleSize * 2) >= WIDGET_IMAGE_MAX_DIMENSION &&
+            height / (sampleSize * 2) >= WIDGET_IMAGE_MAX_DIMENSION
+        ) {
+            sampleSize *= 2
+        }
+        return sampleSize
     }
 
     companion object {
