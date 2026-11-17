@@ -41,18 +41,20 @@ decompose = "3.3.0"
 navigationevent = "1.1.2"
 napier = "2.7.1"
 kotlinx-datetime = "0.6.2"
-backdrop = "2.0.0"
 zoomable = "2.14.0"
 
 # 测试
 junit = "4.13.2"
 
 [libraries]
-# Compose Multiplatform artifact 由 org.jetbrains.compose 插件通过 compose.* / compose.dependencies.* DSL 管理，
-# 不在这里声明，以避免平台 artifact 坐标错误（如 material3 / material-icons-extended 无通用 common artifact）。
+# Compose Multiplatform 依赖直接声明坐标：Gradle 插件 1.12.0 已弃用 compose.runtime 等简写访问器，
+# 这里只收录带 common KMP artifact 的核心模块（runtime / foundation / ui / components-resources），
+# 无通用 common artifact 的坐标（如 material3）不得加入。
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
 
-# Backdrop / Liquid Glass
-backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 
 # MIUIX
@@ -88,13 +90,11 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 
 # SQLDelight
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
-sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 # Multiplatform Settings
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
-multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatform-settings" }
 
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

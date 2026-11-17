@@ -11,6 +11,12 @@ plugins {
 }
 
 kotlin {
+    // expect/actual class 声明在 Kotlin 2.x 仍是 Beta 特性；双端 actual 已全覆盖，
+    // 显式启用以免每轮编译都被 Beta 提示刷屏。
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -39,13 +45,10 @@ kotlin {
         }
 
         commonMain.dependencies {
-            // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.components.resources)
 
             // MIUIX
             implementation(libs.miuix.ui)
@@ -53,8 +56,6 @@ kotlin {
             implementation(libs.miuix.icons)
             implementation(libs.miuix.blur)
 
-            // Kyant0 Backdrop (Liquid Glass & Realtime Blur Multiplatform)
-            implementation(libs.backdrop)
             implementation(libs.zoomable)
 
             // Ktor
@@ -76,11 +77,9 @@ kotlin {
 
             // Settings
             api(libs.multiplatform.settings)
-            api(libs.multiplatform.settings.coroutines)
 
-            // SQLDelight runtime（提供 SqlDriver.Schema 等共享 API）与 coroutines 扩展
+            // SQLDelight runtime（提供 SqlDriver.Schema 等共享 API）
             api(libs.sqldelight.runtime)
-            api(libs.sqldelight.coroutines.extensions)
 
             // Coil
             implementation(libs.coil.compose)

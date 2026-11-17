@@ -84,12 +84,10 @@ kotlin {
         val desktopTest by getting
 
         commonMain.dependencies {
-            // Compose 1.12.0 使用 compose.* DSL；后续升级时按官方迁移指南评估 compose.dependencies.*。
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.components.resources)
             // decompose/decompose-compose 由 shared 以 api 暴露，经 projects.shared 传递可达
             implementation(projects.shared)
             implementation(libs.miuix.ui)
