@@ -27,8 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.BanRepository
-import com.perol.pixez.shared.data.repository.UserRepository
-import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
@@ -41,6 +39,7 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -53,7 +52,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Add
 import androidx.compose.foundation.background
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
@@ -341,7 +340,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("添加屏蔽标签失败", e)
-                            toastSink(ToastData("${strings.btnAdd}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
+                            toastSink(actionFailureToast(strings.btnAdd, e, strings))
                         }
                     } finally {
                         isAddingTag = false
@@ -382,7 +381,7 @@ fun ShieldScreen(
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("删除屏蔽项失败", e)
-                            toastSink(ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
+                            toastSink(actionFailureToast(strings.btnDelete, e, strings))
                         }
                     } finally {
                         isDeleting = false

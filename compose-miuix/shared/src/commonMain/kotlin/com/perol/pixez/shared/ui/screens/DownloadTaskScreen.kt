@@ -45,7 +45,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
-import com.perol.pixez.shared.data.repository.DownloadHistoryRepository
 import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
 import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
@@ -56,6 +55,7 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.flow.conflate
@@ -70,7 +70,14 @@ import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Report
+import top.yukonga.miuix.kmp.icon.extended.Show
+import top.yukonga.miuix.kmp.icon.extended.Stopwatch
 
 /**
  * 下载任务页：展示全部 / 运行中 / 完成 / 失败四类下载任务，
@@ -255,7 +262,7 @@ fun DownloadTaskScreen(
                                                         }.onSuccess {
                                                             refreshToken++
                                                         }.onFailure {
-                                                            toastSink(ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
+                                                            toastSink(actionFailureToast(strings.btnDelete, it, strings))
                                                         }
                                                     } finally {
                                                         processingTaskIds = processingTaskIds - task.id
@@ -369,7 +376,7 @@ fun DownloadTaskScreen(
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                toastSink(ToastData("${strings.btnDelete}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
+                                toastSink(actionFailureToast(strings.btnDelete, e, strings))
                             } finally {
                                 isBatchProcessing = false
                             }

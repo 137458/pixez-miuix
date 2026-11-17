@@ -40,6 +40,7 @@ import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PagingFooterAppearance
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
+import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
@@ -49,9 +50,7 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.derivedStateOf
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import androidx.compose.foundation.background
@@ -125,20 +124,8 @@ fun RecomUserScreen(
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
 
-    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
-    val shouldLoadMore by remember(pagedList) {
-        derivedStateOf {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-            )
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
+    // 四条件守卫与阈值单源在状态机内（UI-2），统一入口只在末项进入预加载区间时回调。
+    rememberPagingPreload(pagedList = pagedList, listState = listState, onLoadMore = ::loadMore)
 
     val strings = LocalStrings.current
     val backdrop = rememberBlurBackdrop()

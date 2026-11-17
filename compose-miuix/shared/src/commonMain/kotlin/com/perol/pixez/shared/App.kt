@@ -15,14 +15,12 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
-import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.navigation.RootContent
+import com.perol.pixez.shared.ui.navigation.toRepositoryRegistry
 
 /**
- * 共享的 Compose 应用入口。
- *
- * M3 阶段接入 Decompose 导航与 MIUIX 页面，替换 M1 的占位页面。
+ * 共享的 Compose 应用入口：装配 Coil 图片加载器、Decompose 根组件与仓储注入通道。
  */
 @OptIn(coil3.annotation.ExperimentalCoilApi::class)
 @Composable
@@ -59,33 +57,7 @@ fun App(
 
     val component = rootComponent ?: rememberRootComponent(dependencies)
     val navigationEventDispatcherOwner = rememberNavigationEventDispatcherOwner(parent = null)
-    // 仓库清单的唯一权威是 RepositoryRegistry（ui/navigation）。
-    // nav3/DN14 已把「全部仓储 CompositionLocal 的展开」收敛到 ui/ProvideRepositories，
-    // 但本处「AppDependencies -> Registry」的逐字段搬运仍是未收敛的第 4 处：
-    // 后续若由 AppDependencies 直接暴露 Registry（或改为容器投影），即可删除下面整段搬运。
-    val registry = remember(dependencies) {
-        RepositoryRegistry(
-            illustRepository = dependencies.illustRepository,
-            pixivisionRepository = dependencies.pixivisionRepository,
-            searchRepository = dependencies.searchRepository,
-            userRepository = dependencies.userRepository,
-            accountRepository = dependencies.accountRepository,
-            bookmarkRepository = dependencies.bookmarkRepository,
-            downloadRepository = dependencies.downloadRepository,
-            downloadHistoryRepository = dependencies.downloadHistoryRepository,
-            banRepository = dependencies.banRepository,
-            settingsRepository = dependencies.settingsRepository,
-            boardRepository = dependencies.boardRepository,
-            historyRepository = dependencies.historyRepository,
-            novelHistoryRepository = dependencies.novelHistoryRepository,
-            muteRepository = dependencies.muteRepository,
-            novelRepository = dependencies.novelRepository,
-            updateRepository = dependencies.updateRepository,
-            updateDownloader = dependencies.updateDownloader,
-            sauceNaoRepository = dependencies.sauceNaoRepository,
-            watchlistRepository = dependencies.watchlistRepository,
-        )
-    }
+    val registry = remember(dependencies) { dependencies.toRepositoryRegistry() }
     CompositionLocalProvider(
         LocalNavigationEventDispatcherOwner provides navigationEventDispatcherOwner,
     ) {

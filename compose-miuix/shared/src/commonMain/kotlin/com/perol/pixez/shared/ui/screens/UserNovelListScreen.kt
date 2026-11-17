@@ -1,62 +1,20 @@
 package com.perol.pixez.shared.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isLoggedIn
-import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
-import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
-import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.NovelCard
-import com.perol.pixez.shared.ui.components.blurBackdropSource
-import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.UserPagedListScreen
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
-import com.perol.pixez.shared.ui.components.PagingFooterAppearance
-import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
-import com.perol.pixez.shared.ui.state.PagedListState
-import com.perol.pixez.shared.ui.state.PagingFooterPhase
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
- * 用户小说列表页：展示指定画师/作者的小说作品，支持流式分页与下拉刷新。
+ * 用户小说列表页：账号守卫、分页、四态占位与下拉刷新由 [UserPagedListScreen] 统一提供，
+ * 本页只描述数据源、条目渲染、标题拼装与列表内边距/间距。
  */
 @Composable
 fun UserNovelListScreen(
@@ -67,74 +25,7 @@ fun UserNovelListScreen(
     onUserClick: ((Long) -> Unit)? = null,
 ) {
     val repository = LocalNovelRepository.current
-    val accountRepository = LocalAccountRepository.current
-
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
-    var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
-
-    val pagedList = remember(userId) {
-        PagedListState(
-            fetch = { nextUrl ->
-                val response = repository.getUserNovels(userId, nextUrl = nextUrl)
-                PagedListPage(response.novels, response.nextUrl)
-            },
-            mergeItems = { old, new -> old.appendDistinct(new) },
-        )
-    }
-    val coroutineScope = rememberCoroutineScope()
-
-    val accountUnloaded = remember { Any() }
-    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
-    LaunchedEffect(userId, retryCount, isLoggedIn, user) {
-        if (isLoggedIn == null) return@LaunchedEffect
-        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
-        if (accountSwitched) pagedList.reset()
-        loadedForAccount = user
-        val force = isManualRefreshing
-        pagedList.loadFirst(force = force)
-        isManualRefreshing = false
-    }
-
-    fun loadMore() {
-        coroutineScope.launch { pagedList.loadMore() }
-    }
-
-    val triggerManualRefresh: () -> Unit = {
-        isManualRefreshing = true
-        retryCount++
-    }
-
-    val listState = rememberLazyListState()
-
-    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
-    val shouldLoadMore by remember(pagedList) {
-        derivedStateOf {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-            )
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
-
     val strings = LocalStrings.current
-    val scrollBehavior = MiuixScrollBehavior()
-    val backdrop = rememberBlurBackdrop()
-    val colorScheme = MiuixTheme.colorScheme
 
     val pageTitle = remember(authorName, strings.userNovels) {
         if (authorName.isNotBlank()) {
@@ -144,104 +35,35 @@ fun UserNovelListScreen(
         }
     }
 
-    BlurTopBarScaffold(
-        modifier = Modifier.fillMaxSize(),
+    UserPagedListScreen(
         title = pageTitle,
-        backdrop = backdrop,
-        scrollBehavior = scrollBehavior,
+        emptyText = strings.userNovelsEmpty,
+        pageKey = userId,
         onBack = onBack,
-        actions = {
-            IconButton(onClick = triggerManualRefresh) {
-                Icon(
-                    imageVector = MiuixIcons.Refresh,
-                    contentDescription = strings.refresh,
-                )
-            }
+        fetch = { nextUrl ->
+            val response = repository.getUserNovels(userId, nextUrl = nextUrl)
+            PagedListPage(response.novels, response.nextUrl)
         },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surface)
-                .blurBackdropSource(backdrop),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            val currentItems = pagedList.items
-            when {
-                currentItems == null && pagedList.initialError == null ->
-                    LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                currentItems != null -> when {
-                    currentItems.isEmpty() -> {
-                        EmptyPlaceholder(
-                            message = strings.userNovelsEmpty,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(paddingValues),
-                        )
-                    }
-                    else -> {
-                        PullToRefresh(
-                            isRefreshing = isManualRefreshing,
-                            onRefresh = triggerManualRefresh,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
-                            topAppBarScrollBehavior = scrollBehavior,
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.TopCenter,
-                            ) {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                        .fillMaxWidth()
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    contentPadding = PaddingValues(
-                                        start = 12.dp,
-                                        end = 12.dp,
-                                        top = paddingValues.calculateTopPadding() + 8.dp,
-                                        bottom = paddingValues.calculateBottomPadding() + 16.dp,
-                                    ),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    items(
-                                        items = currentItems,
-                                        key = { it.id },
-                                        contentType = { "novel_card_item" },
-                                    ) { novel ->
-                                        NovelCard(
-                                            novel = novel,
-                                            onClick = { onNovelClick(novel.id) },
-                                            onUserClick = onUserClick,
-                                        )
-                                    }
-
-                                    // 三态 footer 收敛到统一组件（UI-3）：Hidden 时不挂 item，避免尾部留白。
-                                    val footerState = pagedList.footerState
-                                    if (footerState.phase != PagingFooterPhase.Hidden) {
-                                        item(key = "novel_pagination_footer", contentType = "footer") {
-                                            PagingLoadMoreFooter(
-                                                state = footerState,
-                                                onRetry = ::loadMore,
-                                                appearance = PagingFooterAppearance.Compact,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else -> ErrorPlaceholder(
-                    error = pagedList.initialError,
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
-            }
-        }
-    }
+        mergeItems = { old, new -> old.appendDistinct(new) },
+        itemKey = { it.id },
+        itemContentType = "novel_card_item",
+        footerKey = "novel_pagination_footer",
+        itemContent = { novel ->
+            NovelCard(
+                novel = novel,
+                onClick = { onNovelClick(novel.id) },
+                onUserClick = onUserClick,
+            )
+        },
+        // 小说卡片按卡片留白排版：列表内边距在顶栏内边距之上再加卡片间距。
+        contentPadding = { paddingValues ->
+            PaddingValues(
+                start = 12.dp,
+                end = 12.dp,
+                top = paddingValues.calculateTopPadding() + 8.dp,
+                bottom = paddingValues.calculateBottomPadding() + 16.dp,
+            )
+        },
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    )
 }

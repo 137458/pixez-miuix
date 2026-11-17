@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +55,7 @@ import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.NovelCard
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
+import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.components.UserPreviewItem
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
@@ -359,20 +359,8 @@ private fun <T> SearchPagedListColumn(
     }
 
     val currentItems = pagedList.items
-    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
-    val shouldLoadMore by remember(pagedList) {
-        derivedStateOf {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-            )
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
+    // 四条件守卫与阈值单源在状态机内（UI-2），统一入口只在末项进入预加载区间时回调。
+    rememberPagingPreload(pagedList = pagedList, listState = listState, onLoadMore = ::loadMore)
 
     when {
         currentItems == null && pagedList.initialError == null -> LoadingPlaceholder(

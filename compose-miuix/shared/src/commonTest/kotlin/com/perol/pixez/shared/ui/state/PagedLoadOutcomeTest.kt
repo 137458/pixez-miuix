@@ -226,7 +226,7 @@ class PagedLoadOutcomeTest {
         val stale = async { state.loadMore() }
         runCurrent()
         assertEquals(PagedLoadOutcome.Written, state.loadFirst(force = true))
-        holdPage!!.complete(Unit)
+        holdPage.complete(Unit)
         assertEquals(PagedLoadOutcome.Discarded, stale.await())
 
         // 翻页失败：报 Failed

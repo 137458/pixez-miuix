@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -16,11 +15,13 @@ import com.perol.pixez.shared.data.repository.MuteRepository
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.repository.NovelRepository
 import com.perol.pixez.shared.data.repository.PixivisionRepository
+import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UpdateRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.WatchlistRepository
 import com.perol.pixez.shared.platform.AppUpdateDownloader
+import com.perol.pixez.shared.ui.navigation.RepositoryRegistry
 
 /**
  * 各数据仓储的组合注入通道（中-9 单通道收敛）：由 RootContent 在应用根部统一 provide，
@@ -122,7 +123,7 @@ val LocalUpdateDownloader = staticCompositionLocalOf<AppUpdateDownloader> {
 }
 
 /** SauceNAO 以图搜图数据通道：搜索页以图搜图浮层。 */
-val LocalSauceNaoRepository = staticCompositionLocalOf<com.perol.pixez.shared.data.repository.SauceNaoRepository> {
+val LocalSauceNaoRepository = staticCompositionLocalOf<SauceNaoRepository> {
     error("LocalSauceNaoRepository not provided")
 }
 
@@ -135,8 +136,8 @@ val LocalSauceNaoRepository = staticCompositionLocalOf<com.perol.pixez.shared.da
  * 2. [RepositoryRegistry] 增加同名字段（唯一仓库清单）；
  * 3. 本函数增加一行 `LocalXxxRepository provides registry.xxxRepository`。
  *
- * 注意：App.kt 目前仍逐字段把 AppDependencies 搬进 Registry（本轮未收敛的第 4 处），
- * 后续可让容器直接暴露 Registry 后删除该段搬运。
+ * 清单由 [com.perol.pixez.shared.AppDependencies.toRepositoryRegistry] 一次投影生成，
+ * 组合根只调用该投影函数，不再逐字段搬运。
  *
  * @param registry 唯一仓库清单；各 Local 的 provide 值与改造前逐字段一致。
  */

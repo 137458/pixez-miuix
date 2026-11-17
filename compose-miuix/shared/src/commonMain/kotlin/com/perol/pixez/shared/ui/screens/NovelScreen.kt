@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +48,7 @@ import com.perol.pixez.shared.ui.components.PagingFooterAppearance
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -138,19 +138,9 @@ fun NovelScreen(
         coroutineScope.launch { pagedList.loadMore() }
     }
 
-    // 触底自动加载更多：snapshotFlow 监听滚动可视项位置 + 状态机内四条件守卫（UI-2），
-    // 消除 listState 作唯一 key 时的协程取消与分页死锁。
-    LaunchedEffect(listState, pagedList) {
-        snapshotFlow {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
-            )
-        }.collect { shouldLoad ->
-            if (shouldLoad) {
-                loadMore()
-            }
-        }
-    }
+    // 触底自动加载更多：四条件守卫与阈值单源在状态机内（UI-2），
+    // 统一入口内部以派生状态监听可视项位置，末尾进入预加载区间时回调。
+    rememberPagingPreload(pagedList = pagedList, listState = listState, onLoadMore = ::loadMore)
 
     BlurTopBarScaffold(
         modifier = modifier.fillMaxSize(),

@@ -62,6 +62,7 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
+import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,12 +84,12 @@ import com.perol.pixez.shared.ui.components.CommentEmojiText
 import com.perol.pixez.shared.ui.components.PixivEmojis
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.runtime.derivedStateOf
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Send
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.Res
 import pixez_miuix.shared.generated.resources.emoji_304
@@ -192,20 +193,8 @@ fun CommentsScreen(
 
     val currentComments = pagedList.items
 
-    // 触底预加载：四条件守卫与阈值单源在状态机内（UI-2），此处只喂末项索引。
-    val shouldLoadMore by remember(pagedList) {
-        derivedStateOf {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-            )
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
+    // 触底预加载：四条件守卫与阈值单源在状态机内（UI-2），统一入口只在末项进入预加载区间时回调。
+    rememberPagingPreload(pagedList = pagedList, listState = listState, onLoadMore = ::loadMore)
 
     val strings = LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()

@@ -12,12 +12,14 @@ import kotlin.test.assertTrue
 /**
  * CHANGELOG [未发布]「退出登录或切换账号后清空上一账号分页列表」的接线守护。
  *
- * 覆盖面：共 13 个页面文件，分两组。
- * 1. 7 个皮肤无关页面（shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/screens）：
- *    NovelScreen / CommentsScreen / RecomUserScreen / UserFollowListScreen /
- *    UserFollowerListScreen / SearchResultsState / SearchResultSection。
+ * 覆盖面：共 12 个来源文件，分三组。
+ * 1. 5 个皮肤无关页面（shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/screens）：
+ *    NovelScreen / CommentsScreen / RecomUserScreen / SearchResultsState / SearchResultSection。
  *    搜索结果的两套状态机按皮肤无关状态下沉拆分：插画结果在 SearchResultsState（listState），
  *    画师与小说结果在 SearchResultSection（pagedList），各自独立守护。
+ * 1b. 1 个共享实现（shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/components 的
+ *    UserPagedListScreen.kt）：用户关注、粉丝、小说、相关用户四页的重复骨架已合并到这里，
+ *    切号作废逻辑只有这一份，四页薄壳必须委托它（见下方委托守护用例）。
  * 2. 6 个 COUI 手写接线页面（shared/src/androidMain/kotlin/com/perol/pixez/shared/ui/coui/page）：
  *    CouiCommentsScreen / CouiNovelScreen / CouiRecomUserScreen / CouiSearchResultLists /
  *    CouiUserListScreen / CouiUserNovelListScreen。COUI 侧不复用 MIUIX 页面实现，各自复制了一份
@@ -49,6 +51,9 @@ class AccountSwitchPagedListResetWiringTest {
     private val miuixScreensRoot =
         "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/screens"
 
+    private val miuixComponentsRoot =
+        "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/components"
+
     private val couiPagesRoot =
         "shared/src/androidMain/kotlin/com/perol/pixez/shared/ui/coui/page"
 
@@ -57,10 +62,9 @@ class AccountSwitchPagedListResetWiringTest {
         GuardedPage(miuixScreensRoot, "NovelScreen.kt", listOf("pagedList")),
         GuardedPage(miuixScreensRoot, "CommentsScreen.kt", listOf("pagedList")),
         GuardedPage(miuixScreensRoot, "RecomUserScreen.kt", listOf("pagedList")),
-        GuardedPage(miuixScreensRoot, "UserFollowListScreen.kt", listOf("pagedList")),
-        GuardedPage(miuixScreensRoot, "UserFollowerListScreen.kt", listOf("pagedList")),
         GuardedPage(miuixScreensRoot, "SearchResultsState.kt", listOf("listState")),
         GuardedPage(miuixScreensRoot, "SearchResultSection.kt", listOf("pagedList")),
+        GuardedPage(miuixComponentsRoot, "UserPagedListScreen.kt", listOf("pagedList")),
     )
 
     /** COUI 手写接线页面：androidMain coui/page（不复用 MIUIX 实现，需独立守护）。 */
@@ -73,8 +77,16 @@ class AccountSwitchPagedListResetWiringTest {
         GuardedPage(couiPagesRoot, "CouiUserNovelListScreen.kt", listOf("pagedList")),
     )
 
-    /** 全部受守护页面（7 个皮肤无关页面 + 6 个 COUI 页面）。 */
+    /** 全部受守护来源（6 个皮肤无关来源 + 6 个 COUI 页面）。 */
     private val pages: List<GuardedPage> = miuixPages + couiPages
+
+    /** 合并后的四个用户列表薄壳：自有骨架已删，切号作废必须经共享组件。 */
+    private val delegatedUserListShells: List<String> = listOf(
+        "UserFollowListScreen.kt",
+        "UserFollowerListScreen.kt",
+        "UserNovelListScreen.kt",
+        "UserRelatedListScreen.kt",
+    )
 
     /** 从 Gradle 测试工作目录向上定位仓库根：以 shared/src 目录为锚点。 */
     private fun repoRoot(): Path {
@@ -90,7 +102,7 @@ class AccountSwitchPagedListResetWiringTest {
         repoRoot().resolve(page.sourceRoot).resolve(page.fileName)
 
     @Test
-    fun `十三个页面文件均显式 import 账号仓库并收集登录事件作为切换信号源`() {
+    fun `受守护来源均显式 import 账号仓库并收集登录事件作为切换信号源`() {
         for (page in pages) {
             val file = sourcePath(page)
             assertTrue(file.exists(), "缺少待守护源码：${file}")
@@ -115,7 +127,7 @@ class AccountSwitchPagedListResetWiringTest {
     }
 
     @Test
-    fun `十三个页面的每个分页状态机都在账号切换时重置`() {
+    fun `受守护来源的每个分页状态机都在账号切换时重置`() {
         for (page in pages) {
             val source = sourcePath(page).readText()
             for (state in page.stateMachines) {
@@ -124,6 +136,31 @@ class AccountSwitchPagedListResetWiringTest {
                     "${page.fileName} 的 $state 应在 accountSwitched 检测到切号/登出时调用 reset() 作废旧账号列表",
                 )
             }
+        }
+    }
+
+    /**
+     * 委托守护：四个用户列表页合并后不再各写一份切号作废逻辑，
+     * 若哪个薄壳绕过共享组件重新手搓骨架，切号残留会以另一种形式回归。
+     */
+    @Test
+    fun `四个用户列表薄壳必须委托共享骨架`() {
+        for (fileName in delegatedUserListShells) {
+            val file = repoRoot().resolve(miuixScreensRoot).resolve(fileName)
+            assertTrue(file.exists(), "缺少待守护源码：$file")
+            val source = file.readText()
+            assertTrue(
+                "import com.perol.pixez.shared.ui.components.UserPagedListScreen" in source,
+                "$fileName 应 import 共享骨架 UserPagedListScreen",
+            )
+            assertTrue(
+                "UserPagedListScreen(" in source,
+                "$fileName 应调用共享骨架 UserPagedListScreen(",
+            )
+            assertTrue(
+                "accountSwitched" !in source,
+                "$fileName 不应再自行实现账号切换判定（唯一实现在 UserPagedListScreen.kt）",
+            )
         }
     }
 

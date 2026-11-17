@@ -155,7 +155,7 @@ internal fun buildIllustDetailMoreMenuEntries(
                                         onBanSuccess()
                                         onToast(ToastData(strings.menuBanWork, ToastType.Success))
                                     },
-                                    onFailure = { e -> onToast(ToastData("${strings.menuBanWork}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
+                                    onFailure = { e -> onToast(actionFailureToast(strings.menuBanWork, e, strings)) },
                                 )
                             }
                         },
@@ -172,7 +172,7 @@ internal fun buildIllustDetailMoreMenuEntries(
                                         onBanSuccess()
                                         onToast(ToastData(strings.menuBanUser, ToastType.Success))
                                     },
-                                    onFailure = { e -> onToast(ToastData("${strings.menuBanUser}: ${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error)) },
+                                    onFailure = { e -> onToast(actionFailureToast(strings.menuBanUser, e, strings)) },
                                 )
                             }
                         },

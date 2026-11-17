@@ -39,6 +39,7 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.runClipboardShare
+import com.perol.pixez.shared.ui.components.actionFailureMessage
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
@@ -54,7 +55,8 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Hide
+import top.yukonga.miuix.kmp.icon.extended.Show
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 
@@ -238,7 +240,7 @@ fun AccountEditScreen(
                                                 currentPassword = ""
                                                 newPassword = ""
                                             }.onFailure { e ->
-                                                toastSink(ToastData("${strings.accountEditSaveFailed}：${PixivApiErrorFormatter.format(e, strings)}", ToastType.Error))
+                                                toastSink(ToastData(actionFailureMessage(strings.accountEditSaveFailed, e, strings), ToastType.Error))
                                                 Napier.e("保存账号信息失败", e)
                                             }
                                         } finally {

@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.navigation
 
+import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.BoardRepository
@@ -24,7 +25,7 @@ import com.perol.pixez.shared.platform.AppUpdateDownloader
  * RootContent 链路的仓储聚合容器：将原本 RootContent → RootChildContent → render*
  * 逐级透传的 15 个仓储收敛为单一不可变参数。
  *
- * 字段与 [com.perol.pixez.shared.AppDependencies] 中的同名仓储一一对应，由 App 层装配后
+ * 字段与 [AppDependencies] 中的同名仓储一一对应，由 [toRepositoryRegistry] 投影后
  * 一次性传入 [RootContent]，各页面渲染分支按需从本容器取值。
  */
 data class RepositoryRegistry(
@@ -50,4 +51,32 @@ data class RepositoryRegistry(
     val updateDownloader: AppUpdateDownloader,
     val sauceNaoRepository: SauceNaoRepository,
     val watchlistRepository: WatchlistRepository,
+)
+
+/**
+ * 容器投影：把 [AppDependencies] 的仓储字段映射为 UI 侧唯一清单。
+ *
+ * 装配点只有一处——组合根持有容器，容器持有仓储实例；[AppDependencies] 之外不得再出现
+ * 「逐个仓储搬运」的清单，否则新增仓储时要改多处且容易漏。映射保持与构造参数同名同序。
+ */
+internal fun AppDependencies.toRepositoryRegistry(): RepositoryRegistry = RepositoryRegistry(
+    illustRepository = illustRepository,
+    pixivisionRepository = pixivisionRepository,
+    searchRepository = searchRepository,
+    userRepository = userRepository,
+    accountRepository = accountRepository,
+    bookmarkRepository = bookmarkRepository,
+    downloadRepository = downloadRepository,
+    downloadHistoryRepository = downloadHistoryRepository,
+    banRepository = banRepository,
+    settingsRepository = settingsRepository,
+    boardRepository = boardRepository,
+    historyRepository = historyRepository,
+    novelHistoryRepository = novelHistoryRepository,
+    muteRepository = muteRepository,
+    novelRepository = novelRepository,
+    updateRepository = updateRepository,
+    updateDownloader = updateDownloader,
+    sauceNaoRepository = sauceNaoRepository,
+    watchlistRepository = watchlistRepository,
 )

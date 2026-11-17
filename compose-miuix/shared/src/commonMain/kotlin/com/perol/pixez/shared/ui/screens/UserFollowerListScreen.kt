@@ -1,62 +1,18 @@
 package com.perol.pixez.shared.ui.screens
 
-import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
-import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
-
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.perol.pixez.shared.ui.components.blurBackdropSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isLoggedIn
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
-import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import com.perol.pixez.shared.ui.components.EmptyPlaceholder
-import com.perol.pixez.shared.ui.components.ErrorPlaceholder
-import com.perol.pixez.shared.ui.components.LoadingPlaceholder
-import com.perol.pixez.shared.ui.components.PagingFooterAppearance
-import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
+import com.perol.pixez.shared.ui.components.UserPagedListScreen
 import com.perol.pixez.shared.ui.components.UserPreviewItem
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
-import com.perol.pixez.shared.ui.state.PagedListState
-import com.perol.pixez.shared.ui.state.PagingFooterPhase
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.PullToRefresh
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.icon.extended.Contacts
 
 /**
- * 用户好P友/粉丝列表页：支持流式分页与下拉刷新。
+ * 用户好P友/粉丝列表页：账号守卫、分页、四态占位与下拉刷新由 [UserPagedListScreen] 统一提供，
+ * 本页只描述数据源、条目渲染与文案。
  */
 @Composable
 fun UserFollowerListScreen(
@@ -66,174 +22,27 @@ fun UserFollowerListScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalUserRepository.current
-    val accountRepository = LocalAccountRepository.current
+    val strings = LocalStrings.current
 
-    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        // 挂起上下文读取当前账号：suspendRunCatchingNonCancel 捕获异常并保留取消语义（同 NewScreen）。
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
-    val coroutineScope = rememberCoroutineScope()
-    var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
-    var isManualRefreshing by rememberSaveable(userId) { mutableStateOf(false) }
-
-    // 分页状态机单点实现（含 generation 竞态守卫），替代手抄的请求代数与标志位。
-    val pagedList = remember(userId) {
-        PagedListState(
-            fetch = { nextUrl ->
-                val response = repository.getUserFollowersResponse(userId = userId, nextUrl = nextUrl)
-                PagedListPage(response.userPreviews, response.nextUrl)
-            },
-            mergeItems = { old, new -> old.appendDistinct(new) },
-        )
-    }
-
-    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
-    val accountUnloaded = remember { Any() }
-    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
-    LaunchedEffect(userId, retryCount, isLoggedIn, user) {
-        // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
-        if (isLoggedIn == null) return@LaunchedEffect
-        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
-        if (accountSwitched) pagedList.reset()
-        loadedForAccount = user
-        val force = isManualRefreshing
-        pagedList.loadFirst(force = force)
-        isManualRefreshing = false
-    }
-
-    val triggerManualRefresh: () -> Unit = {
-        isManualRefreshing = true
-        retryCount++
-    }
-
-    fun loadMore() {
-        coroutineScope.launch { pagedList.loadMore() }
-    }
-
-    val scrollBehavior = MiuixScrollBehavior()
-    val listState = rememberLazyListState()
-
-    // 四条件守卫与阈值单源在状态机内（UI-2），此处只喂布局上报的末项索引。
-    val shouldLoadMore by remember(pagedList) {
-        derivedStateOf {
-            pagedList.shouldPreloadMore(
-                lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
-            )
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            loadMore()
-        }
-    }
-
-    val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
-    val backdrop = rememberBlurBackdrop()
-    val colorScheme = MiuixTheme.colorScheme
-
-    BlurTopBarScaffold(
-        modifier = Modifier.fillMaxSize(),
+    UserPagedListScreen(
         title = strings.userFollowerTitle,
-        backdrop = backdrop,
-        scrollBehavior = scrollBehavior,
+        emptyText = strings.userFollowerEmpty,
+        emptyIcon = MiuixIcons.Contacts,
+        pageKey = userId,
         onBack = onBack,
-        actions = {
-            IconButton(onClick = triggerManualRefresh) {
-                Icon(
-                    imageVector = MiuixIcons.Refresh,
-                    contentDescription = strings.refresh,
-                )
-            }
+        fetch = { nextUrl ->
+            val response = repository.getUserFollowersResponse(userId = userId, nextUrl = nextUrl)
+            PagedListPage(response.userPreviews, response.nextUrl)
         },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surface)
-                .blurBackdropSource(backdrop),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            val currentItems = pagedList.items
-            when {
-                currentItems == null && pagedList.initialError == null ->
-                    LoadingPlaceholder(modifier = Modifier.fillMaxSize().padding(paddingValues))
-                currentItems != null -> when {
-                    currentItems.isEmpty() -> {
-                        EmptyPlaceholder(
-                            message = strings.userFollowerEmpty,
-                            icon = MiuixIcons.Contacts,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(paddingValues),
-                        )
-                    }
-                    else -> {
-                        PullToRefresh(
-                            isRefreshing = isManualRefreshing,
-                            onRefresh = triggerManualRefresh,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
-                            topAppBarScrollBehavior = scrollBehavior,
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.TopCenter,
-                            ) {
-                                LazyColumn(
-                                    state = listState,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-                                        .fillMaxWidth()
-                                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                                    contentPadding = paddingValues,
-                                ) {
-                                    items(
-                                        items = currentItems,
-                                        key = { it.user.id },
-                                        contentType = { "user_preview_item" },
-                                    ) { preview ->
-                                        UserPreviewItem(
-                                            preview = preview,
-                                            onClick = { onUserClick(preview.user.id) },
-                                        )
-                                    }
-
-                                    // 三态 footer 收敛到统一组件（UI-3）：Hidden 时不挂 item，避免尾部留白。
-                                    val footerState = pagedList.footerState
-                                    if (footerState.phase != PagingFooterPhase.Hidden) {
-                                        item(key = "follower_pagination_footer", contentType = "footer") {
-                                            PagingLoadMoreFooter(
-                                                state = footerState,
-                                                onRetry = ::loadMore,
-                                                appearance = PagingFooterAppearance.Compact,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                else -> ErrorPlaceholder(
-                    error = pagedList.initialError,
-                    onRetry = { triggerManualRefresh() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                )
-            }
-        }
-    }
+        mergeItems = { old, new -> old.appendDistinct(new) },
+        itemKey = { it.user.id },
+        itemContentType = "user_preview_item",
+        footerKey = "follower_pagination_footer",
+        itemContent = { preview ->
+            UserPreviewItem(
+                preview = preview,
+                onClick = { onUserClick(preview.user.id) },
+            )
+        },
+    )
 }
-

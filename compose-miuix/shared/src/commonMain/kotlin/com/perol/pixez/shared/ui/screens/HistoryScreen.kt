@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -30,9 +29,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import com.perol.pixez.shared.ui.AppConstants
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,11 +54,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.SquircleShape
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
 import com.perol.pixez.shared.ui.utils.rememberHistoryResult
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -79,7 +74,9 @@ import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Search
 
 /**
  * 浏览历史页：分"插画 / 小说"两页签展示本地浏览历史，支持搜索、单条删除与清空全部。
@@ -290,7 +287,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastSink(ToastData("${strings.actionClear}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
+                                    toastSink(actionFailureToast(strings.actionClear, it, strings))
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
@@ -326,7 +323,7 @@ fun HistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastSink(ToastData("${strings.btnDelete}${strings.failedSuffix}: ${PixivApiErrorFormatter.format(it, strings)}", ToastType.Error))
+                                    toastSink(actionFailureToast(strings.btnDelete, it, strings))
                                 }
                         } finally {
                             // 协程取消或异常时也必须重置状态，避免弹窗按钮永久禁用。
