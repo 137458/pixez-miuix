@@ -108,6 +108,20 @@
 - 统一分组标题与卡片的水平缩进基线：分组标题恢复 MIUIX 默认 28 dp 内缩，卡片外边距统一为 12 dp（叠加卡片内组件自带的 16 dp 即与标题文字对齐）；移除列表容器与标题上额外叠加的水平 padding，搜索联想、搜索筛选等复用组件改为由调用方注入水平留白，避免逐层叠加。
 - 清理 Android 侧在 minSdk 31 下恒真的系统版本门控：分区存储（Q）、分区存储临时文件落盘、前台服务类型（Q）、默认打开方式设置页与屏幕圆角（S）等 5 处判断恒为真，统一删去死分支与失效的旧回退路径，保留行为等价；`RuntimeShaderCompat` 等以 Android 13（TIRAMISU）为界的分支仍有效，保持不变。
 
+- 收敛跨层重复定义与死代码：
+  - 主机与接口常量统一收口到 network 层：`PixivHosts` 补齐裸域、短链域、OAuth 域、账号域与 Pixivision 嵌入域，新增 `PixivOAuthDefaults`（OAuth 客户端凭据与回调路径）与 `BoardEndpoints`（公告板三条镜像地址），`GitHubReleaseEndpoints` 改由 owner/repo 派生，`SauceNaoEndpoints` 增加主域常量；`AppConstants` 只保留 UI 常量与链接构造，全库不再出现第二份主机字面量，重定向白名单、深链识别、图源清洗与 OAuth 回调共用同一组常量。
+  - 删除确认零引用的死代码：`CheckIndicator` 组件、`ThreadSafeLruCache.touch`、`SearchRepository.searchUser`、`NovelRankingMode.fromValue`、`PageContainerGeometry.isMeasured`、`AppConstants` 与 `SettingsKeys` 合计 20 余个零引用常量、`BanRepository` 5 个零引用方法，以及只服务于转场计时调试的 `NavTransitionLog`（含 19 处调用点）。
+  - 历史类查询上限收敛为 `HISTORY_QUERY_LIMIT` 单一常量，插画历史、小说历史与下载历史不再各写一份 `1000L`。
+- 抽取并复用重复实现：
+  - 关注 / 粉丝 / 小说 / 相关画师四个用户列表页合并为共享骨架 `UserPagedListScreen`（账号切换作废、触底预加载、刷新与三态占位单点维护），四页各自只剩数据源与条目渲染；列表触底预加载收敛为 `rememberPagingPreload`，替换 9 处手写样板。
+  - 错误提示统一经 `actionFailureToast` / `actionFailureMessage` 产出，修正部分调用点漏掉「失败」后缀、个别使用全角冒号的漂移，替换 10 处手拼实现。
+  - `PixivisionParser` 两处同构的文章块解析合并为 `parseArticleBlocks`，39 条正则提升为文件级常量，HTML 实体解码改委托 `HtmlUtils`（数字实体如 `&#8217;` 不再漏到界面）。
+  - `BanRepository` 三类屏蔽对象共用泛型表流程；标签规则一次编译后按集合匹配，插画过滤由 O(n×b×t) 双层遍历降为一次集合查找。
+  - `IllustRepository` 的评论发表与首屏缓存各自合并为单份实现；下载客户端按需惰性创建，不再声明即分配。
+- 拆分职责过载文件：1102 行的全屏查看器拆为 `IllustFullScreenViewer`（页面骨架与手势）、`ZoomableImage`（单个缩放图片单元）与 `IllustViewerLogic`（目标图地址、分享信息、模式切换与菜单装配等纯函数）。
+- 收敛仓库装配：`AppDependencies.toRepositoryRegistry()` 一次投影生成 `RepositoryRegistry`，组合根不再逐字段搬运 19 个仓储，新增仓储只需改一处。
+- 依赖与构建清理：移除 `multiplatform-settings-coroutines`、`sqldelight-coroutines-extensions`、`compose.components.uiToolingPreview`、`io.github.kyant0:backdrop` 四项零使用依赖及其失效的 ProGuard `-dontwarn` 规则；`compose.runtime` 等改用版本目录直连坐标（`libs.compose.*`）消除编译器弃用告警；关闭 KMP 默认层级模板（`kotlin.mpp.applyDefaultHierarchyTemplate=false`），保留 `jvmShared` 中间源集并消除构建告警；桌面图标加载改用 `ImageIO` + `toComposeImageBitmap`，MIUIX 扩展图标由通配 import 改为具名 import。
+
 ### 修复
 
 - 修复 COUI 公告详情、插画详情与画师详情中富文本说明残留的 MIUIX 字号体系：富文本说明改取 COUI 文本样式，不再混用 MIUIX 排版。
@@ -155,6 +169,16 @@
 - 修复了小说页触底翻页失败后没有重试入口的问题：尾部加载统一接入三态页脚（加载中 / 失败重试 / 没有更多）。
 - 修复了列表页与账号相关界面在凭证失效瞬间仍按「账号行存在」显示已登录态的问题：登录态统一收敛到同一判定入口「是否仍持有可用的 access/refresh token」，覆盖首页、新作页、评论页、搜索页、小说页、推荐画师、关注/粉丝/作品/相关列表，以及设置页与引导页的账号区块。
 - 新增了凭证失效时设置页的说明与入口：账号区块在凭证失效状态下展示「需重新登录后才能删除或管理该账号」提示，并提供重新登录与账号管理页两个可点入口，正常登录态不展示；文案补齐全部语言。
+
+- 修复了首页未读红点不刷新的问题：红点状态是不可观察的普通字段，底栏直接读取不会建立订阅，刷新此前依赖偶然的父级重组；改为显式参数下传，并以设置变更版本号作为记忆键。
+- 修复了多图全屏查看器换页后新图绕过图片缓存的问题：重载计数未按图片地址复用，切页后残留计数给新地址追加了时间戳参数，内存与磁盘缓存键随之漂移；同时修正垂直卷轴模式下已滚走页面缩放不复位、悬停光标每帧触发整棵图片子树重组、相邻页预加载未走自定义图源映射三处缺陷。
+- 修复了相同文案的 Toast 在短时间内连续触发时第二条被吞掉的问题：以文本本身作为副作用键时结构相等不产生状态变更，改为携带自增序号的事件键。
+- 修复了导入小说浏览历史时多条无 id 记录互相覆盖、最终只剩最后一条的问题：无有效 id 的导入改走不带 id 列的自增插入，带 id 的记录仍原样保留。
+- 修复了下载页设置的最大并发任务数不生效的问题：页级并发与 IO 级门控此前各取一个来源，实际并发被静默压到两者较小值；现统一读取同一设置。
+- 修复了登录凭证过期时可能被强制登出的问题：刷新互斥锁与失效熔断表原属客户端实例，API 与账号两个客户端各持一份，同账号并发 401 会各自刷新轮换式 refresh_token，后到者收到 `invalid_grant` 后被判失效；现改为进程级共享。
+- 修复了桌面小组件刷新泄漏 HTTP 引擎的问题：下载客户端未传入时每次刷新新建 Ktor 引擎且从不关闭，现复用共享客户端。
+- 修复了更新包下载与安装期间在主线程做文件删除、以及目录扫描失败会吞掉协程取消的问题：删除动作移交后台协程，可取消的挂起调用改用 `suspendRunCatchingNonCancel`。
+- 修复了客户端预热、token 响应体读取与小组件写入处协程取消被吞的问题，一并改用 `suspendRunCatchingNonCancel`。
 
 ### 破坏性变更
 
