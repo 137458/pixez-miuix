@@ -4,8 +4,7 @@ package com.perol.pixez.shared.platform
  * 下载通知 extra 与 WakeLock 平台常量（架构审查 中-2 自 ui 层下沉）。
  *
  * 正名落位于 platform 包，Android actual（DownloadNotifier / PlatformDownloadKeeper）
- * 直引此处，不再反向依赖 ui 层 [com.perol.pixez.shared.ui.AppConstants]；
- * UI 侧经 `AppConstants.Download` 保留的委托别名访问，调用点不变，随全量移包清理。
+ * 直引此处，不再反向依赖 [com.perol.pixez.shared.ui.AppConstants]，也不保留委托别名。
  */
 object DownloadPlatformDefaults {
 

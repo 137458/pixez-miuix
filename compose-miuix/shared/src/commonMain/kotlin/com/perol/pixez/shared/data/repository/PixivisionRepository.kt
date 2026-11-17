@@ -88,11 +88,11 @@ class PixivisionRepository(
                     SpotlightResponse(spotlightArticles = emptyList(), nextUrl = null)
                 } else {
                     val lang = getPixivisionLanguagePath()
-                    val targetUrl = "https://www.pixivision.net/$lang/c/novels"
+                    val targetUrl = "${PixivHosts.PIXIVISION_ORIGIN}/$lang/c/novels"
                     val html: String = webClient.get(TrustedUrlPolicy.spotlightUrl(targetUrl)) {
                         headers {
                             append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                            append("Referer", "https://www.pixivision.net/")
+                            append("Referer", PixivHosts.REFERER_PIXIVISION)
                         }
                     }.body()
                     val articles = PixivisionParser.parseArticleList(html)

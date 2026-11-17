@@ -109,11 +109,11 @@ class DefaultOAuthClient(
                 FormDataContent(
                     Parameters.build {
                         append("code", code)
-                        append("redirect_uri", REDIRECT_URI)
+                        append("redirect_uri", PixivOAuthDefaults.REDIRECT_URI)
                         append("grant_type", "authorization_code")
                         append("include_policy", "true")
-                        append("client_id", CLIENT_ID)
-                        append("client_secret", CLIENT_SECRET)
+                        append("client_id", PixivOAuthDefaults.CLIENT_ID)
+                        append("client_secret", PixivOAuthDefaults.CLIENT_SECRET)
                         append("code_verifier", verifier)
                     },
                 ),
@@ -131,8 +131,8 @@ class DefaultOAuthClient(
             setBody(
                 FormDataContent(
                     Parameters.build {
-                        append("client_id", CLIENT_ID)
-                        append("client_secret", CLIENT_SECRET)
+                        append("client_id", PixivOAuthDefaults.CLIENT_ID)
+                        append("client_secret", PixivOAuthDefaults.CLIENT_SECRET)
                         append("grant_type", "refresh_token")
                         append("refresh_token", cleanToken)
                         append("include_policy", "true")
@@ -157,11 +157,6 @@ class DefaultOAuthClient(
     }
 
     companion object {
-        private const val CLIENT_ID = "MOBrBDS8blbauoSck0ZfDbtuzpyT"
-        private const val CLIENT_SECRET = "lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj"
-        private const val REDIRECT_URI =
-            "https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback"
-
         // PKCE verifier 允许的字符集，长度 128。
         private const val CODE_VERIFIER_CHARS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"

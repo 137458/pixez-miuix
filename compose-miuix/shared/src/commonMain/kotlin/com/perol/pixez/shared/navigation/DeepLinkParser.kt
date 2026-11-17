@@ -1,5 +1,7 @@
 package com.perol.pixez.shared.navigation
 
+import com.perol.pixez.shared.network.PixivHosts
+import com.perol.pixez.shared.network.PixivOAuthDefaults
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import io.ktor.http.Url
 import io.ktor.http.decodeURLQueryComponent
@@ -27,10 +29,15 @@ object DeepLinkParser {
     private val TRUSTED_OAUTH_LINK_REGEX = Regex(
         """(?i)(?:^|\s)(?:(?:pixez|pixiv)://(?:account|oauth)\b|https://(?:app-api\.|www\.)?pixiv\.net/(?:web/v1/)?users/auth/pixiv/callback(?=[/?#\s]|$))""",
     )
-    private val OAUTH_CALLBACK_HOSTS = setOf("pixiv.net", "www.pixiv.net", "app-api.pixiv.net")
+    private val OAUTH_CALLBACK_HOSTS = setOf(
+        PixivHosts.HOST_PIXIV_NET,
+        PixivHosts.HOST_WWW_PIXIV,
+        PixivHosts.HOST_PIXIV_APP,
+    )
     private val OAUTH_CALLBACK_PATHS = setOf(
         "/users/auth/pixiv/callback",
-        "/web/v1/users/auth/pixiv/callback",
+        // 应用实际使用的回调路径与 OAuthClient 提交的 redirect_uri 同源。
+        PixivOAuthDefaults.REDIRECT_PATH,
     )
 
     /**
@@ -174,8 +181,8 @@ object DeepLinkParser {
                     }
                 }
             }
-            host == "pixiv.net" || host.endsWith(".pixiv.net") ||
-                host == "pixiv.me" || host.endsWith(".pixiv.me") -> {
+            host == PixivHosts.HOST_PIXIV_NET || host.endsWith("." + PixivHosts.HOST_PIXIV_NET) ||
+                host == PixivHosts.HOST_PIXIV_ME || host.endsWith("." + PixivHosts.HOST_PIXIV_ME) -> {
                 if (scheme == "https" && host in OAUTH_CALLBACK_HOSTS && path in OAUTH_CALLBACK_PATHS) {
                     val code = url.parameters["code"]?.trim().orEmpty()
                     if (code.isNotEmpty()) return ParsedDeepLink.OAuthLogin(code)

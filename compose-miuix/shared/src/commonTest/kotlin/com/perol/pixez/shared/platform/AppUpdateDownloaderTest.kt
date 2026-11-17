@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.platform
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
@@ -10,6 +11,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+// advanceUntilIdle 等测试调度器 API 仍标注 ExperimentalCoroutinesApi。
+@OptIn(ExperimentalCoroutinesApi::class)
 class AppUpdateDownloaderTest {
 
     private val asset = UpdateAsset(
@@ -181,6 +184,8 @@ class AppUpdateDownloaderTest {
 
         // 释放更新信息变化：旧完成包必须被删除，状态回到 Idle。
         downloader.syncTarget(nextAsset)
+        // 旧包删除在注入的 scope 上异步执行（不阻塞调用线程），等其跑完再断言。
+        advanceUntilIdle()
         assertEquals(UpdateDownloadState.Idle, downloader.state.value)
         assertEquals(listOf("/cache/app.apk"), deletedPaths)
         assertNull(downloader.installPathFor(asset))

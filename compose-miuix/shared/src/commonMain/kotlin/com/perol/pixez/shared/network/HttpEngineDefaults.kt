@@ -3,9 +3,8 @@ package com.perol.pixez.shared.network
 /**
  * HTTP 引擎层默认参数收敛点：连接池 / 并发上限 / DoH / 网络模式取值 / 图片请求 UA（架构审查 中-2）。
  *
- * 正名落位于 network 包，network / platform 层直引此处，不再反向依赖
- * ui 层 [com.perol.pixez.shared.ui.AppConstants]；UI 侧经 `AppConstants.Network`
- * 保留的委托别名访问，调用点不变，随全量移包清理。
+ * 网络 / platform / ui 各层一律直引此处，不再反向依赖
+ * [com.perol.pixez.shared.ui.AppConstants]，也不保留任何委托别名。
  */
 object HttpEngineDefaults {
 

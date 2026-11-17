@@ -8,10 +8,10 @@ import io.ktor.http.Url
  * before they are passed to an HTTP client.
  */
 object TrustedUrlPolicy {
-    private const val API_HOST = "app-api.pixiv.net"
+    private const val API_HOST = PixivHosts.HOST_PIXIV_APP
     private const val IMAGE_HOST = PixivHosts.HOST_PXIMG
-    private const val IMAGE_STATIC_HOST = "s.pximg.net"
-    private const val SPOTLIGHT_HOST = "www.pixivision.net"
+    private const val IMAGE_STATIC_HOST = PixivHosts.HOST_PXIMG_STATIC
+    private const val SPOTLIGHT_HOST = PixivHosts.PIXIVISION_HOST
 
     /** 内置可信图片 host：pximg 官方系域名 + 应用预置镜像。 */
     private val IMAGE_HOSTS = setOf(IMAGE_HOST, IMAGE_STATIC_HOST, PixivHosts.HOST_PIXIV_RE)

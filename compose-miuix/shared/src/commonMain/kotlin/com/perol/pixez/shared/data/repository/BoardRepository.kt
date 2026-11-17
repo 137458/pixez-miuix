@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.data.repository
 
 import com.perol.pixez.shared.data.model.BoardInfo
+import com.perol.pixez.shared.network.BoardEndpoints
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -8,13 +9,6 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlin.concurrent.Volatile
-
-/** 公告板数据源：GitHub Raw 主源 + jsdelivr CDN 双镜像，按序重试。 */
-private val BOARD_URLS = listOf(
-    "https://raw.githubusercontent.com/137458/pixez-miuix/refs/heads/master/.github/board/android.json",
-    "https://fastly.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
-    "https://cdn.jsdelivr.net/gh/137458/pixez-miuix@master/.github/board/android.json",
-)
 
 /**
  * 公告板仓库：从原 Flutter 项目托管在 GitHub Raw / CDN 镜像上的 JSON 拉取公告列表。
@@ -25,7 +19,7 @@ private val BOARD_URLS = listOf(
  */
 class BoardRepository(
     private val client: HttpClient,
-    private val urls: List<String> = BOARD_URLS,
+    private val urls: List<String> = BoardEndpoints.BOARD_URLS,
 ) {
     private val json = Json {
         ignoreUnknownKeys = true

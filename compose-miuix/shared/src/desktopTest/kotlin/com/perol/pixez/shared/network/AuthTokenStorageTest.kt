@@ -7,8 +7,8 @@ import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.model.OAuthProfileImageUrls
 import com.perol.pixez.shared.data.model.OAuthUser
 import com.perol.pixez.shared.platform.PlatformTokenCipher
+import com.perol.pixez.shared.platform.TokenCipherDefaults
 import com.perol.pixez.shared.platform.TokenCipherException
-import com.perol.pixez.shared.ui.AppConstants
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -152,9 +152,9 @@ class AuthTokenStorageTest {
             "UPDATE account SET access_token = ?, refresh_token = ?, password = ? WHERE user_id = ?",
             4,
         ) {
-            bindString(0, "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}@@not-valid-base64@@")
-            bindString(1, "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}AAAA")
-            bindString(2, "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}####corrupted####")
+            bindString(0, "${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}@@not-valid-base64@@")
+            bindString(1, "${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}AAAA")
+            bindString(2, "${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}####corrupted####")
             bindString(3, "9")
         }
         // 新建实例绕过内存缓存，从数据库读取损坏行

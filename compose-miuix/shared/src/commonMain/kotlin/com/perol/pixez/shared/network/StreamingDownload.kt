@@ -39,7 +39,8 @@ internal object StreamingDownload {
     /**
      * 将 [response] 响应体流式写入 [targetFile]。
      *
-     * @throws IllegalStateException 状态码非 2xx、声明/实收字节超过 [maxBytes] 或与 Content-Length 不匹配时抛出。
+     * @throws IllegalStateException 状态码非 2xx 时抛出。
+     * @throws IllegalArgumentException 声明或实收字节超过 [maxBytes]、或实收字节与 Content-Length 不匹配时抛出。
      */
     suspend fun writeResponseToFile(
         response: HttpResponse,

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -201,6 +202,12 @@ private class FakeOAuthClient : OAuthClient {
  * 打桩全部文件内自包含：Fake 存储与 OAuth 客户端 + MockEngine 请求捕获。
  */
 class TokenRefreshPluginTest {
+
+    /** 熔断表跨实例共享，逐用例复位以保证账户失效判定不跨用例泄漏。 */
+    @BeforeTest
+    fun resetSharedRefreshBreaker() {
+        TokenRefreshPlugin.resetRefreshBreaker()
+    }
 
     private fun buildClient(
         storage: FakeAuthTokenStorage,

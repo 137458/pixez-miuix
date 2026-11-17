@@ -4,8 +4,7 @@ package com.perol.pixez.shared.platform
  * 凭据加解密协议常量（架构审查 中-2 自 ui 层下沉）。
  *
  * 密文前缀是双端 [PlatformTokenCipher] actual 共用的存储协议，正名落位于 platform 包
- * 单点维护，不再反向依赖 ui 层 [com.perol.pixez.shared.ui.AppConstants]；
- * UI 侧经 `AppConstants.Auth` 保留的委托别名访问，调用点不变，随全量移包清理。
+ * 单点维护，各层直引此处，不再反向依赖 [com.perol.pixez.shared.ui.AppConstants]。
  */
 object TokenCipherDefaults {
 

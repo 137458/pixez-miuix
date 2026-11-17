@@ -17,13 +17,17 @@ import io.ktor.http.encodedPath
 import io.ktor.http.takeFrom
 
 private val REDIRECT_STATUS_CODES = setOf(301, 302, 303, 307, 308)
-private val PIXIVISION_IMAGE_HOSTS = setOf("pixivision.net", "www.pixivision.net", "embed.pixiv.net")
+private val PIXIVISION_IMAGE_HOSTS = setOf(
+    PixivHosts.PIXIVISION_BARE_HOST,
+    PixivHosts.PIXIVISION_HOST,
+    PixivHosts.PIXIVISION_EMBED_HOST,
+)
 private val API_PIXIV_HOSTS = setOf(
-    "app-api.pixiv.net",
-    "oauth.secure.pixiv.net",
-    "accounts.pixiv.net",
-    "www.pixiv.net",
-    "pixiv.net",
+    PixivHosts.HOST_PIXIV_APP,
+    PixivHosts.HOST_OAUTH,
+    PixivHosts.HOST_ACCOUNTS,
+    PixivHosts.HOST_WWW_PIXIV,
+    PixivHosts.HOST_PIXIV_NET,
 )
 
 /**
@@ -214,10 +218,10 @@ internal fun sanitizeRemoteImageModel(model: Any?, mirrorHost: String?): Any? {
 }
 
 private fun isPixivisionHost(host: String): Boolean =
-    host in PIXIVISION_IMAGE_HOSTS || host.endsWith(".pixivision.net")
+    host in PIXIVISION_IMAGE_HOSTS || host.endsWith("." + PixivHosts.PIXIVISION_BARE_HOST)
 
 private fun isSauceNaoHost(host: String): Boolean =
-    host == "saucenao.com" || host.endsWith(".saucenao.com")
+    host == SauceNaoEndpoints.HOST || host.endsWith("." + SauceNaoEndpoints.HOST)
 
 private inline fun isHttpsNoUserInfo(raw: String, hostAllowed: (String) -> Boolean): Boolean {
     val trimmed = raw.trim()

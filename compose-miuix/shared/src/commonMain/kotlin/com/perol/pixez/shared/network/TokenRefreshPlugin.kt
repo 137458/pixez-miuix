@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 
 /**
  * 自动注入 Bearer Token 并在凭证失效时刷新 token 的 Ktor 插件。
@@ -68,15 +69,10 @@ class TokenRefreshPlugin(
     private val oAuthClient: OAuthClient,
     private val authExpirySignal: AuthExpirySignal? = null,
 ) {
-    private val mutex = Mutex()
-
     private data class RequestAuthSnapshot(
         val userId: String,
         val header: String,
     )
-
-    /** 已确认失效的账号与时间点（按 userId 隔离）；同账号窗口内直接熔断，不阻塞切号后的新账号。 */
-    private val expiredUsers = mutableMapOf<String, TimeMark>()
 
     private suspend fun getAuthorizationSnapshot(): RequestAuthSnapshot? {
         val account = tokenStorage.getCurrentAccount() ?: return null
@@ -174,6 +170,26 @@ class TokenRefreshPlugin(
         override val key: AttributeKey<TokenRefreshPlugin> = AttributeKey("TokenRefreshPlugin")
         private val REQUEST_USER_ID_KEY = AttributeKey<String>("TokenRefreshPluginUserId")
 
+        /**
+         * 刷新互斥与熔断表挂在 companion 上，跨 client 共享。
+         *
+         * apiClient 与 accountClient 各 install 一次本插件；若锁随实例走，同一账号的 401 会被两条
+         * client 并发刷新，而 pixiv 的 refresh_token 是轮换式的——后到者必然 invalid_grant，
+         * 进而清凭证并触发登录失效信号，用户被强制登出。
+         */
+        private val mutex = Mutex()
+
+        /** 已确认失效的账号与时间点（按 userId 隔离）；同账号窗口内直接熔断，不阻塞切号后的新账号。 */
+        private val expiredUsers = mutableMapOf<String, TimeMark>()
+
+        /**
+         * 清空熔断表。熔断表是进程级共享状态，单测必须逐用例复位，
+         * 否则前一个用例判定的失效会泄漏到后一个用例（生产代码不调用）。
+         */
+        internal fun resetRefreshBreaker() {
+            expiredUsers.clear()
+        }
+
         override fun prepare(block: Config.() -> Unit): TokenRefreshPlugin {
             val config = Config().apply(block)
             return TokenRefreshPlugin(
@@ -230,7 +246,7 @@ class TokenRefreshPlugin(
                             val retryStatus = call.response.status
                             if (retryStatus == HttpStatusCode.Unauthorized) {
                                 call = call.save()
-                                val retryBody = runCatching { call.response.bodyAsText() }.getOrDefault("")
+                                val retryBody = suspendRunCatchingNonCancel { call.response.bodyAsText() }.getOrDefault("")
                                 // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                                 throw PixivApiException(
                                     statusCode = retryStatus.value,

@@ -6,9 +6,16 @@ package com.perol.pixez.shared.network
  * 下层（data / network）所需成员收敛于此，避免反向依赖 ui 层 [com.perol.pixez.shared.ui.AppConstants]。
  */
 object GitHubReleaseEndpoints {
-    const val RELEASES_PAGE = "https://github.com/137458/pixez-miuix/releases"
-    const val LATEST_API = "https://api.github.com/repos/137458/pixez-miuix/releases/latest"
+    /** 发布仓库 owner 账号，同时是项目作者主页所在账号。 */
+    const val OWNER = "137458"
+
+    /** 发布仓库名。 */
+    const val REPO_NAME = "pixez-miuix"
 
     /** 官方发布仓库路径（owner/repo），asset 直链白名单校验用。 */
-    const val OFFICIAL_REPO_PATH = "137458/pixez-miuix"
+    const val OFFICIAL_REPO_PATH = OWNER + "/" + REPO_NAME
+
+    const val RELEASES_PAGE = "https://github.com/" + OFFICIAL_REPO_PATH + "/releases"
+
+    const val LATEST_API = "https://api.github.com/repos/" + OFFICIAL_REPO_PATH + "/releases/latest"
 }

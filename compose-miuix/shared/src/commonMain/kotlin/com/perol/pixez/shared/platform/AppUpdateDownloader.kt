@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.platform
 
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -174,7 +175,8 @@ class AppUpdateDownloader(
             )
             updateDownloadForegroundStart()
         }
-        fileToDelete?.let { deleteFile(it) }
+        // 删除旧完成包是磁盘 IO，不能压在调用线程（UI 事件回调）上。
+        fileToDelete?.let { stale -> scope.launch { deleteFile(stale) } }
         val launched = scope.launch {
             var lastReportAt = 0L
             var lastBytes = 0L
@@ -294,7 +296,7 @@ class AppUpdateDownloader(
                 restoreToken = generation
             }
         }
-        fileToDelete?.let { deleteFile(it) }
+        fileToDelete?.let { stale -> scope.launch { deleteFile(stale) } }
         val token = restoreToken
         if (asset != null && token != null) {
             scope.launch { restoreCompletedFile(asset, token) }
@@ -311,7 +313,7 @@ class AppUpdateDownloader(
     private suspend fun restoreCompletedFile(asset: UpdateAsset, token: Long) {
         if (token != generation || _state.value != UpdateDownloadState.Idle) return
         val safeName = runCatching { FileNamePolicy.requireSafeBaseName(asset.fileName) }.getOrNull() ?: return
-        val files = runCatching { scanUpdateDir() }.getOrDefault(emptyList())
+        val files = suspendRunCatchingNonCancel { scanUpdateDir() }.getOrDefault(emptyList())
         // 扫描是挂起点：期间用户可能已重新开始下载，过期恢复必须丢弃。
         if (token != generation || _state.value != UpdateDownloadState.Idle) return
 
@@ -347,7 +349,8 @@ class AppUpdateDownloader(
             generation++
             _state.value = UpdateDownloadState.Idle
         }
-        deleteFile(fileToDelete)
+        // 安装失败后的清理同样走后台，避免阻塞点击安装的调用线程。
+        scope.launch { deleteFile(fileToDelete) }
     }
 
     /** 取消下载并丢弃半成品，状态回到 [UpdateDownloadState.Idle]。 */

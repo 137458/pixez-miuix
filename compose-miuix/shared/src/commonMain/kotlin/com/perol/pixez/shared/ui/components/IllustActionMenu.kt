@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.network.SauceNaoEndpoints
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.mapToPictureSource
@@ -175,7 +176,7 @@ internal fun rememberIllustQuickActions(
             onDismiss()
             runClipboardShare(
                 success = ToastData(strings.share, ToastType.Success),
-                failurePrefix = strings.share,
+                failurePrefix = "${strings.share}${strings.failedSuffix}",
                 onToast = toastSink,
             ) { IllustShare().share(buildIllustShareLink(illust), illust.title) }
         },
@@ -219,7 +220,7 @@ internal fun buildIllustShareLink(illust: Illust): String {
  * 构造 SauceNAO 以图搜图链接。
  */
 internal fun buildSauceNaoUrl(imageUrl: String): String {
-    return io.ktor.http.URLBuilder(com.perol.pixez.shared.ui.AppConstants.Urls.SAUCE_NAO_SEARCH).apply {
+    return io.ktor.http.URLBuilder(SauceNaoEndpoints.SEARCH).apply {
         parameters.append("db", "999")
         parameters.append("url", imageUrl)
     }.buildString()

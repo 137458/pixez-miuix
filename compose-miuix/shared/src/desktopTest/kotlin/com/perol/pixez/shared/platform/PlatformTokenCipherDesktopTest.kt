@@ -1,6 +1,6 @@
 package com.perol.pixez.shared.platform
 
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.platform.TokenCipherDefaults
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * 桌面端凭据加解密测试（S-2 / 中-17）：Windows 走系统 DPAPI（CryptProtectData），
- * 密文以 [AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX] 前缀标识，与 Android Keystore 实现共用同一套
+ * 密文以 [TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX] 前缀标识，与 Android Keystore 实现共用同一套
  * 前缀协议——无前缀视为历史明文原样返回，下次写回时自动升级为密文。
  *
  * 失败语义（中-17 fail-fast）：带前缀密文解密失败（损坏/平台无 DPAPI）抛出 [TokenCipherException]，
@@ -24,7 +24,7 @@ class PlatformTokenCipherDesktopTest {
         if (!isWindows) return
         val encrypted = PlatformTokenCipher.encrypt(PLAIN)
 
-        assertTrue(encrypted.startsWith(AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX), "密文应带 enc_v1: 前缀")
+        assertTrue(encrypted.startsWith(TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX), "密文应带 enc_v1: 前缀")
         assertFalse(encrypted.contains(PLAIN), "密文不应包含明文")
     }
 
@@ -59,9 +59,9 @@ class PlatformTokenCipherDesktopTest {
     @Test
     fun `损坏密文解密 fail-fast 抛出 TokenCipherException 而非原样返回`() {
         listOf(
-            "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}@@not-valid-base64@@",
-            AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
-            "${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}AAAA",
+            "${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}@@not-valid-base64@@",
+            TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX,
+            "${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}AAAA",
         ).forEach { broken ->
             val thrown = assertFailsWith<TokenCipherException> { PlatformTokenCipher.decrypt(broken) }
             assertEquals(TokenCipherException.STAGE_DECRYPT, thrown.stage, "失败环节应标识为解密: $broken")
@@ -79,7 +79,7 @@ class PlatformTokenCipherDesktopTest {
     fun `DPAPI 加密失败应抛 TokenCipherException 而非返回明文`() {
         if (!isWindows) return
         val cipher = DpapiTokenCipher(
-            prefix = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
+            prefix = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX,
             protect = { error("模拟 DPAPI 加密故障") },
         )
 
@@ -90,12 +90,12 @@ class PlatformTokenCipherDesktopTest {
     fun `DPAPI 解密失败应抛 TokenCipherException 而非返回密文`() {
         if (!isWindows) return
         val cipher = DpapiTokenCipher(
-            prefix = AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX,
+            prefix = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX,
             unprotect = { error("模拟 DPAPI 解密故障") },
         )
 
         val thrown = assertFailsWith<TokenCipherException> {
-            cipher.decrypt("${AppConstants.Auth.TOKEN_ENCRYPTION_PREFIX}AAAA")
+            cipher.decrypt("${TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX}AAAA")
         }
         assertEquals(TokenCipherException.STAGE_DECRYPT, thrown.stage)
     }

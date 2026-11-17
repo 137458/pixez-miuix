@@ -7,7 +7,6 @@ import io.ktor.http.Url
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -19,7 +18,7 @@ object SauceNaoParser {
 
     /** SauceNAO 缩略图可信 host：自有缩略图域 saucenao.com（含 img*.saucenao.com 子域）与 Pixiv 图源静态域。 */
     private const val SAUCENAO_HOST_SUFFIX = "saucenao.com"
-    private val THUMBNAIL_HOSTS = setOf(PixivHosts.HOST_PXIMG, "s.pximg.net")
+    private val THUMBNAIL_HOSTS = setOf(PixivHosts.HOST_PXIMG, PixivHosts.HOST_PXIMG_STATIC)
 
     private val PIXIV_URL_REGEX = Regex("""(?:pixiv\.net/(?:artworks/|member_illust\.php\?[^"'\s]*illust_id=))(\d+)""")
     private val HTML_RESULT_TABLE_REGEX = Regex("""<div class="result">([\s\S]*?)</table>\s*</div>""")

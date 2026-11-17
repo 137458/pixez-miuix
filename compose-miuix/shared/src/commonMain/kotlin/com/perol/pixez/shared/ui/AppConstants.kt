@@ -1,42 +1,28 @@
 package com.perol.pixez.shared.ui
 
 import com.perol.pixez.shared.network.GitHubReleaseEndpoints
-import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
-import com.perol.pixez.shared.platform.TokenCipherDefaults
 
 /**
- * 应用级全局常量定义，集中管理外部 URL、常用占位符模板与预设档位，消除散落的魔法值。
+ * UI 层全局常量：图片解码档位、布局与断点、分享模板、外部链接模板与预置档位，
+ * 集中管理以消除散落的魔法值。
+ *
+ * 网络 / 主机 / 引擎常量归属 [com.perol.pixez.shared.network.PixivHosts]、
+ * [com.perol.pixez.shared.network.HttpEngineDefaults] 与
+ * [com.perol.pixez.shared.network.GitHubReleaseEndpoints]，凭据常量归属
+ * [com.perol.pixez.shared.platform.TokenCipherDefaults]；调用方直接引用正名，此处不再保留委托别名。
  */
 object AppConstants {
 
     /**
-     * 网络与图片源域名
+     * 图片解码档位（Coil 请求侧边长上限）
      */
-    object Network {
-        // 过渡委托：正名已外迁至 network/PixivHosts.kt（UI 与测试仍经由处引用），随全量移包清理。
-        const val HOST_PXIMG = PixivHosts.HOST_PXIMG
-        const val HOST_PIXIV_RE = PixivHosts.HOST_PIXIV_RE
-
-        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 与测试仍经由处引用），随全量移包清理。
-        const val MODE_STANDARD = HttpEngineDefaults.MODE_STANDARD
-        const val HTTP_POOL_MAX_IDLE_CONNECTIONS = HttpEngineDefaults.HTTP_POOL_MAX_IDLE_CONNECTIONS
-        const val HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES = HttpEngineDefaults.HTTP_POOL_KEEP_ALIVE_DURATION_MINUTES
-        const val HTTP_DISPATCHER_MAX_REQUESTS = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS
-        const val HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST = HttpEngineDefaults.HTTP_DISPATCHER_MAX_REQUESTS_PER_HOST
-
-        const val IMAGE_MAX_DECODE_DIMENSION = 4096
+    object Image {
+        /** 原图 / 详情页全屏浏览的解码边长上限（px）。 */
+        const val MAX_DECODE_DIMENSION = 4096
 
         /** 普通浏览场景（列表 / 详情页）的解码边长上限（px）。 */
-        const val IMAGE_STANDARD_DECODE_DIMENSION = 2048
-
-        /**
-         * Pixivision 页面 Referer（Pixivision 域名下的图片同样启用防盗链校验）。
-         */
-        const val REFERER_PIXIVISION = "https://www.pixivision.net/"
-
-        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 仍经由处引用），随全量移包清理。
-        const val IMAGE_REQUEST_USER_AGENT = HttpEngineDefaults.IMAGE_REQUEST_USER_AGENT
+        const val STANDARD_DECODE_DIMENSION = 2048
 
         /**
          * 相邻页预加载的解码边长上限（px）。
@@ -44,21 +30,7 @@ object AppConstants {
          * 预加载只为写入 Coil 磁盘缓存，解码结果随即丢弃，因此按最小尺寸解码，
          * 避免原图全尺寸位图（数十 MB）在堆内存中短暂驻留。
          */
-        const val IMAGE_PRELOAD_DECODE_DIMENSION = 192
-
-        // 过渡委托：正名已外迁至 network/HttpEngineDefaults.kt（network 层直引，UI 与测试仍经由处引用），随全量移包清理。
-        const val DOH_URL = HttpEngineDefaults.DOH_URL
-        const val DOH_TIMEOUT_SECONDS = HttpEngineDefaults.DOH_TIMEOUT_SECONDS
-        val DOH_BOOTSTRAP_HOSTS = HttpEngineDefaults.DOH_BOOTSTRAP_HOSTS
-    }
-
-    /**
-     * 账号与凭据安全常量
-     */
-    object Auth {
-        // 过渡委托：正名已外迁至 platform/TokenCipherDefaults.kt（platform 层直引，测试仍经由处引用），随全量移包清理。
-        const val TOKEN_ENCRYPTION_PREFIX = TokenCipherDefaults.TOKEN_ENCRYPTION_PREFIX
-        const val KEYSTORE_ALIAS = TokenCipherDefaults.KEYSTORE_ALIAS
+        const val PRELOAD_DECODE_DIMENSION = 192
     }
 
     /**
@@ -72,56 +44,50 @@ object AppConstants {
      * 分享与复制信息模板
      */
     object Share {
-        const val ARTWORK_URL_PLACEHOLDER = "https://www.pixiv.net/artworks/{illust_id}"
-        const val USER_URL_PLACEHOLDER = "https://www.pixiv.net/users/{user_id}"
+        /** 复制文案里的作品地址模板：与真实地址同一前缀，仅把 id 段替换为占位符。 */
+        val ARTWORK_URL_PLACEHOLDER = PixivHosts.PIXIV_ARTWORK_PREFIX + "{illust_id}"
+
+        /** 复制文案里的用户主页模板。 */
+        val USER_URL_PLACEHOLDER = Urls.PIXIV_USER_PREFIX + "{user_id}"
     }
 
     /**
-     * 外部链接与社群地址
+     * 站外链接与社群地址。
+     *
+     * 主机字面量一律由 [PixivHosts.WEB_ORIGIN] 与
+     * [com.perol.pixez.shared.network.GitHubReleaseEndpoints.OFFICIAL_REPO_PATH] 派生，
+     * 避免同一域名在本文件与 network 层各存一份。
      */
     object Urls {
-        // 过渡委托：正名已外迁至 network/PixivHosts.kt（UI 与测试仍经由处引用），随全量移包清理。
-        const val PIXIV_APP_API = PixivHosts.PIXIV_APP_API
-        const val PIXIV_USER_PREFIX = "https://www.pixiv.net/users/"
+        const val PIXIV_USER_PREFIX = PixivHosts.WEB_ORIGIN + "/users/"
+
+        /** 小说阅读页直链前缀。 */
+        const val PIXIV_NOVEL_PREFIX = PixivHosts.WEB_ORIGIN + "/novel/show.php?id="
+
         fun pixivArtworkUrl(id: Long): String = PixivHosts.PIXIV_ARTWORK_PREFIX + id
-        fun pixivUserUrl(userId: Long): String = "$PIXIV_USER_PREFIX$userId"
-        fun pixivUserUrl(userId: String): String = "$PIXIV_USER_PREFIX$userId"
-        const val PIXIV_NOVEL_PREFIX = "https://www.pixiv.net/novel/show.php?id="
-        fun pixivNovelUrl(id: Long): String = "$PIXIV_NOVEL_PREFIX$id"
-        fun pixivNovelUrl(id: Int): String = "$PIXIV_NOVEL_PREFIX$id"
-        const val GITHUB_REPO = "https://github.com/137458/pixez-miuix"
 
-        // 过渡委托：正名已外迁至 network/GitHubReleaseEndpoints.kt（data 层 UpdateRepository 直引），随全量移包清理。
-        const val GITHUB_RELEASES = GitHubReleaseEndpoints.RELEASES_PAGE
-        const val GITHUB_RELEASES_LATEST_API = GitHubReleaseEndpoints.LATEST_API
-        const val PIXIV_PRIVACY = "https://policies.pixiv.net/privacy.html"
-        const val PIXIV_TERMS = "https://policies.pixiv.net/terms.html"
-        const val PIXIV_LEAVE_ACCOUNT = "https://www.pixiv.net/leave_pixiv.php"
-        const val SAUCE_NAO_SEARCH = "https://saucenao.com/search.php"
+        fun pixivUserUrl(userId: Long): String = PIXIV_USER_PREFIX + userId
+
+        fun pixivNovelUrl(id: Long): String = PIXIV_NOVEL_PREFIX + id
+
+        /** 小说 id 在部分调用点以 Int 传入（如对旧版接口字段的解包结果），保留重载避免调用方手写转换。 */
+        fun pixivNovelUrl(id: Int): String = PIXIV_NOVEL_PREFIX + id
+
+        const val GITHUB_REPO = "https://github.com/" + GitHubReleaseEndpoints.OFFICIAL_REPO_PATH
+
+        const val PIXIV_PRIVACY = PixivHosts.WEB_ORIGIN + "/policies/privacy.html"
+
+        const val PIXIV_TERMS = PixivHosts.WEB_ORIGIN + "/policies/terms.html"
+
+        const val PIXIV_LEAVE_ACCOUNT = PixivHosts.WEB_ORIGIN + "/leave_pixiv.php"
+
         const val AUTHOR_NOTSFSSSF = "https://github.com/Notsfsssf"
-        const val AUTHOR_ROSEMARY = "https://github.com/137458"
-        const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
-        const val FEEDBACK_MAILTO = "mailto:PxezFeedBack@outlook.com"
-    }
 
-    /**
-     * 下载相关预设与占位符。
-     *
-     * 通知 extra / WakeLock 常量已统一放在
-     * [com.perol.pixez.shared.platform.DownloadPlatformDefaults]，此处不再保留重复字面量副本。
-     */
-    object Download {
-        val FORMAT_PLACEHOLDERS = listOf(
-            "{illust_id}",
-            "{user_id}",
-            "{title}",
-            "{author}",
-            "{part}",
-            "{create_date}",
-            "{width}",
-            "{height}",
-            "{width}x{height}",
-        )
+        const val AUTHOR_ROSEMARY = "https://github.com/" + GitHubReleaseEndpoints.OWNER
+
+        const val FEEDBACK_EMAIL = "PxezFeedBack@outlook.com"
+
+        const val FEEDBACK_MAILTO = "mailto:" + FEEDBACK_EMAIL
     }
 
     /**
@@ -135,7 +101,6 @@ object AppConstants {
      * 跨适配网格预设
      */
     object CrossAdapter {
-        const val WIDTH_DEFAULT = 180
         const val PREVIEW_ITEM_COUNT = 20
     }
 
@@ -216,14 +181,11 @@ object AppConstants {
     }
 
     /**
-     * 应用更新与弹窗常量预设（单位：dp / ms）
+     * 应用更新与弹窗常量预设（单位：dp）
      */
     object Update {
         /** 更新日志卡片可视区域最大高度（dp），扩容以展示更充分的版本说明，消除视口狭窄感。 */
         const val CHANGELOG_MAX_HEIGHT_DP = 380
-
-        /** 更新日志卡片可视区域最小高度（dp）。 */
-        const val CHANGELOG_MIN_HEIGHT_DP = 80
 
         /** 更新日志滚动渐变遮罩边缘高度（dp），用于顶部卷出和底部未完时的平滑淡出。 */
         const val CHANGELOG_FADE_EDGE_DP = 28
@@ -231,12 +193,7 @@ object AppConstants {
         /** 滚动条指示器宽度（dp）。 */
         const val SCROLLBAR_WIDTH_DP = 3
 
-        const val SPEED_CALCULATION_INTERVAL_MS = 500L
         const val BADGE_CORNER_RADIUS_DP = 8
-    }
-
-    object Ugoira {
-        val PLAY_SPEEDS = listOf(0.5f, 1.0f, 1.5f, 2.0f)
     }
 
     /**
@@ -253,4 +210,3 @@ object AppConstants {
         fun isUgoira(type: String): Boolean = type == UGOIRA
     }
 }
-

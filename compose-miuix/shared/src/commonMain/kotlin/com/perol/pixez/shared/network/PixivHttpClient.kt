@@ -13,6 +13,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLProtocol
 import io.ktor.serialization.kotlinx.json.json
+import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 
 /**
  * Pixiv API 与 OAuth 的 Ktor HttpClient 工厂。
@@ -46,7 +47,7 @@ class PixivHttpClient(
      * 业务 API 客户端。
      */
     val apiClient: HttpClient = createClient(
-        host = APP_API_HOST,
+        host = PixivHosts.HOST_PIXIV_APP,
         tokenStorage = tokenStorage,
         oAuthClient = oAuthClient,
         languageProvider = languageProvider,
@@ -59,7 +60,7 @@ class PixivHttpClient(
      * 账号管理客户端，用于 accounts.pixiv.net 的账号信息编辑等接口。
      */
     val accountClient: HttpClient = createClient(
-        host = ACCOUNTS_HOST,
+        host = PixivHosts.HOST_ACCOUNTS,
         tokenStorage = tokenStorage,
         oAuthClient = oAuthClient,
         languageProvider = languageProvider,
@@ -155,20 +156,17 @@ class PixivHttpClient(
      * 在后台静默预连接常用 API 与图片域名，消除冷启动首屏网络请求时的 DNS 解析与 TLS 握手延迟。
      */
     suspend fun warmup() {
-        runCatching {
-            apiClient.head("https://$APP_API_HOST/favicon.ico")
+        suspendRunCatchingNonCancel {
+            apiClient.head("https://${PixivHosts.HOST_PIXIV_APP}/favicon.ico")
         }
-        runCatching {
-            downloadClient.head("https://i.pximg.net/favicon.ico")
+        suspendRunCatchingNonCancel {
+            downloadClient.head("https://${PixivHosts.HOST_PXIMG}/favicon.ico")
         }
     }
 
     companion object {
         /** 错误响应体进入日志/异常消息的最大字符数，超出部分截断并标注总长。 */
         private const val MAX_ERROR_BODY_LOG_CHARS = 200
-        private const val APP_API_HOST = "app-api.pixiv.net"
-        private const val OAUTH_HOST = "oauth.secure.pixiv.net"
-        private const val ACCOUNTS_HOST = "accounts.pixiv.net"
 
         /**
          * 创建不带 TokenRefreshPlugin 的基础 OAuth 客户端，供 [OAuthClient] 内部使用。
@@ -188,7 +186,7 @@ class PixivHttpClient(
             defaultRequest {
                 url {
                     protocol = URLProtocol.HTTPS
-                    host = OAUTH_HOST
+                    host = PixivHosts.HOST_OAUTH
                 }
                 PixivHeaders.commonHeaders(languageProvider()).forEach { (key, value) ->
                     headers[key] = value

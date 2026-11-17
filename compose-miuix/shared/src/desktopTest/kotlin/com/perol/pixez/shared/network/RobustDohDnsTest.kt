@@ -3,7 +3,7 @@ package com.perol.pixez.shared.network
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.settings.SettingsFactory
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.network.HttpEngineDefaults
 import okhttp3.Dns
 import java.net.InetAddress
 import java.net.UnknownHostException
@@ -38,8 +38,8 @@ class RobustDohDnsTest {
         val previousApiMode = dependencies.settingsRepository.apiNetworkMode
         val previousOauthMode = dependencies.settingsRepository.oauthNetworkMode
         try {
-            dependencies.settingsRepository.apiNetworkMode = AppConstants.Network.MODE_STANDARD
-            dependencies.settingsRepository.oauthNetworkMode = AppConstants.Network.MODE_STANDARD
+            dependencies.settingsRepository.apiNetworkMode = HttpEngineDefaults.MODE_STANDARD
+            dependencies.settingsRepository.oauthNetworkMode = HttpEngineDefaults.MODE_STANDARD
 
             val mockDoh = MockDns("1.2.3.4")
             val mockFallback = MockDns("5.6.7.8")
@@ -117,7 +117,7 @@ class RobustDohDnsTest {
             doh = mockDoh,
             fallback = mockFallback,
             hasProxyProvider = { false },
-            modeProvider = { AppConstants.Network.MODE_STANDARD },
+            modeProvider = { HttpEngineDefaults.MODE_STANDARD },
         )
 
         val result = dns.lookup("app-api.pixiv.net")
@@ -179,7 +179,7 @@ class RobustDohDnsTest {
             modeProvider = { isOauthHost ->
                 capturedFlags += isOauthHost
                 // OAuth 域配置为 standard（走系统 DNS），API 域配置为 ech（走 DoH）。
-                if (isOauthHost) AppConstants.Network.MODE_STANDARD else "ech"
+                if (isOauthHost) HttpEngineDefaults.MODE_STANDARD else "ech"
             },
         )
 
