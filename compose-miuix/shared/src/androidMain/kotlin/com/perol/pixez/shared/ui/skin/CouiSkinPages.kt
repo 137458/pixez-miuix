@@ -78,7 +78,6 @@ internal object CouiSkinPages : SkinPages {
         tab: RootComponent.MainTab,
         component: RootComponent,
         feedRestore: MainFeedRestore,
-        fallback: @Composable () -> Unit,
     ) {
         when (tab) {
             RootComponent.MainTab.Hello -> {
@@ -121,8 +120,6 @@ internal object CouiSkinPages : SkinPages {
                     onNovelClick = component::onNovelClicked,
                 )
             }
-            // 其余标签尚未迁移：走 MIUIX 回退，功能与既有页面完全一致。
-            else -> fallback()
         }
     }
 

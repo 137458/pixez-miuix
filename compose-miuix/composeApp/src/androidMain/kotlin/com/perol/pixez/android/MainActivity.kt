@@ -14,7 +14,6 @@ import com.perol.pixez.PixEzApp
 import com.perol.pixez.shared.AppDependencies
 import com.perol.pixez.shared.platform.BrowserLauncherContext
 import com.perol.pixez.shared.navigation.DeepLinkParser
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.Dispatchers

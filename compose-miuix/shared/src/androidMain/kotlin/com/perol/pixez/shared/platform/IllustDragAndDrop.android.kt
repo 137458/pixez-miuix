@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.platform
 
 import android.content.ClipData
-import android.content.Context
 import android.net.Uri
 import android.view.View
 import androidx.compose.foundation.draganddrop.dragAndDropSource

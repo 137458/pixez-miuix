@@ -51,7 +51,6 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiCard

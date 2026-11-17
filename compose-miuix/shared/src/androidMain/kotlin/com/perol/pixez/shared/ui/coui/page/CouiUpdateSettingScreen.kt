@@ -38,10 +38,10 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.network.GitHubReleaseEndpoints
 import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.platform.installPathFor
 import com.perol.pixez.shared.platform.UpdateDownloadState
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.buildUpdateDialogPlan
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.MarkdownText
@@ -224,7 +224,7 @@ internal fun CouiUpdateSettingScreen(
                             title = "GitHub Releases",
                             summary = strings.updateGithubReleasesSummary,
                             onClick = {
-                                openSafeUrl(AppConstants.Urls.GITHUB_RELEASES, strings, onError = { message ->
+                                openSafeUrl(GitHubReleaseEndpoints.RELEASES_PAGE, strings, onError = { message ->
                                     toastSink(ToastData(message, ToastType.Error))
                                 })
                             },
@@ -319,7 +319,7 @@ private fun CouiChangelogSection(
     CouiSettingSection(title = changelogTitle) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Text(
-                text = releaseInfo.title?.takeIf { it.isNotBlank() } ?: strings.updateNewRelease,
+                text = releaseInfo.title.takeIf { it.isNotBlank() } ?: strings.updateNewRelease,
                 kind = CouiTextKind.ItemTitle,
                 color = scheme.onSurface,
             )

@@ -13,10 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
@@ -25,9 +25,6 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.res.loadImageBitmap
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -47,14 +44,15 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import io.github.aakira.napier.Napier
 import java.awt.Dimension
 import java.awt.SystemTray
+import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 托盘图标回退绘制（当资源未就绪时使用）。
@@ -254,7 +252,10 @@ private fun androidx.compose.ui.window.ApplicationScope.PixEzDesktopApplication(
         runCatching {
             val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
                 ?: PixEzTrayPainter::class.java.getResourceAsStream("/icon.png")
-            stream?.use { BitmapPainter(loadImageBitmap(it)) }
+            stream?.use { input ->
+                val image = ImageIO.read(input) ?: return@use null
+                BitmapPainter(image.toComposeImageBitmap())
+            }
         }.getOrNull()
     }
 

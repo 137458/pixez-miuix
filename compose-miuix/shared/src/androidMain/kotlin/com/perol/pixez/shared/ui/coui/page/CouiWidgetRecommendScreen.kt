@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
@@ -53,8 +53,8 @@ internal fun CouiWidgetRecommendScreen(
     val pictureSourceOptions = remember(strings) {
         listOf(
             "" to strings.settingWidgetPictureSourceFollowGlobal,
-            AppConstants.Network.HOST_PXIMG to strings.settingWidgetPictureSourceOfficial,
-            AppConstants.Network.HOST_PIXIV_RE to strings.settingWidgetPictureSourceMirror,
+            PixivHosts.HOST_PXIMG to strings.settingWidgetPictureSourceOfficial,
+            PixivHosts.HOST_PIXIV_RE to strings.settingWidgetPictureSourceMirror,
         )
     }
 

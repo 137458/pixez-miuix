@@ -375,7 +375,7 @@ private fun CouiIllustDetailSingle(
                 banRepository = banRepository,
                 actions = actions,
                 onBanSuccess = { isBanned = true },
-                onToast = { data -> data?.let(toastSink) },
+                onToast = toastSink,
                 onBack = onBack,
             )
         } else if (illust != null) {

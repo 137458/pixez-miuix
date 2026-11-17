@@ -82,7 +82,7 @@ internal fun CouiSelectRow(
             },
             onItemClick = { item ->
                 expanded = false
-                (item.value as? String)?.toIntOrNull()?.let(onSelect)
+                item.value.toIntOrNull()?.let(onSelect)
             },
         )
     }

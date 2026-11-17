@@ -139,14 +139,12 @@ internal fun MainContent(
         val descriptor = MAIN_TAB_DESCRIPTORS[page]
         val skinPages = LocalSkinPages.current
         if (skinPages != null) {
-            // 皮肤接缝收敛在页面宿主：COUI 标签走皮肤实现，未迁移标签执行 fallback。
+            // 皮肤接缝收敛在页面宿主：COUI 标签走皮肤实现，皮肤关闭时走下方 else 分支的 MIUIX 页面。
             skinPages.mainTabPage(
                 tab = descriptor.tab,
                 component = component,
                 feedRestore = feedRestore,
-            ) {
-                descriptor.content(component, feedRestore)
-            }
+            )
         } else {
             descriptor.content(component, feedRestore)
         }

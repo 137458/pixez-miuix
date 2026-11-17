@@ -49,7 +49,7 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
@@ -244,7 +244,7 @@ private fun CouiGuideNetworkStep(
 ) {
     val strings = LocalStrings.current
     var isMirrorEnabled by remember {
-        mutableStateOf(settingsRepository.pictureSource == AppConstants.Network.HOST_PIXIV_RE)
+        mutableStateOf(settingsRepository.pictureSource == PixivHosts.HOST_PIXIV_RE)
     }
     var currentNetworkMode by remember {
         mutableStateOf(settingsRepository.apiNetworkMode)
@@ -272,7 +272,7 @@ private fun CouiGuideNetworkStep(
                         selected = isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = true
-                            settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
+                            settingsRepository.pictureSource = PixivHosts.HOST_PIXIV_RE
                         },
                     )
                     CouiRadioRow(
@@ -281,7 +281,7 @@ private fun CouiGuideNetworkStep(
                         selected = !isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = false
-                            settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
+                            settingsRepository.pictureSource = PixivHosts.HOST_PXIMG
                         },
                     )
                 }

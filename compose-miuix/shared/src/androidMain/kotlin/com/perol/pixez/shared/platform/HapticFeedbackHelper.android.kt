@@ -3,12 +3,14 @@ package com.perol.pixez.shared.platform
 import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.os.VibratorManager
 import io.github.aakira.napier.Napier
 
 actual fun performHapticFeedback(type: HapticType) {
     val context = BrowserLauncherContext.applicationContext ?: return
     try {
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        // minSdk 31 起 Context.VIBRATOR_SERVICE 已废弃，改走 VibratorManager 取默认振动器。
+        val vibrator: Vibrator? = context.getSystemService(VibratorManager::class.java)?.defaultVibrator
         if (vibrator != null && vibrator.hasVibrator()) {
             val effect = when (type) {
                 HapticType.Confirm -> VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE)

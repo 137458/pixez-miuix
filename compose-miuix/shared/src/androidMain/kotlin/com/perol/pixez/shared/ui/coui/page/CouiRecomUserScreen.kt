@@ -21,8 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.appendDistinct
@@ -42,7 +40,6 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 

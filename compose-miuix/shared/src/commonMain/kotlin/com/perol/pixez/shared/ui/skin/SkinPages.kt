@@ -42,14 +42,14 @@ internal interface SkinPages {
     )
 
     /**
-     * 一级标签页的 COUI 宿主：COUI 实现不可用时（或标签尚未迁移）执行 [fallback] 的 MIUIX 页面。
+     * 一级标签页的 COUI 宿主：标签与实现一一对应，没有未覆盖的标签，因此不需要 MIUIX 回退参数。
+     * 皮肤关闭时调用方直接在 if/else 的另一支渲染 MIUIX 原页面。
      */
     @Composable
     fun mainTabPage(
         tab: RootComponent.MainTab,
         component: RootComponent,
         feedRestore: MainFeedRestore,
-        fallback: @Composable () -> Unit,
     )
 
     /** 插画详情页的 COUI 实现。 */

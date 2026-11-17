@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
