@@ -24,9 +24,7 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -137,13 +135,7 @@ internal fun CouiIllustSeriesScreen(
                     }
                 }.onFailure { error ->
                     watchlistAdded = currentAdded
-                    toastSink(
-                        ToastData(
-                            "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                                PixivApiErrorFormatter.format(error, strings),
-                            ToastType.Error,
-                        ),
-                    )
+                    toastSink(actionFailureToast(strings.watchlistTitle, error, strings))
                 }
             } finally {
                 isTogglingWatchlist = false

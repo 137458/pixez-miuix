@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -81,6 +82,7 @@ import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -114,19 +116,10 @@ internal fun CouiCommentsScreen(
     var inputText by rememberSaveable { mutableStateOf("") }
     // 发送状态不持久化：进程恢复后协程不会恢复，避免发送按钮永久卡死。
     var isSending by remember { mutableStateOf(false) }
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
+    val (user, isLoggedIn) = rememberAccountSession()
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
     val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
 
     // isNovel 在本页生命周期内固定：一次性选定评论读取与发表端点。
     val fetchCommentsResponse: suspend (String?) -> CommentResponse =
@@ -242,11 +235,11 @@ internal fun CouiCommentsScreen(
                     contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(
+                    itemsIndexed(
                         items = currentComments,
-                        key = { it.id ?: it.hashCode() },
-                        contentType = { "comment_item" },
-                    ) { comment ->
+                        key = { index, comment -> comment.id ?: "local_comment_$index" },
+                        contentType = { _, _ -> "comment_item" },
+                    ) { _, comment ->
                         CouiCommentItem(
                             comment = comment,
                             onUserClick = onUserClick,

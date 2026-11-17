@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.derivedStateOf
@@ -25,10 +26,7 @@ import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.PagingFooterState
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PagingLoadMoreFooter
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -344,13 +342,7 @@ fun NewScreen(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         feed.confirmRemoveSeries { error ->
-                            watchlistToast(
-                                ToastData(
-                                    "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                                        PixivApiErrorFormatter.format(error, strings),
-                                    ToastType.Error,
-                                ),
-                            )
+                            watchlistToast(actionFailureToast(strings.watchlistTitle, error, strings))
                         }
                     },
                 )

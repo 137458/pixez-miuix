@@ -67,6 +67,7 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -245,7 +246,7 @@ internal fun CouiDownloadTaskScreen(
                         }
                     }
                 }
-                toastSink(ToastData(strings.downloadTaskEmptyCompleted, ToastType.Success))
+                toastSink(ToastData(strings.downloadTaskClearedCompleted, ToastType.Success))
                 refreshToken++
             } catch (e: CancellationException) {
                 throw e
@@ -371,13 +372,7 @@ internal fun CouiDownloadTaskScreen(
                                                 }.onSuccess {
                                                     refreshToken++
                                                 }.onFailure {
-                                                    toastSink(
-                                                        ToastData(
-                                                            "${strings.btnDelete}${strings.failedSuffix}: " +
-                                                                PixivApiErrorFormatter.format(it, strings),
-                                                            ToastType.Error,
-                                                        ),
-                                                    )
+                                                    toastSink(actionFailureToast(strings.btnDelete, it, strings))
                                                 }
                                             } finally {
                                                 processingTaskIds = processingTaskIds - task.id

@@ -39,6 +39,7 @@ import com.perol.pixez.shared.data.model.MangaSeries
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
@@ -52,9 +53,6 @@ import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.NewFeedRestrict
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
@@ -103,13 +101,7 @@ internal fun CouiNewScreen(
         onDismiss = feed.dismissRemoveSeries,
         onConfirm = {
             feed.confirmRemoveSeries { error ->
-                toast(
-                    ToastData(
-                        "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                            PixivApiErrorFormatter.format(error, strings),
-                        ToastType.Error,
-                    ),
-                )
+                toast(actionFailureToast(strings.watchlistTitle, error, strings))
             }
         },
     )

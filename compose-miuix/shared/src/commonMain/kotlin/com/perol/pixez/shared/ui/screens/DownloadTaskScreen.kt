@@ -371,7 +371,7 @@ fun DownloadTaskScreen(
                                         }
                                     }
                                 }
-                                toastSink(ToastData(strings.downloadTaskEmptyCompleted, ToastType.Success))
+                                toastSink(ToastData(strings.downloadTaskClearedCompleted, ToastType.Success))
                                 refreshToken++
                             } catch (e: CancellationException) {
                                 throw e

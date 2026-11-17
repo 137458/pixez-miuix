@@ -60,10 +60,8 @@ import com.perol.pixez.shared.data.repository.HistoryItem
 import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -246,13 +244,7 @@ internal fun CouiHistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastSink(
-                                        ToastData(
-                                            "${strings.actionClear}${strings.failedSuffix}: " +
-                                                PixivApiErrorFormatter.format(it, strings),
-                                            ToastType.Error,
-                                        )
-                                    )
+                                    toastSink(actionFailureToast(strings.actionClear, it, strings))
                                 }
                         } finally {
                             isProcessing = false
@@ -296,13 +288,7 @@ internal fun CouiHistoryScreen(
                             }
                                 .onSuccess { refreshToken++ }
                                 .onFailure {
-                                    toastSink(
-                                        ToastData(
-                                            "${strings.btnDelete}${strings.failedSuffix}: " +
-                                                PixivApiErrorFormatter.format(it, strings),
-                                            ToastType.Error,
-                                        )
-                                    )
+                                    toastSink(actionFailureToast(strings.btnDelete, it, strings))
                                 }
                         } finally {
                             isProcessing = false

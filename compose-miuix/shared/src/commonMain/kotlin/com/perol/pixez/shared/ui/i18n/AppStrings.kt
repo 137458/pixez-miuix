@@ -543,6 +543,7 @@ interface AppStrings {
     val downloadTaskFilterFailed: String
     val downloadTaskEmptyAll: String
     val downloadTaskEmptyRunning: String
+    val downloadTaskClearedCompleted: String
     val downloadTaskEmptyCompleted: String
     val downloadTaskEmptyFailed: String
     val downloadTaskRetrySuccess: String
@@ -992,6 +993,7 @@ object ZhCnStrings : AppStrings {
     override val downloadTaskFilterFailed = "失败"
     override val downloadTaskEmptyAll = "暂无下载任务"
     override val downloadTaskEmptyRunning = "暂无运行中的任务"
+    override val downloadTaskClearedCompleted = "已清空已完成的任务"
     override val downloadTaskEmptyCompleted = "暂无已完成的任务"
     override val downloadTaskEmptyFailed = "暂无失败的任务"
     override val downloadTaskRetrySuccess = "重试成功"
@@ -1673,6 +1675,7 @@ object ZhTwStrings : AppStrings {
     override val downloadTaskFilterFailed = "失敗"
     override val downloadTaskEmptyAll = "暫無下載任務"
     override val downloadTaskEmptyRunning = "暫無進行中的任務"
+    override val downloadTaskClearedCompleted = "已清除已完成的任務"
     override val downloadTaskEmptyCompleted = "暫無已完成的任務"
     override val downloadTaskEmptyFailed = "暫無失敗的任務"
     override val downloadTaskRetrySuccess = "重試成功"
@@ -2389,6 +2392,7 @@ object EnStrings : AppStrings {
     override val downloadTaskFilterFailed = "Failed"
     override val downloadTaskEmptyAll = "No download tasks"
     override val downloadTaskEmptyRunning = "No running tasks"
+    override val downloadTaskClearedCompleted = "Cleared completed tasks"
     override val downloadTaskEmptyCompleted = "No completed tasks"
     override val downloadTaskEmptyFailed = "No failed tasks"
     override val downloadTaskRetrySuccess = "Retry succeeded"
@@ -3134,6 +3138,7 @@ object JaStrings : AppStrings {
     override val downloadTaskFilterFailed = "失敗"
     override val downloadTaskEmptyAll = "ダウンロードタスクはありません"
     override val downloadTaskEmptyRunning = "実行中のタスクはありません"
+    override val downloadTaskClearedCompleted = "完了したタスクを消去しました"
     override val downloadTaskEmptyCompleted = "完了したタスクはありません"
     override val downloadTaskEmptyFailed = "失敗したタスクはありません"
     override val downloadTaskRetrySuccess = "再試行に成功しました"
@@ -3862,6 +3867,7 @@ object KoStrings : AppStrings {
     override val downloadTaskFilterFailed = "실패"
     override val downloadTaskEmptyAll = "다운로드 작업 없음"
     override val downloadTaskEmptyRunning = "진행 중인 작업 없음"
+    override val downloadTaskClearedCompleted = "완료된 작업을 지웠습니다"
     override val downloadTaskEmptyCompleted = "완료된 작업 없음"
     override val downloadTaskEmptyFailed = "실패한 작업 없음"
     override val downloadTaskRetrySuccess = "재시도 성공"
@@ -4572,6 +4578,7 @@ object RuStrings : AppStrings {
     override val downloadTaskFilterFailed = "Ошибки"
     override val downloadTaskEmptyAll = "Нет задач загрузки"
     override val downloadTaskEmptyRunning = "Нет активных задач"
+    override val downloadTaskClearedCompleted = "Завершённые задачи удалены"
     override val downloadTaskEmptyCompleted = "Нет завершенных задач"
     override val downloadTaskEmptyFailed = "Нет задач с ошибками"
     override val downloadTaskRetrySuccess = "Повтор успешен"
@@ -5284,6 +5291,7 @@ object EsStrings : AppStrings {
     override val downloadTaskFilterFailed = "Fallidos"
     override val downloadTaskEmptyAll = "No hay tareas de descarga"
     override val downloadTaskEmptyRunning = "No hay tareas en ejecución"
+    override val downloadTaskClearedCompleted = "Tareas completadas eliminadas"
     override val downloadTaskEmptyCompleted = "No hay tareas completadas"
     override val downloadTaskEmptyFailed = "No hay tareas fallidas"
     override val downloadTaskRetrySuccess = "Reintento exitoso"
@@ -5994,6 +6002,7 @@ object TrStrings : AppStrings {
     override val downloadTaskFilterFailed = "Başarısız"
     override val downloadTaskEmptyAll = "İndirme görevi yok"
     override val downloadTaskEmptyRunning = "Çalışan görev yok"
+    override val downloadTaskClearedCompleted = "Tamamlanan görevler temizlendi"
     override val downloadTaskEmptyCompleted = "Tamamlanan görev yok"
     override val downloadTaskEmptyFailed = "Başarısız görev yok"
     override val downloadTaskRetrySuccess = "Yeniden deneme başarılı"
@@ -6706,6 +6715,7 @@ object IdStrings : AppStrings {
     override val downloadTaskFilterFailed = "Gagal"
     override val downloadTaskEmptyAll = "Tidak ada tugas unduhan"
     override val downloadTaskEmptyRunning = "Tidak ada tugas yang berjalan"
+    override val downloadTaskClearedCompleted = "Tugas selesai telah dibersihkan"
     override val downloadTaskEmptyCompleted = "Tidak ada tugas yang selesai"
     override val downloadTaskEmptyFailed = "Tidak ada tugas yang gagal"
     override val downloadTaskRetrySuccess = "Berhasil mencoba kembali"
@@ -7417,6 +7427,7 @@ object FilStrings : AppStrings {
     override val downloadTaskFilterFailed = "Bigo"
     override val downloadTaskEmptyAll = "Walang mga gawain sa pag-download"
     override val downloadTaskEmptyRunning = "Walang tumatakbong mga gawain"
+    override val downloadTaskClearedCompleted = "Nabura na ang mga natapos na gawain"
     override val downloadTaskEmptyCompleted = "Walang natapos na mga gawain"
     override val downloadTaskEmptyFailed = "Walang nabigong mga gawain"
     override val downloadTaskRetrySuccess = "Matagumpay na muling sinubukan"
@@ -8128,6 +8139,7 @@ object DeStrings : AppStrings {
     override val downloadTaskFilterFailed = "Fehlgeschlagen"
     override val downloadTaskEmptyAll = "Keine Download-Aufgaben"
     override val downloadTaskEmptyRunning = "Keine laufenden Aufgaben"
+    override val downloadTaskClearedCompleted = "Abgeschlossene Aufgaben gelöscht"
     override val downloadTaskEmptyCompleted = "Keine abgeschlossenen Aufgaben"
     override val downloadTaskEmptyFailed = "Keine fehlgeschlagenen Aufgaben"
     override val downloadTaskRetrySuccess = "Erneuter Versuch erfolgreich"
@@ -8795,6 +8807,7 @@ object ViStrings : AppStrings {
     override val downloadTaskFilterFailed = "Lỗi"
     override val downloadTaskEmptyAll = "Không có tác vụ tải xuống"
     override val downloadTaskEmptyRunning = "Không có tác vụ đang chạy"
+    override val downloadTaskClearedCompleted = "Đã xóa các tác vụ đã hoàn tất"
     override val downloadTaskEmptyCompleted = "Không có tác vụ đã hoàn tất"
     override val downloadTaskEmptyFailed = "Không có tác vụ lỗi"
     override val downloadTaskRetrySuccess = "Tải lại thành công"

@@ -204,6 +204,7 @@ object FaStrings : AppStrings {
     override val downloadTaskFilterFailed = "ناموفق"
     override val downloadTaskEmptyAll = "هیچ وظیفه دانلودی وجود ندارد"
     override val downloadTaskEmptyRunning = "هیچ وظیفه‌ای در حال اجرا نیست"
+    override val downloadTaskClearedCompleted = "تسک‌های تکمیل‌شده پاک شد"
     override val downloadTaskEmptyCompleted = "هیچ وظیفه تکمیل‌شده‌ای وجود ندارد"
     override val downloadTaskEmptyFailed = "هیچ وظیفه ناموفقی وجود ندارد"
     override val downloadTaskRetrySuccess = "تلاش مجدد موفق بود"

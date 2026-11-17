@@ -87,9 +87,11 @@ fun LoginScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val accountRepository = LocalAccountRepository.current
-    var tokenInput by rememberSaveable { mutableStateOf("") }
+    // 长期凭证不进 savedInstanceState：token 落盘会随系统进程快照一起被读取。
+    var tokenInput by remember { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
-    var isLoading by rememberSaveable { mutableStateOf(false) }
+    // 加载态不持久化：进程恢复后协程不会恢复，存了就会让登录按钮永久禁用。
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val clipboard = remember { IllustClipboard() }
 

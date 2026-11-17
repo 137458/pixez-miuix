@@ -23,24 +23,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.perol.pixez.shared.ui.AppConstants
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.Comment
 import com.perol.pixez.shared.data.model.CommentResponse
@@ -49,7 +49,6 @@ import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
-import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -63,6 +62,7 @@ import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberPagingPreload
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,7 +108,6 @@ fun CommentsScreen(
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val repository = LocalIllustRepository.current
-    val accountRepository = LocalAccountRepository.current
     // retryCount 变化触发重新加载：点击重试或发表评论后自增。
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
@@ -117,17 +116,8 @@ fun CommentsScreen(
     var isSending by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
     // 登录状态：未登录时禁用发送按钮，与 Hello/New/Spotlight 等页面保持一致。
-    var user by remember { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        // 当前处于 LaunchedEffect 挂起上下文，需要调用挂起函数，使用 suspendRunCatchingNonCancel 捕获异常并保留取消语义。
-        user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = suspendRunCatchingNonCancel { accountRepository.currentAccount() }.getOrNull()
-            isLoggedIn = user.isLoggedIn
-        }
-    }
+    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
+    val (user, isLoggedIn) = rememberAccountSession()
     // 回复目标：选中某条评论时非空，发送时作为 parent_comment_id。
     // 使用 remember：进程恢复时丢失回复目标不会导致功能异常，用户可重新点击回复。
     var replyTarget by remember { mutableStateOf<Comment?>(null) }
@@ -288,11 +278,11 @@ fun CommentsScreen(
                                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                                     contentPadding = paddingValues,
                                 ) {
-                                    items(
+                                    itemsIndexed(
                                     items = currentComments,
-                                    key = { it.id ?: it.hashCode() },
-                                    contentType = { "comment_item" },
-                                ) { comment ->
+                                    key = { index, comment -> comment.id ?: "local_comment_$index" },
+                                    contentType = { _, _ -> "comment_item" },
+                                ) { _, comment ->
                                     CommentItem(
                                         comment = comment,
                                         onUserClick = onUserClick,

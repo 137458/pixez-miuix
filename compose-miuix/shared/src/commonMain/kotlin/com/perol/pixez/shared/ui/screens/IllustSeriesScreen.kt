@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.screens
 
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
+import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -33,9 +34,6 @@ import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import top.yukonga.miuix.kmp.basic.Icon
@@ -145,13 +143,7 @@ fun IllustSeriesScreen(
                 }
                     .onFailure { error ->
                         watchlistAdded = currentAdded
-                        watchlistToast(
-                            ToastData(
-                                "${strings.watchlistTitle}${strings.failedSuffix}: " +
-                                    PixivApiErrorFormatter.format(error, strings),
-                                ToastType.Error,
-                            ),
-                        )
+                        watchlistToast(actionFailureToast(strings.watchlistTitle, error, strings))
                     }
             } finally {
                 // 协程取消或异常时也必须复位，避免切换按钮永久禁用。
