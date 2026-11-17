@@ -80,7 +80,6 @@ fun miuixCardExpandPredictiveBackAnimatable(
         illustIdCandidates = listOf(registry.resolveEffectiveIllustId(illustId), illustId),
         containerBounds = geometry.bounds,
     ) ?: run {
-        NavTransitionLog.d("selector") { "anchor=MISS illustId=$illustId effective=${registry.resolveEffectiveIllustId(illustId)} container=${geometry.bounds} -> fallback slide" }
         registry.updateTransitionState(null, 0f)
         return miuixSlidePredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
@@ -88,7 +87,6 @@ fun miuixCardExpandPredictiveBackAnimatable(
             registry = registry,
         )
     }
-    NavTransitionLog.d("selector") { "anchor=HIT illustId=${anchor.illustId} card=${anchor.card.rect} container=${geometry.bounds} -> card expand" }
     val sourceCard = anchor.card
 
     // 进度按弹簧平滑驱动：系统进度派发稀疏/跳变（澎湃 / MIUI）时页面不再瞬间跳位。

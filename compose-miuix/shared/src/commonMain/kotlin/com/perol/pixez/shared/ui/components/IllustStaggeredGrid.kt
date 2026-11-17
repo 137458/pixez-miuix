@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ fun IllustStaggeredGrid(
 ) {
     val settings = LocalSettingsRepository.current
     val changeVersion = settings.changeVersion.collectAsState().value
+    val currentOnIllustClick by rememberUpdatedState(onIllustClick)
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -136,7 +138,9 @@ fun IllustStaggeredGrid(
                 key = { it.id },
                 contentType = { "illust_card" },
             ) { illust ->
-                val onCardClick = remember(illust.id) { { onIllustClick(illust.id) } }
+                // 卡片点击闭包按作品 id 缓存：回调本身经 rememberUpdatedState 取最新值，
+                // 宿主重建 lambda 时不会继续调用首次捕获的旧闭包。
+                val onCardClick = remember(illust.id) { { currentOnIllustClick(illust.id) } }
                 IllustCard(
                     illust = illust,
                     onClick = onCardClick,
@@ -158,7 +162,7 @@ fun IllustStaggeredGrid(
             ) {
                 PagingLoadMoreFooter(
                     state = footerState,
-                    onRetry = { (onRetryLoadMore ?: onLoadMore)?.invoke() },
+                    onRetry = { (onRetryLoadMore ?: onLoadMore).invoke() },
                 )
             }
         }

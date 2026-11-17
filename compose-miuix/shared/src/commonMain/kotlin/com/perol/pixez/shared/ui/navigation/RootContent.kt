@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
@@ -36,7 +37,6 @@ import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.theme.darkAppExtraColors
 import com.perol.pixez.shared.ui.theme.lightAppExtraColors
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
-import com.perol.pixez.shared.ui.navigation.animation.NavTransitionLog
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
@@ -128,7 +128,6 @@ fun RootContent(
     val sharedBounds = remember { SharedBoundsRegistry() }
     // SideEffect：成功应用后再同步路由锚点；被丢弃的重组不会污染不可回滚的注册表字段
     SideEffect {
-        NavTransitionLog.d("root") { "syncRoute ${(stack.active.configuration as? Config.IllustDetail)?.illustId}" }
         sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? Config.IllustDetail)?.illustId)
     }
     val bottomBarVisible = remember { mutableStateOf(true) }
@@ -142,7 +141,14 @@ fun RootContent(
     var showAuthExpiredDialog by remember { mutableStateOf(false) }
     // 全局 Toast 宿主：唯一实例挂在根层，页面与组件通过 LocalToastSink 投递提示。
     var rootToastMessage by remember { mutableStateOf<ToastData?>(null) }
-    val rootToastSink: (ToastData) -> Unit = remember { { rootToastMessage = it } }
+    // 触发序号：相同文案连发两次时靠它区分，否则结构相等会让第二次投递不可观察。
+    var rootToastSeq by remember { mutableIntStateOf(0) }
+    val rootToastSink: (ToastData) -> Unit = remember {
+        {
+            rootToastSeq += 1
+            rootToastMessage = it.copy(seq = rootToastSeq)
+        }
+    }
 
     // 凭证失效提示：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
     // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失。
@@ -279,12 +285,10 @@ fun RootContent(
                             .onGloballyPositioned { coordinates ->
                                 val newBounds = coordinates.boundsInWindow()
                                 if (newBounds != containerGeometry.bounds) {
-                                    NavTransitionLog.d("root") { "containerGeometry bounds=$newBounds" }
                                     containerGeometry = containerGeometry.withBounds(newBounds)
                                 }
                             },
                     ) {
-                        NavTransitionLog.d("root") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] recompose" }
                         Children(
                             stack = component.stack,
                             modifier = Modifier.fillMaxSize(),
@@ -560,14 +564,15 @@ private fun MainChildSection(
     useFloatingBottomBar: Boolean,
     floatingBackdrop: LayerBackdrop?,
 ) {
-    // 读取 changeVersion 以订阅设置变更，保证 Main 子树在设置修改后重组刷新。
-    // 中-9：设置仓储经 LocalSettingsRepository 读取（RootContent 根部 provide）。
+    // 设置仓储经 LocalSettingsRepository 读取（RootContent 根部 provide）。
+    // hasUnreadFeedBadge 是普通字段而非可观察状态，只有把 changeVersion 一并读进组合作用域，
+    // 未读红点才会在写入后立即刷新；导航条目同样以 changeVersion 为 remember 键。
     val settingsRepository = LocalSettingsRepository.current
-    val mainChangeVersion = settingsRepository.changeVersion.collectAsState().value
+    val changeVersion = settingsRepository.changeVersion.collectAsState().value
     val skinPages = LocalSkinPages.current
     val strings = LocalStrings.current
     val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
-    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab) {
+    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab, changeVersion) {
         MAIN_TAB_DESCRIPTORS.map { descriptor ->
             SkinNavItem(
                 title = descriptor.label(strings),
@@ -591,6 +596,7 @@ private fun MainChildSection(
                 MainNavigationRail(
                     activeTab = activeTab,
                     onTabSelected = component::onMainTabSelected,
+                    hasUnreadFeedBadge = hasUnreadFeedBadge,
                 )
             }
             Box(
@@ -629,6 +635,7 @@ private fun MainChildSection(
                         MainBottomBar(
                             activeTab = activeTab,
                             onTabSelected = component::onMainTabSelected,
+                            hasUnreadFeedBadge = hasUnreadFeedBadge,
                             isFloating = useFloatingBottomBar,
                             backdrop = floatingBackdrop,
                             modifier = Modifier.align(Alignment.BottomCenter),

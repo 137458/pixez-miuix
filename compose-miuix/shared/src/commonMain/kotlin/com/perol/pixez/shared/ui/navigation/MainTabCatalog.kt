@@ -11,7 +11,11 @@ import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SpotlightScreen
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.All
+import top.yukonga.miuix.kmp.icon.extended.Promotions
+import top.yukonga.miuix.kmp.icon.extended.Recent
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.TopDownloads
 
 /**
  * 单个一级标签的目录条目（nav13）：文案、图标、徽标条件与 Pager 页内容同表声明。

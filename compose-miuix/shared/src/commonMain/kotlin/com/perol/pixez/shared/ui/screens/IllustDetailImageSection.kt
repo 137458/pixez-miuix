@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Download
 
 /**
  * 作品详情页的图片展示区块：多页图片项、单页/Ugoira 图片项与全屏查看器。

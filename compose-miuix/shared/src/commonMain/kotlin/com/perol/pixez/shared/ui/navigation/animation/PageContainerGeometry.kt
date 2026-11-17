@@ -21,9 +21,6 @@ data class PageContainerGeometry(
     val widthPx: Float = 0f,
     val cornerRadius: Dp = 0.dp,
 ) {
-    /** 容器已完成测量、几何可用于转场时为 true。 */
-    val isMeasured: Boolean get() = bounds.width > 0f && bounds.height > 0f
-
     /** 仅替换窗口矩形，保留其余测量结果。 */
     fun withBounds(newBounds: Rect): PageContainerGeometry = copy(bounds = newBounds)
 }

@@ -220,8 +220,8 @@ private fun validateHistoryItems(list: List<HistoryItem>): List<HistoryItem> {
 private fun validateNovelItems(list: List<NovelHistoryItem>): List<NovelHistoryItem> {
     checkItemCount(list.size, "novelHistory")
     return list.map { item ->
-        checkNonNegative(item.novelId.toLong(), "novelHistory.novelId")
-        checkNonNegative(item.userId.toLong(), "novelHistory.userId")
+        checkNonNegative(item.novelId, "novelHistory.novelId")
+        checkNonNegative(item.userId, "novelHistory.userId")
         checkNonNegative(item.time, "novelHistory.time")
         validateText(item.pictureUrl, "novelHistory.pictureUrl")
         validateText(item.title, "novelHistory.title")

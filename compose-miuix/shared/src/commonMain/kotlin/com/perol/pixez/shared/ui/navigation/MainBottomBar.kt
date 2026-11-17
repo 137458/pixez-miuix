@@ -41,6 +41,7 @@ val LocalTabGesturePosition = compositionLocalOf { mutableStateOf<Float?>(null) 
 fun MainBottomBar(
     activeTab: RootComponent.MainTab,
     onTabSelected: (RootComponent.MainTab) -> Unit,
+    hasUnreadFeedBadge: Boolean,
     modifier: Modifier = Modifier,
     isFloating: Boolean = true,
     backdrop: Backdrop? = null,
@@ -49,9 +50,6 @@ fun MainBottomBar(
     val strings = LocalStrings.current
 
     val descriptors = MAIN_TAB_DESCRIPTORS
-
-    val settingsRepository = com.perol.pixez.shared.ui.LocalSettingsRepository.current
-    val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
 
     if (isFloating) {
         val navItems = remember(strings) {

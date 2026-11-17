@@ -30,7 +30,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.extended.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import androidx.compose.foundation.background
 

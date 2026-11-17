@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
@@ -233,12 +234,12 @@ fun NetworkSettingScreen(
 /**
  * 默认图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-internal const val DEFAULT_IMAGE_HOST = AppConstants.Network.HOST_PXIMG
+internal const val DEFAULT_IMAGE_HOST = PixivHosts.HOST_PXIMG
 
 /**
  * 镜像图片 Host：对齐 Flutter 版 ImageCatHost。
  */
-internal const val MIRROR_IMAGE_HOST = AppConstants.Network.HOST_PIXIV_RE
+internal const val MIRROR_IMAGE_HOST = PixivHosts.HOST_PIXIV_RE
 
 /**
  * standard 网络模式 code：该模式下不显示图片源选择。

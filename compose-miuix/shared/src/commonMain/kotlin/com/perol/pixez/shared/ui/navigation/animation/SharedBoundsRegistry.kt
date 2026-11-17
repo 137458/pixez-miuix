@@ -117,7 +117,6 @@ class SharedBoundsRegistry {
      */
     fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
-            NavTransitionLog.d("registry") { "put IGNORE zero/null id=$illustId rect=$rect" }
             // 零尺寸矩形来自 LazyGrid item 被回收（详情页稳态期间底层列表销毁）前的最后一次布局回调，
             // 属于组合噪声而非「卡片已失效」；据此清除登记会让返回转场丢失锚点而退化侧滑，故仅忽略本次上报。
             return
@@ -291,7 +290,6 @@ class SharedBoundsRegistry {
         containerBounds: Rect = Rect.Zero,
         isExiting: Boolean = false,
     ) {
-        NavTransitionLog.d("registry") { "updateTransition id=$illustId expansion=$expansion isExiting=$isExiting active=$activeTransitionIllustId route=$currentRouteIllustId" }
         val clamped = expansion.coerceIn(0f, 1f)
         val expectedOwner = currentRouteIllustId
             ?.let { displayedIllustIdByOrigin[it] ?: it }

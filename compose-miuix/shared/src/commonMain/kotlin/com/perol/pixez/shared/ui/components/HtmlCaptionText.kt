@@ -72,7 +72,8 @@ fun HtmlCaptionText(
     if (html.isBlank()) return
 
     val strings = LocalStrings.current
-    var isExpanded by remember { mutableStateOf(false) }
+    // 展开态随文案重置：换作品后沿用上一次的展开结果会让折叠开关失去意义。
+    var isExpanded by remember(html) { mutableStateOf(false) }
 
     val linkClickListener = remember(onUserClick, onIllustClick, onIllustSeriesClick, onNovelClick, onTagClick, onLinkClick) {
         { rawUrl: String ->
@@ -177,11 +178,7 @@ internal fun handleCaptionLink(
     val cleanUrl = unwrapPixivJumpUrl(url.trim())
 
     // 1. Pixiv User 协议或 Web 用户主页链接
-    val userMatch = Regex(
-        """(?:pixiv://(?:users?|members?)/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:users/|u/))(\d+)""" +
-        """|https?://(?:www\.)?pixiv\.net/member\.php\?(?:[^#]*&)?id=(\d+)""",
-        RegexOption.IGNORE_CASE
-    ).find(cleanUrl)
+    val userMatch = CAPTION_USER_PATTERN.find(cleanUrl)
     if (userMatch != null) {
         val userId = (userMatch.groups[1]?.value ?: userMatch.groups[2]?.value)?.toLongOrNull()
         if (userId != null && onUserClick != null) {
@@ -191,11 +188,7 @@ internal fun handleCaptionLink(
     }
 
     // 2. Pixiv Illust 协议或 Web 画作详情链接
-    val illustMatch = Regex(
-        """(?:pixiv://(?:illusts?|artworks)/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:artworks/|i/))(\d+)""" +
-        """|https?://(?:www\.)?pixiv\.net/member_illust\.php\?(?:[^#]*&)?illust_id=(\d+)""",
-        RegexOption.IGNORE_CASE
-    ).find(cleanUrl)
+    val illustMatch = CAPTION_ILLUST_PATTERN.find(cleanUrl)
     if (illustMatch != null) {
         val illustId = (illustMatch.groups[1]?.value ?: illustMatch.groups[2]?.value)?.toLongOrNull()
         if (illustId != null && onIllustClick != null) {
@@ -205,10 +198,7 @@ internal fun handleCaptionLink(
     }
 
     // 3. Pixiv 系列（Series）链接
-    val seriesMatch = Regex(
-        """(?:pixiv://(?:illust/)?series/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:user/\d+/series/|series/))(\d+)""",
-        RegexOption.IGNORE_CASE
-    ).find(cleanUrl)
+    val seriesMatch = CAPTION_SERIES_PATTERN.find(cleanUrl)
     if (seriesMatch != null) {
         val seriesId = seriesMatch.groupValues[1].toLongOrNull()
         if (seriesId != null && onIllustSeriesClick != null) {
@@ -218,11 +208,7 @@ internal fun handleCaptionLink(
     }
 
     // 4. Pixiv 小说（Novel）链接
-    val novelMatch = Regex(
-        """(?:pixiv://novels?/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?novels/)(\d+)""" +
-        """|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?novel/show\.php\?(?:[^#]*&)?id=(\d+)""",
-        RegexOption.IGNORE_CASE
-    ).find(cleanUrl)
+    val novelMatch = CAPTION_NOVEL_PATTERN.find(cleanUrl)
     if (novelMatch != null) {
         val novelId = (novelMatch.groups[1]?.value ?: novelMatch.groups[2]?.value)?.toLongOrNull()
         if (novelId != null && onNovelClick != null) {
@@ -232,10 +218,7 @@ internal fun handleCaptionLink(
     }
 
     // 5. Pixiv 标签（Tag）链接
-    val tagMatch = Regex(
-        """(?:pixiv://tags/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?tags/)([^/?#]+)""",
-        RegexOption.IGNORE_CASE
-    ).find(cleanUrl)
+    val tagMatch = CAPTION_TAG_PATTERN.find(cleanUrl)
     if (tagMatch != null) {
         val rawTag = decodeUrlPercent(tagMatch.groupValues[1])
         if (rawTag.isNotBlank() && onTagClick != null) {
@@ -273,23 +256,13 @@ internal fun parseHtmlCaption(
 ): AnnotatedString {
     // 1. 规范化换行标签、段落与块级标签
     val preprocessed = html
-        .replace(Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("""</(?:p|div|li|h[1-6])>""", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("""<(?:p|div|li|h[1-6])[^>]*>""", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("""\n{3,}"""), "\n\n")
+        .replace(LINE_BREAK_TAG_PATTERN, "\n")
+        .replace(BLOCK_CLOSE_TAG_PATTERN, "\n")
+        .replace(BLOCK_OPEN_TAG_PATTERN, "\n")
+        .replace(MULTI_NEWLINE_PATTERN, "\n\n")
         .trim()
 
     // 2. 构造分词正则：匹配 <a href="...">...</a>、<b>...</b>、<i>...</i>、<u>...</u>、<s>...</s> 及其他未识别 HTML 标签
-    val tagPattern = Regex(
-        """<a\s+[^>]*href=(?:["']([^"']*)["']|([^\s>]+))[^>]*>(.*?)</a>""" +
-        """|<(b|strong)>(.*?)</\3>""" +
-        """|<(i|em)>(.*?)</\5>""" +
-        """|<(u|ins)>(.*?)</\7>""" +
-        """|<(s|strike|del)>(.*?)</\9>""" +
-        """|<[^>]+>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
-
     val linkStyles = TextLinkStyles(
         style = SpanStyle(
             color = linkColor,
@@ -310,7 +283,7 @@ internal fun parseHtmlCaption(
 
     return buildAnnotatedString {
         var lastIndex = 0
-        tagPattern.findAll(preprocessed).forEach { matchResult ->
+        CAPTION_TOKEN_PATTERN.findAll(preprocessed).forEach { matchResult ->
             val range = matchResult.range
 
             // 匹配标签前的普通文本（可能包含裸写 URL 或 Pixiv ID 快捷方式）
@@ -389,6 +362,56 @@ internal fun parseHtmlCaption(
     }
 }
 
+/** user 链接识别模式（[handleCaptionLink] 第 1 顺位）。 */
+private val CAPTION_USER_PATTERN = Regex(
+        """(?:pixiv://(?:users?|members?)/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:users/|u/))(\d+)""" +
+        """|https?://(?:www\.)?pixiv\.net/member\.php\?(?:[^#]*&)?id=(\d+)""",
+        RegexOption.IGNORE_CASE
+)
+
+/** illust 链接识别模式（[handleCaptionLink] 第 2 顺位）。 */
+private val CAPTION_ILLUST_PATTERN = Regex(
+        """(?:pixiv://(?:illusts?|artworks)/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:artworks/|i/))(\d+)""" +
+        """|https?://(?:www\.)?pixiv\.net/member_illust\.php\?(?:[^#]*&)?illust_id=(\d+)""",
+        RegexOption.IGNORE_CASE
+)
+
+/** series 链接识别模式（[handleCaptionLink] 第 3 顺位）。 */
+private val CAPTION_SERIES_PATTERN = Regex(
+        """(?:pixiv://(?:illust/)?series/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?(?:user/\d+/series/|series/))(\d+)""",
+        RegexOption.IGNORE_CASE
+)
+
+/** novel 链接识别模式（[handleCaptionLink] 第 4 顺位）。 */
+private val CAPTION_NOVEL_PATTERN = Regex(
+        """(?:pixiv://novels?/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?novels/)(\d+)""" +
+        """|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?novel/show\.php\?(?:[^#]*&)?id=(\d+)""",
+        RegexOption.IGNORE_CASE
+)
+
+/** tag 链接识别模式（[handleCaptionLink] 第 5 顺位）。 */
+private val CAPTION_TAG_PATTERN = Regex(
+        """(?:pixiv://tags/|https?://(?:www\.)?pixiv\.net/(?:[a-zA-Z_-]+/)?tags/)([^/?#]+)""",
+        RegexOption.IGNORE_CASE
+)
+
+// 解析期正则一律提升到顶层：每次解析现编译会让每次点击都重复付出编译开销。
+private val LINE_BREAK_TAG_PATTERN = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
+private val BLOCK_CLOSE_TAG_PATTERN = Regex("""</(?:p|div|li|h[1-6])>""", RegexOption.IGNORE_CASE)
+private val BLOCK_OPEN_TAG_PATTERN = Regex("""<(?:p|div|li|h[1-6])[^>]*>""", RegexOption.IGNORE_CASE)
+private val MULTI_NEWLINE_PATTERN = Regex("""\n{3,}""")
+
+/** HTML 简介分词：链接、粗体、斜体、下划线、删除线与未识别标签。 */
+private val CAPTION_TOKEN_PATTERN = Regex(
+    """<a\s+[^>]*href=(?:["']([^"']*)["']|([^\s>]+))[^>]*>(.*?)</a>""" +
+    """|<(b|strong)>(.*?)</\3>""" +
+    """|<(i|em)>(.*?)</\5>""" +
+    """|<(u|ins)>(.*?)</\7>""" +
+    """|<(s|strike|del)>(.*?)</\9>""" +
+    """|<[^>]+>""",
+    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+)
+
 private val AUTO_LINK_PATTERN = Regex(
     // 1. 标准 HTTP/HTTPS URL
     """(https?://[^\s<>"'`()]+)""" +
@@ -414,20 +437,29 @@ internal fun stripHtmlTags(input: String): String = HtmlUtils.stripHtmlTags(inpu
  * 去除 URL 末尾由于标点符号贴附而多匹配的符号（例如句子末尾句号、逗号等）。
  */
 internal fun trimTrailingUrlPunctuation(url: String): Pair<String, String> {
+    // 括号配对与右端剥离各扫一遍：每轮对 take 子串做 count 的旧写法会把长尾标点退化成平方复杂度。
+    var openParens = 0
+    var closeParens = 0
+    var openBrackets = 0
+    var closeBrackets = 0
+    for (ch in url) {
+        when (ch) {
+            '(' -> openParens++
+            ')' -> closeParens++
+            '[' -> openBrackets++
+            ']' -> closeBrackets++
+        }
+    }
     var endIndex = url.length
     while (endIndex > 0) {
         val lastChar = url[endIndex - 1]
-        if (lastChar in ".,;:!?)]\"'") {
-            if (lastChar == ')' && url.take(endIndex).count { it == '(' } >= url.take(endIndex).count { it == ')' }) {
-                break
-            }
-            if (lastChar == ']' && url.take(endIndex).count { it == '[' } >= url.take(endIndex).count { it == ']' }) {
-                break
-            }
-            endIndex--
-        } else {
-            break
-        }
+        if (lastChar !in ".,;:!?)]\"'") break
+        // 成对括号属于 URL 本身（如维基百科条目），只有落单的右括号才当作句末标点剥离。
+        if (lastChar == ')' && openParens >= closeParens) break
+        if (lastChar == ']' && openBrackets >= closeBrackets) break
+        if (lastChar == ')') closeParens--
+        if (lastChar == ']') closeBrackets--
+        endIndex--
     }
     return url.substring(0, endIndex) to url.substring(endIndex)
 }

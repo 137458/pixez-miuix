@@ -189,7 +189,7 @@ private fun rememberGravityRotatedHighlight(
     val gravityAngle = rememberQuantizedGravityAngle()
     return remember(gravityAngle, base, extraDegrees) {
         derivedStateOf {
-            val baseStyle = base.style as BloomStroke
+            val baseStyle = base.style as? BloomStroke ?: return@derivedStateOf base
             val basePrimary = baseStyle.primaryLight
             val rad = gravityAngle.value + (extraDegrees * PI / 180.0).toFloat()
             base.copy(

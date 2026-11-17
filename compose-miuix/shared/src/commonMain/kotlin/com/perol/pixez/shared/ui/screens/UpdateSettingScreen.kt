@@ -38,10 +38,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.network.GitHubReleaseEndpoints
 import com.perol.pixez.shared.platform.UpdateDownloadState
 import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.platform.installPathFor
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateDownloader
 import com.perol.pixez.shared.ui.LocalUpdateRepository
@@ -85,7 +85,7 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -345,7 +345,7 @@ fun UpdateSettingScreen(
                             }
                         },
                         onGithubClick = {
-                            openSafeUrl(AppConstants.Urls.GITHUB_RELEASES, strings, onError = { message ->
+                            openSafeUrl(GitHubReleaseEndpoints.RELEASES_PAGE, strings, onError = { message ->
                                 toastSink(ToastData(message, ToastType.Error))
                             })
                         },

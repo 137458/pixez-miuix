@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.platform
 
 import coil3.ImageLoader
+import coil3.annotation.DelicateCoilApi
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
@@ -16,6 +17,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+// SingletonImageLoader.reset/setUnsafe 标注 DelicateCoilApi：只允许测试这类受控环境替换全局单例。
+@OptIn(DelicateCoilApi::class)
 class LocalIllustResolverTest {
 
     private val context = PlatformContext.INSTANCE

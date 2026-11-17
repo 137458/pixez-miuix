@@ -50,12 +50,14 @@ import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import io.github.aakira.napier.Napier
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -111,28 +113,30 @@ fun SpotlightDetailScreen(
     val clipboard = remember { com.perol.pixez.shared.platform.IllustClipboard() }
     val share = remember { com.perol.pixez.shared.platform.IllustShare() }
 
-    val moreDropdownEntry = remember(article, strings) {
+    // toastSink 是闭包捕获的宿主回调，身份变化后旧闭包会继续向失效宿主投递，故一并入键。
+    val moreDropdownEntry = remember(article, strings, toastSink) {
         top.yukonga.miuix.kmp.basic.DropdownEntry(
             items = listOf(
                 top.yukonga.miuix.kmp.basic.DropdownItem(
                     text = strings.menuCopyLink,
                     onClick = {
-                        try {
-                            clipboard.copy(article.articleUrl)
-                            toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
-                        } catch (_: Throwable) {
-                            toastSink(ToastData("${strings.copy}${strings.failedSuffix}", ToastType.Error))
-                        }
+                        runClipboardShare(
+                            success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                            failurePrefix = "${strings.copy}${strings.failedSuffix}",
+                            onToast = toastSink,
+                        ) { clipboard.copy(article.articleUrl) }
+                            .onFailure { Napier.w("复制文章链接失败", it) }
                     },
                 ),
                 top.yukonga.miuix.kmp.basic.DropdownItem(
                     text = strings.share,
                     onClick = {
-                        try {
-                            share.share(article.articleUrl, article.pureTitle.ifBlank { article.title })
-                        } catch (_: Throwable) {
-                            toastSink(ToastData("${strings.share}${strings.failedSuffix}", ToastType.Error))
-                        }
+                        runClipboardShare(
+                            success = ToastData(strings.share, ToastType.Success),
+                            failurePrefix = "${strings.share}${strings.failedSuffix}",
+                            onToast = toastSink,
+                        ) { share.share(article.articleUrl, article.pureTitle.ifBlank { article.title }) }
+                            .onFailure { Napier.w("分享文章链接失败", it) }
                     },
                 ),
                 top.yukonga.miuix.kmp.basic.DropdownItem(

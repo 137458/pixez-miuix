@@ -3,7 +3,6 @@ package com.perol.pixez.shared.ui.screens
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +67,7 @@ import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.foundation.lazy.rememberLazyListState
+import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.squircle.squircleClip
 
 /**
@@ -77,6 +77,7 @@ import top.yukonga.miuix.kmp.squircle.squircleClip
  * 交互分组包含异形屏/H 限制/返回再退出/滑动切换作品开关；显示分组包含「跨适配设置」与「布局设置」；
  * 下载分组包含下载设置、下载历史、下载任务；存储分组包含清除缓存与应用数据；关于分组包含公告板、更新设置、关于 PixEz。
  */
+@OptIn(ExperimentalScrollBarApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -460,7 +461,6 @@ fun SettingsScreen(
 }
 }
 }
-
 
 /**
  * 账号分组：已登录展示头像与账号信息，未登录提供登录入口。

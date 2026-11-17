@@ -210,13 +210,11 @@ fun AboutScreen(
                             summary = strings.aboutDisclaimerSummary,
                             onClick = { showDisclaimerDialog = true },
                         )
-                        if (onUpdateClick != null) {
-                            BasicComponent(
-                                title = strings.settingUpdate,
-                                summary = "${strings.version} v${AppInfo.VERSION_NAME}",
-                                onClick = onUpdateClick,
-                            )
-                        }
+                        BasicComponent(
+                            title = strings.settingUpdate,
+                            summary = "${strings.version} v${AppInfo.VERSION_NAME}",
+                            onClick = onUpdateClick,
+                        )
                     }
                 }
 

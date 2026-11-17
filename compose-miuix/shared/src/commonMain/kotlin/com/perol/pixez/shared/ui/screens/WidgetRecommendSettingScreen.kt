@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
@@ -62,8 +63,8 @@ fun WidgetRecommendSettingScreen(
     val widgetPictureSourceOptions = remember(strings) {
         listOf(
             WidgetPictureSourceOption(source = "", label = strings.settingWidgetPictureSourceFollowGlobal),
-            WidgetPictureSourceOption(source = AppConstants.Network.HOST_PXIMG, label = strings.settingWidgetPictureSourceOfficial),
-            WidgetPictureSourceOption(source = AppConstants.Network.HOST_PIXIV_RE, label = strings.settingWidgetPictureSourceMirror),
+            WidgetPictureSourceOption(source = PixivHosts.HOST_PXIMG, label = strings.settingWidgetPictureSourceOfficial),
+            WidgetPictureSourceOption(source = PixivHosts.HOST_PIXIV_RE, label = strings.settingWidgetPictureSourceMirror),
         )
     }
 

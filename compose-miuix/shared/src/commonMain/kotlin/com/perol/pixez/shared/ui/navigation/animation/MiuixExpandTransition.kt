@@ -94,7 +94,6 @@ internal fun cardExpandFrame(
     val activeSourceBounds = anchor?.card?.rect
         ?: sourceBounds?.takeIf { hasUsableCardExpandGeometry(it, containerBounds) }
     val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
-    NavTransitionLog.d("animator") { "frame dir=$direction factor=$factor anchor=${anchor?.illustId} slidePath=${activeSourceBounds == null} rawId=$rawIllustId container=$containerBounds" }
 
     val geometry = containerGeometry()
     val layerModifier: Modifier

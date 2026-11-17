@@ -19,14 +19,12 @@ import top.yukonga.miuix.kmp.basic.NavigationRailItem
 fun MainNavigationRail(
     activeTab: RootComponent.MainTab,
     onTabSelected: (RootComponent.MainTab) -> Unit,
+    hasUnreadFeedBadge: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
 
     val descriptors = MAIN_TAB_DESCRIPTORS
-
-    val settingsRepository = com.perol.pixez.shared.ui.LocalSettingsRepository.current
-    val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
 
     NavigationRail(
         modifier = modifier.fillMaxHeight(),

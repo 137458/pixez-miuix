@@ -41,7 +41,8 @@ import top.yukonga.miuix.kmp.blur.highlight.LightPosition
 import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.*
+import top.yukonga.miuix.kmp.icon.extended.Ok
+import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -100,10 +101,15 @@ enum class ToastType {
 
 /**
  * 结构化 Toast 数据载荷。
+ *
+ * @property seq 同文案重复触发的序号。连续两次相同文案（如连点两次「已复制」）时，
+ * 仅靠 [message] 无法与上一次区分，结构相等会让状态写入被 Compose 判定为无变化，
+ * 第二条提示被整条吞掉；由注入方递增本字段即可保证每次触发都可观察。
  */
 data class ToastData(
     val message: String,
     val type: ToastType = ToastType.Normal,
+    val seq: Int = 0,
 )
 
 /**
@@ -142,9 +148,35 @@ fun ToastMessage(
     backdrop: Backdrop? = null,
     onDismiss: () -> Unit = {},
 ) {
+    ToastSurface(
+        message = message,
+        eventKey = message,
+        modifier = modifier,
+        type = type,
+        durationMillis = durationMillis,
+        backdrop = backdrop,
+        onDismiss = onDismiss,
+    )
+}
+
+/**
+ * Toast 渲染内核：两个公开重载共用同一套动效与布局。
+ *
+ * @param eventKey 触发标识，与文案共同作为重启计时器的键，使相同文案的重复触发依然可见
+ */
+@Composable
+private fun ToastSurface(
+    message: String?,
+    eventKey: Any?,
+    modifier: Modifier = Modifier,
+    type: ToastType? = null,
+    durationMillis: Long = 2000L,
+    backdrop: Backdrop? = null,
+    onDismiss: () -> Unit = {},
+) {
     var visible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(message) {
+    LaunchedEffect(message, eventKey) {
         if (!message.isNullOrBlank()) {
             visible = true
             delay(durationMillis)
@@ -298,8 +330,9 @@ fun ToastMessage(
     backdrop: Backdrop? = null,
     onDismiss: () -> Unit = {},
 ) {
-    ToastMessage(
+    ToastSurface(
         message = toast?.message,
+        eventKey = toast?.seq,
         modifier = modifier,
         type = toast?.type,
         durationMillis = durationMillis,

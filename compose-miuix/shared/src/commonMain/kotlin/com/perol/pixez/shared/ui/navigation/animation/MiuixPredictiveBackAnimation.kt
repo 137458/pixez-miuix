@@ -155,7 +155,6 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
         val activeKeys = remember { HashSet<Any>() }
         val handler = rememberHandler(stack = stack, isGestureEnabled = { activeKeys.size == 1 })
         val anim = animation
-        NavTransitionLog.d("invoke") { "stack=[${stack.items.joinToString { it.configuration.toString() }}] items=${handler.items.size} animHash=${anim.hashCode()} handlerHash=${handler.hashCode()}" }
 
         val childContent =
             remember(content) {
@@ -164,10 +163,8 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
                         content(child)
 
                         DisposableEffect(Unit) {
-                            NavTransitionLog.d("invoke") { "activeKeys + ${child.key} -> ${activeKeys.size + 1}" }
                             activeKeys += child.key
                             onDispose {
-                                NavTransitionLog.d("invoke") { "activeKeys - ${child.key} -> ${activeKeys.size - 1}" }
                                 activeKeys -= child.key
                             }
                         }
@@ -292,7 +289,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     private var isDragSession = false
 
     override fun onBackStarted(backEvent: BackEvent) {
-        NavTransitionLog.d("gesture") { "onBackStarted progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null}" }
         if (isBackConfirmed) return
         if (isDragSession) return
         initialBackEvent = backEvent
@@ -300,7 +296,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
 
     /** 应用内拖拽起始（[Modifier.miuixDragBackGesture] 边缘起手时调用）。 */
     fun onDragStarted(backEvent: BackEvent) {
-        NavTransitionLog.d("gesture") { "onDragStarted progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null}" }
         if (isBackConfirmed) return
         if (isDragSession) return
         // 系统手势流已持有起始事件（Started 已到、尚未激活）时拖拽不得接管，避免双事件源争抢。
@@ -311,7 +306,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
 
     /** 应用内拖拽推进（跟手期 snap 直驱）。 */
     fun onDragProgressed(backEvent: BackEvent) {
-        NavTransitionLog.d("gesture") { "onDragProgressed progress=${backEvent.progress} confirmed=$isBackConfirmed drag=$isDragSession animatable=${animatable != null}" }
         if (isBackConfirmed) return
         if (!isDragSession) return
         progressed(backEvent, snapToFollow = true)
@@ -328,7 +322,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     }
 
     override fun onBackProgressed(backEvent: BackEvent) {
-        NavTransitionLog.d("gesture") { "onBackProgressed progress=${backEvent.progress} confirmed=$isBackConfirmed animatable=${animatable != null} gestureEnabled=${isGestureEnabled()}" }
         if (isBackConfirmed) return
         if (isDragSession) return
         progressed(backEvent, snapToFollow = false)
@@ -364,7 +357,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
                     MiuixPredictiveBackGestureItem(stack = stack.dropLast(), key = key + 1, modifier = created::enterModifier),
                     MiuixPredictiveBackGestureItem(stack = stack, key = key, modifier = created::exitModifier),
                 )
-            NavTransitionLog.d("gesture") { "ENGAGE snap=$snapToFollow handlerKey=$key exit=${stack.active.configuration} enter=${stack.backStack.last().configuration}" }
             launchFollow(created)
         } else {
             // 取消动画进行中手势被重新推进：终止回弹，复用同一动画器继续贴合手指。
@@ -378,7 +370,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         ChildStack(active = backStack.last(), backStack = backStack.dropLast(1))
 
     override fun onBack() {
-        NavTransitionLog.d("gesture") { "onBack confirmed (was=$isBackConfirmed) animatable=${animatable != null} drag=$isDragSession" }
         isBackConfirmed = true
         isDragSession = false
         val current = animatable
@@ -396,7 +387,6 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     }
 
     override fun onBackCancelled() {
-        NavTransitionLog.d("gesture") { "onBackCancelled confirmed=$isBackConfirmed animatable=${animatable != null} drag=$isDragSession" }
         if (isBackConfirmed) return
         // 手势生命周期已终止：丢弃尚未消费的起始事件，防止取消后杂散进度凭空激活假手势。
         initialBackEvent = null

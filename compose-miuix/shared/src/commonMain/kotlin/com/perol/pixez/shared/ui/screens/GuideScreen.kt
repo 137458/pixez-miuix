@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -266,7 +267,7 @@ private fun GuideNetworkStep(
 ) {
     val strings = LocalStrings.current
     var isMirrorEnabled by remember {
-        mutableStateOf(settingsRepository.pictureSource == AppConstants.Network.HOST_PIXIV_RE)
+        mutableStateOf(settingsRepository.pictureSource == PixivHosts.HOST_PIXIV_RE)
     }
     var currentNetworkMode by remember {
         mutableStateOf(settingsRepository.apiNetworkMode)
@@ -319,7 +320,7 @@ private fun GuideNetworkStep(
                         selected = isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = true
-                            settingsRepository.pictureSource = AppConstants.Network.HOST_PIXIV_RE
+                            settingsRepository.pictureSource = PixivHosts.HOST_PIXIV_RE
                         },
                     )
                     RadioButtonPreference(
@@ -328,7 +329,7 @@ private fun GuideNetworkStep(
                         selected = !isMirrorEnabled,
                         onClick = {
                             isMirrorEnabled = false
-                            settingsRepository.pictureSource = AppConstants.Network.HOST_PXIMG
+                            settingsRepository.pictureSource = PixivHosts.HOST_PXIMG
                         },
                     )
                 }
