@@ -1,8 +1,13 @@
 package com.perol.pixez.shared.ui.coui.page
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,14 +15,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -30,6 +33,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -42,14 +47,29 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.itos.coui.effect.CouiFloatingRenderer
+import com.itos.coui.layout.rememberCouiImeInsets
+import com.itos.coui.layout.Scaffold
+import com.itos.coui.messageinput.CouiMessageInputAction
+import com.itos.coui.messageinput.MessageInputBar
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
@@ -66,8 +86,10 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.PixivEmojis
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.coui.component.COUI_MESSAGE_INPUT_MIN_SDK
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.CouiCommentComposer
 import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
@@ -93,11 +115,16 @@ import top.yukonga.miuix.kmp.icon.extended.Send
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 评论页：固定顶栏 + 评论卡片列表 + 底部输入栏。
+ * COUI 评论页：COUI Scaffold（固定顶栏 + 评论列表 + 玻璃输入栏）。
+ *
+ * 骨架用库的 Scaffold：它自建正文背景源并把顶栏、底栏画在采样层之外，输入栏的玻璃才能
+ * 折射到滚动中的真实内容；页面只在容器上做一次 IME 避让，输入栏自己消费剩余导航栏。
+ *
+ * 输入栏双路径：API 34 及以上走库的 MessageInputBar（需 FloatingRenderer），渲染器预建
+ * 失败或版本不足时回退自绘胶囊输入栏，两条路径共用同一份 TextFieldState 草稿。
  *
  * 业务编排与 MIUIX 版一致：账号切换作废列表、流式分页与触底预加载、下拉刷新改为顶栏
  * 刷新（皮肤内不做下拉刷新手势）、回复目标、表情面板、发表后重拉首屏并回顶。
- * COUI 库无文本输入组件，输入框用基础文本字段按 COUI 胶囊样式自绘，交互等价。
  */
 @Composable
 internal fun CouiCommentsScreen(
@@ -113,7 +140,24 @@ internal fun CouiCommentsScreen(
 
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
-    var inputText by rememberSaveable { mutableStateOf("") }
+    // 草稿用 TextFieldState 单源：库输入栏与自绘输入框共用同一份缓冲，也避免 String 往返把光标顶回行首。
+    val draft = rememberTextFieldState()
+    val inputInteraction = remember { MutableInteractionSource() }
+    val inputFocused by inputInteraction.collectIsFocusedAsState()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var showEmojiPanel by rememberSaveable { mutableStateOf(false) }
+    // 底栏在根坐标中的位置：点击判定要分清「点正文收键盘」与「点输入栏本身」。
+    var bottomBarBounds by remember { mutableStateOf(Rect.Zero) }
+    var pageOrigin by remember { mutableStateOf(Offset.Zero) }
+    // 渲染器在进 UI 前预建：失败时整条 MessageInputBar 路径让位给自绘输入栏，不出现半渲染的玻璃栏。
+    val rendererOutcome = remember {
+        if (Build.VERSION.SDK_INT >= COUI_MESSAGE_INPUT_MIN_SDK) {
+            runCatching { CouiFloatingRenderer.standalone() }
+        } else {
+            null
+        }
+    }
     // 发送状态不持久化：进程恢复后协程不会恢复，避免发送按钮永久卡死。
     var isSending by remember { mutableStateOf(false) }
     // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
@@ -189,50 +233,132 @@ internal fun CouiCommentsScreen(
         if (shouldLoadMore) loadMore()
     }
 
-    Column(
+    val canSend = CouiCommentComposer.canSend(draft.text.toString(), isSending, isLoggedIn)
+    val inputEnabled = !isSending && isLoggedIn != false
+    val placeholder = when {
+        isLoggedIn == false -> strings.commentsLoginToComment
+        replyTarget != null -> strings.commentsReplyPlaceholder
+        else -> strings.commentsPublishPlaceholder
+    }
+
+    fun insertEmoji(code: String) {
+        val draftSelection = draft.selection
+        val insertion = CouiCommentComposer.placeEmoji(draft.text, draftSelection.start, draftSelection.end, code)
+        draft.edit {
+            replace(0, length, insertion.text)
+            selection = TextRange(insertion.cursor)
+        }
+    }
+
+    val submit: () -> Unit = submit@{
+        val comment = draft.text.toString()
+        if (!CouiCommentComposer.canSend(comment, isSending, isLoggedIn)) return@submit
+        coroutineScope.launch {
+            isSending = true
+            suspendRunCatchingNonCancel {
+                submitComment(comment, replyTarget?.id)
+            }.onSuccess {
+                draft.edit { replace(0, length, "") }
+                replyTarget = null
+                triggerManualRefresh()
+            }.onFailure { e ->
+                // COUI 无内联错误色令牌，失败改用皮肤内的错误 Toast 提示。
+                toastSink(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
+            }
+            isSending = false
+        }
+    }
+
+    // 键盘将出现时收起表情面板：两者争同一块底部空间，同时展开会互相顶掉。
+    LaunchedEffect(inputFocused) {
+        if (inputFocused) showEmojiPanel = false
+    }
+
+    Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.commentsTitle,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
-                icon = MiuixIcons.Refresh,
-                contentDescription = strings.refresh,
-                onClick = triggerManualRefresh,
+            // IME 避让只在页面级做一次：Scaffold 与输入栏都不再各自处理键盘。
+            .windowInsetsPadding(rememberCouiImeInsets())
+            .onGloballyPositioned { pageOrigin = it.positionInRoot() }
+            .pointerInput(Unit) {
+                // 在 Initial 阶段旁观按下：只观察不消费，子节点照样拿到事件，点击卡片也能收起键盘。
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (!bottomBarBounds.contains(pageOrigin + down.position)) {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        showEmojiPanel = false
+                    }
+                }
+            },
+        topBar = {
+            CouiFixedTopBar(
+                title = strings.commentsTitle,
+                onBack = onBack,
+            ) {
+                CouiActionButton(
+                    icon = MiuixIcons.Refresh,
+                    contentDescription = strings.refresh,
+                    onClick = triggerManualRefresh,
+                )
+            }
+        },
+        bottomBar = {
+            CouiCommentBottomBar(
+                draft = draft,
+                inputInteraction = inputInteraction,
+                placeholder = placeholder,
+                inputEnabled = inputEnabled,
+                canSend = canSend,
+                isSending = isSending,
+                isLoggedIn = isLoggedIn,
+                replyTarget = replyTarget,
+                showEmojiPanel = showEmojiPanel,
+                renderer = rendererOutcome?.getOrNull(),
+                onToggleEmojiPanel = {
+                    val opening = !showEmojiPanel
+                    showEmojiPanel = opening
+                    // 表情面板占用键盘位置：展开时先收键盘，避免两者叠加把输入栏顶到半空。
+                    if (opening) {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    }
+                },
+                onCancelReply = { replyTarget = null },
+                onPlaceEmoji = ::insertEmoji,
+                onSubmit = submit,
+                onBoundsChanged = { bottomBarBounds = it },
             )
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            // 阅读列：列表与三态占位统一收敛到平板可读宽度。
-            CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-                when {
+        },
+    ) { contentPadding ->
+        // 阅读列：列表与三态占位统一收敛到平板可读宽度。
+        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
+            when {
                 currentComments == null && pagedList.initialError == null -> CouiStatePlaceholder(
                     message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(contentPadding),
                 )
                 currentComments == null -> CouiStatePlaceholder(
                     message = couiErrorMessage(pagedList.initialError),
                     actionText = strings.retry,
                     onAction = triggerManualRefresh,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(contentPadding),
                 )
                 currentComments.isEmpty() -> CouiStatePlaceholder(
                     message = strings.noComments,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(contentPadding),
                 )
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     overscrollEffect = rememberCouiOverscrollEffect(),
-                    contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 8.dp),
+                    // 列表滚到输入栏下方：玻璃采样到的是真实滚动内容，而不是被裁掉的空白。
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = contentPadding.calculateTopPadding() + 8.dp,
+                        end = 12.dp,
+                        bottom = contentPadding.calculateBottomPadding() + 8.dp,
+                    ),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     itemsIndexed(
@@ -260,166 +386,234 @@ internal fun CouiCommentsScreen(
                 }
             }
         }
-        }
-
-        CouiCommentInputBar(
-            text = inputText,
-            onTextChange = { inputText = it },
-            isSending = isSending,
-            isLoggedIn = isLoggedIn,
-            replyTarget = replyTarget,
-            onCancelReply = { replyTarget = null },
-            onSend = {
-                if (isSending || inputText.isBlank() || isLoggedIn != true) return@CouiCommentInputBar
-                coroutineScope.launch {
-                    isSending = true
-                    suspendRunCatchingNonCancel {
-                        submitComment(inputText, replyTarget?.id)
-                    }.onSuccess {
-                        inputText = ""
-                        replyTarget = null
-                        triggerManualRefresh()
-                    }.onFailure { e ->
-                        // COUI 无内联错误色令牌，失败改用皮肤内的错误 Toast 提示。
-                        toastSink(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
-                    }
-                    isSending = false
-                }
-            },
-        )
     }
 }
 
-/** 底部输入栏：表情切换、胶囊输入框、发送按钮与回复目标提示。 */
+/** COUI 底栏槽：回复目标、表情面板与输入栏自下而上堆叠。 */
 @Composable
-private fun CouiCommentInputBar(
-    text: String,
-    onTextChange: (String) -> Unit,
+private fun CouiCommentBottomBar(
+    draft: TextFieldState,
+    inputInteraction: MutableInteractionSource,
+    placeholder: String,
+    inputEnabled: Boolean,
+    canSend: Boolean,
     isSending: Boolean,
     isLoggedIn: Boolean?,
     replyTarget: Comment?,
+    showEmojiPanel: Boolean,
+    renderer: CouiFloatingRenderer?,
+    onToggleEmojiPanel: () -> Unit,
     onCancelReply: () -> Unit,
-    onSend: () -> Unit,
+    onPlaceEmoji: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onBoundsChanged: (Rect) -> Unit,
 ) {
-    val strings = LocalStrings.current
-    val scheme = CouiTheme.colorScheme
-    var showEmojiPanel by rememberSaveable { mutableStateOf(false) }
-    val inputEnabled = !isSending && isLoggedIn != false
-    val emojiInteraction = remember { MutableInteractionSource() }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+            .onGloballyPositioned { onBoundsChanged(it.boundsInRoot()) },
     ) {
-        replyTarget?.let { target ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = strings.commentsReplyTo.format(
-                        target.user?.name.orEmpty(),
-                        target.comment.orEmpty(),
-                    ),
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                CouiCancelButton(text = strings.cancel, onClick = onCancelReply)
-            }
+        if (replyTarget != null) {
+            CouiCommentReplyBanner(target = replyTarget, onCancelReply = onCancelReply)
         }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .couiPressFeedback(emojiInteraction, enabled = inputEnabled, list = false)
-                    .clickable(
-                        interactionSource = emojiInteraction,
-                        indication = null,
-                        enabled = inputEnabled,
-                        onClick = { showEmojiPanel = !showEmojiPanel },
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.emoji_304),
-                    contentDescription = strings.commentsEmojiPicker,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            CouiTextInput(
-                value = text,
-                onValueChange = onTextChange,
-                // 占位文案要区分未登录、回复与普通发布三种语境。
-                placeholder = when {
-                    isLoggedIn == false -> strings.commentsLoginToComment
-                    replyTarget != null -> strings.commentsReplyPlaceholder
-                    else -> strings.commentsPublishPlaceholder
-                },
-                enabled = inputEnabled,
-                singleLine = false,
-                maxLines = 3,
-                textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp, lineHeight = 20.sp),
-                modifier = Modifier.weight(1f),
-                // 输入框与输入栏其它圆角控件统一成胶囊。
-                shape = RoundedCornerShape(50),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            CouiSendButton(
-                isSending = isSending,
-                enabled = text.isNotBlank() && !isSending && isLoggedIn == true,
-                strings = strings,
-                onClick = onSend,
-            )
-        }
-
+        // 面板放在输入栏之上：放下面会把输入栏顶离底边，并与输入栏自带的导航栏留白叠加。
         if (showEmojiPanel && isLoggedIn != false) {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 44.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(
-                    items = PixivEmojis.allEmojis,
-                    key = { it.code },
-                    contentType = { "emoji_item" },
-                ) { emoji ->
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onTextChange(text + emoji.code) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(emoji.resource),
-                            contentDescription = emoji.code,
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
+            CouiCommentEmojiPanel(onPick = onPlaceEmoji)
+        }
+        if (renderer != null) {
+            CouiLibraryMessageInputBar(
+                draft = draft,
+                renderer = renderer,
+                placeholder = placeholder,
+                enabled = inputEnabled,
+                canSend = canSend,
+                isSending = isSending,
+                interactionSource = inputInteraction,
+                onToggleEmojiPanel = onToggleEmojiPanel,
+                onSubmit = onSubmit,
+            )
+        } else {
+            CouiCommentInputRow(
+                draft = draft,
+                placeholder = placeholder,
+                enabled = inputEnabled,
+                canSend = canSend,
+                isSending = isSending,
+                interactionSource = inputInteraction,
+                onToggleEmojiPanel = onToggleEmojiPanel,
+                onSubmit = onSubmit,
+            )
+        }
+    }
+}
+
+/** 回复目标提示：显示被回复的账号与摘要，右侧可取消。 */
+@Composable
+private fun CouiCommentReplyBanner(
+    target: Comment,
+    onCancelReply: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    val scheme = CouiTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 底栏画在正文之上：提示条自带底色，列表内容不会从它背后透出来。
+            .background(scheme.background)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = strings.commentsReplyTo.format(target.user?.name.orEmpty(), target.comment.orEmpty()),
+            kind = CouiTextKind.ItemSummary,
+            color = scheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        CouiCancelButton(text = strings.cancel, onClick = onCancelReply)
+    }
+}
+
+/** 表情面板：占据键盘位置的固定高度网格，选中后按光标插入草稿。 */
+@Composable
+private fun CouiCommentEmojiPanel(onPick: (String) -> Unit) {
+    val scheme = CouiTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(scheme.container),
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 44.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(PixivEmojis.allEmojis, key = { it.code }, contentType = { "emoji_item" }) { emoji ->
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onPick(emoji.code) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(emoji.resource),
+                        contentDescription = emoji.code,
+                        modifier = Modifier.size(32.dp),
+                    )
                 }
             }
         }
+    }
+}
+
+/** API 34 及以上：库的玻璃消息输入栏，前置表情、主操作发送。 */
+@RequiresApi(COUI_MESSAGE_INPUT_MIN_SDK)
+@Composable
+private fun CouiLibraryMessageInputBar(
+    draft: TextFieldState,
+    renderer: CouiFloatingRenderer,
+    placeholder: String,
+    enabled: Boolean,
+    canSend: Boolean,
+    isSending: Boolean,
+    interactionSource: MutableInteractionSource,
+    onToggleEmojiPanel: () -> Unit,
+    onSubmit: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    MessageInputBar(
+        state = draft,
+        onSubmit = onSubmit,
+        enabled = enabled,
+        renderer = renderer,
+        placeholder = placeholder,
+        interactionSource = interactionSource,
+        // backdrop 由 Scaffold 经 LocalCouiBackdrop 提供，这里不再自建采样源。
+        leadingAction = CouiMessageInputAction(
+            icon = painterResource(Res.drawable.emoji_304),
+            contentDescription = strings.commentsEmojiPicker,
+            onClick = onToggleEmojiPanel,
+            enabled = enabled,
+        ),
+        primaryAction = CouiMessageInputAction(
+            icon = rememberVectorPainter(MiuixIcons.Send),
+            contentDescription = if (isSending) strings.commentsSending else strings.commentsSend,
+            onClick = onSubmit,
+            enabled = canSend,
+        ),
+    )
+}
+
+/** API 31-33 或渲染器不可用：自绘胶囊输入栏，键盘避让由页面统一处理。 */
+@Composable
+private fun CouiCommentInputRow(
+    draft: TextFieldState,
+    placeholder: String,
+    enabled: Boolean,
+    canSend: Boolean,
+    isSending: Boolean,
+    interactionSource: MutableInteractionSource,
+    onToggleEmojiPanel: () -> Unit,
+    onSubmit: () -> Unit,
+) {
+    val strings = LocalStrings.current
+    val scheme = CouiTheme.colorScheme
+    val emojiInteraction = remember { MutableInteractionSource() }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 底色先铺满全宽，再把导航栏避让放到内层，导航栏条带与栏体同色。
+            .background(scheme.background)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .couiPressFeedback(emojiInteraction)
+                .clickable(
+                    interactionSource = emojiInteraction,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onToggleEmojiPanel,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.emoji_304),
+                contentDescription = strings.commentsEmojiPicker,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        CouiTextInput(
+            state = draft,
+            modifier = Modifier.weight(1f),
+            placeholder = placeholder,
+            enabled = enabled,
+            singleLine = false,
+            maxLines = 3,
+            shape = RoundedCornerShape(50),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            interactionSource = interactionSource,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        CouiSendButton(
+            isSending = isSending,
+            enabled = canSend,
+            strings = strings,
+            onClick = onSubmit,
+        )
     }
 }
 

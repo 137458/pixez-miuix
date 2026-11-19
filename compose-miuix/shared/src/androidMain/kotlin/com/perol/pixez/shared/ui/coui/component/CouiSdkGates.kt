@@ -16,3 +16,6 @@ internal const val COUI_CHIP_TAB_MIN_SDK = 34
 
 /** `NavigationBar` 浮动底栏门槛（API 34）。 */
 internal const val COUI_LIBRARY_NAVIGATION_BAR_MIN_SDK = 34
+
+/** `MessageInputBar` 与 `CouiFloatingRenderer.standalone()` 门槛（API 34）。 */
+internal const val COUI_MESSAGE_INPUT_MIN_SDK = 34

@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.coui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -146,6 +149,61 @@ internal fun CouiTextInput(
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * TextFieldState 重载：草稿由单一状态源承载时使用（评论输入栏在 API 34+ 走 COUI `MessageInputBar`、
+ * 低版本走自绘胶囊，两条渲染路径共用同一份草稿，不能退化成 String 往返以免光标跳回行首）。
+ * 状态源重载没有 visualTransformation / keyboardActions：文本变换改由 InputTransformation 承担，
+ * IME 动作由库在装饰层内部处理，调用方无需也不该再传。
+ */
+@Composable
+internal fun CouiTextInput(
+    state: TextFieldState,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    enabled: Boolean = true,
+    singleLine: Boolean = true,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    shape: Shape = RoundedCornerShape(14.dp),
+    containerColor: Color = CouiTheme.colorScheme.container,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    minHeight: Dp = 44.dp,
+    textStyle: TextStyle? = null,
+    cursorColor: Color? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    interactionSource: MutableInteractionSource? = null,
+    leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    CouiTextInputFrame(
+        isEmpty = state.text.isEmpty(),
+        placeholder = placeholder,
+        enabled = enabled,
+        singleLine = singleLine,
+        modifier = modifier,
+        shape = shape,
+        containerColor = containerColor,
+        contentPadding = contentPadding,
+        minHeight = minHeight,
+        leading = leading,
+        trailing = trailing,
+    ) {
+        BasicTextField(
+            state = state,
+            enabled = enabled,
+            textStyle = couiTextInputTextStyle(textStyle, enabled),
+            cursorBrush = SolidColor(cursorColor ?: CouiTheme.colorScheme.accent),
+            keyboardOptions = keyboardOptions,
+            lineLimits = if (singleLine) {
+                TextFieldLineLimits.SingleLine
+            } else {
+                TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines)
+            },
+            interactionSource = interactionSource,
             modifier = Modifier.fillMaxWidth(),
         )
     }

@@ -8,7 +8,7 @@ android-gradle-plugin = "8.13.0"
 miuix = "0.9.4"
 
 # COUI（ColorOS 皮肤，仅 Android）
-coui = "0.0.1-alpha11"
+coui = "0.0.1-alpha12"
 androidx-compose-bom-alpha = "2026.08.01"
 androidx-core-ktx = "1.19.1"
 
