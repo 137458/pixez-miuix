@@ -63,7 +63,9 @@ class UpdateRepositoryTest {
                 }
             }
         }
-        repository = UpdateRepository(client)
+        // 被测链路的平台判定是 expect 实现，Android 单测宿主上会解析成 isAndroid=true，
+        // 与下方「桌面端选 .exe」语义冲突；这里显式注入 Desktop，把宿主差异挡在用例之外。
+        repository = UpdateRepository(client, isDesktop = true, isAndroid = false)
     }
 
     @After
@@ -117,6 +119,25 @@ class UpdateRepositoryTest {
         val request = captured.single()
         assertEquals("/repos/137458/pixez-miuix/releases/latest", request.path)
         assertEquals("PixEz-MIUIX/${AppInfo.VERSION_NAME}", request.userAgent)
+    }
+
+    @Test
+    fun `fetchLatestReleaseInfo Android 侧选用 apk 资产`() = runBlocking {
+        respondBody = releaseJson(tagName = "v99.0.0")
+        val androidRepository = UpdateRepository(client, isDesktop = false, isAndroid = true)
+
+        val result = androidRepository.fetchLatestReleaseInfo()
+
+        assertTrue(result.isSuccess, "GitHub 正常响应应返回成功结果")
+        val info = result.getOrThrow()
+        // 双端资产同时存在时，Android 平台必须选 .apk 而非 .exe。
+        assertEquals(
+            "https://github.com/137458/pixez-miuix/releases/download/v99.0.0/pixez-miuix-99.0.0.apk",
+            info.downloadUrl,
+        )
+        assertEquals("pixez-miuix-99.0.0.apk", info.fileName)
+        assertEquals(25_000_000L, info.fileSize)
+        assertNull(info.digest, "该 apk 资产未提供 digest，应透传为 null")
     }
 
     @Test

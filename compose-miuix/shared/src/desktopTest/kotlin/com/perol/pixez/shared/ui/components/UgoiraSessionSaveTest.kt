@@ -32,6 +32,10 @@ import kotlin.test.assertTrue
  * saveUgoiraIllust 保存链路测试（架构审查 中-15）：
  * 缓存命中时复用会话缓存 zip 且不得删除缓存文件（播放会话仍需复用）；
  * 缓存未命中时走流式下载保存，且保存临时文件不残留。
+ *
+ * 该链路断言的是「桌面 IllustSaver 真实落盘」语义（写进 settings.storePath 指向的目录，
+ * 再按路径读回内容），因此固定跑在 desktopTest；Android 侧走 MediaStore 分区存储，
+ * JVM 单测没有 ContentResolver，Android 侧该链路无 JVM 单测覆盖（已知缺口）。
  */
 class UgoiraSessionSaveTest {
 

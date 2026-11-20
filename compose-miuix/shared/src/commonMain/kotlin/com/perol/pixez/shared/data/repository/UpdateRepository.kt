@@ -150,6 +150,10 @@ private fun compareVersion(v1: String, v2: String): Int {
  */
 class UpdateRepository(
     private val client: HttpClient,
+    // 平台判定默认沿用 expect 实现（生产调用方无需感知）；两个开关同时作为测试接缝，
+    // 让同一 JVM 单测能分别覆盖 Desktop 与 Android 的资产选择分支，而不是只在宿主平台成立。
+    private val isDesktop: Boolean = isDesktopPlatform(),
+    private val isAndroid: Boolean = isAndroidPlatform(),
 ) {
     /**
      * 从 GitHub Release API 获取完整版本发布信息。
@@ -171,7 +175,11 @@ class UpdateRepository(
             val versionName = tag.removePrefix("v").ifBlank { "unknown" }
             val isNew = hasNewVersion(versionName)
 
-            val matchedAsset = selectPlatformReleaseAsset(release.assets)
+            val matchedAsset = selectPlatformReleaseAsset(
+                assets = release.assets,
+                isDesktop = isDesktop,
+                isAndroid = isAndroid,
+            )
             // asset 直链必须指向官方仓库（owner/repo 白名单），拒绝 GitHub 域内第三方仓库投毒。
             val downloadUrl = matchedAsset?.browser_download_url?.let {
                 TrustedUrlPolicy.officialReleaseAssetUrl(it, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
