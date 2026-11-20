@@ -6,6 +6,7 @@ import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
+import com.perol.pixez.shared.data.local.task.TaskDatabase
 import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -372,10 +373,15 @@ class AppDependencies(
     }
 
     /**
-     * 应用启动预热：在后台异步预热常用网络连接与 TLS 握手。
+     * 应用启动预热：在后台异步对账中断的下载任务，再预热常用网络连接与 TLS 握手。
+     *
+     * 对账放在最前面：上次进程被杀时残留的 Downloading 行必须先落到失败终态，
+     * 否则历史列表会永久显示「下载中」且无法重试。对账失败只记日志，不影响预热。
      */
     fun warmupAsync(scope: kotlinx.coroutines.CoroutineScope) {
         scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { reconcileInterruptedDownloadTasks(taskDriver) }
+                .onFailure { Napier.w("启动对账中断的下载任务失败", it) }
             httpClient.warmup()
         }
     }
@@ -402,4 +408,17 @@ class AppDependencies(
             currentInstance = null
         }
     }
+}
+
+/**
+ * 启动对账：把上次进程崩溃（或被杀）后残留的下载中任务落到失败终态。
+ *
+ * 进程死亡不会给在途任务任何收尾机会，task.status 会永久停在 Downloading，
+ * 界面既不会推进也不会自动重试，因此启动时必须先对账一次。
+ *
+ * 只改 Downloading：Pending 表示排队待下，Success/Failed 已是终态，对账不得触碰。
+ * 对账是幂等的，重复执行不会再改变任何行。
+ */
+internal fun reconcileInterruptedDownloadTasks(driver: SqlDriver) {
+    TaskDatabase(driver).taskQueries.markInterrupted()
 }

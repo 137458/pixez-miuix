@@ -277,6 +277,39 @@ class DownloadRepositoryTest {
         assertTrue(recorded != null, "历史记录必须仍存在")
         assertEquals(DownloadStatus.Failed, recorded.status)
     }
+    // ---------- R-12a：保存阶段失败时下载临时文件必须一并清理 ----------
+
+    @Test
+    fun `保存失败时临时文件被删除`() = runBlocking {
+        val repo = newCappedDownloadRepo(maxBytes = 1_000L)
+        stubBody = ByteArray(64) { 7 }
+        stubDeclaredLength = 64L
+
+        // 路径穿越文件名会让 FileNamePolicy.requireSafeBaseName 抛错，从而在下载成功之后、保存之前失败。
+        val pending = historyRepo.saveTask(
+            DownloadTaskHistory(
+                id = 0,
+                illustId = 666004L,
+                pageIndex = 0,
+                title = "Unsafe File Name",
+                userName = "ArtistA",
+                remoteUrl = "https://i.pximg.net/unsafe.jpg",
+                fileName = "../evil.png",
+                status = DownloadStatus.Failed,
+            ),
+        )
+        assertTrue(pending.id > 0, "历史记录必须已持久化")
+        val before = tempFileLeftovers()
+
+        val failure = runCatching { repo.retry(pending) }
+
+        assertTrue(failure.isFailure, "含目录分隔符的文件名必须让保存失败")
+        val leftovers = tempFileLeftovers() - before.toSet()
+        // 实现修复前这里会真的泄漏临时文件，断言前先删掉本用例的产物，避免污染同类其它用例。
+        deleteTempLeftovers(leftovers)
+        assertTrue(leftovers.isEmpty(), "保存失败后不得残留下载临时文件，实际残留: $leftovers")
+    }
+
     // ---------- 风险1：下载流式大小上限与临时文件清理 ----------
 
     /** 由用例改写的桩响应：字节体与显式 Content-Length（null = 不声明长度）。 */
@@ -315,6 +348,14 @@ class DownloadRepositoryTest {
         return FileSystem.SYSTEM.list(cacheDir)
             .map { it.name }
             .filter { it.startsWith("dl_temp_") || it.startsWith("dl_retry_") }
+    }
+
+    /** 删除指定的下载临时文件（尽力而为，失败不影响断言结果）。 */
+    private fun deleteTempLeftovers(names: List<String>) {
+        val cacheDir = getAppCacheDirectory()
+        names.forEach { name ->
+            runCatching { FileSystem.SYSTEM.delete(cacheDir.resolve(name), mustExist = false) }
+        }
     }
 
     private fun illustWithUrl(url: String): Illust = createDummyIllust().copy(

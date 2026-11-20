@@ -33,7 +33,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import okio.FileSystem
 import okio.Path
+import okio.SYSTEM
 import com.perol.pixez.shared.platform.getAppCacheDirectory
 import io.ktor.client.request.prepareGet
 import io.ktor.http.Url
@@ -115,8 +117,12 @@ class DownloadRepository(
             startWriteTolerant = false,
         ) {
             val tempPath = downloadToTempFile(remoteUrl, prefix = "dl_temp_${illust.id}_${pageIndex}_")
-            saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
-                .also { Napier.d("下载完成 path=$it") }
+            try {
+                saver.saveFromTempFile(fileName, tempPath, subDir = subDir, customBasePath = customBasePath)
+                    .also { Napier.d("下载完成 path=$it") }
+            } finally {
+                deleteTempFileQuietly(tempPath)
+            }
         }
     }
 
@@ -209,13 +215,30 @@ class DownloadRepository(
             startWriteTolerant = true,
         ) {
             val tempPath = downloadToTempFile(history.remoteUrl, prefix = "dl_retry_${history.illustId}_${history.pageIndex}_")
-            saver.saveFromTempFile(
-                FileNamePolicy.requireSafeBaseName(history.fileName),
-                tempPath,
-                subDir = subDir,
-                customBasePath = customBasePath,
-            ).also { Napier.d("重试下载完成 path=$it") }
+            try {
+                saver.saveFromTempFile(
+                    FileNamePolicy.requireSafeBaseName(history.fileName),
+                    tempPath,
+                    subDir = subDir,
+                    customBasePath = customBasePath,
+                ).also { Napier.d("重试下载完成 path=$it") }
+            } finally {
+                deleteTempFileQuietly(tempPath)
+            }
         }.task
+    }
+
+    /**
+     * 删除下载临时文件（尽力而为，绝不抛出）：保存成功时文件已被平台实现消费，
+     * 未消费或保存失败时由该兜底清理负责，删除失败只记录日志，不覆盖调用方的真实结果。
+     *
+     * 使用 [NonCancellable]：任务被取消时临时文件同样不能残留。
+     */
+    private suspend fun deleteTempFileQuietly(tempPath: Path) {
+        withContext(NonCancellable) {
+            runCatching { FileSystem.SYSTEM.delete(tempPath, mustExist = false) }
+                .onFailure { Napier.w("清理下载临时文件失败 path=$tempPath", it) }
+        }
     }
 
     /**
@@ -334,11 +357,15 @@ class DownloadRepository(
     /**
      * 从已下载的临时 zip 文件保存动图作品（架构审查 中-15）：
      * 经 [IllustSaver.saveFromTempFile] 流式复制落盘，zip 不整体读入堆内存；
-     * 来源临时文件在保存成功后被平台实现消费（删除）。
+     * 来源临时文件在保存成功后被平台实现消费（删除），保存失败时由本方法兜底删除，绝不留残骸。
      */
     suspend fun saveUgoiraZipFromFile(illust: Illust, zipPath: Path, zipUrl: String): String =
-        runUgoiraSaveTask(illust, zipUrl) { fileName, subDir, customBasePath ->
-            saver.saveFromTempFile(fileName, zipPath, subDir = subDir, customBasePath = customBasePath)
+        try {
+            runUgoiraSaveTask(illust, zipUrl) { fileName, subDir, customBasePath ->
+                saver.saveFromTempFile(fileName, zipPath, subDir = subDir, customBasePath = customBasePath)
+            }
+        } finally {
+            deleteTempFileQuietly(zipPath)
         }
 
     /**

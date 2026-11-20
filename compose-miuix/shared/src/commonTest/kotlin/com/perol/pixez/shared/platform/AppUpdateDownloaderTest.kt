@@ -15,11 +15,14 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppUpdateDownloaderTest {
 
+    /** 与 [asset] 摘要匹配的整包 SHA-256（小写 hex）。 */
+    private val digestHex = "a".repeat(64)
+
     private val asset = UpdateAsset(
         downloadUrl = "https://example.com/app.apk",
         fileName = "app.apk",
         size = 1024L,
-        sha256Digest = null,
+        sha256Digest = "sha256:$digestHex",
         releaseTag = "v2.0.0",
     )
 
@@ -28,6 +31,9 @@ class AppUpdateDownloaderTest {
         fileName = "app-next.apk",
         releaseTag = "v2.1.0",
     )
+
+    /** 远端未提供可用摘要的资产：无法校验完整性，一律拒绝自动安装（fail-closed）。 */
+    private val untrustedAsset = asset.copy(sha256Digest = null)
 
     @Test
     fun `启动即进入下载态并在完成后进入 Done`() = runTest {
@@ -70,10 +76,12 @@ class AppUpdateDownloaderTest {
         assertTrue(failed.message.contains("SHA-256"), "失败原因应说明摘要不匹配")
     }
 
+    // 规格变更（R-05，决策 D1 = fail-closed）：原断言的"无摘要 → Done 并保留安装包"已被推翻，
+    // 缺摘要时无法确认包完整性，必须删除已下载文件并拒绝自动安装。
     @Test
-    fun `没有摘要时跳过校验并保留安装包`() = runTest {
+    fun `缺少摘要时删除安装包并拒绝自动安装`() = runTest {
         var digestCalculated = false
-        var deleted = false
+        val deletedPaths = mutableListOf<String>()
         val downloader = AppUpdateDownloader(
             scope = this,
             downloadFile = { _, _, _ -> Result.success("/cache/app.apk") },
@@ -81,18 +89,21 @@ class AppUpdateDownloaderTest {
                 digestCalculated = true
                 null
             },
-            deleteFile = {
-                deleted = true
+            deleteFile = { path ->
+                deletedPaths += path
                 true
             },
         )
 
-        downloader.start(asset.copy(sha256Digest = null))
+        downloader.start(untrustedAsset)
         advanceUntilIdle()
 
-        assertEquals(UpdateDownloadState.Done("/cache/app.apk", asset.identity), downloader.state.value)
-        assertTrue(!digestCalculated, "无摘要时不应白算整包摘要")
-        assertTrue(!deleted)
+        val failed = assertIs<UpdateDownloadState.Failed>(downloader.state.value)
+        assertTrue(failed.message.contains("摘要"), "失败原因应说明缺少摘要，实际: ${failed.message}")
+        assertEquals(untrustedAsset.identity, failed.target)
+        assertEquals(listOf("/cache/app.apk"), deletedPaths, "无法校验的安装包必须删除")
+        assertNull(downloader.installPathFor(untrustedAsset))
+        assertTrue(!digestCalculated, "无期望摘要时不应白算整包摘要")
     }
 
     @Test
@@ -169,7 +180,7 @@ class AppUpdateDownloaderTest {
             downloadFile = { url, _, _ ->
                 Result.success(if (url == nextAsset.downloadUrl) "/cache/app-next.apk" else "/cache/app.apk")
             },
-            sha256OfFile = { null },
+            sha256OfFile = { digestHex },
             deleteFile = { path ->
                 deletedPaths += path
                 true
@@ -206,7 +217,7 @@ class AppUpdateDownloaderTest {
                 requestedUrl = url
                 Result.success(if (url == nextAsset.downloadUrl) "/cache/app-next.apk" else "/cache/app.apk")
             },
-            sha256OfFile = { null },
+            sha256OfFile = { digestHex },
             deleteFile = { path ->
                 deletedPaths += path
                 true
@@ -233,7 +244,7 @@ class AppUpdateDownloaderTest {
                 downloaded++
                 Result.success("/cache/app.apk")
             },
-            sha256OfFile = { null },
+            sha256OfFile = { digestHex },
             deleteFile = { true },
         )
 
@@ -348,5 +359,35 @@ class AppUpdateDownloaderTest {
 
         assertEquals(UpdateDownloadState.Idle, downloader.state.value)
         assertEquals(listOf("/cache/app.apk"), deletedPaths)
+    }
+
+    // 规格变更（R-05，决策 D1 = fail-closed）：恢复路径同样不得把无法校验的旧完成包接回 Done。
+    @Test
+    fun `恢复时缺少摘要不接回完成态并删除候选文件`() = runTest {
+        val deletedPaths = mutableListOf<String>()
+        var digestCalculated = false
+        val downloader = AppUpdateDownloader(
+            scope = this,
+            downloadFile = { _, _, _ -> Result.failure(IllegalStateException("不应重新下载")) },
+            sha256OfFile = {
+                digestCalculated = true
+                digestHex
+            },
+            deleteFile = { path ->
+                deletedPaths += path
+                true
+            },
+            scanUpdateDir = {
+                listOf(UpdateFileEntry("/cache/app.apk", "app.apk", 1024L))
+            },
+        )
+
+        downloader.syncTarget(untrustedAsset)
+        advanceUntilIdle()
+
+        assertEquals(UpdateDownloadState.Idle, downloader.state.value, "缺少摘要的完成包不得接回 Done")
+        assertNull(downloader.installPathFor(untrustedAsset))
+        assertEquals(listOf("/cache/app.apk"), deletedPaths, "无法校验的完成包应被删除")
+        assertTrue(!digestCalculated, "无期望摘要时不应白算整包摘要")
     }
 }

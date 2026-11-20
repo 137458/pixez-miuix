@@ -210,12 +210,20 @@ class AppUpdateDownloader(
                 result.onSuccess { path ->
                     val expected = UpdateDigest.expectedSha256(asset.sha256Digest)
                     if (expected == null) {
-                        // 远端没给可用摘要：跳过校验，不拦下载。
-                        publish(token, UpdateDownloadState.Done(path, asset.identity))
+                        // 远端没给可用摘要就无法校验完整性：按 fail-closed 拒绝自动安装，
+                        // 已下载的包一并删除，避免留成用户可手动安装的可执行文件。
+                        deleteFile(path)
+                        publish(
+                            token,
+                            UpdateDownloadState.Failed(
+                                "更新包缺少 SHA-256 摘要，已拒绝自动安装",
+                                asset.identity,
+                            ),
+                        )
                         return@onSuccess
                     }
                     val check = UpdateDigest.verify(expected, sha256OfFile(path))
-                    // 只有 Mismatched 需要拦；Matched 放行，Skipped 已在上面提前返回。
+                    // 只有 Mismatched 需要拦；Matched 放行。
                     if (check is DigestCheck.Mismatched) {
                         // 内容与发布信息不一致：删包，绝不把它交给安装器。
                         deleteFile(path)
@@ -309,6 +317,8 @@ class AppUpdateDownloader(
      *
      * 只删除本应用以 `.{safeName}.` 前缀命名的 `.part` 临时文件：桌面端保存目录就是用户的 Downloads 目录，
      * 扩大删除范围会误伤用户其它隐藏 `.part` 文件，因此绝不清理无关文件或其它版本完成包。
+     *
+     * 恢复同样要求远端提供了可用摘要：缺摘要的完成包无法校验，据此删除且不接回 [UpdateDownloadState.Done]。
      */
     private suspend fun restoreCompletedFile(asset: UpdateAsset, token: Long) {
         if (token != generation || _state.value != UpdateDownloadState.Idle) return
@@ -324,9 +334,12 @@ class AppUpdateDownloader(
         val candidate = files.firstOrNull { it.name == safeName && it.size > 0L } ?: return
         if (asset.size > 0L && candidate.size != asset.size) return
         val expected = UpdateDigest.expectedSha256(asset.sha256Digest)
-        if (expected != null &&
-            UpdateDigest.verify(expected, sha256OfFile(candidate.path)) is DigestCheck.Mismatched
-        ) {
+        if (expected == null) {
+            // 没有可用摘要的旧完成包同样不可信：删掉候选文件并保持 Idle，由后续下载重新校验。
+            deleteFile(candidate.path)
+            return
+        }
+        if (UpdateDigest.verify(expected, sha256OfFile(candidate.path)) is DigestCheck.Mismatched) {
             deleteFile(candidate.path)
             return
         }

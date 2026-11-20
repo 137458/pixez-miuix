@@ -55,3 +55,11 @@ DELETE FROM task;
 
 lastInsertRowId:
 SELECT last_insert_rowid();
+
+-- 启动对账：进程崩溃后任务行会永久停在 Downloading，这里统一落到失败终态。
+-- 状态数值与 DownloadHistoryRepository 的映射一致（Pending=0、Downloading=1、Success=2、Failed=3）；
+-- 只匹配 Downloading —— Pending 表示排队待下、Success/Failed 已是终态，都不应被改写。
+markInterrupted:
+UPDATE task
+SET status = 3
+WHERE status = 1;
