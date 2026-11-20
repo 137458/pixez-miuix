@@ -2,7 +2,7 @@
 
 <img src="../compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
 
-# PixEz MIUIX | 使用指南 & 常见问题（FAQ）
+# PixEz MIUIX | 使用指南与常见问题（FAQ）
 
 使用中遇到问题，请先查阅本指南。
 
@@ -27,13 +27,14 @@
 
 ## 一、项目声明与版本说明
 
-- **PixEz MIUIX**：基于 Kotlin Multiplatform（KMP）与 Compose Multiplatform（CMP）构建，采用 Miuix 组件库，遵循 Xiaomi HyperOS 设计语言。正式发布 Android 与 Windows Desktop 双端，macOS target 未启用。
+- **PixEz MIUIX**：基于 Kotlin Multiplatform（KMP）与 Compose Multiplatform（CMP）构建，采用 MIUIX 组件库，遵循 Xiaomi HyperOS 设计语言。正式发布 Android 与 Windows Desktop 双端，macOS target 未启用。
+- **版本标识**：当前版本名为 `0.9.109.7-miuix`，与 `compose-miuix/composeApp/build.gradle.kts` 中的 `versionName` 一致。
 - **Flutter v1 归档**：旧 Flutter 代码冻结于 [`archive/flutter-v1/`](../archive/flutter-v1/)，不再参与主线开发。
 - **关于本 FAQ**：本指南面向 PixEz MIUIX 版本的功能、设置项与常见问题。
 - **免责声明与版权提示**：
-  - 本项目由个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无任何关联或商业合作。
-  - 应用内所有插画、漫画、小说、动图及特辑的版权归原作者及 pixiv Inc. 所有。通过本客户端获取的资源仅限个人学习鉴赏，严禁用于商业用途或侵权行为。
-  - 内置直连等技术仅供网络通信研究，使用者应遵守当地法律法规，由此产生的纠纷由使用者自行承担。
+  - 本项目由个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无关联或商业合作。
+  - 应用内插画、漫画、小说、动图及特辑的版权归原作者及 pixiv Inc. 所有。通过本客户端获取的资源仅限个人学习鉴赏，严禁商业用途或侵权行为。
+  - 应用内置 DoH 域名解析与可选图源镜像，仅用于网络通信研究。使用者应遵守当地法律法规，由此产生的纠纷由使用者自行承担。
 
 ---
 
@@ -43,9 +44,9 @@
 
 | 平台 | 文件格式 / 产物 | 说明与运行方式 |
 | :--- | :--- | :--- |
-| **Android** | `PixEz-MIUIX-v*.apk` | 需要 Android 7.0（API 24）及以上系统，已适配手机与平板 |
+| **Android** | `PixEz-MIUIX-v*.apk` | 需要 Android 12（API 31）及以上系统，已适配手机与平板 |
 | **Windows Desktop** | `PixEz-Standalone.exe` / `PixEz-windows-x64-portable.zip` / `PixEz-*.msi` | 单文件版、便携版与 MSI 安装包均内嵌 Java 运行环境，无需预装 Java |
-| **macOS / Linux** | 无 | 未提供发布安装包 |
+| **macOS / Linux** | 无 | 未提供发布安装包；Linux 可从源码构建 Deb 包 |
 
 ---
 
@@ -55,45 +56,51 @@
 
 PixEz MIUIX 提供两种登录方式：
 
-- **网页端授权登录（推荐）**：点击登录按钮打开系统浏览器完成 Pixiv 授权，授权完成后自动回调，客户端换取并持久化登录凭证。
-- **Token 快速登录**：在登录界面粘贴 Pixiv Refresh Token 或授权回调链接（`pixiv://...`），支持从剪贴板导入。
+- **网页端授权登录（推荐）**：点击登录按钮，在系统浏览器完成 Pixiv 授权。授权完成后自动回调，客户端换取并持久化登录凭证。
+- **Token 快速登录**：在登录界面粘贴 Pixiv Refresh Token 或授权回调链接（`pixiv://...`）。支持从剪贴板导入。
 
 ### 2. 无法登录
 
-- 核对账号与密码；错误提示由 Pixiv 服务端返回，若怀疑密码问题，登录 Pixiv 网页端修改密码后重试。
-- 授权页打不开或超时：检查网络代理，或进入「设置 -> 网络设置」开启 SNI 绕过。
+- 核对账号与密码。错误提示由 Pixiv 服务端返回。若怀疑密码问题，登录 Pixiv 网页端修改密码后重试。
+- 授权页打不开或超时：检查网络代理，或在「设置 → 存储 → 网络设置」中调整网络模式。
 
 ---
 
 ## 四、多语言与界面切换
 
-应用内置多语言体系，当前支持 12 种语言：
+应用内置多语言体系，当前支持 13 种语言：
 
-- 简体中文 (`zh-CN`)、繁体中文 (`zh-TW`)
-- English (`en-US`)
-- 日本語 (`ja-JP`)
-- 한국어 (`ko-KR`)
-- Русский (`ru-RU`)
-- Español (`es-ES`)
-- Türkçe (`tr-TR`)
-- Bahasa Indonesia (`id-ID`)
-- Filipino (`fil-PH`)
-- Deutsch (`de-DE`)
-- Tiếng Việt (`vi-VN`)（机器翻译预览版）
+- English（`en-US`）
+- 简体中文（`zh-CN`）
+- 繁體中文（`zh-TW`）
+- 日本語（`ja`）
+- 한국어（`ko`）
+- Русский（`ru`）
+- Español（`es`）
+- Türkçe（`tr`）
+- Bahasa Indonesia（`id`）
+- Filipino（`fil`）
+- Deutsch（`de`）
+- Tiếng Việt（`vi`，机器翻译预览版）
+- فارسی（`fa`，波斯语，支持 RTL 排版）
 
-**切换方式**：进入「设置 -> 通用 -> 语言设置」，选择所需语言，更改在应用重启后生效。
+**切换方式**：进入「设置 → 主题 → 语言设置」，选择所需语言。更改在应用重启后生效。
 
 ---
 
 ## 五、直连访问与网络问题
 
-### 1. 免代理直连原理
+### 1. 网络模式与域名解析
 
-应用内置针对 Pixiv 域名与图片 CDN 的直连方案，包含镜像源加速、SNI 绕过与安全 DNS（DNS over HTTPS，解析失败自动熔断约 5 分钟）。在「设置 -> 网络设置」中选择网络模式并完成配置，无需代理软件即可加载 Pixiv 内容。
+域名解析走 DoH（DNS over HTTPS），解析失败后熔断 5 分钟，冷却期内回退系统 DNS。图片 CDN 可选镜像 Host。
+
+网络模式分 `ech`、`compat`、`standard` 三档，账号接口与图片接口分别设置。ECH 与兼容档的差异由底层 TLS 协商承担，应用不修改 SNI。
+
+图源支持默认 Host、镜像 Host 与自定义 Host。`standard` 档强制使用默认 Host，并隐藏图源选项。
 
 ### 2. 已有代理环境
 
-本地已配置代理时，可在「设置 -> 网络设置」中切换网络模式，改由本地代理处理请求。
+本地已配置代理时，`RobustDohDns` 通过 `ProxySelector` 复用系统代理，无需在应用内另配。网络模式只决定域名解析走 DoH 还是系统 DNS，入口在「设置 → 存储 → 网络设置」。
 
 ---
 
@@ -101,8 +108,9 @@ PixEz MIUIX 提供两种登录方式：
 
 ### 1. 单图与多 P 插画下载
 
-- 在插画详情页点击下载按钮下载当前作品；多 P 作品提供「下载全部」入口，一次加入全部页面。
-- 进入「设置 -> 下载任务」查看下载队列，支持批量重试失败任务与清空已完成任务。
+- 在插画详情页点击下载按钮下载当前作品。多 P 作品提供「下载全部」入口，一次加入全部页面。
+- 下载与动图压缩包共用 256 MB 单任务上限，超限会中止并清理临时文件。
+- 进入「设置 → 画质与保存 → 下载任务」查看下载队列，支持批量重试失败任务与清空已完成任务。
 
 ### 2. 动图（Ugoira）播放与保存
 
@@ -111,7 +119,7 @@ PixEz MIUIX 提供两种登录方式：
 
 ### 3. 保存路径与相册同步
 
-- **Android**：保存到公共 `Pictures/PixEz` 目录（ZIP 保存到公共 `Downloads/PixEz`），并同步系统媒体库，可在系统相册中查看。
+- **Android**：保存到公共 `Pictures/PixEz` 目录，ZIP 保存到公共 `Downloads/PixEz`。两类文件同步到系统媒体库，可在系统相册查看。
 - **桌面端**：保存到用户主目录 `Pictures/PixEz`。
 
 ---
@@ -120,12 +128,12 @@ PixEz MIUIX 提供两种登录方式：
 
 ### 1. 为什么看不到 R-18 / R-18G 作品？
 
-- **Pixiv 服务端限制**：登录 Pixiv 网页端，进入「用户设置 -> 浏览限制」，将限制浏览作品修改为「显示作品」并保存。
-- **客户端开关**：在「设置 -> 屏蔽与过滤」中确认相关展示选项未关闭。
+- **Pixiv 服务端限制**：登录 Pixiv 网页端，进入「用户设置 → 浏览限制」。将限制浏览作品改为「显示作品」并保存。
+- **客户端开关**：在「设置 → 屏蔽与隐私 → 屏蔽与过滤」中确认相关展示选项未关闭。
 
 ### 2. 屏蔽与过滤
 
-「设置 -> 屏蔽与过滤」支持四类过滤：
+「设置 → 屏蔽与隐私 → 屏蔽与过滤」支持四类过滤：
 
 - **标签屏蔽（Tag）**：按标签文本屏蔽作品。
 - **画师屏蔽（User ID）**：屏蔽指定画师的全部作品。
@@ -136,15 +144,15 @@ PixEz MIUIX 提供两种登录方式：
 
 ## 八、大屏、平板与桌面端适配
 
-- **HyperOS 设计语言**：采用 Miuix 官方组件与 Squircle 超椭圆圆角、分层卡片布局。
-- **悬浮底栏**：基于 AndroidLiquidGlass 实现，具备多层背景采样与透镜折射效果。
-- **宽屏自适应**：宽屏下内容居中限宽，导航自动切换为侧边栏（NavigationRail），瀑布流列数按宽度阈值自适应（默认阈值 160 dp，可调范围 50–2,160 dp）。
+- **HyperOS 设计语言**：采用 MIUIX 官方组件与超椭圆圆角、分层卡片布局。
+- **悬浮底栏**：液态玻璃折射与背景模糊由着色器渲染。Android 13（API 33）及以上使用系统 `RuntimeShader`，低版本回退为模糊；桌面端使用 Skia `RuntimeEffect`。
+- **宽屏自适应**：宽屏下内容居中限宽，导航切换为侧边栏（`NavigationRail`）。瀑布流列数按宽度阈值自适应，默认 160 dp，可调范围 50～2160 dp。
 
 ---
 
 ## 九、数据备份与迁移
 
-进入「设置 -> 数据备份与导出」，可对以下五类数据执行导出与导入：
+进入「设置 → 存储 → 数据备份与导出」，可对以下五类数据执行导出与导入：
 
 - 搜索标签历史（`pixez_search_tags.json`）
 - 收藏标签（`pixez_book_tags.json`）
@@ -152,12 +160,12 @@ PixEz MIUIX 提供两种登录方式：
 - 小说历史（`pixez_novel_history.json`）
 - 屏蔽数据（`pixez_mute_data.json`）
 
-每类数据导出为一个 JSON 文件；导入时执行体积、条目数与字段校验，可在新设备恢复数据。
+每类数据导出为一个 JSON 文件。导入时校验文件格式，可在新设备恢复数据。
 
 ---
 
 ## 十、反馈与交流社区
 
-遇到 Bug 或有功能建议，通过邮件反馈：[gaaf14738@gmail.com](mailto:gaaf14738@gmail.com)。
+遇到 Bug 或有功能建议，通过邮件反馈：[PxezFeedBack@outlook.com](mailto:PxezFeedBack@outlook.com)。
 
 > **提问倡议**：反馈问题时请附带系统版本、设备型号、应用版本号与复现步骤。
