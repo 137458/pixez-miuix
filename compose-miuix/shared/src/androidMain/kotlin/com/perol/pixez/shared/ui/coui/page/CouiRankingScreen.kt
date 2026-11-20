@@ -138,6 +138,7 @@ internal fun CouiRankingScreen(
                         hasMore = feed.listState.nextUrl != null,
                         isLoadingMore = feed.listState.isLoadingMore,
                         loadMoreError = feed.listState.loadMoreError,
+                        isRefreshing = feed.listState.isRefreshing,
                         onLoadMore = feed.loadMore,
                     )
                 }

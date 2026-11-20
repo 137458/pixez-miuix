@@ -384,6 +384,7 @@ internal fun IllustTabBody(
                     hasMore = hasMore,
                     isLoadingMore = isLoadingMore,
                     loadMoreError = loadMoreError,
+                    isRefreshing = isRefreshing,
                     onLoadMore = onLoadMore,
                 )
             }

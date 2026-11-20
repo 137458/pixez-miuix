@@ -34,16 +34,37 @@ class FilterableIllustListState(
     /** 恢复态（restoreRaw）待首轮重过滤标志：过滤设置可能在跨页期间已变化，版本号无从比较。 */
     private var forceRefilterOnNextCheck = false
 
-    /** 全量替换原始列表（首屏加载/下拉刷新成功），按 [filterVersion] 过滤。 */
-    suspend fun replace(raw: List<Illust>, filterVersion: Int) {
+    /**
+     * 全量替换原始列表（首屏加载/下拉刷新成功），按 [filterVersion] 过滤。
+     *
+     * [filter] 是挂起闭包（实现通常要读屏蔽名单），期间调用方可能已切号 [clear]（R-02）：
+     * 故写入前两次复查 [isStillValid]，且只有两次复查都通过才一次性提交三个字段，
+     * 避免中途失效时留下「原始列表已换、展示列表仍是旧值」的半成品。
+     *
+     * @param isStillValid 调用方的有效性守卫（如代数是否仍匹配）；返回 false 表示本次写入作废。
+     *   无默认值：正确性守卫不设「默认放行」的退路，每个调用点必须显式表态。
+     */
+    suspend fun replace(
+        raw: List<Illust>,
+        filterVersion: Int,
+        isStillValid: () -> Boolean,
+    ) {
+        if (!isStillValid()) return
+        val filtered = filter(raw)
+        if (!isStillValid()) return
         rawIllusts = raw
         appliedFilterVersion = filterVersion
-        filteredIllusts = filter(raw)
+        filteredIllusts = filtered
     }
 
-    /** 追加下一页原始数据（触底翻页成功），按 id 去重合并后按 [filterVersion] 过滤。 */
-    suspend fun append(rawPage: List<Illust>, filterVersion: Int) {
-        replace(rawIllusts.orEmpty().appendDistinct(rawPage), filterVersion)
+    /** 追加下一页原始数据（触底翻页成功），按 id 去重合并后按 [filterVersion] 过滤；守卫同 [replace]。 */
+    suspend fun append(
+        rawPage: List<Illust>,
+        filterVersion: Int,
+        isStillValid: () -> Boolean,
+    ) {
+        if (!isStillValid()) return
+        replace(rawIllusts.orEmpty().appendDistinct(rawPage), filterVersion, isStillValid)
     }
 
     /**

@@ -213,6 +213,7 @@ internal fun CouiNewScreen(
                                 hasMore = feed.listState.nextUrl != null,
                                 isLoadingMore = feed.listState.isLoadingMore,
                                 loadMoreError = feed.listState.loadMoreError,
+                                isRefreshing = feed.listState.isRefreshing,
                                 onLoadMore = feed.loadMore,
                             )
                         }
@@ -235,6 +236,7 @@ private fun CouiWatchlistContent(
     val hasMore = feed.watchlistState.nextUrl != null
     val isLoadingMore = feed.watchlistState.isLoadingMore
     val loadMoreError = feed.watchlistState.loadMoreError
+    val isRefreshing = feed.watchlistState.isRefreshing
 
     when {
         series == null && feed.watchlistState.initialError == null -> CouiStatePlaceholder(
@@ -249,7 +251,7 @@ private fun CouiWatchlistContent(
             message = strings.watchlistEmpty,
         )
         series != null -> {
-            val shouldLoadMore by remember(feed.watchlistListState, series.size, hasMore, isLoadingMore, loadMoreError) {
+            val shouldLoadMore by remember(feed.watchlistListState, series.size, hasMore, isLoadingMore, loadMoreError, isRefreshing) {
                 derivedStateOf {
                     shouldPreloadMore(
                         itemCount = series.size,
@@ -258,6 +260,7 @@ private fun CouiWatchlistContent(
                         hasLoadMoreError = loadMoreError != null,
                         lastVisibleItemIndex = feed.watchlistListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1,
                         thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_ITEMS,
+                        isRefreshing = isRefreshing,
                     )
                 }
             }

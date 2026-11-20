@@ -563,4 +563,50 @@ class PagedListStateTest {
         // 六个分页标志必须是六个不同的快照状态对象：UI 在组合期直读，普通 var 写入不会触发重组。
         assertEquals(6, observed.size)
     }
+
+    // ---- 刷新在途（R-01）：旧游标页不得并入刷新后的列表 ----
+
+    @Test
+    fun refreshingSuppressesPreloadGuard() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source)
+        source.pages[null] = PagedListPage(List(20) { "a$it" }, "p1")
+        state.loadFirst()
+        assertTrue(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+
+        // 强制刷新在途：旧列表仍是 20 条、仍有下一页，但刷新结果未落盘前不得触发预加载
+        source.hold(2)
+        val refresh = launch { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+        assertFalse(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+
+        source.release(2)
+        refresh.join()
+        assertFalse(state.isRefreshing)
+        assertTrue(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+    }
+
+    @Test
+    fun loadMoreReturnsSkippedWhileRefreshing() = runTest {
+        val source = FakePagedSource()
+        val state = newState(source)
+        source.pages[null] = PagedListPage(listOf("a1", "a2"), "p1")
+        source.pages["p1"] = PagedListPage(listOf("a3"), null)
+        state.loadFirst()
+
+        source.hold(2)
+        val refresh = launch { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+
+        // 刷新在途时不得发起翻页：直接 Skipped，且不发出请求
+        assertEquals(PagedLoadOutcome.Skipped, state.loadMore())
+        assertEquals(2, source.calls.size)
+        assertFalse(state.isLoadingMore)
+
+        source.release(2)
+        refresh.join()
+        assertEquals(2, source.calls.size)
+    }
 }

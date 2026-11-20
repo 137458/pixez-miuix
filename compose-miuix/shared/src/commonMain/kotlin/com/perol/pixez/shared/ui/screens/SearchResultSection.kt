@@ -180,6 +180,7 @@ internal fun SearchIllustResultGrid(
                     hasMore = listState.nextUrl != null,
                     isLoadingMore = listState.isLoadingMore,
                     loadMoreError = listState.loadMoreError,
+                    isRefreshing = listState.isRefreshing,
                     onLoadMore = ::loadMore,
                 )
             }

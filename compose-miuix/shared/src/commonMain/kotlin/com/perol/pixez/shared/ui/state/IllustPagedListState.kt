@@ -68,6 +68,12 @@ class IllustPagedListState(
         private set
 
     /**
+     * 翻页请求令牌（R-03）：每次 [loadMore] 递增并捕获，finally 时与当前值比对，
+     * 使同代内先结束的旧请求无法清除后起请求的在途标志。UI 不读，普通 var 即可。
+     */
+    private var loadMoreToken: Int = 0
+
+    /**
      * 首屏加载或强制刷新：递增 [generation] 作废所有在途翻页并复位其加载态，再拉取首页。
      * 非 force 且已有数据且无首屏错误时早退（缓存命中，不做网络请求）。
      * 早退判断必须先于 generation/翻页标志复位执行：缓存命中不重新加载，
@@ -91,11 +97,18 @@ class IllustPagedListState(
             suspendRunCatchingNonCancel { fetch(null) }
                 .onSuccess { page ->
                     if (myGeneration == generation) {
-                        filterable.replace(page.illusts, filterVersionProvider())
-                        nextUrl = page.nextUrl
-                        initialError = null
-                        loadMoreError = null
-                        outcome = PagedLoadOutcome.Written
+                        filterable.replace(
+                            page.illusts,
+                            filterVersionProvider(),
+                            isStillValid = { myGeneration == generation },
+                        )
+                        // 过滤是挂起闭包（R-02）：期间若发生 reset/刷新，游标与结果态同样不得写回。
+                        if (myGeneration == generation) {
+                            nextUrl = page.nextUrl
+                            initialError = null
+                            loadMoreError = null
+                            outcome = PagedLoadOutcome.Written
+                        }
                     }
                 }
                 .onFailure { error ->
@@ -125,8 +138,13 @@ class IllustPagedListState(
     suspend fun loadMore(): PagedLoadOutcome {
         val currentNextUrl = nextUrl ?: return PagedLoadOutcome.Skipped
         if (isLoadingMore) return PagedLoadOutcome.Skipped
+        // 刷新在途（R-01）：列表仍是刷新前的游标页，续拉会把旧页并入刷新后的列表。
+        if (isRefreshing) return PagedLoadOutcome.Skipped
         // 翻页捕获当前代数不递增：刷新路径递增后本任务即失配（RankingScreen.kt:157 语义）。
         val myGeneration = generation
+        // 同代内可能有先后两轮翻页（R-03）：请求令牌区分在途标志的归属，
+        // 先结束的旧请求不得清除后起请求的在途标志。
+        val myToken = ++loadMoreToken
         isLoadingMore = true
         loadMoreError = null
         var outcome = PagedLoadOutcome.Discarded
@@ -134,9 +152,16 @@ class IllustPagedListState(
             suspendRunCatchingNonCancel { fetch(currentNextUrl) }
                 .onSuccess { page ->
                     if (myGeneration == generation) {
-                        filterable.append(page.illusts, filterVersionProvider())
-                        nextUrl = page.nextUrl
-                        outcome = PagedLoadOutcome.Written
+                        filterable.append(
+                            page.illusts,
+                            filterVersionProvider(),
+                            isStillValid = { myGeneration == generation },
+                        )
+                        // 过滤是挂起闭包（R-02）：期间若发生 reset/刷新，游标与本轮结果态不得写回。
+                        if (myGeneration == generation) {
+                            nextUrl = page.nextUrl
+                            outcome = PagedLoadOutcome.Written
+                        }
                     }
                 }
                 .onFailure { error ->
@@ -146,7 +171,8 @@ class IllustPagedListState(
                     }
                 }
         } finally {
-            if (myGeneration == generation) {
+            // 代数与令牌双守卫：过期刷新的旧请求、同代内先结束的旧翻页都不得清除当前在途标志。
+            if (myGeneration == generation && myToken == loadMoreToken) {
                 isLoadingMore = false
             }
         }
@@ -154,7 +180,7 @@ class IllustPagedListState(
     }
 
     /**
-     * 触底预加载判定（架构审查 UI-2）：四条件守卫与本类过滤后条目数单点判定，
+     * 触底预加载判定（架构审查 UI-2）：五条件守卫与本类过滤后条目数单点判定，
      * 调用方只提供布局上报的末项索引。
      */
     fun shouldPreloadMore(
@@ -167,6 +193,7 @@ class IllustPagedListState(
         hasLoadMoreError = loadMoreError != null,
         lastVisibleItemIndex = lastVisibleItemIndex,
         thresholdItems = thresholdItems,
+        isRefreshing = isRefreshing,
     )
 
     /** footer 三态所需的状态快照（架构审查 UI-3），交给统一 footer 组件渲染。 */

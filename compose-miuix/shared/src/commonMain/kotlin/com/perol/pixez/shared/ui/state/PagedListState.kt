@@ -110,6 +110,8 @@ class PagedListState<T>(
     suspend fun loadMore(): PagedLoadOutcome {
         val currentNextUrl = nextUrl ?: return PagedLoadOutcome.Skipped
         if (isLoadingMore) return PagedLoadOutcome.Skipped
+        // 刷新在途（R-01）：列表仍是刷新前的游标页，续拉会把旧页并入刷新后的列表。
+        if (isRefreshing) return PagedLoadOutcome.Skipped
         val myGeneration = generation
         isLoadingMore = true
         loadMoreError = null
@@ -138,7 +140,7 @@ class PagedListState<T>(
     }
 
     /**
-     * 触底预加载判定（架构审查 UI-2）：四条件守卫与本类累积条目数单点判定，
+     * 触底预加载判定（架构审查 UI-2）：五条件守卫与本类累积条目数单点判定，
      * 调用方只提供布局上报的末项索引。
      */
     fun shouldPreloadMore(
@@ -151,6 +153,7 @@ class PagedListState<T>(
         hasLoadMoreError = loadMoreError != null,
         lastVisibleItemIndex = lastVisibleItemIndex,
         thresholdItems = thresholdItems,
+        isRefreshing = isRefreshing,
     )
 
     /** footer 三态所需的状态快照（架构审查 UI-3），交给统一 footer 组件渲染。 */

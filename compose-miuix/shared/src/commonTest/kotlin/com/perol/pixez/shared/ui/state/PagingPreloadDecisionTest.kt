@@ -32,6 +32,7 @@ class PagingPreloadDecisionTest {
         isLoadingMore: Boolean = false,
         hasError: Boolean = false,
         thresholdItems: Int = listThreshold,
+        isRefreshing: Boolean = false,
     ): Boolean = shouldPreloadMore(
         itemCount = itemCount,
         hasMore = hasMore,
@@ -39,6 +40,7 @@ class PagingPreloadDecisionTest {
         hasLoadMoreError = hasError,
         lastVisibleItemIndex = lastVisibleItemIndex,
         thresholdItems = thresholdItems,
+        isRefreshing = isRefreshing,
     )
 
     private fun illust(id: Long): Illust = Illust(
@@ -103,6 +105,31 @@ class PagingPreloadDecisionTest {
         // 出错后等待用户显式重试，不自动续拉
         assertFalse(decide(itemCount = 20, lastVisibleItemIndex = 19, hasError = true))
         assertFalse(decide(itemCount = 20, lastVisibleItemIndex = 18, hasError = true))
+    }
+
+    @Test
+    fun refreshingNeverPreloads() {
+        // R-01：刷新在途时列表仍指向刷新前的旧游标，续拉会把旧页并入刷新后的列表，
+        // 故其余条件全部满足也不得触发预加载。
+        assertFalse(decide(itemCount = 20, lastVisibleItemIndex = 19, isRefreshing = true))
+        assertFalse(
+            decide(
+                itemCount = 200,
+                lastVisibleItemIndex = 199,
+                isRefreshing = true,
+                thresholdItems = staggeredThreshold,
+            ),
+        )
+        // 对照组：同一组输入在非刷新态必须触发，确认上面两条不是被其它条件挡住而空绿。
+        assertTrue(decide(itemCount = 20, lastVisibleItemIndex = 19, isRefreshing = false))
+        assertTrue(
+            decide(
+                itemCount = 200,
+                lastVisibleItemIndex = 199,
+                isRefreshing = false,
+                thresholdItems = staggeredThreshold,
+            ),
+        )
     }
 
     // ---- 边界索引与两种阈值 ----

@@ -47,6 +47,7 @@ internal fun CouiIllustGrid(
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     loadMoreError: Throwable? = null,
+    isRefreshing: Boolean,
     onLoadMore: (() -> Unit)? = null,
 ) {
     // 设置变更版本由列表统一收集一次：卡片只做无状态渲染，避免每张卡片各挂一个收集器。
@@ -60,6 +61,7 @@ internal fun CouiIllustGrid(
             loadMoreError = loadMoreError,
             lastVisibleItemIndex = { state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1 },
             thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
+            isRefreshing = isRefreshing,
             onLoadMore = onLoadMore,
         )
     }

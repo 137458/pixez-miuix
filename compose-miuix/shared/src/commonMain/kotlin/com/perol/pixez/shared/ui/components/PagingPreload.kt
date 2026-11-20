@@ -62,13 +62,14 @@ internal fun rememberPagingPreload(
     loadMoreError: Throwable?,
     lastVisibleItemIndex: () -> Int,
     thresholdItems: Int,
+    isRefreshing: Boolean,
     onLoadMore: () -> Unit,
 ) {
     val currentOnLoadMore by rememberUpdatedState(onLoadMore)
     val currentLastVisibleItemIndex by rememberUpdatedState(lastVisibleItemIndex)
 
     // 键含分页标志与条目数：标志翻转或长度变化都要重算，否则派生值会停在旧判定上。
-    val shouldLoadMore by remember(itemCount, hasMore, isLoadingMore, loadMoreError, thresholdItems) {
+    val shouldLoadMore by remember(itemCount, hasMore, isLoadingMore, loadMoreError, thresholdItems, isRefreshing) {
         derivedStateOf {
             shouldPreloadMore(
                 itemCount = itemCount,
@@ -77,6 +78,7 @@ internal fun rememberPagingPreload(
                 hasLoadMoreError = loadMoreError != null,
                 lastVisibleItemIndex = currentLastVisibleItemIndex(),
                 thresholdItems = thresholdItems,
+                isRefreshing = isRefreshing,
             )
         }
     }

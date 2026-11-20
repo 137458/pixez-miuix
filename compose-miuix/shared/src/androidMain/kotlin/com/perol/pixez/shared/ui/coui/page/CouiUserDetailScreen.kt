@@ -706,6 +706,7 @@ private fun CouiUserWorksTab(
         hasMore = listState.nextUrl != null,
         isLoadingMore = listState.isLoadingMore,
         loadMoreError = listState.loadMoreError,
+        isRefreshing = listState.isRefreshing,
         header = header,
         gridState = gridState,
         onLoadMore = loadMore,
@@ -796,6 +797,7 @@ private fun CouiUserBookmarksTab(
         hasMore = activeState.nextUrl != null,
         isLoadingMore = activeState.isLoadingMore,
         loadMoreError = activeState.loadMoreError,
+        isRefreshing = activeState.isRefreshing,
         header = bookmarkHeader,
         gridState = gridState,
         onLoadMore = loadMore,
@@ -822,6 +824,7 @@ private fun CouiUserTabBody(
     hasMore: Boolean,
     isLoadingMore: Boolean,
     loadMoreError: Throwable?,
+    isRefreshing: Boolean,
     header: @Composable () -> Unit,
     gridState: LazyStaggeredGridState,
     onLoadMore: () -> Unit,
@@ -861,6 +864,7 @@ private fun CouiUserTabBody(
             hasMore = hasMore,
             isLoadingMore = isLoadingMore,
             loadMoreError = loadMoreError,
+            isRefreshing = isRefreshing,
             onLoadMore = onLoadMore,
         )
         else -> CouiUserTabPlaceholderList(

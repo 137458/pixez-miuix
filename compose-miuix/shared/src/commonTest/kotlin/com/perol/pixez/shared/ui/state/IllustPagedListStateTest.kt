@@ -10,6 +10,7 @@ import com.perol.pixez.shared.data.model.MetaSinglePage
 import com.perol.pixez.shared.data.model.isR18
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -551,5 +552,177 @@ class IllustPagedListStateTest {
         val retryOutcome = state.loadMore()
         assertEquals(PagedLoadOutcome.Written, retryOutcome, "复位后再次触发 loadMore 应正常写入下一页")
         assertEquals(listOf(1L, 2L), state.filteredIllusts?.map { it.id })
+    }
+
+    // ---- 刷新在途（R-01）：旧游标页不得并入刷新后的列表 ----
+
+    @Test
+    fun refreshingSuppressesPreloadGuard() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(List(20) { illust(it.toLong()) }, "p1")
+        state.loadFirst()
+        assertTrue(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+
+        // 强制刷新在途：旧列表仍是 20 条、仍有下一页，但刷新结果未落盘前不得触发预加载
+        source.hold(2)
+        val refresh = launch { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+        assertFalse(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+
+        source.release(2)
+        refresh.join()
+        assertFalse(state.isRefreshing)
+        assertTrue(state.shouldPreloadMore(lastVisibleItemIndex = 19))
+    }
+
+    @Test
+    fun loadMoreReturnsSkippedWhileRefreshing() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1), illust(2)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(3)), null)
+        state.loadFirst()
+
+        source.hold(2)
+        val refresh = launch { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+
+        // 刷新在途时不得发起翻页：直接 Skipped，且不发出请求
+        assertEquals(PagedLoadOutcome.Skipped, state.loadMore())
+        assertEquals(2, source.calls.size)
+        assertFalse(state.isLoadingMore)
+
+        source.release(2)
+        refresh.join()
+        assertEquals(2, source.calls.size)
+    }
+
+    // ---- 过滤写入复查世代（R-02）：切号在途过滤不得写回 ----
+
+    @Test
+    fun resetDuringInFlightReplaceFilterDoesNotWriteBack() = runTest {
+        val source = FakeIllustSource()
+        val filterGate = CompletableDeferred<Unit>()
+        var holdFilter = false
+        // 过滤闭包可控挂起：模拟 filter 内部 withContext(IO) 读取黑名单期间的挂起点
+        val state = IllustPagedListState(
+            fetch = source::fetch,
+            filter = { raw ->
+                if (holdFilter) filterGate.await()
+                raw
+            },
+            filterVersionProvider = { 0 },
+        )
+        source.pages[null] = IllustPagedPage(listOf(illust(1), illust(2)), "p1")
+        state.loadFirst()
+        assertEquals(listOf(1L, 2L), state.rawIllusts?.map { it.id })
+
+        // 换账号首页返回 [7]：过滤挂起期间 reset() 作废旧账号数据
+        source.pages[null] = IllustPagedPage(listOf(illust(7)), "pA")
+        holdFilter = true
+        val refresh = async { state.loadFirst(force = true) }
+        runCurrent()
+        assertTrue(state.isRefreshing)
+
+        state.reset()
+        filterGate.complete(Unit)
+        val outcome = refresh.await()
+
+        assertNull(state.rawIllusts, "reset 后旧账号原始列表不得写回")
+        assertNull(state.filteredIllusts, "reset 后旧账号展示列表不得写回")
+        assertNull(state.nextUrl, "reset 后旧游标不得写回")
+        assertEquals(PagedLoadOutcome.Discarded, outcome, "跨挂起点失效的刷新不得报告 Written")
+    }
+
+    @Test
+    fun resetDuringInFlightAppendFilterDoesNotWriteBack() = runTest {
+        val source = FakeIllustSource()
+        val filterGate = CompletableDeferred<Unit>()
+        var holdFilter = false
+        val state = IllustPagedListState(
+            fetch = source::fetch,
+            filter = { raw ->
+                if (holdFilter) filterGate.await()
+                raw
+            },
+            filterVersionProvider = { 0 },
+        )
+        source.pages[null] = IllustPagedPage(listOf(illust(1), illust(2)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(3)), null)
+        state.loadFirst()
+        assertEquals(listOf(1L, 2L), state.rawIllusts?.map { it.id })
+
+        // 翻页结果已在途、过滤挂起期间 reset()：下一批旧账号数据整批丢弃
+        holdFilter = true
+        val loadMoreJob = async { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        state.reset()
+        filterGate.complete(Unit)
+        val outcome = loadMoreJob.await()
+
+        assertNull(state.rawIllusts, "reset 后旧账号下一页不得写回原始列表")
+        assertNull(state.filteredIllusts, "reset 后旧账号下一页不得写回展示列表")
+        assertNull(state.nextUrl, "reset 后旧游标不得写回")
+        assertEquals(PagedLoadOutcome.Discarded, outcome, "跨挂起点失效的翻页不得报告 Written")
+    }
+
+    // ---- 同代翻页请求令牌（R-03）----
+
+    @Test
+    fun sameGenerationLoadMoreSequenceClearsInFlightFlagEachTime() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(2)), "p2")
+        source.pages["p2"] = IllustPagedPage(listOf(illust(3)), null)
+        state.loadFirst()
+        val generationBefore = state.generation
+
+        // 同代内两轮翻页各持一个请求令牌：每轮结束都必须清掉自己的在途标志
+        assertEquals(PagedLoadOutcome.Written, state.loadMore())
+        assertFalse(state.isLoadingMore, "第一轮翻页结束必须复位在途标志")
+        assertEquals(PagedLoadOutcome.Written, state.loadMore())
+        assertFalse(state.isLoadingMore, "第二轮翻页结束必须复位在途标志")
+
+        assertEquals(generationBefore, state.generation, "翻页不递增代数：两轮翻页同代")
+        assertEquals(listOf(1L, 2L, 3L), state.rawIllusts?.map { it.id })
+    }
+
+    @Test
+    fun cancelledLoadMoreDoesNotClearLaterInFlightLoadMoreFlag() = runTest {
+        val source = FakeIllustSource()
+        val settings = FakeFilterSettings()
+        val state = newState(source, settings)
+        source.pages[null] = IllustPagedPage(listOf(illust(1)), "p1")
+        source.pages["p1"] = IllustPagedPage(listOf(illust(2)), null)
+        state.loadFirst()
+
+        source.hold(2)
+        val first = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore)
+
+        // 同代内先取消一轮翻页，再起新一轮：新一轮在途标志不得被先结束的请求清掉
+        first.cancel()
+        source.hold(3)
+        val second = launch { state.loadMore() }
+        runCurrent()
+        assertTrue(state.isLoadingMore, "新一轮翻页在途时在途标志不得被先结束的请求清除")
+
+        source.release(3)
+        second.join()
+        first.join()
+
+        assertFalse(state.isLoadingMore)
+        assertEquals(listOf(1L, 2L), state.rawIllusts?.map { it.id })
+        assertNull(state.nextUrl)
     }
 }

@@ -71,7 +71,7 @@ class FilterableIllustListStateTest {
         )
         val safe = illust(id = 101L)
         val r18 = illust(id = 202L, xRestrict = 1)
-        state.replace(raw = listOf(safe, r18), filterVersion = 0)
+        state.replace(raw = listOf(safe, r18), filterVersion = 0, isStillValid = { true })
         assertEquals(listOf(101L, 202L), state.filteredIllusts?.map { it.id })
 
         // 模拟过滤条件变化：filterChangeVersion 0 → 1，须对原始列表本地重过滤
@@ -90,7 +90,7 @@ class FilterableIllustListStateTest {
             filter = { raw -> settings.filter(raw) },
             initialFilterVersion = 5,
         )
-        state.replace(raw = listOf(illust(id = 1L), illust(id = 2L, xRestrict = 1)), filterVersion = 5)
+        state.replace(raw = listOf(illust(id = 1L), illust(id = 2L, xRestrict = 1)), filterVersion = 5, isStillValid = { true })
 
         settings.hideR18 = true
         val refiltered = state.refilterIfChanged(filterVersion = 5)
@@ -106,17 +106,17 @@ class FilterableIllustListStateTest {
             filter = { raw -> settings.filter(raw) },
             initialFilterVersion = 0,
         )
-        state.replace(raw = listOf(illust(id = 1L)), filterVersion = 0)
+        state.replace(raw = listOf(illust(id = 1L)), filterVersion = 0, isStillValid = { true })
 
         // 触底翻页：原始列表去重合并，过滤按当前版本执行
         settings.hideR18 = false
-        state.append(rawPage = listOf(illust(id = 1L), illust(id = 9L, xRestrict = 1)), filterVersion = 0)
+        state.append(rawPage = listOf(illust(id = 1L), illust(id = 9L, xRestrict = 1)), filterVersion = 0, isStillValid = { true })
         assertEquals(listOf(1L, 9L), state.filteredIllusts?.map { it.id })
         assertEquals(listOf(1L, 9L), state.rawIllusts?.map { it.id })
 
         // 过滤开关变化后的下一页：合并去重且整体按当前版本重过滤
         settings.hideR18 = true
-        state.append(rawPage = listOf(illust(id = 2L)), filterVersion = 1)
+        state.append(rawPage = listOf(illust(id = 2L)), filterVersion = 1, isStillValid = { true })
         assertEquals(listOf(1L, 2L), state.filteredIllusts?.map { it.id })
         assertEquals(listOf(1L, 9L, 2L), state.rawIllusts?.map { it.id })
     }

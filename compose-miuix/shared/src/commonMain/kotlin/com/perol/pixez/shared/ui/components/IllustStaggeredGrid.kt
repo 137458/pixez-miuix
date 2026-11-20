@@ -48,6 +48,7 @@ fun IllustStaggeredGrid(
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
     loadMoreError: Throwable? = null,
+    isRefreshing: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
     // 默认取同一次调用传入的 onLoadMore：Compose 对默认表达式按实参记忆化，onLoadMore 变化时默认值同步更新，
     // 不会固化上一次的引用；仅当重试动作与加载动作不同（如需要先清错误态）才需要显式传入。
@@ -96,6 +97,7 @@ fun IllustStaggeredGrid(
                 loadMoreError,
                 illusts,
                 state,
+                isRefreshing,
             ) {
                 derivedStateOf {
                     shouldPreloadMore(
@@ -105,6 +107,7 @@ fun IllustStaggeredGrid(
                         hasLoadMoreError = loadMoreError != null,
                         lastVisibleItemIndex = state.layoutInfo.visibleItemsInfo.maxOfOrNull { it.index } ?: -1,
                         thresholdItems = AppConstants.Layout.PRELOAD_THRESHOLD_STAGGERED_ITEMS,
+                        isRefreshing = isRefreshing,
                     )
                 }
             }

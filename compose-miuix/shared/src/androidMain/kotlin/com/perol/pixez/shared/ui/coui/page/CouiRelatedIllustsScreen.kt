@@ -141,6 +141,7 @@ internal fun CouiRelatedIllustsScreen(
                     hasMore = listState.nextUrl != null,
                     isLoadingMore = listState.isLoadingMore,
                     loadMoreError = listState.loadMoreError,
+                    isRefreshing = listState.isRefreshing,
                     onLoadMore = ::loadMore,
                 )
             }
