@@ -16,16 +16,24 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 | :--- | :--- |
 | Desktop 共享模块编译 | `./gradlew :shared:compileKotlinDesktop` |
 | Desktop 应用编译 | `./gradlew :composeApp:compileKotlinDesktop` |
-| 双端单元测试 | `./gradlew :shared:desktopTest :composeApp:desktopTest` |
+| Desktop 双端单元测试 | `./gradlew :shared:desktopTest :composeApp:desktopTest` |
+| Android 共享模块单元测试 | `./gradlew :shared:testDebugUnitTest` |
+| Android 应用单元测试 | `./gradlew :composeApp:testDebugUnitTest` |
 | Android Debug 编译 | `./gradlew :composeApp:compileDebugKotlinAndroid` |
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Windows 单文件 EXE | `./gradlew :composeApp:packageWindowsSingleFileExe` |
 | 桌面端运行 | `./gradlew :composeApp:run` |
 
+Android 单测任务只做 JVM 单元测试（源集 `shared/src/androidUnitTest`、`composeApp/src/androidUnitTest`），不启动模拟器；任务名可用 `./gradlew :shared:tasks --all` 复核，本轮实测为 `:shared:testDebugUnitTest` 与 `:composeApp:testDebugUnitTest`。
+
 **发布前全量验证（单行）：**
 ```bash
-./gradlew :shared:compileKotlinDesktop :shared:desktopTest :composeApp:compileKotlinDesktop :composeApp:desktopTest :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
+./gradlew :shared:compileKotlinDesktop :shared:desktopTest :shared:testDebugUnitTest :composeApp:compileKotlinDesktop :composeApp:desktopTest :composeApp:testDebugUnitTest :composeApp:compileDebugKotlinAndroid :composeApp:packageWindowsSingleFileExe
 ```
+
+**已知限制（C7 · SQLDelight 迁移校验在 Windows 上恒为 SKIPPED）：**
+
+SQLDelight 生成的 `verify<SourceSet><Db>Migration` 任务（聚合名 `verifySqlDelightMigration`）在 `shared/build.gradle.kts` 中带 `onlyIf { !skip && !isWindows }`：Windows 上执行 `./gradlew :shared:verifyCommonMainTaskDatabaseMigration` 只输出 `> Task :shared:verifyCommonMainTaskDatabaseMigration SKIPPED` 与 `BUILD SUCCESSFUL`，等于零校验，不能作为 `.sqm` 与 schema 一致的证据。放开该条件强制运行必然失败，且与迁移内容无关：sqlite-jdbc 需把原生库释放到不可写目录，先报 `java.nio.file.AccessDeniedException: C:\WINDOWS\sqlite-3.45.2.0-<hash>-sqlitejdbc.dll.lck`，回退 `System.loadLibrary` 后再报 `java.lang.UnsatisfiedLinkError: no sqlitejdbc in java.library.path`。已排除（三种手段复现同一错误，故未改动构建脚本）：直接强制运行；`--no-daemon` 配显式 `TMP`/`TEMP`；`-Dorg.sqlite.tmpdir=<可写目录>`。结论：迁移校验只能在 Linux 或 WSL 环境补跑（本仓库无远程 CI），Windows 宿主以 `:shared:desktopTest`、`:shared:testDebugUnitTest` 覆盖 SQLDelight 相关逻辑。
 
 ## 核心开发红线
 
@@ -44,4 +52,4 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 | 跨会话状态 | `CONTEXT.md` | 本地会话记忆、系统安全不变量、环境踩坑与构建调优 |
 | 发版规范 | `RELEASE_NOTES_GUIDE.md` | CHANGELOG 维护准则、发版流程与 Release 模板 |
 
-> `MIUIX_Spec.md`、`Code_Wiki.md`、`Global_TODO.md`、`CONTEXT.md` 由 `.gitignore` 忽略，只存在于本地工作区、不随仓库分发；改动这些文档不会进入提交，修改后需本地留存。
+> `MIUIX_Spec.md`、`Code_Wiki.md`、`Global_TODO.md`、`CONTEXT.md`、`RELEASE_NOTES_GUIDE.md`、`release-notes-*.md` 与 `release/` 目录均由 `.gitignore` 忽略，只存在于本地工作区、不随仓库分发；改动这些文档不会进入提交，修改后需本地留存。仓库根目录实际入库的文档只有本文件、`README.md`、`CHANGELOG.md`、`GEMINI.md`。
