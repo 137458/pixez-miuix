@@ -21,8 +21,46 @@ import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
+
+/** 软失效待恢复判定：账号行保留且 refreshToken 非空，但 accessToken 已被置空等待启动静默恢复。 */
+internal val AccountPersist?.isPendingSilentRecovery: Boolean
+    get() = this != null && accessToken.isBlank() && refreshToken.isNotBlank()
+
+/**
+ * 解析推荐页当前应呈现的三态登录标志：
+ * - 持有完整凭证时立即判定已登录（true）；
+ * - 启动静默恢复进行中且当前尚未拿到完整凭证时保持未决（null），避免首帧抢跑弹窗；
+ * - 其余情况判定为未登录（false）。
+ */
+internal fun resolveHelloFeedLoggedInState(
+    account: AccountPersist?,
+    isRefreshingSession: Boolean,
+): Boolean? = when {
+    account.isLoggedIn -> true
+    isRefreshingSession -> null
+    else -> false
+}
+
+/**
+ * 根据最新登录态收敛登录引导弹窗状态：
+ * - 会话恢复为已登录（true）时强制关闭弹窗；
+ * - 首次确认未登录（false 且尚未提示过）时弹出一次；
+ * - 登录态未决（null）期间保持当前弹窗状态。
+ */
+internal fun resolveLoginDialogOpen(
+    currentShowLoginDialog: Boolean,
+    hasPromptedLogin: Boolean,
+    isLoggedIn: Boolean?,
+): Pair<Boolean, Boolean> = when (isLoggedIn) {
+    true -> false to hasPromptedLogin
+    false -> if (!hasPromptedLogin) true to true else currentShowLoginDialog to true
+    null -> currentShowLoginDialog to hasPromptedLogin
+}
 
 /**
  * 推荐页的皮肤无关状态集合：分页状态机、登录态、恢复快照与刷新/翻页动作。
@@ -63,22 +101,58 @@ internal fun rememberHelloFeedState(
     // 未登录提示弹窗：仅当首次检测到未登录时主动弹出一次，避免旋转屏幕等场景反复打扰。
     var showLoginDialog by rememberSaveable { mutableStateOf(false) }
     var hasPromptedLogin by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        user = accountRepository.currentAccount()
-        // 解密失败/被吊销后账号行仍保留但 token 为空，登录态必须看凭证而不是账号行。
-        isLoggedIn = user.isLoggedIn
-        accountRepository.loginEventFlow.collect {
-            user = accountRepository.currentAccount()
-            isLoggedIn = user.isLoggedIn
+    LaunchedEffect(accountRepository) {
+        suspend fun syncSessionState() {
+            val latestUser = accountRepository.currentAccount()
+            user = latestUser
+            val resolved = resolveHelloFeedLoggedInState(
+                account = latestUser,
+                isRefreshingSession = accountRepository.isRefreshingSession.value,
+            )
+            if (resolved != null) {
+                isLoggedIn = resolved
+                if (resolved) {
+                    showLoginDialog = false
+                }
+            }
+        }
+
+        val initialUser = accountRepository.currentAccount()
+        user = initialUser
+        // 软失效待恢复账号若早于 RootContent 的启动自检协程执行，先让渡一次调度，防止首帧抢跑判未登录。
+        if (initialUser.isPendingSilentRecovery && !accountRepository.isRefreshingSession.value) {
+            yield()
+        }
+        if (accountRepository.isRefreshingSession.value && !initialUser.isLoggedIn) {
+            accountRepository.isRefreshingSession.first { !it }
+        }
+        syncSessionState()
+
+        coroutineScope {
+            launch {
+                accountRepository.loginEventFlow.collect {
+                    syncSessionState()
+                }
+            }
+            launch {
+                accountRepository.isRefreshingSession.collect { refreshing ->
+                    if (!refreshing) {
+                        syncSessionState()
+                    }
+                }
+            }
         }
     }
 
-    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗。
+    // 当登录状态检测完成且为未登录时，触发一次性登录提示弹窗；会话恢复后自动关闭弹窗。
     LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false && !hasPromptedLogin) {
-            showLoginDialog = true
-            hasPromptedLogin = true
-        }
+        val (nextShow, nextPrompted) = resolveLoginDialogOpen(
+            currentShowLoginDialog = showLoginDialog,
+            hasPromptedLogin = hasPromptedLogin,
+            isLoggedIn = isLoggedIn,
+        )
+        showLoginDialog = nextShow
+        hasPromptedLogin = nextPrompted
     }
 
     // 过滤被屏蔽作品与画师

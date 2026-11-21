@@ -1,10 +1,12 @@
 package com.perol.pixez.shared.ui.state
 
+import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.state.StateTestFixtures.illust
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -225,5 +227,77 @@ class HelloFeedStateTest {
             "banRepository.filterIllustsBySettings(rawIllusts, settingsRepository)" in source,
             "过滤链应注入屏蔽设置过滤，而非在页面内手写",
         )
+        assertTrue(
+            "accountRepository.isRefreshingSession" in source,
+            "HelloFeedState 必须等待 AccountRepository 静默恢复状态，避免首帧误判",
+        )
+        assertTrue(
+            "resolveHelloFeedLoggedInState(" in source && "resolveLoginDialogOpen(" in source,
+            "HelloFeedState 应走统一的登录态与弹窗收敛辅助函数",
+        )
+    }
+
+    @Test
+    fun `软失效账号在静默恢复期间保持登录态未决且不首帧弹窗，恢复后自动关闭登录弹窗`() {
+        val softExpiredAccount = AccountPersist(
+            userId = "100",
+            userImage = "",
+            accessToken = "",
+            refreshToken = "rt-valid",
+            deviceToken = "",
+            name = "tester",
+            account = "tester",
+            mailAddress = "t@example.com",
+            passWord = "",
+            isPremium = 0,
+            xRestrict = 0,
+            isMailAuthorized = 1,
+        )
+        val recoveredAccount = softExpiredAccount.copy(accessToken = "at-fresh", refreshToken = "rt-fresh")
+
+        assertTrue(softExpiredAccount.isPendingSilentRecovery, "仅 accessToken 为空且 refreshToken 非空属于软失效待恢复")
+        assertFalse(recoveredAccount.isPendingSilentRecovery, "已持完整凭证不再属于待恢复")
+        assertFalse(softExpiredAccount.copy(refreshToken = "").isPendingSilentRecovery, "双空不属于静默恢复")
+
+        // 1. 静默恢复进行中：首帧保持 null，不弹登录框。
+        val duringRefresh = resolveHelloFeedLoggedInState(
+            account = softExpiredAccount,
+            isRefreshingSession = true,
+        )
+        assertNull(duringRefresh, "静默恢复期间不得把软失效账号直接判为未登录")
+        val (showDuringRefresh, promptedDuringRefresh) = resolveLoginDialogOpen(
+            currentShowLoginDialog = false,
+            hasPromptedLogin = false,
+            isLoggedIn = duringRefresh,
+        )
+        assertFalse(showDuringRefresh, "静默恢复期间首帧不得弹出登录弹窗")
+        assertFalse(promptedDuringRefresh, "未实际弹窗前不得消耗一次性弹窗标记")
+
+        // 2. 静默恢复成功：转为 true，即使登录弹窗曾处于打开状态也必须自动关闭。
+        val afterSuccess = resolveHelloFeedLoggedInState(
+            account = recoveredAccount,
+            isRefreshingSession = false,
+        )
+        assertEquals(true, afterSuccess)
+        val (showAfterSuccess, _) = resolveLoginDialogOpen(
+            currentShowLoginDialog = true,
+            hasPromptedLogin = true,
+            isLoggedIn = afterSuccess,
+        )
+        assertFalse(showAfterSuccess, "会话恢复成功后必须自动关闭已打开的登录弹窗")
+
+        // 3. 静默恢复结束仍无有效凭证：此时才转为 false 并触发一次登录提示。
+        val afterFailure = resolveHelloFeedLoggedInState(
+            account = softExpiredAccount,
+            isRefreshingSession = false,
+        )
+        assertEquals(false, afterFailure)
+        val (showAfterFailure, promptedAfterFailure) = resolveLoginDialogOpen(
+            currentShowLoginDialog = false,
+            hasPromptedLogin = false,
+            isLoggedIn = afterFailure,
+        )
+        assertTrue(showAfterFailure, "静默恢复结束仍未登录时应提示登录")
+        assertTrue(promptedAfterFailure)
     }
 }

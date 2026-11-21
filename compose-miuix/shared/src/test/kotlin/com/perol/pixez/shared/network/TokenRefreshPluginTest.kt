@@ -675,4 +675,132 @@ class TokenRefreshPluginTest {
             "重放请求应携带刷新后的 access_token",
         )
     }
+
+    @Test
+    fun `软失效后无凭证请求收到 401 时直接放行且不刷新不熔断不发失效事件`() {
+        val storage = FakeAuthTokenStorage().apply { login("", STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshResult = accountFixture(FRESH_ACCESS_TOKEN, FRESH_REFRESH_TOKEN)
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth, signal) { request ->
+            requests.add(request.url.encodedPath to request.headers["Authorization"])
+            respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders)
+        }
+
+        val status: HttpStatusCode = client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                val code = client.get("$API_HOST/v1/illust/detail").status
+                collector.cancel()
+                code
+            }
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, status, "无凭证请求收到 401 应直接放行原响应")
+        assertEquals(listOf<Pair<String, String?>>("/v1/illust/detail" to null), requests, "无凭证请求不应重放也不应注入空 Bearer")
+        assertEquals(0, oauth.refreshCalls, "无凭证请求不得触发 token 刷新")
+        assertTrue(events.isEmpty(), "无凭证请求不得触发失效事件")
+        assertEquals(STALE_REFRESH_TOKEN, storage.rowOf("100")?.refresh_token, "不得修改保留的 refresh_token")
+    }
+
+    @Test
+    fun `软失效后无凭证请求收到 400 invalid_grant 时直接放行且不刷新不熔断不发失效事件`() {
+        val storage = FakeAuthTokenStorage().apply { login("", STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth, signal) { request ->
+            requests.add(request.url.encodedPath to request.headers["Authorization"])
+            respond(INVALID_GRANT_BODY, HttpStatusCode.BadRequest, jsonHeaders)
+        }
+
+        val status: HttpStatusCode = client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                val code = client.get("$API_HOST/v1/illust/detail").status
+                collector.cancel()
+                code
+            }
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, status, "无凭证请求收到 400 invalid_grant 应直接放行原响应")
+        assertEquals(listOf<Pair<String, String?>>("/v1/illust/detail" to null), requests, "无凭证请求不应重放")
+        assertEquals(0, oauth.refreshCalls, "无凭证请求不得触发 token 刷新")
+        assertTrue(events.isEmpty(), "无凭证请求不得发射 authExpirySignal")
+    }
+
+    @Test
+    fun `匿名 walkthrough 接口即使在已登录态或熔断窗口下收到 401 或 400 invalid_grant 也直接放行`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        var respond400 = false
+        val client = buildClient(storage, oauth, signal) {
+            if (respond400) {
+                respond(INVALID_GRANT_BODY, HttpStatusCode.BadRequest, jsonHeaders)
+            } else {
+                respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders)
+            }
+        }
+
+        client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                // 先通过普通请求触发 30s 熔断窗口，再验证 walkthrough 在熔断期仍直接放行。
+                assertFailsWith<AuthExpiredException> { client.get("$API_HOST/v1/illust/detail") }
+                assertEquals(HttpStatusCode.Unauthorized, client.get("$API_HOST/v1/walkthrough/illusts").status)
+                respond400 = true
+                assertEquals(HttpStatusCode.BadRequest, client.get("$API_HOST/v1/walkthrough/illusts").status)
+                collector.cancel()
+            }
+        }
+
+        assertEquals(1, oauth.refreshCalls, "walkthrough 匿名接口不得额外触发 OAuth 刷新")
+        assertEquals(listOf(AuthExpiredEvent("100")), events, "walkthrough 匿名接口不得额外发射 authExpirySignal")
+    }
+
+    @Test
+    fun `同一熔断窗口内多次失败请求仅在首次失效时发射一次 authExpirySignal`() {
+        val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient().apply {
+            refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        }
+        val events = mutableListOf<AuthExpiredEvent>()
+        val client = buildClient(
+            storage,
+            oauth,
+            signal,
+        ) { respond(OAUTH_EXPIRED_BODY, HttpStatusCode.Unauthorized, jsonHeaders) }
+
+        client.use {
+            runBlocking {
+                val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+                    signal.events.collect { events += it }
+                }
+                assertFailsWith<AuthExpiredException> { client.get("$API_HOST/first") }
+                assertFailsWith<AuthExpiredException> { client.get("$API_HOST/second") }
+                assertFailsWith<AuthExpiredException> { client.get("$API_HOST/third") }
+                collector.cancel()
+            }
+        }
+
+        assertEquals(1, oauth.refreshCalls, "熔断窗口内只应发起一次 OAuth 刷新")
+        assertEquals(listOf(AuthExpiredEvent("100")), events, "同一熔断窗口内仅首轮失效发射一次 authExpirySignal")
+    }
 }

@@ -1,17 +1,21 @@
 package com.perol.pixez.shared.network
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
 import com.perol.pixez.shared.data.local.account.AccountDatabase
+import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.model.OAuthProfileImageUrls
 import com.perol.pixez.shared.data.model.OAuthUser
 import com.perol.pixez.shared.platform.TokenCipherDefaults
 import com.perol.pixez.shared.platform.TokenCipherException
+import com.perol.pixez.shared.testutil.TestSqlDriverFactory
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.nio.file.Files
 import java.util.Base64
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -258,5 +262,61 @@ class AuthTokenStorageTest {
             decryptFn = ::testDecrypt,
         )
         assertNull(verify.getCurrentAccount(), "加密失败时凭证不得明文落库")
+    }
+
+    @Test
+    fun `expireAccessToken 基于 TestSqlDriverFactory 实库仅置空指定账号 access_token 并保留 refresh_token 与密码`() = runBlocking {
+        val tempRoot = Files.createTempDirectory("pixez-auth-expire-test-").toFile().also { it.deleteOnExit() }
+        val factory = TestSqlDriverFactory(tempRoot)
+        var fileActiveUserId: String? = null
+        val fileDriver = factory.createDriver(LocalDatabases.account)
+        try {
+            val fileStorage = SqlDelightAuthTokenStorage(
+                driver = fileDriver,
+                getActiveUserId = { fileActiveUserId },
+                setActiveUserId = { fileActiveUserId = it },
+                encryptFn = ::testEncrypt,
+                decryptFn = ::testDecrypt,
+            )
+            fileStorage.saveAccount(response("100"), password = "pwd-100", deviceToken = "dev-100")
+            fileStorage.saveAccount(response("200"), password = "pwd-200", deviceToken = "dev-200")
+            fileStorage.switchAccount("100")
+
+            fileStorage.expireAccessToken("100")
+            fileStorage.expireAccessToken("nonexistent")
+
+            val cached100 = fileStorage.getCurrentAccount()
+            assertEquals("100", cached100?.user_id)
+            assertEquals("", cached100?.access_token, "内存缓存中的 access_token 应立即置空")
+            assertEquals("rt-100", cached100?.refresh_token, "软失效必须保留 refresh_token")
+            assertEquals("pwd-100", cached100?.password, "软失效不得清空密码")
+        } finally {
+            factory.closeDriver(fileDriver)
+        }
+
+        // 重新打开同一磁盘数据库文件验证落库结果，绕过内存缓存。
+        val verifyDriver = factory.createDriver(LocalDatabases.account)
+        try {
+            val verifyStorage = SqlDelightAuthTokenStorage(
+                driver = verifyDriver,
+                getActiveUserId = { fileActiveUserId },
+                setActiveUserId = { fileActiveUserId = it },
+                encryptFn = ::testEncrypt,
+                decryptFn = ::testDecrypt,
+            )
+            val persisted100 = verifyStorage.getCurrentAccount()
+            assertEquals("100", persisted100?.user_id)
+            assertEquals("", persisted100?.access_token, "磁盘实库中的 access_token 必须已置空")
+            assertEquals("rt-100", persisted100?.refresh_token, "磁盘实库中的 refresh_token 必须保留")
+            assertEquals("pwd-100", persisted100?.password, "磁盘实库中的密码必须保留")
+
+            val persisted200 = verifyStorage.getAllAccounts().first { it.user_id == "200" }
+            assertEquals("at-200", persisted200.access_token, "其他账号 access_token 不得受影响")
+            assertEquals("rt-200", persisted200.refresh_token, "其他账号 refresh_token 不得受影响")
+            assertEquals("pwd-200", persisted200.password, "其他账号密码不得受影响")
+        } finally {
+            factory.closeDriver(verifyDriver)
+            tempRoot.deleteRecursively()
+        }
     }
 }

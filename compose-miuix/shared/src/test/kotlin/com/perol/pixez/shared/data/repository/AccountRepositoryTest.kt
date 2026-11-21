@@ -7,16 +7,19 @@ import com.perol.pixez.shared.data.model.AccountResponse
 import com.perol.pixez.shared.data.local.account.Account as AccountRow
 import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.PixivApiException
 import com.perol.pixez.shared.network.OAuthClient
 import com.perol.pixez.shared.network.OAuthClient.PkcePair
+import com.perol.pixez.shared.network.TokenRefreshPlugin
 import com.perol.pixez.shared.testutil.InMemorySettings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.get
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.encodedPath
@@ -54,6 +57,7 @@ class AccountRepositoryTest {
         var exchangeError: Throwable? = null
         var refreshResult: Account? = null
         var refreshError: Throwable? = null
+        var onRefreshing: (suspend () -> Unit)? = null
         val receivedCodes = mutableListOf<String>()
         val receivedTokens = mutableListOf<String>()
 
@@ -68,6 +72,7 @@ class AccountRepositoryTest {
 
         override suspend fun refreshToken(refreshToken: String): Account {
             receivedTokens.add(refreshToken)
+            onRefreshing?.invoke()
             refreshError?.let { throw it }
             return refreshResult ?: error("未设置 refreshResult")
         }
@@ -78,6 +83,7 @@ class AccountRepositoryTest {
         var activeUserId: String? = null
         val savedResponses = mutableListOf<AccountResponse>()
         var updateTokensCalls = 0
+        var updateTokensError: Throwable? = null
         var updateCurrentAccountCalls = 0
         var transformAppliedTo: String? = null
 
@@ -118,6 +124,7 @@ class AccountRepositoryTest {
 
         override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {
             updateTokensCalls++
+            updateTokensError?.let { throw it }
             rows.replaceAll {
                 if (it.user_id == userId) it.copy(access_token = accessToken, refresh_token = refreshToken) else it
             }
@@ -168,6 +175,7 @@ class AccountRepositoryTest {
 
     @Before
     fun setUp() {
+        TokenRefreshPlugin.resetRefreshBreaker()
         oauth = FakeOAuthClient()
         storage = FakeTokenStorage()
         accountClient = HttpClient(MockEngine) {
@@ -597,5 +605,163 @@ class AccountRepositoryTest {
         assertEquals("new", capturedForm["new_password"])
         assertEquals("new@m", capturedForm["new_mail_address"])
         assertEquals("9", storage.transformAppliedTo, "编辑成功后应回写当前账号缓存")
+    }
+
+    @Test
+    fun `并发调用 refreshSessionState 仅触发一次 refreshToken`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = "rt-1"))
+        storage.activeUserId = "1"
+        oauth.refreshResult = oauthEnvelope("1")
+        val refreshStarted = CompletableDeferred<Unit>()
+        val allowFinish = CompletableDeferred<Unit>()
+        oauth.onRefreshing = {
+            refreshStarted.complete(Unit)
+            withTimeoutOrNull(5_000) { allowFinish.await() }
+                ?: error("时序超时：allowFinish 未触发")
+        }
+
+        val first = launch(start = CoroutineStart.UNDISPATCHED) { repository.refreshSessionState() }
+        withTimeoutOrNull(5_000) { refreshStarted.await() } ?: error("首次 refreshSessionState 未进入刷新")
+        val second = launch { repository.refreshSessionState() }
+        kotlinx.coroutines.delay(50)
+        allowFinish.complete(Unit)
+        first.join()
+        second.join()
+
+        assertEquals(listOf("rt-1"), oauth.receivedTokens, "并发静默恢复应共享互斥锁，仅消耗一次 refresh_token")
+        assertEquals("access-1", storage.rows.single().access_token)
+        assertEquals("refresh-1", storage.rows.single().refresh_token)
+    }
+
+    @Test
+    fun `refreshSessionState 与 TokenRefreshPlugin 并发刷新共享互斥锁且仅消耗一次 refresh_token`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "stale-at", refresh_token = "rt-1"))
+        storage.activeUserId = "1"
+        oauth.refreshResult = oauthEnvelope("1")
+        val refreshStarted = CompletableDeferred<Unit>()
+        val allowFinish = CompletableDeferred<Unit>()
+        oauth.onRefreshing = {
+            refreshStarted.complete(Unit)
+            withTimeoutOrNull(5_000) { allowFinish.await() }
+                ?: error("时序超时：allowFinish 未触发")
+        }
+        val signal = AuthExpirySignal()
+        val sharedRepo = AccountRepository(oauth, storage, accountClient, sessionCache, signal)
+        lateinit var concurrentJob: kotlinx.coroutines.Job
+        val apiClient = HttpClient(MockEngine) {
+            install(TokenRefreshPlugin) {
+                tokenStorage = storage
+                oAuthClient = oauth
+                authExpirySignal = signal
+            }
+            engine {
+                addHandler { request ->
+                    when (request.headers["Authorization"]) {
+                        "Bearer stale-at" -> {
+                            // 请求已携带旧 token 发出；响应返回前另一协程触发软失效并启动静默恢复。
+                            storage.expireAccessToken("1")
+                            concurrentJob = launch { sharedRepo.refreshSessionState() }
+                            withTimeoutOrNull(5_000) { refreshStarted.await() }
+                                ?: error("静默恢复未进入刷新窗口")
+                            respond(
+                                """{"error":"invalid_grant","message":"OAuth access token expired"}""",
+                                HttpStatusCode.Unauthorized,
+                                headersOf("Content-Type", ContentType.Application.Json.toString()),
+                            )
+                        }
+                        "Bearer access-1" -> respond(
+                            """{"ok":true}""",
+                            HttpStatusCode.OK,
+                            headersOf("Content-Type", ContentType.Application.Json.toString()),
+                        )
+                        else -> respond(
+                            """{"error":"missing"}""",
+                            HttpStatusCode.Unauthorized,
+                            headersOf("Content-Type", ContentType.Application.Json.toString()),
+                        )
+                    }
+                }
+            }
+        }
+
+        val status = apiClient.use {
+            val requestJob = async(start = CoroutineStart.UNDISPATCHED) {
+                apiClient.get("https://app-api.pixiv.net/v1/illust/detail").status
+            }
+            withTimeoutOrNull(5_000) { refreshStarted.await() } ?: error("refreshStarted 未就绪")
+            kotlinx.coroutines.delay(50)
+            allowFinish.complete(Unit)
+            val code = requestJob.await()
+            concurrentJob.join()
+            code
+        }
+
+        assertEquals(HttpStatusCode.OK, status, "等待静默恢复完成后应复用新凭证重放成功")
+        assertEquals(listOf("rt-1"), oauth.receivedTokens, "AccountRepository 与 TokenRefreshPlugin 必须共享互斥锁，仅刷新一次")
+        assertEquals("access-1", storage.rows.single().access_token)
+    }
+
+    @Test
+    fun `refreshSessionState 在 refresh_token 格式非法时发出失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = "bad-rt"))
+        storage.activeUserId = "1"
+        oauth.refreshError = IllegalArgumentException("invalid refresh token format")
+        val event = CompletableDeferred<String>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { event.complete(it.userId) }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals("1", withTimeoutOrNull(1_000) { event.await() }, "refresh_token 格式非法应发出失效事件")
+        job.cancel()
+    }
+
+    @Test
+    fun `refreshSessionState 本地写库异常时不得误发失效事件也不得假通知恢复`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = "rt-1"))
+        storage.activeUserId = "1"
+        oauth.refreshResult = oauthEnvelope("1")
+        storage.updateTokensError = RuntimeException("sqlite disk error")
+        var authEvents = 0
+        var loginEvents = 0
+        val job1 = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { authEvents++ }
+        }
+        val job2 = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.loginEventFlow.collect { loginEvents++ }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals(0, authEvents, "本地写库失败不是凭证被拒，不得发射失效事件")
+        assertEquals(0, loginEvents, "本地写库失败未持久化新凭证，不得通知 UI 会话已恢复")
+        assertEquals("", storage.rows.single().access_token)
+        assertEquals("rt-1", storage.rows.single().refresh_token)
+        job1.cancel()
+        job2.cancel()
+    }
+
+    @Test
+    fun `isRefreshingSession 在静默恢复期间为 true 并在结束后复位为 false`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = "", refresh_token = "rt-1"))
+        storage.activeUserId = "1"
+        oauth.refreshResult = oauthEnvelope("1")
+        val refreshStarted = CompletableDeferred<Unit>()
+        val allowFinish = CompletableDeferred<Unit>()
+        oauth.onRefreshing = {
+            refreshStarted.complete(Unit)
+            withTimeoutOrNull(5_000) { allowFinish.await() }
+                ?: error("时序超时：allowFinish 未触发")
+        }
+
+        assertEquals(false, repository.isRefreshingSession.value, "初始不应处于刷新中")
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { repository.refreshSessionState() }
+        withTimeoutOrNull(5_000) { refreshStarted.await() } ?: error("refreshSessionState 未进入刷新")
+        assertEquals(true, repository.isRefreshingSession.value, "静默恢复执行期间必须暴露 isRefreshingSession = true")
+
+        allowFinish.complete(Unit)
+        job.join()
+        assertEquals(false, repository.isRefreshingSession.value, "静默恢复结束后必须复位为 false")
     }
 }

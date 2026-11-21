@@ -146,12 +146,19 @@ fun RootContent(
         }
     }
 
-    // 凭证失效提示：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
-    // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失。
+    // 凭证失效提示与恢复收敛：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
+    // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失；会话恢复或重新登录后自动收起失效弹窗。
     LaunchedEffect(Unit) {
         launch(start = CoroutineStart.UNDISPATCHED) {
             registry.accountRepository.authExpiredFlow.collect {
                 showAuthExpiredDialog = true
+            }
+        }
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            registry.accountRepository.loginEventFlow.collect {
+                if (registry.accountRepository.currentAccount()?.hasCredentials == true) {
+                    showAuthExpiredDialog = false
+                }
             }
         }
         registry.accountRepository.refreshSessionState()

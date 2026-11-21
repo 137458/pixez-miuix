@@ -17,6 +17,7 @@ import com.perol.pixez.shared.network.PixivApiException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -90,6 +91,14 @@ class TokenRefreshPlugin(
         )
     }
 
+    /** 检查当前活跃账号是否正处于失效熔断窗口内（供无凭证 401/400 快失败判断使用）。 */
+    private suspend fun activeBreakerUserIdOrNull(): String? {
+        val current = tokenStorage.getCurrentAccount() ?: return null
+        return withRefreshLock {
+            if (isRefreshBreakerActive(current.user_id)) current.user_id else null
+        }
+    }
+
     private suspend fun resolveAccount(targetUserId: String?): Account? {
         val current = tokenStorage.getCurrentAccount()
         if (targetUserId == null || current?.user_id == targetUserId) {
@@ -112,14 +121,9 @@ class TokenRefreshPlugin(
             val targetAccount = resolveAccount(targetUserId)
                 ?: throw IllegalStateException("No logged-in account to refresh token")
             // 同账号近期已确认失效：熔断，避免每个请求重复发起注定失败的刷新；不同账号各自独立。
-            val expiredAt = expiredUsers[targetAccount.user_id]
-            val breakerActive = expiredAt != null && expiredAt.elapsedNow() < REFRESH_BREAKER_WINDOW
-            if (breakerActive) {
-                authExpirySignal?.emit(targetAccount.user_id)
+            // 仅在首次进入熔断时（expireCredentials）发射 authExpirySignal，同一窗口内不再重复发射。
+            if (isRefreshBreakerActive(targetAccount.user_id)) {
                 throw AuthExpiredException(targetAccount.user_id)
-            }
-            if (expiredAt != null) {
-                expiredUsers.remove(targetAccount.user_id)
             }
             if (targetAccount.access_token != initialAccessToken && targetAccount.access_token.isNotBlank()) {
                 Napier.i("检测到 Token 已由前置并发请求完成刷新，复用最新凭证")
@@ -219,7 +223,34 @@ class TokenRefreshPlugin(
         private val mutex = Mutex()
 
         /** 已确认失效的账号与时间点（按 userId 隔离）；同账号窗口内直接熔断，不阻塞切号后的新账号。 */
-        private val expiredUsers = mutableMapOf<String, TimeMark>()
+        private val expiredUsers = ConcurrentHashMap<String, TimeMark>()
+
+        /**
+         * 跨 HttpClient 与 AccountRepository 共享刷新互斥锁，
+         * 确保启动静默恢复与并发 401 刷新不会同时消耗同一个轮换型 refresh_token。
+         */
+        internal suspend fun <T> withRefreshLock(block: suspend () -> T): T =
+            mutex.withLock { block() }
+
+        /** 检查指定账号是否仍处于失效熔断窗口内（超期条目顺带清理）。 */
+        internal fun isRefreshBreakerActive(userId: String): Boolean {
+            val expiredAt = expiredUsers[userId] ?: return false
+            if (expiredAt.elapsedNow() < REFRESH_BREAKER_WINDOW) {
+                return true
+            }
+            expiredUsers.remove(userId, expiredAt)
+            return false
+        }
+
+        /** 标记账号进入失效熔断窗口。 */
+        internal fun markRefreshBreaker(userId: String) {
+            expiredUsers[userId] = TimeSource.Monotonic.markNow()
+        }
+
+        /** 清除指定账号的失效熔断标记（刷新成功或重新登录后调用）。 */
+        internal fun clearRefreshBreaker(userId: String) {
+            expiredUsers.remove(userId)
+        }
 
         /**
          * 清空熔断表。熔断表是进程级共享状态，单测必须逐用例复位，
@@ -238,10 +269,13 @@ class TokenRefreshPlugin(
             )
         }
 
+        private fun isAnonymousEndpoint(encodedPath: String): Boolean =
+            encodedPath.contains("v1/walkthrough/illusts")
+
         override fun install(plugin: TokenRefreshPlugin, scope: HttpClient) {
             // 请求阶段注入 Authorization（walkthrough 等匿名接口除外），并绑定发起账号 ID。
             scope.requestPipeline.intercept(HttpRequestPipeline.State) {
-                if (!context.url.encodedPath.contains("v1/walkthrough/illusts")) {
+                if (!isAnonymousEndpoint(context.url.encodedPath)) {
                     val snapshot = plugin.getAuthorizationSnapshot()
                     if (snapshot != null) {
                         context.headers {
@@ -258,6 +292,12 @@ class TokenRefreshPlugin(
             // Pixiv API 在 access_token 过期时可能返回 400 (invalid_grant) 或 401 (Unauthorized)。
             scope.plugin(HttpSend).intercept { request ->
                 var call = execute(request)
+                // 显式匿名接口直接放行原响应，绝不进入刷新或熔断逻辑。
+                if (isAnonymousEndpoint(request.url.encodedPath)) {
+                    return@intercept call
+                }
+                val hasRequestCredentials = request.attributes.contains(REQUEST_USER_ID_KEY) ||
+                    !request.headers["Authorization"].isNullOrBlank()
                 val status = call.response.status
                 if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.BadRequest) {
                     call = call.save()
@@ -271,6 +311,15 @@ class TokenRefreshPlugin(
                     }
                     when (resolveAuthRefreshDecision(status, bodyText)) {
                         AuthRefreshDecision.REFRESH -> {
+                            if (!hasRequestCredentials) {
+                                // 未携带凭证时：仅当当前活跃账号仍在 30s 熔断期内才快失败，
+                                // 其余状态（冷启动软失效 / 冷却期已过）直接放行原响应，不刷新不熔断不发信号。
+                                val activeExpiredUserId = plugin.activeBreakerUserIdOrNull()
+                                if (activeExpiredUserId != null) {
+                                    throw AuthExpiredException(activeExpiredUserId)
+                                }
+                                return@intercept call
+                            }
                             Napier.i("检测到 Pixiv Access Token 失效/过期 (HTTP $status)，正在自动执行 Token 刷新并重试...")
                             val targetUserId = request.attributes.getOrNull(REQUEST_USER_ID_KEY)
                             val staleAccessToken = request.headers["Authorization"]?.removePrefix("Bearer ")
@@ -294,7 +343,7 @@ class TokenRefreshPlugin(
                             }
                         }
 
-                        AuthRefreshDecision.PASS_THROUGH -> if (status == HttpStatusCode.Unauthorized) {
+                        AuthRefreshDecision.PASS_THROUGH -> if (hasRequestCredentials && status == HttpStatusCode.Unauthorized) {
                             // 非 OAuth 相关的 401（如账号被禁用、token 被撤销）直接抛异常
                             // 异常 message 仅承载技术细节供日志，不进入用户可见文案（高-6b：UI 走 PixivApiErrorFormatter）。
                             throw PixivApiException(

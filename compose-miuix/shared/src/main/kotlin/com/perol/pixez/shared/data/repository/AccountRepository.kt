@@ -10,6 +10,7 @@ import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.OAuthClient
 import com.perol.pixez.shared.network.PixivApiException
+import com.perol.pixez.shared.network.TokenRefreshPlugin
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -21,8 +22,12 @@ import io.ktor.http.Parameters
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 账号仓库：封装 OAuth 登录、token 刷新、账号信息编辑与本地账号持久化。
@@ -36,6 +41,12 @@ class AccountRepository(
 ) {
     private val _loginEventFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val loginEventFlow: SharedFlow<Unit> = _loginEventFlow.asSharedFlow()
+
+    private val refreshSessionCounter = AtomicInteger(0)
+    private val _isRefreshingSession = MutableStateFlow(false)
+
+    /** 启动静默恢复是否正在进行中；UI 首帧据此前置等待，避免把软失效账号误判为未登录。 */
+    val isRefreshingSession: StateFlow<Boolean> = _isRefreshingSession.asStateFlow()
 
     /**
      * 凭证失效事件：刷新失败或启动自检发现账号凭证为空时发出，UI 根层据此提示重新登录。
@@ -68,34 +79,69 @@ class AccountRepository(
      * 由 UI 根层在订阅 [authExpiredFlow] 之后调用，保证提示不会因时序问题丢失。
      */
     suspend fun refreshSessionState() {
-        val account = tokenStorage.getCurrentAccount() ?: return
-        if (account.hasCredentials()) return
-        if (account.refresh_token.isBlank()) {
-            authExpirySignal.emit(account.user_id)
-            return
-        }
+        refreshSessionCounter.incrementAndGet()
+        _isRefreshingSession.value = true
         try {
-            val refreshed = oAuthClient.refreshToken(account.refresh_token)
-            tokenStorage.updateTokensForUser(
-                userId = account.user_id,
-                accessToken = refreshed.response.accessToken,
-                refreshToken = refreshed.response.refreshToken,
-            )
-            Napier.i("账号(${account.user_id})凭证已静默恢复")
-            onSessionIdentityChanged()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: PixivApiException) {
-            // 只有 OAuth 端点明确拒绝才判定需要重新登录；服务端 5xx 等保持凭证待下次重试。
-            if (e.statusCode == 400 || e.statusCode == 401) {
-                Napier.w("账号(${account.user_id})静默恢复被拒（HTTP ${e.statusCode}），需要重新登录")
-                authExpirySignal.emit(account.user_id)
-            } else {
-                Napier.w("账号(${account.user_id})静默恢复失败（HTTP ${e.statusCode}），保留凭证待下次启动重试")
+            val restored = TokenRefreshPlugin.withRefreshLock {
+                val account = tokenStorage.getCurrentAccount() ?: return@withRefreshLock false
+                if (account.hasCredentials()) return@withRefreshLock false
+                if (account.refresh_token.isBlank()) {
+                    authExpirySignal.emit(account.user_id)
+                    return@withRefreshLock false
+                }
+                if (TokenRefreshPlugin.isRefreshBreakerActive(account.user_id)) {
+                    return@withRefreshLock false
+                }
+                val refreshed = try {
+                    oAuthClient.refreshToken(account.refresh_token)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: PixivApiException) {
+                    // 只有 OAuth 端点明确拒绝才判定需要重新登录；服务端 5xx 等保持凭证待下次重试。
+                    if (e.statusCode == 400 || e.statusCode == 401) {
+                        Napier.w("账号(${account.user_id})静默恢复被拒（HTTP ${e.statusCode}），需要重新登录")
+                        TokenRefreshPlugin.markRefreshBreaker(account.user_id)
+                        authExpirySignal.emit(account.user_id)
+                    } else {
+                        Napier.w("账号(${account.user_id})静默恢复失败（HTTP ${e.statusCode}），保留凭证待下次启动重试")
+                    }
+                    return@withRefreshLock false
+                } catch (e: IllegalArgumentException) {
+                    Napier.w("账号(${account.user_id})静默恢复被拒（refresh_token 格式非法），需要重新登录", e)
+                    TokenRefreshPlugin.markRefreshBreaker(account.user_id)
+                    authExpirySignal.emit(account.user_id)
+                    return@withRefreshLock false
+                } catch (e: Exception) {
+                    // 离线或超时等网络异常不得把用户踢下线：保留凭证，下次启动再试。
+                    Napier.w("账号(${account.user_id})静默恢复网络失败，保留凭证待下次启动重试", e)
+                    return@withRefreshLock false
+                }
+
+                // 写库异常与网络异常隔离：网络续期已消耗旧 refresh_token，但本地落库故障既不是服务端拒绝，
+                // 也未完成本地持久化，不得误发失效信号或通知 UI 假恢复。
+                try {
+                    tokenStorage.updateTokensForUser(
+                        userId = account.user_id,
+                        accessToken = refreshed.response.accessToken,
+                        refreshToken = refreshed.response.refreshToken,
+                    )
+                    TokenRefreshPlugin.clearRefreshBreaker(account.user_id)
+                    Napier.i("账号(${account.user_id})凭证已静默恢复")
+                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Napier.e("账号(${account.user_id})静默恢复成功但凭证写回本地失败，保留原凭证待重试", e)
+                    false
+                }
             }
-        } catch (e: Exception) {
-            // 离线或写库异常不得把用户踢下线：保留凭证，下次启动再试。
-            Napier.w("账号(${account.user_id})静默恢复失败，保留凭证待下次启动重试", e)
+            if (restored) {
+                onSessionIdentityChanged()
+            }
+        } finally {
+            if (refreshSessionCounter.decrementAndGet() == 0) {
+                _isRefreshingSession.value = false
+            }
         }
     }
 
@@ -112,6 +158,7 @@ class AccountRepository(
     suspend fun loginWithCode(code: String): OAuthAccount {
         val account = oAuthClient.exchangeCodeForToken(code)
         tokenStorage.saveAccount(account.response)
+        TokenRefreshPlugin.clearRefreshBreaker(account.response.user.id)
         onSessionIdentityChanged()
         return account
     }
@@ -122,6 +169,7 @@ class AccountRepository(
     suspend fun loginWithToken(token: String): OAuthAccount {
         val account = oAuthClient.refreshToken(token.trim())
         tokenStorage.saveAccount(account.response)
+        TokenRefreshPlugin.clearRefreshBreaker(account.response.user.id)
         onSessionIdentityChanged()
         return account
     }
@@ -209,6 +257,7 @@ class AccountRepository(
      */
     suspend fun logout() {
         tokenStorage.clear()
+        TokenRefreshPlugin.resetRefreshBreaker()
         onSessionIdentityChanged()
     }
 
