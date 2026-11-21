@@ -31,6 +31,7 @@ import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.PlatformBackHandler
 import com.perol.pixez.shared.platform.PlatformPhotoPicker
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
@@ -70,6 +71,25 @@ import com.perol.pixez.shared.ui.screens.resolveSearchEmptyPhase
 import kotlinx.coroutines.launch
 
 /**
+ * 判定 COUI 搜索页当前是否应拦截系统返回事件：
+ * 仅当前台处于激活态且未被筛选/以图搜图弹窗接管时，结果态或展开态均交由页面退回建议列表。
+ */
+internal fun shouldInterceptCouiSearchBack(
+    isActive: Boolean,
+    showingResults: Boolean,
+    searchExpanded: Boolean,
+    hasBlockingDialog: Boolean,
+): Boolean = isActive && !hasBlockingDialog && (showingResults || searchExpanded)
+
+/**
+ * 同步结果态与搜索栏展开态：点击热搜/历史进入结果态时，同步展开 SearchBar 以展示取消与清除操作。
+ */
+internal fun resolveCouiSearchExpandedForResults(
+    currentExpanded: Boolean,
+    showingResults: Boolean,
+): Boolean = currentExpanded || showingResults
+
+/**
  * COUI 搜索页：官方折叠顶栏骨架承载搜索栏、搜索类型胶囊、快捷筛选、历史/热搜与作品瀑布流。
  *
  * 查询词、搜索态、筛选条件、历史与热搜统一由 [rememberSearchCoreState] 承载；
@@ -82,6 +102,7 @@ internal fun CouiSearchScreen(
     onUserClick: (Long) -> Unit,
     onNovelClick: (Long) -> Unit,
     initialQuery: String = "",
+    isActive: Boolean = true,
 ) {
     val strings = LocalStrings.current
     val searchRepository = LocalSearchRepository.current
@@ -145,6 +166,27 @@ internal fun CouiSearchScreen(
     }
 
     val showingResults = core.isSearching && core.query.isNotBlank()
+    LaunchedEffect(showingResults) {
+        searchExpanded = resolveCouiSearchExpandedForResults(
+            currentExpanded = searchExpanded,
+            showingResults = showingResults,
+        )
+    }
+
+    val exitToSuggestions: () -> Unit = {
+        searchExpanded = false
+        core.onExitSearch()
+    }
+    PlatformBackHandler(
+        enabled = shouldInterceptCouiSearchBack(
+            isActive = isActive,
+            showingResults = showingResults,
+            searchExpanded = searchExpanded,
+            hasBlockingDialog = showFilterSheet || showSauceNaoSheet,
+        ),
+        onBack = exitToSuggestions,
+    )
+
     val suggestionsListState = rememberLazyListState()
     val searchTypeChips = remember(strings) {
         listOf(
@@ -166,8 +208,7 @@ internal fun CouiSearchScreen(
                     if (expanded) {
                         searchExpanded = true
                     } else {
-                        searchExpanded = false
-                        core.onExitSearch()
+                        exitToSuggestions()
                     }
                 },
                 placeholder = strings.searchPlaceholder,

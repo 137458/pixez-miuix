@@ -18,6 +18,7 @@ internal object CouiIcons {
 
     private inline fun strokeIcon(
         name: String,
+        autoMirror: Boolean = false,
         crossinline block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit,
     ): ImageVector = ImageVector.Builder(
         name = "CouiIcons.$name",
@@ -25,6 +26,7 @@ internal object CouiIcons {
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f,
+        autoMirror = autoMirror,
     ).apply {
         path(
             stroke = SolidColor(Color.Black),
@@ -128,14 +130,14 @@ internal object CouiIcons {
     }
 
     /** `chevron-left` — 返回 */
-    val Back: ImageVector = strokeIcon("Back") {
+    val Back: ImageVector = strokeIcon("Back", autoMirror = true) {
         moveTo(15f, 18f)
         lineTo(9f, 12f)
         lineTo(15f, 6f)
     }
 
     /** `chevron-right` — 前进 / 展开 */
-    val ChevronForward: ImageVector = strokeIcon("ChevronForward") {
+    val ChevronForward: ImageVector = strokeIcon("ChevronForward", autoMirror = true) {
         moveTo(9f, 18f)
         lineTo(15f, 12f)
         lineTo(9f, 6f)

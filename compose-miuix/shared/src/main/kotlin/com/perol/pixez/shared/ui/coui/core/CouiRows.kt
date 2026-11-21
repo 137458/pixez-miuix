@@ -16,10 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.layout.CouiPageColors
 import com.itos.coui.layout.CouiPageDefaults
@@ -96,19 +99,22 @@ internal fun CouiChevron(
     modifier: Modifier = Modifier,
     color: Color = CouiTheme.colorScheme.onSurfaceVariant,
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(modifier = modifier.size(16.dp)) {
         val stroke = 1.6.dp.toPx()
+        val tailX = if (isRtl) size.width * 0.64f else size.width * 0.36f
+        val tipX = if (isRtl) size.width * 0.34f else size.width * 0.66f
         drawLine(
             color = color,
-            start = Offset(size.width * 0.36f, size.height * 0.28f),
-            end = Offset(size.width * 0.66f, size.height * 0.5f),
+            start = Offset(tailX, size.height * 0.28f),
+            end = Offset(tipX, size.height * 0.5f),
             strokeWidth = stroke,
             cap = StrokeCap.Round,
         )
         drawLine(
             color = color,
-            start = Offset(size.width * 0.66f, size.height * 0.5f),
-            end = Offset(size.width * 0.36f, size.height * 0.72f),
+            start = Offset(tipX, size.height * 0.5f),
+            end = Offset(tailX, size.height * 0.72f),
             strokeWidth = stroke,
             cap = StrokeCap.Round,
         )
@@ -253,7 +259,7 @@ internal fun CouiActionRow(
                 kind = CouiTextKind.ItemTitle,
                 color = when {
                     !enabled -> colors.disabled
-                    destructive -> CouiTheme.colorScheme.accent
+                    destructive -> CouiDialogDefaults.colors(CouiTheme.isDark).destructive
                     else -> colors.title
                 },
                 textAlign = TextAlign.Start,

@@ -1,8 +1,11 @@
 package com.perol.pixez.shared.ui.skin
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.ui.components.ToastData
@@ -52,6 +55,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiUserListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserNovelListScreen
 import com.perol.pixez.shared.ui.coui.page.CouiWelcomePageScreen
 import com.perol.pixez.shared.ui.coui.page.CouiWidgetRecommendScreen
+import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
@@ -158,7 +162,7 @@ internal object CouiSkinPages : SkinPages {
     ) {
         when (tab) {
             RootComponent.MainTab.Hello -> {
-                val reselectFlow = remember(tab) { component.reselectFlowOf(tab) }
+                val reselectFlow = remember(component, tab) { component.reselectFlowOf(tab) }
                 CouiHelloScreen(
                     onIllustClick = component::onIllustClicked,
                     onUserClick = component::onUserClicked,
@@ -181,7 +185,7 @@ internal object CouiSkinPages : SkinPages {
                 )
             }
             RootComponent.MainTab.New -> {
-                val reselectFlow = remember(tab) { component.reselectFlowOf(tab) }
+                val reselectFlow = remember(component, tab) { component.reselectFlowOf(tab) }
                 CouiNewScreen(
                     onIllustClick = component::onIllustClicked,
                     onUserClick = component::onUserClicked,
@@ -191,10 +195,14 @@ internal object CouiSkinPages : SkinPages {
                 )
             }
             RootComponent.MainTab.Search -> {
+                val selectedTab by component.selectedTab.collectAsState()
+                val stack by component.stack.subscribeAsState()
                 CouiSearchScreen(
                     onIllustClick = component::onIllustClicked,
                     onUserClick = component::onUserClicked,
                     onNovelClick = component::onNovelClicked,
+                    isActive = selectedTab == RootComponent.MainTab.Search &&
+                        stack.active.configuration is Config.Main,
                 )
             }
         }

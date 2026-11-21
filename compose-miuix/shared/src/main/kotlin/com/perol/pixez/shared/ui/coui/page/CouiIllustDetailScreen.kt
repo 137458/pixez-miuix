@@ -126,6 +126,7 @@ import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
+import com.perol.pixez.shared.ui.screens.rememberSyncedDetailToggle
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import com.perol.pixez.shared.ui.utils.formatPixivDate
@@ -325,13 +326,13 @@ private fun CouiIllustDetailSingle(
         }
     }
 
-    var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
+    val bookmarkState = rememberSyncedDetailToggle(key = illustId, remoteValue = illust?.isBookmarked)
+    val isBookmarked = bookmarkState.value
     var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
-    var isFollowed by rememberSaveable(illust?.user?.id, illust?.user?.isFollowed) {
-        mutableStateOf(illust?.user?.isFollowed ?: false)
-    }
+    val followState = rememberSyncedDetailToggle(key = illustId, remoteValue = illust?.user?.isFollowed)
+    val isFollowed = followState.value
     var isFollowLoading by remember { mutableStateOf(false) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
@@ -383,7 +384,7 @@ private fun CouiIllustDetailSingle(
         repository = repository,
         bookmarkRepository = bookmarkRepository,
         downloadRepository = downloadRepository,
-        onBookmarkedChange = { isBookmarked = it },
+        onBookmarkedChange = bookmarkState.setLocal,
         onBookmarkLoadingChange = { isBookmarkLoading = it },
         onBookmarkErrorChange = { bookmarkError = it },
         onDownloadingChange = { isDownloading = it },
@@ -405,7 +406,7 @@ private fun CouiIllustDetailSingle(
                         }
                     }.onSuccess {
                         performHapticFeedback(HapticType.Confirm)
-                        isFollowed = !wasFollowed
+                        followState.setLocal(!wasFollowed)
                     }.onFailure { error ->
                         performHapticFeedback(HapticType.Reject)
                         toastSink(

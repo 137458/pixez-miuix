@@ -179,6 +179,49 @@ fun IllustDetailScreen(
     }
 }
 
+/**
+ * 作品详情页局部布尔开关（如收藏、关注）的远端同步决策：
+ * 仅在尚未产生本地交互变更且远端返回非空值时对齐服务端状态，避免网刷覆盖乐观/本地状态。
+ */
+internal fun resolveSyncedDetailToggle(
+    currentValue: Boolean,
+    hasLocalChange: Boolean,
+    remoteValue: Boolean?,
+): Boolean = if (!hasLocalChange && remoteValue != null) remoteValue else currentValue
+
+internal class DetailToggleHandle(
+    val value: Boolean,
+    val setLocal: (Boolean) -> Unit,
+)
+
+/**
+ * 维系作品详情页的局部布尔状态，并在未产生本地变更时随远端详情数据对齐。
+ */
+@Composable
+internal fun rememberSyncedDetailToggle(
+    key: Any?,
+    remoteValue: Boolean?,
+): DetailToggleHandle {
+    var value by rememberSaveable(key) { mutableStateOf(remoteValue ?: false) }
+    var hasLocalChange by rememberSaveable(key) { mutableStateOf(false) }
+
+    LaunchedEffect(key, remoteValue) {
+        value = resolveSyncedDetailToggle(
+            currentValue = value,
+            hasLocalChange = hasLocalChange,
+            remoteValue = remoteValue,
+        )
+    }
+
+    return DetailToggleHandle(
+        value = value,
+        setLocal = { newValue ->
+            value = newValue
+            hasLocalChange = true
+        },
+    )
+}
+
 @Composable
 private fun IllustDetailSingleContent(
     illustId: Long,
@@ -227,7 +270,8 @@ private fun IllustDetailSingleContent(
         }
     }
 
-    var isBookmarked by rememberSaveable(illust) { mutableStateOf(illust?.isBookmarked ?: false) }
+    val bookmarkState = rememberSyncedDetailToggle(key = illustId, remoteValue = illust?.isBookmarked)
+    val isBookmarked = bookmarkState.value
     // 进行中标志使用 remember 而非 rememberSaveable：进程恢复后协程不会恢复，避免按钮被永久禁用。
     var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -337,7 +381,7 @@ private fun IllustDetailSingleContent(
                         repository = repository,
                         bookmarkRepository = bookmarkRepository,
                         downloadRepository = downloadRepository,
-                        onBookmarkedChange = { isBookmarked = it },
+                        onBookmarkedChange = bookmarkState.setLocal,
                         onBookmarkLoadingChange = { isBookmarkLoading = it },
                         onBookmarkErrorChange = { bookmarkError = it },
                         onDownloadingChange = { isDownloading = it },
@@ -418,7 +462,7 @@ private fun IllustDetailSingleContent(
                 bookmarkRepository = bookmarkRepository,
                 downloadRepository = downloadRepository,
                 banRepository = banRepository,
-                onBookmarkedChange = { isBookmarked = it },
+                onBookmarkedChange = bookmarkState.setLocal,
                 onBookmarkLoadingChange = { isBookmarkLoading = it },
                 onBookmarkErrorChange = { bookmarkError = it },
                 onDownloadingChange = { isDownloading = it },

@@ -34,7 +34,7 @@ import com.perol.pixez.shared.ui.LocalSettingsRepository
 /**
  * COUI 语言设置页：折叠大标题顶栏 + 语言单选分组 + 当前语言的 Sponsor 横滚条。
  *
- * 语言索引持久化口径不变（只写 [SettingsRepository.languageNum]，不做应用内实时切换）；
+ * 语言索引写入 [SettingsRepository.languageNum] 后即刻生效（由根宿主订阅 changeVersion 实时切换语言与 RTL 排版）；
  * 选中态由 core 的 [CouiRadioOptionRow] 承担：整行 selectable 提供点击与无障碍语义，
  * 圆形指示器由官方 RadioButton 绘制，行与指示器共享同一 InteractionSource 以避免双重触发。
  * 分组间距、卡片圆角、行间分隔线全部来自官方 Group / Item / Divider。

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -255,14 +256,14 @@ internal fun CouiNavigationRail(
     val safeIndex = selectedIndex.coerceIn(0, items.lastIndex)
 
     Row(modifier = modifier.fillMaxHeight()) {
+        val railInsets = WindowInsets.systemBars.only(WindowInsetsSides.Vertical + WindowInsetsSides.Start)
         Column(
             modifier = Modifier
                 .width(80.dp)
                 .fillMaxHeight()
                 .background(scheme.surface)
-                .windowInsetsPadding(
-                    WindowInsets.systemBars.only(WindowInsetsSides.Vertical + WindowInsetsSides.Start),
-                )
+                .windowInsetsPadding(railInsets)
+                .consumeWindowInsets(railInsets)
                 .padding(horizontal = 8.dp, vertical = 16.dp)
                 .selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
