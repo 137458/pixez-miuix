@@ -30,6 +30,7 @@
 - 优化了 13 种语言翻译覆盖与交互体验，补齐缺失翻译，下载路径面包屑支持点击直接切换至上级目录。
 - 优化了弹窗布局规范、列表触底底栏与多账号缓存隔离，切号或退出时即时清空上一账号内存缓存。
 - 优化了 Android 发布包体积与混淆裁剪规则。
+- 收敛工程构建架构为纯 Android 原生模块（`com.android.library` + `com.android.application`），移除 Kotlin Multiplatform 与 Compose Multiplatform 壳层并统一 Jetpack Compose BOM 与 Android 资源体系。
 
 ### 破坏性变更
 

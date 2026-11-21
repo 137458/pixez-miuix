@@ -1,11 +1,11 @@
 # PixEz MIUIX — Agent 约束入口
 
-PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform + MIUIX 重制版。
+PixEz（Pixiv 第三方客户端）Android 原生 Jetpack Compose + MIUIX / COUI 双皮肤重制版。
 
 ## 工具链与平台矩阵
 
 - **基线**：JDK 17、Gradle 8.14.4、Kotlin 2.4.10、AGP 8.13.0
-- **应用栈**：Compose Multiplatform 1.12.0、MIUIX 0.9.4、COUI 0.0.1-alpha12、Coil 3.6.3、SQLDelight 2.0.2
+- **应用栈**：Android Gradle 模块（`com.android.library` + `com.android.application`）、Jetpack Compose（`compose-bom-alpha 2026.08.01`）、MIUIX 0.9.4、COUI 0.0.1-alpha12、Coil 3.6.3、SQLDelight 2.0.2
 - **平台支持**：仅 Android（API 31+，COUI AAR 清单固定 `minSdkVersion=31`）；已移除 Desktop 与 Flutter 归档
 - **SDK 与版本**：`compileSdk 36`、`targetSdk 35`；`versionCode` 为 `10010097`，`versionName` 为 `0.9.109.7-miuix`，与 `AppInfo.kt` 的 `VERSION_NAME` 由 `AppInfoVersionParityTest` 约束一致
 - **CI 状态**：无远程 CI，所有验证与打包均在本地执行
@@ -16,24 +16,24 @@ PixEz（Pixiv 第三方客户端）Kotlin Multiplatform + Compose Multiplatform 
 
 | 目标 | 执行命令 |
 | :--- | :--- |
-| Android 共享模块编译 | `./gradlew :shared:compileDebugKotlinAndroid` |
-| Android 应用编译 | `./gradlew :composeApp:compileDebugKotlinAndroid` |
+| Android 共享模块编译 | `./gradlew :shared:compileDebugKotlin` |
+| Android 应用编译 | `./gradlew :composeApp:compileDebugKotlin` |
 | Android 共享模块单元测试 | `./gradlew :shared:testDebugUnitTest` |
 | Android 应用单元测试 | `./gradlew :composeApp:testDebugUnitTest` |
 | Android Debug APK | `./gradlew :composeApp:assembleDebug` |
 | Android Release APK | `./gradlew :composeApp:assembleRelease` |
 
-Android 单测只跑 JVM 单元测试，源集为 `shared/src/androidUnitTest` 与 `composeApp/src/androidUnitTest`（含原迁入的通用业务单测），不启动模拟器。任务名为 `:shared:testDebugUnitTest` 与 `:composeApp:testDebugUnitTest`，可用 `./gradlew :shared:tasks --all` 复核。
+Android 单测只跑 JVM 单元测试，源集为 `shared/src/test` 与 `composeApp/src/test`（SQLDelight schema 位于 `shared/src/main/sqldelight`），不启动模拟器。任务名为 `:shared:testDebugUnitTest` 与 `:composeApp:testDebugUnitTest`，可用 `./gradlew :shared:tasks --all` 复核。
 
 **发布前全量验证（单行）：**
 ```bash
-./gradlew :shared:compileDebugKotlinAndroid :shared:testDebugUnitTest :composeApp:compileDebugKotlinAndroid :composeApp:testDebugUnitTest :composeApp:assembleDebug
+./gradlew :shared:compileDebugKotlin :shared:testDebugUnitTest :composeApp:compileDebugKotlin :composeApp:testDebugUnitTest :composeApp:assembleDebug
 ```
 
 **已知限制（SQLDelight 迁移校验在 Windows 上恒为 SKIPPED）**
 
-- **生效条件**：任务为 `verify<SourceSet><Db>Migration`，聚合名为 `verifySqlDelightMigration`。`shared/build.gradle.kts` 的 `onlyIf` 在 `-PskipVerifyMigrations` 为真、或 `os.name` 含 `win` 时跳过。
-- **Windows 行为**：`./gradlew :shared:verifyCommonMainTaskDatabaseMigration` 只输出 `> Task :shared:verifyCommonMainTaskDatabaseMigration SKIPPED` 与 `BUILD SUCCESSFUL`。零校验，不能作为 `.sqm` 与 schema 一致的证据。
+- **生效条件**：任务为 `verify<Variant><Db>Migration`，聚合名为 `verifySqlDelightMigration`。`shared/build.gradle.kts` 的 `onlyIf` 在 `-PskipVerifyMigrations` 为真、或 `os.name` 含 `win` 时跳过。
+- **Windows 行为**：`./gradlew :shared:verifyDebugTaskDatabaseMigration` 只输出 `> Task :shared:verifyDebugTaskDatabaseMigration SKIPPED` 与 `BUILD SUCCESSFUL`。零校验，不能作为 `.sqm` 与 schema 一致的证据。
 - **强制运行必失败**：sqlite-jdbc 需把原生库释放到不可写目录。先报 `java.nio.file.AccessDeniedException: C:\WINDOWS\sqlite-3.45.2.0-<hash>-sqlitejdbc.dll.lck`；回退 `System.loadLibrary` 后再报 `java.lang.UnsatisfiedLinkError: no sqlitejdbc in java.library.path`。直接强制、`--no-daemon` 配显式 `TMP`/`TEMP`、`-Dorg.sqlite.tmpdir=<可写目录>` 三种手段复现同一错误，与迁移内容无关，故未改构建脚本。
 - **替代覆盖**：迁移校验只能在 Linux 或 WSL 补跑；Windows 宿主以 `:shared:testDebugUnitTest` 覆盖 SQLDelight 逻辑。
 
