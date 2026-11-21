@@ -6,10 +6,13 @@ import androidx.compose.ui.unit.dp
 /**
  * COUI 官方浮动底栏的版式常量与几何推导。
  *
- * 下列数字逐条抄自 COUI-Kit 0.0.1-alpha11 的 navigation/NavigationBar.kt：库把外框、圆钮与菜单的
- * 尺寸写死在版式里，也没有内容槽与定位接口，所以未读红点只能在底栏之上另叠一层，用这里的公式
- * 复算每个条目的位置。本对象只做纯算术，不涉及组合、窗口特性与手势；只在库不支持内容槽时用于
- * 叠层绘制。升级 COUI-Kit 后必须复核这些数字，androidMain 的 UiSkinNavigationBar.kt 是唯一使用方。
+ * 下列数字逐条抄自 COUI-Kit 的 navigation/NavigationBar.kt。官方的浮动底栏是按「3 个条目 + 左右各一个
+ * 圆形附件」设计的，胶囊宽度固定按 `可用宽度 - 136dp` 计算并给两个 56dp 附件预留位置，本工程 5 个
+ * 等分条目、没有附件，因此底栏改为用库内公开的浮动玻璃原语自装配（androidMain 的 CouiBottomBar.kt），
+ * 只沿用这里的度量：胶囊高、条目高、图标、内边距、间距、红点尺寸。
+ *
+ * 纯算术对象，不涉及组合、窗口特性与手势；NavigationBarBadgeMetricsTest 锁死这些取值，
+ * 升级 COUI-Kit 后按此处复核官方栏是否仍是同一套度量。
  */
 internal object CouiNavigationBarMetrics {
 
