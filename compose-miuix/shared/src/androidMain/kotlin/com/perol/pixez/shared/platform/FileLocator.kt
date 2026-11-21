@@ -5,10 +5,16 @@ import android.content.Intent
 import io.github.aakira.napier.Napier
 
 /**
- * Android 平台实现：打开系统下载管理器或图库。
+ * Android 平台文件定位与管理器打开工具：打开系统下载管理器或图库。
  */
-actual class FileLocator {
-    actual fun showInFileManager(filePath: String): Boolean {
+class FileLocator {
+    /**
+     * 在系统文件管理器中打开或定位 [filePath] 文件。
+     *
+     * @param filePath 文件的绝对路径
+     * @return 是否成功唤起系统文件管理器
+     */
+    fun showInFileManager(filePath: String): Boolean {
         val context = BrowserLauncherContext.applicationContext ?: return false
         return try {
             val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {

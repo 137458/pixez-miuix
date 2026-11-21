@@ -9,9 +9,9 @@ import androidx.core.app.NotificationCompat
 import com.perol.pixez.shared.R
 
 /**
- * Android 平台实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。
+ * 下载状态与系统通知实现：支持 Android 16 (API 36) Rich Ongoing Notifications 实时动态胶囊下载通知。
  */
-actual class DownloadNotifier {
+class DownloadNotifier {
     private val channelId = IMAGE_DOWNLOAD_CHANNEL_ID
 
     private fun getNotificationManager(context: Context): NotificationManager? {
@@ -30,7 +30,7 @@ actual class DownloadNotifier {
         )
     }
 
-    actual fun notifyProgress(id: Long, title: String, current: Int, total: Int) {
+    fun notifyProgress(id: Long, title: String, current: Int, total: Int) {
         val context = BrowserLauncherContext.applicationContext ?: return
         createChannelIfNeeded(context)
         val manager = getNotificationManager(context) ?: return
@@ -63,7 +63,7 @@ actual class DownloadNotifier {
         manager.notify(stableNotificationId(id), notification)
     }
 
-    actual fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int) {
+    fun notifyFinished(id: Long, title: String, successCount: Int, failedCount: Int) {
         val context = BrowserLauncherContext.applicationContext ?: return
         createChannelIfNeeded(context)
         val manager = getNotificationManager(context) ?: return
@@ -99,7 +99,7 @@ actual class DownloadNotifier {
         manager.notify(stableNotificationId(id), notification)
     }
 
-    actual fun cancel(id: Long) {
+    fun cancel(id: Long) {
         val context = BrowserLauncherContext.applicationContext ?: return
         val manager = getNotificationManager(context) ?: return
         manager.cancel(stableNotificationId(id))

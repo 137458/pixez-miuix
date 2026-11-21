@@ -10,13 +10,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import io.github.aakira.napier.Napier
 
+/**
+ * 系统目录/文件夹选择器。
+ *
+ * 调用系统 SAF 文件选择器（OpenDocumentTree），自动获取并持久化目录授权。
+ *
+ * @param initialDirectory 保留参数（SAF 选择器不使用初始目录）。
+ * @param dialogTitle 保留参数（SAF 选择器不使用自定义标题）。
+ * @param onResult 选定路径后的回调，参数为解析后的绝对路径字符串（或 Uri 字符串），取消或失败时为 null。
+ * @return 触发选择器的无参函数。
+ */
 @Composable
-actual fun rememberDirectoryPicker(
-    initialDirectory: String?,
-    dialogTitle: String?,
+fun rememberDirectoryPicker(
+    initialDirectory: String? = null,
+    dialogTitle: String? = null,
     onResult: (String?) -> Unit,
 ): () -> Unit {
-    // SAF 选择器不接受初始目录与标题参数，二者仅桌面端使用。
+    // SAF 选择器不接受初始目录与标题参数，保留参数以兼容现有调用方。
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()

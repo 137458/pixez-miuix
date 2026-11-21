@@ -24,9 +24,12 @@ import java.io.File
  * 2. 检索 Coil 磁盘缓存中的原图 URL（`metaSinglePage.originalImageUrl` / `metaPages[pageIndex].imageUrls.original`）；
  * 3. 检索 Coil 磁盘缓存中的高清/标清显示缓存（`large` -> `medium` -> `squareMedium`）；
  * 4. 离线/无缓存时安全降级为作品 Web URL 文本。
+ *
+ * @param illust 目标插画作品实体
+ * @param pageIndex 目标分页索引，单页作品传 0
  */
 @Composable
-actual fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int): Modifier {
+fun Modifier.illustDragAndDropSource(illust: Illust, pageIndex: Int = 0): Modifier {
     val context = LocalContext.current.applicationContext
 
     return this.dragAndDropSource(
@@ -174,5 +177,3 @@ private fun buildCandidateUrls(illust: Illust, pageIndex: Int, originalUrl: Stri
     }
     return urls.distinct()
 }
-
-

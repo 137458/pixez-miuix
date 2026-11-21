@@ -13,8 +13,13 @@ private const val NAV_MODE_THREE_BUTTON = 0
 // API < 28 无此设置项：其时不存在手势导航，视为可用。
 private const val NAV_MODE_NOT_PRESENT = -2
 
+/**
+ * 应用内拖拽返回手势是否可用。
+ *
+ * Android 仅三键导航机型可用——手势导航机型的边缘拖拽返回由系统预测性返回承担，应用内再监听会双重响应。
+ */
 @Composable
-actual fun rememberDragBackGestureEnabled(): Boolean {
+fun rememberDragBackGestureEnabled(): Boolean {
     val context = LocalContext.current
     // 手势导航（含两键 pill）的边缘横拖由系统 predictive back 接管，
     // 应用内拖拽仅在三键导航（或无此设置的旧系统）启用，避免双重响应。

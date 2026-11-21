@@ -1,12 +1,25 @@
 package com.perol.pixez.shared.platform
 
-import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import io.github.aakira.napier.Napier
 
-actual fun performHapticFeedback(type: HapticType) {
+/**
+ * 触觉反馈类型定义。
+ */
+enum class HapticType {
+    Confirm,
+    Reject,
+    GestureStart,
+    GestureEnd,
+    Tick,
+}
+
+/**
+ * 触发系统物理级触觉反馈（触感振动）。
+ */
+fun performHapticFeedback(type: HapticType) {
     val context = BrowserLauncherContext.applicationContext ?: return
     try {
         // minSdk 31 起 Context.VIBRATOR_SERVICE 已废弃，改走 VibratorManager 取默认振动器。

@@ -154,14 +154,14 @@ class UpdateDownloadService : Service() {
     }
 }
 
-internal actual fun updateDownloadForegroundStart() {
+internal fun updateDownloadForegroundStart() {
     BrowserLauncherContext.applicationContext?.let(UpdateDownloadService::start)
 }
 
-internal actual fun updateDownloadForegroundProgress(downloaded: Long, total: Long) {
+internal fun updateDownloadForegroundProgress(downloaded: Long, total: Long) {
     BrowserLauncherContext.applicationContext?.let { UpdateDownloadService.update(it, downloaded, total) }
 }
 
-internal actual fun updateDownloadForegroundStop() {
+internal fun updateDownloadForegroundStop() {
     BrowserLauncherContext.applicationContext?.let(UpdateDownloadService::stop)
 }

@@ -116,7 +116,7 @@ data class UpdateFileEntry(val path: String, val name: String, val size: Long)
  *
  * 只在恢复 [UpdateDownloadState.Done] 时扫描一次。
  */
-internal expect suspend fun scanUpdateDirectory(): List<UpdateFileEntry>
+internal suspend fun scanUpdateDirectory(): List<UpdateFileEntry> = scanUpdateDirectoryJvm()
 
 /**
  * 进程级更新下载器。
@@ -128,8 +128,8 @@ internal expect suspend fun scanUpdateDirectory(): List<UpdateFileEntry>
  * 旧协程可能仍会在取消生效前写出一帧进度，代际号让过期写入直接丢弃。
  * 该代际号会被下载协程（IO 线程）读取，必须用 `@Volatile` 保证跨线程可见性。
  *
- * 取舍：低层传输、文件摘要、删除与目录扫描通过构造参数注入，默认指向各平台 actual 实现；
- * 这样状态机与三态校验能在 commonTest 里用假传输完整覆盖。
+ * 取舍：低层传输、文件摘要、删除与目录扫描通过构造参数注入，默认指向平台实现；
+ * 这样状态机与三态校验能在单元测试里用假传输完整覆盖。
  */
 class AppUpdateDownloader(
     private val scope: CoroutineScope,
@@ -315,8 +315,8 @@ class AppUpdateDownloader(
      * 进程重启后的恢复：把磁盘上已下载完成、且与 [asset] 完全匹配的安装包接回 [UpdateDownloadState.Done]，
      * 并清理中断下载遗留的 `.part` 半成品。
      *
-     * 只删除本应用以 `.{safeName}.` 前缀命名的 `.part` 临时文件：桌面端保存目录就是用户的 Downloads 目录，
-     * 扩大删除范围会误伤用户其它隐藏 `.part` 文件，因此绝不清理无关文件或其它版本完成包。
+     * 只删除本应用以 `.{safeName}.` 前缀命名的 `.part` 临时文件：
+     * 扩大删除范围会误伤其它隐藏 `.part` 文件，因此绝不清理无关文件或其它版本完成包。
      *
      * 恢复同样要求远端提供了可用摘要：缺摘要的完成包无法校验，据此删除且不接回 [UpdateDownloadState.Done]。
      */
@@ -397,24 +397,29 @@ class AppUpdateDownloader(
 /** 进度回调节流：网络每读一块都更新 StateFlow 会带来大量无效重组。 */
 private const val PROGRESS_REPORT_INTERVAL_MS = 500L
 
-/** 传输中断后遗留的半成品后缀（与各平台 actual 的临时文件命名一致）。 */
+/** 传输中断后遗留的半成品后缀（与平台临时文件命名一致）。 */
 private const val PART_FILE_SUFFIX = ".part"
 
 /**
- * 平台传输实现：下载安装包到本地缓存目录，返回本地绝对路径。
+ * 传输实现：下载安装包到本地缓存目录，返回本地绝对路径，委派至 JVM 共用下载实现。
  *
- * 实际字节数校验（HTTP 总长 / 截断 / 大小上限）在 actual 内完成；摘要校验在公共状态机
+ * 实际字节数校验（HTTP 总长 / 截断 / 大小上限）在此内完成；摘要校验在公共状态机
  * 下载完成后再做，保证“无摘要跳过、有摘要不一致删包报错”的口径只有一份。
  */
-internal expect suspend fun downloadUpdateFile(
+internal suspend fun downloadUpdateFile(
     downloadUrl: String,
     fileName: String,
     onProgress: (downloaded: Long, total: Long) -> Unit,
-): Result<String>
-
-/** 前台保活：Android 以前台服务 + 进度通知呈现；桌面端为空实现。 */
-internal expect fun updateDownloadForegroundStart()
-
-internal expect fun updateDownloadForegroundProgress(downloaded: Long, total: Long)
-
-internal expect fun updateDownloadForegroundStop()
+): Result<String> = downloadUpdateFileJvm(
+    downloadUrl = downloadUrl,
+    fileName = fileName,
+    onProgress = onProgress,
+    moveAtomically = { tempFile, targetFile ->
+        // minSdk 31 恒高于 O（26），原子覆盖统一走 java.nio，不再保留 renameTo 回退。
+        java.nio.file.Files.move(
+            tempFile.toPath(),
+            targetFile.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+        )
+    },
+)

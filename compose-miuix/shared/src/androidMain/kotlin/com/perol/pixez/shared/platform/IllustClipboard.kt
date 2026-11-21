@@ -7,12 +7,17 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 /**
- * Android 平台实现：使用系统 ClipboardManager 复制文本与图片。
+ * Android 平台剪贴板工具：使用系统 ClipboardManager 复制文本与图片。
  *
  * 复用 [BrowserLauncherContext] 获取应用 Context，与 [IllustSaver] 保持一致。
  */
-actual class IllustClipboard {
-    actual fun copy(text: String) {
+class IllustClipboard {
+    /**
+     * 将 [text] 复制到系统剪贴板。
+     *
+     * 失败时抛出异常，由调用方处理并提示用户。
+     */
+    fun copy(text: String) {
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 ClipboardManager")
 
@@ -21,7 +26,10 @@ actual class IllustClipboard {
         clipboardManager.setPrimaryClip(clipData)
     }
 
-    actual fun copyImage(imageBytes: ByteArray) {
+    /**
+     * 将图片二进制数据 [imageBytes] 复制为系统剪贴板位图。
+     */
+    fun copyImage(imageBytes: ByteArray) {
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 ClipboardManager")
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -33,7 +41,10 @@ actual class IllustClipboard {
         clipboardManager.setPrimaryClip(clipData)
     }
 
-    actual fun getText(): String? {
+    /**
+     * 读取系统剪贴板中的纯文本内容，剪贴板为空或不支持时返回 null。
+     */
+    fun getText(): String? {
         val context = BrowserLauncherContext.applicationContext ?: return null
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
         val clip = clipboardManager.primaryClip ?: return null

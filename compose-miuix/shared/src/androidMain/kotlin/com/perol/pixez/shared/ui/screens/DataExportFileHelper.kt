@@ -8,6 +8,8 @@ import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.data.repository.NovelHistoryRepository
 import com.perol.pixez.shared.data.settings.SettingsKeys
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.BrowserLauncherContext
+import com.perol.pixez.shared.utils.runCatchingNonCancel
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,52 +17,95 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.IOException
+
+/** 导入文件大小上限：防止误放入 export 目录的超大文件在 readText 时耗尽内存。 */
+internal const val MAX_IMPORT_FILE_BYTES: Long = 8L * 1024 * 1024
 
 /**
  * 将文本内容写入指定路径的导出文件。
  *
- * 该函数为平台相关函数：Android / Desktop 使用 Java [java.io.File]，
- * 其它平台在需要时再补充实现。
- *
- * 平台实现会校验 [path] 必须位于 [getExportBaseDirectory] 之下，
- * 防止 `../` 路径遍历导致写入应用私有目录之外。
+ * 写入前校验路径必须位于 [getExportBaseDirectory] 之下，防止 `../` 路径遍历导致写入应用私有目录之外。
  *
  * @param path 用户输入的目标文件路径，必须以 `.json` 结尾。
  * @param content 待写入的 JSON 文本。
- * @return [Result] 包装写入结果，失败时携带 [DataExportException]（平台实现只抛错误码，不抛文案）。
+ * @return [Result] 包装写入结果，失败时携带 [DataExportException]（只抛错误码，不抛文案）。
  */
-internal expect fun writeExportFile(path: String, content: String): Result<Unit>
+internal fun writeExportFile(path: String, content: String): Result<Unit> =
+    runCatchingNonCancel {
+        val safePath = validateExportPath(path)
+        try {
+            File(safePath).apply { parentFile?.mkdirs() }.writeText(content, Charsets.UTF_8)
+        } catch (e: IOException) {
+            throw DataExportException(DataExportErrorCode.IoFailure, "path=$safePath", e)
+        }
+    }
 
 /**
  * 从指定路径读取导出文件的文本内容。
  *
- * 平台实现会校验 [path] 必须位于 [getExportBaseDirectory] 之下，
- * 防止 `../` 路径遍历导致读取应用私有目录之外的数据。
+ * 读取前校验路径必须位于 [getExportBaseDirectory] 之下，防止 `../` 路径遍历导致读取应用私有目录之外的数据。
  *
  * @param path 用户输入的源文件路径，必须以 `.json` 结尾。
  * @return [Result] 包装读取到的文本，失败时携带 [DataExportException]。
  */
-/** 导入文件大小上限：防止误放入 export 目录的超大文件在 readText 时耗尽内存。 */
-internal const val MAX_IMPORT_FILE_BYTES: Long = 8L * 1024 * 1024
-
-internal expect fun readExportFile(path: String): Result<String>
+internal fun readExportFile(path: String): Result<String> = runCatchingNonCancel {
+    val safePath = validateExportPath(path)
+    val file = File(safePath)
+    val size = file.length()
+    if (size > MAX_IMPORT_FILE_BYTES) {
+        throw DataExportException(
+            DataExportErrorCode.ImportFileTooLarge,
+            "size=$size limit=$MAX_IMPORT_FILE_BYTES",
+        )
+    }
+    try {
+        file.readText(Charsets.UTF_8)
+    } catch (e: IOException) {
+        throw DataExportException(DataExportErrorCode.IoFailure, "path=$safePath", e)
+    }
+}
 
 /**
  * 弹出平台原生文件选择器。
  *
+ * Android 无桌面式文件选择器接入（SAF 另行排期）：返回 null 保持现有手输路径流程。
+ *
  * @param suggestedName 保存时的建议文件名（导入时忽略）。
  * @param forSave true 为导出保存对话框，false 为导入打开对话框。
- * @return 用户选中的绝对路径；取消或平台未实现时返回 null（调用方回退手输路径）。
+ * @return 用户选中的绝对路径；取消或未实现时返回 null（调用方回退手输路径）。
  */
-internal expect suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String?
+internal suspend fun pickExportFilePath(suggestedName: String, forSave: Boolean): String? = null
 
 /**
- * 返回当前平台允许导出/导入的根目录。
- *
- * Android 使用应用外部私有目录下的 `export` 子目录；
- * Desktop 使用用户主目录下的 `PixEz/export` 子目录。
+ * 返回当前平台允许导出/导入的根目录：优先使用应用外部私有目录下的 `export` 子目录。
  */
-internal expect fun getExportBaseDirectory(): String
+internal fun getExportBaseDirectory(): String {
+    val context = BrowserLauncherContext.applicationContext
+        ?: throw DataExportException(DataExportErrorCode.BaseDirUnavailable, "BrowserLauncherContext")
+    return context.getExternalFilesDir("export")?.absolutePath
+        ?: File(context.filesDir, "export").absolutePath
+}
+
+/**
+ * 校验导出/导入路径是否位于允许的基础目录内。
+ *
+ * 使用 [File.getCanonicalPath] 解析 `../` 等路径，确保目标文件不会穿越到应用目录之外。
+ */
+private fun validateExportPath(path: String): String {
+    if (path.isBlank()) throw DataExportException(DataExportErrorCode.PathBlank)
+    if (!path.endsWith(".json", ignoreCase = true)) {
+        throw DataExportException(DataExportErrorCode.PathUnsupportedExtension, path)
+    }
+    val baseDir = File(getExportBaseDirectory()).canonicalPath
+    val targetFile = File(baseDir, path).canonicalFile
+    val targetPath = targetFile.canonicalPath
+    if (!(targetPath.startsWith(baseDir + File.separator) || targetPath == baseDir)) {
+        throw DataExportException(DataExportErrorCode.PathOutsideExportDir, path)
+    }
+    return targetPath
+}
 
 /**
  * 当前支持操作的数据类型列表，与原 Flutter DataExportPage 保持一致。

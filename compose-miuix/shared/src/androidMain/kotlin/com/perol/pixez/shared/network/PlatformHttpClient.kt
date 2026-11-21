@@ -13,8 +13,15 @@ import io.ktor.client.HttpClientConfig
  *   [TrustedUrlPolicy] 校验后再请求（Ktor 3.1 无请求级重定向开关，只能建独立 client）。
  * @param block Ktor HttpClient 的通用插件配置块。
  */
-expect fun createPlatformHttpClient(
+fun createPlatformHttpClient(
     modeProvider: (isOauthHost: Boolean) -> String? = { null },
     followRedirects: Boolean = true,
     block: HttpClientConfig<*>.() -> Unit = {},
-): HttpClient
+): HttpClient = createJvmHttpClient(
+    // Android 与 JVM 共用 RobustDohDns（含熔断）与连接池构建。
+    // Android 端不做桌面式系统代理探测（DoH 经 VPN/代理隧道可达），standard 分流由 modeProvider 承担。
+    hasProxyProvider = { false },
+    modeProvider = modeProvider,
+    followRedirects = followRedirects,
+    block = block,
+)

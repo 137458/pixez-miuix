@@ -14,7 +14,10 @@ object BrowserLauncherContext {
     var applicationContext: Context? = null
 }
 
-actual fun openBrowser(url: String) {
+/**
+ * 打开外部浏览器访问指定 URL。
+ */
+fun openBrowser(url: String) {
     val context = BrowserLauncherContext.applicationContext
         ?: throw IllegalStateException("BrowserLauncherContext 未初始化")
     if (!isBrowserUrlAllowed(url)) {
@@ -30,3 +33,11 @@ actual fun openBrowser(url: String) {
         throw e
     }
 }
+
+internal fun isBrowserUrlAllowed(url: String): Boolean {
+    val scheme = url.substringBefore(':', "").lowercase()
+    return scheme in DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES
+}
+
+/** 外部浏览器默认允许打开的安全 URL Scheme 白名单，与 `UrlLauncher` 共用单点定义。 */
+internal val DEFAULT_ALLOWED_EXTERNAL_URL_SCHEMES: Set<String> = setOf("http", "https", "mailto")

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,16 +19,40 @@ import com.perol.pixez.shared.ui.coui.core.LocalCouiFloatingBackdrop
 import top.yukonga.miuix.kmp.theme.Colors
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-actual val isCouiSkinSupported: Boolean = true
+/**
+ * 界面皮肤：同一套业务逻辑下的两套系统视觉。
+ *
+ * - [HYPEROS]：MIUIX 原生组件（默认）。
+ * - [COLOROS]：COUI 原语（Android 皮肤切换）。
+ */
+enum class UiSkin(val storageIndex: Int) {
+    HYPEROS(0),
+    COLOROS(1),
+    ;
+
+    companion object {
+        fun fromIndex(index: Int): UiSkin = entries.firstOrNull { it.storageIndex == index } ?: HYPEROS
+    }
+}
+
+/** 当前生效皮肤，由根组合在 [com.perol.pixez.shared.ui.navigation.RootContent] 下发。 */
+val LocalUiSkin = compositionLocalOf { UiSkin.HYPEROS }
+
+/** 当前平台是否提供 COUI 皮肤（Android API 31+ 恒支持）。 */
+val isCouiSkinSupported: Boolean = true
 
 /**
  * COUI 皮肤宿主：开启时把 MIUIX 主题桥接成 ColorOS 色板，并注入 COUI 的页面实现。
+ * 必须放在 MiuixTheme 内部调用，以保证 COUI 配色由当前 MIUIX 主题派生。
  *
  * 皮肤差异只在这一处登记：页面调用方只认 [LocalSkinPages]，不再关心当前是哪套皮肤。
  * 关闭时不提供实现，[LocalSkinPages] 保持 null，调用方自然走 MIUIX 原页面。
+ *
+ * @param dark 当前实际明暗，取自 AppThemeSpec.resolvedDark。COUI 组件的明暗分支（顶栏渐隐色、
+ * 底栏选中色、弹层材质）全部以它为准，不允许组件内部再从底色亮度反推。
  */
 @Composable
-actual fun CouiSkinHost(enabled: Boolean, dark: Boolean, content: @Composable () -> Unit) {
+fun CouiSkinHost(enabled: Boolean, dark: Boolean, content: @Composable () -> Unit) {
     if (!enabled) {
         content()
         return
@@ -70,9 +95,14 @@ actual fun CouiSkinHost(enabled: Boolean, dark: Boolean, content: @Composable ()
     )
 }
 
-/** 皮肤关闭时本地方为空，正文容器原样返回，不产生任何采样开销。 */
+/**
+ * 皮肤浮动栏的正文采样源。
+ *
+ * COUI 浮动底栏的玻璃材质是把「被它遮挡的正文」采样后重建的：皮肤开启时把正文登记为采样源，
+ * 皮肤关闭时本地方为空，正文容器原样返回，不产生任何采样开销。挂在正文容器上，且不能覆盖浮动栏自身所在的节点。
+ */
 @Composable
-actual fun Modifier.skinFloatingBarSource(): Modifier {
+fun Modifier.skinFloatingBarSource(): Modifier {
     val backdrop = LocalCouiFloatingBackdrop.current ?: return this
     return couiBackdrop(backdrop)
 }
