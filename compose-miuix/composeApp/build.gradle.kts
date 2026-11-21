@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
@@ -9,9 +8,8 @@ val releaseSigningProps = rootProject.file("keystore.properties").takeIf { it.ex
 }
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
 }
@@ -26,37 +24,8 @@ if (!releaseSigningConfigured) {
 }
 
 kotlin {
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-
-    sourceSets {
-        commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            // decompose/decompose-compose 由 shared 以 api 暴露，经 projects.shared 传递可达
-            implementation(projects.shared)
-            implementation(libs.miuix.ui)
-            implementation(libs.napier)
-        }
-
-        androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.core.splashscreen)
-            implementation(libs.androidx.profileinstaller)
-        }
-
-        val androidUnitTest by getting
-        androidUnitTest.dependencies {
-            implementation(kotlin("test"))
-            implementation(libs.junit)
-        }
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -72,6 +41,10 @@ android {
         targetSdk = 35
         versionCode = 10010097
         versionName = "0.9.109.7-miuix"
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     signingConfigs {
@@ -130,6 +103,25 @@ android {
     }
 }
 
+dependencies {
+    implementation(platform(libs.androidx.compose.bom.alpha))
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui)
+
+    // decompose/decompose-compose 由 shared 以 api 暴露，经 projects.shared 传递可达
+    implementation(projects.shared)
+    implementation(libs.miuix.ui)
+    implementation(libs.napier)
+
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.profileinstaller)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+}
 
 androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
@@ -145,4 +137,3 @@ androidComponents {
         }
     }
 }
-

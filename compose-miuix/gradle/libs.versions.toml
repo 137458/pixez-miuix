@@ -1,7 +1,6 @@
 [versions]
-# Kotlin / Compose
+# Kotlin / Android
 kotlin = "2.4.10"
-compose = "1.12.0"
 android-gradle-plugin = "8.13.0"
 
 # MIUIX
@@ -44,13 +43,10 @@ zoomable = "2.14.0"
 junit = "4.13.2"
 
 [libraries]
-# Compose Multiplatform 依赖直接声明坐标：Gradle 插件 1.12.0 已弃用 compose.runtime 等简写访问器，
-# 这里只收录带 common KMP artifact 的核心模块（runtime / foundation / ui / components-resources），
-# 无通用 common artifact 的坐标（如 material3）不得加入。
-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
+# Jetpack Compose（版本统一由 androidx-compose-bom-alpha 管理）
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 
 zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 
@@ -88,7 +84,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 # SQLDelight
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-# 仅用于 androidUnitTest 本地 JVM 单测
+# 仅用于 unitTest 本地 JVM 单测
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 
 # Multiplatform Settings
@@ -120,8 +116,7 @@ junit = { module = "junit:junit", version.ref = "junit" }
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "android-gradle-plugin" }
 androidLibrary = { id = "com.android.library", version.ref = "android-gradle-plugin" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

@@ -1,102 +1,16 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.sqldelight)
 }
 
 kotlin {
-    // expect/actual class 声明在 Kotlin 2.x 仍是 Beta 特性；双端 actual 已全覆盖，
-    // 显式启用以免每轮编译都被 Beta 提示刷屏。
     compilerOptions {
-        freeCompilerArgs.add("-Xexpect-actual-classes")
-    }
-
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-
-    sourceSets {
-        val commonMain by getting
-        val androidMain by getting
-
-        commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-
-            // MIUIX
-            implementation(libs.miuix.ui)
-            implementation(libs.miuix.preference)
-            implementation(libs.miuix.icons)
-            implementation(libs.miuix.blur)
-
-            implementation(libs.zoomable)
-
-            // Ktor
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.ktor.client.logging)
-
-            // Kotlinx
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.datetime)
-
-            // Navigation / Logging
-            api(libs.decompose)
-            api(libs.decompose.compose)
-            implementation(libs.navigationevent.compose)
-            implementation(libs.napier)
-
-            // Settings
-            api(libs.multiplatform.settings)
-
-            // SQLDelight runtime（提供 SqlDriver.Schema 等共享 API）
-            api(libs.sqldelight.runtime)
-
-            // Coil
-            implementation(libs.coil.compose)
-            implementation(libs.coil.network.ktor3)
-        }
-
-        commonTest.dependencies {
-            implementation(kotlin("test"))
-            implementation(libs.junit)
-            implementation(libs.ktor.client.mock)
-            implementation(libs.kotlinx.coroutines.test)
-        }
-
-        androidMain.dependencies {
-            // COUI 仅落到 Android：BOM 与 AAR 只在本 source set 参与解析。
-            implementation(project.dependencies.platform(libs.androidx.compose.bom.alpha))
-            implementation(libs.androidx.core.ktx)
-            implementation(libs.coui)
-
-            implementation(libs.okhttp.dnsoverhttps)
-            implementation(libs.ktor.client.okhttp)
-
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.sqldelight.android.driver)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation(libs.coil.gif)
-        }
-
-        val androidUnitTest by getting
-        androidUnitTest.dependencies {
-            implementation(libs.sqldelight.sqlite.driver)
-        }
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -108,6 +22,10 @@ android {
     defaultConfig {
         // COUI AAR 清单固定 minSdkVersion=31（Android 12），整体抬齐而非使用 overrideLibrary 门控。
         minSdk = 31
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -129,6 +47,68 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+}
+
+dependencies {
+    implementation(platform(libs.androidx.compose.bom.alpha))
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui)
+
+    // MIUIX
+    implementation(libs.miuix.ui)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.icons)
+    implementation(libs.miuix.blur)
+
+    implementation(libs.zoomable)
+
+    // COUI（ColorOS 皮肤，仅 Android）
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.coui)
+
+    // Ktor
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.okhttp.dnsoverhttps)
+
+    // Kotlinx
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.datetime)
+
+    // Navigation / Logging
+    api(libs.decompose)
+    api(libs.decompose.compose)
+    implementation(libs.navigationevent.compose)
+    implementation(libs.napier)
+
+    // Settings
+    api(libs.multiplatform.settings)
+
+    // SQLDelight（runtime 提供 SqlDriver.Schema 等共享 API）
+    api(libs.sqldelight.runtime)
+    implementation(libs.sqldelight.android.driver)
+
+    // AndroidX Lifecycle / Activity
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Coil
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.ktor3)
+    implementation(libs.coil.gif)
+
+    // Unit Tests
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.sqldelight.sqlite.driver)
 }
 
 // SQLDelight migration 验证在 Windows 上因 native sqlite 库释放路径问题可能失败，
@@ -153,42 +133,41 @@ sqldelight {
         //  - banncommentid.db（表 ban_comment_persist）
         create("AccountDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.account")
-            srcDirs.setFrom("src/commonMain/sqldelight/account")
+            srcDirs.setFrom("src/main/sqldelight/account")
         }
         // 注意：该数据库实际表名为 glanceillustpersist，对应旧 glanceillustpersist.db，
         // 因此生成类命名为 GlanceIllustPersistDatabase，避免与未来的 illustpersist.db 混淆。
         create("GlanceIllustPersistDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.glanceillustpersist")
-            srcDirs.setFrom("src/commonMain/sqldelight/glanceillustpersist")
+            srcDirs.setFrom("src/main/sqldelight/glanceillustpersist")
         }
         create("TaskDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.task")
-            srcDirs.setFrom("src/commonMain/sqldelight/task")
+            srcDirs.setFrom("src/main/sqldelight/task")
         }
         create("KVPairDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.kvpair")
-            srcDirs.setFrom("src/commonMain/sqldelight/kvpair")
+            srcDirs.setFrom("src/main/sqldelight/kvpair")
         }
         create("BanIllustIdDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.banillustid")
-            srcDirs.setFrom("src/commonMain/sqldelight/banillustid")
+            srcDirs.setFrom("src/main/sqldelight/banillustid")
         }
         create("BanUserIdDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.banuserid")
-            srcDirs.setFrom("src/commonMain/sqldelight/banuserid")
+            srcDirs.setFrom("src/main/sqldelight/banuserid")
         }
         create("BanTagDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.bantag")
-            srcDirs.setFrom("src/commonMain/sqldelight/bantag")
+            srcDirs.setFrom("src/main/sqldelight/bantag")
         }
         create("IllustPersistDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.illustpersist")
-            srcDirs.setFrom("src/commonMain/sqldelight/illustpersist")
+            srcDirs.setFrom("src/main/sqldelight/illustpersist")
         }
         create("NovelPersistDatabase") {
             packageName.set("com.perol.pixez.shared.data.local.novelpersist")
-            srcDirs.setFrom("src/commonMain/sqldelight/novelpersist")
+            srcDirs.setFrom("src/main/sqldelight/novelpersist")
         }
     }
 }
-
