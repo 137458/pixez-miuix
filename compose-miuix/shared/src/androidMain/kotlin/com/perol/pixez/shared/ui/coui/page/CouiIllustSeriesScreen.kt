@@ -1,10 +1,14 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,26 +19,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.effect.couiButtonFeedback
+import com.itos.coui.text.CouiTextKind
+import com.itos.coui.text.Text
+import androidx.compose.ui.graphics.Color
 import com.itos.coui.theme.CouiTheme
+import com.itos.coui.theme.LocalCouiContentColor
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.actionFailureToast
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
@@ -49,11 +58,11 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 插画系列页：固定顶栏 + 系列作品瀑布流。
+ * COUI 插画系列页：二级页骨架 + 系列作品瀑布流。
  *
  * 分页、过滤重算、强制刷新回顶与追更/取消追更（乐观翻转 + 失败回滚）与 MIUIX 版一致；
- * 差异只有皮肤层：固定顶栏承载刷新与追更文本动作，取消追更二次确认改用 COUI `Dialog`，
- * 三态占位收敛到平板可读宽度，不做下拉刷新。
+ * 差异只有皮肤层：容器由 [CouiSecondaryScaffold] 唯一提供，追更文本动作与刷新图标按钮
+ * 进骨架 `actions` 槽，三态占位改用 core 组件，取消追更二次确认仍用 COUI `Dialog`。
  */
 @Composable
 internal fun CouiIllustSeriesScreen(
@@ -143,24 +152,20 @@ internal fun CouiIllustSeriesScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = seriesTitle,
-            onBack = onBack,
-        ) {
+    CouiSecondaryScaffold(
+        title = seriesTitle,
+        onBack = onBack,
+        actions = {
             // 追更切换：系列详情加载完成（watchlistAdded 非 null）后展示。
-            if (watchlistAdded != null) {
-                CouiTextAction(
-                    text = if (watchlistAdded == true) strings.watchlistAdded else strings.watchlistAdd,
+            val currentAdded = watchlistAdded
+            if (currentAdded != null) {
+                CouiSeriesWatchlistAction(
+                    text = if (currentAdded) strings.watchlistAdded else strings.watchlistAdd,
                     enabled = !isTogglingWatchlist,
-                    color = if (watchlistAdded == true) CouiTheme.colorScheme.accent else null,
+                    highlighted = currentAdded,
                     onClick = {
                         // 取消追更为破坏性操作，先二次确认；追更直接执行。
-                        if (watchlistAdded == true) {
+                        if (currentAdded) {
                             pendingUnwatchConfirm = true
                         } else {
                             toggleWatchlist()
@@ -168,50 +173,47 @@ internal fun CouiIllustSeriesScreen(
                     },
                 )
             }
-            CouiActionButton(
+            CouiTopBarIconButton(
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = triggerManualRefresh,
             )
-        }
-
+        },
+    ) { padding ->
+        // 占位态贴齐骨架内边距：左右由库保证为 0，这里只吃上下与窗口内边距。
+        val stateModifier = Modifier
+            .padding(padding)
+            .consumeWindowInsets(padding)
         val currentIllusts = listState.filteredIllusts
         when {
             currentIllusts == null && listState.initialError == null ->
-                CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-                    CouiStatePlaceholder(
-                        message = strings.loading,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                CouiLoadingPlaceholder(modifier = stateModifier)
 
             currentIllusts == null && listState.initialError != null ->
-                CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-                    CouiStatePlaceholder(
-                        message = couiErrorMessage(listState.initialError),
-                        actionText = strings.retry,
-                        onAction = { triggerManualRefresh() },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                CouiErrorPlaceholder(
+                    error = listState.initialError,
+                    onRetry = { triggerManualRefresh() },
+                    modifier = stateModifier,
+                )
 
             currentIllusts != null -> if (currentIllusts.isEmpty()) {
-                CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-                    CouiStatePlaceholder(
-                        message = strings.seriesEmpty,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+                CouiPlaceholder(
+                    message = strings.seriesEmpty,
+                    modifier = stateModifier,
+                )
             } else {
                 CouiIllustGrid(
                     illusts = currentIllusts,
                     state = gridState,
                     onIllustClick = onIllustClick,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .consumeWindowInsets(padding),
                     contentPadding = PaddingValues(
                         start = 8.dp,
-                        top = 8.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
                         end = 8.dp,
-                        bottom = LocalBottomBarContentPadding.current,
+                        bottom = padding.calculateBottomPadding() + 8.dp,
                     ),
                     hasMore = listState.nextUrl != null,
                     isLoadingMore = listState.isLoadingMore,
@@ -246,6 +248,45 @@ internal fun CouiIllustSeriesScreen(
                 text = strings.cancel,
                 onClick = { if (!isTogglingWatchlist) pendingUnwatchConfirm = false },
             ),
+        )
+    }
+}
+
+/** 顶栏追更文本动作：追更中禁用，已追更时以强调色标示，避免图标无法表达两种文案。 */
+@Composable
+private fun CouiSeriesWatchlistAction(
+    text: String,
+    enabled: Boolean,
+    highlighted: Boolean,
+    onClick: () -> Unit,
+) {
+    val pressInteraction = remember { MutableInteractionSource() }
+    val scheme = CouiTheme.colorScheme
+    // 顶栏内容色由库按滚动/API 能力注入，缺失时退回强调色。
+    val injectedColor = LocalCouiContentColor.current
+    val contentColor = if (injectedColor == Color.Unspecified) scheme.accent else injectedColor
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, list = false)
+            .clickable(
+                interactionSource = pressInteraction,
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            kind = CouiTextKind.ItemSummary,
+            color = when {
+                !enabled -> contentColor.copy(alpha = 0.38f)
+                highlighted -> scheme.accent
+                else -> contentColor
+            },
+            maxLines = 1,
         )
     }
 }

@@ -1,10 +1,10 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,15 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
-import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.rememberHelloFeedState
@@ -37,6 +36,10 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 
 /**
  * COUI 推荐页：复用 [rememberHelloFeedState] 的分页/登录/恢复逻辑，仅替换视觉壳。
+ *
+ * 骨架用一级页 [CouiMainScaffold]（折叠大标题、无返回），顶栏动作用 [CouiTopBarIconButton]；
+ * 正文瀑布流把骨架护栏交给 `contentPadding`，首屏三态交给 [CouiPlaceholder] /
+ * [CouiErrorPlaceholder]，页面自身不再铺底、不再扣安全区。
  */
 @Composable
 internal fun CouiHelloScreen(
@@ -49,29 +52,28 @@ internal fun CouiHelloScreen(
     reselectFlow: Flow<Unit>?,
 ) {
     val strings = LocalStrings.current
-    val bottomBarPadding = LocalBottomBarContentPadding.current
     val feed = rememberHelloFeedState(feedRestore, reselectFlow, onLoginClick)
 
-    CouiPageScaffold(
+    CouiMainScaffold(
         title = strings.tabRecommend,
         actions = {
-            CouiActionButton(
+            CouiTopBarIconButton(
+                onClick = feed.refresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = feed.refresh,
             )
             if (feed.isLoggedIn == false) {
-                CouiActionButton(
+                CouiTopBarIconButton(
+                    onClick = onLoginClick,
                     icon = MiuixIcons.Contacts,
                     contentDescription = strings.goLogin,
-                    onClick = onLoginClick,
                 )
             }
             if (feed.isLoggedIn == true) {
-                CouiActionButton(
+                CouiTopBarIconButton(
+                    onClick = onRecomUserClick,
                     icon = MiuixIcons.AddCircle,
                     contentDescription = strings.recomUserTitle,
-                    onClick = onRecomUserClick,
                 )
                 val currentUser = feed.user
                 val targetUserId = currentUser?.userId?.toLongOrNull()
@@ -81,7 +83,7 @@ internal fun CouiHelloScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .couiPressFeedback(pressInteraction, list = false)
+                            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, list = false)
                             .clickable(
                                 interactionSource = pressInteraction,
                                 indication = null,
@@ -99,54 +101,57 @@ internal fun CouiHelloScreen(
                     }
                 }
             }
-            CouiActionButton(
+            CouiTopBarIconButton(
+                onClick = onSettingsClick,
                 icon = MiuixIcons.Settings,
                 contentDescription = strings.tabSettings,
-                onClick = onSettingsClick,
             )
         },
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CouiTheme.colorScheme.background),
-        ) {
-            val currentIllusts = feed.listState.filteredIllusts
-            when {
-                currentIllusts == null && feed.listState.initialError == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.padding(padding),
-                )
-                currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                    message = couiErrorMessage(feed.listState.initialError),
-                    actionText = strings.retry,
-                    onAction = feed.refresh,
-                    modifier = Modifier.padding(padding),
-                )
-                currentIllusts != null && currentIllusts.isEmpty() -> CouiStatePlaceholder(
-                    message = strings.noData,
-                    modifier = Modifier.padding(padding),
-                )
-                currentIllusts != null -> CouiIllustGrid(
-                    illusts = currentIllusts,
-                    state = feed.gridState,
-                    onIllustClick = onIllustClick,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(
-                        start = 10.dp,
-                        top = 4.dp,
-                        end = 10.dp,
-                        bottom = bottomBarPadding + 8.dp,
-                    ),
-                    hasMore = feed.listState.nextUrl != null,
-                    isLoadingMore = feed.listState.isLoadingMore,
-                    loadMoreError = feed.listState.loadMoreError,
-                    isRefreshing = feed.listState.isRefreshing,
-                    onLoadMore = feed.loadMore,
-                )
-            }
+        val currentIllusts = feed.listState.filteredIllusts
+        when {
+            currentIllusts == null && feed.listState.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
+
+            currentIllusts == null && feed.listState.initialError != null -> CouiErrorPlaceholder(
+                error = feed.listState.initialError,
+                onRetry = feed.refresh,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
+
+            currentIllusts != null && currentIllusts.isEmpty() -> CouiPlaceholder(
+                message = strings.noData,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
+
+            currentIllusts != null -> CouiIllustGrid(
+                illusts = currentIllusts,
+                state = feed.gridState,
+                onIllustClick = onIllustClick,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+                // 护栏进列表内层：内容可以滚进顶栏覆盖区，底部留白已含底栏占位。
+                contentPadding = PaddingValues(
+                    start = 10.dp,
+                    top = padding.calculateTopPadding() + 4.dp,
+                    end = 10.dp,
+                    bottom = padding.calculateBottomPadding() + 8.dp,
+                ),
+                hasMore = feed.listState.nextUrl != null,
+                isLoadingMore = feed.listState.isLoadingMore,
+                loadMoreError = feed.listState.loadMoreError,
+                isRefreshing = feed.listState.isRefreshing,
+                onLoadMore = feed.loadMore,
+            )
         }
     }
 }

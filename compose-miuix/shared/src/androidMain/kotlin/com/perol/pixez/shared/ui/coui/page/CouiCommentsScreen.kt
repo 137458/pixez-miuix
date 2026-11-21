@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -87,16 +88,15 @@ import com.perol.pixez.shared.ui.components.PixivEmojis
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.COUI_MESSAGE_INPUT_MIN_SDK
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiCommentComposer
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiTopBar
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
@@ -292,16 +292,17 @@ internal fun CouiCommentsScreen(
                 }
             },
         topBar = {
-            CouiFixedTopBar(
+            CouiTopBar(
                 title = strings.commentsTitle,
                 onBack = onBack,
-            ) {
-                CouiActionButton(
-                    icon = MiuixIcons.Refresh,
-                    contentDescription = strings.refresh,
-                    onClick = triggerManualRefresh,
-                )
-            }
+                actions = {
+                    CouiTopBarIconButton(
+                        icon = MiuixIcons.Refresh,
+                        contentDescription = strings.refresh,
+                        onClick = triggerManualRefresh,
+                    )
+                },
+            )
         },
         bottomBar = {
             CouiCommentBottomBar(
@@ -331,57 +332,53 @@ internal fun CouiCommentsScreen(
             )
         },
     ) { contentPadding ->
-        // 阅读列：列表与三态占位统一收敛到平板可读宽度。
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            when {
-                currentComments == null && pagedList.initialError == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize().padding(contentPadding),
-                )
-                currentComments == null -> CouiStatePlaceholder(
-                    message = couiErrorMessage(pagedList.initialError),
-                    actionText = strings.retry,
-                    onAction = triggerManualRefresh,
-                    modifier = Modifier.fillMaxSize().padding(contentPadding),
-                )
-                currentComments.isEmpty() -> CouiStatePlaceholder(
-                    message = strings.noComments,
-                    modifier = Modifier.fillMaxSize().padding(contentPadding),
-                )
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    overscrollEffect = rememberCouiOverscrollEffect(),
-                    // 列表滚到输入栏下方：玻璃采样到的是真实滚动内容，而不是被裁掉的空白。
-                    contentPadding = PaddingValues(
-                        start = 12.dp,
-                        top = contentPadding.calculateTopPadding() + 8.dp,
-                        end = 12.dp,
-                        bottom = contentPadding.calculateBottomPadding() + 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    itemsIndexed(
-                        items = currentComments,
-                        key = { index, comment -> comment.id ?: "local_comment_$index" },
-                        contentType = { _, _ -> "comment_item" },
-                    ) { _, comment ->
-                        CouiCommentItem(
-                            comment = comment,
-                            onUserClick = onUserClick,
-                            onReplyClick = { replyTarget = comment },
-                        )
-                    }
+        when {
+            currentComments == null && pagedList.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier.padding(contentPadding).consumeWindowInsets(contentPadding),
+            )
+            currentComments == null -> CouiErrorPlaceholder(
+                error = pagedList.initialError,
+                onRetry = triggerManualRefresh,
+                modifier = Modifier.padding(contentPadding).consumeWindowInsets(contentPadding),
+            )
+            currentComments.isEmpty() -> CouiPlaceholder(
+                message = strings.noComments,
+                modifier = Modifier.padding(contentPadding).consumeWindowInsets(contentPadding),
+            )
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().consumeWindowInsets(contentPadding),
+                overscrollEffect = rememberCouiOverscrollEffect(),
+                // 列表滚到输入栏下方：玻璃采样到的是真实滚动内容，而不是被裁掉的空白。
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    top = contentPadding.calculateTopPadding() + 8.dp,
+                    end = 12.dp,
+                    bottom = contentPadding.calculateBottomPadding() + 8.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                itemsIndexed(
+                    items = currentComments,
+                    key = { index, comment -> comment.id ?: "local_comment_$index" },
+                    contentType = { _, _ -> "comment_item" },
+                ) { _, comment ->
+                    CouiCommentItem(
+                        comment = comment,
+                        onUserClick = onUserClick,
+                        onReplyClick = { replyTarget = comment },
+                    )
+                }
 
-                    val footerState = pagedList.footerState
-                    if (footerState.phase != PagingFooterPhase.Hidden) {
-                        item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
-                            CouiPagingFooter(
-                                state = footerState,
-                                onRetry = ::loadMore,
-                                noMoreText = strings.commentsNoMore,
-                            )
-                        }
+                val footerState = pagedList.footerState
+                if (footerState.phase != PagingFooterPhase.Hidden) {
+                    item(key = "comment_pagination_footer", contentType = "comment_pagination_footer") {
+                        CouiLoadMoreFooter(
+                            state = footerState,
+                            onRetry = ::loadMore,
+                            noMoreText = strings.commentsNoMore,
+                        )
                     }
                 }
             }

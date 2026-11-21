@@ -1,38 +1,38 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -41,21 +41,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import com.itos.coui.menu.CouiMenuAnchor
-import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
+import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.rememberCouiMenuAnchor
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
@@ -71,43 +71,43 @@ import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
-import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
-import com.perol.pixez.shared.ui.components.buildIllustDetailMoreMenuEntries
-import com.perol.pixez.shared.ui.components.HtmlCaptionText
-import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
-import com.perol.pixez.shared.ui.components.UgoiraPlayer
-import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
-import com.perol.pixez.shared.ui.coui.component.CouiOverlayActionButton
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalBookmarkRepository
 import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.HtmlCaptionText
+import com.perol.pixez.shared.ui.components.LocalToastSink
+import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.components.UgoiraPlayer
+import com.perol.pixez.shared.ui.components.buildIllustDetailMoreMenuEntries
+import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
+import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
+import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
+import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
+import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.IllustDetailFullScreenOverlay
 import com.perol.pixez.shared.ui.screens.IllustDetailViewport
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
 import com.perol.pixez.shared.ui.screens.resolveIllustDetailImageWidthPx
-import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
@@ -115,6 +115,7 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
@@ -122,14 +123,14 @@ import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Show
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 插画详情页（第一期）：骨架、顶栏、图片区、作者行、操作区与简介/标签。
  *
  * 业务编排与 MIUIX 详情页一致：收藏/下载动作来自 [rememberIllustDetailActions]，
  * 全屏查看复用 [IllustDetailFullScreenOverlay]，图片 URL 与画质解析沿用同一套规则。
- * 皮肤差异仅在视觉层：顶栏为 COUI 浮层动作按钮，内容卡片使用 COUI 卡片/胶囊/菜单。
+ * 壳层交给 [CouiSecondaryScaffold]：折叠顶栏、返回、护栏与底栏留白都由骨架提供，
+ * 收藏/下载/更多收进顶栏 actions 槽；皮肤差异仅在正文卡片的材质与排版。
  */
 @Composable
 internal fun CouiIllustDetailScreen(
@@ -296,89 +297,104 @@ private fun CouiIllustDetailSingle(
         onToast = { data -> data?.let(toastSink) },
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val viewport = IllustDetailViewport(
-                isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
-                containerWidthPx = constraints.maxWidth.toFloat(),
-                containerHeightPx = constraints.maxHeight.toFloat(),
-            )
-            when {
-                result == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
+    // 全屏查看层必须盖住顶栏，而顶栏由骨架在正文之上绘制，因此它留在骨架之外、
+    // 与骨架同级后置绘制。外层盒子不画底色、不加安全区，页面底色仍由骨架提供。
+    Box(modifier = Modifier.fillMaxSize()) {
+        CouiSecondaryScaffold(
+            title = illust?.title.orEmpty(),
+            onBack = onBack,
+            actions = {
+                CouiDetailTopBarActions(
+                    illust = illust,
+                    isBookmarked = isBookmarked,
+                    isBookmarkLoading = isBookmarkLoading,
+                    isDownloading = isDownloading,
+                    isBanned = isBanned,
+                    strings = strings,
+                    coroutineScope = coroutineScope,
+                    banRepository = banRepository,
+                    actions = actions,
+                    onBanSuccess = { isBanned = true },
+                    onToast = toastSink,
                 )
-                illust != null -> {
-                    if (isRestricted && !isTempView) {
-                        CouiStatePlaceholder(
-                            message = illust.title,
-                            actionText = strings.confirm,
-                            onAction = { isTempView = true },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        val illustAspectRatio = remember(illust.width, illust.height) {
-                            if (illust.width > 0 && illust.height > 0) {
-                                (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.1f, 10.0f)
-                            } else {
-                                null
+            },
+        ) { padding ->
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+            ) {
+                val viewport = IllustDetailViewport(
+                    isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
+                    containerWidthPx = constraints.maxWidth.toFloat(),
+                    containerHeightPx = constraints.maxHeight.toFloat(),
+                )
+                when {
+                    result == null -> CouiPlaceholder(
+                        message = strings.loading,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    )
+
+                    illust != null -> {
+                        if (isRestricted && !isTempView) {
+                            CouiPlaceholder(
+                                message = illust.title,
+                                actionText = strings.confirm,
+                                onAction = { isTempView = true },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(padding),
+                            )
+                        } else {
+                            val illustAspectRatio = remember(illust.width, illust.height) {
+                                if (illust.width > 0 && illust.height > 0) {
+                                    (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.1f, 10.0f)
+                                } else {
+                                    null
+                                }
                             }
+                            CouiIllustDetailList(
+                                illust = illust,
+                                illustAspectRatio = illustAspectRatio,
+                                viewport = viewport,
+                                settings = settings,
+                                listState = listState,
+                                padding = padding,
+                                repository = repository,
+                                downloadRepository = downloadRepository,
+                                isDownloading = isDownloading,
+                                coroutineScope = coroutineScope,
+                                strings = strings,
+                                onToast = { data -> data?.let(toastSink) },
+                                onDownloadAll = actions::downloadAll,
+                                onFullScreen = { fullScreenPageIndex = it },
+                                onUserClick = onUserClick,
+                                onCommentsClick = onCommentsClick,
+                                onRelatedIllustsClick = onRelatedIllustsClick,
+                                onIllustSeriesClick = onIllustSeriesClick,
+                                onTagClick = onTagClick,
+                                onIllustClick = onIllustClick,
+                                onNovelClick = onNovelClick,
+                            )
                         }
-                        CouiIllustDetailList(
-                            illust = illust,
-                            illustAspectRatio = illustAspectRatio,
-                            viewport = viewport,
-                            settings = settings,
-                            listState = listState,
-                            repository = repository,
-                            downloadRepository = downloadRepository,
-                            isDownloading = isDownloading,
-                            coroutineScope = coroutineScope,
-                            strings = strings,
-                            onToast = { data -> data?.let(toastSink) },
-                            onDownloadAll = actions::downloadAll,
-                            onFullScreen = { fullScreenPageIndex = it },
-                            onUserClick = onUserClick,
-                            onCommentsClick = onCommentsClick,
-                            onRelatedIllustsClick = onRelatedIllustsClick,
-                            onIllustSeriesClick = onIllustSeriesClick,
-                            onTagClick = onTagClick,
-                            onIllustClick = onIllustClick,
-                            onNovelClick = onNovelClick,
-                        )
                     }
+
+                    else -> CouiPlaceholder(
+                        message = CouiErrorMessage(result.exceptionOrNull()),
+                        actionText = strings.retry,
+                        onAction = { retryCount++ },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                    )
                 }
-                else -> CouiStatePlaceholder(
-                    message = couiErrorMessage(result.exceptionOrNull()),
-                    actionText = strings.retry,
-                    onAction = { retryCount++ },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
         }
 
         val fullScreenPage = fullScreenPageIndex
-        if (fullScreenPage == null) {
-            CouiIllustDetailTopBar(
-                illust = illust,
-                isBookmarked = isBookmarked,
-                isBookmarkLoading = isBookmarkLoading,
-                isDownloading = isDownloading,
-                isBanned = isBanned,
-                scrolled = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0,
-                strings = strings,
-                coroutineScope = coroutineScope,
-                banRepository = banRepository,
-                actions = actions,
-                onBanSuccess = { isBanned = true },
-                onToast = toastSink,
-                onBack = onBack,
-            )
-        } else if (illust != null) {
+        if (fullScreenPage != null && illust != null) {
             IllustDetailFullScreenOverlay(
                 illust = illust,
                 pageIndex = fullScreenPage,
@@ -401,78 +417,60 @@ private fun CouiIllustDetailSingle(
 }
 
 /**
- * COUI 详情页顶栏：返回 + 折叠标题 + 收藏/下载/更多，按钮为半透明圆形浮层。
+ * COUI 详情页顶栏动作：收藏、下载、更多菜单。
+ *
+ * 三个按钮都放在骨架的 actions 槽内，材质、按压反馈与图标色由顶栏下发
+ * （API 34+ 官方按钮，API 31-33 同尺寸平替）。收藏态用实心图标表达。
  */
 @Composable
-private fun CouiIllustDetailTopBar(
+private fun CouiDetailTopBarActions(
     illust: Illust?,
     isBookmarked: Boolean,
     isBookmarkLoading: Boolean,
     isDownloading: Boolean,
     isBanned: Boolean,
-    scrolled: Boolean,
     strings: AppStrings,
     coroutineScope: CoroutineScope,
     banRepository: BanRepository,
     actions: IllustDetailActions,
     onBanSuccess: () -> Unit,
     onToast: (ToastData) -> Unit,
-    onBack: () -> Unit,
 ) {
-    val scheme = CouiTheme.colorScheme
-    val background by animateColorAsState(
-        targetValue = if (scrolled) scheme.background else Color.Transparent,
-        label = "couiDetailTopBarBackground",
-    )
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
-    val bookmarkTint = if (isBookmarked) {
-        LocalAppExtraColors.current.bookmarkActive
-    } else {
-        Color.White
-    }
 
-    // 底色只在顶栏内部绘制一次：外层再涂一层会让同一块背景画两遍，
-    // 且未滚动时的透明色会被外层不透明底盖住，浮层渐变永远看不见。
-    CouiFixedTopBar(
-        title = if (scrolled) illust?.title.orEmpty() else "",
-        onBack = onBack,
-        overlayBack = true,
-        background = background,
-    ) {
-        CouiOverlayActionButton(
-            icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
-            contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
-            onClick = actions::bookmark,
-            enabled = !isBookmarkLoading && illust != null,
-            tint = bookmarkTint,
-        )
-        CouiOverlayActionButton(
-            icon = MiuixIcons.Download,
-            contentDescription = strings.download,
-            onClick = actions::download,
-            enabled = !isDownloading && illust != null,
-        )
-        if (illust != null) {
-            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                CouiOverlayActionButton(
-                    icon = MiuixIcons.More,
-                    contentDescription = strings.menuMoreActions,
-                    onClick = { menuAnchor.open { menuExpanded = true } },
-                )
-                CouiDetailMoreMenu(
-                    illust = illust,
-                    expanded = menuExpanded,
-                    anchor = menuAnchor,
-                    isBanned = isBanned,
-                    strings = strings,
-                    coroutineScope = coroutineScope,
-                    banRepository = banRepository,
-                    onDismiss = { menuExpanded = false },
-                    onBanSuccess = onBanSuccess,
-                    onToast = onToast,
-                )
-            }
+    CouiTopBarIconButton(
+        onClick = actions::bookmark,
+        icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+        contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
+        enabled = !isBookmarkLoading && illust != null,
+    )
+    CouiTopBarIconButton(
+        onClick = actions::download,
+        icon = MiuixIcons.Download,
+        contentDescription = strings.download,
+        enabled = !isDownloading && illust != null,
+    )
+    if (illust != null) {
+        // 菜单挂在顶栏按钮的锚点上，位置由 couiMenuAnchor 按可见边界计算。
+        Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+            CouiTopBarIconButton(
+                onClick = { menuAnchor.open { menuExpanded = true } },
+                icon = MiuixIcons.More,
+                contentDescription = strings.menuMoreActions,
+            )
+            CouiDetailMoreMenu(
+                illust = illust,
+                expanded = menuExpanded,
+                anchor = menuAnchor,
+                isBanned = isBanned,
+                strings = strings,
+                coroutineScope = coroutineScope,
+                banRepository = banRepository,
+                onDismiss = { menuExpanded = false },
+                onBanSuccess = onBanSuccess,
+                onToast = onToast,
+            )
         }
     }
 }
@@ -550,6 +548,7 @@ private fun CouiIllustDetailList(
     viewport: IllustDetailViewport,
     settings: SettingsRepository,
     listState: LazyListState,
+    padding: PaddingValues,
     repository: IllustRepository,
     downloadRepository: DownloadRepository,
     isDownloading: Boolean,
@@ -570,7 +569,12 @@ private fun CouiIllustDetailList(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .navigationBarsPadding(),
+            .consumeWindowInsets(padding),
+        // 护栏交给列表内层：首图从收起后的顶栏下方开始，滚动时仍能滚进顶栏覆盖区。
+        contentPadding = PaddingValues(
+            top = padding.calculateTopPadding(),
+            bottom = padding.calculateBottomPadding(),
+        ),
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         if (illust.metaPages.isNotEmpty()) {
@@ -646,17 +650,15 @@ private fun CouiIllustDetailList(
         item(key = "coui_interaction", contentType = "coui_interaction") {
             Spacer(modifier = Modifier.height(10.dp))
             CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                CouiNavigationRow(
+                CouiValueRow(
                     title = strings.commentsTitle,
-                    summary = "${illust.totalComments ?: 0}",
+                    value = "${illust.totalComments ?: 0}",
                     onClick = { onCommentsClick(illust.id) },
-                    verticalPadding = 14.dp,
                 )
-                CouiNavigationRow(
+                CouiRowDivider()
+                CouiValueRow(
                     title = strings.relatedIllusts,
-                    summary = "",
                     onClick = { onRelatedIllustsClick(illust.id) },
-                    verticalPadding = 14.dp,
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
@@ -894,22 +896,19 @@ private fun CouiDetailInfoCard(
             CouiDetailArtistRow(illust = illust, strings = strings, onUserClick = onUserClick)
             if (illust.pageCount > 1) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CouiNavigationRow(
+                CouiValueRow(
                     title = strings.downloadTaskFilterAll,
-                    summary = "${illust.pageCount} P",
+                    value = "${illust.pageCount} P",
                     onClick = {
                         if (!isDownloading) onDownloadAll()
                     },
-                    verticalPadding = 14.dp,
                 )
             }
             illust.series?.let { series ->
                 Spacer(modifier = Modifier.height(4.dp))
-                CouiNavigationRow(
+                CouiValueRow(
                     title = series.title.orEmpty(),
-                    summary = "",
                     onClick = { onIllustSeriesClick(series.id) },
-                    verticalPadding = 14.dp,
                 )
             }
         }

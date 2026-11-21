@@ -1,32 +1,34 @@
 package com.perol.pixez.shared.ui.coui.page
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -35,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -42,16 +45,15 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
+import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.rememberCouiMenuAnchor
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
@@ -62,6 +64,9 @@ import com.perol.pixez.shared.data.model.DownloadTaskHistory
 import com.perol.pixez.shared.platform.FileLocator
 import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.getDefaultPictureDirectory
+import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
+import com.perol.pixez.shared.ui.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -69,31 +74,30 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
-import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
+import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
-import com.perol.pixez.shared.ui.LocalDownloadRepository
-import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.screens.TaskFilter
+import com.perol.pixez.shared.ui.screens.TaskFilterSaver
 import com.perol.pixez.shared.ui.screens.emptyMessage
 import com.perol.pixez.shared.ui.screens.label
 import com.perol.pixez.shared.ui.screens.matches
-import com.perol.pixez.shared.ui.screens.TaskFilter
-import com.perol.pixez.shared.ui.screens.TaskFilterSaver
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.More
@@ -102,15 +106,14 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Report
 import top.yukonga.miuix.kmp.icon.extended.Show
 import top.yukonga.miuix.kmp.icon.extended.Stopwatch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 下载任务页：固定顶栏 + 全部/运行中/完成/失败胶囊筛选 + 任务卡片行。
+ * COUI 下载任务页：折叠顶栏 + 全部/运行中/完成/失败胶囊筛选 + 任务卡片行。
  *
- * 数据编排与 MIUIX 版完全一致：按当前筛选查询一次，用 [derivedStateOf] 派生子列表；
- * 下载仓库任务事件流经 conflate 合并后触发刷新。差异：
- * 批量操作从底部弹层改为 COUI 锚点菜单，清空已完成从底部确认栏改为 COUI `Dialog`；
- * 运行中任务的不确定进度条按 COUI 令牌自绘，表头筛选与列表收敛到平板可读宽度。
+ * 数据编排完全保持原语义：按当前筛选查询一次，用 [derivedStateOf] 派生子列表；
+ * 下载仓库任务事件流经 conflate 合并后触发刷新；批量操作仍走锚点菜单与 COUI 弹窗。
+ * 表现层由 [CouiSecondaryScaffold] 收敛顶栏、护栏与底栏留白，筛选胶囊作为列表首项，
+ * 正文因此能滚进顶栏覆盖区。
  */
 @Composable
 internal fun CouiDownloadTaskScreen(
@@ -197,12 +200,12 @@ internal fun CouiDownloadTaskScreen(
                             ToastData(strings.downloadTaskRetrySuccess, ToastType.Success)
 
                         successCount == 0 ->
-                            ToastData(strings.downloadTaskRetryFailed.format("$failureCount"), ToastType.Error)
+                            ToastData(strings.downloadTaskRetryFailed.format("${failureCount}"), ToastType.Error)
 
                         else ->
                             ToastData(
-                                "${strings.downloadTaskRetrySuccess} ($successCount), " +
-                                    strings.downloadTaskRetryFailed.format("$failureCount"),
+                                "${strings.downloadTaskRetrySuccess} (${successCount}), " +
+                                    strings.downloadTaskRetryFailed.format("${failureCount}"),
                                 ToastType.Normal,
                             )
                     },
@@ -266,20 +269,16 @@ internal fun CouiDownloadTaskScreen(
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.settingDownloadTask,
-            onBack = onBack,
-        ) {
+    CouiSecondaryScaffold(
+        title = strings.settingDownloadTask,
+        onBack = onBack,
+        actions = {
+            // 批量操作菜单挂在顶栏按钮的锚点上，位置由 couiMenuAnchor 按可见边界计算。
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                CouiActionButton(
+                CouiTopBarIconButton(
+                    onClick = { menuAnchor.open { menuExpanded = true } },
                     icon = MiuixIcons.More,
                     contentDescription = strings.menuMoreActions,
-                    onClick = { menuAnchor.open { menuExpanded = true } },
                     enabled = !isBatchProcessing,
                 )
                 Menu(
@@ -301,95 +300,118 @@ internal fun CouiDownloadTaskScreen(
                     },
                 )
             }
-        }
-
-        // 筛选与任务列表收敛到平板可读宽度，与 MIUIX 版一致。
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiFilterChipBar(
-                chips = filterChips,
-                selectedKey = selectedFilter.name,
-                onSelect = { key ->
-                    selectedFilter = TaskFilter.entries.firstOrNull { it.name == key } ?: TaskFilter.All
-                },
-            )
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                when (val result = state.value) {
-                    null -> CouiStatePlaceholder(
-                        message = strings.loading,
-                        modifier = Modifier.fillMaxSize(),
+        },
+    ) { padding ->
+        val result = state.value
+        val tasks = filteredTasks.orEmpty()
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
+            contentPadding = PaddingValues(
+                start = 12.dp,
+                top = padding.calculateTopPadding() + 8.dp,
+                end = 12.dp,
+                bottom = padding.calculateBottomPadding(),
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            overscrollEffect = rememberCouiOverscrollEffect(),
+        ) {
+            item(key = "coui_download_task_filter", contentType = "header") {
+                CouiFilterChipBar(
+                    chips = filterChips,
+                    selectedKey = selectedFilter.name,
+                    onSelect = { key ->
+                        selectedFilter = TaskFilter.entries.firstOrNull { it.name == key } ?: TaskFilter.All
+                    },
+                )
+            }
+            when {
+                result == null -> item(key = "coui_download_task_state", contentType = "state") {
+                    CouiLoadingPlaceholder(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = DownloadTaskStateMinHeight),
                     )
+                }
 
-                    else -> when {
-                        result.isSuccess -> {
-                            val tasks = filteredTasks.orEmpty()
-                            if (tasks.isEmpty()) {
-                                CouiStatePlaceholder(
-                                    message = selectedFilter.emptyMessage(),
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                CouiDownloadTaskList(
-                                    tasks = tasks,
-                                    isBatchProcessing = isBatchProcessing,
-                                    processingTaskIds = processingTaskIds,
-                                    onClick = { onIllustClick(it.illustId) },
-                                    onRetry = { task ->
-                                        if (processingTaskIds.contains(task.id)) return@CouiDownloadTaskList
-                                        processingTaskIds = processingTaskIds + task.id
-                                        coroutineScope.launch {
-                                            try {
-                                                suspendRunCatchingNonCancel {
-                                                    downloadRepository.retry(task)
-                                                }.onSuccess {
-                                                    toastSink(
-                                                        ToastData(strings.downloadTaskRetrySuccess, ToastType.Success),
-                                                    )
-                                                    refreshToken++
-                                                }.onFailure {
-                                                    toastSink(
-                                                        ToastData(
-                                                            strings.downloadTaskRetryFailed.format(
-                                                                PixivApiErrorFormatter.format(it, strings),
-                                                            ),
-                                                            ToastType.Error,
-                                                        ),
-                                                    )
-                                                }
-                                            } finally {
-                                                processingTaskIds = processingTaskIds - task.id
-                                            }
+                !result.isSuccess -> item(key = "coui_download_task_state", contentType = "state") {
+                    CouiErrorPlaceholder(
+                        error = result.exceptionOrNull(),
+                        onRetry = { retryCount++ },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = DownloadTaskStateMinHeight),
+                    )
+                }
+
+                tasks.isEmpty() -> item(key = "coui_download_task_state", contentType = "state") {
+                    CouiPlaceholder(
+                        message = selectedFilter.emptyMessage(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = DownloadTaskStateMinHeight),
+                    )
+                }
+
+                else -> items(
+                    items = tasks,
+                    key = { it.id },
+                    contentType = { "coui_download_task" },
+                ) { task ->
+                    CouiDownloadTaskRow(
+                        task = task,
+                        isProcessing = processingTaskIds.contains(task.id) || isBatchProcessing,
+                        onClick = { onIllustClick(task.illustId) },
+                        onRetry = {
+                            if (!processingTaskIds.contains(task.id)) {
+                                processingTaskIds = processingTaskIds + task.id
+                                coroutineScope.launch {
+                                    try {
+                                        suspendRunCatchingNonCancel {
+                                            downloadRepository.retry(task)
+                                        }.onSuccess {
+                                            toastSink(
+                                                ToastData(strings.downloadTaskRetrySuccess, ToastType.Success),
+                                            )
+                                            refreshToken++
+                                        }.onFailure {
+                                            toastSink(
+                                                ToastData(
+                                                    strings.downloadTaskRetryFailed.format(
+                                                        PixivApiErrorFormatter.format(it, strings),
+                                                    ),
+                                                    ToastType.Error,
+                                                ),
+                                            )
                                         }
-                                    },
-                                    onDelete = { task ->
-                                        if (processingTaskIds.contains(task.id)) return@CouiDownloadTaskList
-                                        processingTaskIds = processingTaskIds + task.id
-                                        coroutineScope.launch {
-                                            try {
-                                                suspendRunCatchingNonCancel {
-                                                    withContext(Dispatchers.Default) {
-                                                        downloadHistoryRepository.deleteTask(task.id)
-                                                    }
-                                                }.onSuccess {
-                                                    refreshToken++
-                                                }.onFailure {
-                                                    toastSink(actionFailureToast(strings.btnDelete, it, strings))
-                                                }
-                                            } finally {
-                                                processingTaskIds = processingTaskIds - task.id
-                                            }
-                                        }
-                                    },
-                                )
+                                    } finally {
+                                        processingTaskIds = processingTaskIds - task.id
+                                    }
+                                }
                             }
-                        }
-
-                        else -> CouiStatePlaceholder(
-                            message = couiErrorMessage(result.exceptionOrNull()),
-                            actionText = strings.retry,
-                            onAction = { retryCount++ },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
+                        },
+                        onDelete = {
+                            if (!processingTaskIds.contains(task.id)) {
+                                processingTaskIds = processingTaskIds + task.id
+                                coroutineScope.launch {
+                                    try {
+                                        suspendRunCatchingNonCancel {
+                                            withContext(Dispatchers.Default) {
+                                                downloadHistoryRepository.deleteTask(task.id)
+                                            }
+                                        }.onSuccess {
+                                            refreshToken++
+                                        }.onFailure {
+                                            toastSink(actionFailureToast(strings.btnDelete, it, strings))
+                                        }
+                                    } finally {
+                                        processingTaskIds = processingTaskIds - task.id
+                                    }
+                                }
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -422,36 +444,8 @@ internal fun CouiDownloadTaskScreen(
     }
 }
 
-@Composable
-private fun CouiDownloadTaskList(
-    tasks: List<DownloadTaskHistory>,
-    isBatchProcessing: Boolean,
-    processingTaskIds: Set<Long>,
-    onClick: (DownloadTaskHistory) -> Unit,
-    onRetry: (DownloadTaskHistory) -> Unit,
-    onDelete: (DownloadTaskHistory) -> Unit,
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        overscrollEffect = rememberCouiOverscrollEffect(),
-    ) {
-        items(
-            items = tasks,
-            key = { it.id },
-            contentType = { "coui_download_task" },
-        ) { task ->
-            CouiDownloadTaskRow(
-                task = task,
-                isProcessing = processingTaskIds.contains(task.id) || isBatchProcessing,
-                onClick = { onClick(task) },
-                onRetry = { onRetry(task) },
-                onDelete = { onDelete(task) },
-            )
-        }
-    }
-}
+/** 三态占位的高度：作为列表首项之后的可视块，避免占位被压成一条线。 */
+private val DownloadTaskStateMinHeight = 320.dp
 
 /** 单条下载任务卡：缩略图、标题、状态、操作按钮，运行中任务底部带不确定进度条。 */
 @Composable

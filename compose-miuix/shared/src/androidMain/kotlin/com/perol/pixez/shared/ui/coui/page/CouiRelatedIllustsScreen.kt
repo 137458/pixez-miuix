@@ -1,15 +1,14 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,31 +17,30 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.repository.filterIllustsBySettings
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
- * COUI 相关作品页：固定顶栏 + 相关插画瀑布流。
+ * COUI 相关作品页：折叠顶栏 + 相关插画瀑布流。
  *
  * 业务编排与 MIUIX 版一致：分页/竞态/加载态由 [IllustPagedListState] 承担，
  * 过滤条件变化仅本地重过滤，强制刷新成功才回顶。
- * 皮肤差异：不做下拉刷新，刷新入口保留在顶栏图标。
+ * 壳层交给 [CouiSecondaryScaffold]：返回、标题、护栏与底栏留白都由骨架提供，
+ * 刷新入口放在顶栏 actions 槽。皮肤差异：不做下拉刷新。
  */
 @Composable
 internal fun CouiRelatedIllustsScreen(
@@ -94,57 +92,61 @@ internal fun CouiRelatedIllustsScreen(
         retryCount++
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.relatedIllusts,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = strings.relatedIllusts,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = triggerManualRefresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = triggerManualRefresh,
             )
-        }
+        },
+    ) { padding ->
+        val currentIllusts = listState.filteredIllusts
+        when {
+            currentIllusts == null && listState.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            val currentIllusts = listState.filteredIllusts
-            when {
-                currentIllusts == null && listState.initialError == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                currentIllusts == null -> CouiStatePlaceholder(
-                    message = couiErrorMessage(listState.initialError),
-                    actionText = strings.retry,
-                    onAction = triggerManualRefresh,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                currentIllusts.isEmpty() -> CouiStatePlaceholder(
-                    message = strings.relatedIllustsEmpty,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                else -> CouiIllustGrid(
-                    illusts = currentIllusts,
-                    state = gridState,
-                    onIllustClick = onIllustClick,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 8.dp,
-                        top = 8.dp,
-                        end = 8.dp,
-                        bottom = LocalBottomBarContentPadding.current,
-                    ),
-                    hasMore = listState.nextUrl != null,
-                    isLoadingMore = listState.isLoadingMore,
-                    loadMoreError = listState.loadMoreError,
-                    isRefreshing = listState.isRefreshing,
-                    onLoadMore = ::loadMore,
-                )
-            }
+            currentIllusts == null -> CouiPlaceholder(
+                message = CouiErrorMessage(listState.initialError),
+                actionText = strings.retry,
+                onAction = triggerManualRefresh,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+
+            currentIllusts.isEmpty() -> CouiPlaceholder(
+                message = strings.relatedIllustsEmpty,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            )
+
+            else -> CouiIllustGrid(
+                illusts = currentIllusts,
+                state = gridState,
+                onIllustClick = onIllustClick,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    end = 8.dp,
+                    bottom = padding.calculateBottomPadding() + 8.dp,
+                ),
+                hasMore = listState.nextUrl != null,
+                isLoadingMore = listState.isLoadingMore,
+                loadMoreError = listState.loadMoreError,
+                isRefreshing = listState.isRefreshing,
+                onLoadMore = ::loadMore,
+            )
         }
     }
 }

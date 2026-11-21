@@ -1,13 +1,11 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,20 +23,21 @@ import coil3.compose.AsyncImage
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.Sponsor
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 
 /**
- * COUI 语言设置页：固定顶栏 + 语言单选分组卡片 + 当前语言的 Sponsor。
+ * COUI 语言设置页：折叠大标题顶栏 + 语言单选分组 + 当前语言的 Sponsor 横滚条。
  *
  * 语言索引持久化口径不变（只写 [SettingsRepository.languageNum]，不做应用内实时切换）；
- * 选中态由共用 [CouiRadioRow] 承担：整行 selectable 提供点击与无障碍语义，指示器用 COUI 库 RadioButton。
+ * 选中态由 core 的 [CouiRadioOptionRow] 承担：整行 selectable 提供点击与无障碍语义，
+ * 圆形指示器由官方 RadioButton 绘制，行与指示器共享同一 InteractionSource 以避免双重触发。
+ * 分组间距、卡片圆角、行间分隔线全部来自官方 Group / Item / Divider。
  */
 @Composable
 internal fun CouiLanguageSettingScreen(
@@ -51,40 +50,31 @@ internal fun CouiLanguageSettingScreen(
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingLanguage,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingLanguage,
-            onBack = onBack,
-        )
-
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_language", contentType = "section") {
-                    CouiSettingSection(title = strings.settingLanguage) {
-                        LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                            CouiRadioRow(
-                                title = "${option.nativeName} (${option.displayName})",
-                                summary = option.code,
-                                selected = selectedIndex == index,
-                                onClick = {
-                                    selectedIndex = index
-                                    settingsRepository.languageNum = index
-                                },
-                            )
-                        }
-                    }
+        item(key = "coui_language", contentType = "section") {
+            CouiSettingSection(title = strings.settingLanguage) {
+                LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = "${option.nativeName} (${option.displayName})",
+                        selected = selectedIndex == index,
+                        onClick = {
+                            selectedIndex = index
+                            settingsRepository.languageNum = index
+                        },
+                        summary = option.code,
+                    )
                 }
+            }
+        }
 
-                if (selectedLanguage.sponsors.isNotEmpty()) {
-                    item(key = "coui_language_sponsors", contentType = "section") {
-                        CouiSettingSection(title = strings.sponsor) {
-                            CouiSponsorRow(sponsors = selectedLanguage.sponsors)
-                        }
-                    }
+        if (selectedLanguage.sponsors.isNotEmpty()) {
+            item(key = "coui_language_sponsors", contentType = "section") {
+                CouiSettingSection(title = strings.sponsor) {
+                    CouiSponsorRow(sponsors = selectedLanguage.sponsors)
                 }
             }
         }

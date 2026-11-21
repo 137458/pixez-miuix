@@ -1,12 +1,9 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,30 +19,27 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSelectRow
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.utils.insertTextAtSelection
 import io.github.aakira.napier.Napier
 
 /**
- * COUI 下载设置页：固定顶栏 + 三组卡片（路径、保存格式、收藏联动）。
+ * COUI 下载设置页：设置骨架 + 官方 Group 卡片（路径、保存格式、收藏联动）。
  *
  * 保存路径选择、面包屑逐级回退、格式模板编辑与全部开关语义保持不变；
- * COUI 库无原生开关/下拉/输入，分别使用共用 `CouiSwitchRow`、
- * `CouiSelectRow` 与按主题令牌自绘的输入框。
+ * 分组与行走 core 原语（Group + Item），输入框仍按 COUI 令牌自绘。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -54,7 +48,6 @@ internal fun CouiDownloadSettingScreen(
 ) {
     val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
-    val scheme = CouiTheme.colorScheme
 
     var storePath by remember { mutableStateOf(settingsRepository.storePath.orEmpty()) }
     val effectiveStorePath = remember(storePath) {
@@ -106,174 +99,173 @@ internal fun CouiDownloadSettingScreen(
         items
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingDownload,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingDownload,
-            onBack = onBack,
-        )
-
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_download_path", contentType = "section") {
-                    CouiSettingSection(title = strings.dialogSavePath) {
-                        CouiNavigationRow(
-                            title = strings.dialogSavePath,
-                            summary = effectiveStorePath,
-                            onClick = { pickDirectory() },
-                        )
-                        if (breadcrumbs.isNotEmpty()) {
-                            FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                breadcrumbs.forEach { (segment, path) ->
-                                    CouiAssistChip(
-                                        text = segment,
-                                        selected = path == effectiveStorePath,
-                                        onClick = {
-                                            if (path.isNotBlank() && path != effectiveStorePath) {
-                                                storePath = path
-                                                settingsRepository.storePath = path
-                                            } else {
-                                                pickDirectory()
-                                            }
-                                        },
-                                    )
-                                }
-                            }
+        item(key = "coui_download_path", contentType = "section") {
+            CouiSettingSection(title = strings.dialogSavePath) {
+                CouiValueRow(
+                    title = strings.dialogSavePath,
+                    summary = effectiveStorePath,
+                    onClick = { pickDirectory() },
+                )
+                if (breadcrumbs.isNotEmpty()) {
+                    CouiRowDivider()
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        breadcrumbs.forEach { (segment, path) ->
+                            CouiAssistChip(
+                                text = segment,
+                                selected = path == effectiveStorePath,
+                                onClick = {
+                                    if (path.isNotBlank() && path != effectiveStorePath) {
+                                        storePath = path
+                                        settingsRepository.storePath = path
+                                    } else {
+                                        pickDirectory()
+                                    }
+                                },
+                            )
                         }
-                        CouiNavigationRow(
-                            title = strings.downloadTaskShowInFolder,
-                            summary = effectiveStorePath,
-                            onClick = {
-                                runCatching {
-                                    okio.FileSystem.SYSTEM.createDirectories(
-                                        with(okio.Path) { effectiveStorePath.toPath() },
-                                    )
-                                    com.perol.pixez.shared.platform.FileLocator()
-                                        .showInFileManager(effectiveStorePath)
-                                }.onFailure {
-                                    Napier.e("打开所在文件夹失败 storePath=$effectiveStorePath", it)
-                                }
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.downloadSingleFolder,
-                            summary = strings.downloadSingleFolderSummary,
-                            checked = singleFolder,
-                            onCheckedChange = { checked ->
-                                singleFolder = checked
-                                settingsRepository.singleFolder = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.downloadSanityFolder,
-                            summary = strings.downloadSanityFolderSummary,
-                            checked = overSanityLevelFolder,
-                            onCheckedChange = { checked ->
-                                overSanityLevelFolder = checked
-                                settingsRepository.overSanityLevelFolder = checked
-                            },
-                        )
                     }
                 }
+                CouiRowDivider()
+                CouiValueRow(
+                    title = strings.downloadTaskShowInFolder,
+                    summary = effectiveStorePath,
+                    onClick = {
+                        runCatching {
+                            okio.FileSystem.SYSTEM.createDirectories(
+                                with(okio.Path) { effectiveStorePath.toPath() },
+                            )
+                            com.perol.pixez.shared.platform.FileLocator()
+                                .showInFileManager(effectiveStorePath)
+                        }.onFailure {
+                            Napier.e("打开所在文件夹失败 storePath=$effectiveStorePath", it)
+                        }
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.downloadSingleFolder,
+                    summary = strings.downloadSingleFolderSummary,
+                    checked = singleFolder,
+                    onCheckedChange = { checked ->
+                        singleFolder = checked
+                        settingsRepository.singleFolder = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.downloadSanityFolder,
+                    summary = strings.downloadSanityFolderSummary,
+                    checked = overSanityLevelFolder,
+                    onCheckedChange = { checked ->
+                        overSanityLevelFolder = checked
+                        settingsRepository.overSanityLevelFolder = checked
+                    },
+                )
+            }
+        }
 
-                item(key = "coui_download_format", contentType = "section") {
-                    CouiSettingSection(title = strings.dialogSaveFormat) {
-                        CouiNavigationRow(
-                            title = strings.dialogSaveFormat,
-                            summary = if (fileNameEval) strings.settingShareFormat else format,
-                            onClick = { showFormatDialog = true },
-                        )
-                        CouiSelectRow(
-                            title = strings.dialogTaskCount,
-                            items = taskCountOptions,
-                            selectedIndex = (maxRunningTask - 1).coerceIn(0, taskCountOptions.lastIndex),
-                            onSelect = { index ->
-                                val count = index + 1
-                                maxRunningTask = count
-                                settingsRepository.maxRunningTask = count
-                            },
-                        )
-                    }
-                }
+        item(key = "coui_download_format", contentType = "section") {
+            CouiSettingSection(title = strings.dialogSaveFormat) {
+                CouiValueRow(
+                    title = strings.dialogSaveFormat,
+                    summary = if (fileNameEval) strings.settingShareFormat else format,
+                    onClick = { showFormatDialog = true },
+                )
+                CouiRowDivider()
+                CouiMenuSelectRow(
+                    title = strings.dialogTaskCount,
+                    items = taskCountOptions,
+                    selectedIndex = (maxRunningTask - 1).coerceIn(0, taskCountOptions.lastIndex),
+                    onSelect = { index ->
+                        val count = index + 1
+                        maxRunningTask = count
+                        settingsRepository.maxRunningTask = count
+                    },
+                )
+            }
+        }
 
-                item(key = "coui_download_bookmark", contentType = "section") {
-                    CouiSettingSection(title = strings.settingSectionBookmarkShare) {
-                        CouiSwitchRow(
-                            title = strings.defaultPrivateLike,
-                            summary = if (defaultPrivateLike) {
-                                strings.defaultPrivateLikeSummaryOn
-                            } else {
-                                strings.defaultPrivateLikeSummaryOff
-                            },
-                            checked = defaultPrivateLike,
-                            onCheckedChange = { checked ->
-                                defaultPrivateLike = checked
-                                settingsRepository.defaultPrivateLike = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.autoTagWhenStar,
-                            summary = if (autoTagWhenStar) {
-                                strings.autoTagWhenStarSummaryOn
-                            } else {
-                                strings.autoTagWhenStarSummaryOff
-                            },
-                            checked = autoTagWhenStar,
-                            onCheckedChange = { checked ->
-                                autoTagWhenStar = checked
-                                settingsRepository.autoTagWhenStar = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.feedSettingFollowAfterStar,
-                            summary = if (followAfterStar) {
-                                strings.feedSettingFollowAfterStarSummaryOn
-                            } else {
-                                strings.feedSettingFollowAfterStarSummaryOff
-                            },
-                            checked = followAfterStar,
-                            onCheckedChange = { checked ->
-                                followAfterStar = checked
-                                settingsRepository.followAfterStar = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.saveAfterStar,
-                            summary = if (saveAfterStar) {
-                                strings.saveAfterStarSummaryOn
-                            } else {
-                                strings.saveAfterStarSummaryOff
-                            },
-                            checked = saveAfterStar,
-                            onCheckedChange = { checked ->
-                                saveAfterStar = checked
-                                settingsRepository.saveAfterStar = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.starAfterSave,
-                            summary = if (starAfterSave) {
-                                strings.starAfterSaveSummaryOn
-                            } else {
-                                strings.starAfterSaveSummaryOff
-                            },
-                            checked = starAfterSave,
-                            onCheckedChange = { checked ->
-                                starAfterSave = checked
-                                settingsRepository.starAfterSave = checked
-                            },
-                        )
-                    }
-                }
+        item(key = "coui_download_bookmark", contentType = "section") {
+            CouiSettingSection(title = strings.settingSectionBookmarkShare) {
+                CouiToggleRow(
+                    title = strings.defaultPrivateLike,
+                    summary = if (defaultPrivateLike) {
+                        strings.defaultPrivateLikeSummaryOn
+                    } else {
+                        strings.defaultPrivateLikeSummaryOff
+                    },
+                    checked = defaultPrivateLike,
+                    onCheckedChange = { checked ->
+                        defaultPrivateLike = checked
+                        settingsRepository.defaultPrivateLike = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.autoTagWhenStar,
+                    summary = if (autoTagWhenStar) {
+                        strings.autoTagWhenStarSummaryOn
+                    } else {
+                        strings.autoTagWhenStarSummaryOff
+                    },
+                    checked = autoTagWhenStar,
+                    onCheckedChange = { checked ->
+                        autoTagWhenStar = checked
+                        settingsRepository.autoTagWhenStar = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.feedSettingFollowAfterStar,
+                    summary = if (followAfterStar) {
+                        strings.feedSettingFollowAfterStarSummaryOn
+                    } else {
+                        strings.feedSettingFollowAfterStarSummaryOff
+                    },
+                    checked = followAfterStar,
+                    onCheckedChange = { checked ->
+                        followAfterStar = checked
+                        settingsRepository.followAfterStar = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.saveAfterStar,
+                    summary = if (saveAfterStar) {
+                        strings.saveAfterStarSummaryOn
+                    } else {
+                        strings.saveAfterStarSummaryOff
+                    },
+                    checked = saveAfterStar,
+                    onCheckedChange = { checked ->
+                        saveAfterStar = checked
+                        settingsRepository.saveAfterStar = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.starAfterSave,
+                    summary = if (starAfterSave) {
+                        strings.starAfterSaveSummaryOn
+                    } else {
+                        strings.starAfterSaveSummaryOff
+                    },
+                    checked = starAfterSave,
+                    onCheckedChange = { checked ->
+                        starAfterSave = checked
+                        settingsRepository.starAfterSave = checked
+                    },
+                )
             }
         }
     }

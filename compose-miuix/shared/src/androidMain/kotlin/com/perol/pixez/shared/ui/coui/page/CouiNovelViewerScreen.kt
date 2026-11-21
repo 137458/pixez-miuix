@@ -1,14 +1,13 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -62,11 +60,11 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBookmarkRepository
@@ -95,12 +93,12 @@ private sealed interface CouiNovelViewState {
 }
 
 /**
- * COUI 小说阅读器：固定顶栏 + COUI 卡片正文。
+ * COUI 小说阅读器：库骨架 [CouiSecondaryScaffold] + COUI 卡片正文。
  *
  * 业务编排与 MIUIX 版一致：正文/详情/内嵌图源并行加载、收藏（点击常规 / 长按强制私密）、
  * 字号调节持久化、正文复制/分享/浏览器打开、内嵌插画与上传图、系列前后章节跳转。
- * 皮肤差异：顶栏为固定条（无折叠毛玻璃），动作数多，复制/分享/浏览器打开与评论收敛到
- * 更多菜单以减少挤占标题；评论入口仍保留在顶栏。
+ * 表现层：骨架负责折叠大标题与返回，动作（评论/收藏/字号/更多）进 actions 槽；正文为可选中的
+ * COUI 卡片列表。复制/分享/浏览器打开收敛在更多菜单，避免挤占标题。
  */
 @Composable
 internal fun CouiNovelViewerScreen(
@@ -203,151 +201,108 @@ internal fun CouiNovelViewerScreen(
 
     val novelty = (state as? CouiNovelViewState.Success)?.data?.novelText
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiNovelViewerTopBar(
-            title = novelDetail?.title?.takeIf { it.isNotBlank() } ?: strings.novelReaderTitle,
-            isBookmarked = isBookmarked,
-            showBookmark = novelDetail != null,
-            strings = strings,
-            onBack = onBack,
-            onCommentsClick = { onCommentsClick(novelId) },
-            onBookmarkClick = { toggleNovelBookmark(forcePrivate = false) },
-            onBookmarkLongClick = { toggleNovelBookmark(forcePrivate = true) },
-            onFontDecrease = {
-                if (fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP) {
-                    fontSizeSp -= 1f
-                    settings.novelFontSize = fontSizeSp
-                }
-            },
-            onFontIncrease = {
-                if (fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP) {
-                    fontSizeSp += 1f
-                    settings.novelFontSize = fontSizeSp
-                }
-            },
-            onCopyText = {
-                if (!novelty.isNullOrBlank()) {
-                    IllustClipboard().copy(novelty)
-                    toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
-                }
-            },
-            onShare = {
-                IllustShare().share(AppConstants.Urls.pixivNovelUrl(novelId), strings.novelReaderTitle)
-            },
-            onOpenInBrowser = {
-                openSafeUrl(AppConstants.Urls.pixivNovelUrl(novelId), strings, onError = { message ->
-                    toastSink(ToastData(message, ToastType.Error))
-                })
-            },
-        )
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (val st = state) {
-                is CouiNovelViewState.Loading -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                is CouiNovelViewState.Error -> CouiStatePlaceholder(
-                    message = st.message,
-                    actionText = strings.retry,
-                    onAction = { loadNovel() },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                is CouiNovelViewState.Success -> CouiNovelBody(
-                    data = st.data,
-                    novelDetail = novelDetail,
-                    webResource = webResource,
-                    fontSizeSp = fontSizeSp,
-                    strings = strings,
-                    onNovelClick = onNovelClick,
-                    onIllustClick = onIllustClick,
-                    onUserClick = onUserClick,
-                    onOpenUrl = { url ->
-                        openSafeUrl(url, strings, onError = { message ->
-                            toastSink(ToastData(message, ToastType.Error))
-                        })
-                    },
-                )
-            }
-        }
-    }
-}
-
-/** COUI 阅读器顶栏：返回 + 标题 + 评论/收藏/字号/更多。 */
-@Composable
-private fun CouiNovelViewerTopBar(
-    title: String,
-    isBookmarked: Boolean,
-    showBookmark: Boolean,
-    strings: AppStrings,
-    onBack: () -> Unit,
-    onCommentsClick: () -> Unit,
-    onBookmarkClick: () -> Unit,
-    onBookmarkLongClick: () -> Unit,
-    onFontDecrease: () -> Unit,
-    onFontIncrease: () -> Unit,
-    onCopyText: () -> Unit,
-    onShare: () -> Unit,
-    onOpenInBrowser: () -> Unit,
-) {
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by remember { mutableStateOf(false) }
 
-    CouiFixedTopBar(
-        title = title,
+    CouiSecondaryScaffold(
+        title = novelDetail?.title?.takeIf { it.isNotBlank() } ?: strings.novelReaderTitle,
         onBack = onBack,
-        actionSpacing = 4.dp,
-    ) {
-        CouiActionButton(
-            icon = MiuixIcons.Messages,
-            contentDescription = strings.commentsTitle,
-            onClick = onCommentsClick,
-        )
-        if (showBookmark) {
-            CouiNovelBookmarkButton(
-                isBookmarked = isBookmarked,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = { onCommentsClick(novelId) },
+                icon = MiuixIcons.Messages,
+                contentDescription = strings.commentsTitle,
+            )
+            // 收藏需要长按（强制私密），CouiTopBarIconButton 不支持长按，故保留页面自绘圆钮。
+            if (novelDetail != null) {
+                CouiNovelBookmarkButton(
+                    isBookmarked = isBookmarked,
+                    strings = strings,
+                    onClick = { toggleNovelBookmark(forcePrivate = false) },
+                    onLongClick = { toggleNovelBookmark(forcePrivate = true) },
+                )
+            }
+            CouiTopBarIconButton(
+                onClick = {
+                    fontSizeSp -= 1f
+                    settings.novelFontSize = fontSizeSp
+                },
+                icon = MiuixIcons.Remove,
+                contentDescription = strings.novelFontSize + " -",
+                enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
+            )
+            CouiTopBarIconButton(
+                onClick = {
+                    fontSizeSp += 1f
+                    settings.novelFontSize = fontSizeSp
+                },
+                icon = MiuixIcons.Add,
+                contentDescription = strings.novelFontSize + " +",
+                enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
+            )
+            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+                CouiTopBarIconButton(
+                    onClick = { menuAnchor.open { menuExpanded = true } },
+                    icon = MiuixIcons.More,
+                    contentDescription = strings.menuMoreActions,
+                )
+                Menu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    anchor = menuAnchor,
+                    headerText = strings.menuMoreActions,
+                    items = listOf(
+                        CouiMenuItem(value = "copy_text", text = strings.copy),
+                        CouiMenuItem(value = "share", text = strings.share),
+                        CouiMenuItem(value = "browser", text = strings.openInBrowser),
+                    ),
+                    onItemClick = { item ->
+                        menuExpanded = false
+                        when (item.value) {
+                            "copy_text" -> if (!novelty.isNullOrBlank()) {
+                                IllustClipboard().copy(novelty)
+                                toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
+                            }
+                            "share" -> IllustShare().share(
+                                AppConstants.Urls.pixivNovelUrl(novelId),
+                                strings.novelReaderTitle,
+                            )
+                            "browser" -> openSafeUrl(
+                                AppConstants.Urls.pixivNovelUrl(novelId),
+                                strings,
+                                onError = { message ->
+                                    toastSink(ToastData(message, ToastType.Error))
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+        },
+    ) { padding ->
+        val stateModifier = Modifier.padding(padding).consumeWindowInsets(padding)
+        when (val st = state) {
+            is CouiNovelViewState.Loading -> CouiLoadingPlaceholder(modifier = stateModifier)
+            is CouiNovelViewState.Error -> CouiPlaceholder(
+                message = st.message,
+                modifier = stateModifier,
+                actionText = strings.retry,
+                onAction = { loadNovel() },
+            )
+            is CouiNovelViewState.Success -> CouiNovelBody(
+                data = st.data,
+                novelDetail = novelDetail,
+                webResource = webResource,
+                fontSizeSp = fontSizeSp,
                 strings = strings,
-                onClick = onBookmarkClick,
-                onLongClick = onBookmarkLongClick,
-            )
-        }
-        CouiFontSizeButton(
-            icon = MiuixIcons.Remove,
-            contentDescription = strings.novelFontSize + " -",
-            onClick = onFontDecrease,
-        )
-        CouiFontSizeButton(
-            icon = MiuixIcons.Add,
-            contentDescription = strings.novelFontSize + " +",
-            onClick = onFontIncrease,
-        )
-        Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-            CouiActionButton(
-                icon = MiuixIcons.More,
-                contentDescription = strings.menuMoreActions,
-                onClick = { menuAnchor.open { menuExpanded = true } },
-            )
-            Menu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
-                anchor = menuAnchor,
-                headerText = strings.menuMoreActions,
-                items = listOf(
-                    CouiMenuItem(value = "copy_text", text = strings.copy),
-                    CouiMenuItem(value = "share", text = strings.share),
-                    CouiMenuItem(value = "browser", text = strings.openInBrowser),
-                ),
-                onItemClick = { item ->
-                    menuExpanded = false
-                    when (item.value) {
-                        "copy_text" -> onCopyText()
-                        "share" -> onShare()
-                        "browser" -> onOpenInBrowser()
-                    }
+                padding = padding,
+                onNovelClick = onNovelClick,
+                onIllustClick = onIllustClick,
+                onUserClick = onUserClick,
+                onOpenUrl = { url ->
+                    openSafeUrl(url, strings, onError = { message ->
+                        toastSink(ToastData(message, ToastType.Error))
+                    })
                 },
             )
         }
@@ -387,41 +342,6 @@ private fun CouiNovelBookmarkButton(
     }
 }
 
-/**
- * 字号调节按钮：与图标动作共用 40dp 触区。
- *
- * 用 [MiuixIcons.Add] / [MiuixIcons.Remove] 取代原先的加减号文本按钮：
- * 图标随字号缩放不会错位，且无障碍描述能带上方向（AppStrings 没有"增大/减小"词条，
- * 故以通用正负号后缀区分两个按钮，避免读屏把两个按钮读成同一个名字）。
- */
-@Composable
-private fun CouiFontSizeButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .couiPressFeedback(interactionSource, list = false)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            painter = rememberVectorPainter(icon),
-            contentDescription = contentDescription,
-            colorFilter = ColorFilter.tint(CouiTheme.colorScheme.accent),
-            modifier = Modifier.size(22.dp),
-        )
-    }
-}
-
 /** 正文区：COUI 卡片承载可选中的长文列表与系列章节导航。 */
 @Composable
 private fun CouiNovelBody(
@@ -430,6 +350,7 @@ private fun CouiNovelBody(
     webResource: NovelWebResponse?,
     fontSizeSp: Float,
     strings: AppStrings,
+    padding: PaddingValues,
     onNovelClick: (Long) -> Unit,
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
@@ -442,132 +363,131 @@ private fun CouiNovelBody(
         if (novelText.isBlank()) emptyList() else buildNovelViewerItems(novelText)
     }
 
-    CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(CouiTheme.colorScheme.card),
-        ) {
-            SelectionContainer {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
-                    overscrollEffect = rememberCouiOverscrollEffect(),
-                ) {
-                    novelDetail?.let { detail ->
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 18.dp),
-                            ) {
-                                Text(
-                                    text = detail.title,
-                                    kind = CouiTextKind.ItemTitle,
-                                    color = CouiTheme.colorScheme.onSurface,
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable { onUserClick(detail.user.id) }
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    PixivAsyncImage(
-                                        model = detail.user.profileImageUrls.medium,
-                                        contentDescription = detail.user.name,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape),
-                                    )
-                                    Column {
-                                        Text(
-                                            text = detail.user.name,
-                                            kind = CouiTextKind.ItemTitle,
-                                            color = CouiTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                        )
-                                        Text(
-                                            text = detail.user.account,
-                                            kind = CouiTextKind.ItemSummary,
-                                            color = CouiTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-                    }
-
-                    if (viewerItems.isEmpty()) {
-                        item {
-                            BasicText(
-                                text = strings.novelTextEmpty,
-                                style = TextStyle(
-                                    fontSize = fontSizeSp.sp,
-                                    lineHeight = (fontSizeSp * 1.65f).sp,
-                                    color = CouiTheme.colorScheme.onSurfaceVariant,
-                                ),
-                                modifier = Modifier.padding(horizontal = 18.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .consumeWindowInsets(padding)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(CouiTheme.colorScheme.card)
+    ) {
+        SelectionContainer {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
+                overscrollEffect = rememberCouiOverscrollEffect(),
+            ) {
+                novelDetail?.let { detail ->
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp),
+                        ) {
+                            Text(
+                                text = detail.title,
+                                kind = CouiTextKind.ItemTitle,
+                                color = CouiTheme.colorScheme.onSurface,
                             )
-                        }
-                    } else {
-                        items(
-                            count = viewerItems.size,
-                            key = { it },
-                            contentType = { index -> viewerItems[index]::class },
-                        ) { index ->
-                            CouiNovelViewerItemContent(
-                                item = viewerItems[index],
-                                webResource = webResource,
-                                fontSizeSp = fontSizeSp,
-                                onIllustClick = onIllustClick,
-                                onOpenUrl = onOpenUrl,
-                            )
-                        }
-                    }
-
-                    if (seriesPrev?.id != null || seriesNext?.id != null) {
-                        item {
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { onUserClick(detail.user.id) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                if (seriesPrev?.id != null) {
-                                    CouiSeriesNavButton(
-                                        text = strings.novelPrevChapter,
-                                        onClick = { onNovelClick(seriesPrev.id) },
-                                        modifier = Modifier.weight(1f),
+                                PixivAsyncImage(
+                                    model = detail.user.profileImageUrls.medium,
+                                    contentDescription = detail.user.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape),
+                                )
+                                Column {
+                                    Text(
+                                        text = detail.user.name,
+                                        kind = CouiTextKind.ItemTitle,
+                                        color = CouiTheme.colorScheme.onSurface,
+                                        maxLines = 1,
                                     )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                                if (seriesNext?.id != null) {
-                                    CouiSeriesNavButton(
-                                        text = strings.novelNextChapter,
-                                        onClick = { onNovelClick(seriesNext.id) },
-                                        modifier = Modifier.weight(1f),
+                                    Text(
+                                        text = detail.user.account,
+                                        kind = CouiTextKind.ItemSummary,
+                                        color = CouiTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
                                     )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
                                 }
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+
+                if (viewerItems.isEmpty()) {
+                    item {
+                        BasicText(
+                            text = strings.novelTextEmpty,
+                            style = TextStyle(
+                                fontSize = fontSizeSp.sp,
+                                lineHeight = (fontSizeSp * 1.65f).sp,
+                                color = CouiTheme.colorScheme.onSurfaceVariant,
+                            ),
+                            modifier = Modifier.padding(horizontal = 18.dp),
+                        )
+                    }
+                } else {
+                    items(
+                        count = viewerItems.size,
+                        key = { it },
+                        contentType = { index -> viewerItems[index]::class },
+                    ) { index ->
+                        CouiNovelViewerItemContent(
+                            item = viewerItems[index],
+                            webResource = webResource,
+                            fontSizeSp = fontSizeSp,
+                            onIllustClick = onIllustClick,
+                            onOpenUrl = onOpenUrl,
+                        )
+                    }
+                }
+
+                if (seriesPrev?.id != null || seriesNext?.id != null) {
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            if (seriesPrev?.id != null) {
+                                CouiSeriesNavButton(
+                                    text = strings.novelPrevChapter,
+                                    onClick = { onNovelClick(seriesPrev.id) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                            if (seriesNext?.id != null) {
+                                CouiSeriesNavButton(
+                                    text = strings.novelNextChapter,
+                                    onClick = { onNovelClick(seriesNext.id) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
-
-                    item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
+
+                item { Spacer(modifier = Modifier.height(32.dp)) }
             }
         }
     }

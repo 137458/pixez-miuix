@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,15 +47,13 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.Novel
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.state.PagedListPage
@@ -67,10 +66,11 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 用户小说列表页：固定顶栏 + 小说卡片列表。
+ * COUI 用户小说列表页：二级页骨架 + 小说卡片列表。
  *
  * 分页、账号切换重拉与刷新口径与 MIUIX 版一致；差异只有皮肤层：
- * 固定顶栏刷新入口、COUI 卡片行、三态占位与平板可读宽度，不做下拉刷新。
+ * 容器由 [CouiSecondaryScaffold] 唯一提供，刷新入口用顶栏图标按钮，
+ * 列表护栏进 `contentPadding`，不做下拉刷新。
  * 作者行在传入 [onUserClick] 时可点击跳转画师详情，与 MIUIX 版一致。
  */
 @Composable
@@ -143,80 +143,79 @@ internal fun CouiUserNovelListScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = pageTitle,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = pageTitle,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = triggerManualRefresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = triggerManualRefresh,
             )
-        }
+        },
+    ) { padding ->
+        val currentItems = pagedList.items
+        when {
+            currentItems == null && pagedList.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            val currentItems = pagedList.items
-            when {
-                currentItems == null && pagedList.initialError == null ->
-                    CouiStatePlaceholder(
-                        message = strings.loading,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            currentItems != null -> if (currentItems.isEmpty()) {
+                CouiPlaceholder(
+                    message = strings.userNovelsEmpty,
+                    modifier = Modifier
+                        .padding(padding)
+                        .consumeWindowInsets(padding),
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .consumeWindowInsets(padding),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        end = 12.dp,
+                        bottom = padding.calculateBottomPadding(),
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
+                ) {
+                    items(
+                        items = currentItems,
+                        key = { it.id },
+                        contentType = { "coui_novel_card" },
+                    ) { novel ->
+                        CouiNovelCard(
+                            novel = novel,
+                            onClick = { onNovelClick(novel.id) },
+                            onUserClick = onUserClick,
+                        )
+                    }
 
-                currentItems != null -> if (currentItems.isEmpty()) {
-                    CouiStatePlaceholder(
-                        message = strings.userNovelsEmpty,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 8.dp,
-                            end = 12.dp,
-                            bottom = LocalBottomBarContentPadding.current,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        overscrollEffect = rememberCouiOverscrollEffect(),
-                    ) {
-                        items(
-                            items = currentItems,
-                            key = { it.id },
-                            contentType = { "coui_novel_card" },
-                        ) { novel ->
-                            CouiNovelCard(
-                                novel = novel,
-                                onClick = { onNovelClick(novel.id) },
-                                onUserClick = onUserClick,
+                    val footerState = pagedList.footerState
+                    if (footerState.phase != PagingFooterPhase.Hidden) {
+                        item(key = "coui_novel_list_footer", contentType = "footer") {
+                            CouiLoadMoreFooter(
+                                state = footerState,
+                                onRetry = ::loadMore,
                             )
-                        }
-
-                        val footerState = pagedList.footerState
-                        if (footerState.phase != PagingFooterPhase.Hidden) {
-                            item(key = "coui_novel_list_footer", contentType = "footer") {
-                                CouiPagingFooter(
-                                    state = footerState,
-                                    onRetry = ::loadMore,
-                                )
-                            }
                         }
                     }
                 }
-
-                else -> CouiStatePlaceholder(
-                    message = couiErrorMessage(pagedList.initialError),
-                    actionText = strings.retry,
-                    onAction = { triggerManualRefresh() },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
+
+            else -> CouiErrorPlaceholder(
+                error = pagedList.initialError,
+                onRetry = { triggerManualRefresh() },
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
         }
     }
 }

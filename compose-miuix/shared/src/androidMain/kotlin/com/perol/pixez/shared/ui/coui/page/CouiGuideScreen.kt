@@ -1,8 +1,8 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,35 +10,34 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,29 +49,36 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.PixivHosts
-import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
-import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
-import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
+import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
+import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import pixez_miuix.shared.generated.resources.Res
+import pixez_miuix.shared.generated.resources.ic_pixez_logo
 
 /** 引导页分步切换的转场时长（毫秒）。 */
 private const val COUI_GUIDE_PAGE_TRANSITION_MILLIS = 300
 
+/** 引导页总步数。 */
+private const val COUI_GUIDE_STEP_COUNT = 3
+
 /**
- * COUI 首次启动引导页：固定顶栏 + 三步内容 + 底部步骤导航。
+ * COUI 首次启动引导页：库骨架 + 三步内容 + 底部步骤导航。
  *
  * 三步的写入项（语言、图源、网络模式、完成标记）与 MIUIX 版完全一致；
  * 第三步保留账号状态检测、登录入口、游客模式与开始旅程。
+ * 页面只保留 [CouiMainScaffold] 一个容器：顶栏由骨架提供，底部步骤导航与正文同处骨架正文，
+ * 各步列表的顶部留白来自骨架下发的 padding，滚动时内容会进入顶栏覆盖区。
  */
 @Composable
 internal fun CouiGuideScreen(
@@ -83,84 +89,98 @@ internal fun CouiGuideScreen(
     val accountRepository = LocalAccountRepository.current
     val strings = LocalStrings.current
     var currentStep by remember { mutableIntStateOf(0) }
-    val scheme = CouiTheme.colorScheme
 
     val finishGuide: () -> Unit = {
         settingsRepository.hasCompletedGuide = true
         onFinish()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = when (currentStep) {
-                0 -> "1. ${strings.guideStepLanguage}"
-                1 -> "2. ${strings.guideStepNetwork}"
-                else -> "3. ${strings.guideStepWelcome}"
-            },
-            onBack = if (currentStep > 0) {
-                { currentStep-- }
-            } else {
-                null
-            },
-        ) {
-            CouiTextAction(
+    CouiMainScaffold(
+        title = when (currentStep) {
+            0 -> "1. ${strings.guideStepLanguage}"
+            1 -> "2. ${strings.guideStepNetwork}"
+            else -> "3. ${strings.guideStepWelcome}"
+        },
+        actions = {
+            CouiTextButton(
                 text = strings.guideSkipLogin,
                 onClick = finishGuide,
+                modifier = Modifier.padding(end = 12.dp),
+                filled = false,
             )
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
-            AnimatedContent(
-                targetState = currentStep,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
-                            fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
-                            .togetherWith(
-                                slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
-                                    fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
-                            )
-                    } else {
-                        (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
-                            fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
-                            .togetherWith(
-                                slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
-                                    fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
-                            )
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-            ) { step ->
-                CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
+        },
+    ) { padding ->
+        val stepPadding = PaddingValues(
+            top = padding.calculateTopPadding() + 4.dp,
+            bottom = 16.dp,
+        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                    .fillMaxSize(),
+            ) {
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
+                                fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
+                                .togetherWith(
+                                    slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
+                                        fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
+                                )
+                        } else {
+                            (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
+                                fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
+                                .togetherWith(
+                                    slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
+                                        fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
+                                )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) { step ->
                     when (step) {
-                        0 -> CouiGuideLanguageStep(settingsRepository = settingsRepository)
-                        1 -> CouiGuideNetworkStep(settingsRepository = settingsRepository)
+                        0 -> CouiGuideLanguageStep(
+                            settingsRepository = settingsRepository,
+                            contentPadding = stepPadding,
+                        )
+
+                        1 -> CouiGuideNetworkStep(
+                            settingsRepository = settingsRepository,
+                            contentPadding = stepPadding,
+                        )
+
                         else -> CouiGuideWelcomeStep(
                             accountRepository = accountRepository,
                             onLoginClick = onLoginClick,
                             onFinish = finishGuide,
+                            contentPadding = stepPadding,
                         )
                     }
                 }
+
+                CouiGuideBottomBar(
+                    currentStep = currentStep,
+                    totalSteps = COUI_GUIDE_STEP_COUNT,
+                    onPrevious = { if (currentStep > 0) currentStep-- },
+                    onNext = {
+                        if (currentStep < COUI_GUIDE_STEP_COUNT - 1) {
+                            currentStep++
+                        } else {
+                            finishGuide()
+                        }
+                    },
+                    modifier = Modifier.padding(bottom = padding.calculateBottomPadding()),
+                )
             }
         }
-
-        CouiGuideBottomBar(
-            currentStep = currentStep,
-            totalSteps = 3,
-            onPrevious = { if (currentStep > 0) currentStep-- },
-            onNext = {
-                if (currentStep < 2) {
-                    currentStep++
-                } else {
-                    finishGuide()
-                }
-            },
-        )
     }
 }
 
@@ -168,6 +188,7 @@ internal fun CouiGuideScreen(
 @Composable
 private fun CouiGuideLanguageStep(
     settingsRepository: SettingsRepository,
+    contentPadding: PaddingValues,
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
@@ -177,8 +198,7 @@ private fun CouiGuideLanguageStep(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         item(key = "coui_guide_hero") {
@@ -218,19 +238,20 @@ private fun CouiGuideLanguageStep(
         }
 
         item(key = "coui_guide_language") {
-            CouiSettingSection(title = strings.settingLanguage) {
-                Column {
-                    LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                        CouiRadioRow(
-                            title = "${option.nativeName} (${option.displayName})",
-                            summary = option.code,
-                            selected = selectedIndex == index,
-                            onClick = {
-                                selectedIndex = index
-                                settingsRepository.languageNum = index
-                            },
-                        )
+            CouiSettingsGroup(title = strings.settingLanguage) {
+                LANGUAGE_OPTIONS.forEachIndexed { index, option ->
+                    if (index > 0) {
+                        CouiRowDivider()
                     }
+                    CouiRadioOptionRow(
+                        title = "${option.nativeName} (${option.displayName})",
+                        summary = option.code,
+                        selected = selectedIndex == index,
+                        onClick = {
+                            selectedIndex = index
+                            settingsRepository.languageNum = index
+                        },
+                    )
                 }
             }
         }
@@ -241,6 +262,7 @@ private fun CouiGuideLanguageStep(
 @Composable
 private fun CouiGuideNetworkStep(
     settingsRepository: SettingsRepository,
+    contentPadding: PaddingValues,
 ) {
     val strings = LocalStrings.current
     var isMirrorEnabled by remember {
@@ -252,8 +274,7 @@ private fun CouiGuideNetworkStep(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         item(key = "coui_guide_network_title") {
@@ -264,71 +285,65 @@ private fun CouiGuideNetworkStep(
         }
 
         item(key = "coui_guide_image_source") {
-            CouiSettingSection(title = strings.guideImageSource) {
-                Column {
-                    CouiRadioRow(
-                        title = strings.guideImageMirror,
-                        summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
-                        selected = isMirrorEnabled,
-                        onClick = {
-                            isMirrorEnabled = true
-                            settingsRepository.pictureSource = PixivHosts.HOST_PIXIV_RE
-                        },
-                    )
-                    CouiRadioRow(
-                        title = strings.guideImageOfficial,
-                        summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
-                        selected = !isMirrorEnabled,
-                        onClick = {
-                            isMirrorEnabled = false
-                            settingsRepository.pictureSource = PixivHosts.HOST_PXIMG
-                        },
-                    )
-                }
+            CouiSettingsGroup(title = strings.guideImageSource) {
+                CouiRadioOptionRow(
+                    title = strings.guideImageMirror,
+                    summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
+                    selected = isMirrorEnabled,
+                    onClick = {
+                        isMirrorEnabled = true
+                        settingsRepository.pictureSource = PixivHosts.HOST_PIXIV_RE
+                    },
+                )
+                CouiRowDivider()
+                CouiRadioOptionRow(
+                    title = strings.guideImageOfficial,
+                    summary = "${strings.guideImageOfficialDesc} • ${strings.guideOfficialNeedProxy}",
+                    selected = !isMirrorEnabled,
+                    onClick = {
+                        isMirrorEnabled = false
+                        settingsRepository.pictureSource = PixivHosts.HOST_PXIMG
+                    },
+                )
             }
         }
 
         item(key = "coui_guide_network_mode") {
-            CouiSettingSection(title = strings.guideStepNetwork) {
-                Column {
-                    CouiRadioRow(
-                        title = strings.guideNetworkDirect,
-                        summary = strings.guideNetworkDirectDesc,
-                        selected = currentNetworkMode == "direct",
-                        onClick = {
-                            currentNetworkMode = "direct"
-                            settingsRepository.apiNetworkMode = "direct"
-                            settingsRepository.oauthNetworkMode = "direct"
-                        },
-                    )
-                    CouiRadioRow(
-                        title = strings.guideNetworkSni,
-                        summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
-                        selected = currentNetworkMode == "sni",
-                        onClick = {
-                            currentNetworkMode = "sni"
-                            settingsRepository.apiNetworkMode = "sni"
-                            settingsRepository.oauthNetworkMode = "sni"
-                        },
-                    )
-                }
+            CouiSettingsGroup(title = strings.guideStepNetwork) {
+                CouiRadioOptionRow(
+                    title = strings.guideNetworkDirect,
+                    summary = strings.guideNetworkDirectDesc,
+                    selected = currentNetworkMode == "direct",
+                    onClick = {
+                        currentNetworkMode = "direct"
+                        settingsRepository.apiNetworkMode = "direct"
+                        settingsRepository.oauthNetworkMode = "direct"
+                    },
+                )
+                CouiRowDivider()
+                CouiRadioOptionRow(
+                    title = strings.guideNetworkSni,
+                    summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
+                    selected = currentNetworkMode == "sni",
+                    onClick = {
+                        currentNetworkMode = "sni"
+                        settingsRepository.apiNetworkMode = "sni"
+                        settingsRepository.oauthNetworkMode = "sni"
+                    },
+                )
             }
         }
 
         item(key = "coui_guide_network_tip") {
-            CouiCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = strings.loginTroubleTip,
-                        kind = CouiTextKind.ItemTitle,
-                        color = CouiTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = strings.loginTroubleDesc,
-                        kind = CouiTextKind.ItemSummary,
-                        color = CouiTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
+            CouiSettingsGroup {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    CouiItemTitle(text = strings.loginTroubleTip)
+                    CouiItemSummary(text = strings.loginTroubleDesc)
                 }
             }
         }
@@ -341,6 +356,7 @@ private fun CouiGuideWelcomeStep(
     accountRepository: AccountRepository,
     onLoginClick: () -> Unit,
     onFinish: () -> Unit,
+    contentPadding: PaddingValues,
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
@@ -360,8 +376,7 @@ private fun CouiGuideWelcomeStep(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
         item(key = "coui_guide_welcome_title") {
@@ -372,17 +387,17 @@ private fun CouiGuideWelcomeStep(
         }
 
         item(key = "coui_guide_features") {
-            CouiSettingSection(title = strings.guidePixEzFeatures) {
-                Column {
-                    CouiGuideFeatureRow(strings.guideFeatureIllust, strings.guideFeatureIllustDesc)
-                    CouiGuideFeatureRow(strings.guideFeatureRanking, strings.guideFeatureRankingDesc)
-                    CouiGuideFeatureRow(strings.guideFeatureDownload, strings.guideFeatureDownloadDesc)
-                }
+            CouiSettingsGroup(title = strings.guidePixEzFeatures) {
+                CouiGuideFeatureRow(strings.guideFeatureIllust, strings.guideFeatureIllustDesc)
+                CouiRowDivider()
+                CouiGuideFeatureRow(strings.guideFeatureRanking, strings.guideFeatureRankingDesc)
+                CouiRowDivider()
+                CouiGuideFeatureRow(strings.guideFeatureDownload, strings.guideFeatureDownloadDesc)
             }
         }
 
         item(key = "coui_guide_account") {
-            CouiSettingSection(title = strings.settingSectionAccount) {
+            CouiSettingsGroup(title = strings.settingSectionAccount) {
                 val current = currentAccount
                 when {
                     current != null && current.hasCredentials -> Column(
@@ -397,18 +412,18 @@ private fun CouiGuideWelcomeStep(
                             color = scheme.accent,
                         )
                         Text(
-                            text = "${current.name} (@${current.account})",
+                            text = current.name + " (@" + current.account + ")",
                             kind = CouiTextKind.ItemSummary,
                             color = scheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 6.dp),
                         )
-                        CouiTextAction(
+                        CouiTextButton(
                             text = strings.guideSwitchAccount,
-                            color = scheme.accent,
                             onClick = onLoginClick,
                             modifier = Modifier.padding(top = 10.dp),
+                            filled = false,
                         )
                     }
 
@@ -430,17 +445,16 @@ private fun CouiGuideWelcomeStep(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 6.dp),
                         )
-                        CouiGuideButton(
+                        CouiTextButton(
                             text = strings.guideLoginNow,
-                            onClick = {
-                                onLoginClick()
-                            },
+                            onClick = onLoginClick,
                             modifier = Modifier.padding(top = 14.dp),
                         )
-                        CouiTextAction(
+                        CouiTextButton(
                             text = strings.guideGuestExplore,
                             onClick = onFinish,
                             modifier = Modifier.padding(top = 6.dp),
+                            filled = false,
                         )
                     }
                 }
@@ -448,10 +462,13 @@ private fun CouiGuideWelcomeStep(
         }
 
         item(key = "coui_guide_start") {
-            CouiGuideButton(
+            CouiTextButton(
                 text = strings.guideStartJourney,
                 onClick = onFinish,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .heightIn(min = 44.dp),
             )
         }
     }
@@ -485,61 +502,20 @@ private fun CouiGuideStepHeader(
     }
 }
 
-/** 特性行：标题 + 说明。 */
+/** 特性行：标题 + 说明，版式对齐官方 Item 的行内边距。 */
 @Composable
 private fun CouiGuideFeatureRow(
     title: String,
     summary: String,
 ) {
-    val scheme = CouiTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(
-            text = title,
-            kind = CouiTextKind.ItemTitle,
-            color = scheme.onSurface,
-        )
-        Text(
-            text = summary,
-            kind = CouiTextKind.ItemSummary,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-    }
-}
-
-/** COUI 主按钮：实心强调色，按压反馈与登录页同口径。 */
-@Composable
-private fun CouiGuideButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = CouiTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(50))
-            .background(scheme.accent)
-            .couiPressFeedback(interactionSource, list = false)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            kind = CouiTextKind.ItemTitle,
-            color = scheme.onAccent,
-        )
+        CouiItemTitle(text = title)
+        CouiItemSummary(text = summary)
     }
 }
 
@@ -550,20 +526,22 @@ private fun CouiGuideBottomBar(
     totalSteps: Int,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (currentStep > 0) {
-            CouiTextAction(
+            CouiTextButton(
                 text = strings.guidePrev,
                 onClick = onPrevious,
+                filled = false,
             )
         } else {
             Spacer(modifier = Modifier.width(64.dp))
@@ -592,10 +570,10 @@ private fun CouiGuideBottomBar(
             }
         }
 
-        CouiTextAction(
+        CouiTextButton(
             text = if (currentStep == totalSteps - 1) strings.guideFinish else strings.guideNext,
-            color = scheme.accent,
             onClick = onNext,
+            filled = false,
         )
     }
 }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -47,17 +46,16 @@ import com.perol.pixez.shared.data.settings.parseCrossAdapterWidthInput
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSelectRow
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import kotlin.math.max
 
 /**
- * COUI 布局设置页：固定顶栏 + 分组卡片。
+ * COUI 布局设置页：设置骨架 + 官方 Group 卡片。
  *
  * 底栏模式、平板模式、竖屏/横屏列数与自适应阈值的取值与回写口径与 MIUIX 版一致。
  * 自适应阈值用 COUI 库 Slider + 数值行内输入保留连续调节与精确输入：拖动中只更新预览值，松手才落盘，
@@ -94,124 +92,116 @@ internal fun CouiLayoutSettingScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingLayout,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingLayout,
-            onBack = onBack,
-        )
+        item(key = "coui_layout_bottom_bar", contentType = "section") {
+            CouiSettingSection(title = strings.floatingBottomBar) {
+                CouiToggleRow(
+                    title = strings.floatingBottomBar,
+                    summary = if (useFloatingBottomBar) {
+                        strings.floatingBottomBarSummaryOn
+                    } else {
+                        strings.floatingBottomBarSummaryOff
+                    },
+                    checked = useFloatingBottomBar,
+                    onCheckedChange = { checked ->
+                        useFloatingBottomBar = checked
+                        settingsRepository.useFloatingBottomBar = checked
+                    },
+                )
+            }
+        }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_layout_bottom_bar", contentType = "section") {
-                    CouiSettingSection(title = strings.floatingBottomBar) {
-                        CouiSwitchRow(
-                            title = strings.floatingBottomBar,
-                            summary = if (useFloatingBottomBar) {
-                                strings.floatingBottomBarSummaryOn
-                            } else {
-                                strings.floatingBottomBarSummaryOff
-                            },
-                            checked = useFloatingBottomBar,
-                            onCheckedChange = { checked ->
-                                useFloatingBottomBar = checked
-                                settingsRepository.useFloatingBottomBar = checked
-                            },
-                        )
-                    }
+        item(key = "coui_layout_display_mode", contentType = "section") {
+            CouiSettingSection(title = strings.dialogDisplayMode) {
+                CouiMenuSelectRow(
+                    title = strings.dialogDisplayMode,
+                    items = displayModeLabels,
+                    selectedIndex = displayMode.coerceIn(0, displayModeLabels.lastIndex),
+                    onSelect = { index ->
+                        displayMode = index
+                        settingsRepository.displayMode = index
+                    },
+                )
+            }
+        }
+
+        item(key = "coui_layout_portrait", contentType = "section") {
+            CouiSettingSection(title = strings.crossCountPortrait) {
+                CouiToggleRow(
+                    title = strings.crossAdaptAuto,
+                    summary = if (crossAdapt) {
+                        strings.crossAdaptAutoSummaryOn
+                    } else {
+                        strings.crossAdaptAutoSummaryOff
+                    },
+                    checked = crossAdapt,
+                    onCheckedChange = { checked ->
+                        crossAdapt = checked
+                        settingsRepository.crossAdapt = checked
+                    },
+                )
+                CouiRowDivider()
+                if (crossAdapt) {
+                    CouiAdapterWidthSlider(
+                        width = crossAdapterWidth,
+                        onWidthChangeFinished = { newWidth ->
+                            crossAdapterWidth = newWidth
+                            settingsRepository.crossAdapterWidth = newWidth
+                        },
+                    )
+                } else {
+                    CouiMenuSelectRow(
+                        title = strings.crossCountPortrait,
+                        items = crossCountOptions,
+                        selectedIndex = (crossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
+                        onSelect = { index ->
+                            val count = index + 2
+                            crossCount = count
+                            settingsRepository.crossCount = count
+                        },
+                    )
                 }
+            }
+        }
 
-                item(key = "coui_layout_display_mode", contentType = "section") {
-                    CouiSettingSection(title = strings.dialogDisplayMode) {
-                        CouiSelectRow(
-                            title = strings.dialogDisplayMode,
-                            items = displayModeLabels,
-                            selectedIndex = displayMode.coerceIn(0, displayModeLabels.lastIndex),
-                            onSelect = { index ->
-                                displayMode = index
-                                settingsRepository.displayMode = index
-                            },
-                        )
-                    }
-                }
-
-                item(key = "coui_layout_portrait", contentType = "section") {
-                    CouiSettingSection(title = strings.crossCountPortrait) {
-                        CouiSwitchRow(
-                            title = strings.crossAdaptAuto,
-                            summary = if (crossAdapt) {
-                                strings.crossAdaptAutoSummaryOn
-                            } else {
-                                strings.crossAdaptAutoSummaryOff
-                            },
-                            checked = crossAdapt,
-                            onCheckedChange = { checked ->
-                                crossAdapt = checked
-                                settingsRepository.crossAdapt = checked
-                            },
-                        )
-                        if (crossAdapt) {
-                            CouiAdapterWidthSlider(
-                                width = crossAdapterWidth,
-                                onWidthChangeFinished = { newWidth ->
-                                    crossAdapterWidth = newWidth
-                                    settingsRepository.crossAdapterWidth = newWidth
-                                },
-                            )
-                        } else {
-                            CouiSelectRow(
-                                title = strings.crossCountPortrait,
-                                items = crossCountOptions,
-                                selectedIndex = (crossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
-                                onSelect = { index ->
-                                    val count = index + 2
-                                    crossCount = count
-                                    settingsRepository.crossCount = count
-                                },
-                            )
-                        }
-                    }
-                }
-
-                item(key = "coui_layout_landscape", contentType = "section") {
-                    CouiSettingSection(title = strings.crossCountLandscape) {
-                        CouiSwitchRow(
-                            title = strings.crossAdaptAuto,
-                            summary = if (hCrossAdapt) {
-                                strings.crossAdaptAutoSummaryOn
-                            } else {
-                                strings.crossAdaptAutoSummaryOff
-                            },
-                            checked = hCrossAdapt,
-                            onCheckedChange = { checked ->
-                                hCrossAdapt = checked
-                                settingsRepository.hCrossAdapt = checked
-                            },
-                        )
-                        if (hCrossAdapt) {
-                            CouiAdapterWidthSlider(
-                                width = hCrossAdapterWidth,
-                                onWidthChangeFinished = { newWidth ->
-                                    hCrossAdapterWidth = newWidth
-                                    settingsRepository.hCrossAdapterWidth = newWidth
-                                },
-                            )
-                        } else {
-                            CouiSelectRow(
-                                title = strings.crossCountLandscape,
-                                items = crossCountOptions,
-                                selectedIndex = (hCrossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
-                                onSelect = { index ->
-                                    val count = index + 2
-                                    hCrossCount = count
-                                    settingsRepository.hCrossCount = count
-                                },
-                            )
-                        }
-                    }
+        item(key = "coui_layout_landscape", contentType = "section") {
+            CouiSettingSection(title = strings.crossCountLandscape) {
+                CouiToggleRow(
+                    title = strings.crossAdaptAuto,
+                    summary = if (hCrossAdapt) {
+                        strings.crossAdaptAutoSummaryOn
+                    } else {
+                        strings.crossAdaptAutoSummaryOff
+                    },
+                    checked = hCrossAdapt,
+                    onCheckedChange = { checked ->
+                        hCrossAdapt = checked
+                        settingsRepository.hCrossAdapt = checked
+                    },
+                )
+                CouiRowDivider()
+                if (hCrossAdapt) {
+                    CouiAdapterWidthSlider(
+                        width = hCrossAdapterWidth,
+                        onWidthChangeFinished = { newWidth ->
+                            hCrossAdapterWidth = newWidth
+                            settingsRepository.hCrossAdapterWidth = newWidth
+                        },
+                    )
+                } else {
+                    CouiMenuSelectRow(
+                        title = strings.crossCountLandscape,
+                        items = crossCountOptions,
+                        selectedIndex = (hCrossCount - 2).coerceIn(0, crossCountOptions.lastIndex),
+                        onSelect = { index ->
+                            val count = index + 2
+                            hCrossCount = count
+                            settingsRepository.hCrossCount = count
+                        },
+                    )
                 }
             }
         }
@@ -247,12 +237,10 @@ private fun CouiAdapterWidthSlider(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -335,14 +323,15 @@ private fun CouiAdapterWidthSlider(
                                 .focusRequester(focusRequester),
                         )
                     }
-                    CouiTextAction(
+                    CouiTextButton(
                         text = strings.cancel,
                         onClick = {
                             editing = false
                             focusManager.clearFocus()
                         },
+                        filled = false,
                     )
-                    CouiTextAction(
+                    CouiTextButton(
                         text = strings.confirm,
                         enabled = parseCrossAdapterWidthInput(inputText) != null,
                         onClick = {
@@ -365,12 +354,10 @@ private fun CouiAdapterWidthSlider(
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
             )
 
-            Box(modifier = Modifier.padding(bottom = 12.dp)) {
-                CouiPreviewGrid(
-                    columnCount = columnCount,
-                    itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
-                )
-            }
+            CouiPreviewGrid(
+                columnCount = columnCount,
+                itemCount = AppConstants.CrossAdapter.PREVIEW_ITEM_COUNT,
+            )
         }
     }
 }

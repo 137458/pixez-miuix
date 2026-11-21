@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,30 +32,31 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.MangaSeries
 import com.perol.pixez.shared.ui.AppConstants
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.NewFeedRestrict
+import com.perol.pixez.shared.ui.state.NewFeedState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.PagingFooterState
 import com.perol.pixez.shared.ui.state.rememberNewFeedState
@@ -67,6 +69,10 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
  * COUI 动态页：复用 [rememberNewFeedState] 的登录/筛选/分页/追更逻辑，仅替换视觉壳。
+ *
+ * 骨架用一级页 [CouiMainScaffold]；主页签与动态范围两条 chip 栏作为正文头部交给列表，
+ * 因此能随内容滚进折叠顶栏的覆盖区。首屏三态用 core 占位组件，护栏只出现在列表
+ * `contentPadding` 与非滚动正文的 `.padding()` 上，页面不再自行铺底或扣安全区。
  */
 @Composable
 internal fun CouiNewScreen(
@@ -77,7 +83,6 @@ internal fun CouiNewScreen(
     reselectFlow: Flow<Unit>?,
 ) {
     val strings = LocalStrings.current
-    val bottomBarPadding = LocalBottomBarContentPadding.current
     val toast = LocalToastSink.current
     val feed = rememberNewFeedState(reselectFlow = reselectFlow, onLoginClick = onLoginClick)
     val mainTabs = remember(strings) {
@@ -106,19 +111,39 @@ internal fun CouiNewScreen(
         },
     )
 
-    CouiPageScaffold(
+    // 头部筛选条：两行 chip 都是列表/正文的第一段，滚动时进入顶栏覆盖区并被渐隐遮罩盖住。
+    val headerContent: @Composable () -> Unit = {
+        Column {
+            CouiFilterChipBar(
+                chips = mainTabs,
+                selectedKey = if (feed.selectedMainTab == 1) "watchlist" else "feed",
+                onSelect = { key -> feed.onMainTabSelected(if (key == "watchlist") 1 else 0) },
+            )
+            if (feed.isLoggedIn == true && feed.selectedMainTab == 0) {
+                CouiFilterChipBar(
+                    chips = restrictChips,
+                    selectedKey = feed.selectedRestrict.code,
+                    onSelect = { key ->
+                        NewFeedRestrict.entries.firstOrNull { it.code == key }?.let(feed.onRestrictSelected)
+                    },
+                )
+            }
+        }
+    }
+
+    CouiMainScaffold(
         title = if (feed.selectedMainTab == 1) strings.watchlistTitle else strings.tabNew,
         actions = {
-            CouiActionButton(
+            CouiTopBarIconButton(
+                onClick = feed.refresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = feed.refresh,
             )
             if (feed.isLoggedIn == false) {
-                CouiActionButton(
+                CouiTopBarIconButton(
+                    onClick = onLoginClick,
                     icon = MiuixIcons.Contacts,
                     contentDescription = strings.goLogin,
-                    onClick = onLoginClick,
                 )
             }
             if (feed.isLoggedIn == true) {
@@ -130,7 +155,7 @@ internal fun CouiNewScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .couiPressFeedback(pressInteraction, list = false)
+                            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, list = false)
                             .clickable(
                                 interactionSource = pressInteraction,
                                 indication = null,
@@ -150,86 +175,131 @@ internal fun CouiNewScreen(
             }
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CouiTheme.colorScheme.background)
-                .padding(padding),
-        ) {
-            CouiFilterChipBar(
-                chips = mainTabs,
-                selectedKey = if (feed.selectedMainTab == 1) "watchlist" else "feed",
-                onSelect = { key -> feed.onMainTabSelected(if (key == "watchlist") 1 else 0) },
+        when (feed.isLoggedIn) {
+            false -> CouiNewStateBody(
+                message = strings.loginNewNeedLogin,
+                padding = padding,
+                header = headerContent,
+                actionText = strings.btnGoLogin,
+                onAction = onLoginClick,
             )
-            if (feed.isLoggedIn == true && feed.selectedMainTab == 0) {
-                CouiFilterChipBar(
-                    chips = restrictChips,
-                    selectedKey = feed.selectedRestrict.code,
-                    onSelect = { key ->
-                        NewFeedRestrict.entries.firstOrNull { it.code == key }?.let(feed.onRestrictSelected)
-                    },
+
+            null -> CouiNewStateBody(
+                message = strings.loading,
+                padding = padding,
+                header = headerContent,
+            )
+
+            true -> if (feed.selectedMainTab == 1) {
+                CouiWatchlistContent(
+                    feed = feed,
+                    onSeriesClick = onSeriesClick,
+                    padding = padding,
+                    header = headerContent,
                 )
-            }
-            Box(modifier = Modifier.fillMaxSize()) {
-                when (feed.isLoggedIn) {
-                    false -> CouiStatePlaceholder(
-                        message = strings.loginNewNeedLogin,
-                        actionText = strings.btnGoLogin,
-                        onAction = onLoginClick,
+            } else {
+                val currentIllusts = feed.listState.filteredIllusts
+                when {
+                    currentIllusts == null && feed.listState.initialError == null -> CouiNewStateBody(
+                        message = strings.loading,
+                        padding = padding,
+                        header = headerContent,
                     )
 
-                    null -> CouiStatePlaceholder(message = strings.loading)
+                    currentIllusts == null && feed.listState.initialError != null -> CouiNewErrorBody(
+                        error = feed.listState.initialError,
+                        onRetry = feed.refresh,
+                        padding = padding,
+                        header = headerContent,
+                    )
 
-                    true -> if (feed.selectedMainTab == 1) {
-                        CouiWatchlistContent(
-                            feed = feed,
-                            onSeriesClick = onSeriesClick,
-                            bottomBarPadding = bottomBarPadding,
-                        )
-                    } else {
-                        val currentIllusts = feed.listState.filteredIllusts
-                        when {
-                            currentIllusts == null && feed.listState.initialError == null -> CouiStatePlaceholder(
-                                message = strings.loading,
-                            )
-                            currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                                message = couiErrorMessage(feed.listState.initialError),
-                                actionText = strings.retry,
-                                onAction = feed.refresh,
-                            )
-                            currentIllusts != null && currentIllusts.isEmpty() -> CouiStatePlaceholder(
-                                message = strings.loginNewEmpty,
-                            )
-                            currentIllusts != null -> CouiIllustGrid(
-                                illusts = currentIllusts,
-                                state = feed.gridState,
-                                onIllustClick = onIllustClick,
-                                contentPadding = PaddingValues(
-                                    start = 10.dp,
-                                    top = 4.dp,
-                                    end = 10.dp,
-                                    bottom = bottomBarPadding + 8.dp,
-                                ),
-                                hasMore = feed.listState.nextUrl != null,
-                                isLoadingMore = feed.listState.isLoadingMore,
-                                loadMoreError = feed.listState.loadMoreError,
-                                isRefreshing = feed.listState.isRefreshing,
-                                onLoadMore = feed.loadMore,
-                            )
-                        }
-                    }
+                    currentIllusts != null && currentIllusts.isEmpty() -> CouiNewStateBody(
+                        message = strings.loginNewEmpty,
+                        padding = padding,
+                        header = headerContent,
+                    )
+
+                    currentIllusts != null -> CouiIllustGrid(
+                        illusts = currentIllusts,
+                        state = feed.gridState,
+                        onIllustClick = onIllustClick,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .consumeWindowInsets(padding),
+                        contentPadding = PaddingValues(
+                            start = 10.dp,
+                            top = padding.calculateTopPadding() + 4.dp,
+                            end = 10.dp,
+                            bottom = padding.calculateBottomPadding() + 8.dp,
+                        ),
+                        header = headerContent,
+                        hasMore = feed.listState.nextUrl != null,
+                        isLoadingMore = feed.listState.isLoadingMore,
+                        loadMoreError = feed.listState.loadMoreError,
+                        isRefreshing = feed.listState.isRefreshing,
+                        onLoadMore = feed.loadMore,
+                    )
                 }
             }
         }
     }
 }
 
+/** 带头部的居中占位：登录提示 / 加载中 / 空态共用，头部与列表保持同一滚动起点。 */
+@Composable
+private fun CouiNewStateBody(
+    message: String,
+    padding: PaddingValues,
+    header: @Composable () -> Unit,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .consumeWindowInsets(padding),
+    ) {
+        header()
+        CouiPlaceholder(
+            message = message,
+            modifier = Modifier.weight(1f),
+            actionText = actionText,
+            onAction = onAction,
+        )
+    }
+}
+
+/** 带头部的错误占位。 */
+@Composable
+private fun CouiNewErrorBody(
+    error: Throwable?,
+    onRetry: () -> Unit,
+    padding: PaddingValues,
+    header: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .consumeWindowInsets(padding),
+    ) {
+        header()
+        CouiErrorPlaceholder(
+            error = error,
+            onRetry = onRetry,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
 /** 追更页签：系列卡片列表 + 触底预加载 + 三态 footer。 */
 @Composable
 private fun CouiWatchlistContent(
-    feed: com.perol.pixez.shared.ui.state.NewFeedState,
+    feed: NewFeedState,
     onSeriesClick: (Long) -> Unit,
-    bottomBarPadding: androidx.compose.ui.unit.Dp,
+    padding: PaddingValues,
+    header: @Composable () -> Unit,
 ) {
     val strings = LocalStrings.current
     val series = feed.watchlistState.items
@@ -239,17 +309,25 @@ private fun CouiWatchlistContent(
     val isRefreshing = feed.watchlistState.isRefreshing
 
     when {
-        series == null && feed.watchlistState.initialError == null -> CouiStatePlaceholder(
+        series == null && feed.watchlistState.initialError == null -> CouiNewStateBody(
             message = strings.loading,
+            padding = padding,
+            header = header,
         )
-        series == null && feed.watchlistState.initialError != null -> CouiStatePlaceholder(
-            message = couiErrorMessage(feed.watchlistState.initialError),
-            actionText = strings.retry,
-            onAction = feed.refresh,
+
+        series == null && feed.watchlistState.initialError != null -> CouiNewErrorBody(
+            error = feed.watchlistState.initialError,
+            onRetry = feed.refresh,
+            padding = padding,
+            header = header,
         )
-        series != null && series.isEmpty() -> CouiStatePlaceholder(
+
+        series != null && series.isEmpty() -> CouiNewStateBody(
             message = strings.watchlistEmpty,
+            padding = padding,
+            header = header,
         )
+
         series != null -> {
             val shouldLoadMore by remember(feed.watchlistListState, series.size, hasMore, isLoadingMore, loadMoreError, isRefreshing) {
                 derivedStateOf {
@@ -270,16 +348,19 @@ private fun CouiWatchlistContent(
 
             LazyColumn(
                 state = feed.watchlistListState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
                 contentPadding = PaddingValues(
                     start = 10.dp,
-                    top = 6.dp,
+                    top = padding.calculateTopPadding() + 6.dp,
                     end = 10.dp,
-                    bottom = bottomBarPadding + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 8.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 overscrollEffect = rememberCouiOverscrollEffect(),
             ) {
+                item(key = "coui_new_header", contentType = "coui_new_header") { header() }
                 items(items = series, key = { it.id }, contentType = { "coui_watchlist" }) { item ->
                     CouiWatchlistRow(
                         item = item,
@@ -295,7 +376,7 @@ private fun CouiWatchlistContent(
                 )
                 if (footerState.phase != PagingFooterPhase.Hidden) {
                     item(key = "coui_watchlist_footer", contentType = "coui_watchlist_footer") {
-                        CouiPagingFooter(state = footerState, onRetry = feed.loadMoreWatchlist)
+                        CouiLoadMoreFooter(state = footerState, onRetry = feed.loadMoreWatchlist)
                     }
                 }
             }
@@ -318,7 +399,7 @@ private fun CouiWatchlistRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
-            .couiPressFeedback(pressInteraction)
+            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, list = true)
             .clickable(
                 interactionSource = pressInteraction,
                 indication = null,
@@ -435,4 +516,3 @@ private fun CouiRemoveWatchlistDialog(
         dismissAction = CouiDialogAction(text = strings.cancel, onClick = onDismiss),
     ) {}
 }
-

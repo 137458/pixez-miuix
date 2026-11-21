@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,22 +62,20 @@ import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.buildUserCopyInfo
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
@@ -97,12 +96,12 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 用户详情页（画师详情）：固定顶栏 + 资料区 +「作品 / 收藏」瀑布流。
+ * COUI 用户详情页（画师详情）：折叠大标题顶栏 + 资料区 +「作品 / 收藏」瀑布流。
  *
  * 业务编排与 MIUIX 版一致：资料加载/失败回退、关注切换、作品与公开/私密收藏分页、
  * 滚动位置与分页状态经 [UserDetailPageState] 跨组合保留、更多菜单（相关画师/小说/
- * 复制/分享）。皮肤差异仅在视觉层与顶栏形态：COUI 顶栏为固定条（无折叠毛玻璃），
- * 列表不做下拉刷新，刷新入口保留在顶栏图标上。
+ * 复制/分享）。容器与底色由 [CouiSecondaryScaffold] 唯一提供，资料区与 Tab 头随滚动
+ * 进顶栏覆盖区；刷新与更多入口收敛到顶栏 actions 槽，列表仍不做下拉刷新。
  */
 @Composable
 internal fun CouiUserDetailScreen(
@@ -196,65 +195,68 @@ internal fun CouiUserDetailScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiUserDetailTopBar(
-            title = userDetail?.user?.name.orEmpty(),
-            detail = userDetail,
-            strings = strings,
-            onBack = onBack,
-            onRefresh = { retryCount++ },
-            onRelatedUsersClick = onRelatedUsersClick,
-            onUserNovelsClick = onUserNovelsClick,
-            onToast = { toastSink(it) },
-        )
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                result == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                userDetail != null -> CouiUserDetailTabs(
-                    userId = userId,
-                    pageState = pageState,
-                    userDetail = userDetail,
-                    isCurrentUser = isCurrentUser,
-                    isFollowed = isFollowed,
-                    isFollowLoading = isFollowLoading,
-                    onFollowClick = { onFollowToggle(userDetail) },
-                    onFollowListClick = { onFollowListClick(userDetail.user.id) },
-                    onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
-                    onIllustClick = onIllustClick,
-                    repository = repository,
-                    banRepository = banRepository,
-                    settingsRepository = settingsRepository,
-                    initialTab = initialTab,
-                    onToast = toastSink,
-                )
-                else -> CouiStatePlaceholder(
-                    message = couiErrorMessage(result.exceptionOrNull()),
-                    actionText = strings.retry,
-                    onAction = { retryCount++ },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+    CouiSecondaryScaffold(
+        title = userDetail?.user?.name.orEmpty(),
+        onBack = onBack,
+        actions = {
+            CouiUserDetailActions(
+                detail = userDetail,
+                strings = strings,
+                onRefresh = { retryCount++ },
+                onRelatedUsersClick = onRelatedUsersClick,
+                onUserNovelsClick = onUserNovelsClick,
+                onToast = { toastSink(it) },
+            )
+        },
+    ) { padding ->
+        when {
+            result == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
+
+            userDetail != null -> CouiUserDetailTabs(
+                userId = userId,
+                pageState = pageState,
+                userDetail = userDetail,
+                isCurrentUser = isCurrentUser,
+                isFollowed = isFollowed,
+                isFollowLoading = isFollowLoading,
+                onFollowClick = { onFollowToggle(userDetail) },
+                onFollowListClick = { onFollowListClick(userDetail.user.id) },
+                onFollowerListClick = { onFollowerListClick(userDetail.user.id) },
+                onIllustClick = onIllustClick,
+                repository = repository,
+                banRepository = banRepository,
+                settingsRepository = settingsRepository,
+                initialTab = initialTab,
+                padding = padding,
+                onToast = toastSink,
+            )
+
+            else -> CouiErrorPlaceholder(
+                error = result.exceptionOrNull(),
+                onRetry = { retryCount++ },
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
         }
     }
 }
 
 /**
- * COUI 用户页顶栏：返回 + 名字 + 刷新 + 更多菜单。
- * 固定条形态（不随滚动折叠），与 COUI 插画详情顶栏保持一致。
+ * COUI 用户页顶栏动作：刷新 + 更多菜单，由宿主塞进 [CouiSecondaryScaffold] 的 actions 槽。
+ *
+ * [CouiTopBarIconButton] 只在顶栏槽内可用（材质与图标色由顶栏下发）；菜单锚点与展开态与按钮同层，
+ * 顶栏折叠时锚点跟着槽位走。
  */
 @Composable
-private fun CouiUserDetailTopBar(
-    title: String,
+private fun CouiUserDetailActions(
     detail: UserDetail?,
     strings: AppStrings,
-    onBack: () -> Unit,
     onRefresh: () -> Unit,
     onRelatedUsersClick: ((Long) -> Unit)?,
     onUserNovelsClick: ((Long, String) -> Unit)?,
@@ -263,33 +265,28 @@ private fun CouiUserDetailTopBar(
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
-    CouiFixedTopBar(
-        title = title,
-        onBack = onBack,
-    ) {
-        CouiActionButton(
-            icon = MiuixIcons.Refresh,
-            contentDescription = strings.refresh,
-            onClick = onRefresh,
-        )
-        if (detail != null) {
-            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                CouiActionButton(
-                    icon = MiuixIcons.More,
-                    contentDescription = strings.menuMoreActions,
-                    onClick = { menuAnchor.open { menuExpanded = true } },
-                )
-                CouiUserMoreMenu(
-                    detail = detail,
-                    expanded = menuExpanded,
-                    anchor = menuAnchor,
-                    strings = strings,
-                    onRelatedUsersClick = onRelatedUsersClick,
-                    onUserNovelsClick = onUserNovelsClick,
-                    onDismiss = { menuExpanded = false },
-                    onToast = onToast,
-                )
-            }
+    CouiTopBarIconButton(
+        onClick = onRefresh,
+        icon = MiuixIcons.Refresh,
+        contentDescription = strings.refresh,
+    )
+    if (detail != null) {
+        Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+            CouiTopBarIconButton(
+                onClick = { menuAnchor.open { menuExpanded = true } },
+                icon = MiuixIcons.More,
+                contentDescription = strings.menuMoreActions,
+            )
+            CouiUserMoreMenu(
+                detail = detail,
+                expanded = menuExpanded,
+                anchor = menuAnchor,
+                strings = strings,
+                onRelatedUsersClick = onRelatedUsersClick,
+                onUserNovelsClick = onUserNovelsClick,
+                onDismiss = { menuExpanded = false },
+                onToast = onToast,
+            )
         }
     }
 }
@@ -373,6 +370,7 @@ private fun CouiUserDetailTabs(
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
     initialTab: Int,
+    padding: PaddingValues,
     onToast: (ToastData) -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -459,6 +457,7 @@ private fun CouiUserDetailTabs(
                     repository = repository,
                     banRepository = banRepository,
                     settingsRepository = settingsRepository,
+                    padding = padding,
                     emptyText = strings.userNoWorks,
                 )
             }
@@ -484,6 +483,7 @@ private fun CouiUserDetailTabs(
                     repository = repository,
                     banRepository = banRepository,
                     settingsRepository = settingsRepository,
+                    padding = padding,
                 )
             }
         }
@@ -511,14 +511,12 @@ private fun CouiUserProfileHeader(
         openSafeUrl(url, strings, onError = { message -> onToast(ToastData(message, ToastType.Error)) })
     }
 
-    // 阅读列：资料区在平板上收进可读宽度，避免账号/签名行横跨整屏。
-    CouiReadableColumn {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -600,7 +598,6 @@ private fun CouiUserProfileHeader(
             )
         }
     }
-    }
 }
 
 /** 关注按钮：未关注为强调胶囊，已关注为容器底色胶囊。 */
@@ -674,6 +671,7 @@ private fun CouiUserWorksTab(
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    padding: PaddingValues,
     emptyText: String,
 ) {
     var retryCount by rememberSaveable(userId) { mutableIntStateOf(0) }
@@ -712,6 +710,7 @@ private fun CouiUserWorksTab(
         onLoadMore = loadMore,
         onIllustClick = onIllustClick,
         onRetry = { retryCount++ },
+        padding = padding,
         emptyText = emptyText,
     )
 }
@@ -727,6 +726,7 @@ private fun CouiUserBookmarksTab(
     repository: UserRepository,
     banRepository: BanRepository,
     settingsRepository: SettingsRepository,
+    padding: PaddingValues,
 ) {
     val strings = LocalStrings.current
     // 收藏可见性：0 = 公开(public)，1 = 私密(private)。
@@ -802,6 +802,7 @@ private fun CouiUserBookmarksTab(
         gridState = gridState,
         onLoadMore = loadMore,
         onIllustClick = onIllustClick,
+        padding = padding,
         onRetry = { if (isPublic) publicRetryCount++ else privateRetryCount++ },
         emptyText = if (isPublic) {
             strings.userNoBookmarks.format(strings.userPublicRestrict)
@@ -829,36 +830,44 @@ private fun CouiUserTabBody(
     gridState: LazyStaggeredGridState,
     onLoadMore: () -> Unit,
     onIllustClick: (Long) -> Unit,
+    padding: PaddingValues,
     onRetry: () -> Unit,
     emptyText: String,
 ) {
     val strings = LocalStrings.current
-    val bottomPadding = LocalBottomBarContentPadding.current
     val contentPadding = PaddingValues(
         start = 10.dp,
-        top = 4.dp,
+        top = padding.calculateTopPadding() + 4.dp,
         end = 10.dp,
-        bottom = bottomPadding + 8.dp,
+        bottom = padding.calculateBottomPadding() + 8.dp,
     )
 
     when {
         illusts == null && initialError == null -> CouiUserTabPlaceholderList(
             header = header,
             contentPadding = contentPadding,
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
         ) {
-            CouiStatePlaceholder(message = strings.loading)
+            CouiPlaceholder(message = strings.loading)
         }
         illusts != null && illusts.isEmpty() && !isLoadingMore -> CouiUserTabPlaceholderList(
             header = header,
             contentPadding = contentPadding,
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
         ) {
-            CouiStatePlaceholder(message = emptyText)
+            CouiPlaceholder(message = emptyText)
         }
         illusts != null -> CouiIllustGrid(
             illusts = illusts,
             state = gridState,
             onIllustClick = onIllustClick,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
             contentPadding = contentPadding,
             header = header,
             hasMore = hasMore,
@@ -870,12 +879,11 @@ private fun CouiUserTabBody(
         else -> CouiUserTabPlaceholderList(
             header = header,
             contentPadding = contentPadding,
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
         ) {
-            CouiStatePlaceholder(
-                message = couiErrorMessage(initialError),
-                actionText = strings.retry,
-                onAction = onRetry,
-            )
+            CouiErrorPlaceholder(error = initialError, onRetry = onRetry)
         }
     }
 }
@@ -885,10 +893,11 @@ private fun CouiUserTabBody(
 private fun CouiUserTabPlaceholderList(
     header: @Composable () -> Unit,
     contentPadding: PaddingValues,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {

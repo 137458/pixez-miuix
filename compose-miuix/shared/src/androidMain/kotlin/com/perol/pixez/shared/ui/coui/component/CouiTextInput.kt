@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,24 +28,31 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiTextStyle
 
 /**
- * COUI 文本输入原语：圆角容器 + 主题令牌 + 空值占位。
+ * COUI 文本输入原语：容器 + 官方版式令牌 + 空值占位。
  *
- * COUI 皮肤库只提供展示控件，没有文本输入控件，各页此前各自克隆一份
- * BasicTextField + 容器 + 占位的写法，圆角、内边距、占位色逐渐漂移。
- * 这里把容器与占位收敛到一处，调用方只需要决定尺寸与令牌：
- * - shape / containerColor / contentPadding / minHeight 由调用方传入，
- *   因为搜索框（胶囊）、设置项（14dp 圆角）、导出路径（12dp 圆角）观感不同；
- * - textStyle 传 null 时统一取 LocalCouiTextStyle 并叠加 onSurface/禁用色，
- *   传值则完全交给调用方（个别页面需要 14sp/15sp 与行高）。
+ * 库内没有可复用的输入框：`coui/input/` 只有 IME 定位、触觉与指针内部件
+ * （CouiHaptics / PointerEvents / CouiMovingActionClick / CouiSearchRelocationBoundary），
+ * SearchBar 与 InputDialog 的输入区都内嵌在各自组件里取不出来，所以这里继续用 BasicTextField 自绘。
+ * 容器版式按官方分组卡片同源：
+ * - 底色取 `CouiTheme.colorScheme.card`，与官方 Group 卡片同一令牌（CouiPageComponents.kt:92-93）；
+ * - 圆角取 `CouiPageDefaults.shape`，即 CouiShape(24.dp, 3f)（CouiPageComponents.kt:54）；
+ * - 内边距取 `CouiPageDefaults.rowPadding`(16) 与 `contentPadding`(10)（CouiPageComponents.kt:50、134-135）；
+ * - 前置图标与文字的间距取 `CouiPageDefaults.iconSpacing`，尾部插槽按官方 Item 贴边放置（CouiPageComponents.kt:147、152）；
+ * - 文字走官方 Text + CouiTextKind.ItemTitle，占位与禁用色取 `themeColors()` 的 summary/disabled
+ *   （CouiPageComponents.kt:66-67）；
+ * - 光标色取 `colorScheme.accent`。
  *
- * 保留 BasicTextField 而不是换成 COUI 控件：COUI 无输入控件可用，
- * 且需要继续支持 input 内部的 emoji 按钮、清空按钮、密码可见性切换等尾部插槽。
+ * 公开签名（参数名、顺序、类型）与改造前逐字一致，仅默认值改为官方常量；
+ * 调用方仍可覆盖 shape / containerColor / contentPadding / minHeight 做搜索胶囊等特化。
+ * 容器本身不是可点表面：官方 Item 在无 onClick 时同样不安装点击与反馈（CouiPageComponents.kt:138-142），
+ * 焦点、光标与 IME 由 BasicTextField 承担，尾部按钮的按压反馈由插槽自带。
  */
 @Composable
 internal fun CouiTextInput(
@@ -57,9 +63,12 @@ internal fun CouiTextInput(
     enabled: Boolean = true,
     singleLine: Boolean = true,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    shape: Shape = RoundedCornerShape(14.dp),
-    containerColor: Color = CouiTheme.colorScheme.container,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    shape: Shape = CouiPageDefaults.shape,
+    containerColor: Color = CouiTheme.colorScheme.card,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = CouiPageDefaults.rowPadding,
+        vertical = CouiPageDefaults.contentPadding,
+    ),
     minHeight: Dp = 44.dp,
     textStyle: TextStyle? = null,
     cursorColor: Color? = null,
@@ -113,9 +122,12 @@ internal fun CouiTextInput(
     enabled: Boolean = true,
     singleLine: Boolean = true,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    shape: Shape = RoundedCornerShape(14.dp),
-    containerColor: Color = CouiTheme.colorScheme.container,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    shape: Shape = CouiPageDefaults.shape,
+    containerColor: Color = CouiTheme.colorScheme.card,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = CouiPageDefaults.rowPadding,
+        vertical = CouiPageDefaults.contentPadding,
+    ),
     minHeight: Dp = 44.dp,
     textStyle: TextStyle? = null,
     cursorColor: Color? = null,
@@ -168,9 +180,12 @@ internal fun CouiTextInput(
     enabled: Boolean = true,
     singleLine: Boolean = true,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    shape: Shape = RoundedCornerShape(14.dp),
-    containerColor: Color = CouiTheme.colorScheme.container,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    shape: Shape = CouiPageDefaults.shape,
+    containerColor: Color = CouiTheme.colorScheme.card,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = CouiPageDefaults.rowPadding,
+        vertical = CouiPageDefaults.contentPadding,
+    ),
     minHeight: Dp = 44.dp,
     textStyle: TextStyle? = null,
     cursorColor: Color? = null,
@@ -210,8 +225,11 @@ internal fun CouiTextInput(
 }
 
 /**
- * 容器外壳：负责圆角、底色、内边距、前后插槽与空值占位。
- * 占位与输入框叠在同一个 Box 里，靠 [isEmpty] 决定是否绘制，位置随行数对齐。
+ * 容器外壳：圆角、底色、内边距、前后插槽与空值占位。
+ * 圆角裁切后铺底色，顺序与官方 Group 卡片一致（CouiPageComponents.kt:92-93）；
+ * 最小高度用 heightIn 硬下限，保持改造前 [minHeight] 的「不低于」语义。
+ * 占位与输入框叠在同一个 Box 里，靠 [isEmpty] 决定是否绘制，位置随行数对齐
+ * （官方 SearchBar 同样把占位与 field 叠在同一格，SearchBar.kt:255-258）。
  */
 @Composable
 private fun CouiTextInputFrame(
@@ -228,7 +246,7 @@ private fun CouiTextInputFrame(
     trailing: (@Composable () -> Unit)?,
     field: @Composable () -> Unit,
 ) {
-    val scheme = CouiTheme.colorScheme
+    val colors = CouiPageDefaults.themeColors()
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -240,8 +258,8 @@ private fun CouiTextInputFrame(
     ) {
         if (leading != null) {
             leading()
-            // 图标与文字之间统一 8dp，避免各页各写一个 Spacer。
-            Spacer(modifier = Modifier.width(8.dp))
+            // 图标与文字的间距沿用官方行版式图标间距，避免各页各写一个 Spacer。
+            Spacer(modifier = Modifier.width(CouiPageDefaults.iconSpacing))
         }
         Box(
             modifier = Modifier.weight(1f),
@@ -250,29 +268,26 @@ private fun CouiTextInputFrame(
             if (isEmpty && placeholder.isNotEmpty()) {
                 Text(
                     text = placeholder,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
+                    kind = CouiTextKind.ItemTitle,
+                    color = if (enabled) colors.summary else colors.disabled,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             field()
         }
-        if (trailing != null) {
-            // 尾部按钮自带 32/40dp 命中区，这里只留 4dp 视觉间隙。
-            Spacer(modifier = Modifier.width(4.dp))
-            trailing()
-        }
+        // 官方 Item 的尾部控件贴边放置，间隙由控件自带命中区提供（CouiPageComponents.kt:152）。
+        if (trailing != null) trailing()
     }
 }
 
 /**
- * 未显式给样式时统一取 COUI 正文样式并叠加颜色：
- * 禁用态用 onSurfaceVariant 表示不可编辑，与启用态区分。
- * 返回类型交给推断，避免把 LocalCouiTextStyle 的具体类型写死在签名里。
+ * 未显式给样式时统一取 COUI 正文样式（LocalCouiTextStyle，即官方 body）并叠加颜色：
+ * 启用态用 themeColors().title（= onSurface），禁用态用官方 disabled 令牌（CouiPageComponents.kt:66-67）。
  */
 @Composable
-private fun couiTextInputTextStyle(textStyle: TextStyle?, enabled: Boolean) =
-    textStyle ?: LocalCouiTextStyle.current.copy(
-        color = if (enabled) CouiTheme.colorScheme.onSurface else CouiTheme.colorScheme.onSurfaceVariant,
-    )
+private fun couiTextInputTextStyle(textStyle: TextStyle?, enabled: Boolean): TextStyle {
+    if (textStyle != null) return textStyle
+    val colors = CouiPageDefaults.themeColors()
+    return LocalCouiTextStyle.current.copy(color = if (enabled) colors.title else colors.disabled)
+}

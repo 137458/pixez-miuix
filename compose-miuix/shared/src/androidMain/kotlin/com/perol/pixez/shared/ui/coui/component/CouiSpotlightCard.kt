@@ -8,38 +8,43 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 
 /** 特辑卡片：16:9 封面加标题副标题，仅特辑列表使用。 */
 
-/** COUI Spotlight 文章卡片：16:9 封面 + 标题/副标题。 */
+/**
+ * COUI Spotlight 文章卡片：16:9 封面 + 标题/副标题。
+ * 圆角与底色取官方 Group 卡片口径（CouiPageDefaults.shape、themeColors().card），
+ * 文字块按官方行版式取 rowPadding/contentPadding 与 summarySpacing。
+ */
 @Composable
 internal fun CouiSpotlightCard(
     article: SpotlightArticle,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val pageColors = CouiPageDefaults.themeColors()
     val pressInteraction = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CouiTheme.colorScheme.card)
+            .clip(CouiPageDefaults.shape)
+            .background(pageColors.card)
             .couiPressFeedback(pressInteraction)
             .clickable(
                 interactionSource = pressInteraction,
                 indication = null,
+                role = Role.Button,
                 onClick = onClick,
             ),
     ) {
@@ -54,20 +59,23 @@ internal fun CouiSpotlightCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(
+                    horizontal = CouiPageDefaults.rowPadding,
+                    vertical = CouiPageDefaults.contentPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(CouiPageDefaults.summarySpacing),
         ) {
             Text(
                 text = article.title,
                 kind = CouiTextKind.ItemTitle,
-                color = CouiTheme.colorScheme.onSurface,
+                color = pageColors.title,
                 maxLines = 2,
             )
             if (article.pureTitle.isNotBlank() && article.pureTitle != article.title) {
                 Text(
                     text = article.pureTitle,
                     kind = CouiTextKind.ItemSummary,
-                    color = CouiTheme.colorScheme.onSurfaceVariant,
+                    color = pageColors.summary,
                     maxLines = 2,
                 )
             }

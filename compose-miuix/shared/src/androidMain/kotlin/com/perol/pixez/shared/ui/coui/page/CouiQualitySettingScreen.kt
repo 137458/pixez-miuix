@@ -1,27 +1,21 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSelectRow
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
- * COUI 画质设置页：固定顶栏 + 分组卡片内的下拉选择行。
+ * COUI 画质设置页：设置骨架 + 四项偏好的单选分组卡片。
  *
- * 四项画质偏好的取值索引与回写口径不变；COUI 库无下拉原语，
- * 选择行用锚点菜单实现（见共用 [CouiSelectRow]）。
+ * 四项画质偏好的取值索引与回写口径不变：每项偏好独立成组，候选顺序即索引顺序，
+ * 选中下标仍按原口径 `coerceIn(0, lastIndex)` 收口，点中即写库。
  */
 @Composable
 internal fun CouiQualitySettingScreen(
@@ -44,57 +38,70 @@ internal fun CouiQualitySettingScreen(
         listOf(strings.qualityOriginal, strings.qualityLarge, strings.qualityMedium)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingQuality,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingQuality,
-            onBack = onBack,
-        )
+        item(key = "coui_quality_feed_preview", contentType = "section") {
+            CouiSettingSection(title = strings.feedPreviewQuality) {
+                feedPreviewQualityOptions.forEachIndexed { index, label ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = feedPreviewQuality.coerceIn(0, feedPreviewQualityOptions.lastIndex) == index,
+                        onClick = {
+                            feedPreviewQuality = index
+                            settingsRepository.feedPreviewQuality = index
+                        },
+                    )
+                }
+            }
+        }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_quality", contentType = "section") {
-                    CouiSettingSection(title = strings.settingQuality) {
-                        CouiSelectRow(
-                            title = strings.feedPreviewQuality,
-                            items = feedPreviewQualityOptions,
-                            selectedIndex = feedPreviewQuality.coerceIn(0, feedPreviewQualityOptions.lastIndex),
-                            onSelect = { index ->
-                                feedPreviewQuality = index
-                                settingsRepository.feedPreviewQuality = index
-                            },
-                        )
-                        CouiSelectRow(
-                            title = strings.pictureQuality,
-                            items = detailQualityOptions,
-                            selectedIndex = pictureQuality.coerceIn(0, detailQualityOptions.lastIndex),
-                            onSelect = { index ->
-                                pictureQuality = index
-                                settingsRepository.pictureQuality = index
-                            },
-                        )
-                        CouiSelectRow(
-                            title = strings.mangaQuality,
-                            items = detailQualityOptions,
-                            selectedIndex = mangaQuality.coerceIn(0, detailQualityOptions.lastIndex),
-                            onSelect = { index ->
-                                mangaQuality = index
-                                settingsRepository.mangaQuality = index
-                            },
-                        )
-                        CouiSelectRow(
-                            title = strings.zoomQuality,
-                            items = zoomQualityOptions,
-                            selectedIndex = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex),
-                            onSelect = { index ->
-                                zoomQuality = index
-                                settingsRepository.zoomQuality = index
-                            },
-                        )
-                    }
+        item(key = "coui_quality_picture", contentType = "section") {
+            CouiSettingSection(title = strings.pictureQuality) {
+                detailQualityOptions.forEachIndexed { index, label ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = pictureQuality.coerceIn(0, detailQualityOptions.lastIndex) == index,
+                        onClick = {
+                            pictureQuality = index
+                            settingsRepository.pictureQuality = index
+                        },
+                    )
+                }
+            }
+        }
+
+        item(key = "coui_quality_manga", contentType = "section") {
+            CouiSettingSection(title = strings.mangaQuality) {
+                detailQualityOptions.forEachIndexed { index, label ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = mangaQuality.coerceIn(0, detailQualityOptions.lastIndex) == index,
+                        onClick = {
+                            mangaQuality = index
+                            settingsRepository.mangaQuality = index
+                        },
+                    )
+                }
+            }
+        }
+
+        item(key = "coui_quality_zoom", contentType = "section") {
+            CouiSettingSection(title = strings.zoomQuality) {
+                zoomQualityOptions.forEachIndexed { index, label ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex) == index,
+                        onClick = {
+                            zoomQuality = index
+                            settingsRepository.zoomQuality = index
+                        },
+                    )
                 }
             }
         }

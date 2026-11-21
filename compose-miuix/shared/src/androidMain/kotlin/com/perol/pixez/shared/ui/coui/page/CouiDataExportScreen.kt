@@ -1,15 +1,8 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,33 +11,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.components.LocalToastSink
-import com.perol.pixez.shared.ui.components.ToastData
-import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
-import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
-import com.perol.pixez.shared.ui.coui.component.CouiTextInput
-import com.perol.pixez.shared.ui.i18n.AppStrings
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalMuteRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.LocalToastSink
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
+import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
+import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
+import com.perol.pixez.shared.ui.coui.core.CouiActionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.DataExportErrorCode
 import com.perol.pixez.shared.ui.screens.DataExportException
 import com.perol.pixez.shared.ui.screens.DataType
@@ -55,10 +46,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /**
- * COUI 数据导入导出页：固定顶栏 + 单张数据类型卡片。
+ * COUI 数据导入导出页：设置骨架 + 每种数据类型一张动作卡片。
  *
  * 导入导出实现、文件选择器与错误码本地化完全复用 MIUIX 版；
- * 路径输入兜底改用 COUI 弹窗与原语输入框。
+ * 卡片标题是数据类型、页脚是该类型的用途说明，组内两行分别是导出与导入；
+ * 路径输入兜底仍走 COUI 弹窗与原语输入框。
  */
 @Composable
 internal fun CouiDataExportScreen(
@@ -143,34 +135,27 @@ internal fun CouiDataExportScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingDataExport,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingDataExport,
-            onBack = onBack,
-        )
-
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
-                item(key = "coui_data_export_list", contentType = "section") {
-                    CouiSettingSection(title = strings.settingDataExport) {
-                        DataType.entries.forEach { type ->
-                            CouiDataExportRow(
-                                type = type,
-                                enabled = !isProcessing,
-                                onExportClick = { startOperation(type, CouiExportAction.Export) },
-                                onImportClick = { startOperation(type, CouiExportAction.Import) },
-                            )
-                        }
-                    }
+        DataType.entries.forEach { type ->
+            item(key = "coui_data_export_" + type.name, contentType = "section") {
+                CouiSettingsGroup(
+                    title = type.couiTitle(strings),
+                    footer = type.couiSummary(strings),
+                ) {
+                    CouiActionRow(
+                        title = strings.dataExportActionExport,
+                        onClick = { startOperation(type, CouiExportAction.Export) },
+                        enabled = !isProcessing,
+                    )
+                    CouiRowDivider()
+                    CouiActionRow(
+                        title = strings.dataExportActionImport,
+                        onClick = { startOperation(type, CouiExportAction.Import) },
+                        enabled = !isProcessing,
+                    )
                 }
             }
         }
@@ -187,54 +172,6 @@ internal fun CouiDataExportScreen(
                 showPathDialog = false
                 coroutineScope.launch { performOperation(operation, path) }
             },
-        )
-    }
-}
-
-/** 一行数据操作入口：标题/说明 + 导出与导入文本动作。 */
-@Composable
-private fun CouiDataExportRow(
-    type: DataType,
-    enabled: Boolean,
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
-) {
-    val strings = LocalStrings.current
-    val scheme = CouiTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = type.couiTitle(strings),
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = type.couiSummary(strings),
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        CouiTextAction(
-            text = strings.dataExportActionExport,
-            enabled = enabled,
-            modifier = Modifier.heightIn(min = 36.dp),
-            onClick = onExportClick,
-        )
-        CouiTextAction(
-            text = strings.dataExportActionImport,
-            enabled = enabled,
-            modifier = Modifier.heightIn(min = 36.dp),
-            onClick = onImportClick,
         )
     }
 }

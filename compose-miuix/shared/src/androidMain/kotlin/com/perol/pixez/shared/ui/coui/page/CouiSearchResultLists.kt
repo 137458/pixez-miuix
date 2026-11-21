@@ -50,11 +50,12 @@ import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
-import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -72,6 +73,7 @@ internal fun CouiSearchUserResultList(
     settingsRepository: SettingsRepository,
     onUserClick: (Long) -> Unit,
     contentPadding: PaddingValues,
+    header: (@Composable () -> Unit)? = null,
 ) {
     val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
     CouiSearchPagedColumn(
@@ -80,6 +82,7 @@ internal fun CouiSearchUserResultList(
         emptyMessage = LocalStrings.current.searchEmptyUser,
         itemKey = { it.user.id },
         contentPadding = contentPadding,
+        header = header,
         fetch = { nextUrl ->
             val response = repository.searchUserResponse(query, nextUrl = nextUrl)
             PagedListPage(response.userPreviews, response.nextUrl)
@@ -103,6 +106,7 @@ internal fun CouiSearchNovelResultList(
     onNovelClick: (Long) -> Unit,
     onUserClick: ((Long) -> Unit)? = null,
     contentPadding: PaddingValues,
+    header: (@Composable () -> Unit)? = null,
 ) {
     CouiSearchPagedColumn(
         query = query,
@@ -110,6 +114,7 @@ internal fun CouiSearchNovelResultList(
         emptyMessage = LocalStrings.current.noData,
         itemKey = { it.id },
         contentPadding = contentPadding,
+        header = header,
         fetch = { nextUrl ->
             val response = novelRepository.searchNovels(query, nextUrl = nextUrl)
             PagedListPage(response.novels, response.nextUrl)
@@ -137,11 +142,11 @@ private fun <T> CouiSearchPagedColumn(
     emptyMessage: String,
     itemKey: (T) -> Any,
     contentPadding: PaddingValues,
+    header: (@Composable () -> Unit)? = null,
     fetch: suspend (nextUrl: String?) -> PagedListPage<T>,
     mergeItems: (old: List<T>, new: List<T>) -> List<T>,
     itemContent: @Composable (item: T) -> Unit,
 ) {
-    val strings = LocalStrings.current
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -184,36 +189,64 @@ private fun <T> CouiSearchPagedColumn(
         if (shouldLoadMore) loadMore()
     }
 
-    when {
-        currentItems == null && pagedList.initialError == null -> CouiStatePlaceholder(
-            message = strings.loading,
-        )
-        currentItems == null -> CouiStatePlaceholder(
-            message = pagedList.initialError?.let { PixivApiErrorFormatter.format(it, strings) } ?: strings.retry,
-            actionText = strings.retry,
-            onAction = { retryCount++ },
-        )
-        currentItems.isEmpty() -> CouiStatePlaceholder(message = emptyMessage)
-        else -> LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            overscrollEffect = rememberCouiOverscrollEffect(),
-        ) {
-            items(
-                items = currentItems,
-                key = itemKey,
-            ) { item ->
-                CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    itemContent(item)
-                }
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        overscrollEffect = rememberCouiOverscrollEffect(),
+    ) {
+        if (header != null) {
+            item(key = "coui_search_paged_header", contentType = "header") {
+                header()
+            }
+        }
+
+        when {
+            currentItems == null && pagedList.initialError == null -> item(
+                key = "coui_search_paged_loading",
+            ) {
+                CouiLoadingPlaceholder(
+                    modifier = Modifier
+                        .fillParentMaxHeight(0.6f)
+                        .fillMaxWidth(),
+                )
             }
 
-            val footerState = pagedList.footerState
-            if (footerState.phase != PagingFooterPhase.Hidden) {
-                item(key = "coui_search_paged_footer", contentType = "footer") {
-                    CouiPagingFooter(state = footerState, onRetry = ::loadMore)
+            currentItems == null -> item(key = "coui_search_paged_error") {
+                CouiErrorPlaceholder(
+                    error = pagedList.initialError,
+                    onRetry = { retryCount++ },
+                    modifier = Modifier
+                        .fillParentMaxHeight(0.6f)
+                        .fillMaxWidth(),
+                )
+            }
+
+            currentItems.isEmpty() -> item(key = "coui_search_paged_empty") {
+                CouiPlaceholder(
+                    message = emptyMessage,
+                    modifier = Modifier
+                        .fillParentMaxHeight(0.6f)
+                        .fillMaxWidth(),
+                )
+            }
+
+            else -> {
+                items(
+                    items = currentItems,
+                    key = itemKey,
+                ) { item ->
+                    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        itemContent(item)
+                    }
+                }
+
+                val footerState = pagedList.footerState
+                if (footerState.phase != PagingFooterPhase.Hidden) {
+                    item(key = "coui_search_paged_footer", contentType = "footer") {
+                        CouiLoadMoreFooter(state = footerState, onRetry = ::loadMore)
+                    }
                 }
             }
         }

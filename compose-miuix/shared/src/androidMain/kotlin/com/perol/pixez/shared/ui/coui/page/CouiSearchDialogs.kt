@@ -34,10 +34,11 @@ import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.switch.Switch
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
 import com.perol.pixez.shared.data.model.SauceNaoParser
 import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.ui.AppConstants
@@ -281,8 +282,12 @@ internal fun CouiSauceNaoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    CouiDialogTextAction(text = strings.sauceNaoPickImage, onClick = onPickAnother)
-                    CouiDialogTextAction(text = strings.retry, onClick = onRetry, primary = true)
+                    CouiTextButton(
+                        text = strings.sauceNaoPickImage,
+                        onClick = onPickAnother,
+                        filled = false,
+                    )
+                    CouiTextButton(text = strings.retry, onClick = onRetry)
                 }
             }
 
@@ -297,7 +302,11 @@ internal fun CouiSauceNaoDialog(
                         kind = CouiTextKind.ItemSummary,
                         color = CouiTheme.colorScheme.onSurfaceVariant,
                     )
-                    CouiDialogTextAction(text = strings.sauceNaoPickImage, onClick = onPickAnother)
+                    CouiTextButton(
+                        text = strings.sauceNaoPickImage,
+                        onClick = onPickAnother,
+                        filled = false,
+                    )
                 }
             }
 
@@ -317,7 +326,11 @@ internal fun CouiSauceNaoDialog(
                             color = CouiTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                         )
-                        CouiDialogTextAction(text = strings.sauceNaoPickImage, onClick = onPickAnother)
+                        CouiTextButton(
+                            text = strings.sauceNaoPickImage,
+                            onClick = onPickAnother,
+                            filled = false,
+                        )
                     }
                     LazyColumn(
                         modifier = Modifier
@@ -358,6 +371,11 @@ private fun CouiFilterSection(
     }
 }
 
+/**
+ * 开关行：官方 Item + Switch 版式（行高 48dp、点击整行生效、反馈与开关共享同一 InteractionSource）。
+ *
+ * 保留本函数名与签名，是因为 18 个页面共 40 余处调用都指向它；实现已换成官方版式。
+ */
 @Composable
 internal fun CouiSwitchRow(
     title: String,
@@ -365,31 +383,12 @@ internal fun CouiSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     summary: String? = null,
 ) {
-    val scheme = CouiTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-            )
-            if (summary != null) {
-                Text(
-                    text = summary,
-                    kind = CouiTextKind.GroupFooter,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
+    CouiToggleRow(
+        title = title,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        summary = summary,
+    )
 }
 
 /** COUI 风格日期输入框：统一走 CouiTextInput，弹窗里铺 surface 底色以区分弹层背景。 */
@@ -406,31 +405,6 @@ private fun CouiDateField(
         placeholder = placeholder,
         modifier = modifier.fillMaxWidth(),
         containerColor = CouiTheme.colorScheme.surface,
-    )
-}
-
-/** 弹窗内的文字动作：主次两档，主档用强调色。 */
-@Composable
-private fun CouiDialogTextAction(
-    text: String,
-    onClick: () -> Unit,
-    primary: Boolean = false,
-) {
-    val pressInteraction = remember { MutableInteractionSource() }
-    Text(
-        text = text,
-        kind = CouiTextKind.ItemTitle,
-        color = if (primary) CouiTheme.colorScheme.accent else CouiTheme.colorScheme.onSurface,
-        maxLines = 1,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .couiPressFeedback(pressInteraction, list = false)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
 

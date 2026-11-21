@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,16 +41,14 @@ import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.model.UserPreview
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.rememberPagingPreload
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
@@ -59,15 +58,16 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
  * COUI 用户列表页：关注 / 粉丝 / 相关画师共用一套实现。
  *
  * 业务编排与三份 MIUIX 页逐条对齐：账号切换或手动刷新时重拉首屏，
  * 触底按 [PagedListState.shouldPreloadMore] 续页；差异只有皮肤层：
- * 固定顶栏刷新入口、COUI 卡片行与三态占位，列表收敛到平板可读宽度，
+ * 容器由 [CouiSecondaryScaffold] 唯一提供，刷新入口用顶栏图标按钮，
+ * 三态占位与分页页脚统一取 core，列表护栏进 `contentPadding`，
  * 不再提供下拉刷新（与全部 COUI 页面一致）。
  */
 @Composable
@@ -141,79 +141,78 @@ internal fun CouiUserListScreen(
         CouiUserListKind.Related -> strings.relatedUsersEmpty
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = title,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = title,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = triggerManualRefresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = triggerManualRefresh,
             )
-        }
+        },
+    ) { padding ->
+        val currentItems = pagedList.items
+        when {
+            currentItems == null && pagedList.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            val currentItems = pagedList.items
-            when {
-                currentItems == null && pagedList.initialError == null ->
-                    CouiStatePlaceholder(
-                        message = strings.loading,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            currentItems != null -> if (currentItems.isEmpty()) {
+                CouiPlaceholder(
+                    message = emptyMessage,
+                    modifier = Modifier
+                        .padding(padding)
+                        .consumeWindowInsets(padding),
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .consumeWindowInsets(padding),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        end = 12.dp,
+                        bottom = padding.calculateBottomPadding(),
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
+                ) {
+                    items(
+                        items = currentItems,
+                        key = { it.user.id },
+                        contentType = { "coui_user_preview" },
+                    ) { preview ->
+                        CouiUserPreviewRow(
+                            preview = preview,
+                            onClick = { onUserClick(preview.user.id) },
+                        )
+                    }
 
-                currentItems != null -> if (currentItems.isEmpty()) {
-                    CouiStatePlaceholder(
-                        message = emptyMessage,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 8.dp,
-                            end = 12.dp,
-                            bottom = LocalBottomBarContentPadding.current,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        overscrollEffect = rememberCouiOverscrollEffect(),
-                    ) {
-                        items(
-                            items = currentItems,
-                            key = { it.user.id },
-                            contentType = { "coui_user_preview" },
-                        ) { preview ->
-                            CouiUserPreviewRow(
-                                preview = preview,
-                                onClick = { onUserClick(preview.user.id) },
+                    val footerState = pagedList.footerState
+                    if (footerState.phase != PagingFooterPhase.Hidden) {
+                        item(key = "coui_user_list_footer", contentType = "footer") {
+                            CouiLoadMoreFooter(
+                                state = footerState,
+                                onRetry = ::loadMore,
                             )
-                        }
-
-                        val footerState = pagedList.footerState
-                        if (footerState.phase != PagingFooterPhase.Hidden) {
-                            item(key = "coui_user_list_footer", contentType = "footer") {
-                                CouiPagingFooter(
-                                    state = footerState,
-                                    onRetry = ::loadMore,
-                                )
-                            }
                         }
                     }
                 }
-
-                else -> CouiStatePlaceholder(
-                    message = couiErrorMessage(pagedList.initialError),
-                    actionText = strings.retry,
-                    onAction = { triggerManualRefresh() },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
+
+            else -> CouiErrorPlaceholder(
+                error = pagedList.initialError,
+                onRetry = { triggerManualRefresh() },
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
         }
     }
 }

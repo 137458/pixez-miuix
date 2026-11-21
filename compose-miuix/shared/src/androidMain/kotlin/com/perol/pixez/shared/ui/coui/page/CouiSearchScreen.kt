@@ -1,13 +1,9 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,8 +12,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,24 +20,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.itos.coui.layout.Scaffold
+import com.itos.coui.layout.Item
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
+import com.itos.coui.search.CouiSearchBarState
 import com.itos.coui.search.SearchBar
 import com.itos.coui.search.rememberCouiSearchBarState
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
-import com.itos.coui.theme.CouiTheme
-import com.itos.coui.theme.LocalCouiTextStyle
-import com.itos.coui.topappbar.CouiTopAppBarDefaults
-import com.itos.coui.topappbar.LargeTopAppBar
 import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.data.model.TrendTag
 import com.perol.pixez.shared.data.repository.BanRepository
@@ -55,16 +38,26 @@ import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSauceNaoRepository
 import com.perol.pixez.shared.ui.LocalSearchRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiActionRow
+import com.perol.pixez.shared.ui.coui.core.CouiBodyTitle
+import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
+import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiSingleGroup
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.ui.screens.SearchCoreState
@@ -82,11 +75,11 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Photos
 
 /**
- * COUI 搜索页（第一阶段）：官方 SearchBar + 搜索类型胶囊 + 快捷筛选 + 历史/热搜 + 作品结果瀑布流。
+ * COUI 搜索页：官方折叠顶栏骨架承载搜索栏、搜索类型胶囊、快捷筛选、历史/热搜与作品瀑布流。
  *
  * 查询词、搜索态、筛选条件、历史与热搜统一由 [rememberSearchCoreState] 承载；
- * 作品结果用 [rememberSearchIllustResultsState] + COUI 瀑布流。画师/小说结果与筛选抽屉、
- * SauceNAO 抽屉本阶段仍复用 MIUIX 实现，第二阶段再统一收口为 COUI 组件。
+ * 作品结果用 [rememberSearchIllustResultsState] + COUI 瀑布流。搜索头作为各容器的首个
+ * 滚动项，随正文一起滚入折叠顶栏的覆盖区；未进入搜索态时同一搜索头挂在推荐列表首位。
  */
 @Composable
 internal fun CouiSearchScreen(
@@ -96,7 +89,6 @@ internal fun CouiSearchScreen(
     initialQuery: String = "",
 ) {
     val strings = LocalStrings.current
-    val bottomBarPadding = LocalBottomBarContentPadding.current
     val searchRepository = LocalSearchRepository.current
     val novelRepository = LocalNovelRepository.current
     val settingsRepository = LocalSettingsRepository.current
@@ -156,7 +148,6 @@ internal fun CouiSearchScreen(
         bottomBarVisibility.value = !showFilterSheet
     }
 
-    val scrollBehavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val showingResults = core.isSearching && core.query.isNotBlank()
     val suggestionsListState = rememberLazyListState()
     val searchTypeChips = remember(strings) {
@@ -167,58 +158,26 @@ internal fun CouiSearchScreen(
         )
     }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = CouiTheme.colorScheme.background,
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    BasicText(
-                        text = if (showingResults) core.query else strings.tabSearch,
-                        style = LocalCouiTextStyle.current,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    if (showingResults) {
-                        CouiActionButton(
-                            icon = MiuixIcons.Back,
-                            contentDescription = strings.back,
-                            onClick = core.onExitSearch,
-                        )
-                    }
-                },
-                actions = {
-                    CouiActionButton(
-                        icon = MiuixIcons.Photos,
-                        contentDescription = strings.menuSauceNao,
-                        onClick = launchPickPhoto,
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-                colors = CouiTopAppBarDefaults.colors(
-                    backgroundColor = CouiTheme.colorScheme.background,
-                    dark = CouiTheme.isDark,
-                ),
+    CouiMainScaffold(
+        title = if (showingResults) core.query else strings.tabSearch,
+        actions = {
+            if (showingResults) {
+                CouiTopBarIconButton(
+                    onClick = core.onExitSearch,
+                    icon = MiuixIcons.Back,
+                    contentDescription = strings.back,
+                )
+            }
+            CouiTopBarIconButton(
+                onClick = launchPickPhoto,
+                icon = MiuixIcons.Photos,
+                contentDescription = strings.menuSauceNao,
             )
         },
-    ) { innerPadding ->
-        val density = LocalDensity.current
-        // 顶栏折叠位移在测量期读取，组合期算成字面量会冻结首帧的顶栏高度。
-        val contentPadding = remember(scrollBehavior, innerPadding, density) {
-            scrollBehavior.state.contentPadding(innerPadding, density)
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CouiTheme.colorScheme.background)
-                .padding(contentPadding),
-        ) {
-            SearchBar(
-                state = searchBarState,
+    ) { padding ->
+        val header: @Composable () -> Unit = {
+            CouiSearchHeader(
+                searchBarState = searchBarState,
                 query = core.query,
                 onQueryChange = core.onQueryChange,
                 onExpandedChange = { expanded ->
@@ -229,74 +188,77 @@ internal fun CouiSearchScreen(
                         core.onExitSearch()
                     }
                 },
-                placeholder = strings.searchPlaceholder,
-                cancelText = strings.cancel,
-                clearDescription = strings.btnDelete,
                 onSearch = core.onSearch,
-            )
-
-            if (showingResults) {
-                CouiFilterChipBar(
-                    chips = searchTypeChips,
-                    selectedKey = core.searchTypeIndex.toString(),
-                    onSelect = { key -> key.toIntOrNull()?.let(core.onSearchTypeSelected) },
-                )
-                if (core.searchTypeIndex == 0) {
-                    CouiSearchQuickFilterRow(
-                        core = core,
-                        onOpenFilter = { showFilterSheet = true },
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) {
-                if (showingResults) {
-                    val resultPadding = PaddingValues(
-                        start = 8.dp,
-                        top = 4.dp,
-                        end = 8.dp,
-                        bottom = bottomBarPadding + 8.dp,
-                    )
-                    when (core.searchTypeIndex) {
-                        0 -> CouiIllustSearchResults(
-                            query = core.query,
-                            sort = core.sort,
-                            filterState = core.filterState,
-                            repository = searchRepository,
-                            banRepository = banRepository,
-                            settingsRepository = settingsRepository,
-                            onIllustClick = onIllustClick,
-                            contentPadding = resultPadding,
-                        )
-                        1 -> CouiSearchUserResultList(
-                            query = core.query,
-                            repository = searchRepository,
-                            settingsRepository = settingsRepository,
-                            onUserClick = onUserClick,
-                            contentPadding = resultPadding,
-                        )
-                        else -> CouiSearchNovelResultList(
-                            query = core.query,
-                            novelRepository = novelRepository,
-                            onNovelClick = onNovelClick,
-                            onUserClick = onUserClick,
-                            contentPadding = resultPadding,
+                showingResults = showingResults,
+                searchTypeChips = searchTypeChips,
+                searchTypeIndex = core.searchTypeIndex,
+                onSearchTypeSelected = core.onSearchTypeSelected,
+                quickFilterRow = if (core.searchTypeIndex == 0) {
+                    {
+                        CouiSearchQuickFilterRow(
+                            core = core,
+                            onOpenFilter = { showFilterSheet = true },
                         )
                     }
                 } else {
-                    CouiSearchSuggestions(
-                        core = core,
-                        onIllustClick = onIllustClick,
-                        onUserClick = onUserClick,
-                        listState = suggestionsListState,
-                        bottomBarPadding = bottomBarPadding,
-                    )
-                }
+                    null
+                },
+            )
+        }
+
+        if (showingResults) {
+            val listPadding = PaddingValues(
+                top = padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding() + 8.dp,
+            )
+            when (core.searchTypeIndex) {
+                0 -> CouiIllustSearchResults(
+                    query = core.query,
+                    sort = core.sort,
+                    filterState = core.filterState,
+                    repository = searchRepository,
+                    banRepository = banRepository,
+                    settingsRepository = settingsRepository,
+                    onIllustClick = onIllustClick,
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        top = listPadding.calculateTopPadding(),
+                        end = 8.dp,
+                        bottom = listPadding.calculateBottomPadding(),
+                    ),
+                    header = header,
+                )
+
+                1 -> CouiSearchUserResultList(
+                    query = core.query,
+                    repository = searchRepository,
+                    settingsRepository = settingsRepository,
+                    onUserClick = onUserClick,
+                    contentPadding = listPadding,
+                    header = header,
+                )
+
+                else -> CouiSearchNovelResultList(
+                    query = core.query,
+                    novelRepository = novelRepository,
+                    onNovelClick = onNovelClick,
+                    onUserClick = onUserClick,
+                    contentPadding = listPadding,
+                    header = header,
+                )
             }
+        } else {
+            CouiSearchSuggestions(
+                core = core,
+                onIllustClick = onIllustClick,
+                onUserClick = onUserClick,
+                listState = suggestionsListState,
+                contentPadding = PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding(),
+                ),
+                header = header,
+            )
         }
     }
 
@@ -322,6 +284,68 @@ internal fun CouiSearchScreen(
             onPickAnother = launchPickPhoto,
             onIllustClick = onIllustClick,
         )
+    }
+}
+
+/** 搜索头：官方 SearchBar，搜索结果态下追加搜索类型胶囊与作品快捷筛选，作为列表首个滚动项。 */
+@Composable
+private fun CouiSearchHeader(
+    searchBarState: CouiSearchBarState,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+    onSearch: () -> Unit,
+    showingResults: Boolean,
+    searchTypeChips: List<CouiFilterChip>,
+    searchTypeIndex: Int,
+    onSearchTypeSelected: (Int) -> Unit,
+    quickFilterRow: (@Composable () -> Unit)? = null,
+) {
+    val strings = LocalStrings.current
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SearchBar(
+            state = searchBarState,
+            query = query,
+            onQueryChange = onQueryChange,
+            onExpandedChange = onExpandedChange,
+            placeholder = strings.searchPlaceholder,
+            cancelText = strings.cancel,
+            clearDescription = strings.btnDelete,
+            onSearch = onSearch,
+        )
+        if (showingResults) {
+            CouiFilterChipBar(
+                chips = searchTypeChips,
+                selectedKey = searchTypeIndex.toString(),
+                onSelect = { key -> key.toIntOrNull()?.let(onSearchTypeSelected) },
+            )
+            if (quickFilterRow != null) {
+                quickFilterRow()
+            }
+        }
+    }
+}
+
+/** 结果区占位外壳：搜索头固定在顶栏下，占位内容居中铺满剩余高度。 */
+@Composable
+private fun CouiSearchStateBody(
+    contentPadding: PaddingValues,
+    header: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = contentPadding.calculateTopPadding()),
+    ) {
+        header()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            content()
+        }
     }
 }
 
@@ -388,6 +412,7 @@ private fun CouiIllustSearchResults(
     settingsRepository: SettingsRepository,
     onIllustClick: (Long) -> Unit,
     contentPadding: PaddingValues,
+    header: @Composable () -> Unit,
 ) {
     val strings = LocalStrings.current
     val resultsState = rememberSearchIllustResultsState(
@@ -408,14 +433,23 @@ private fun CouiIllustSearchResults(
 
     val currentIllusts = listState.filteredIllusts
     when {
-        currentIllusts == null && listState.initialError == null -> CouiStatePlaceholder(
-            message = strings.loading,
-        )
-        currentIllusts == null -> CouiStatePlaceholder(
-            message = listState.initialError?.let { PixivApiErrorFormatter.format(it, strings) } ?: strings.retry,
-            actionText = strings.retry,
-            onAction = resultsState.retry,
-        )
+        currentIllusts == null && listState.initialError == null -> CouiSearchStateBody(
+            contentPadding = contentPadding,
+            header = header,
+        ) {
+            CouiLoadingPlaceholder()
+        }
+
+        currentIllusts == null -> CouiSearchStateBody(
+            contentPadding = contentPadding,
+            header = header,
+        ) {
+            CouiErrorPlaceholder(
+                error = listState.initialError,
+                onRetry = resultsState.retry,
+            )
+        }
+
         else -> {
             val filtered = remember(currentIllusts, filterState.ugoiraFilter, filterState.ratioFilter) {
                 applySearchClientFilters(currentIllusts, filterState.ugoiraFilter, filterState.ratioFilter)
@@ -428,17 +462,33 @@ private fun CouiIllustSearchResults(
                         hasLoadMoreError = listState.loadMoreError != null,
                     )
                 ) {
-                    SearchEmptyPhase.Retry -> CouiStatePlaceholder(
-                        message = listState.loadMoreError?.let { PixivApiErrorFormatter.format(it, strings) }
-                            ?: strings.retry,
-                        actionText = strings.retry,
-                        onAction = ::loadMore,
-                    )
+                    SearchEmptyPhase.Retry -> CouiSearchStateBody(
+                        contentPadding = contentPadding,
+                        header = header,
+                    ) {
+                        CouiPlaceholder(
+                            message = CouiErrorMessage(listState.loadMoreError),
+                            actionText = strings.retry,
+                            onAction = ::loadMore,
+                        )
+                    }
+
                     SearchEmptyPhase.LoadingMore -> {
                         LaunchedEffect(filtered.isEmpty(), listState.nextUrl) { loadMore() }
-                        CouiStatePlaceholder(message = strings.loading)
+                        CouiSearchStateBody(
+                            contentPadding = contentPadding,
+                            header = header,
+                        ) {
+                            CouiLoadingPlaceholder()
+                        }
                     }
-                    SearchEmptyPhase.Empty -> CouiStatePlaceholder(message = strings.searchEmptyIllust)
+
+                    SearchEmptyPhase.Empty -> CouiSearchStateBody(
+                        contentPadding = contentPadding,
+                        header = header,
+                    ) {
+                        CouiPlaceholder(message = strings.searchEmptyIllust)
+                    }
                 }
             } else {
                 CouiIllustGrid(
@@ -446,6 +496,7 @@ private fun CouiIllustSearchResults(
                     state = gridState,
                     onIllustClick = onIllustClick,
                     contentPadding = contentPadding,
+                    header = header,
                     hasMore = listState.nextUrl != null,
                     isLoadingMore = listState.isLoadingMore,
                     loadMoreError = listState.loadMoreError,
@@ -457,36 +508,46 @@ private fun CouiIllustSearchResults(
     }
 }
 
-/** 未进入搜索态时的推荐区：ID/URL 直达入口、热门标签与搜索历史。 */
+/** 未进入搜索态时的推荐区：搜索头、ID/URL 直达入口、热门标签与搜索历史。 */
 @Composable
 private fun CouiSearchSuggestions(
     core: SearchCoreState,
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
     listState: LazyListState,
-    bottomBarPadding: Dp,
+    contentPadding: PaddingValues,
+    header: @Composable () -> Unit,
 ) {
     val strings = LocalStrings.current
     val queryTarget = core.queryTarget
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = bottomBarPadding + 8.dp),
+        contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(8.dp),
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
+        item(key = "coui_search_header") {
+            header()
+        }
+
         if (queryTarget != null) {
             item(key = "coui_search_target") {
-                CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    if (queryTarget !is SearchQueryTarget.UserId) {
-                        CouiSuggestionRow(
-                            text = "${strings.copyTextChipIllustId}: ${queryTarget.id}",
+                val showIllustTarget = queryTarget !is SearchQueryTarget.UserId
+                val showUserTarget = queryTarget !is SearchQueryTarget.IllustId
+                CouiSettingsGroup {
+                    if (showIllustTarget) {
+                        CouiActionRow(
+                            title = "${strings.copyTextChipIllustId}: ${queryTarget.id}",
                             onClick = { onIllustClick(queryTarget.id) },
                         )
                     }
-                    if (queryTarget !is SearchQueryTarget.IllustId) {
-                        CouiSuggestionRow(
-                            text = "${strings.copyTextChipUserId}: ${queryTarget.id}",
+                    if (showUserTarget) {
+                        if (showIllustTarget) {
+                            CouiRowDivider()
+                        }
+                        CouiActionRow(
+                            title = "${strings.copyTextChipUserId}: ${queryTarget.id}",
                             onClick = { onUserClick(queryTarget.id) },
                         )
                     }
@@ -495,87 +556,64 @@ private fun CouiSearchSuggestions(
         }
 
         item(key = "coui_search_hot_title") {
-            CouiSectionTitle(text = strings.searchHotTags)
+            CouiBodyTitle(text = strings.searchHotTags)
         }
 
         when {
             core.isTrendLoading -> item(key = "coui_search_hot_loading") {
-                CouiHintRow(text = strings.loading)
+                CouiSearchHint(text = strings.loading)
             }
+
             core.trendError != null -> item(key = "coui_search_hot_error") {
-                CouiHintRow(
-                    text = PixivApiErrorFormatter.format(core.trendError, strings),
+                CouiSearchHint(
+                    text = CouiErrorMessage(core.trendError),
                     actionText = strings.retry,
                     onAction = core.onRetryTrend,
                 )
             }
+
             core.trendTags.isNullOrEmpty() -> item(key = "coui_search_hot_empty") {
-                CouiHintRow(text = strings.searchHotTagsEmpty)
+                CouiSearchHint(text = strings.searchHotTagsEmpty)
             }
+
             else -> item(key = "coui_search_hot_tags") {
-                CouiTrendTagCard(tags = core.trendTags.orEmpty(), onTagClick = core.onTagClick)
+                CouiSearchTrendGroup(
+                    tags = core.trendTags.orEmpty(),
+                    onTagClick = core.onTagClick,
+                )
             }
         }
 
         if (core.searchHistory.isNotEmpty()) {
             item(key = "coui_search_history_title") {
-                CouiSectionTitle(text = strings.searchHistory)
+                CouiBodyTitle(text = strings.searchHistory)
             }
             item(key = "coui_search_history_list") {
-                CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    core.searchHistory.forEach { history ->
-                        val pressInteraction = remember { MutableInteractionSource() }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = history,
-                                kind = CouiTextKind.ItemTitle,
-                                color = CouiTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .couiPressFeedback(pressInteraction)
-                                    .clickable(
-                                        interactionSource = pressInteraction,
-                                        indication = null,
-                                    ) { core.onTagClick(history) }
-                                    .padding(vertical = 10.dp),
-                            )
-                            CouiActionButton(
-                                icon = MiuixIcons.Close,
-                                contentDescription = strings.btnDelete,
-                                onClick = { core.onHistoryRemove(history) },
-                            )
+                CouiSettingsGroup {
+                    core.searchHistory.forEachIndexed { index, history ->
+                        if (index > 0) {
+                            CouiRowDivider()
                         }
+                        Item(
+                            title = { CouiItemTitle(text = history) },
+                            trailing = {
+                                CouiActionButton(
+                                    icon = MiuixIcons.Close,
+                                    contentDescription = strings.btnDelete,
+                                    onClick = { core.onHistoryRemove(history) },
+                                )
+                            },
+                            onClick = { core.onTagClick(history) },
+                        )
                     }
                 }
             }
             item(key = "coui_search_history_clear") {
-                val pressInteraction = remember { MutableInteractionSource() }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(CouiTheme.colorScheme.card)
-                        .couiPressFeedback(pressInteraction)
-                        .clickable(
-                            interactionSource = pressInteraction,
-                            indication = null,
-                            onClick = core.onClearHistory,
-                        )
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = strings.searchClearHistory,
-                        kind = CouiTextKind.ItemTitle,
-                        color = CouiTheme.colorScheme.accent,
-                        maxLines = 1,
+                CouiSingleGroup {
+                    CouiActionRow(
+                        title = strings.searchClearHistory,
+                        onClick = core.onClearHistory,
+                        destructive = true,
                     )
                 }
             }
@@ -583,89 +621,42 @@ private fun CouiSearchSuggestions(
     }
 }
 
+/** 热门标签分组：整卡行点击后按原始 tag 起搜。 */
 @Composable
-private fun CouiTrendTagCard(
+private fun CouiSearchTrendGroup(
     tags: List<TrendTag>,
     onTagClick: (String) -> Unit,
 ) {
-    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-        tags.forEach { tag ->
-            CouiSuggestionRow(
-                text = tag.translatedName ?: tag.tag,
+    CouiSettingsGroup {
+        tags.forEachIndexed { index, tag ->
+            if (index > 0) {
+                CouiRowDivider()
+            }
+            CouiActionRow(
+                title = tag.translatedName ?: tag.tag,
                 onClick = { onTagClick(tag.tag) },
             )
         }
     }
 }
 
+/** 推荐区提示卡：加载 / 错误重试 / 空态共用，动作以 core 文本按钮呈现。 */
 @Composable
-private fun CouiSectionTitle(text: String) {
-    Text(
-        text = text,
-        kind = CouiTextKind.GroupTitle,
-        color = CouiTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-    )
-}
-
-@Composable
-private fun CouiSuggestionRow(
-    text: String,
-    onClick: () -> Unit,
-) {
-    val pressInteraction = remember { MutableInteractionSource() }
-    Text(
-        text = text,
-        kind = CouiTextKind.ItemTitle,
-        color = CouiTheme.colorScheme.onSurface,
-        maxLines = 1,
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(pressInteraction)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-    )
-}
-
-/** 推荐区占位行：加载 / 错误重试 / 空态共用。 */
-@Composable
-private fun CouiHintRow(
+private fun CouiSearchHint(
     text: String,
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+    CouiSingleGroup {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = text,
-                kind = CouiTextKind.ItemSummary,
-                color = CouiTheme.colorScheme.onSurfaceVariant,
-            )
+            CouiItemSummary(text = text)
             if (actionText != null && onAction != null) {
-                val pressInteraction = remember { MutableInteractionSource() }
-                Text(
-                    text = actionText,
-                    kind = CouiTextKind.ItemTitle,
-                    color = CouiTheme.colorScheme.accent,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .couiPressFeedback(pressInteraction)
-                        .clickable(
-                            interactionSource = pressInteraction,
-                            indication = null,
-                            onClick = onAction,
-                        ),
-                )
+                CouiTextButton(text = actionText, onClick = onAction, filled = false)
             }
         }
     }

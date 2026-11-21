@@ -2,17 +2,13 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -56,11 +51,12 @@ import com.perol.pixez.shared.ui.components.updateDialogNotesState
 import com.perol.pixez.shared.ui.components.updatePrimaryCta
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUpdateDownloader
@@ -74,7 +70,13 @@ import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import pixez_miuix.shared.generated.resources.Res
 
 /**
- * COUI 更新设置页：固定顶栏 + 应用信息、更新日志、更新设置与版本通道四段。
+ * COUI 更新设置页：折叠大标题顶栏 + 应用标识头 + 更新日志卡片 + 设置组 + 渠道组。
+ *
+ * 骨架改用 [CouiSettingsScaffold]：居上限宽、overscroll、底部悬浮底栏留白与顶栏覆盖区
+ * 补偿都由骨架代付，页面不再自铺底色、不加状态栏内边距、也不再二次扣底部安全区。
+ * 组内开关行换 core 的 [CouiToggleRow]，入口行换 [CouiValueRow]（副标题走 summary、
+ * onClick 自动挂 Chevron），行间统一插 [CouiRowDivider]；主/次动作换 [CouiTextButton]
+ * （主 CTA 实心胶囊、次级动作描边胶囊）。更新日志、进度轨道与版本弹窗仍是纯排版块。
  *
  * 检查更新、忽略版本、下载/安装/浏览器兜底与进程级下载器口径完全复用 MIUIX 版的
  * 计划函数；COUI 侧只重排视觉，不重写状态机。HyperOS 3 动效开关只作用于 MIUIX 背景，
@@ -130,107 +132,94 @@ internal fun CouiUpdateSettingScreen(
         doCheck(userInitiated = false)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingUpdate,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingUpdate,
-            onBack = onBack,
-        )
+        item(key = "coui_update_hero", contentType = "hero") {
+            CouiUpdateHero(
+                isChecking = isChecking,
+                hasNew = hasNew,
+                releaseVersionName = releaseInfo?.versionName.orEmpty(),
+            )
+        }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
-                item(key = "coui_update_hero", contentType = "hero") {
-                    CouiUpdateHero(
-                        isChecking = isChecking,
-                        hasNew = hasNew,
-                        releaseVersionName = releaseInfo?.versionName.orEmpty(),
-                    )
-                }
+        val changelogRelease = releaseInfo
+        if (changelogRelease != null) {
+            item(key = "coui_update_changelog", contentType = "section") {
+                CouiChangelogSection(
+                    releaseInfo = changelogRelease,
+                    hasNew = hasNew,
+                    downloadState = downloadState,
+                    updateAsset = updateAsset,
+                )
+            }
+        }
 
-                val changelogRelease = releaseInfo
-                if (changelogRelease != null) {
-                    item(key = "coui_update_changelog", contentType = "section") {
-                        CouiChangelogSection(
-                            releaseInfo = changelogRelease,
-                            hasNew = hasNew,
-                            downloadState = downloadState,
-                            updateAsset = updateAsset,
-                        )
-                    }
-                }
-
-                item(key = "coui_update_settings", contentType = "section") {
-                    CouiSettingSection(title = strings.updateSectionSettings) {
-                        CouiSwitchRow(
-                            title = strings.updateAutoCheck,
-                            summary = strings.updateAutoCheckSummary,
-                            checked = autoCheckUpdate,
-                            onCheckedChange = { checked ->
-                                autoCheckUpdate = checked
-                                coroutineScope.launch {
-                                    withContext(Dispatchers.Default) {
-                                        settingsRepository.autoCheckUpdate = checked
-                                    }
+        item(key = "coui_update_settings", contentType = "section") {
+            CouiSettingSection(title = strings.updateSectionSettings) {
+                CouiToggleRow(
+                    title = strings.updateAutoCheck,
+                    summary = strings.updateAutoCheckSummary,
+                    checked = autoCheckUpdate,
+                    onCheckedChange = { checked ->
+                        autoCheckUpdate = checked
+                        coroutineScope.launch {
+                            withContext(Dispatchers.Default) {
+                                settingsRepository.autoCheckUpdate = checked
+                            }
+                        }
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.updateIgnoreVersion,
+                    summary = when {
+                        isChecking -> strings.loading
+                        !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
+                        ignoredVersion == releaseInfo?.versionName -> strings.updateIgnoreVersionIgnored
+                        else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName.orEmpty())
+                    },
+                    checked = hasNew && ignoredVersion == releaseInfo?.versionName,
+                    onCheckedChange = { checked ->
+                        // COUI 开关无禁用态：无新版本时保持原状态，不写入忽略值。
+                        if (hasNew) {
+                            val newValue = if (checked) releaseInfo?.versionName else null
+                            coroutineScope.launch {
+                                withContext(Dispatchers.Default) {
+                                    settingsRepository.ignoreUpdateVersion = newValue
                                 }
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.updateIgnoreVersion,
-                            summary = when {
-                                isChecking -> strings.loading
-                                !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
-                                ignoredVersion == releaseInfo?.versionName -> strings.updateIgnoreVersionIgnored
-                                else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName.orEmpty())
-                            },
-                            checked = hasNew && ignoredVersion == releaseInfo?.versionName,
-                            onCheckedChange = { checked ->
-                                // COUI 开关无禁用态：无新版本时保持原状态，不写入忽略值。
-                                if (hasNew) {
-                                    val newValue = if (checked) releaseInfo?.versionName else null
-                                    coroutineScope.launch {
-                                        withContext(Dispatchers.Default) {
-                                            settingsRepository.ignoreUpdateVersion = newValue
-                                        }
-                                        ignoredVersion = newValue
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
+                                ignoredVersion = newValue
+                            }
+                        }
+                    },
+                )
+            }
+        }
 
-                item(key = "coui_update_channel", contentType = "section") {
-                    CouiSettingSection(title = strings.updateSectionChannel) {
-                        CouiNavigationRow(
-                            title = strings.updateManualCheck,
-                            summary = if (isChecking) {
-                                strings.updateManualCheckSummaryChecking
-                            } else {
-                                strings.updateManualCheckSummaryIdle
-                            },
-                            onClick = {
-                                coroutineScope.launch { doCheck(userInitiated = true) }
-                            },
-                        )
-                        CouiNavigationRow(
-                            title = "GitHub Releases",
-                            summary = strings.updateGithubReleasesSummary,
-                            onClick = {
-                                openSafeUrl(GitHubReleaseEndpoints.RELEASES_PAGE, strings, onError = { message ->
-                                    toastSink(ToastData(message, ToastType.Error))
-                                })
-                            },
-                        )
-                    }
-                }
+        item(key = "coui_update_channel", contentType = "section") {
+            CouiSettingSection(title = strings.updateSectionChannel) {
+                CouiValueRow(
+                    title = strings.updateManualCheck,
+                    summary = if (isChecking) {
+                        strings.updateManualCheckSummaryChecking
+                    } else {
+                        strings.updateManualCheckSummaryIdle
+                    },
+                    onClick = {
+                        coroutineScope.launch { doCheck(userInitiated = true) }
+                    },
+                )
+                CouiRowDivider()
+                CouiValueRow(
+                    title = "GitHub Releases",
+                    summary = strings.updateGithubReleasesSummary,
+                    onClick = {
+                        openSafeUrl(GitHubReleaseEndpoints.RELEASES_PAGE, strings, onError = { message ->
+                            toastSink(ToastData(message, ToastType.Error))
+                        })
+                    },
+                )
             }
         }
     }
@@ -344,10 +333,11 @@ private fun CouiChangelogSection(
                 onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
             )
             if (notesState.hiddenLineCount > 0 || notesExpanded) {
-                CouiTextAction(
+                CouiTextButton(
                     text = if (notesExpanded) strings.collapse else strings.expand,
                     onClick = { notesExpanded = !notesExpanded },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled = false,
                 )
             }
 
@@ -372,15 +362,14 @@ private fun CouiChangelogSection(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (downloadState is UpdateDownloadState.Downloading) {
-                    CouiTextAction(
+                    CouiTextButton(
                         text = strings.updateCancelDownload,
                         onClick = updateDownloader::cancel,
+                        filled = false,
                     )
                 } else {
-                    CouiTextAction(
+                    CouiTextButton(
                         text = primaryCta.text,
-                        enabled = primaryCta.enabled,
-                        color = scheme.accent,
                         onClick = {
                             val error = runUpdatePrimaryAction(
                                 action = primaryCta.action,
@@ -405,16 +394,20 @@ private fun CouiChangelogSection(
                                 toastSink(ToastData(error, ToastType.Error))
                             }
                         },
+                        enabled = primaryCta.enabled,
+                        filled = true,
                     )
                 }
                 if (hasNew && updateAsset != null && downloadState !is UpdateDownloadState.Downloading) {
-                    CouiTextAction(
+                    CouiTextButton(
                         text = strings.updateOpenInBrowser,
                         onClick = {
                             openSafeUrl(updateBrowserFallbackUrl(releaseInfo), strings, onError = { message ->
                                 toastSink(ToastData(message, ToastType.Error))
                             })
                         },
+                        modifier = Modifier.padding(top = 8.dp),
+                        filled = false,
                     )
                 }
             }
@@ -546,35 +539,38 @@ private fun CouiUpdateDialog(
                 onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
             )
             if (notesState.hiddenLineCount > 0 || notesExpanded) {
-                CouiTextAction(
+                CouiTextButton(
                     text = if (notesExpanded) strings.collapse else strings.expand,
                     onClick = { notesExpanded = !notesExpanded },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled = false,
                 )
             }
 
             if (plan.showCancelDownload) {
-                CouiTextAction(
+                CouiTextButton(
                     text = strings.updateCancelDownload,
                     onClick = downloader::cancel,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled = false,
                 )
             }
             if (plan.showBrowserFallback) {
-                CouiTextAction(
+                CouiTextButton(
                     text = strings.updateOpenInBrowser,
                     onClick = {
                         openSafeUrl(updateBrowserFallbackUrl(releaseInfo), strings, onError = {})
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled = false,
                 )
             }
             if (plan.showIgnore) {
-                CouiTextAction(
+                CouiTextButton(
                     text = strings.updateDialogIgnore,
-                    color = scheme.accent,
                     onClick = { onIgnore(releaseInfo.versionName) },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled = false,
                 )
             }
         }

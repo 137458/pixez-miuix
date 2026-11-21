@@ -1,8 +1,8 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,22 +25,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.NovelRankingMode
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
+import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -53,11 +51,11 @@ private enum class CouiNovelBrowseTab {
 }
 
 /**
- * COUI 小说浏览页：固定顶栏 + 分类胶囊 + 小说列表。
+ * COUI 小说浏览页：二级骨架 + 分类胶囊 + 小说列表。
  *
  * 推荐/排行榜切换、日/周/月榜切换、账号切换作废、触底预加载、
- * 手动刷新与三态占位全部保留；差异只有皮肤层：顶栏图标、分类胶囊、
- * 小说卡片与占位改用 COUI 组件，列表收敛到平板可读宽度。
+ * 手动刷新与三态占位全部保留；差异只有皮肤层：顶栏图标换成骨架槽位按钮、
+ * 分类胶囊改作正文头部、占位与分页页脚改用 core 组件，底色由骨架承担。
  */
 @Composable
 internal fun CouiNovelScreen(
@@ -73,7 +71,6 @@ internal fun CouiNovelScreen(
     var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
     var refreshToken by rememberSaveable { mutableIntStateOf(0) }
 
-    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
     // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
     val (user, isLoggedIn) = rememberAccountSession()
 
@@ -126,26 +123,106 @@ internal fun CouiNovelScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.novelBrowseTitle,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = strings.novelBrowseTitle,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = { refreshToken++ },
             )
+        },
+    ) { padding ->
+        val header: @Composable () -> Unit = {
+            CouiNovelBrowseHeader(
+                currentTab = currentTab,
+                rankingMode = rankingMode,
+                onTabChange = { currentTab = it },
+                onRankingModeChange = { rankingMode = it },
+            )
         }
+        val novelItems = pagedList.items
+        when {
+            novelItems == null && pagedList.initialError == null -> CouiNovelStateBody(
+                padding = padding,
+                message = strings.loading,
+                header = header,
+            )
 
+            pagedList.initialError != null -> CouiNovelStateBody(
+                padding = padding,
+                message = CouiErrorMessage(pagedList.initialError),
+                actionText = strings.retry,
+                onAction = { refreshToken++ },
+                header = header,
+            )
+
+            novelItems.isNullOrEmpty() -> CouiNovelStateBody(
+                padding = padding,
+                message = strings.noData,
+                header = header,
+            )
+
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    end = 12.dp,
+                    bottom = padding.calculateBottomPadding(),
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                overscrollEffect = rememberCouiOverscrollEffect(),
+            ) {
+                // 分类胶囊随列表滚动：切 tab 后列表会重建，胶囊仍在首屏顶部。
+                item(key = "coui_novel_browse_header", contentType = "header") {
+                    header()
+                }
+
+                items(
+                    items = novelItems,
+                    key = { it.id },
+                    contentType = { "novel_item" },
+                ) { novel ->
+                    CouiNovelCard(
+                        novel = novel,
+                        onClick = { onNovelClick(novel.id) },
+                        onUserClick = onUserClick,
+                    )
+                }
+
+                val footerState = pagedList.footerState
+                if (footerState.phase != PagingFooterPhase.Hidden) {
+                    item(key = "coui_novel_footer", contentType = "footer") {
+                        CouiLoadMoreFooter(
+                            state = footerState,
+                            onRetry = ::loadMore,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 分类胶囊：推荐/排行榜与日/周/月两行，正文头部与占位态共用同一份实现。 */
+@Composable
+private fun CouiNovelBrowseHeader(
+    currentTab: CouiNovelBrowseTab,
+    rankingMode: NovelRankingMode,
+    onTabChange: (CouiNovelBrowseTab) -> Unit,
+    onRankingModeChange: (NovelRankingMode) -> Unit,
+) {
+    val strings = LocalStrings.current
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -154,7 +231,7 @@ internal fun CouiNovelScreen(
                 selected = currentTab == CouiNovelBrowseTab.Recommend,
                 onClick = {
                     if (currentTab != CouiNovelBrowseTab.Recommend) {
-                        currentTab = CouiNovelBrowseTab.Recommend
+                        onTabChange(CouiNovelBrowseTab.Recommend)
                     }
                 },
             )
@@ -163,7 +240,7 @@ internal fun CouiNovelScreen(
                 selected = currentTab == CouiNovelBrowseTab.Ranking,
                 onClick = {
                     if (currentTab != CouiNovelBrowseTab.Ranking) {
-                        currentTab = CouiNovelBrowseTab.Ranking
+                        onTabChange(CouiNovelBrowseTab.Ranking)
                     }
                 },
             )
@@ -173,83 +250,52 @@ internal fun CouiNovelScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                    .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CouiAssistChip(
                     text = strings.rankingDay,
                     selected = rankingMode == NovelRankingMode.Day,
-                    onClick = { rankingMode = NovelRankingMode.Day },
+                    onClick = { onRankingModeChange(NovelRankingMode.Day) },
                 )
                 CouiAssistChip(
                     text = strings.rankingWeek,
                     selected = rankingMode == NovelRankingMode.Week,
-                    onClick = { rankingMode = NovelRankingMode.Week },
+                    onClick = { onRankingModeChange(NovelRankingMode.Week) },
                 )
                 CouiAssistChip(
                     text = strings.rankingMonth,
                     selected = rankingMode == NovelRankingMode.Month,
-                    onClick = { rankingMode = NovelRankingMode.Month },
+                    onClick = { onRankingModeChange(NovelRankingMode.Month) },
                 )
             }
         }
+    }
+}
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            val novelItems = pagedList.items
-            when {
-                novelItems == null && pagedList.initialError == null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                pagedList.initialError != null -> CouiStatePlaceholder(
-                    message = couiErrorMessage(pagedList.initialError),
-                    actionText = strings.retry,
-                    onAction = { refreshToken++ },
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                novelItems.isNullOrEmpty() -> CouiStatePlaceholder(
-                    message = strings.noData,
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 12.dp,
-                        top = 8.dp,
-                        end = 12.dp,
-                        bottom = LocalBottomBarContentPadding.current,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    overscrollEffect = rememberCouiOverscrollEffect(),
-                ) {
-                    items(
-                        items = novelItems,
-                        key = { it.id },
-                        contentType = { "novel_item" },
-                    ) { novel ->
-                        CouiNovelCard(
-                            novel = novel,
-                            onClick = { onNovelClick(novel.id) },
-                            onUserClick = onUserClick,
-                        )
-                    }
-
-                    val footerState = pagedList.footerState
-                    if (footerState.phase != com.perol.pixez.shared.ui.state.PagingFooterPhase.Hidden) {
-                        item(key = "coui_novel_footer", contentType = "footer") {
-                            CouiPagingFooter(
-                                state = footerState,
-                                onRetry = ::loadMore,
-                            )
-                        }
-                    }
-                }
-            }
-        }
+/** 占位态正文：分类胶囊固定在最上方，占位卡片吃掉剩余高度。 */
+@Composable
+private fun CouiNovelStateBody(
+    padding: PaddingValues,
+    message: String,
+    header: @Composable () -> Unit,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .consumeWindowInsets(padding)
+            .padding(horizontal = 12.dp),
+    ) {
+        header()
+        CouiPlaceholder(
+            message = message,
+            modifier = Modifier.weight(1f),
+            actionText = actionText,
+            onAction = onAction,
+        )
     }
 }

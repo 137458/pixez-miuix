@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -28,11 +27,11 @@ import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.DEFAULT_IMAGE_HOST
@@ -40,11 +39,11 @@ import com.perol.pixez.shared.ui.screens.MIRROR_IMAGE_HOST
 import com.perol.pixez.shared.ui.screens.NETWORK_MODE_STANDARD
 
 /**
- * COUI 网络设置页：固定顶栏 + OAuth/API 模式单选卡片 + 图片源卡片。
+ * COUI 网络设置页：设置骨架 + 官方 Group 卡片（OAuth/API 模式单选、图片源）。
  *
  * 模式切换与图片源重置、自定义 Host 校验口径完全保留；
  * 切到 standard 时清空自定义输入并回落到默认 Host；
- * 单选由共用 [CouiRadioRow] 承担（库 RadioButton 作指示器）；COUI 库无输入原语，输入框仍为自绘。
+ * 单选由 core [CouiRadioOptionRow] 承担（库 RadioButton 作指示器）；COUI 库无输入原语，输入框仍为自绘。
  */
 @Composable
 internal fun CouiNetworkSettingScreen(
@@ -53,7 +52,6 @@ internal fun CouiNetworkSettingScreen(
     val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
     val toastSink = LocalToastSink.current
-    val scheme = CouiTheme.colorScheme
 
     var oauthNetworkMode by remember { mutableStateOf(settingsRepository.oauthNetworkMode) }
     var apiNetworkMode by remember { mutableStateOf(settingsRepository.apiNetworkMode) }
@@ -112,82 +110,71 @@ internal fun CouiNetworkSettingScreen(
         Triple("standard", strings.networkModeStandard, strings.networkModeStandardSummary),
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingNetwork,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingNetwork,
-            onBack = onBack,
-        )
-
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_network_oauth", contentType = "section") {
-                    CouiSettingSection(title = strings.oauthNetworkMode) {
-                        networkModes.forEach { (code, label, description) ->
-                            CouiRadioRow(
-                                title = label,
-                                summary = description,
-                                selected = oauthNetworkMode == code,
-                                onClick = { setOAuthNetworkMode(code) },
-                            )
-                        }
-                    }
+        item(key = "coui_network_oauth", contentType = "section") {
+            CouiSettingSection(title = strings.oauthNetworkMode) {
+                networkModes.forEachIndexed { index, (code, label, description) ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = oauthNetworkMode == code,
+                        summary = description,
+                        onClick = { setOAuthNetworkMode(code) },
+                    )
                 }
+            }
+        }
 
-                item(key = "coui_network_api", contentType = "section") {
-                    CouiSettingSection(title = strings.apiNetworkMode) {
-                        networkModes.forEach { (code, label, description) ->
-                            CouiRadioRow(
-                                title = label,
-                                summary = description,
-                                selected = apiNetworkMode == code,
-                                onClick = { setApiNetworkMode(code) },
-                            )
-                        }
-                    }
+        item(key = "coui_network_api", contentType = "section") {
+            CouiSettingSection(title = strings.apiNetworkMode) {
+                networkModes.forEachIndexed { index, (code, label, description) ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = apiNetworkMode == code,
+                        summary = description,
+                        onClick = { setApiNetworkMode(code) },
+                    )
                 }
+            }
+        }
 
-                if (allowsImageSource) {
-                    item(key = "coui_network_picture_source", contentType = "section") {
-                        CouiSettingSection(title = strings.pictureSource) {
-                            CouiRadioRow(
-                                title = DEFAULT_IMAGE_HOST,
-                                summary = DEFAULT_IMAGE_HOST,
-                                selected = pictureSource == DEFAULT_IMAGE_HOST,
-                                onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
-                            )
-                            CouiRadioRow(
-                                title = MIRROR_IMAGE_HOST,
-                                summary = MIRROR_IMAGE_HOST,
-                                selected = pictureSource == MIRROR_IMAGE_HOST,
-                                onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = strings.customHost,
-                                    kind = CouiTextKind.ItemTitle,
-                                    color = scheme.onSurface,
-                                )
-                                CouiNetworkHostField(
-                                    value = customHostInput,
-                                    placeholder = strings.customHost,
-                                    onValueChange = { customHostInput = it },
-                                )
-                                CouiTextAction(
-                                    text = strings.confirm,
-                                    color = scheme.accent,
-                                    onClick = { setCustomPictureSource(customHostInput) },
-                                )
-                            }
-                        }
+        if (allowsImageSource) {
+            item(key = "coui_network_picture_source", contentType = "section") {
+                CouiSettingSection(title = strings.pictureSource) {
+                    CouiRadioOptionRow(
+                        title = DEFAULT_IMAGE_HOST,
+                        selected = pictureSource == DEFAULT_IMAGE_HOST,
+                        onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
+                    )
+                    CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = MIRROR_IMAGE_HOST,
+                        selected = pictureSource == MIRROR_IMAGE_HOST,
+                        onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
+                    )
+                    CouiRowDivider()
+                    // 自定义 Host：分组内独立区块，留白与官方 Item 的 rowPadding 对齐。
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CouiItemTitle(text = strings.customHost)
+                        CouiNetworkHostField(
+                            value = customHostInput,
+                            placeholder = strings.customHost,
+                            onValueChange = { customHostInput = it },
+                        )
+                        CouiTextButton(
+                            text = strings.confirm,
+                            onClick = { setCustomPictureSource(customHostInput) },
+                            filled = false,
+                        )
                     }
                 }
             }

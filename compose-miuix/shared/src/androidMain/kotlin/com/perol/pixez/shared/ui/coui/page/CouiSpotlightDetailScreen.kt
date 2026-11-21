@@ -1,12 +1,12 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -52,14 +52,13 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
+import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
@@ -72,10 +71,10 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI Spotlight 特辑详情页：固定顶栏 + 阅读列。
+ * COUI Spotlight 特辑详情页：二级骨架 + 正文列表。
  *
- * 数据加载、缓存初始化与手动刷新口径与 MIUIX 版一致；顶栏保留刷新与复制链接/分享/
- * 浏览器打开三个动作，正文按阅读列单列排布，作品卡片保留共享元素过渡。
+ * 数据加载、缓存初始化与手动刷新口径与 MIUIX 版一致；顶栏动作槽位保留刷新与
+ * 复制链接/分享/浏览器打开三个菜单项，正文单列排布，作品卡片保留共享元素过渡。
  */
 @Composable
 internal fun CouiSpotlightDetailScreen(
@@ -115,23 +114,17 @@ internal fun CouiSpotlightDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     val scheme = CouiTheme.colorScheme
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = article.pureTitle.ifBlank { article.title },
-            onBack = onBack,
-            actionSpacing = 4.dp,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = article.pureTitle.ifBlank { article.title },
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = triggerManualRefresh,
             )
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                CouiActionButton(
+                CouiTopBarIconButton(
                     icon = MiuixIcons.More,
                     contentDescription = strings.menuMoreActions,
                     onClick = { menuAnchor.open { menuExpanded = true } },
@@ -172,124 +165,139 @@ internal fun CouiSpotlightDetailScreen(
                     },
                 )
             }
-        }
+        },
+    ) { padding ->
+        val result = state.value
+        when {
+            result == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            val result = state.value
-            when {
-                result == null -> CouiStatePlaceholder(message = strings.loading)
+            result.isSuccess -> {
+                val detail = result.getOrNull() ?: SpotlightDetail(
+                    title = article.title,
+                    pureTitle = article.pureTitle,
+                    coverUrl = article.thumbnail,
+                    rawUrl = article.articleUrl,
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .consumeWindowInsets(padding),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        end = 12.dp,
+                        bottom = padding.calculateBottomPadding(),
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
+                ) {
+                    item(key = "coui_spotlight_header", contentType = "header") {
+                        CouiArticleHeader(article = article, detail = detail)
+                    }
 
-                result.isSuccess -> {
-                    val detail = result.getOrNull() ?: SpotlightDetail(
-                        title = article.title,
-                        pureTitle = article.pureTitle,
-                        coverUrl = article.thumbnail,
-                        rawUrl = article.articleUrl,
-                    )
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        overscrollEffect = rememberCouiOverscrollEffect(),
-                    ) {
-                        item(key = "coui_spotlight_header", contentType = "header") {
-                            CouiArticleHeader(article = article, detail = detail)
-                        }
-
-                        if (detail.description.isNotBlank()) {
-                            item(key = "coui_spotlight_desc", contentType = "section") {
-                                CouiCard {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = strings.spotlightLead,
-                                            kind = CouiTextKind.ItemTitle,
-                                            color = scheme.accent,
-                                        )
-                                        Text(
-                                            text = detail.description,
-                                            kind = CouiTextKind.ItemSummary,
-                                            color = scheme.onSurface,
-                                            modifier = Modifier.padding(top = 8.dp),
-                                        )
-                                    }
+                    if (detail.description.isNotBlank()) {
+                        item(key = "coui_spotlight_desc", contentType = "section") {
+                            CouiCard {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = strings.spotlightLead,
+                                        kind = CouiTextKind.ItemTitle,
+                                        color = scheme.accent,
+                                    )
+                                    Text(
+                                        text = detail.description,
+                                        kind = CouiTextKind.ItemSummary,
+                                        color = scheme.onSurface,
+                                        modifier = Modifier.padding(top = 8.dp),
+                                    )
                                 }
                             }
                         }
+                    }
 
-                        if (detail.subArticles.isNotEmpty()) {
-                            item(key = "coui_spotlight_sub_header", contentType = "header") {
-                                Text(
-                                    text = "${strings.includedArticles} (${detail.subArticles.size})",
-                                    kind = CouiTextKind.ItemTitle,
-                                    color = scheme.onSurface,
-                                    modifier = Modifier.padding(start = 4.dp, top = 4.dp),
-                                )
-                            }
-                            items(
-                                items = detail.subArticles,
-                                key = { "sub_${it.id}" },
-                                contentType = { "sub_article" },
-                            ) { subArticle ->
-                                CouiSpotlightArticleCard(
-                                    article = subArticle,
-                                    onClick = { onArticleClick(subArticle) },
-                                )
-                            }
+                    if (detail.subArticles.isNotEmpty()) {
+                        item(key = "coui_spotlight_sub_header", contentType = "header") {
+                            Text(
+                                text = "${strings.includedArticles} (${detail.subArticles.size})",
+                                kind = CouiTextKind.ItemTitle,
+                                color = scheme.onSurface,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                            )
                         }
-
-                        if (detail.works.isNotEmpty()) {
-                            item(key = "coui_spotlight_works_header", contentType = "header") {
-                                Text(
-                                    text = "${strings.includedWorks} (${detail.works.size})",
-                                    kind = CouiTextKind.ItemTitle,
-                                    color = scheme.onSurface,
-                                    modifier = Modifier.padding(start = 4.dp, top = 4.dp),
-                                )
-                            }
-                            items(
-                                items = detail.works,
-                                key = { it.arworkLink ?: it.showImage.orEmpty() },
-                                contentType = { "work" },
-                            ) { work ->
-                                CouiSpotlightWorkCard(
-                                    work = work,
-                                    onIllustClick = { work.illustId?.let(onIllustClick) },
-                                    onUserClick = { work.userId?.let(onUserClick) },
-                                )
-                            }
+                        items(
+                            items = detail.subArticles,
+                            key = { "sub_${it.id}" },
+                            contentType = { "sub_article" },
+                        ) { subArticle ->
+                            CouiSpotlightArticleCard(
+                                article = subArticle,
+                                onClick = { onArticleClick(subArticle) },
+                            )
                         }
+                    }
 
-                        item(key = "coui_spotlight_browser", contentType = "section") {
-                            CouiCard {
-                                CouiNavigationRow(
-                                    title = strings.viewOriginalArticle,
-                                    summary = article.articleUrl,
-                                    onClick = {
-                                        openSafeUrl(article.articleUrl, strings, onError = showErrorToast)
-                                    },
-                                )
-                            }
+                    if (detail.works.isNotEmpty()) {
+                        item(key = "coui_spotlight_works_header", contentType = "header") {
+                            Text(
+                                text = "${strings.includedWorks} (${detail.works.size})",
+                                kind = CouiTextKind.ItemTitle,
+                                color = scheme.onSurface,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                            )
+                        }
+                        items(
+                            items = detail.works,
+                            key = { it.arworkLink ?: it.showImage.orEmpty() },
+                            contentType = { "work" },
+                        ) { work ->
+                            CouiSpotlightWorkCard(
+                                work = work,
+                                onIllustClick = { work.illustId?.let(onIllustClick) },
+                                onUserClick = { work.userId?.let(onUserClick) },
+                            )
+                        }
+                    }
+
+                    item(key = "coui_spotlight_browser", contentType = "section") {
+                        CouiCard {
+                            CouiValueRow(
+                                title = strings.viewOriginalArticle,
+                                summary = article.articleUrl,
+                                onClick = {
+                                    openSafeUrl(article.articleUrl, strings, onError = showErrorToast)
+                                },
+                            )
                         }
                     }
                 }
+            }
 
-                else -> Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    CouiStatePlaceholder(
-                        message = couiErrorMessage(result.exceptionOrNull()),
-                        actionText = strings.retry,
-                        onAction = triggerManualRefresh,
-                        modifier = Modifier.weight(1f),
-                    )
-                    CouiTextAction(
-                        text = strings.viewOriginalArticle,
-                        onClick = {
-                            openSafeUrl(article.articleUrl, strings, onError = showErrorToast)
-                        },
-                    )
-                }
+            else -> Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                CouiPlaceholder(
+                    message = CouiErrorMessage(result.exceptionOrNull()),
+                    modifier = Modifier.weight(1f),
+                    actionText = strings.retry,
+                    onAction = triggerManualRefresh,
+                )
+                CouiTextButton(
+                    text = strings.viewOriginalArticle,
+                    onClick = {
+                        openSafeUrl(article.articleUrl, strings, onError = showErrorToast)
+                    },
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    filled = false,
+                )
             }
         }
     }

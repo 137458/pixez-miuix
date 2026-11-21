@@ -1,26 +1,29 @@
 package com.perol.pixez.shared.ui.coui.page
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -33,20 +36,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.itos.coui.dialog.CouiDialogAction
@@ -58,44 +61,43 @@ import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.repository.HistoryItem
 import com.perol.pixez.shared.data.repository.NovelHistoryItem
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.LocalHistoryRepository
+import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
-import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
+import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
+import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.CouiTextInput
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.LocalHistoryRepository
-import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
-import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
 import com.perol.pixez.shared.ui.screens.forActiveHistory
 import com.perol.pixez.shared.ui.screens.formatNovelHistoryTime
+import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
 import com.perol.pixez.shared.ui.utils.rememberHistoryResult
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
- * COUI 浏览历史页：固定顶栏 + 搜索 + 插画/小说页签。
+ * COUI 浏览历史页：折叠顶栏 + 搜索 + 插画/小说页签。
  *
- * 业务编排与 MIUIX 版一致：两页签各自加载本地历史，搜索按 ID/标题/作者本地过滤，
- * 单条删除与清空全部各走一次 COUI 确认弹窗。皮肤差异：
- * 搜索框与页签收敛到平板可读宽度，小说列表不再带 MIUIX 的纵向滚动条，
- * 删除确认使用 COUI Dialog（宽屏居中、手机底部）。
+ * 业务编排不变：两页签各自加载本地历史，搜索按 ID/标题/作者本地过滤，
+ * 单条删除与清空各走一次 COUI 确认弹窗。表现层统一交给 [CouiSecondaryScaffold]：
+ * 顶栏、护栏与底栏留白都由骨架代付，搜索框与页签作为滚动容器的首项，
+ * 正文因此能滚进顶栏的模糊覆盖区。
  */
 @Composable
 internal fun CouiHistoryScreen(
@@ -161,26 +163,10 @@ internal fun CouiHistoryScreen(
             CouiFilterChip(key = "novel", label = strings.historyTypeNovel),
         )
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.settingHistory,
-            onBack = onBack,
-        ) {
-            CouiTextAction(
-                text = strings.actionClear,
-                enabled = hasHistory,
-                color = if (hasHistory) CouiTheme.colorScheme.accent else null,
-                onClick = { showClearConfirm = true },
-            )
-        }
-
-        // 搜索框与页签收敛到平板可读宽度，与 MIUIX 版一致。
-        CouiReadableColumn(modifier = Modifier.fillMaxWidth()) {
+    // 搜索框与页签作为列表首项：滚出视野后没有查询词时用户仍可下拉找回，
+    // 空态下也能就地清除查询，不会把页面锁死。
+    val header: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth()) {
             CouiHistorySearchField(
                 query = query,
                 onQueryChange = { query = it },
@@ -193,27 +179,42 @@ internal fun CouiHistoryScreen(
                 onSelect = { key -> selectedType = if (key == "illust") 0 else 1 },
             )
         }
+    }
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (selectedType == 0) {
-                CouiHistoryIllustTab(
-                    result = historyResult.value,
-                    items = filteredItems,
-                    emptyMessage = emptyMessage,
-                    onRetry = { refreshToken++ },
-                    onIllustClick = onIllustClick,
-                    onDelete = { itemToDelete = it.id },
-                )
-            } else {
-                CouiHistoryNovelTab(
-                    result = novelHistoryResult.value,
-                    items = filteredNovelItems,
-                    emptyMessage = emptyMessage,
-                    onRetry = { refreshToken++ },
-                    onNovelClick = onNovelClick,
-                    onDelete = { itemToDelete = it.id },
-                )
-            }
+    CouiSecondaryScaffold(
+        title = strings.settingHistory,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = { showClearConfirm = true },
+                icon = MiuixIcons.Delete,
+                contentDescription = strings.actionClear,
+                enabled = hasHistory,
+            )
+        },
+    ) { padding ->
+        if (selectedType == 0) {
+            CouiHistoryIllustTab(
+                padding = padding,
+                result = historyResult.value,
+                items = filteredItems,
+                emptyMessage = emptyMessage,
+                header = header,
+                onRetry = { refreshToken++ },
+                onIllustClick = onIllustClick,
+                onDelete = { itemToDelete = it.id },
+            )
+        } else {
+            CouiHistoryNovelTab(
+                padding = padding,
+                result = novelHistoryResult.value,
+                items = filteredNovelItems,
+                emptyMessage = emptyMessage,
+                header = header,
+                onRetry = { refreshToken++ },
+                onNovelClick = onNovelClick,
+                onDelete = { itemToDelete = it.id },
+            )
         }
     }
 
@@ -363,104 +364,91 @@ private fun CouiHistorySearchField(
     )
 }
 
+/** 三态占位的高度：列表首项之后留出可见块，不把占位压成一条线。 */
+private val StatePlaceholderMinHeight = 320.dp
+
+/** 插画历史页签：瀑布流列表，搜索框与页签是整行首项。 */
 @Composable
 private fun CouiHistoryIllustTab(
+    padding: PaddingValues,
     result: Result<List<HistoryItem>>?,
     items: List<HistoryItem>,
     emptyMessage: String,
+    header: @Composable () -> Unit,
     onRetry: () -> Unit,
-    onIllustClick: (Long) -> Unit,
-    onDelete: (HistoryItem) -> Unit,
-) {
-    when {
-        result == null -> CouiHistoryReadableState(LocalStrings.current.loading)
-        !result.isSuccess -> CouiHistoryReadableState(
-            message = couiErrorMessage(result.exceptionOrNull()),
-            actionText = LocalStrings.current.retry,
-            onAction = onRetry,
-        )
-        items.isEmpty() -> CouiHistoryReadableState(emptyMessage)
-        else -> CouiHistoryIllustGrid(
-            items = items,
-            onIllustClick = onIllustClick,
-            onDelete = onDelete,
-        )
-    }
-}
-
-@Composable
-private fun CouiHistoryNovelTab(
-    result: Result<List<NovelHistoryItem>>?,
-    items: List<NovelHistoryItem>,
-    emptyMessage: String,
-    onRetry: () -> Unit,
-    onNovelClick: (Long) -> Unit,
-    onDelete: (NovelHistoryItem) -> Unit,
-) {
-    when {
-        result == null -> CouiHistoryReadableState(LocalStrings.current.loading)
-        !result.isSuccess -> CouiHistoryReadableState(
-            message = couiErrorMessage(result.exceptionOrNull()),
-            actionText = LocalStrings.current.retry,
-            onAction = onRetry,
-        )
-        items.isEmpty() -> CouiHistoryReadableState(emptyMessage)
-        else -> CouiHistoryNovelList(
-            items = items,
-            onNovelClick = onNovelClick,
-            onDelete = onDelete,
-        )
-    }
-}
-
-/** 加载/错误/空态：统一收敛到平板可读宽度。 */
-@Composable
-private fun CouiHistoryReadableState(
-    message: String,
-    actionText: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-        CouiStatePlaceholder(
-            message = message,
-            actionText = actionText,
-            onAction = onAction,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
-}
-
-/** 插画历史瀑布流：本地列表一次成型，无分页。 */
-@Composable
-private fun CouiHistoryIllustGrid(
-    items: List<HistoryItem>,
     onIllustClick: (Long) -> Unit,
     onDelete: (HistoryItem) -> Unit,
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(padding),
         contentPadding = PaddingValues(
             start = 8.dp,
-            top = 8.dp,
+            top = padding.calculateTopPadding() + 8.dp,
             end = 8.dp,
-            bottom = LocalBottomBarContentPadding.current,
+            bottom = padding.calculateBottomPadding(),
         ),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalItemSpacing = 10.dp,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
-        items(
-            items = items,
-            // 使用自增主键作为唯一 key；同一作品可多次浏览，illustId 会重复。
-            key = { it.id },
-            contentType = { "coui_history_illust" },
-        ) { item ->
-            CouiHistoryIllustCard(
-                item = item,
-                onClick = { onIllustClick(item.illustId) },
-                onLongClick = { onDelete(item) },
-            )
+        item(key = "coui_history_header", contentType = "header", span = StaggeredGridItemSpan.FullLine) {
+            header()
+        }
+        when {
+            result == null -> item(
+                key = "coui_history_state",
+                contentType = "state",
+                span = StaggeredGridItemSpan.FullLine,
+            ) {
+                CouiLoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            !result.isSuccess -> item(
+                key = "coui_history_state",
+                contentType = "state",
+                span = StaggeredGridItemSpan.FullLine,
+            ) {
+                CouiErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = onRetry,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            items.isEmpty() -> item(
+                key = "coui_history_state",
+                contentType = "state",
+                span = StaggeredGridItemSpan.FullLine,
+            ) {
+                CouiPlaceholder(
+                    message = emptyMessage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            else -> items(
+                items = items,
+                // 使用自增主键作为唯一 key；同一作品可多次浏览，illustId 会重复。
+                key = { it.id },
+                contentType = { "coui_history_illust" },
+            ) { item ->
+                CouiHistoryIllustCard(
+                    item = item,
+                    onClick = { onIllustClick(item.illustId) },
+                    onLongClick = { onDelete(item) },
+                )
+            }
         }
     }
 }
@@ -537,38 +525,77 @@ private fun CouiHistoryIllustCard(
     }
 }
 
-/** 小说历史列表：卡片行 + 右侧删除按钮。 */
+/** 小说历史页签：单列卡片列表，搜索框与页签是首项。 */
 @Composable
-private fun CouiHistoryNovelList(
+private fun CouiHistoryNovelTab(
+    padding: PaddingValues,
+    result: Result<List<NovelHistoryItem>>?,
     items: List<NovelHistoryItem>,
+    emptyMessage: String,
+    header: @Composable () -> Unit,
+    onRetry: () -> Unit,
     onNovelClick: (Long) -> Unit,
     onDelete: (NovelHistoryItem) -> Unit,
 ) {
     val listState = rememberLazyListState()
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(padding),
         contentPadding = PaddingValues(
             start = 12.dp,
-            top = 8.dp,
+            top = padding.calculateTopPadding() + 8.dp,
             end = 12.dp,
-            bottom = LocalBottomBarContentPadding.current,
+            bottom = padding.calculateBottomPadding(),
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
-        // id 为导入时的 null 会按旧语义折叠为 0L 单行，故 ?: 0L 不会产生重复 key。
-        items(
-            count = items.size,
-            key = { items[it].id ?: 0L },
-            contentType = { "coui_history_novel" },
-        ) { index ->
-            val item = items[index]
-            CouiHistoryNovelRow(
-                item = item,
-                onClick = { onNovelClick(item.novelId) },
-                onDelete = { onDelete(item) },
-            )
+        item(key = "coui_history_header", contentType = "header") {
+            header()
+        }
+        when {
+            result == null -> item(key = "coui_history_state", contentType = "state") {
+                CouiLoadingPlaceholder(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            !result.isSuccess -> item(key = "coui_history_state", contentType = "state") {
+                CouiErrorPlaceholder(
+                    error = result.exceptionOrNull(),
+                    onRetry = onRetry,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            items.isEmpty() -> item(key = "coui_history_state", contentType = "state") {
+                CouiPlaceholder(
+                    message = emptyMessage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StatePlaceholderMinHeight),
+                )
+            }
+
+            else -> items(
+                count = items.size,
+                // id 为导入时的 null 会按旧语义折叠为 0L 单行，故 ?: 0L 不会产生重复 key。
+                key = { items[it].id ?: 0L },
+                contentType = { "coui_history_novel" },
+            ) { index ->
+                val item = items[index]
+                CouiHistoryNovelRow(
+                    item = item,
+                    onClick = { onNovelClick(item.novelId) },
+                    onDelete = { onDelete(item) },
+                )
+            }
         }
     }
 }

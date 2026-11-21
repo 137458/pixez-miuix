@@ -3,17 +3,14 @@ package com.perol.pixez.shared.ui.coui.page
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -29,11 +26,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.layout.Item
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -41,15 +38,16 @@ import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSelectRow
+import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
+import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.parseHexColor
@@ -57,10 +55,10 @@ import com.perol.pixez.shared.ui.skin.isCouiSkinSupported
 import com.perol.pixez.shared.ui.skin.UiSkin
 
 /**
- * COUI 主题设置页：固定顶栏 + 主题/皮肤/显示/个性化四组卡片。
+ * COUI 主题设置页：设置骨架 + 官方 Group 卡片（主题模式 / 皮肤 / 显示 / 个性化）。
  *
  * 主题模式、界面皮肤、AMOLED、动态取色、种子色、调色板风格与 2025 规范开关全部保留；
- * 差异只有皮肤层：单选/开关/下拉改用 COUI 行组件，种子色改用 COUI `Dialog`
+ * 差异只有表现层：分组与行走 core 原语（Group + Item），种子色改用 COUI `Dialog`
  * 承载预设色板与 HEX 输入（COUI 无连续拾色器，等价交互为预设色 + 自定义 HEX）。
  */
 @Composable
@@ -92,142 +90,133 @@ internal fun CouiThemeSettingScreen(
         "Content",
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingTheme,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingTheme,
-            onBack = onBack,
-        )
+        item(key = "coui_theme_mode", contentType = "section") {
+            CouiSettingSection(title = strings.settingTheme) {
+                CouiRadioOptionRow(
+                    title = strings.themeModeSystem,
+                    selected = themeMode == 0,
+                    onClick = {
+                        themeMode = 0
+                        settingsRepository.themeMode = 0
+                    },
+                )
+                CouiRowDivider()
+                CouiRadioOptionRow(
+                    title = strings.themeModeLight,
+                    selected = themeMode == 1,
+                    onClick = {
+                        themeMode = 1
+                        settingsRepository.themeMode = 1
+                    },
+                )
+                CouiRowDivider()
+                CouiRadioOptionRow(
+                    title = strings.themeModeDark,
+                    selected = themeMode == 2,
+                    onClick = {
+                        themeMode = 2
+                        settingsRepository.themeMode = 2
+                    },
+                )
+            }
+        }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_theme_mode", contentType = "section") {
-                    CouiSettingSection(title = strings.settingTheme) {
-                        CouiRadioRow(
-                            title = strings.themeModeSystem,
-                            selected = themeMode == 0,
-                            onClick = {
-                                themeMode = 0
-                                settingsRepository.themeMode = 0
-                            },
-                        )
-                        CouiRadioRow(
-                            title = strings.themeModeLight,
-                            selected = themeMode == 1,
-                            onClick = {
-                                themeMode = 1
-                                settingsRepository.themeMode = 1
-                            },
-                        )
-                        CouiRadioRow(
-                            title = strings.themeModeDark,
-                            selected = themeMode == 2,
-                            onClick = {
-                                themeMode = 2
-                                settingsRepository.themeMode = 2
-                            },
-                        )
-                    }
+        if (isCouiSkinSupported) {
+            item(key = "coui_theme_skin", contentType = "section") {
+                // 皮肤说明是官方 Group 的 footer 槽位：放在卡片下方，缩进与分组标题一致。
+                CouiSettingsGroup(
+                    title = strings.settingUiSkin,
+                    footer = strings.settingUiSkinSummary,
+                ) {
+                    CouiRadioOptionRow(
+                        title = strings.skinHyperOs,
+                        selected = uiSkinIndex == UiSkin.HYPEROS.storageIndex,
+                        onClick = {
+                            uiSkinIndex = UiSkin.HYPEROS.storageIndex
+                            settingsRepository.uiSkinIndex = UiSkin.HYPEROS.storageIndex
+                        },
+                    )
+                    CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = strings.skinColorOs,
+                        selected = uiSkinIndex == UiSkin.COLOROS.storageIndex,
+                        onClick = {
+                            uiSkinIndex = UiSkin.COLOROS.storageIndex
+                            settingsRepository.uiSkinIndex = UiSkin.COLOROS.storageIndex
+                        },
+                    )
                 }
+            }
+        }
 
-                if (isCouiSkinSupported) {
-                    item(key = "coui_theme_skin", contentType = "section") {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            CouiSettingSection(title = strings.settingUiSkin) {
-                                CouiRadioRow(
-                                    title = strings.skinHyperOs,
-                                    selected = uiSkinIndex == UiSkin.HYPEROS.storageIndex,
-                                    onClick = {
-                                        uiSkinIndex = UiSkin.HYPEROS.storageIndex
-                                        settingsRepository.uiSkinIndex = UiSkin.HYPEROS.storageIndex
-                                    },
-                                )
-                                CouiRadioRow(
-                                    title = strings.skinColorOs,
-                                    selected = uiSkinIndex == UiSkin.COLOROS.storageIndex,
-                                    onClick = {
-                                        uiSkinIndex = UiSkin.COLOROS.storageIndex
-                                        settingsRepository.uiSkinIndex = UiSkin.COLOROS.storageIndex
-                                    },
-                                )
-                            }
-                            Text(
-                                text = strings.settingUiSkinSummary,
-                                kind = CouiTextKind.ItemSummary,
-                                color = CouiTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 22.dp),
-                            )
-                        }
-                    }
-                }
+        item(key = "coui_theme_layout", contentType = "section") {
+            CouiSettingSection(title = strings.settingSectionDisplayLayout) {
+                CouiToggleRow(
+                    title = strings.themeAmoled,
+                    summary = strings.themeAmoledSummary,
+                    checked = isAmoled,
+                    onCheckedChange = {
+                        isAmoled = it
+                        settingsRepository.isAmoled = it
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.themeDynamicColor,
+                    summary = if (useDynamicColor) {
+                        strings.themeDynamicColorSummaryOn
+                    } else {
+                        strings.themeDynamicColorSummaryOff
+                    },
+                    checked = useDynamicColor,
+                    onCheckedChange = {
+                        useDynamicColor = it
+                        settingsRepository.useDynamicColor = it
+                    },
+                )
+            }
+        }
 
-                item(key = "coui_theme_layout", contentType = "section") {
-                    CouiSettingSection(title = strings.settingSectionDisplayLayout) {
-                        CouiSwitchRow(
-                            title = strings.themeAmoled,
-                            summary = strings.themeAmoledSummary,
-                            checked = isAmoled,
-                            onCheckedChange = {
-                                isAmoled = it
-                                settingsRepository.isAmoled = it
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.themeDynamicColor,
-                            summary = if (useDynamicColor) {
-                                strings.themeDynamicColorSummaryOn
-                            } else {
-                                strings.themeDynamicColorSummaryOff
-                            },
-                            checked = useDynamicColor,
-                            onCheckedChange = {
-                                useDynamicColor = it
-                                settingsRepository.useDynamicColor = it
-                            },
-                        )
-                    }
+        if (!useDynamicColor) {
+            item(key = "coui_theme_seed", contentType = "section") {
+                CouiSettingSection(title = strings.dialogPickSeedColor) {
+                    CouiSeedColorRow(
+                        color = seedColor,
+                        onClick = { showColorPicker = true },
+                    )
                 }
+            }
+        }
 
-                if (!useDynamicColor) {
-                    item(key = "coui_theme_seed", contentType = "section") {
-                        CouiSettingSection(title = strings.dialogPickSeedColor) {
-                            CouiSeedColorRow(
-                                color = seedColor,
-                                onClick = { showColorPicker = true },
-                            )
-                        }
-                    }
-                }
-
-                item(key = "coui_theme_personalization", contentType = "section") {
-                    CouiSettingSection(title = strings.themePersonalization) {
-                        CouiSelectRow(
-                            title = strings.dialogPaletteStyle,
-                            items = paletteStyleOptions,
-                            selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
-                            onSelect = {
-                                paletteStyle = it
-                                settingsRepository.miuixPaletteStyle = it
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.themeSpec2025,
-                            summary = if (useSpec2025) {
-                                strings.themeSpec2025SummaryOn
-                            } else {
-                                strings.themeSpec2025SummaryOff
-                            },
-                            checked = useSpec2025,
-                            onCheckedChange = {
-                                useSpec2025 = it
-                                settingsRepository.miuixUseSpec2025 = it
-                            },
-                        )
-                    }
-                }
+        item(key = "coui_theme_personalization", contentType = "section") {
+            CouiSettingSection(title = strings.themePersonalization) {
+                CouiMenuSelectRow(
+                    title = strings.dialogPaletteStyle,
+                    items = paletteStyleOptions,
+                    selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
+                    onSelect = {
+                        paletteStyle = it
+                        settingsRepository.miuixPaletteStyle = it
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.themeSpec2025,
+                    summary = if (useSpec2025) {
+                        strings.themeSpec2025SummaryOn
+                    } else {
+                        strings.themeSpec2025SummaryOff
+                    },
+                    checked = useSpec2025,
+                    onCheckedChange = {
+                        useSpec2025 = it
+                        settingsRepository.miuixUseSpec2025 = it
+                    },
+                )
             }
         }
     }
@@ -245,7 +234,7 @@ internal fun CouiThemeSettingScreen(
     }
 }
 
-/** 种子色行：标题 + 说明 + 右侧色块。 */
+/** 种子色行：官方 Item 版式，尾部为当前色块。 */
 @Composable
 private fun CouiSeedColorRow(
     color: Int,
@@ -253,48 +242,24 @@ private fun CouiSeedColorRow(
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
-    val pressInteraction = remember { MutableInteractionSource() }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(pressInteraction)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                onClick = onClick,
+    Item(
+        onClick = onClick,
+        title = { CouiItemTitle(text = strings.dialogPickSeedColor) },
+        summary = { CouiItemSummary(text = strings.dialogPickSeedColorSummary) },
+        trailing = {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(color))
+                    .border(
+                        width = 1.dp,
+                        color = scheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(6.dp),
+                    ),
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = strings.dialogPickSeedColor,
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = strings.dialogPickSeedColorSummary,
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(color))
-                .border(
-                    width = 1.dp,
-                    color = scheme.onSurfaceVariant,
-                    shape = RoundedCornerShape(6.dp),
-                ),
-        )
-    }
+        },
+    )
 }
 
 /**

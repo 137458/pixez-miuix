@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -23,27 +24,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
+import com.itos.coui.theme.LocalCouiContentColor
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
-import com.perol.pixez.shared.ui.coui.component.CouiPageScaffold
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingMode
@@ -54,6 +56,9 @@ import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
  * COUI 排行榜页：复用 [rememberRankingFeedState] 的分页/日期/恢复逻辑，仅替换视觉壳。
+ *
+ * 骨架用一级页 [CouiMainScaffold]；榜单类型 chip 栏作为正文头部（瀑布流 header / 占位正文首段），
+ * 可随内容滚进折叠顶栏覆盖区。日期入口在顶栏，选中日期后以文本形态展示。
  */
 @Composable
 internal fun CouiRankingScreen(
@@ -61,7 +66,6 @@ internal fun CouiRankingScreen(
     feedRestore: RankingFeedRestoreCache,
 ) {
     val strings = LocalStrings.current
-    val bottomBarPadding = LocalBottomBarContentPadding.current
     val feed = rememberRankingFeedState(feedRestore)
     val rankingChips = remember(strings) {
         RankingMode.entries.map { CouiFilterChip(key = it.code, label = it.label(strings)) }
@@ -76,7 +80,18 @@ internal fun CouiRankingScreen(
         )
     }
 
-    CouiPageScaffold(
+    // 头部筛选条：chip 栏随列表滚动，进入顶栏覆盖区后被渐隐遮罩盖住。
+    val headerContent: @Composable () -> Unit = {
+        CouiFilterChipBar(
+            chips = rankingChips,
+            selectedKey = feed.selectedMode.code,
+            onSelect = { key ->
+                RankingMode.entries.firstOrNull { it.code == key }?.let(feed.onModeSelected)
+            },
+        )
+    }
+
+    CouiMainScaffold(
         title = strings.tabRanking,
         actions = {
             if (feed.dateInput.isNotBlank()) {
@@ -85,64 +100,91 @@ internal fun CouiRankingScreen(
                     onClick = { showDateDialog = true },
                 )
             } else {
-                CouiActionButton(
+                CouiTopBarIconButton(
+                    onClick = { showDateDialog = true },
                     icon = MiuixIcons.Recent,
                     contentDescription = strings.rankingDateLabel,
-                    onClick = { showDateDialog = true },
                 )
             }
-            CouiActionButton(
+            CouiTopBarIconButton(
+                onClick = feed.refresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = feed.refresh,
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CouiTheme.colorScheme.background)
-                .padding(padding),
-        ) {
-            CouiFilterChipBar(
-                chips = rankingChips,
-                selectedKey = feed.selectedMode.code,
-                onSelect = { key ->
-                    RankingMode.entries.firstOrNull { it.code == key }?.let(feed.onModeSelected)
-                },
+        val currentIllusts = feed.listState.filteredIllusts
+        when {
+            currentIllusts == null && feed.listState.initialError == null -> CouiRankingStateBody(
+                message = strings.loading,
+                padding = padding,
+                header = headerContent,
             )
-            Box(modifier = Modifier.fillMaxSize()) {
-                val currentIllusts = feed.listState.filteredIllusts
-                when {
-                    currentIllusts == null && feed.listState.initialError == null -> CouiStatePlaceholder(
-                        message = strings.loading,
-                    )
-                    currentIllusts == null && feed.listState.initialError != null -> CouiStatePlaceholder(
-                        message = couiErrorMessage(feed.listState.initialError),
-                        actionText = strings.retry,
-                        onAction = feed.refresh,
-                    )
-                    currentIllusts != null && currentIllusts.isEmpty() -> CouiStatePlaceholder(
-                        message = strings.rankingEmpty,
-                    )
-                    currentIllusts != null -> CouiIllustGrid(
-                        illusts = currentIllusts,
-                        state = feed.gridState,
-                        onIllustClick = onIllustClick,
-                        contentPadding = PaddingValues(
-                            start = 10.dp,
-                            top = 4.dp,
-                            end = 10.dp,
-                            bottom = bottomBarPadding + 8.dp,
-                        ),
-                        hasMore = feed.listState.nextUrl != null,
-                        isLoadingMore = feed.listState.isLoadingMore,
-                        loadMoreError = feed.listState.loadMoreError,
-                        isRefreshing = feed.listState.isRefreshing,
-                        onLoadMore = feed.loadMore,
-                    )
-                }
-            }
+
+            currentIllusts == null && feed.listState.initialError != null -> CouiRankingStateBody(
+                error = feed.listState.initialError,
+                onRetry = feed.refresh,
+                padding = padding,
+                header = headerContent,
+            )
+
+            currentIllusts != null && currentIllusts.isEmpty() -> CouiRankingStateBody(
+                message = strings.rankingEmpty,
+                padding = padding,
+                header = headerContent,
+            )
+
+            currentIllusts != null -> CouiIllustGrid(
+                illusts = currentIllusts,
+                state = feed.gridState,
+                onIllustClick = onIllustClick,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+                contentPadding = PaddingValues(
+                    start = 10.dp,
+                    top = padding.calculateTopPadding() + 4.dp,
+                    end = 10.dp,
+                    bottom = padding.calculateBottomPadding() + 8.dp,
+                ),
+                header = headerContent,
+                hasMore = feed.listState.nextUrl != null,
+                isLoadingMore = feed.listState.isLoadingMore,
+                loadMoreError = feed.listState.loadMoreError,
+                isRefreshing = feed.listState.isRefreshing,
+                onLoadMore = feed.loadMore,
+            )
+        }
+    }
+}
+
+/** 头部 chip 栏 + 居中占位：加载 / 错误 / 空态共用同一滚动起点。 */
+@Composable
+private fun CouiRankingStateBody(
+    padding: PaddingValues,
+    header: @Composable () -> Unit,
+    message: String? = null,
+    error: Throwable? = null,
+    onRetry: () -> Unit = {},
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .consumeWindowInsets(padding),
+    ) {
+        header()
+        if (error != null) {
+            CouiErrorPlaceholder(
+                error = error,
+                onRetry = onRetry,
+                modifier = Modifier.weight(1f),
+            )
+        } else if (message != null) {
+            CouiPlaceholder(
+                message = message,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
@@ -154,10 +196,12 @@ private fun CouiTopBarTextAction(
     onClick: () -> Unit,
 ) {
     val pressInteraction = remember { MutableInteractionSource() }
+    // 顶栏内容色由库按滚动/API 能力注入，缺失时退回强调色。
+    val contentColor = LocalCouiContentColor.current.takeOrElse { CouiTheme.colorScheme.accent }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .couiPressFeedback(pressInteraction, list = false)
+            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, list = false)
             .clickable(
                 interactionSource = pressInteraction,
                 indication = null,
@@ -169,7 +213,7 @@ private fun CouiTopBarTextAction(
         Text(
             text = text,
             kind = CouiTextKind.ItemSummary,
-            color = CouiTheme.colorScheme.accent,
+            color = contentColor,
             maxLines = 1,
         )
     }
@@ -247,7 +291,7 @@ private fun CouiDialogTextButton(
             .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(50))
             .background(scheme.container)
-            .couiPressFeedback(pressInteraction, enabled = enabled)
+            .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = pressInteraction, enabled = enabled, list = false)
             .clickable(
                 interactionSource = pressInteraction,
                 indication = null,

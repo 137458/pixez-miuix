@@ -1,16 +1,10 @@
 package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,15 +15,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
+import com.itos.coui.layout.CouiPageDefaults
+import com.itos.coui.layout.Item
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -39,15 +33,18 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
+import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
+import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import kotlinx.coroutines.launch
@@ -55,12 +52,19 @@ import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 
+/** 账号行头像尺寸：官方 Item 的图标槽按此尺寸让出入口。 */
+private val CouiAccountAvatarSize = 40.dp
+
+/** 带图标的分隔线缩进：行内边距 + 头像 + 图标间距，与官方 Item 的图标槽对齐。 */
+private val CouiAccountDividerIndent =
+    CouiPageDefaults.rowPadding + CouiAccountAvatarSize + CouiPageDefaults.iconSpacing
+
 /**
- * COUI 账号管理页：固定顶栏 + 账号卡片。
+ * COUI 账号管理页：设置页骨架 + 账号分组。
  *
  * 账号列表、当前活跃标识、切换账号、移除账号确认与添加账号全部保留；
- * 差异只有皮肤层：切换/移除改用 COUI 文本动作与图标按钮，
- * 移除确认改用 COUI `Dialog`。
+ * 差异只有表现层：骨架收敛到 [CouiSettingsScaffold]，行改用官方 Group/Item 版式，
+ * 移除确认沿用 COUI `Dialog`。
  */
 @Composable
 internal fun CouiAccountManageScreen(
@@ -95,76 +99,49 @@ internal fun CouiAccountManageScreen(
         refreshAccounts()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.accountManageTitle,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSettingsScaffold(
+        title = strings.accountManageTitle,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = onAddAccount,
                 icon = MiuixIcons.Add,
                 contentDescription = strings.accountAdd,
-                onClick = onAddAccount,
             )
+        },
+    ) {
+        if (accounts.isEmpty()) {
+            item(key = "coui_account_empty") {
+                CouiPlaceholder(
+                    message = strings.accountEmpty,
+                    actionText = strings.accountAdd,
+                    onAction = onAddAccount,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                )
+            }
+        } else {
+            item(key = "coui_account_list", contentType = "section") {
+                CouiSettingsGroup {
+                    accounts.forEachIndexed { index, account ->
+                        if (index > 0) {
+                            CouiRowDivider(startIndent = CouiAccountDividerIndent)
+                        }
+                        CouiAccountRow(
+                            account = account,
+                            isActive = account.userId == currentAccount?.userId,
+                            onSwitch = { performSwitchAccount(account.userId) },
+                            onDelete = { accountToDelete = account },
+                        )
+                    }
+                }
+            }
         }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_account_list", contentType = "section") {
-                    CouiCard(modifier = Modifier.padding(top = 4.dp)) {
-                        if (accounts.isEmpty()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Text(
-                                    text = strings.accountEmpty,
-                                    kind = CouiTextKind.ItemSummary,
-                                    color = CouiTheme.colorScheme.onSurfaceVariant,
-                                )
-                                CouiTextAction(
-                                    text = strings.accountAdd,
-                                    color = CouiTheme.colorScheme.accent,
-                                    onClick = onAddAccount,
-                                )
-                            }
-                        } else {
-                            accounts.forEach { account ->
-                                val isActive = account.userId == currentAccount?.userId
-                                CouiAccountRow(
-                                    account = account,
-                                    isActive = isActive,
-                                    onSwitch = { performSwitchAccount(account.userId) },
-                                    onDelete = { accountToDelete = account },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item(key = "coui_account_add", contentType = "action") {
-                    CouiCard {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .clickable(onClick = onAddAccount),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "+ ${strings.accountAdd}",
-                                kind = CouiTextKind.ItemTitle,
-                                color = CouiTheme.colorScheme.accent,
-                            )
-                        }
-                    }
-                }
+        item(key = "coui_account_add", contentType = "action") {
+            CouiSettingsGroup {
+                CouiValueRow(title = strings.accountAdd, onClick = onAddAccount)
             }
         }
     }
@@ -197,7 +174,7 @@ internal fun CouiAccountManageScreen(
     }
 }
 
-/** 账号行：头像 + 昵称/账号，尾部活跃标识或切换动作，以及移除按钮。 */
+/** 账号行：头像 + 昵称/账号，尾部活跃标识（点击整行切换）与移除按钮。 */
 @Composable
 private fun CouiAccountRow(
     account: AccountPersist,
@@ -207,70 +184,49 @@ private fun CouiAccountRow(
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
-    val pressInteraction = remember { MutableInteractionSource() }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(pressInteraction, enabled = !isActive)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                enabled = !isActive,
-                onClick = onSwitch,
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        PixivAsyncImage(
-            model = account.userImage,
-            contentDescription = account.name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(46.dp)
-                .clip(CircleShape),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = account.name,
-                kind = CouiTextKind.ItemTitle,
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "@${account.account} (${account.userId})",
-                kind = CouiTextKind.ItemSummary,
-                color = scheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        if (isActive) {
-            Box(
+    Item(
+        icon = {
+            PixivAsyncImage(
+                model = account.userImage,
+                contentDescription = account.name,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(scheme.accent.copy(alpha = 0.15f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = strings.accountCurrentActive,
-                    kind = CouiTextKind.ItemSummary,
+                    .size(CouiAccountAvatarSize)
+                    .clip(CircleShape),
+            )
+        },
+        iconSize = CouiAccountAvatarSize,
+        title = { CouiItemTitle(text = account.name) },
+        summary = { CouiItemSummary(text = "@${account.account} (${account.userId})") },
+        // 当前账号不再切回自己，因此不给点击语义。
+        onClick = if (isActive) null else onSwitch,
+        trailing = {
+            // 当前账号只给状态标识；其它账号给显式的「切换」动作，避免只能靠整行点击发现。
+            if (isActive) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(scheme.accent.copy(alpha = 0.15f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = strings.accountCurrentActive,
+                        kind = CouiTextKind.ItemSummary,
+                        color = scheme.accent,
+                    )
+                }
+            } else {
+                CouiTextAction(
+                    text = strings.accountSwitch,
+                    onClick = onSwitch,
                     color = scheme.accent,
                 )
             }
-        } else {
-            CouiTextAction(
-                text = strings.accountSwitch,
-                color = scheme.accent,
-                onClick = onSwitch,
+            CouiActionButton(
+                icon = MiuixIcons.Delete,
+                contentDescription = strings.accountDelete,
+                onClick = onDelete,
             )
-        }
-        CouiActionButton(
-            icon = MiuixIcons.Delete,
-            contentDescription = strings.accountDelete,
-            onClick = onDelete,
-        )
-    }
+        },
+    )
 }

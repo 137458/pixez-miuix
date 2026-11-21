@@ -1,28 +1,22 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.network.PixivHosts
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiRadioRow
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
-import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
- * COUI 桌面小组件设置页：固定顶栏 + 两个单选分组卡片。
+ * COUI 桌面小组件设置页：设置骨架 + 内容来源与独立图源两个单选分组。
  *
  * 内容来源与独立图源的取值、以及 `rank` 归并到「日榜」的选中口径保持不变；
- * 选中态由共用 [CouiRadioRow] 承担：整行 selectable 提供点击与无障碍语义，指示器用 COUI 库 RadioButton。
+ * 选中态由官方 RadioButton 指示器承担，整行 selectable 提供点击与无障碍语义。
  */
 @Composable
 internal fun CouiWidgetRecommendScreen(
@@ -53,51 +47,43 @@ internal fun CouiWidgetRecommendScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingWidgetRecommend,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingWidgetRecommend,
-            onBack = onBack,
-        )
-
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                item(key = "coui_widget_feed", contentType = "section") {
-                    CouiSettingSection(title = strings.settingWidgetFeedSection) {
-                        feedOptions.forEach { (type, label) ->
-                            val isSelected = when (type) {
-                                // 旧版存量值 rank 归并到日榜，与 MIUIX 版选中口径一致。
-                                "day" -> selectedType == "day" || selectedType == "rank"
-                                else -> selectedType == type
-                            }
-                            CouiRadioRow(
-                                title = label,
-                                selected = isSelected,
-                                onClick = {
-                                    selectedType = type
-                                    settingsRepository.widgetIllustType = type
-                                },
-                            )
-                        }
+        item(key = "coui_widget_feed", contentType = "section") {
+            CouiSettingSection(title = strings.settingWidgetFeedSection) {
+                feedOptions.forEachIndexed { index, (type, label) ->
+                    if (index > 0) CouiRowDivider()
+                    val isSelected = when (type) {
+                        // 旧版存量值 rank 归并到日榜，与 MIUIX 版选中口径一致。
+                        "day" -> selectedType == "day" || selectedType == "rank"
+                        else -> selectedType == type
                     }
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = isSelected,
+                        onClick = {
+                            selectedType = type
+                            settingsRepository.widgetIllustType = type
+                        },
+                    )
                 }
+            }
+        }
 
-                item(key = "coui_widget_picture_source", contentType = "section") {
-                    CouiSettingSection(title = strings.settingWidgetPictureSourceSection) {
-                        pictureSourceOptions.forEach { (source, label) ->
-                            CouiRadioRow(
-                                title = label,
-                                selected = selectedPictureSource == source,
-                                onClick = {
-                                    selectedPictureSource = source
-                                    settingsRepository.widgetPictureSource = source
-                                },
-                            )
-                        }
-                    }
+        item(key = "coui_widget_picture_source", contentType = "section") {
+            CouiSettingSection(title = strings.settingWidgetPictureSourceSection) {
+                pictureSourceOptions.forEachIndexed { index, (source, label) ->
+                    if (index > 0) CouiRowDivider()
+                    CouiRadioOptionRow(
+                        title = label,
+                        selected = selectedPictureSource == source,
+                        onClick = {
+                            selectedPictureSource = source
+                            settingsRepository.widgetPictureSource = source
+                        },
+                    )
                 }
             }
         }

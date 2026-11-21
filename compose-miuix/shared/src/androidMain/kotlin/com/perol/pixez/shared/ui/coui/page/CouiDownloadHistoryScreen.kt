@@ -5,14 +5,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,9 +25,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogAction
@@ -39,31 +40,30 @@ import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.DownloadTaskHistory
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import com.perol.pixez.shared.ui.LocalDownloadHistoryRepository
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Delete
 
 /**
- * COUI 下载历史页：固定顶栏 + 已下载任务卡片列表。
+ * COUI 下载历史页：折叠顶栏 + 已下载任务卡片列表。
  *
- * 数据加载、单条删除与清空全部与 MIUIX 版一致；差异只有皮肤层：
- * 清空确认改用 COUI `Dialog`，列表不再带 MIUIX 的纵向滚动条，
- * 三态占位与列表收敛到平板可读宽度。
+ * 数据加载、单条删除与清空全部保持原语义；表现层改由 [CouiSecondaryScaffold] 收敛
+ * 顶栏、护栏与底栏留白，三态占位用 core 的统一占位件。护栏交给列表的 contentPadding，
+ * 正文因此可以滚进顶栏覆盖区。
  */
 @Composable
 internal fun CouiDownloadHistoryScreen(
@@ -88,80 +88,62 @@ internal fun CouiDownloadHistoryScreen(
         value = suspendRunCatchingNonCancel { repository.getAllTasks() }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.settingDownloadHistory,
-            onBack = onBack,
-        ) {
-            CouiTextAction(
-                text = strings.actionClear,
-                enabled = state.value?.getOrNull()?.isNotEmpty() == true,
-                color = if (state.value?.getOrNull()?.isNotEmpty() == true) {
-                    CouiTheme.colorScheme.accent
-                } else {
-                    null
-                },
+    CouiSecondaryScaffold(
+        title = strings.settingDownloadHistory,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
                 onClick = { showClearConfirm = true },
+                icon = MiuixIcons.Delete,
+                contentDescription = strings.actionClear,
+                enabled = state.value?.getOrNull()?.isNotEmpty() == true,
             )
-        }
+        },
+    ) { padding ->
+        val result = state.value
+        val tasks = result?.getOrNull().orEmpty()
+        when {
+            result == null -> CouiLoadingPlaceholder(modifier = Modifier.padding(padding))
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            when (val result = state.value) {
-                null -> CouiStatePlaceholder(
-                    message = strings.loading,
-                    modifier = Modifier.fillMaxSize(),
-                )
+            !result.isSuccess -> CouiErrorPlaceholder(
+                error = result.exceptionOrNull(),
+                onRetry = { retryCount++ },
+                modifier = Modifier.padding(padding),
+            )
 
-                else -> when {
-                    result.isSuccess -> {
-                        val tasks = result.getOrNull().orEmpty()
-                        if (tasks.isEmpty()) {
-                            CouiStatePlaceholder(
-                                message = strings.downloadHistoryEmpty,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(
-                                    start = 12.dp,
-                                    top = 8.dp,
-                                    end = 12.dp,
-                                    bottom = LocalBottomBarContentPadding.current,
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                overscrollEffect = rememberCouiOverscrollEffect(),
-                            ) {
-                                items(
-                                    items = tasks,
-                                    key = { it.id },
-                                    contentType = { "coui_download_history" },
-                                ) { task ->
-                                    CouiDownloadHistoryRow(
-                                        task = task,
-                                        onClick = { onIllustClick(task.illustId) },
-                                        onDelete = {
-                                            coroutineScope.launch {
-                                                suspendRunCatchingNonCancel {
-                                                    repository.deleteTask(task.id)
-                                                }.onSuccess { refreshToken++ }
-                                            }
-                                        },
-                                    )
-                                }
+            tasks.isEmpty() -> CouiPlaceholder(
+                message = strings.downloadHistoryEmpty,
+                modifier = Modifier.padding(padding),
+            )
+
+            else -> LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(padding),
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    end = 12.dp,
+                    bottom = padding.calculateBottomPadding(),
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                overscrollEffect = rememberCouiOverscrollEffect(),
+            ) {
+                items(
+                    items = tasks,
+                    key = { it.id },
+                    contentType = { "coui_download_history" },
+                ) { task ->
+                    CouiDownloadHistoryRow(
+                        task = task,
+                        onClick = { onIllustClick(task.illustId) },
+                        onDelete = {
+                            coroutineScope.launch {
+                                suspendRunCatchingNonCancel {
+                                    repository.deleteTask(task.id)
+                                }.onSuccess { refreshToken++ }
                             }
-                        }
-                    }
-
-                    else -> CouiStatePlaceholder(
-                        message = couiErrorMessage(result.exceptionOrNull()),
-                        actionText = strings.retry,
-                        onAction = { retryCount++ },
-                        modifier = Modifier.fillMaxSize(),
+                        },
                     )
                 }
             }

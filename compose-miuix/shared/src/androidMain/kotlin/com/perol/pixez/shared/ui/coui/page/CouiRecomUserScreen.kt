@@ -1,16 +1,16 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -21,16 +21,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
-import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
-import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.couiErrorMessage
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiPagingFooter
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiStatePlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
+import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
+import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.state.PagedListPage
@@ -38,15 +35,16 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
- * COUI 推荐画师页：固定顶栏 + 用户预览卡片列表。
+ * COUI 推荐画师页：二级页骨架 + 用户预览卡片列表。
  *
- * 分页、账号切换作废与触底预加载与 MIUIX 版一致；差异只有皮肤层：
- * 固定顶栏刷新入口、COUI 卡片行与三态占位，列表收敛到平板可读宽度，
- * 不再提供下拉刷新（与全部 COUI 页面一致）。
+ * 分页、账号切换作废、触底预加载与三态判定与 MIUIX 版一致；差异只有皮肤层：
+ * 容器由 [CouiSecondaryScaffold] 唯一提供，刷新入口用顶栏图标按钮，
+ * 列表护栏进 `contentPadding`，footer 收敛到 core 的 [CouiLoadMoreFooter]。
+ * 仍不提供下拉刷新（与全部 COUI 页面一致）。
  */
 @Composable
 internal fun CouiRecomUserScreen(
@@ -59,7 +57,6 @@ internal fun CouiRecomUserScreen(
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable { mutableStateOf(false) }
 
-    // 登录状态与账号身份：登录/登出/切号时作废旧账号列表并重拉首屏。
     // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
     val (user, isLoggedIn) = rememberAccountSession()
 
@@ -114,79 +111,78 @@ internal fun CouiRecomUserScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
-    ) {
-        CouiFixedTopBar(
-            title = strings.recomUserTitle,
-            onBack = onBack,
-        ) {
-            CouiActionButton(
+    CouiSecondaryScaffold(
+        title = strings.recomUserTitle,
+        onBack = onBack,
+        actions = {
+            CouiTopBarIconButton(
+                onClick = triggerManualRefresh,
                 icon = MiuixIcons.Refresh,
                 contentDescription = strings.refresh,
-                onClick = triggerManualRefresh,
             )
-        }
+        },
+    ) { padding ->
+        val currentItems = pagedList.items
+        when {
+            currentItems == null && pagedList.initialError == null -> CouiPlaceholder(
+                message = strings.loading,
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            val currentItems = pagedList.items
-            when {
-                currentItems == null && pagedList.initialError == null ->
-                    CouiStatePlaceholder(
-                        message = strings.loading,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            currentItems != null -> if (currentItems.isEmpty()) {
+                CouiPlaceholder(
+                    message = strings.recomUserEmpty,
+                    modifier = Modifier
+                        .padding(padding)
+                        .consumeWindowInsets(padding),
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .consumeWindowInsets(padding),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        end = 12.dp,
+                        bottom = padding.calculateBottomPadding(),
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    overscrollEffect = rememberCouiOverscrollEffect(),
+                ) {
+                    items(
+                        items = currentItems,
+                        key = { it.user.id },
+                        contentType = { "coui_recom_user" },
+                    ) { preview ->
+                        CouiUserPreviewRow(
+                            preview = preview,
+                            onClick = { onUserClick(preview.user.id) },
+                        )
+                    }
 
-                currentItems != null -> if (currentItems.isEmpty()) {
-                    CouiStatePlaceholder(
-                        message = strings.recomUserEmpty,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 12.dp,
-                            top = 8.dp,
-                            end = 12.dp,
-                            bottom = LocalBottomBarContentPadding.current,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        overscrollEffect = rememberCouiOverscrollEffect(),
-                    ) {
-                        items(
-                            items = currentItems,
-                            key = { it.user.id },
-                            contentType = { "coui_recom_user" },
-                        ) { preview ->
-                            CouiUserPreviewRow(
-                                preview = preview,
-                                onClick = { onUserClick(preview.user.id) },
+                    val footerState = pagedList.footerState
+                    if (footerState.phase != PagingFooterPhase.Hidden) {
+                        item(key = "coui_recom_user_footer", contentType = "footer") {
+                            CouiLoadMoreFooter(
+                                state = footerState,
+                                onRetry = ::loadMore,
                             )
-                        }
-
-                        val footerState = pagedList.footerState
-                        if (footerState.phase != PagingFooterPhase.Hidden) {
-                            item(key = "coui_recom_user_footer", contentType = "footer") {
-                                CouiPagingFooter(
-                                    state = footerState,
-                                    onRetry = ::loadMore,
-                                )
-                            }
                         }
                     }
                 }
-
-                else -> CouiStatePlaceholder(
-                    message = couiErrorMessage(pagedList.initialError),
-                    actionText = strings.retry,
-                    onAction = { triggerManualRefresh() },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
+
+            else -> CouiErrorPlaceholder(
+                error = pagedList.initialError,
+                onRetry = { triggerManualRefresh() },
+                modifier = Modifier
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            )
         }
     }
 }

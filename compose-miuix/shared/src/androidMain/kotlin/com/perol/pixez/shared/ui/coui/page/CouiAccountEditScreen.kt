@@ -1,19 +1,15 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,22 +20,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
-import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.text.CouiTextKind
-import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.platform.IllustClipboard
@@ -49,13 +41,15 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.core.CouiActionRow
+import com.perol.pixez.shared.ui.coui.core.CouiInfoRow
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.screens.EMAIL_REGEX
@@ -71,8 +65,8 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
  * COUI 账号编辑页：账号信息、密码/邮箱修改、Refresh Token 复制与账号注销入口。
  *
  * 校验顺序、成功/失败提示、密码可见性切换与敏感字段不写入 Saved Instance State 的约定
- * 都与 MIUIX 版一致；差异只有皮肤层：输入框与保存按钮按 COUI 令牌自绘，
- * 注销二次确认改用 COUI `Dialog`，内容收敛到平板可读宽度。
+ * 都与 MIUIX 版一致；差异只有表现层：骨架收敛到 [CouiSettingsScaffold]，只读的 Pixiv ID
+ * 改用信息行，保存按钮改用胶囊文字按钮，注销二次确认沿用 COUI `Dialog`。
  */
 @Composable
 internal fun CouiAccountEditScreen(
@@ -153,115 +147,85 @@ internal fun CouiAccountEditScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.accountEditTitle,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.accountEditTitle,
-            onBack = onBack,
-        )
+        item(key = "account_info") {
+            // 账号昵称作分组标题、Pixiv ID 作只读信息行，替代原先的禁用输入框。
+            CouiSettingsGroup(title = account?.name.orEmpty()) {
+                CouiInfoRow(title = strings.pixivId, value = account?.account.orEmpty())
+            }
+        }
 
-        CouiReadableColumn(modifier = Modifier.weight(1f)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
-                item(key = "account_info") {
-                    CouiCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = account?.name.orEmpty(),
-                                kind = CouiTextKind.ItemTitle,
-                                color = CouiTheme.colorScheme.onSurface,
-                            )
-                            CouiAccountEditField(
-                                value = account?.account.orEmpty(),
-                                onValueChange = {},
-                                placeholder = strings.pixivId,
-                                enabled = false,
-                                modifier = Modifier.padding(top = 8.dp),
-                            )
-                        }
-                    }
+        item(key = "account_form") {
+            CouiSettingSection(title = strings.accountEditSectionInfo) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CouiAccountEditPasswordField(
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it },
+                        placeholder = strings.accountEditCurrentPassword,
+                        visible = currentPasswordVisible,
+                        onToggleVisibility = { currentPasswordVisible = !currentPasswordVisible },
+                    )
+                    CouiAccountEditPasswordField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholder = strings.accountEditNewPassword,
+                        visible = newPasswordVisible,
+                        onToggleVisibility = { newPasswordVisible = !newPasswordVisible },
+                    )
+                    CouiAccountEditTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = strings.accountEditEmail,
+                    )
+                    CouiTextButton(
+                        text = if (isSaving) strings.accountEditSaving else strings.accountEditSave,
+                        onClick = ::save,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving,
+                    )
                 }
+            }
+        }
 
-                item(key = "account_form") {
-                    CouiAccountEditSectionTitle(strings.accountEditSectionInfo)
-                    CouiCard {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            CouiAccountEditPasswordField(
-                                value = currentPassword,
-                                onValueChange = { currentPassword = it },
-                                placeholder = strings.accountEditCurrentPassword,
-                                visible = currentPasswordVisible,
-                                onToggleVisibility = { currentPasswordVisible = !currentPasswordVisible },
-                            )
-                            CouiAccountEditPasswordField(
-                                value = newPassword,
-                                onValueChange = { newPassword = it },
-                                placeholder = strings.accountEditNewPassword,
-                                visible = newPasswordVisible,
-                                onToggleVisibility = { newPasswordVisible = !newPasswordVisible },
-                            )
-                            CouiAccountEditField(
-                                value = email,
-                                onValueChange = { email = it },
-                                placeholder = strings.accountEditEmail,
-                                enabled = true,
-                            )
-                            CouiAccountEditButton(
-                                text = if (isSaving) strings.accountEditSaving else strings.accountEditSave,
-                                enabled = !isSaving,
-                                primary = true,
-                                onClick = ::save,
-                            )
-                        }
-                    }
+        // 仅已邮箱认证账号展示 Refresh Token 复制入口。
+        if (account?.isMailAuthorized == 1) {
+            item(key = "account_security") {
+                CouiSettingSection(title = strings.accountEditSectionSecurity) {
+                    CouiActionRow(
+                        title = strings.accountEditCopyRefreshToken,
+                        onClick = {
+                            account?.refreshToken?.let { token ->
+                                runClipboardShare(
+                                    success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                                    failurePrefix = "${strings.copy}${strings.failedSuffix}",
+                                    onToast = toastSink,
+                                ) { clipboard.copy(token) }.onFailure { e ->
+                                    Napier.e("复制 refresh token 失败", e)
+                                }
+                            }
+                        },
+                        summary = strings.accountEditCopyRefreshTokenSummary,
+                    )
                 }
+            }
+        }
 
-                // 仅已邮箱认证账号展示 Refresh Token 复制入口。
-                if (account?.isMailAuthorized == 1) {
-                    item(key = "account_security") {
-                        CouiAccountEditSectionTitle(strings.accountEditSectionSecurity)
-                        CouiCard {
-                            CouiAccountEditRow(
-                                title = strings.accountEditCopyRefreshToken,
-                                summary = strings.accountEditCopyRefreshTokenSummary,
-                                onClick = {
-                                    account?.refreshToken?.let { token ->
-                                        runClipboardShare(
-                                            success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                                            failurePrefix = "${strings.copy}${strings.failedSuffix}",
-                                            onToast = toastSink,
-                                        ) { clipboard.copy(token) }.onFailure { e ->
-                                            Napier.e("复制 refresh token 失败", e)
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-
-                item(key = "account_danger") {
-                    CouiAccountEditSectionTitle(strings.accountEditSectionDanger)
-                    CouiCard {
-                        CouiAccountEditRow(
-                            title = strings.accountEditLogoutTitle,
-                            summary = strings.accountEditLogoutSummary,
-                            onClick = { showDeletionConfirm = true },
-                        )
-                    }
-                }
+        item(key = "account_danger") {
+            CouiSettingSection(title = strings.accountEditSectionDanger) {
+                CouiActionRow(
+                    title = strings.accountEditLogoutTitle,
+                    onClick = { showDeletionConfirm = true },
+                    summary = strings.accountEditLogoutSummary,
+                    destructive = true,
+                )
             }
         }
     }
@@ -292,36 +256,19 @@ internal fun CouiAccountEditScreen(
     }
 }
 
-/** 分组小标题。 */
+/** 普通文本输入框：统一走 CouiTextInput，与全仓其它输入框同观感。 */
 @Composable
-private fun CouiAccountEditSectionTitle(text: String) {
-    Text(
-        text = text,
-        kind = CouiTextKind.ItemSummary,
-        color = CouiTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 6.dp),
-    )
-}
-
-/** 只读/普通文本输入框：统一走 CouiTextInput，禁用态靠底色区分。 */
-@Composable
-private fun CouiAccountEditField(
+private fun CouiAccountEditTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
 ) {
-    val scheme = CouiTheme.colorScheme
     CouiTextInput(
         value = value,
         onValueChange = onValueChange,
         placeholder = placeholder,
-        enabled = enabled,
-        // 禁用态换底色而不是换文字色：整块灰下去比只灰字更容易看出不可编辑。
-        containerColor = if (enabled) scheme.container else scheme.card,
-        textStyle = TextStyle(color = scheme.onSurface, fontSize = 14.sp),
-        modifier = modifier.fillMaxWidth(),
+        textStyle = TextStyle(color = CouiTheme.colorScheme.onSurface, fontSize = 14.sp),
+        modifier = Modifier.fillMaxWidth(),
         minHeight = 48.dp,
         shape = RoundedCornerShape(16.dp),
         contentPadding = PaddingValues(horizontal = 14.dp),
@@ -383,84 +330,4 @@ private fun CouiAccountEditPasswordField(
         contentPadding = PaddingValues(horizontal = 14.dp),
         trailing = visibilityToggle,
     )
-}
-
-/** 主要动作按钮：COUI 无按钮原语，按令牌自绘胶囊。 */
-@Composable
-private fun CouiAccountEditButton(
-    text: String,
-    enabled: Boolean,
-    primary: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val scheme = CouiTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(50))
-            .background(
-                when {
-                    !enabled -> scheme.container
-                    primary -> scheme.accent
-                    else -> scheme.container
-                },
-            )
-            .couiPressFeedback(interactionSource, enabled = enabled, list = false)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            kind = CouiTextKind.ItemTitle,
-            color = when {
-                !enabled -> scheme.onSurfaceVariant
-                primary -> scheme.onAccent
-                else -> scheme.onSurface
-            },
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
-
-/** 设置式行：标题 + 摘要，整行可点。 */
-@Composable
-private fun CouiAccountEditRow(
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-) {
-    val pressInteraction = remember { MutableInteractionSource() }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .couiPressFeedback(pressInteraction)
-            .clickable(
-                interactionSource = pressInteraction,
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(16.dp),
-    ) {
-        Text(
-            text = title,
-            kind = CouiTextKind.ItemTitle,
-            color = CouiTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = summary,
-            kind = CouiTextKind.ItemSummary,
-            color = CouiTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
-        )
-    }
 }

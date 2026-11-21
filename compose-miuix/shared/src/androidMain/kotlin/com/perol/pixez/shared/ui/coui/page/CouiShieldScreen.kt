@@ -1,10 +1,7 @@
 package com.perol.pixez.shared.ui.coui.page
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
@@ -32,16 +29,15 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
-import com.perol.pixez.shared.ui.coui.component.CouiSettingsLazyColumn
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.CouiFixedTopBar
-import com.perol.pixez.shared.ui.coui.component.CouiNavigationRow
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
-import com.perol.pixez.shared.ui.coui.component.CouiReadableColumn
-import com.perol.pixez.shared.ui.coui.component.CouiTextAction
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
-import com.perol.pixez.shared.ui.i18n.format
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.core.CouiToggleRow
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBanRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
@@ -58,12 +54,18 @@ private sealed class CouiShieldDeleteTarget {
 }
 
 /**
- * COUI 屏蔽设置页：固定顶栏 + 分组卡片。
+ * COUI 屏蔽设置页：折叠大标题顶栏 + 分级过滤 / AI 内容 / 标签 / 画师 / 作品五组。
  *
- * 敏感内容/AI 过滤开关、AI 显示设置入口、屏蔽标签的添加与删除、
- * 屏蔽画师与作品的展示与删除全部保留；差异只有皮肤层：
- * 开关改用 COUI `Switch`，添加标签与删除确认改用 COUI `Dialog`，
- * 分组与列表收敛到平板可读宽度。
+ * 骨架改用 [CouiSettingsScaffold]：居上限宽、overscroll、底部悬浮底栏留白与顶栏覆盖区
+ * 补偿都由骨架代付，页面不再自铺底色、不加状态栏内边距、也不再二次扣底部安全区。
+ * 组内开关行换 core 的 [CouiToggleRow]，跳转行换 [CouiValueRow]（副标题走 summary、
+ * onClick 自动挂 Chevron），行间共用 [CouiRowDivider]；只有屏蔽项胶囊流、以及"计数 + 添加"
+ * 这类复合头行是纯排版块，无对应行原语。COUI 库没有胶囊按钮与输入控件，添加按钮继续走
+ * [CouiTextButton]，弹窗输入框继续走 CouiTextInput。
+ *
+ * 数据接线不动：屏蔽项仍由 BanRepository 全量读取后按 name 小写排序，增删后统一 loadAll()
+ * 刷新，失败经 Napier 记录并用 PixivApiErrorFormatter / actionFailureToast 转成错误提示；
+ * AI 显示设置走 UserRepository 并把 showAI 回传给宿主的 onAISettingClick。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -71,8 +73,8 @@ internal fun CouiShieldScreen(
     onBack: () -> Unit,
     onAISettingClick: (showAI: Boolean) -> Unit,
 ) {
-    val settingsRepository = LocalSettingsRepository.current
     val banRepository = LocalBanRepository.current
+    val settingsRepository = LocalSettingsRepository.current
     val userRepository = LocalUserRepository.current
     val coroutineScope = rememberCoroutineScope()
     val strings = LocalStrings.current
@@ -123,159 +125,152 @@ internal fun CouiShieldScreen(
         loadAll()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CouiTheme.colorScheme.background),
+    CouiSettingsScaffold(
+        title = strings.settingShield,
+        onBack = onBack,
     ) {
-        CouiFixedTopBar(
-            title = strings.settingShield,
-            onBack = onBack,
-        )
+        // 1. 分级与敏感内容过滤
+        item(key = "coui_shield_privacy", contentType = "section") {
+            CouiSettingSection(title = strings.settingPrivacy) {
+                CouiToggleRow(
+                    title = strings.interactionSettingHNotAllow,
+                    summary = if (hIsNotAllow) {
+                        strings.interactionSettingHNotAllowSummaryOn
+                    } else {
+                        strings.interactionSettingHNotAllowSummaryOff
+                    },
+                    checked = hIsNotAllow,
+                    onCheckedChange = { checked ->
+                        hIsNotAllow = checked
+                        settingsRepository.hIsNotAllow = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.nsfwMask,
+                    summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
+                    checked = nsfwMask,
+                    onCheckedChange = { checked ->
+                        nsfwMask = checked
+                        settingsRepository.nsfwMask = checked
+                    },
+                )
+            }
+        }
 
-        CouiReadableColumn(modifier = Modifier.fillMaxSize()) {
-            CouiSettingsLazyColumn {
-                // 1. 分级与敏感内容过滤
-                item(key = "coui_shield_privacy", contentType = "section") {
-                    CouiSettingSection(title = strings.settingPrivacy) {
-                        CouiSwitchRow(
-                            title = strings.interactionSettingHNotAllow,
-                            summary = if (hIsNotAllow) {
-                                strings.interactionSettingHNotAllowSummaryOn
-                            } else {
-                                strings.interactionSettingHNotAllowSummaryOff
-                            },
-                            checked = hIsNotAllow,
-                            onCheckedChange = { checked ->
-                                hIsNotAllow = checked
-                                settingsRepository.hIsNotAllow = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.nsfwMask,
-                            summary = if (nsfwMask) strings.nsfwMaskSummaryOn else strings.nsfwMaskSummaryOff,
-                            checked = nsfwMask,
-                            onCheckedChange = { checked ->
-                                nsfwMask = checked
-                                settingsRepository.nsfwMask = checked
-                            },
-                        )
-                    }
-                }
-
-                // 2. AI 生成内容控制
-                item(key = "coui_shield_ai", contentType = "section") {
-                    CouiSettingSection(title = strings.filterAi) {
-                        CouiSwitchRow(
-                            title = strings.banAIIllust,
-                            summary = strings.banAIIllustSummary,
-                            checked = banAIIllust,
-                            onCheckedChange = { checked ->
-                                banAIIllust = checked
-                                settingsRepository.banAIIllust = checked
-                            },
-                        )
-                        CouiSwitchRow(
-                            title = strings.feedSettingAiBadge,
-                            summary = if (feedAIBadge) {
-                                strings.feedSettingAiBadgeSummaryOn
-                            } else {
-                                strings.feedSettingAiBadgeSummaryOff
-                            },
-                            checked = feedAIBadge,
-                            onCheckedChange = { checked ->
-                                feedAIBadge = checked
-                                settingsRepository.feedAIBadge = checked
-                            },
-                        )
-                        CouiNavigationRow(
-                            title = strings.userAISettings,
-                            summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
-                            onClick = {
-                                if (isLoadingAISetting) return@CouiNavigationRow
-                                coroutineScope.launch {
-                                    isLoadingAISetting = true
-                                    suspendRunCatchingNonCancel {
-                                        userRepository.getUserAISettings()
-                                    }.onSuccess { response ->
-                                        onAISettingClick(response.showAI)
-                                    }.onFailure { e ->
-                                        Napier.e("加载 AI 显示设置失败", e)
-                                        toastSink(
-                                            ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error),
-                                        )
-                                    }
-                                    isLoadingAISetting = false
-                                }
-                            },
-                        )
-                    }
-                }
-
-                // 3. 屏蔽标签：展示、添加、删除
-                item(key = "coui_shield_tags", contentType = "section") {
-                    CouiSettingSection(title = strings.tags) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                text = strings.banTagCount.format(banTags.size),
-                                kind = CouiTextKind.ItemSummary,
-                                color = CouiTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f),
-                            )
-                            CouiTextAction(
-                                text = strings.btnAdd,
-                                enabled = !isLoading && !isAddingTag,
-                                color = CouiTheme.colorScheme.accent,
-                                onClick = { showAddDialog = true },
-                            )
+        // 2. AI 生成内容控制
+        item(key = "coui_shield_ai", contentType = "section") {
+            CouiSettingSection(title = strings.filterAi) {
+                CouiToggleRow(
+                    title = strings.banAIIllust,
+                    summary = strings.banAIIllustSummary,
+                    checked = banAIIllust,
+                    onCheckedChange = { checked ->
+                        banAIIllust = checked
+                        settingsRepository.banAIIllust = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiToggleRow(
+                    title = strings.feedSettingAiBadge,
+                    summary = if (feedAIBadge) {
+                        strings.feedSettingAiBadgeSummaryOn
+                    } else {
+                        strings.feedSettingAiBadgeSummaryOff
+                    },
+                    checked = feedAIBadge,
+                    onCheckedChange = { checked ->
+                        feedAIBadge = checked
+                        settingsRepository.feedAIBadge = checked
+                    },
+                )
+                CouiRowDivider()
+                CouiValueRow(
+                    title = strings.userAISettings,
+                    summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
+                    onClick = {
+                        if (isLoadingAISetting) return@CouiValueRow
+                        coroutineScope.launch {
+                            isLoadingAISetting = true
+                            suspendRunCatchingNonCancel {
+                                userRepository.getUserAISettings()
+                            }.onSuccess { response ->
+                                onAISettingClick(response.showAI)
+                            }.onFailure { e ->
+                                Napier.e("加载 AI 显示设置失败", e)
+                                toastSink(
+                                    ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error),
+                                )
+                            }
+                            isLoadingAISetting = false
                         }
-                        CouiShieldChips(
-                            items = banTags,
-                            label = { it.name },
-                            onClick = { deleteTarget = CouiShieldDeleteTarget.Tag(it) },
-                        )
-                    }
-                }
+                    },
+                )
+            }
+        }
 
-                // 4. 屏蔽画师
-                item(key = "coui_shield_users", contentType = "section") {
-                    CouiSettingSection(title = strings.author) {
-                        Text(
-                            text = strings.banUserCount.format(banUsers.size),
-                            kind = CouiTextKind.ItemSummary,
-                            color = CouiTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        )
-                        CouiShieldChips(
-                            items = banUsers,
-                            label = { it.name },
-                            onClick = { deleteTarget = CouiShieldDeleteTarget.User(it) },
-                        )
-                    }
+        // 3. 屏蔽标签：展示、添加、删除
+        item(key = "coui_shield_tags", contentType = "section") {
+            CouiSettingSection(title = strings.tags) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = strings.banTagCount.format(banTags.size),
+                        kind = CouiTextKind.ItemSummary,
+                        color = CouiTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    CouiTextButton(
+                        text = strings.btnAdd,
+                        enabled = !isLoading && !isAddingTag,
+                        filled = false,
+                        onClick = { showAddDialog = true },
+                    )
                 }
+                CouiShieldChips(
+                    items = banTags,
+                    label = { it.name },
+                    onClick = { deleteTarget = CouiShieldDeleteTarget.Tag(it) },
+                )
+            }
+        }
 
-                // 5. 屏蔽作品
-                item(key = "coui_shield_illusts", contentType = "section") {
-                    CouiSettingSection(title = strings.includedWorks) {
-                        Text(
-                            text = strings.banIllustCount.format(banIllusts.size),
-                            kind = CouiTextKind.ItemSummary,
-                            color = CouiTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        )
-                        CouiShieldChips(
-                            items = banIllusts,
-                            label = { it.name },
-                            onClick = { deleteTarget = CouiShieldDeleteTarget.Illust(it) },
-                        )
-                    }
-                }
+        // 4. 屏蔽画师
+        item(key = "coui_shield_users", contentType = "section") {
+            CouiSettingSection(title = strings.author) {
+                Text(
+                    text = strings.banUserCount.format(banUsers.size),
+                    kind = CouiTextKind.ItemSummary,
+                    color = CouiTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+                CouiShieldChips(
+                    items = banUsers,
+                    label = { it.name },
+                    onClick = { deleteTarget = CouiShieldDeleteTarget.User(it) },
+                )
+            }
+        }
+
+        // 5. 屏蔽作品
+        item(key = "coui_shield_illusts", contentType = "section") {
+            CouiSettingSection(title = strings.includedWorks) {
+                Text(
+                    text = strings.banIllustCount.format(banIllusts.size),
+                    kind = CouiTextKind.ItemSummary,
+                    color = CouiTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+                CouiShieldChips(
+                    items = banIllusts,
+                    label = { it.name },
+                    onClick = { deleteTarget = CouiShieldDeleteTarget.Illust(it) },
+                )
             }
         }
     }
