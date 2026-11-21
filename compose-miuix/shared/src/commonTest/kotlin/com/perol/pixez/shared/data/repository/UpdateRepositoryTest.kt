@@ -63,9 +63,7 @@ class UpdateRepositoryTest {
                 }
             }
         }
-        // 被测链路的平台判定是 expect 实现，Android 单测宿主上会解析成 isAndroid=true，
-        // 与下方「桌面端选 .exe」语义冲突；这里显式注入 Desktop，把宿主差异挡在用例之外。
-        repository = UpdateRepository(client, isDesktop = true, isAndroid = false)
+        repository = UpdateRepository(client)
     }
 
     @After
@@ -94,8 +92,16 @@ class UpdateRepositoryTest {
     """.trimIndent()
 
     @Test
-    fun `fetchLatestReleaseInfo 成功解析并选用当前平台安装包与摘要`() = runBlocking {
-        respondBody = releaseJson(tagName = "v99.0.0")
+    fun `fetchLatestReleaseInfo 成功解析并选用 apk 安装包与摘要`() = runBlocking {
+        respondBody = releaseJson(
+            tagName = "v99.0.0",
+            assetsJson = """
+                [
+                  {"name":"PixEz-windows-x64-99.0.0.exe","browser_download_url":"https://github.com/137458/pixez-miuix/releases/download/v99.0.0/PixEz-windows-x64-99.0.0.exe","size":68000000,"digest":"sha256:ignored"},
+                  {"name":"pixez-miuix-99.0.0.apk","browser_download_url":"https://github.com/137458/pixez-miuix/releases/download/v99.0.0/pixez-miuix-99.0.0.apk","size":25000000,"digest":"sha256:abcd1234"}
+                ]
+            """.trimIndent(),
+        )
 
         val result = repository.fetchLatestReleaseInfo()
 
@@ -107,13 +113,12 @@ class UpdateRepositoryTest {
         assertEquals("PixEz MIUIX v99.0.0", info.title)
         assertEquals("- 新增功能\n- 修复问题", info.changelog)
         assertEquals("2026-10-01T00:00:00Z", info.publishedAt)
-        // Desktop JVM 测试运行平台应匹配 .exe 资产而非 .apk，URL 经可信策略透传。
         assertEquals(
-            "https://github.com/137458/pixez-miuix/releases/download/v99.0.0/PixEz-windows-x64-99.0.0.exe",
+            "https://github.com/137458/pixez-miuix/releases/download/v99.0.0/pixez-miuix-99.0.0.apk",
             info.downloadUrl,
         )
-        assertEquals("PixEz-windows-x64-99.0.0.exe", info.fileName)
-        assertEquals(68_000_000L, info.fileSize)
+        assertEquals("pixez-miuix-99.0.0.apk", info.fileName)
+        assertEquals(25_000_000L, info.fileSize)
         assertEquals("sha256:abcd1234", info.digest)
 
         val request = captured.single()
@@ -122,15 +127,13 @@ class UpdateRepositoryTest {
     }
 
     @Test
-    fun `fetchLatestReleaseInfo Android 侧选用 apk 资产`() = runBlocking {
+    fun `fetchLatestReleaseInfo 缺失 digest 时透传 null`() = runBlocking {
         respondBody = releaseJson(tagName = "v99.0.0")
-        val androidRepository = UpdateRepository(client, isDesktop = false, isAndroid = true)
 
-        val result = androidRepository.fetchLatestReleaseInfo()
+        val result = repository.fetchLatestReleaseInfo()
 
         assertTrue(result.isSuccess, "GitHub 正常响应应返回成功结果")
         val info = result.getOrThrow()
-        // 双端资产同时存在时，Android 平台必须选 .apk 而非 .exe。
         assertEquals(
             "https://github.com/137458/pixez-miuix/releases/download/v99.0.0/pixez-miuix-99.0.0.apk",
             info.downloadUrl,
@@ -194,7 +197,7 @@ class UpdateRepositoryTest {
             tagName = "v99.0.0",
             assetsJson = """
                 [
-                  {"name":"PixEz-windows-x64-99.0.0.exe","browser_download_url":"https://github.com/attacker/malware/releases/download/v99.0.0/PixEz-windows-x64-99.0.0.exe","size":68000000}
+                  {"name":"pixez-miuix-99.0.0.apk","browser_download_url":"https://github.com/attacker/malware/releases/download/v99.0.0/pixez-miuix-99.0.0.apk","size":25000000}
                 ]
             """.trimIndent(),
         )

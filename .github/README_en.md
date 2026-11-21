@@ -7,7 +7,7 @@
 **A third-party Pixiv client built with Kotlin Multiplatform and Compose Multiplatform, following the Xiaomi HyperOS (MIUIX) design language**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](../LICENSE)
-[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#download--installation)
+[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%2012%2B-blue.svg?style=flat-square)](#download--installation)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
@@ -20,9 +20,7 @@
 
 ## Introduction
 
-**PixEz MIUIX** is a rewrite of PixEz, a third-party Pixiv client. It uses **Kotlin Multiplatform (KMP)** and **Compose Multiplatform (CMP)**. The UI is built on the MIUIX component library (`top.yukonga.miuix.kmp`).
-
-Active targets are Android and Windows Desktop. The macOS target is not enabled.
+**PixEz MIUIX** is a rewrite of PixEz, a third-party Pixiv client focused on Android phones and tablets. It supports both Xiaomi HyperOS (MIUIX) and ColorOS (COUI) UI skins.
 
 The app reaches Pixiv from Mainland China without a proxy. Host resolution uses DNS-over-HTTPS and falls back to system DNS; an image mirror is optional. The ECH and compatibility tiers are decided by the underlying TLS negotiation, and the app does not modify SNI.
 
@@ -34,13 +32,13 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 
 - The UI is built on the MIUIX component library; the main containers are `Card` and `BasicComponent`.
 - The floating bottom bar renders Liquid Glass refraction with background blur, and drops to blur when `RuntimeShader` is unavailable.
-- Shader effects use the system `RuntimeShader` on Android 13 (API 33) and later, and Skia `RuntimeEffect` on desktop.
+- Shader effects use the system `RuntimeShader` on Android 13 (API 33) and later, and COUI uses backdrop glass sampling on Android 14 (API 34) and later, falling back to blur on earlier versions.
 - The bottom bar carries five tabs: Recommend, Search, Ranking, Feed, and Spotlight.
 - Tablets and wide screens switch to a multi-column staggered grid. The floating bottom bar caps at 540 dp and stays centered; the content column caps at 760 dp.
 
 ### Multiplatform Architecture
 
-- `shared/src/commonMain` holds 304 Kotlin files, including 44 `*Screen.kt` and 18 repository classes under `data/repository/`.
+- `shared/src/commonMain` holds 303 Kotlin files, including 44 `*Screen.kt`.
 - Decompose drives routing and navigation.
 - Ktor Client handles networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
 - SQLDelight stores local data; Coil 3 loads images.
@@ -81,21 +79,11 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 
 ## Download & Installation
 
-Download the package for your platform from [GitHub Releases](https://github.com/137458/pixez-miuix/releases). The current release is `0.9.109.7-miuix`.
+Download the latest Android APK from [GitHub Releases](https://github.com/137458/pixez-miuix/releases). The current release is `0.9.109.7-miuix`.
 
 ### Android
 
 Install `PixEz-MIUIX-v*.apk` on the device. Android 12 (API 31) or later is required; phones and tablets are supported.
-
-### Windows Desktop (no Java runtime required)
-
-- **Single-file standalone**: `PixEz-Standalone.exe` embeds the runtime and starts on a double-click, with no extraction step.
-- **Portable**: unzip `PixEz-windows-x64-portable.zip`, then run `PixEz.exe`.
-- **MSI installer**: run `PixEz-*.msi`; it creates desktop and Start-menu shortcuts.
-
-### Other desktop targets
-
-Linux builds from source on a Linux host and can produce a Deb package. The macOS target is not enabled because the `zoomable` dependency ships no matching variant. Neither platform has official release packages.
 
 ---
 
@@ -109,9 +97,7 @@ Linux builds from source on a Linux host and can produce a Deb package. The macO
 | Gradle | 8.14.4, through the Wrapper |
 | Android Gradle Plugin | 8.13.0 |
 | Android SDK | `compileSdk = 36`, `targetSdk = 35`, `minSdk = 31` |
-| Library versions | `compose-miuix/gradle/libs.versions.toml` (Kotlin 2.4.10, Compose Multiplatform 1.12.0, MIUIX 0.9.4) |
-
-Windows single-file EXE packaging also needs `csc.exe` from the .NET Framework 4.0.
+| Library versions | `compose-miuix/gradle/libs.versions.toml` (Kotlin 2.4.10, Compose Multiplatform 1.12.0, MIUIX 0.9.4, COUI 0.0.1-alpha12) |
 
 ### Build Commands
 
@@ -119,22 +105,13 @@ Run the commands from `compose-miuix/`. `AGENTS.md` is the single source of trut
 
 ```bash
 # Android Debug compile check
-./gradlew :composeApp:compileDebugKotlinAndroid
+./gradlew :shared:compileDebugKotlinAndroid :composeApp:compileDebugKotlinAndroid
+
+# Run Android JVM unit tests
+./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest
 
 # Build the Android Debug APK
 ./gradlew :composeApp:assembleDebug
-
-# Compile the Desktop shared module
-./gradlew :shared:compileKotlinDesktop
-
-# Run the desktop app
-./gradlew :composeApp:run
-
-# Run unit tests on both platforms
-./gradlew :shared:desktopTest :composeApp:desktopTest
-
-# Package the Windows single-file EXE
-./gradlew :composeApp:packageWindowsSingleFileExe
 ```
 
 The Android Release APK is built with `./gradlew :composeApp:assembleRelease`. Without `compose-miuix/keystore.properties`, a release build falls back to debug signing and the version name gains a `-debug-signed` suffix; such artifacts must not be published.

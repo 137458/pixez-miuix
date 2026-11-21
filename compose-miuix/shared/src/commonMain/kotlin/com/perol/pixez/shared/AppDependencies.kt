@@ -3,9 +3,9 @@ package com.perol.pixez.shared
 import app.cash.sqldelight.db.SqlDriver
 import com.perol.pixez.shared.data.cache.IllustMemoryCache
 import com.perol.pixez.shared.data.cache.SessionCache
-import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
+import com.perol.pixez.shared.data.local.SqlDriverFactory
 import com.perol.pixez.shared.data.local.task.TaskDatabase
 import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.repository.AccountRepository
@@ -24,7 +24,7 @@ import com.perol.pixez.shared.data.repository.SauceNaoRepository
 import com.perol.pixez.shared.data.repository.SearchRepository
 import com.perol.pixez.shared.data.repository.UserRepository
 import com.perol.pixez.shared.data.repository.WatchlistRepository
-import com.perol.pixez.shared.data.settings.SettingsFactory
+import com.perol.pixez.shared.data.settings.SettingsProvider
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
@@ -56,8 +56,8 @@ import kotlinx.coroutines.launch
  * 负责集中管理数据库驱动、网络客户端、Repository 等生命周期较长的对象。
  */
 class AppDependencies(
-    val driverFactory: DriverFactory,
-    val settingsFactory: SettingsFactory,
+    val driverFactory: SqlDriverFactory,
+    val settingsFactory: SettingsProvider,
 ) {
     init {
         currentInstance = this

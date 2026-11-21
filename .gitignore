@@ -30,29 +30,6 @@ Python/
 local.properties
 **/local.properties
 
-# Frozen Flutter v1 archive build outputs
-archive/flutter-v1/.dart_tool/
-archive/flutter-v1/.flutter-plugins
-archive/flutter-v1/.flutter-plugins-dependencies
-archive/flutter-v1/.packages
-archive/flutter-v1/.pub/
-archive/flutter-v1/.pub-cache/
-archive/flutter-v1/build/
-archive/flutter-v1/**/GeneratedPluginRegistrant.*
-archive/flutter-v1/**/flutter/ephemeral/
-archive/flutter-v1/**/Flutter/ephemeral/
-archive/flutter-v1/**/Pods/
-archive/flutter-v1/**/DerivedData/
-archive/flutter-v1/**/xcuserdata/
-archive/flutter-v1/**/captures/
-archive/flutter-v1/**/rust/target/
-archive/flutter-v1/**/rust/.cargo/
-archive/flutter-v1/android/local.properties
-archive/flutter-v1/android/key.properties
-
-# Local Flutter SDK cache, if an archive maintainer uses FVM
-archive/flutter-v1/.fvm/
-
 # Internal documentation, PRDs, research notes and planning (Rule: strictly keep out of git)
 compose-miuix/docs/
 docs/

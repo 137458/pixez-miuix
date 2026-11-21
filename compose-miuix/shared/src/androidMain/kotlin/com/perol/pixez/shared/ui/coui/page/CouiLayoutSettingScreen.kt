@@ -44,7 +44,6 @@ import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiTextStyle
 import com.perol.pixez.shared.data.settings.parseCrossAdapterWidthInput
 import com.perol.pixez.shared.data.settings.SettingsRepository
-import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
@@ -76,13 +75,7 @@ internal fun CouiLayoutSettingScreen(
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
     var displayMode by remember { mutableIntStateOf(settingsRepository.displayMode) }
 
-    val crossCountOptions = remember {
-        if (isDesktopPlatform()) {
-            listOf("2", "3", "4", "5", "6", "7", "8")
-        } else {
-            listOf("2", "3", "4", "5", "6")
-        }
-    }
+    val crossCountOptions = remember { listOf("2", "3", "4", "5", "6") }
     // 显示模式下拉选项：索引与 displayMode 数值一一对应（0 跟随系统 / 1 60Hz / 2 高刷）。
     val displayModeLabels = remember(strings) {
         listOf(

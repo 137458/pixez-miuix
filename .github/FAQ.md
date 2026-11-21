@@ -19,7 +19,7 @@
 - [五、直连访问与网络问题](#五直连访问与网络问题)
 - [六、图片与动图下载](#六图片与动图下载)
 - [七、作品屏蔽与 R-18 过滤](#七作品屏蔽与-r-18-过滤)
-- [八、大屏、平板与桌面端适配](#八大屏平板与桌面端适配)
+- [八、大屏与平板适配](#八大屏与平板适配)
 - [九、数据备份与迁移](#九数据备份与迁移)
 - [十、反馈与交流社区](#十反馈与交流社区)
 
@@ -27,9 +27,8 @@
 
 ## 一、项目声明与版本说明
 
-- **PixEz MIUIX**：基于 Kotlin Multiplatform（KMP）与 Compose Multiplatform（CMP）构建，采用 MIUIX 组件库，遵循 Xiaomi HyperOS 设计语言。正式发布 Android 与 Windows Desktop 双端，macOS target 未启用。
+- **PixEz MIUIX**：基于 Kotlin 与 Jetpack Compose / Compose Multiplatform 构建的 Android 客户端，支持 HyperOS（MIUIX）与 ColorOS（COUI）双皮肤。
 - **版本标识**：当前版本名为 `0.9.109.7-miuix`，与 `compose-miuix/composeApp/build.gradle.kts` 中的 `versionName` 一致。
-- **Flutter v1 归档**：旧 Flutter 代码冻结于 [`archive/flutter-v1/`](../archive/flutter-v1/)，不再参与主线开发。
 - **关于本 FAQ**：本指南面向 PixEz MIUIX 版本的功能、设置项与常见问题。
 - **免责声明与版权提示**：
   - 本项目由个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无关联或商业合作。
@@ -40,13 +39,11 @@
 
 ## 二、如何下载最新版
 
-各平台最新安装包与运行包发布于 [GitHub Releases 页面](https://github.com/137458/pixez-miuix/releases)：
+最新安装包发布于 [GitHub Releases 页面](https://github.com/137458/pixez-miuix/releases)：
 
 | 平台 | 文件格式 / 产物 | 说明与运行方式 |
 | :--- | :--- | :--- |
 | **Android** | `PixEz-MIUIX-v*.apk` | 需要 Android 12（API 31）及以上系统，已适配手机与平板 |
-| **Windows Desktop** | `PixEz-Standalone.exe` / `PixEz-windows-x64-portable.zip` / `PixEz-*.msi` | 单文件版、便携版与 MSI 安装包均内嵌 Java 运行环境，无需预装 Java |
-| **macOS / Linux** | 无 | 未提供发布安装包；Linux 可从源码构建 Deb 包 |
 
 ---
 
@@ -119,8 +116,7 @@ PixEz MIUIX 提供两种登录方式：
 
 ### 3. 保存路径与相册同步
 
-- **Android**：保存到公共 `Pictures/PixEz` 目录，ZIP 保存到公共 `Downloads/PixEz`。两类文件同步到系统媒体库，可在系统相册查看。
-- **桌面端**：保存到用户主目录 `Pictures/PixEz`。
+- 保存图片至系统公共 `Pictures/PixEz` 目录，ZIP 动图压缩包保存至公共 `Downloads/PixEz` 目录，两类文件同步至系统媒体库，可在系统相册查看（也可在下载设置中切换自定义目录）。
 
 ---
 
@@ -142,10 +138,10 @@ PixEz MIUIX 提供两种登录方式：
 
 ---
 
-## 八、大屏、平板与桌面端适配
+## 八、大屏与平板适配
 
-- **HyperOS 设计语言**：采用 MIUIX 官方组件与超椭圆圆角、分层卡片布局。
-- **悬浮底栏**：液态玻璃折射与背景模糊由着色器渲染。Android 13（API 33）及以上使用系统 `RuntimeShader`，低版本回退为模糊；桌面端使用 Skia `RuntimeEffect`。
+- **双皮肤设计**：支持 HyperOS（MIUIX）与 ColorOS（COUI）两套视觉规范。
+- **悬浮底栏**：液态玻璃折射与背景模糊由着色器渲染。Android 13（API 33）及以上使用系统 `RuntimeShader`，COUI 在 Android 14（API 34）及以上启用实时背景玻璃采样，低版本平滑退回背景模糊。
 - **宽屏自适应**：宽屏下内容居中限宽，导航切换为侧边栏（`NavigationRail`）。瀑布流列数按宽度阈值自适应，默认 160 dp，可调范围 50～2160 dp。
 
 ---

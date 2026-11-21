@@ -7,7 +7,7 @@
 **基于 Kotlin Multiplatform 与 Compose Multiplatform 的 Pixiv 第三方客户端，采用 Xiaomi HyperOS（MIUIX）设计规范**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
-[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%20%7C%20Windows%20Desktop-blue.svg?style=flat-square)](#下载与安装)
+[![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%2012%2B-blue.svg?style=flat-square)](#下载与安装)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square\&logo=kotlin)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square\&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
@@ -24,7 +24,6 @@
 - [核心特性](#核心特性)
 - [下载与安装](#下载与安装)
 - [使用说明](#使用说明)
-- [Flutter v1 归档](#flutter-v1-归档)
 - [工程架构](#工程架构)
 - [源码构建](#源码构建)
 - [贡献者与鸣谢](#贡献者与鸣谢)
@@ -36,9 +35,7 @@
 
 ## 项目简介
 
-**PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目基于 Kotlin Multiplatform（简称 KMP）与 Compose Multiplatform（简称 CMP）开发。界面使用 MIUIX 组件库（`top.yukonga.miuix.kmp`）。
-
-当前发行平台为 Android 与 Windows Desktop，macOS target 尚未启用。
+**PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目使用 Jetpack Compose / Compose Multiplatform 与 Kotlin 开发，专注 Android 手机与平板端，支持 Xiaomi HyperOS（MIUIX）与 ColorOS（COUI）双界面皮肤。
 
 面向中国大陆网络环境改善连通性：域名经 DoH 解析，图源可选镜像。ECH 档与兼容档的差异由底层 TLS 协商承担，应用不修改 SNI。
 
@@ -49,7 +46,7 @@
 - **MIUIX 界面与 Liquid Glass 悬浮底栏**：
   - 界面基于 MIUIX 组件库构建。
   - 悬浮底栏支持液态玻璃折射与背景模糊两种渲染；设备不支持 `RuntimeShader` 时回退为模糊。
-  - 着色器动效在 Android 13（API 33）及以上使用系统 `RuntimeShader`，桌面端使用 Skia `RuntimeEffect`。
+  - 着色器动效在 Android 13（API 33）及以上使用系统 `RuntimeShader`，COUI 在 Android 14（API 34）及以上支持实时背景采样玻璃材质，低版本平滑退回背景模糊。
   - 平板与宽屏启用多列瀑布流。
   - 悬浮底栏限宽居中，最大 540 dp；内容区最大宽度 760 dp。
 - **列表浏览**：
@@ -87,21 +84,11 @@
 
 ## 下载与安装
 
-请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载对应平台的安装包或运行包：
+请前往 [GitHub Releases](https://github.com/137458/pixez-miuix/releases) 页面下载最新 Android 安装包：
 
 ### Android
 
 下载 `PixEz-MIUIX-v*.apk` 并在设备上直接安装。支持 Android 12（API 31）及以上系统，适配手机与平板。
-
-### Windows 桌面端（无需预装 Java 环境）
-
-- **单文件独立版**：下载 `PixEz-Standalone.exe`，内嵌运行时，双击即可直接运行，无需解压。
-- **免安装便携版**：下载 `PixEz-windows-x64-portable.zip`，解压后双击 `PixEz.exe` 即可运行。
-- **MSI 安装包**：下载 `PixEz-*.msi`，双击按提示安装，自动创建桌面与开始菜单快捷方式。
-
-### 其他桌面目标
-
-Linux 可从源码构建，打包格式为 Deb。macOS target 因 `zoomable` 缺少对应变体未启用。两个平台当前均未提供正式发行安装包。
 
 ***
 
@@ -116,33 +103,26 @@ Linux 可从源码构建，打包格式为 Deb。macOS target 因 `zoomable` 缺
 
 ***
 
-## Flutter v1 归档
-
-Flutter v1 已从主线归档至 [`archive/flutter-v1/`](archive/flutter-v1/)，不再参与日常开发与桌面发布。该目录保留历史源码、平台工程与私有插件，供历史追溯与安全修复使用。新功能开发在 [`compose-miuix/`](compose-miuix/) 进行。
-
-Android 端 Flutter v1 与 Compose 版使用不同应用 ID，无法覆盖安装升级。详细迁移说明见 [archive README](archive/flutter-v1/README.md)。
-
 ## 工程架构
 
 ```text
 pixez-flutter-MIUIX/
-├── compose-miuix/                      # Kotlin Multiplatform 工程
-│   ├── composeApp/                     # 应用入口模块
-│   │   ├── src/androidMain/            # Android 入口、清单与资源
-│   │   └── src/desktopMain/            # Desktop JVM 入口与打包配置
+├── compose-miuix/                      # Android 主工程（Kotlin + Compose）
+│   ├── composeApp/                     # 应用入口模块（MainActivity、小组件、清单与打包配置）
 │   ├── gradle/libs.versions.toml       # 依赖版本目录
-│   └── shared/                         # 跨平台共享模块
-│       └── src/commonMain/
-│           ├── composeResources/       # 图标资源
-│           ├── sqldelight/             # SQLDelight 数据库定义与迁移
-│           └── kotlin/com/perol/pixez/shared/
-│               ├── data/               # 数据模型、本地存储与仓库
-│               ├── navigation/         # Decompose 路由与导航
-│               ├── network/            # Ktor 客户端、OAuth 认证与令牌刷新
-│               ├── platform/           # Expect/Actual 平台抽象
-│               ├── ui/                 # 页面、MIUIX 组件与动效
-│               └── utils/              # 通用工具
-├── archive/flutter-v1/                 # Flutter v1 只读归档
+│   └── shared/                         # 共享业务与 UI 模块
+│       └── src/
+│           ├── androidMain/            # Android 系统能力实现与 COUI 皮肤页面
+│           └── commonMain/
+│               ├── composeResources/   # 图标资源
+│               ├── sqldelight/         # SQLDelight 数据库定义与迁移
+│               └── kotlin/com/perol/pixez/shared/
+│                   ├── data/           # 数据模型、本地存储与仓库
+│                   ├── navigation/     # Decompose 路由与导航
+│                   ├── network/        # Ktor 客户端、OAuth 认证与令牌刷新
+│                   ├── platform/       # 平台能力抽象
+│                   ├── ui/             # 页面、MIUIX 组件与动效
+│                   └── utils/          # 通用工具
 ├── .github/                            # FAQ、多语言 README 与截图
 ├── AGENTS.md                           # Agent 约束与构建验证命令清单
 ├── CHANGELOG.md                        # 版本变更记录
@@ -151,7 +131,7 @@ pixez-flutter-MIUIX/
 └── README.md                           # 项目说明
 ```
 
-`shared/src/commonMain` 共 304 个 Kotlin 源文件。其中 `data/repository/` 有 18 个仓库类，`ui/screens/` 有 44 个 `*Screen.kt`。
+`shared/src/commonMain` 共 303 个 Kotlin 源文件，包含 44 个 `*Screen.kt`。
 
 ### 技术栈
 
@@ -163,14 +143,13 @@ pixez-flutter-MIUIX/
 | Android Gradle Plugin | 8.13.0 |
 | Compose Multiplatform | 1.12.0 |
 | MIUIX | 0.9.4 |
-| COUI（仅 Android） | 0.0.1-alpha12 |
+| COUI | 0.0.1-alpha12 |
 | Ktor | 3.1.2 |
 | Coil | 3.6.3 |
 | SQLDelight | 2.0.2 |
 | Decompose | 3.3.0 |
 | kotlinx-coroutines | 1.10.2 |
 | kotlinx-serialization | 1.8.1 |
-| JNA（仅桌面端） | 5.14.0 |
 
 版本以 `compose-miuix/gradle/libs.versions.toml` 与 `compose-miuix/composeApp/build.gradle.kts` 为准。
 
@@ -183,7 +162,6 @@ pixez-flutter-MIUIX/
 - JDK 17。
 - Android SDK：`compileSdk = 36`、`minSdk = 31`、`targetSdk = 35`。
 - 构建通过 Gradle Wrapper（Gradle 8.14.4）执行。
-- Windows 单文件 EXE 打包依赖 .NET Framework 的 `csc.exe`。
 
 ### 常用命令
 
@@ -191,22 +169,13 @@ pixez-flutter-MIUIX/
 
 ```bash
 # Android Debug 编译验证
-./gradlew :composeApp:compileDebugKotlinAndroid
+./gradlew :shared:compileDebugKotlinAndroid :composeApp:compileDebugKotlinAndroid
+
+# 运行单元测试
+./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest
 
 # 构建 Android Debug APK
 ./gradlew :composeApp:assembleDebug
-
-# 编译 Desktop 共享模块
-./gradlew :shared:compileKotlinDesktop
-
-# 运行桌面端
-./gradlew :composeApp:run
-
-# 运行双端单元测试
-./gradlew :shared:desktopTest :composeApp:desktopTest
-
-# 打包 Windows 单文件 EXE
-./gradlew :composeApp:packageWindowsSingleFileExe
 ```
 
 Android Release APK 使用 `./gradlew :composeApp:assembleRelease` 构建。未配置 `compose-miuix/keystore.properties` 时回退 debug 签名。此时产物版本名带 `-debug-signed` 后缀。

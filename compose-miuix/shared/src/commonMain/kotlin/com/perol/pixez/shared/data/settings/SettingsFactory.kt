@@ -3,18 +3,27 @@ package com.perol.pixez.shared.data.settings
 import com.russhwolf.settings.Settings
 
 /**
+ * [Settings] 工厂接口，供生产平台实现与 JVM 测试替身共用。
+ */
+interface SettingsProvider {
+    fun createSettings(): Settings
+
+    suspend fun migrateIfNeeded()
+}
+
+/**
  * 平台相关的 [Settings] 工厂，用于创建与旧 SharedPreferences 兼容的存储。
  */
-expect class SettingsFactory {
+expect class SettingsFactory : SettingsProvider {
     /**
      * 创建当前平台的 [Settings] 实例。
      * 该方法应尽可能轻量，不执行文件 I/O 等可能阻塞调用线程的操作。
      */
-    fun createSettings(): Settings
+    override fun createSettings(): Settings
 
     /**
-     * 在后台协程中执行一次性旧设置迁移（如 Desktop 从 shared_preferences.json 导入）。
-     * Android 因直接使用旧 SharedPreferences，无需额外迁移。
+     * 在后台协程中执行一次性旧设置迁移。
+     * Android 直接使用旧 SharedPreferences，无需额外迁移。
      */
-    suspend fun migrateIfNeeded()
+    override suspend fun migrateIfNeeded()
 }

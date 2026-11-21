@@ -11,6 +11,7 @@ import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.network.StreamingDownload
 import com.perol.pixez.shared.platform.DownloadNotifier
 import com.perol.pixez.shared.platform.FileNamePolicy
+import com.perol.pixez.shared.platform.IllustFileSaver
 import com.perol.pixez.shared.platform.IllustSaver
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -51,7 +52,7 @@ private const val DEFAULT_NAME_FORMAT = "{illust_id}_p{part}"
  */
 class DownloadRepository(
     private val httpClient: HttpClient = HttpClient(),
-    private val saver: IllustSaver = IllustSaver(),
+    private val saver: IllustFileSaver = IllustSaver(),
     private val historyRepository: DownloadHistoryRepository? = null,
     private val notifier: DownloadNotifier = DownloadNotifier(),
     private val settingsRepository: SettingsRepository,

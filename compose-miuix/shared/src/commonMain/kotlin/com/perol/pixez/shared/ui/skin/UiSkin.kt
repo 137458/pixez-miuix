@@ -7,8 +7,8 @@ import androidx.compose.ui.Modifier
 /**
  * 界面皮肤：同一套业务逻辑下的两套系统视觉。
  *
- * - [HYPEROS]：MIUIX 原生组件（默认，全平台可用）。
- * - [COLOROS]：COUI 原语，仅在 Android 提供（COUI AAR 无 Desktop 产物）。
+ * - [HYPEROS]：MIUIX 原生组件（默认）。
+ * - [COLOROS]：COUI 原语（Android 皮肤切换）。
  */
 enum class UiSkin(val storageIndex: Int) {
     HYPEROS(0),
@@ -23,7 +23,7 @@ enum class UiSkin(val storageIndex: Int) {
 /** 当前生效皮肤，由根组合在 [com.perol.pixez.shared.ui.navigation.RootContent] 下发。 */
 val LocalUiSkin = compositionLocalOf { UiSkin.HYPEROS }
 
-/** 当前平台是否提供 COUI 皮肤。Desktop 恒为 false。 */
+/** 当前平台是否提供 COUI 皮肤。 */
 expect val isCouiSkinSupported: Boolean
 
 /**

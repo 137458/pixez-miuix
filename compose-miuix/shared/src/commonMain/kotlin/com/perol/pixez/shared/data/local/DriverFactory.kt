@@ -5,11 +5,22 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlSchema
 
 /**
+ * SQLDelight 驱动工厂接口，供生产平台实现与 JVM 测试替身共用。
+ */
+interface SqlDriverFactory {
+    fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver
+
+    fun resolveDatabaseFileName(database: LocalDatabase): String
+
+    fun closeDriver(driver: SqlDriver)
+}
+
+/**
  * 平台相关的 SQLDelight 驱动工厂。
  * 每个旧 .db 文件通过 [fileName] 单独打开，保持与旧 Flutter 应用文件路径兼容。
  */
-expect class DriverFactory {
-    fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver
+expect class DriverFactory : SqlDriverFactory {
+    override fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver
 
     /**
      * 解析该库在当前设备上应实际打开的库文件名。
@@ -18,11 +29,11 @@ expect class DriverFactory {
      * 过渡版本写出的别名），全部不存在时返回登记主名（新建库走主名）。持库方必须经此解析，
      * 否则补列清单会与实开文件脱节。
      */
-    fun resolveDatabaseFileName(database: LocalDatabase): String
+    override fun resolveDatabaseFileName(database: LocalDatabase): String
 
     /**
      * 关闭由 [createDriver] 创建的 [SqlDriver]，释放底层文件句柄与连接。
      * Repository / DatabaseHolder 层应在合适的生命周期点统一调用。
      */
-    fun closeDriver(driver: SqlDriver)
+    override fun closeDriver(driver: SqlDriver)
 }

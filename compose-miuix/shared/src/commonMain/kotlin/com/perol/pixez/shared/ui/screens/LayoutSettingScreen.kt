@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.platform.isAndroidPlatform
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import androidx.compose.ui.Alignment
@@ -83,13 +82,7 @@ fun LayoutSettingScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
-    val crossCountOptions = remember {
-        if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
-            listOf("2", "3", "4", "5", "6", "7", "8")
-        } else {
-            listOf("2", "3", "4", "5", "6")
-        }
-    }
+    val crossCountOptions = remember { listOf("2", "3", "4", "5", "6") }
 
     // 显示模式下拉选项：索引与 displayMode 数值一一对应（0 跟随系统 / 1 60Hz / 2 高刷）。
     val displayModeLabels = remember(strings) {
@@ -137,20 +130,18 @@ fun LayoutSettingScreen(
                     }
                 }
 
-                if (isAndroidPlatform()) {
-                    item {
-                        SmallTitle(text = strings.dialogDisplayMode)
-                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                            OverlayDropdownPreference(
-                                title = strings.dialogDisplayMode,
-                                items = displayModeLabels,
-                                selectedIndex = displayMode.coerceIn(0, displayModeLabels.lastIndex),
-                                onSelectedIndexChange = { index ->
-                                    displayMode = index
-                                    settingsRepository.displayMode = index
-                                },
-                            )
-                        }
+                item {
+                    SmallTitle(text = strings.dialogDisplayMode)
+                    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                        OverlayDropdownPreference(
+                            title = strings.dialogDisplayMode,
+                            items = displayModeLabels,
+                            selectedIndex = displayMode.coerceIn(0, displayModeLabels.lastIndex),
+                            onSelectedIndexChange = { index ->
+                                displayMode = index
+                                settingsRepository.displayMode = index
+                            },
+                        )
                     }
                 }
 

@@ -16,13 +16,15 @@ actual object LocalIllustResolver {
                 if (custom.exists() && custom.isDirectory) custom else null
             } else null
 
-            val defaultDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "PixEz",
-            )
+            val defaultDir = runCatching {
+                File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                    "PixEz",
+                )
+            }.getOrNull()
             val baseDirs = buildList {
                 if (customDir != null) add(customDir)
-                if (defaultDir.exists() && defaultDir.isDirectory && defaultDir != customDir) {
+                if (defaultDir != null && defaultDir.exists() && defaultDir.isDirectory && defaultDir != customDir) {
                     add(defaultDir)
                 }
             }

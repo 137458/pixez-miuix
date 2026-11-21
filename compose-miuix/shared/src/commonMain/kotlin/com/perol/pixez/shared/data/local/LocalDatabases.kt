@@ -146,5 +146,5 @@ object LocalDatabases {
 /**
  * 按登记项打开库：先解析该设备上实际存在的库文件名（兼容历史别名），再交给平台驱动。
  */
-fun DriverFactory.createDriver(database: LocalDatabase) =
+fun SqlDriverFactory.createDriver(database: LocalDatabase) =
     createDriver(database.schema, resolveDatabaseFileName(database))

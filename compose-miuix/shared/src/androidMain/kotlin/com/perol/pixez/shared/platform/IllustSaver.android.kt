@@ -10,8 +10,8 @@ import java.io.File
 /**
  * Android 平台实现：将图片保存到公共 Pictures/PixEz 目录（ZIP 保存到公共 Downloads/PixEz 目录），并刷新 MediaStore。
  */
-actual class IllustSaver {
-    actual suspend fun save(
+actual class IllustSaver : IllustFileSaver {
+    actual override suspend fun save(
         fileName: String,
         bytes: ByteArray,
         subDir: String?,
@@ -33,7 +33,7 @@ actual class IllustSaver {
         ).toString()
     }
 
-    actual suspend fun saveFromTempFile(
+    actual override suspend fun saveFromTempFile(
         fileName: String,
         tempFilePath: okio.Path,
         subDir: String?,

@@ -24,25 +24,9 @@ kotlin {
         }
     }
 
-    jvm("desktop")
-
     sourceSets {
         val commonMain by getting
-        val desktopMain by getting
-        val desktopTest by getting
         val androidMain by getting
-
-        // 高-7：Android 与 Desktop 双端同为 JVM，RobustDohDns（含熔断）与连接池/client 构建逻辑
-        // 收敛到本中间源集，双端能力对齐；平台差异（桌面端系统代理探测）由 actual 注入。
-        val jvmShared by creating
-        jvmShared.dependsOn(commonMain)
-        androidMain.dependsOn(jvmShared)
-        desktopMain.dependsOn(jvmShared)
-
-        jvmShared.dependencies {
-            implementation(libs.okhttp.dnsoverhttps)
-            implementation(libs.ktor.client.okhttp)
-        }
 
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -94,10 +78,13 @@ kotlin {
         }
 
         androidMain.dependencies {
-            // COUI 仅落到 Android：BOM 与 AAR 只在本 source set 参与解析，Desktop 依赖树不受影响。
+            // COUI 仅落到 Android：BOM 与 AAR 只在本 source set 参与解析。
             implementation(project.dependencies.platform(libs.androidx.compose.bom.alpha))
             implementation(libs.androidx.core.ktx)
             implementation(libs.coui)
+
+            implementation(libs.okhttp.dnsoverhttps)
+            implementation(libs.ktor.client.okhttp)
 
             implementation(libs.androidx.activity.compose)
             implementation(libs.sqldelight.android.driver)
@@ -106,18 +93,10 @@ kotlin {
             implementation(libs.coil.gif)
         }
 
-        desktopMain.dependencies {
-            implementation(libs.sqldelight.sqlite.driver)
-            // 桌面端凭据加密走 Windows DPAPI（CryptProtectData），非 Windows JVM 运行时回退明文
-            implementation(libs.jna.platform)
-        }
-
         val androidUnitTest by getting
         androidUnitTest.dependencies {
             implementation(libs.sqldelight.sqlite.driver)
         }
-
-        // desktopTest 复用 commonTest 的 kotlin("test")/junit 依赖，无需重复声明
     }
 }
 
@@ -134,6 +113,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            // Compose Android runtime 等三方库在 JVM 单测中调用 android.util.Log，允许返回默认值避免 not mocked 中断
+            isReturnDefaultValues = true
+        }
     }
 
     lint {

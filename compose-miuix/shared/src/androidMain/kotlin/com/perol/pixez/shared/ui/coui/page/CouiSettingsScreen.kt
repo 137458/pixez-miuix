@@ -47,7 +47,6 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -246,14 +245,12 @@ internal fun CouiSettingsScreen(
                     summary = strings.interactionSettingSwipeChange,
                     onClick = onInteractionSettingClick,
                 )
-                if (isAndroidPlatform()) {
-                    CouiRowDivider()
-                    CouiValueRow(
-                        title = strings.settingWidgetRecommend,
-                        summary = strings.settingWidgetRecommendSummary,
-                        onClick = onWidgetRecommendSettingClick,
-                    )
-                }
+                CouiRowDivider()
+                CouiValueRow(
+                    title = strings.settingWidgetRecommend,
+                    summary = strings.settingWidgetRecommendSummary,
+                    onClick = onWidgetRecommendSettingClick,
+                )
                 CouiRowDivider()
                 CouiValueRow(title = strings.settingHistory, summary = strings.settingHistorySummary, onClick = onHistoryClick)
                 CouiRowDivider()
@@ -277,14 +274,12 @@ internal fun CouiSettingsScreen(
         // ── 6. 系统与数据 ──
         item(key = "coui_settings_storage", contentType = "section") {
             CouiSettingSection(title = strings.settingSectionStorage) {
-                if (isAndroidPlatform()) {
-                    CouiValueRow(
-                        title = strings.platformSettingDefaultOpenLinks,
-                        summary = strings.platformSettingDefaultOpenLinksSummary,
-                        onClick = { openDefaultAppSettings() },
-                    )
-                    CouiRowDivider()
-                }
+                CouiValueRow(
+                    title = strings.platformSettingDefaultOpenLinks,
+                    summary = strings.platformSettingDefaultOpenLinksSummary,
+                    onClick = { openDefaultAppSettings() },
+                )
+                CouiRowDivider()
                 CouiValueRow(title = strings.settingNetwork, summary = strings.settingNetworkSummary, onClick = onNetworkSettingClick)
                 CouiRowDivider()
                 CouiValueRow(

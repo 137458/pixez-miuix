@@ -1,8 +1,8 @@
 package com.perol.pixez.shared.data.repository
 
-import com.perol.pixez.shared.data.local.DriverFactory
 import com.perol.pixez.shared.data.local.LocalDatabases
 import com.perol.pixez.shared.data.local.SqlDelightAuthTokenStorage
+import com.perol.pixez.shared.data.local.SqlDriverFactory
 import com.perol.pixez.shared.data.local.createDriver
 import com.perol.pixez.shared.data.local.glanceillustpersist.GlanceIllustPersistDatabase
 import com.perol.pixez.shared.data.local.glanceillustpersist.Glanceillustpersist
@@ -27,7 +27,7 @@ private const val CACHE_EXPIRY_MILLIS = 24L * 60 * 60 * 1000
  * 封装小部件在独立进程/广播接收器中的数据读取、按需网络拉取与持久化缓存。
  */
 class WidgetRepository(
-    private val driverFactory: DriverFactory,
+    private val driverFactory: SqlDriverFactory,
     private val settingsRepository: SettingsRepository,
     private val tokenStorage: AuthTokenStorage? = null,
     private val remoteFetcher: (suspend (type: String, authStorage: AuthTokenStorage) -> List<Illust>)? = null,

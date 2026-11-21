@@ -2,9 +2,7 @@
 
 # PixEz MIUIX [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](../LICENSE)
 
-> **Compose adalah jalur utama**: PixEz MIUIX dikembangkan dan dirilis dari [`compose-miuix/`](../compose-miuix). Flutter v1 diarsipkan di [`archive/flutter-v1/`](../archive/flutter-v1/) untuk penelusuran historis dan perbaikan keamanan. Di Android, Flutter v1 dan versi Compose memakai application ID berbeda, sehingga pembaruan tidak dapat menimpa satu sama lain.
-
-Klien pihak ketiga Pixiv yang dibangun dengan Kotlin Multiplatform (KMP) dan Compose Multiplatform (CMP), dengan antarmuka berbasis pustaka komponen MIUIX (`top.yukonga.miuix.kmp`). Rilis aktif tersedia untuk Android dan Windows Desktop; target macOS belum diaktifkan.
+Klien pihak ketiga Pixiv untuk ponsel dan tablet Android, mendukung tema antarmuka Xiaomi HyperOS (MIUIX) dan ColorOS (COUI).
 
 Aplikasi menjangkau Pixiv dari Tiongkok Daratan tanpa proxy. Resolusi nama domain memakai DNS-over-HTTPS dengan cadangan DNS sistem, dan mirror sumber gambar bersifat opsional. Tingkat ECH dan kompatibilitas ditentukan oleh negosiasi TLS lapisan bawah; aplikasi tidak mengubah SNI.
 
@@ -13,11 +11,8 @@ Aplikasi menjangkau Pixiv dari Tiongkok Daratan tanpa proxy. Resolusi nama domai
 | OS | Unduhan |
 | :--- | :--- |
 | Android | [`PixEz-MIUIX-v*.apk`](https://github.com/137458/pixez-miuix/releases) |
-| Windows Desktop | [`PixEz-Standalone.exe` / `PixEz-windows-x64-portable.zip` / `PixEz-*.msi`](https://github.com/137458/pixez-miuix/releases) |
-| Linux | Build dari sumber (termasuk paket Deb); belum ada rilis resmi |
-| macOS | Target belum diaktifkan; belum ada rilis resmi |
 
-Rilis saat ini: `0.9.109.7-miuix`. Android 12 (API 31) atau lebih baru, untuk ponsel dan tablet. EXE Windows berjalan tanpa pemasangan Java. Versi portabel diekstrak terlebih dahulu, lalu jalankan `PixEz.exe`.
+Rilis saat ini: `0.9.109.7-miuix`. Membutuhkan Android 12 (API 31) atau lebih baru untuk ponsel dan tablet.
 
 ## Pratinjau
 
@@ -26,7 +21,7 @@ Rilis saat ini: `0.9.109.7-miuix`. Android 12 (API 31) atau lebih baru, untuk po
 
 ## Tentang Repositori Ini
 
-PixEz MIUIX adalah versi tulis-ulang PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 304 berkas Kotlin, termasuk 18 kelas repositori di `data/repository/` dan 44 berkas `*Screen.kt`. Tumpukan utamanya: Kotlin 2.4.10, Compose Multiplatform 1.12.0, MIUIX 0.9.4, Ktor 3.1.2, SQLDelight 2.0.2, Coil 3.6.3, dan Decompose 3.3.0. Proyek memakai `compileSdk` 36 dan `minSdk` 31.
+PixEz MIUIX adalah versi tulis-ulang PixEz, klien pihak ketiga Pixiv. `shared/src/commonMain` memuat 303 berkas Kotlin, termasuk 44 berkas `*Screen.kt`. Tumpukan utamanya: Kotlin 2.4.10, Compose Multiplatform 1.12.0, MIUIX 0.9.4, COUI 0.0.1-alpha12, Ktor 3.1.2, SQLDelight 2.0.2, Coil 3.6.3, dan Decompose 3.3.0. Proyek memakai `compileSdk` 36 dan `minSdk` 31.
 
 Komponen utama:
 

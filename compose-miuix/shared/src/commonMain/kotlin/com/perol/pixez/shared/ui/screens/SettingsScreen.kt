@@ -40,7 +40,6 @@ import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.BoardInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
-import com.perol.pixez.shared.platform.isAndroidPlatform
 import com.perol.pixez.shared.platform.openDefaultAppSettings
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.components.LocalToastSink
@@ -318,13 +317,11 @@ fun SettingsScreen(
                         summary = strings.interactionSettingSwipeChange,
                         onClick = onInteractionSettingClick,
                     )
-                    if (isAndroidPlatform()) {
-                        ArrowPreference(
-                            title = strings.settingWidgetRecommend,
-                            summary = strings.settingWidgetRecommendSummary,
-                            onClick = onWidgetRecommendSettingClick,
-                        )
-                    }
+                    ArrowPreference(
+                        title = strings.settingWidgetRecommend,
+                        summary = strings.settingWidgetRecommendSummary,
+                        onClick = onWidgetRecommendSettingClick,
+                    )
                     ArrowPreference(
                         title = strings.settingHistory,
                         summary = strings.settingHistorySummary,
@@ -359,13 +356,11 @@ fun SettingsScreen(
             item {
                 SmallTitle(text = strings.settingSectionStorage)
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                    if (isAndroidPlatform()) {
-                        BasicComponent(
-                            title = strings.platformSettingDefaultOpenLinks,
-                            summary = strings.platformSettingDefaultOpenLinksSummary,
-                            onClick = { openDefaultAppSettings() },
-                        )
-                    }
+                    BasicComponent(
+                        title = strings.platformSettingDefaultOpenLinks,
+                        summary = strings.platformSettingDefaultOpenLinksSummary,
+                        onClick = { openDefaultAppSettings() },
+                    )
                     ArrowPreference(
                         title = strings.settingNetwork,
                         summary = strings.settingNetworkSummary,

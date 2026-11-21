@@ -393,26 +393,8 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.IS_RETURN_AGAIN_TO_EXIT] = value; notifyChanged() }
 
     /**
-     * Desktop 关闭主窗口时是否最小化到系统托盘。
-     * 默认关闭，避免用户误以为应用已经完全退出。
-     */
-    var closeToTray: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.CLOSE_TO_TRAY, false)
-        set(value) {
-            settings[SettingsKeys.CLOSE_TO_TRAY] = value
-            notifyChanged()
-        }
-
-    /**
      * 插画详情页左右滑动切换作品。
      */
-    var launchOnStartup: Boolean
-        get() = tracked().getBooleanWithLegacyFallback(SettingsKeys.LAUNCH_ON_STARTUP, false)
-        set(value) {
-            settings[SettingsKeys.LAUNCH_ON_STARTUP] = value
-            notifyChanged()
-        }
-
     var swipeChangeArtwork: Boolean
         get() = tracked().getBooleanWithLegacyFallback(
             SettingsKeys.SWIPE_CHANGE_ARTWORK,

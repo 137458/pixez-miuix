@@ -108,13 +108,8 @@ internal fun buildIllustDetailMoreMenuEntries(
                     icon = { modifier -> Icon(imageVector = MiuixIcons.Share, contentDescription = null, modifier = modifier) },
                     onClick = {
                         val link = buildIllustShareLink(illust)
-                        val successMsg = if (com.perol.pixez.shared.platform.isDesktopPlatform()) {
-                            strings.copiedToClipboard
-                        } else {
-                            strings.share
-                        }
                         runClipboardShare(
-                            success = ToastData(successMsg, ToastType.Success),
+                            success = ToastData(strings.share, ToastType.Success),
                             failurePrefix = strings.share,
                             onToast = onToast,
                         ) { share.share(link, illust.title) }

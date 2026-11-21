@@ -5,8 +5,6 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.blurBackdropSource
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,17 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.platform.isDesktopPlatform
 import com.perol.pixez.shared.ui.AppConstants
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import androidx.compose.foundation.background
 
 /**
- * 交互设置页：管理异形屏适配、H 内容过滤、再次返回退出、滑动切换作品等开关。
+ * 交互设置页：管理再次返回退出、滑动切换作品等开关。
  *
  * @param onBack 返回上一级页面。
  */
@@ -47,8 +43,6 @@ fun InteractionSettingScreen(
     // 页面状态：从 SettingsRepository 读取当前交互相关设置，用于驱动 Switch 的显示与回写。
     var isReturnAgainToExit by remember { mutableStateOf(settingsRepository.isReturnAgainToExit) }
     var swipeChangeArtwork by remember { mutableStateOf(settingsRepository.swipeChangeArtwork) }
-    var closeToTray by remember { mutableStateOf(settingsRepository.closeToTray) }
-    var launchOnStartup by remember { mutableStateOf(settingsRepository.launchOnStartup) }
     val strings = com.perol.pixez.shared.ui.i18n.LocalStrings.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -88,80 +82,18 @@ fun InteractionSettingScreen(
                                 settingsRepository.swipeChangeArtwork = checked
                             },
                         )
-                        if (com.perol.pixez.shared.platform.isAndroidPlatform()) {
-                            SwitchPreference(
-                                title = strings.interactionSettingDoubleBackExit,
-                                summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
-                                checked = isReturnAgainToExit,
-                                onCheckedChange = { checked ->
-                                    isReturnAgainToExit = checked
-                                    settingsRepository.isReturnAgainToExit = checked
-                                },
-                            )
-                        }
-                        if (isDesktopPlatform()) {
-                            SwitchPreference(
-                                title = strings.interactionSettingCloseToTray,
-                                summary = if (closeToTray) strings.interactionSettingCloseToTraySummaryOn else strings.interactionSettingCloseToTraySummaryOff,
-                                checked = closeToTray,
-                                onCheckedChange = { checked ->
-                                    closeToTray = checked
-                                    settingsRepository.closeToTray = checked
-                                },
-                            )
-                            SwitchPreference(
-                                title = strings.interactionSettingLaunchOnStartup,
-                                summary = if (launchOnStartup) strings.interactionSettingLaunchOnStartupSummaryOn else strings.interactionSettingLaunchOnStartupSummaryOff,
-                                checked = launchOnStartup,
-                                onCheckedChange = { checked ->
-                                    launchOnStartup = checked
-                                    settingsRepository.launchOnStartup = checked
-                                    com.perol.pixez.shared.platform.PlatformAutoStart.setEnabled(checked)
-                                },
-                            )
-
-                            // 桌面快捷键速查（动作名复用对应页面标题键，键位与 main.kt onKeyEvent 一致）
-                            ShortcutHintRow("Esc", strings.back)
-                            ShortcutHintRow("Ctrl+F", strings.tabSearch)
-                            ShortcutHintRow("Ctrl+1", strings.tabRecommend)
-                            ShortcutHintRow("Ctrl+2", strings.tabSearch)
-                            ShortcutHintRow("Ctrl+3", strings.tabRanking)
-                            ShortcutHintRow("Ctrl+4", strings.tabNew)
-                            ShortcutHintRow("Ctrl+5", strings.tabSpotlight)
-                            ShortcutHintRow("Ctrl+J / Ctrl+D", strings.settingDownloadTask)
-                            ShortcutHintRow("Ctrl+H", strings.settingHistory)
-                            ShortcutHintRow("Ctrl+B", strings.settingBookTags)
-                            ShortcutHintRow("Ctrl+N", strings.novelBrowseTitle)
-                            ShortcutHintRow("Ctrl+R / F5", strings.refresh)
-                            ShortcutHintRow("Ctrl+,", strings.settingsTitle)
-                            ShortcutHintRow("Ctrl+W", strings.interactionSettingCloseToTray)
-                        }
+                        SwitchPreference(
+                            title = strings.interactionSettingDoubleBackExit,
+                            summary = if (isReturnAgainToExit) strings.interactionSettingDoubleBackExitSummaryOn else strings.interactionSettingDoubleBackExitSummaryOff,
+                            checked = isReturnAgainToExit,
+                            onCheckedChange = { checked ->
+                                isReturnAgainToExit = checked
+                                settingsRepository.isReturnAgainToExit = checked
+                            },
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-/** 单行快捷键速查：键位 + 动作名（桌面交互设置页底部展示）。 */
-@Composable
-private fun ShortcutHintRow(keys: String, action: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = keys,
-            style = MiuixTheme.textStyles.body2,
-            color = MiuixTheme.colorScheme.primary,
-        )
-        Text(
-            text = action,
-            style = MiuixTheme.textStyles.body2,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        )
     }
 }

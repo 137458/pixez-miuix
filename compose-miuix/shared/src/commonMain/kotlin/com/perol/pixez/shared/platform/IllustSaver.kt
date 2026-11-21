@@ -1,22 +1,9 @@
 package com.perol.pixez.shared.platform
 
 /**
- * 跨平台保存插画图片字节到本地存储。
- *
- * 各平台实现负责选择正确的保存路径与权限处理：
- * - Android：保存到公共 Pictures/PixEz 目录并刷新 MediaStore。
- * - Desktop：保存到用户主目录下的 Pictures/PixEz。
+ * 插画保存抽象接口，供生产端平台实现与 JVM 测试替身共用。
  */
-expect class IllustSaver() {
-    /**
-     * 将图片字节保存为指定文件名的文件。
-     *
-     * @param fileName 文件名，含扩展名，如 "title_p0.jpg"。
-     * @param bytes 图片二进制数据。
-     * @param subDir 可选的相对子目录（如画师专属文件夹）。
-     * @param customBasePath 可选的自定义绝对基准路径（如桌面端自定义存储路径）。
-     * @return 保存后的可读路径或标识，失败时抛出异常。
-     */
+interface IllustFileSaver {
     suspend fun save(
         fileName: String,
         bytes: ByteArray,
@@ -24,13 +11,31 @@ expect class IllustSaver() {
         customBasePath: String? = null,
     ): String
 
-    /**
-     * 将临时文件流式保存到目标存储中，避免大图片/动图将完整字节读入 JVM 堆内存。
-     */
     suspend fun saveFromTempFile(
         fileName: String,
         tempFilePath: okio.Path,
         subDir: String? = null,
         customBasePath: String? = null,
+    ): String
+}
+
+/**
+ * 跨平台保存插画图片字节到本地存储。
+ *
+ * Android 实现负责保存到公共 Pictures/PixEz 目录并刷新 MediaStore。
+ */
+expect class IllustSaver() : IllustFileSaver {
+    override suspend fun save(
+        fileName: String,
+        bytes: ByteArray,
+        subDir: String?,
+        customBasePath: String?,
+    ): String
+
+    override suspend fun saveFromTempFile(
+        fileName: String,
+        tempFilePath: okio.Path,
+        subDir: String?,
+        customBasePath: String?,
     ): String
 }

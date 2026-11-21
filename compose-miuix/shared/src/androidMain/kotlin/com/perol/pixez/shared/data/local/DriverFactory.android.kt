@@ -7,8 +7,8 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlSchema
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 
-actual class DriverFactory(private val context: Context) {
-    actual fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver {
+actual class DriverFactory(private val context: Context) : SqlDriverFactory {
+    actual override fun createDriver(schema: SqlSchema<QueryResult.Value<Unit>>, fileName: String): SqlDriver {
         return AndroidSqliteDriver(
             schema,
             context,
@@ -55,10 +55,10 @@ actual class DriverFactory(private val context: Context) {
         )
     }
 
-    actual fun resolveDatabaseFileName(database: LocalDatabase): String =
+    actual override fun resolveDatabaseFileName(database: LocalDatabase): String =
         database.candidateFileNames.firstOrNull { context.getDatabasePath(it).exists() } ?: database.fileName
 
-    actual fun closeDriver(driver: SqlDriver) {
+    actual override fun closeDriver(driver: SqlDriver) {
         driver.close()
     }
 
