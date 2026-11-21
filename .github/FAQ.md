@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="../compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
+<img src="../compose-miuix/shared/src/main/res/drawable-nodpi/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
 
 # PixEz MIUIX | 使用指南与常见问题（FAQ）
 
@@ -27,7 +27,7 @@
 
 ## 一、项目声明与版本说明
 
-- **PixEz MIUIX**：基于 Kotlin 与 Jetpack Compose / Compose Multiplatform 构建的 Android 客户端，支持 HyperOS（MIUIX）与 ColorOS（COUI）双皮肤。
+- **PixEz MIUIX**：基于 Kotlin 与 Jetpack Compose 构建的 Android 客户端，支持 HyperOS（MIUIX）与 ColorOS（COUI）双皮肤。
 - **版本标识**：当前版本名为 `0.9.109.7-miuix`，与 `compose-miuix/composeApp/build.gradle.kts` 中的 `versionName` 一致。
 - **关于本 FAQ**：本指南面向 PixEz MIUIX 版本的功能、设置项与常见问题。
 - **免责声明与版权提示**：

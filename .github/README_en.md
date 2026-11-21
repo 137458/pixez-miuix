@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src="../compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
+<img src="../compose-miuix/shared/src/main/res/drawable-nodpi/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
 
 # PixEz MIUIX
 
-**A third-party Pixiv client built with Kotlin Multiplatform and Compose Multiplatform, following the Xiaomi HyperOS (MIUIX) design language**
+**A third-party Pixiv client for Android built with Kotlin and Jetpack Compose, supporting Xiaomi HyperOS (MIUIX) and ColorOS (COUI)**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](../LICENSE)
 [![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%2012%2B-blue.svg?style=flat-square)](#download--installation)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square&logo=kotlin)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.08.01-4285F4.svg?style=flat-square&logo=jetpackcompose)](https://developer.android.com/compose)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
 
 [中文 README](../README.md) · [Bahasa Indonesia](./README_id.md) · [FAQ & Guidelines](FAQ.md) · [Releases](https://github.com/137458/pixez-miuix/releases)
@@ -36,9 +36,9 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 - The bottom bar carries five tabs: Recommend, Search, Ranking, Feed, and Spotlight.
 - Tablets and wide screens switch to a multi-column staggered grid. The floating bottom bar caps at 540 dp and stays centered; the content column caps at 760 dp.
 
-### Multiplatform Architecture
+### Android Architecture
 
-- `shared/src/commonMain` holds 303 Kotlin files, including 44 `*Screen.kt`.
+- `shared/src/main/kotlin` holds 384 Kotlin files, including 87 `*Screen.kt` (covering both HyperOS and ColorOS skins).
 - Decompose drives routing and navigation.
 - Ktor Client handles networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
 - SQLDelight stores local data; Coil 3 loads images.
@@ -97,7 +97,7 @@ Install `PixEz-MIUIX-v*.apk` on the device. Android 12 (API 31) or later is requ
 | Gradle | 8.14.4, through the Wrapper |
 | Android Gradle Plugin | 8.13.0 |
 | Android SDK | `compileSdk = 36`, `targetSdk = 35`, `minSdk = 31` |
-| Library versions | `compose-miuix/gradle/libs.versions.toml` (Kotlin 2.4.10, Compose Multiplatform 1.12.0, MIUIX 0.9.4, COUI 0.0.1-alpha12) |
+| Library versions | `compose-miuix/gradle/libs.versions.toml` (Kotlin 2.4.10, Jetpack Compose BOM 2026.08.01, MIUIX 0.9.4, COUI 0.0.1-alpha12) |
 
 ### Build Commands
 
@@ -105,7 +105,7 @@ Run the commands from `compose-miuix/`. `AGENTS.md` is the single source of trut
 
 ```bash
 # Android Debug compile check
-./gradlew :shared:compileDebugKotlinAndroid :composeApp:compileDebugKotlinAndroid
+./gradlew :shared:compileDebugKotlin :composeApp:compileDebugKotlin
 
 # Run Android JVM unit tests
 ./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest

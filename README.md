@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src="./compose-miuix/shared/src/commonMain/composeResources/drawable/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
+<img src="./compose-miuix/shared/src/main/res/drawable-nodpi/ic_pixez_logo.png" alt="PixEz Logo" width="128" height="128" />
 
 # PixEz MIUIX
 
-**基于 Kotlin Multiplatform 与 Compose Multiplatform 的 Pixiv 第三方客户端，采用 Xiaomi HyperOS（MIUIX）设计规范**
+**基于 Kotlin 与 Jetpack Compose 的 Pixiv 第三方客户端，采用 Xiaomi HyperOS（MIUIX）与 ColorOS（COUI）双界面设计**
 
 [![License](https://img.shields.io/badge/License-GPL--3.0-orange.svg?style=flat-square)](LICENSE)
 [![Active Releases](https://img.shields.io/badge/Active%20Releases-Android%2012%2B-blue.svg?style=flat-square)](#下载与安装)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7f52ff.svg?style=flat-square\&logo=kotlin)](https://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.12.0-4285F4.svg?style=flat-square\&logo=jetpackcompose)](https://www.jetbrains.com/compose-multiplatform/)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.08.01-4285F4.svg?style=flat-square\&logo=jetpackcompose)](https://developer.android.com/compose)
 [![MIUIX](https://img.shields.io/badge/Design-Xiaomi%20HyperOS%20%2F%20MIUIX-ff6900.svg?style=flat-square)](https://github.com/compose-miuix-ui/miuix)
 
 [English](./.github/README_en.md) · [Bahasa Indonesia](./.github/README_id.md) · [使用指南与 FAQ](.github/FAQ.md) · [发布版本](https://github.com/137458/pixez-miuix/releases)
@@ -35,7 +35,7 @@
 
 ## 项目简介
 
-**PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目使用 Jetpack Compose / Compose Multiplatform 与 Kotlin 开发，专注 Android 手机与平板端，支持 Xiaomi HyperOS（MIUIX）与 ColorOS（COUI）双界面皮肤。
+**PixEz MIUIX** 是 Pixiv 第三方客户端 PixEz 的重制版本。项目使用 Jetpack Compose 与 Kotlin 开发，专注 Android 手机与平板端，支持 Xiaomi HyperOS（MIUIX）与 ColorOS（COUI）双界面皮肤。
 
 面向中国大陆网络环境改善连通性：域名经 DoH 解析，图源可选镜像。ECH 档与兼容档的差异由底层 TLS 协商承担，应用不修改 SNI。
 
@@ -111,18 +111,16 @@ pixez-flutter-MIUIX/
 │   ├── composeApp/                     # 应用入口模块（MainActivity、小组件、清单与打包配置）
 │   ├── gradle/libs.versions.toml       # 依赖版本目录
 │   └── shared/                         # 共享业务与 UI 模块
-│       └── src/
-│           ├── androidMain/            # Android 系统能力实现与 COUI 皮肤页面
-│           └── commonMain/
-│               ├── composeResources/   # 图标资源
-│               ├── sqldelight/         # SQLDelight 数据库定义与迁移
-│               └── kotlin/com/perol/pixez/shared/
-│                   ├── data/           # 数据模型、本地存储与仓库
-│                   ├── navigation/     # Decompose 路由与导航
-│                   ├── network/        # Ktor 客户端、OAuth 认证与令牌刷新
-│                   ├── platform/       # 平台能力抽象
-│                   ├── ui/             # 页面、MIUIX 组件与动效
-│                   └── utils/          # 通用工具
+│       └── src/main/
+│           ├── res/                    # Android 资源（多语言与图标）
+│           ├── sqldelight/             # SQLDelight 数据库定义与迁移
+│           └── kotlin/com/perol/pixez/shared/
+│               ├── data/               # 数据模型、本地存储与仓库
+│               ├── navigation/         # Decompose 路由与导航
+│               ├── network/            # Ktor 客户端、OAuth 认证与令牌刷新
+│               ├── platform/           # 平台能力封装
+│               ├── ui/                 # 页面、MIUIX / COUI 组件与动效
+│               └── utils/              # 通用工具
 ├── .github/                            # FAQ、多语言 README 与截图
 ├── AGENTS.md                           # Agent 约束与构建验证命令清单
 ├── CHANGELOG.md                        # 版本变更记录
@@ -131,7 +129,7 @@ pixez-flutter-MIUIX/
 └── README.md                           # 项目说明
 ```
 
-`shared/src/commonMain` 共 303 个 Kotlin 源文件，包含 44 个 `*Screen.kt`。
+`shared/src/main/kotlin` 共 384 个 Kotlin 源文件，包含 87 个 `*Screen.kt`（涵盖 HyperOS 与 ColorOS 双皮肤页面）。
 
 ### 技术栈
 
@@ -141,7 +139,7 @@ pixez-flutter-MIUIX/
 | Gradle | 8.14.4 |
 | Kotlin | 2.4.10 |
 | Android Gradle Plugin | 8.13.0 |
-| Compose Multiplatform | 1.12.0 |
+| Jetpack Compose BOM | 2026.08.01 (`compose-bom-alpha`) |
 | MIUIX | 0.9.4 |
 | COUI | 0.0.1-alpha12 |
 | Ktor | 3.1.2 |
@@ -169,7 +167,7 @@ pixez-flutter-MIUIX/
 
 ```bash
 # Android Debug 编译验证
-./gradlew :shared:compileDebugKotlinAndroid :composeApp:compileDebugKotlinAndroid
+./gradlew :shared:compileDebugKotlin :composeApp:compileDebugKotlin
 
 # 运行单元测试
 ./gradlew :shared:testDebugUnitTest :composeApp:testDebugUnitTest
