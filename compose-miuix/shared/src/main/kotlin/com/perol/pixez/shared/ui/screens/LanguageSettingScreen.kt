@@ -44,8 +44,7 @@ import androidx.compose.foundation.background
  * 语言设置页：选择应用显示语言。
  *
  * 语言列表与 Sponsor 数据直接硬编码自旧 Flutter 版 `lib/page/about/languages.dart`，
- * 选中后写入 [SettingsRepository.languageNum]。
- * 本次仅持久化语言索引，不触发应用内实时切换语言或刷新 UI 文案。
+ * 选中后写入 [SettingsRepository.languageNum]，由根层实时切换界面语言与 RTL 排版。
  *
  * @param onBack 返回上一级页面。
  */

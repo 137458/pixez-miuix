@@ -43,8 +43,8 @@
 
 ## 核心特性
 
-- **MIUIX 界面与 Liquid Glass 悬浮底栏**：
-  - 界面基于 MIUIX 组件库构建。
+- **双皮肤界面与 Liquid Glass 悬浮底栏**：
+  - 支持 Xiaomi HyperOS（MIUIX）与 ColorOS（COUI）两套视觉皮肤，可在主题设置中实时切换。
   - 悬浮底栏支持液态玻璃折射与背景模糊两种渲染；设备不支持 `RuntimeShader` 时回退为模糊。
   - 着色器动效在 Android 13（API 33）及以上使用系统 `RuntimeShader`，COUI 在 Android 14（API 34）及以上支持实时背景采样玻璃材质，低版本平滑退回背景模糊。
   - 平板与宽屏启用多列瀑布流。

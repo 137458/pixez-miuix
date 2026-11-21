@@ -4,7 +4,7 @@ package com.perol.pixez.shared
  * 应用级静态信息，避免版本号、名称等散落在多个屏幕中。
  * 注意：VERSION_NAME 是应用内自报版本（更新检查、关于页、User-Agent 的唯一来源），
  * 发版时必须与 composeApp/build.gradle.kts 的 versionName 同步升级，
- * 守护测试见 desktopTest 的 AppInfoVersionParityTest。
+ * 守护测试见 shared/src/test 的 AppInfoVersionParityTest。
  */
 object AppInfo {
     const val VERSION_NAME = "0.9.109.7-miuix"

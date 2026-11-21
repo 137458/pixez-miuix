@@ -28,9 +28,9 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 
 ## Features
 
-### MIUIX Design
+### Dual-Skin Design (HyperOS / MIUIX & ColorOS / COUI)
 
-- The UI is built on the MIUIX component library; the main containers are `Card` and `BasicComponent`.
+- Supports both Xiaomi HyperOS (MIUIX) and ColorOS (COUI) UI skins, switchable in theme settings (MIUIX builds on `Card` and `BasicComponent`; COUI builds on official ColorOS Compose components).
 - The floating bottom bar renders Liquid Glass refraction with background blur, and drops to blur when `RuntimeShader` is unavailable.
 - Shader effects use the system `RuntimeShader` on Android 13 (API 33) and later, and COUI uses backdrop glass sampling on Android 14 (API 34) and later, falling back to blur on earlier versions.
 - The bottom bar carries five tabs: Recommend, Search, Ranking, Feed, and Spotlight.

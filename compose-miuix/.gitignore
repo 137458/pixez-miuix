@@ -15,6 +15,4 @@ keystore.properties
 *.jks
 *.keystore
 *.ipa
-*.msix
-*.dmg
 *.deb

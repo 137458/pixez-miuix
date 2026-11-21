@@ -47,7 +47,7 @@
 # ------------------------------------------------------------------------------
 -dontwarn com.arkivanov.decompose.**
 -dontwarn com.arkivanov.essenty.**
--keep class com.perol.pixez.shared.ui.navigation.RootComponent$Config** { *; }
+-keep class com.perol.pixez.shared.ui.navigation.Config** { *; }
 -keep @kotlinx.serialization.Serializable class com.perol.pixez.shared.data.model.** {
     <init>(...);
 }

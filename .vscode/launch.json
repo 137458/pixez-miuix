@@ -5,23 +5,6 @@
   "version": "0.3.0",
   "configurations": [
     {
-      "name": "Debug",
-      "request": "launch",
-      "type": "dart"
-    },
-    {
-      "name": "Release",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "release"
-    },
-    {
-      "name": "Profile",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "profile"
-    },
-    {
       "name": "(Windows) 附加",
       "type": "cppvsdbg",
       "request": "attach",
