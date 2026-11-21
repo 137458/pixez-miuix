@@ -164,6 +164,7 @@ class WidgetRepositoryCacheTest {
         override suspend fun deleteAccount(userId: String) {}
         override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {}
         override suspend fun invalidateCredentials(userId: String) {}
+        override suspend fun expireAccessToken(userId: String) {}
         override suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?) {}
         override suspend fun clear() {}
     }

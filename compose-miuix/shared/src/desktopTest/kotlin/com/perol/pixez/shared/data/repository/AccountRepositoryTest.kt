@@ -8,6 +8,7 @@ import com.perol.pixez.shared.data.local.account.Account as AccountRow
 import com.perol.pixez.shared.data.cache.SessionCache
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.AuthTokenStorage
+import com.perol.pixez.shared.network.PixivApiException
 import com.russhwolf.settings.PreferencesSettings
 import com.perol.pixez.shared.network.OAuthClient
 import com.perol.pixez.shared.network.OAuthClient.PkcePair
@@ -23,6 +24,8 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -116,6 +119,9 @@ class AccountRepositoryTest {
 
         override suspend fun updateTokensForUser(userId: String, accessToken: String, refreshToken: String) {
             updateTokensCalls++
+            rows.replaceAll {
+                if (it.user_id == userId) it.copy(access_token = accessToken, refresh_token = refreshToken) else it
+            }
         }
 
         val invalidatedUserIds = mutableListOf<String>()
@@ -124,6 +130,12 @@ class AccountRepositoryTest {
             invalidatedUserIds += userId
             rows.replaceAll {
                 if (it.user_id == userId) it.copy(access_token = "", refresh_token = "") else it
+            }
+        }
+
+        override suspend fun expireAccessToken(userId: String) {
+            rows.replaceAll {
+                if (it.user_id == userId) it.copy(access_token = "") else it
             }
         }
 
@@ -422,6 +434,61 @@ class AccountRepositoryTest {
         repository.refreshSessionState()
 
         assertEquals(0, events, "有效凭证不应触发失效提示")
+        job.cancel()
+    }
+
+    @Test
+    fun `refreshSessionState 在 access 为空但 refresh 可用时静默恢复且不发失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = ""))
+        storage.activeUserId = "1"
+        oauth.refreshResult = oauthEnvelope("1")
+        var events = 0
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { events++ }
+        }
+        val loginEvent = async(start = CoroutineStart.UNDISPATCHED) { repository.loginEventFlow.first() }
+
+        repository.refreshSessionState()
+
+        assertEquals(listOf("rt"), oauth.receivedTokens, "静默恢复必须使用保留的 refresh_token")
+        assertEquals(0, events, "静默恢复成功不得提示重新登录")
+        assertEquals("access-1", storage.rows.single().access_token, "恢复后应写回新的 access_token")
+        assertEquals("refresh-1", storage.rows.single().refresh_token, "恢复后应写回轮换后的 refresh_token")
+        assertTrue(withTimeoutOrNull(1_000) { loginEvent.await() } == Unit, "静默恢复后应通知 UI 重新读取账号")
+        job.cancel()
+    }
+
+    @Test
+    fun `refreshSessionState 在静默恢复被服务端拒绝时发出失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = ""))
+        storage.activeUserId = "1"
+        oauth.refreshError = PixivApiException(statusCode = 400, message = "invalid_grant")
+        val event = CompletableDeferred<String>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { event.complete(it.userId) }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals("1", withTimeoutOrNull(1_000) { event.await() }, "静默恢复被拒必须提示重新登录")
+        job.cancel()
+    }
+
+    @Test
+    fun `refreshSessionState 在静默恢复遇到网络异常时不发失效事件`() = runBlocking {
+        storage.rows.add(rowFixture("1").copy(access_token = ""))
+        storage.activeUserId = "1"
+        oauth.refreshError = RuntimeException("offline")
+        var events = 0
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            repository.authExpiredFlow.collect { events++ }
+        }
+
+        repository.refreshSessionState()
+
+        assertEquals(0, events, "离线玩家不得被误判为登录失效")
+        assertEquals("", storage.rows.single().access_token, "网络异常不得改动本地凭证")
+        assertEquals("rt", storage.rows.single().refresh_token, "网络异常必须保留 refresh_token 供下次启动重试")
         job.cancel()
     }
 

@@ -205,6 +205,25 @@ class SqlDelightAuthTokenStorage(
     }
 
     /**
+     * 软失效：只把 [userId] 的 access_token 置空，保留 refresh_token 与密码。
+     *
+     * 刷新被服务端拒绝时调用——refresh_token 未必真死（服务端抖动、并发轮换竞态），
+     * 保留它能让下次启动静默恢复登录态；access_token 置空后网络层不再发送失效 Bearer，
+     * 请求退化为匿名访问，而不是每个请求都 401 后重复发起注定失败的刷新。
+     */
+    override suspend fun expireAccessToken(userId: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val target = queries.selectByUserId(userId).executeAsList().firstOrNull()
+                ?: return@withLock
+            writeRow(target.copy(access_token = ""))
+            if (cachedAccount?.user_id == userId) {
+                cachedAccount = queries.selectByUserId(userId).executeAsList().firstOrNull()?.decrypted()
+                isCacheInitialized = true
+            }
+        }
+    }
+
+    /**
      * 原子更新当前账号。
      *
      * 在 Mutex 保护下读取当前账号，调用 [transform] 生成新账号对象，再将结果写回数据库。

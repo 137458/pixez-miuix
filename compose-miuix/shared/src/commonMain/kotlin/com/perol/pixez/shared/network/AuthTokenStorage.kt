@@ -40,6 +40,16 @@ interface AuthTokenStorage {
      */
     suspend fun invalidateCredentials(userId: String)
 
+    /**
+     * 将指定账号的 access_token 置空、保留 refresh_token（软失效）。
+     *
+     * 用于「刷新被服务端拒绝，但 refresh_token 未必真死」（服务端抖动、并发轮换竞态）的场景：
+     * 清空 access_token 让网络层不再发送失效 Bearer（退化为匿名访问，而不是每个请求都 401 后
+     * 反复发起注定失败的刷新），保留 refresh_token 供下次启动静默恢复登录态。
+     * 与 [invalidateCredentials] 的区别是不清 refresh_token，账号仍可自愈。
+     */
+    suspend fun expireAccessToken(userId: String)
+
     suspend fun updateCurrentAccount(transform: suspend (Account?) -> Account?)
 
     suspend fun clear()

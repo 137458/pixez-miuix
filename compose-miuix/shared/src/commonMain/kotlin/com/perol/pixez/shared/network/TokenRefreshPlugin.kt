@@ -77,8 +77,11 @@ class TokenRefreshPlugin(
     private suspend fun getAuthorizationSnapshot(): RequestAuthSnapshot? {
         val account = tokenStorage.getCurrentAccount() ?: return null
         if (account.access_token.isBlank()) {
-            // 凭证已被清理（解密失败或被判定吊销）：不再发送空 Bearer，直接提示重新登录。
-            authExpirySignal?.emit(account.user_id)
+            // 不再发送空 Bearer。软失效（access 清空但 refresh 尚在）留给启动自愈静默恢复，
+            // 不在这里每个请求都提示一次登录失效；两个 token 都没了才是确认失效，直接提示重新登录。
+            if (account.refresh_token.isBlank()) {
+                authExpirySignal?.emit(account.user_id)
+            }
             return null
         }
         return RequestAuthSnapshot(
@@ -123,10 +126,42 @@ class TokenRefreshPlugin(
                 return@withLock "Bearer ${targetAccount.access_token}"
             }
             if (targetAccount.refresh_token.isBlank()) {
-                expireCredentials(targetAccount.user_id)
+                expireCredentials(
+                    userId = targetAccount.user_id,
+                    soft = false,
+                    reason = "refresh_token 为空，无可保留的续期凭证",
+                )
             }
+            val refreshed = try {
+                oAuthClient.refreshToken(targetAccount.refresh_token)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: PixivApiException) {
+                // OAuth 端点明确拒绝（400 invalid_grant / 401）才是凭证失效；其它状态码原样抛出。
+                if (e.statusCode == 400 || e.statusCode == 401) {
+                    expireCredentials(
+                        userId = targetAccount.user_id,
+                        soft = true,
+                        reason = "OAuth 端点拒绝：HTTP ${e.statusCode} ${e.message}",
+                    )
+                }
+                Napier.e("刷新 token 失败", e)
+                throw e
+            } catch (e: IllegalArgumentException) {
+                // refresh_token 格式非法，等价于凭证失效。
+                expireCredentials(
+                    userId = targetAccount.user_id,
+                    soft = true,
+                    reason = "refresh_token 格式非法：${e.message}",
+                )
+            } catch (e: Exception) {
+                // 连接失败/超时等网络异常不得清理凭证，否则离线用户会被误判为登出。
+                Napier.e("刷新 token 失败", e)
+                throw e
+            }
+            // 写回放在网络异常捕获之外：加密/落库失败是本地故障，既不能被当成网络异常静默吞掉，
+            // 也不能据此判定凭证失效。写回失败时本次请求仍使用新 Bearer，账号留待下次启动再续期。
             try {
-                val refreshed = oAuthClient.refreshToken(targetAccount.refresh_token)
                 // 锁内按发起刷新的账号精准写回；期间若切换活跃账号，绝不污染新账号也绝不回写错误 token。
                 tokenStorage.updateTokensForUser(
                     userId = targetAccount.user_id,
@@ -134,34 +169,38 @@ class TokenRefreshPlugin(
                     refreshToken = refreshed.response.refreshToken,
                 )
                 expiredUsers.remove(targetAccount.user_id)
-                "Bearer ${refreshed.response.accessToken}"
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: PixivApiException) {
-                // OAuth 端点明确拒绝（400 invalid_grant / 401）才是凭证失效；其它状态码原样抛出。
-                if (e.statusCode == 400 || e.statusCode == 401) {
-                    expireCredentials(targetAccount.user_id)
-                }
-                Napier.e("刷新 token 失败", e)
-                throw e
-            } catch (e: IllegalArgumentException) {
-                // refresh_token 格式非法，等价于凭证失效。
-                expireCredentials(targetAccount.user_id)
             } catch (e: Exception) {
-                // 连接失败/超时等网络异常不得清理凭证，否则离线用户会被误判为登出。
-                Napier.e("刷新 token 失败", e)
-                throw e
+                Napier.e("刷新 token 成功但凭证写回本地失败，本次请求使用新 Bearer，下次启动需重新续期", e)
             }
+            "Bearer ${refreshed.response.accessToken}"
         }
     }
 
     /**
-     * 确认凭证失效：清理账号 token、标记熔断并发信号，随后抛 [AuthExpiredException]。
+     * 确认凭证失效：标记熔断、清理本地凭证、发信号，随后抛 [AuthExpiredException]。
      * 必须在持有 [mutex] 的上下文中调用。
+     *
+     * @param soft true 为软失效：只清 access_token、保留 refresh_token 供下次启动静默恢复；
+     *   false 为凭据已无可保留（refresh_token 为空），整体清空。
+     * @param reason 日志用原因，含状态码与脱敏响应消息，便于事后定位被拒的具体成因。
      */
-    private suspend fun expireCredentials(userId: String): Nothing {
+    private suspend fun expireCredentials(userId: String, soft: Boolean, reason: String): Nothing {
+        Napier.w(
+            "账号($userId)凭证续期失败，" +
+                if (soft) {
+                    "软失效：清空 access_token 并保留 refresh_token 待启动自愈（$reason）"
+                } else {
+                    "确认失效：清空全部凭证（$reason）"
+                },
+        )
         expiredUsers[userId] = TimeSource.Monotonic.markNow()
-        tokenStorage.invalidateCredentials(userId)
+        if (soft) {
+            tokenStorage.expireAccessToken(userId)
+        } else {
+            tokenStorage.invalidateCredentials(userId)
+        }
         authExpirySignal?.emit(userId)
         throw AuthExpiredException(userId)
     }

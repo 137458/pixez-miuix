@@ -25,6 +25,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -150,6 +151,13 @@ private class FakeAuthTokenStorage : AuthTokenStorage {
     override suspend fun invalidateCredentials(userId: String) {
         invalidatedUserIds += userId
         accounts[userId]?.let { accounts[userId] = it.copy(access_token = "", refresh_token = "") }
+    }
+
+    val accessExpiredUserIds = mutableListOf<String>()
+
+    override suspend fun expireAccessToken(userId: String) {
+        accessExpiredUserIds += userId
+        accounts[userId]?.let { accounts[userId] = it.copy(access_token = "") }
     }
 
     override suspend fun updateCurrentAccount(transform: suspend (AccountRow?) -> AccountRow?) {
@@ -501,7 +509,7 @@ class TokenRefreshPluginTest {
     }
 
     @Test
-    fun `刷新判定失效时清理凭证发事件并对同账号熔断`() {
+    fun `刷新判定失效时只清 access 保留 refresh 发事件并对同账号熔断`() {
         val storage = FakeAuthTokenStorage().apply { login(STALE_ACCESS_TOKEN, STALE_REFRESH_TOKEN) }
         val signal = AuthExpirySignal()
         val oauth = FakeOAuthClient().apply {
@@ -532,10 +540,40 @@ class TokenRefreshPluginTest {
         }
 
         assertEquals(1, oauth.refreshCalls, "同一账号 30 秒内不应重复发起 OAuth 刷新")
-        assertEquals(listOf("100"), storage.invalidatedUserIds, "失效后应清空该账号凭证")
+        assertEquals(listOf("100"), storage.accessExpiredUserIds, "刷新被拒后应软失效该账号的 access_token")
+        assertTrue(storage.invalidatedUserIds.isEmpty(), "refresh_token 未必真死，不得整体清空凭证")
         assertTrue(events.isNotEmpty(), "凭证失效必须发出 authExpired 事件")
-        assertTrue(storage.rowOf("100")?.access_token.isNullOrEmpty(), "失效后 access_token 应为空")
-        assertTrue(storage.rowOf("100")?.refresh_token.isNullOrEmpty(), "失效后 refresh_token 应为空")
+        assertTrue(storage.rowOf("100")?.access_token.isNullOrEmpty(), "软失效后 access_token 应为空")
+        assertEquals(
+            STALE_REFRESH_TOKEN,
+            storage.rowOf("100")?.refresh_token,
+            "软失效必须保留 refresh_token 供下次启动静默恢复",
+        )
+    }
+
+    @Test
+    fun `access 已清空但 refresh 仍在时不发失效事件也不发送空 Bearer`() {
+        val storage = FakeAuthTokenStorage().apply { login("", STALE_REFRESH_TOKEN) }
+        val signal = AuthExpirySignal()
+        val oauth = FakeOAuthClient()
+        val requests = mutableListOf<Pair<String, String?>>()
+        val client = buildClient(storage, oauth, signal, recordingHandler(requests))
+
+        client.use {
+            runBlocking {
+                val events = async(start = CoroutineStart.UNDISPATCHED) { signal.events.first() }
+                assertEquals(HttpStatusCode.OK, client.get("$API_HOST/anonymous").status)
+                assertEquals(null, requests.single().second, "access_token 为空时不得发送空 Bearer")
+                assertNull(
+                    withTimeoutOrNull(200) { events.await() },
+                    "软失效留给启动自愈，不应在每个请求上反复提示登录失效",
+                )
+                events.cancel()
+            }
+        }
+
+        assertEquals(0, oauth.refreshCalls, "无 access_token 的请求不得触发刷新")
+        assertTrue(storage.accessExpiredUserIds.isEmpty(), "读取路径不得改动凭证")
     }
 
     @Test
@@ -566,7 +604,8 @@ class TokenRefreshPluginTest {
         }
 
         assertEquals(0, oauth.refreshCalls, "无 refresh_token 时不应发起注定失败的刷新请求")
-        assertEquals(listOf("100"), storage.invalidatedUserIds)
+        assertEquals(listOf("100"), storage.invalidatedUserIds, "refresh_token 为空时无可保留，应整体清空凭证")
+        assertTrue(storage.accessExpiredUserIds.isEmpty(), "整体清空走 invalidateCredentials，不走软失效")
     }
 
     @Test

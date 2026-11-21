@@ -9,6 +9,8 @@ import com.perol.pixez.shared.network.AuthExpiredEvent
 import com.perol.pixez.shared.network.AuthExpirySignal
 import com.perol.pixez.shared.network.AuthTokenStorage
 import com.perol.pixez.shared.network.OAuthClient
+import com.perol.pixez.shared.network.PixivApiException
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
@@ -58,13 +60,42 @@ class AccountRepository(
     suspend fun currentAccount(): AccountPersist? = tokenStorage.getCurrentAccount()?.toPersist()
 
     /**
-     * 启动自检：当前账号存在但凭证已被清理（解密失败或刷新判定吊销）时发出失效事件。
+     * 启动自检：凭证缺失时先尝试静默恢复，恢复不了才发失效事件。
+     *
+     * 刷新被服务端拒绝只会软失效（只清 access_token、保留 refresh_token，见
+     * [AuthTokenStorage.expireAccessToken]）；启动时用保留的 refresh_token 换一次新凭证，
+     * 成功则用户完全无感，失败再提示重新登录。
      * 由 UI 根层在订阅 [authExpiredFlow] 之后调用，保证提示不会因时序问题丢失。
      */
     suspend fun refreshSessionState() {
         val account = tokenStorage.getCurrentAccount() ?: return
-        if (!account.hasCredentials()) {
+        if (account.hasCredentials()) return
+        if (account.refresh_token.isBlank()) {
             authExpirySignal.emit(account.user_id)
+            return
+        }
+        try {
+            val refreshed = oAuthClient.refreshToken(account.refresh_token)
+            tokenStorage.updateTokensForUser(
+                userId = account.user_id,
+                accessToken = refreshed.response.accessToken,
+                refreshToken = refreshed.response.refreshToken,
+            )
+            Napier.i("账号(${account.user_id})凭证已静默恢复")
+            onSessionIdentityChanged()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: PixivApiException) {
+            // 只有 OAuth 端点明确拒绝才判定需要重新登录；服务端 5xx 等保持凭证待下次重试。
+            if (e.statusCode == 400 || e.statusCode == 401) {
+                Napier.w("账号(${account.user_id})静默恢复被拒（HTTP ${e.statusCode}），需要重新登录")
+                authExpirySignal.emit(account.user_id)
+            } else {
+                Napier.w("账号(${account.user_id})静默恢复失败（HTTP ${e.statusCode}），保留凭证待下次启动重试")
+            }
+        } catch (e: Exception) {
+            // 离线或写库异常不得把用户踢下线：保留凭证，下次启动再试。
+            Napier.w("账号(${account.user_id})静默恢复失败，保留凭证待下次启动重试", e)
         }
     }
 
