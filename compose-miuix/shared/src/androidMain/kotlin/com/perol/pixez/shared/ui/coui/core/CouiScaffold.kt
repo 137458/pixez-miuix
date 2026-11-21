@@ -44,6 +44,7 @@ import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.layout.Scaffold
 import com.itos.coui.scroll.couiVerticalScroll
+import com.itos.coui.search.CouiSearchBarState
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
@@ -51,6 +52,7 @@ import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiContentColor
 import com.itos.coui.theme.LocalCouiTextStyle
 import com.itos.coui.topappbar.CouiTopAppBarDefaults
+import com.itos.coui.topappbar.CollapsingTopAppBar
 import com.itos.coui.topappbar.CouiTopAppBarScrollBehavior
 import com.itos.coui.topappbar.LargeTopAppBar
 import com.itos.coui.topappbar.TopAppBar
@@ -65,9 +67,9 @@ import top.yukonga.miuix.kmp.icon.extended.Back
  * 页面骨架层：容器、顶栏、滚动与安全区全部收敛到这里，页面只提供业务内容。
  *
  * 三条官方规则决定了本文件的所有写法：
- * 1. 顶栏背景是库内合成的两层 —— 采样正文的模糊层 + 颜色渐隐遮罩层。遮罩色必须留空
- *    （Color.Unspecified），库才按明暗回落成白/黑渐隐；一旦传页面底色，遮罩与底色同色，
- *    顶栏就退化为一块实色板，滚动时看不到任何渐隐。
+ * 1. 顶栏背景是库内合成的两层 —— 采样正文的模糊层 + 颜色渐隐遮罩层。遮罩色取页面底色
+ *    （对应官方 DemoTheme 的 materialTheme 分支：LocalDemoTopBarGradient provides colors.background）；
+ *    留空只会回落到纯白/纯黑，与本工程的非纯色底板不同源，顶部会浮出一条色差带。
  * 2. 正文必须留在 Scaffold 的正文槽里滚动，把护栏 padding 交给列表的 contentPadding 或
  *    滚动容器之后的 .padding()。若在外层再包 .padding()，正文视口整体缩到顶栏之下，
  *    模糊层就采样不到任何会动的内容。
@@ -170,8 +172,7 @@ private fun CouiBarIcon(imageVector: ImageVector, contentDescription: String?) {
 /**
  * 紧凑顶栏（52dp）：给不需要大标题的简单页面用。
  *
- * 遮罩色显式取页面底色（与 Scaffold 的 containerColor 同源），对应官方 Demo 的
- * `LocalDemoTopBarGradient provides colors.background` 分支 —— 顶部实色与页面无缝衔接、
+ * 遮罩色显式取页面底色（与 Scaffold 的 containerColor 同源）—— 顶部实色与页面无缝衔接、
  * 向下渐隐出模糊层；留空会让浅色主题出现一条比页面更白的渐隐带。
  */
 @Composable
@@ -292,6 +293,51 @@ private fun CouiCollapsingScaffold(
     ) { innerPadding ->
         val guarded = behavior.state.contentPadding(innerPadding, density)
         // 正文槽的左右护栏恒为 0（横向安全区由 Scaffold 自己消费），因此只透传上下。
+        content(
+            PaddingValues(
+                top = guarded.calculateTopPadding(),
+                bottom = guarded.calculateBottomPadding() + bottomReserve,
+            ),
+        )
+    }
+}
+
+/**
+ * 搜索页骨架：官方 [CollapsingTopAppBar] 的常驻搜索槽。
+ *
+ * 搜索框必须留在顶栏的搜索槽里：槽位在 TopAppBarSurface 内部，属于顶栏采样作用域，
+ * 官方 SearchBar 才能拿到不含自身的背景源。放到正文里既没有该作用域（默认参数直接抛
+ * 「搜索需要显式 backdrop 或独立的顶栏作用域」），显式传源又会把搜索框自己录进模糊层。
+ * 该顶栏没有 actions 槽，页面动作要放在正文里。
+ */
+@Composable
+internal fun CouiSearchScaffold(
+    title: String,
+    searchState: CouiSearchBarState,
+    modifier: Modifier = Modifier,
+    searchBar: @Composable (collapsedFraction: Float) -> Unit,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val behavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val density = LocalDensity.current
+    val bottomReserve = LocalBottomBarContentPadding.current
+    val bar = behavior.state
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+            .nestedScroll(behavior.nestedScrollConnection),
+        topBar = {
+            CollapsingTopAppBar(
+                state = bar,
+                searchState = searchState,
+                title = title,
+                backgroundColor = CouiTheme.colorScheme.background,
+                dark = CouiTheme.isDark,
+            ) { searchBar(bar.collapsedFraction) }
+        },
+    ) { innerPadding ->
+        val guarded = bar.contentPadding(innerPadding, density)
         content(
             PaddingValues(
                 top = guarded.calculateTopPadding(),

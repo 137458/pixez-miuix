@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.itos.coui.layout.Item
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
-import com.itos.coui.search.CouiSearchBarState
 import com.itos.coui.search.SearchBar
 import com.itos.coui.search.rememberCouiSearchBarState
 import com.perol.pixez.shared.data.model.SauceNaoResult
@@ -51,13 +50,12 @@ import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
 import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
 import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
-import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiSearchScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
 import com.perol.pixez.shared.ui.coui.core.CouiSingleGroup
 import com.perol.pixez.shared.ui.coui.core.CouiTextButton
-import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.ui.screens.SearchCoreState
@@ -70,16 +68,14 @@ import com.perol.pixez.shared.ui.screens.rememberSearchIllustResultsState
 import com.perol.pixez.shared.ui.screens.resolveSearchEmptyPhase
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Photos
 
 /**
  * COUI 搜索页：官方折叠顶栏骨架承载搜索栏、搜索类型胶囊、快捷筛选、历史/热搜与作品瀑布流。
  *
  * 查询词、搜索态、筛选条件、历史与热搜统一由 [rememberSearchCoreState] 承载；
- * 作品结果用 [rememberSearchIllustResultsState] + COUI 瀑布流。搜索头作为各容器的首个
- * 滚动项，随正文一起滚入折叠顶栏的覆盖区；未进入搜索态时同一搜索头挂在推荐列表首位。
+ * 作品结果用 [rememberSearchIllustResultsState] + COUI 瀑布流。官方常驻搜索框挂在顶栏的
+ * 搜索槽里（顶栏作用域的采样源），正文首个滚动项只剩搜索方式胶囊，随正文滚入顶栏覆盖区。
  */
 @Composable
 internal fun CouiSearchScreen(
@@ -105,7 +101,8 @@ internal fun CouiSearchScreen(
     )
 
     // 展开态由页面持有：库只按宿主给的目标值做动画。
-    var searchExpanded by rememberSaveable { mutableStateOf(true) }
+    // 带初始查询进页（深链/分享）时才直接展开并聚焦，普通进入不抢占键盘。
+    var searchExpanded by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
     val searchBarState = rememberCouiSearchBarState(expanded = searchExpanded)
 
     var showSauceNaoSheet by remember { mutableStateOf(false) }
@@ -158,26 +155,12 @@ internal fun CouiSearchScreen(
         )
     }
 
-    CouiMainScaffold(
-        title = if (showingResults) core.query else strings.tabSearch,
-        actions = {
-            if (showingResults) {
-                CouiTopBarIconButton(
-                    onClick = core.onExitSearch,
-                    icon = MiuixIcons.Back,
-                    contentDescription = strings.back,
-                )
-            }
-            CouiTopBarIconButton(
-                onClick = launchPickPhoto,
-                icon = MiuixIcons.Photos,
-                contentDescription = strings.menuSauceNao,
-            )
-        },
-    ) { padding ->
-        val header: @Composable () -> Unit = {
-            CouiSearchHeader(
-                searchBarState = searchBarState,
+    CouiSearchScaffold(
+        title = strings.tabSearch,
+        searchState = searchBarState,
+        searchBar = { collapsedFraction ->
+            SearchBar(
+                state = searchBarState,
                 query = core.query,
                 onQueryChange = core.onQueryChange,
                 onExpandedChange = { expanded ->
@@ -188,11 +171,21 @@ internal fun CouiSearchScreen(
                         core.onExitSearch()
                     }
                 },
+                placeholder = strings.searchPlaceholder,
+                cancelText = strings.cancel,
+                clearDescription = strings.btnDelete,
                 onSearch = core.onSearch,
+                shadowProgress = collapsedFraction,
+            )
+        },
+    ) { padding ->
+        val header: @Composable () -> Unit = {
+            CouiSearchChipsHeader(
                 showingResults = showingResults,
                 searchTypeChips = searchTypeChips,
                 searchTypeIndex = core.searchTypeIndex,
                 onSearchTypeSelected = core.onSearchTypeSelected,
+                onSauceNaoClick = launchPickPhoto,
                 quickFilterRow = if (core.searchTypeIndex == 0) {
                     {
                         CouiSearchQuickFilterRow(
@@ -287,32 +280,37 @@ internal fun CouiSearchScreen(
     }
 }
 
-/** 搜索头：官方 SearchBar，搜索结果态下追加搜索类型胶囊与作品快捷筛选，作为列表首个滚动项。 */
+/**
+ * 正文首个滚动项：搜索方式胶囊、搜索类型胶囊与作品快捷筛选。
+ *
+ * 常驻搜索框已上移到顶栏的搜索槽（顶栏作用域能拿到不含自身的采样源），正文只留胶囊；
+ * 顶栏没有 actions 槽，以图搜图这类页面动作放在这一行的胶囊里。
+ */
 @Composable
-private fun CouiSearchHeader(
-    searchBarState: CouiSearchBarState,
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onExpandedChange: (Boolean) -> Unit,
-    onSearch: () -> Unit,
+private fun CouiSearchChipsHeader(
     showingResults: Boolean,
     searchTypeChips: List<CouiFilterChip>,
     searchTypeIndex: Int,
     onSearchTypeSelected: (Int) -> Unit,
+    onSauceNaoClick: () -> Unit,
     quickFilterRow: (@Composable () -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     Column(modifier = Modifier.fillMaxWidth()) {
-        SearchBar(
-            state = searchBarState,
-            query = query,
-            onQueryChange = onQueryChange,
-            onExpandedChange = onExpandedChange,
-            placeholder = strings.searchPlaceholder,
-            cancelText = strings.cancel,
-            clearDescription = strings.btnDelete,
-            onSearch = onSearch,
-        )
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            overscrollEffect = rememberCouiOverscrollEffect(),
+        ) {
+            item(key = "sauceNao") {
+                CouiAssistChip(
+                    text = strings.menuSauceNao,
+                    selected = false,
+                    onClick = onSauceNaoClick,
+                )
+            }
+        }
         if (showingResults) {
             CouiFilterChipBar(
                 chips = searchTypeChips,
@@ -326,7 +324,7 @@ private fun CouiSearchHeader(
     }
 }
 
-/** 结果区占位外壳：搜索头固定在顶栏下，占位内容居中铺满剩余高度。 */
+/** 结果区占位外壳：正文首项固定在正文顶部，占位内容居中铺满剩余高度。 */
 @Composable
 private fun CouiSearchStateBody(
     contentPadding: PaddingValues,
