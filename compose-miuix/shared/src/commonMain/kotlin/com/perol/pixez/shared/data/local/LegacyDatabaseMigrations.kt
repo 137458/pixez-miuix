@@ -51,6 +51,19 @@ object LegacyDatabaseMigrations {
         }
     }
 
+    /** SQLite 与 Android framework 自动创建的内部表：存在它们不代表库里有旧 Flutter 数据。 */
+    private val INTERNAL_TABLE_NAMES = setOf("android_metadata", "sqlite_sequence")
+
+    /**
+     * 判断 [tableNames]（sqlite_master 中的 table 名）是否代表旧 Flutter 库的业务表。
+     *
+     * Android framework 在 SQLiteOpenHelper.onCreate 之前就建好 android_metadata，
+     * AUTOINCREMENT 表还会带出 sqlite_sequence；把它们当作旧库会让全新安装跳过 schema.create，
+     * 随后执行 CREATE INDEX 报 "no such table: main.account" 闪退。
+     */
+    fun hasLegacyUserTables(tableNames: List<String>): Boolean =
+        tableNames.any { name -> name !in INTERNAL_TABLE_NAMES && !name.startsWith("sqlite_") }
+
     /** SqlDriver 侧执行器（desktop 与测试使用）。 */
     fun sqlDriverMigrator(driver: SqlDriver): LegacyColumnMigrator = LegacyColumnMigrator(
         execute = { sql -> driver.execute(null, sql, 0, null) },

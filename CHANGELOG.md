@@ -133,6 +133,7 @@
 
 ### 修复
 
+- 修复 Android 全新安装首次启动闪退：`DriverFactory.android` 的旧库判定把 framework 自动创建的 `android_metadata` 当成旧 Flutter 数据表，空库因此跳过 schema 建表并直接执行 `CREATE INDEX ... ON account`，抛出 `no such table: main.account`。判定改由 `LegacyDatabaseMigrations.hasLegacyUserTables` 排除 `android_metadata`、`sqlite_sequence` 等内部表，新增 `LegacyUserTableDetectionTest` 覆盖全新库与旧库两侧。
 - 修复 COUI 公告详情、插画详情与画师详情中富文本说明残留的 MIUIX 字号体系：富文本说明改取 COUI 文本样式，不再混用 MIUIX 排版。
 - 修复 COUI 首次启动引导页语言、图源、网络模式、特性说明与账号状态区块的卡片嵌套：`CouiSettingSection` 已内置卡片容器，内层重复的 `CouiCard` 导致双层底板与额外内边距，现已回归单层分组卡片。
 - 修复了 UI 渲染性能、状态依赖与硬编码文本问题：

@@ -63,8 +63,11 @@ actual class DriverFactory(private val context: Context) {
     }
 
     private fun SupportSQLiteDatabase.hasLegacyTables(): Boolean {
-        query("SELECT count(*) FROM sqlite_master WHERE type='table'").use { cursor ->
-            return cursor.moveToFirst() && cursor.getLong(0) > 0
+        query("SELECT name FROM sqlite_master WHERE type='table'").use { cursor ->
+            val tableNames = buildList {
+                while (cursor.moveToNext()) add(cursor.getString(0).orEmpty())
+            }
+            return LegacyDatabaseMigrations.hasLegacyUserTables(tableNames)
         }
     }
 }
