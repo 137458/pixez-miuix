@@ -23,7 +23,7 @@ sealed interface DigestCheck {
  *
  * 只认 GitHub `digest` 字段里的 `sha256:<64 hex>`（前缀大小写不敏感）。GitHub 也可能下发
  * 其它算法，但不认识的算法一律当作“没有摘要”跳过，而不是按错误的算法误判失败。
- * 平台相关的文件流式计算由 androidMain / desktopMain 的 actual 提供。
+ * 文件流式计算与删除由 [sha256HexOfFile] / [deleteUpdateFile]（`UpdateFileIo.jvm.kt`）提供。
  */
 object UpdateDigest {
 
@@ -59,9 +59,3 @@ object UpdateDigest {
     fun mismatchMessage(expected: String, actual: String?): String =
         "SHA-256 不匹配（期望 ${expected.take(12)}…，实际 ${actual?.take(12) ?: "无法计算"}）"
 }
-
-/** 流式计算文件 SHA-256，返回小写 hex；读取失败返回 null。 */
-expect fun sha256HexOfFile(path: String): String?
-
-/** 删除下载结果文件；返回是否删除成功（失败不影响状态复位）。 */
-expect fun deleteUpdateFile(path: String): Boolean

@@ -1,7 +1,6 @@
 package com.perol.pixez.shared.platform
 
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
@@ -13,8 +12,14 @@ import com.perol.pixez.shared.R
  *
  * 在 Android 14+ (API 34) 上接入系统 Sharesheet 自定义快捷操作 (ChooserAction)。
  */
-actual class IllustShare {
-    actual fun share(text: String, subject: String?) {
+class IllustShare {
+    /**
+     * 分享 [text]。
+     *
+     * [subject] 作为分享的标题/主题，部分平台（如邮件）会展示。
+     * 失败时抛出异常，由调用方处理并提示用户。
+     */
+    fun share(text: String, subject: String? = null) {
         val context = BrowserLauncherContext.applicationContext
             ?: throw IllegalStateException("BrowserLauncherContext 未初始化，无法获取 Context")
 

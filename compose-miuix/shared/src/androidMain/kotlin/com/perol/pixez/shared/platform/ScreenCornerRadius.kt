@@ -8,8 +8,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/**
+ * 获取当前设备屏幕硬件级的物理圆角半径（以 Dp 为单位）。
+ * - Android 12+ (API 31+)：通过系统 WindowInsets 动态获取物理屏幕四个角落的真实弧度；
+ * - 直角屏幕 / 小圆角设备：返回实际检测到的硬件半径或 0.dp。
+ */
 @Composable
-actual fun rememberScreenCornerRadius(): Dp {
+fun rememberScreenCornerRadius(): Dp {
     val view = LocalView.current
     val density = LocalDensity.current
     return remember(view, density) {

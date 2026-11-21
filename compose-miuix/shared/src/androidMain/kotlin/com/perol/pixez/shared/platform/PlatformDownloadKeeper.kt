@@ -5,13 +5,18 @@ import android.os.PowerManager
 import io.github.aakira.napier.Napier
 import java.util.concurrent.ConcurrentHashMap
 
-actual object PlatformDownloadKeeper {
+/**
+ * 平台级长时/大批量下载任务保活守护器。
+ * 在 Android 等移动平台申请系统唤醒锁与前台活跃保障，
+ * 防止锁屏或退到后台时被系统休眠策略冻结 CPU 与网络套接字。
+ */
+object PlatformDownloadKeeper {
     /** 任务 ID 到嵌套持有次数的映射：同一作品并发下载（批量 + 单页）时会多次 acquire。 */
     private val activeTasks = ConcurrentHashMap<Long, Int>()
     private var wakeLock: PowerManager.WakeLock? = null
     private val lock = Any()
 
-    actual fun acquire(taskId: Long) {
+    fun acquire(taskId: Long) {
         val context = BrowserLauncherContext.applicationContext ?: return
         synchronized(lock) {
             activeTasks.merge(taskId, 1, Int::plus)
@@ -34,7 +39,7 @@ actual object PlatformDownloadKeeper {
         }
     }
 
-    actual fun release(taskId: Long) {
+    fun release(taskId: Long) {
         synchronized(lock) {
             val remaining = (activeTasks[taskId] ?: 0) - 1
             if (remaining > 0) {

@@ -11,7 +11,7 @@ import io.github.aakira.napier.Napier
  * 使用 ACTION_APP_OPEN_BY_DEFAULT_SETTINGS（API 31+）。minSdk 31 下该 Action 恒可用，
  * 早期降级到应用详情页的分支已无意义，故只保留单一路径。
  */
-actual fun openDefaultAppSettings() {
+fun openDefaultAppSettings() {
     val context = BrowserLauncherContext.applicationContext
         ?: throw IllegalStateException("BrowserLauncherContext 未初始化")
     try {
