@@ -1,14 +1,20 @@
 package com.perol.pixez.shared.ui.skin
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
+import com.itos.coui.backdrop.couiBackdrop
+import com.itos.coui.backdrop.rememberCouiBackdrop
+import com.itos.coui.menu.ProvideCouiMenuBackdrop
 import com.itos.coui.theme.CouiColorScheme
 import com.itos.coui.theme.CouiTheme as CouiKitTheme
 import com.itos.coui.theme.CouiTypography
+import com.perol.pixez.shared.ui.coui.core.LocalCouiFloatingBackdrop
 import top.yukonga.miuix.kmp.theme.Colors
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -21,14 +27,13 @@ actual val isCouiSkinSupported: Boolean = true
  * 关闭时不提供实现，[LocalSkinPages] 保持 null，调用方自然走 MIUIX 原页面。
  */
 @Composable
-actual fun CouiSkinHost(enabled: Boolean, content: @Composable () -> Unit) {
+actual fun CouiSkinHost(enabled: Boolean, dark: Boolean, content: @Composable () -> Unit) {
     if (!enabled) {
         content()
         return
     }
     val colors = MiuixTheme.colorScheme
     val textStyles = MiuixTheme.textStyles
-    val dark = colors.surface.luminance() < 0.5f
     val colorScheme = remember(colors, dark) { couiColorSchemeOf(colors, dark) }
     val typography = remember(textStyles) {
         CouiTypography(
@@ -43,15 +48,33 @@ actual fun CouiSkinHost(enabled: Boolean, content: @Composable () -> Unit) {
             dialogCounterFontFamily = textStyles.footnote1.fontFamily,
         )
     }
+    // 浮动底栏的采样源：根层持有，正文容器用 [skinFloatingBarSource] 登记，底栏消费。
+    val floatingBackdrop = rememberCouiBackdrop(diagnosticName = "coui-floating-bar")
     CouiKitTheme(
         darkTheme = dark,
         colorScheme = colorScheme,
         typography = typography,
         materialTint = Color.Transparent,
         content = {
-            CompositionLocalProvider(LocalSkinPages provides CouiSkinPages, content = content)
+            // 窗口级采样源：菜单与弹层材质采样「被它覆盖的整屏内容」，必须在根层登记一次。
+            ProvideCouiMenuBackdrop(isolateContent = false) { windowSource ->
+                Box(modifier = Modifier.fillMaxSize().then(windowSource)) {
+                    CompositionLocalProvider(
+                        LocalSkinPages provides CouiSkinPages,
+                        LocalCouiFloatingBackdrop provides floatingBackdrop,
+                        content = content,
+                    )
+                }
+            }
         },
     )
+}
+
+/** 皮肤关闭时本地方为空，正文容器原样返回，不产生任何采样开销。 */
+@Composable
+actual fun Modifier.skinFloatingBarSource(): Modifier {
+    val backdrop = LocalCouiFloatingBackdrop.current ?: return this
+    return couiBackdrop(backdrop)
 }
 
 private fun couiColorSchemeOf(colors: Colors, isDark: Boolean): CouiColorScheme =

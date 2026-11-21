@@ -70,6 +70,7 @@ import com.perol.pixez.shared.ui.theme.resolveAppThemeSpec
 import com.perol.pixez.shared.ui.theme.toThemeController
 import com.perol.pixez.shared.ui.skin.LocalSkinPages
 import com.perol.pixez.shared.ui.skin.CouiSkinHost
+import com.perol.pixez.shared.ui.skin.skinFloatingBarSource
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.SkinNavItem
 import com.perol.pixez.shared.ui.skin.UiSkin
@@ -177,7 +178,7 @@ fun RootContent(
 
     MiuixTheme(controller = themeController) {
         // 皮肤主题宿主：ColorOS 时由 androidMain 叠加 COUI 配色与排版，其余平台/皮肤直接透传。
-        CouiSkinHost(enabled = uiSkin == UiSkin.COLOROS) {
+        CouiSkinHost(enabled = uiSkin == UiSkin.COLOROS, dark = appThemeSpec.resolvedDark) {
         // 仓储通道统一由 RepositoryRegistry 展开（nav3/DN14）：组合根不再逐条 provides 仓储 Local，
         // 新增仓储只需改 AppDependencies 字段 / Registry 字段 / ui.LocalRepositories.kt 的 provide 一行。
         ProvideRepositories(registry) {
@@ -607,7 +608,9 @@ private fun MainChildSection(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .blurBackdropSource(floatingBackdrop),
+                        .blurBackdropSource(floatingBackdrop)
+                        // COUI 皮肤开启时同一块正文再登记为 COUI 底栏的采样源（桌面端为空操作）。
+                        .skinFloatingBarSource(),
                 ) {
                     MainContent(
                         initialTab = tab,
