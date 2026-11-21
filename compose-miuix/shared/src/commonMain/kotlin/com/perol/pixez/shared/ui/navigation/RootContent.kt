@@ -192,31 +192,43 @@ fun RootContent(
                 LocalAppExtraColors provides appExtraColors,
                 LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
             ) {
+                val skinPages = LocalSkinPages.current
                 val updateInfo = appReleaseInfo
                 if (showAppUpdateDialog && updateInfo != null) {
-                    UpdateDialog(
-                        show = showAppUpdateDialog,
-                        releaseInfo = updateInfo,
-                        onDismiss = { showAppUpdateDialog = false },
-                        onUpdate = { url ->
-                            showAppUpdateDialog = false
-                            openSafeUrl(url, strings, onError = { message ->
-                                rootToastSink(ToastData(message, ToastType.Error))
-                            })
-                        },
-                        onIgnore = { ver ->
-                            settingsRepository.ignoreUpdateVersion = ver
-                            showAppUpdateDialog = false
-                        },
-                    )
+                    val onOpenUpdateUrl: (String) -> Unit = { url ->
+                        showAppUpdateDialog = false
+                        openSafeUrl(url, strings, onError = { message ->
+                            rootToastSink(ToastData(message, ToastType.Error))
+                        })
+                    }
+                    val onIgnoreUpdate: (String) -> Unit = { ver ->
+                        settingsRepository.ignoreUpdateVersion = ver
+                        showAppUpdateDialog = false
+                    }
+                    if (skinPages != null) {
+                        skinPages.updateDialog(
+                            releaseInfo = updateInfo,
+                            onDismiss = { showAppUpdateDialog = false },
+                            onUpdate = onOpenUpdateUrl,
+                            onIgnore = onIgnoreUpdate,
+                        )
+                    } else {
+                        UpdateDialog(
+                            show = showAppUpdateDialog,
+                            releaseInfo = updateInfo,
+                            onDismiss = { showAppUpdateDialog = false },
+                            onUpdate = onOpenUpdateUrl,
+                            onIgnore = onIgnoreUpdate,
+                        )
+                    }
                 }
 
                 val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
                 val pendingOAuthCode by component.pendingClipboardOAuthCode.collectAsState()
-                ClipboardOAuthDialog(
-                    show = !pendingOAuthCode.isNullOrBlank(),
-                    onConfirm = {
-                        val code = component.consumeClipboardOAuthConfirmation() ?: return@ClipboardOAuthDialog
+                val showClipboardOAuth = !pendingOAuthCode.isNullOrBlank()
+                val onConfirmClipboardOAuth: () -> Unit = {
+                    val code = component.consumeClipboardOAuthConfirmation()
+                    if (code != null) {
                         coroutineScope.launch {
                             runCatching { registry.accountRepository.loginWithCode(code) }
                                 .onFailure { error ->
@@ -229,18 +241,39 @@ fun RootContent(
                                     )
                                 }
                         }
-                    },
-                    onDismiss = { component.dismissClipboardOAuthConfirmation() },
-                )
+                    }
+                }
+                if (skinPages != null) {
+                    skinPages.clipboardOAuthDialog(
+                        show = showClipboardOAuth,
+                        onConfirm = onConfirmClipboardOAuth,
+                        onDismiss = { component.dismissClipboardOAuthConfirmation() },
+                    )
+                } else {
+                    ClipboardOAuthDialog(
+                        show = showClipboardOAuth,
+                        onConfirm = onConfirmClipboardOAuth,
+                        onDismiss = { component.dismissClipboardOAuthConfirmation() },
+                    )
+                }
 
-                AuthExpiredDialog(
-                    show = showAuthExpiredDialog,
-                    onRelogin = {
-                        showAuthExpiredDialog = false
-                        component.onAccountManageClicked()
-                    },
-                    onDismiss = { showAuthExpiredDialog = false },
-                )
+                val onReloginExpired: () -> Unit = {
+                    showAuthExpiredDialog = false
+                    component.onAccountManageClicked()
+                }
+                if (skinPages != null) {
+                    skinPages.authExpiredDialog(
+                        show = showAuthExpiredDialog,
+                        onRelogin = onReloginExpired,
+                        onDismiss = { showAuthExpiredDialog = false },
+                    )
+                } else {
+                    AuthExpiredDialog(
+                        show = showAuthExpiredDialog,
+                        onRelogin = onReloginExpired,
+                        onDismiss = { showAuthExpiredDialog = false },
+                    )
+                }
 
                 BoxWithConstraints(
                     modifier = modifier
@@ -326,11 +359,18 @@ fun RootContent(
                         }
                     }
 
-                    // 全局 Toast：根层唯一实例，承载所有页面与组件投递的提示。
-                    ToastMessage(
-                        toast = rootToastMessage,
-                        onDismiss = { rootToastMessage = null },
-                    )
+                    // 全局 Toast：根层唯一实例，皮肤接缝非空时由皮肤渲染（避免 COUI 下弹出 MIUIX Toast）。
+                    if (skinPages != null) {
+                        skinPages.toastOverlay(
+                            toast = rootToastMessage,
+                            onDismiss = { rootToastMessage = null },
+                        )
+                    } else {
+                        ToastMessage(
+                            toast = rootToastMessage,
+                            onDismiss = { rootToastMessage = null },
+                        )
+                    }
                 }
             }
         }
@@ -582,11 +622,24 @@ private fun MainChildSection(
             )
         }
     }
+    val selectedNavIndex = MAIN_TAB_DESCRIPTORS
+        .indexOfFirst { it.tab == activeTab }
+        .coerceAtLeast(0)
+    val onNavIndexSelected: (Int) -> Unit = { index ->
+        MAIN_TAB_DESCRIPTORS.getOrNull(index)?.let {
+            component.onMainTabSelected(it.tab)
+        }
+    }
     // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
     // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
     // 回落为 CompositionLocal 默认值 16.dp。
     CompositionLocalProvider(
-        LocalBottomBarContentPadding provides if (bottomBarVisible.value) 100.dp else 16.dp,
+        LocalBottomBarContentPadding provides when {
+            showNavigationRailInMain -> 16.dp
+            bottomBarVisible.value && useFloatingBottomBar -> 100.dp
+            bottomBarVisible.value -> 68.dp
+            else -> 16.dp
+        },
     ) {
         Row(
             modifier = Modifier
@@ -594,11 +647,19 @@ private fun MainChildSection(
                 .background(MiuixTheme.colorScheme.surface),
         ) {
             if (showNavigationRailInMain) {
-                MainNavigationRail(
-                    activeTab = activeTab,
-                    onTabSelected = component::onMainTabSelected,
-                    hasUnreadFeedBadge = hasUnreadFeedBadge,
-                )
+                if (skinPages != null) {
+                    skinPages.navigationRail(
+                        items = couiNavItems,
+                        selectedIndex = selectedNavIndex,
+                        onSelect = onNavIndexSelected,
+                    )
+                } else {
+                    MainNavigationRail(
+                        activeTab = activeTab,
+                        onTabSelected = component::onMainTabSelected,
+                        hasUnreadFeedBadge = hasUnreadFeedBadge,
+                    )
+                }
             }
             Box(
                 modifier = Modifier
@@ -618,23 +679,17 @@ private fun MainChildSection(
                         feedRestore = feedRestore,
                     )
                 }
-                if (bottomBarVisible.value) {
-                    // 浮动底栏且皮肤提供自家底栏时交给皮肤（未读红点由皮肤层自绘，见 UiSkinNavigationBar.kt）；
-                    // 其余情况一律用 MIUIX 底栏，宽屏非浮动时上面已有侧栏，底栏自然不参与。
-                    if (useFloatingBottomBar && skinPages != null) {
+                if (bottomBarVisible.value && (!isWideScreen || useFloatingBottomBar)) {
+                    // 皮肤开启时无论浮动或贴底都交给皮肤底栏，绝不回退 MIUIX MainBottomBar。
+                    if (skinPages != null) {
                         skinPages.navigationBar(
                             items = couiNavItems,
-                            selectedIndex = MAIN_TAB_DESCRIPTORS
-                                .indexOfFirst { it.tab == activeTab }
-                                .coerceAtLeast(0),
-                            onSelect = { index ->
-                                MAIN_TAB_DESCRIPTORS.getOrNull(index)?.let {
-                                    component.onMainTabSelected(it.tab)
-                                }
-                            },
+                            selectedIndex = selectedNavIndex,
+                            isFloating = useFloatingBottomBar,
+                            onSelect = onNavIndexSelected,
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
-                    } else if (!isWideScreen || useFloatingBottomBar) {
+                    } else {
                         MainBottomBar(
                             activeTab = activeTab,
                             onTabSelected = component::onMainTabSelected,

@@ -23,9 +23,7 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.screens.DEFAULT_COPY_TEXT_FORMAT
 import com.perol.pixez.shared.ui.utils.insertTextAtSelection
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Refresh
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 分享格式设置页：折叠大标题顶栏（重置 + 保存两个顶栏动作）+ 模板编辑卡片 + 占位符胶囊。
@@ -79,7 +77,7 @@ internal fun CouiCopyTextSettingScreen(
                         selection = TextRange(DEFAULT_COPY_TEXT_FORMAT.length),
                     )
                 },
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.copyTextFormatReset,
             )
             CouiTopBarIconButton(
@@ -87,7 +85,7 @@ internal fun CouiCopyTextSettingScreen(
                     settingsRepository.copyInfoText = textFieldValue.text
                     onBack()
                 },
-                icon = MiuixIcons.Ok,
+                icon = CouiIcons.Ok,
                 contentDescription = strings.complete,
             )
         },

@@ -5,6 +5,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
@@ -31,14 +33,57 @@ internal enum class CouiUserListKind {
  */
 internal interface SkinPages {
     /**
-     * COUI 底栏。Android 在 API 34+ 使用 COUI 官方 NavigationBar，API 31-33 用自绘胶囊平替。
+     * COUI 底栏。浮动模式走玻璃胶囊，非浮动模式走贴底 COUI 栏，不回退 MIUIX 底栏。
      */
     @Composable
     fun navigationBar(
         items: List<SkinNavItem>,
         selectedIndex: Int,
+        isFloating: Boolean,
         onSelect: (Int) -> Unit,
         modifier: Modifier = Modifier,
+    )
+
+    /** COUI 宽屏侧边导航栏：平板/宽屏非浮动底栏模式下替代 MIUIX NavigationRail。 */
+    @Composable
+    fun navigationRail(
+        items: List<SkinNavItem>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        modifier: Modifier = Modifier,
+    )
+
+    /** COUI 全局 Toast 覆盖层，替代 MIUIX Squircle Toast。 */
+    @Composable
+    fun toastOverlay(
+        toast: ToastData?,
+        onDismiss: () -> Unit,
+        modifier: Modifier = Modifier,
+    )
+
+    /** COUI 根级版本更新弹窗，替代 MIUIX WindowDialog。 */
+    @Composable
+    fun updateDialog(
+        releaseInfo: ReleaseInfo,
+        onDismiss: () -> Unit,
+        onUpdate: (url: String) -> Unit,
+        onIgnore: ((version: String) -> Unit)?,
+    )
+
+    /** COUI 根级登录凭证失效弹窗，替代 MIUIX WindowDialog。 */
+    @Composable
+    fun authExpiredDialog(
+        show: Boolean,
+        onRelogin: () -> Unit,
+        onDismiss: () -> Unit,
+    )
+
+    /** COUI 根级剪贴板 OAuth 二次确认弹窗，替代 MIUIX WindowDialog。 */
+    @Composable
+    fun clipboardOAuthDialog(
+        show: Boolean,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
     )
 
     /**

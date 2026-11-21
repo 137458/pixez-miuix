@@ -41,8 +41,8 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
+import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
 import com.perol.pixez.shared.ui.coui.core.CouiActionRow
 import com.perol.pixez.shared.ui.coui.core.CouiBodyTitle
 import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
@@ -56,6 +56,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
 import com.perol.pixez.shared.ui.coui.core.CouiSingleGroup
 import com.perol.pixez.shared.ui.coui.core.CouiTextButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.LocalBottomBarVisibility
 import com.perol.pixez.shared.ui.screens.SearchCoreState
@@ -67,8 +68,6 @@ import com.perol.pixez.shared.ui.screens.rememberSearchCoreState
 import com.perol.pixez.shared.ui.screens.rememberSearchIllustResultsState
 import com.perol.pixez.shared.ui.screens.resolveSearchEmptyPhase
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
 
 /**
  * COUI 搜索页：官方折叠顶栏骨架承载搜索栏、搜索类型胶囊、快捷筛选、历史/热搜与作品瀑布流。
@@ -312,10 +311,12 @@ private fun CouiSearchChipsHeader(
             }
         }
         if (showingResults) {
-            CouiFilterChipBar(
-                chips = searchTypeChips,
-                selectedKey = searchTypeIndex.toString(),
-                onSelect = { key -> key.toIntOrNull()?.let(onSearchTypeSelected) },
+            CouiSegmentedTabs(
+                items = remember(searchTypeChips) { searchTypeChips.map { it.label } },
+                selectedIndex = searchTypeIndex,
+                onSelect = onSearchTypeSelected,
+                small = true,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             )
             if (quickFilterRow != null) {
                 quickFilterRow()
@@ -596,7 +597,7 @@ private fun CouiSearchSuggestions(
                             title = { CouiItemTitle(text = history) },
                             trailing = {
                                 CouiActionButton(
-                                    icon = MiuixIcons.Close,
+                                    icon = CouiIcons.Close,
                                     contentDescription = strings.btnDelete,
                                     onClick = { core.onHistoryRemove(history) },
                                 )

@@ -42,9 +42,9 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
+import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
+import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
@@ -53,6 +53,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
 import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.NewFeedRestrict
@@ -62,10 +63,6 @@ import com.perol.pixez.shared.ui.state.PagingFooterState
 import com.perol.pixez.shared.ui.state.rememberNewFeedState
 import com.perol.pixez.shared.ui.state.shouldPreloadMore
 import kotlinx.coroutines.flow.Flow
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
  * COUI 动态页：复用 [rememberNewFeedState] 的登录/筛选/分页/追更逻辑，仅替换视觉壳。
@@ -85,14 +82,11 @@ internal fun CouiNewScreen(
     val strings = LocalStrings.current
     val toast = LocalToastSink.current
     val feed = rememberNewFeedState(reselectFlow = reselectFlow, onLoginClick = onLoginClick)
-    val mainTabs = remember(strings) {
-        listOf(
-            CouiFilterChip(key = "feed", label = strings.tabNew),
-            CouiFilterChip(key = "watchlist", label = strings.watchlistTitle),
-        )
+    val mainTabLabels = remember(strings) {
+        listOf(strings.tabNew, strings.watchlistTitle)
     }
-    val restrictChips = remember(strings) {
-        NewFeedRestrict.entries.map { CouiFilterChip(key = it.code, label = it.label(strings)) }
+    val restrictLabels = remember(strings) {
+        NewFeedRestrict.entries.map { it.label(strings) }
     }
 
     CouiLoginPromptDialog(
@@ -111,24 +105,22 @@ internal fun CouiNewScreen(
         },
     )
 
-    // 头部筛选条：两行 chip 都是列表/正文的第一段，滚动时进入顶栏覆盖区并被渐隐遮罩盖住。
-    val headerContent: @Composable () -> Unit = {
-        Column {
-            CouiFilterChipBar(
-                chips = mainTabs,
-                selectedKey = if (feed.selectedMainTab == 1) "watchlist" else "feed",
-                onSelect = { key -> feed.onMainTabSelected(if (key == "watchlist") 1 else 0) },
-            )
-            if (feed.isLoggedIn == true && feed.selectedMainTab == 0) {
-                CouiFilterChipBar(
-                    chips = restrictChips,
-                    selectedKey = feed.selectedRestrict.code,
-                    onSelect = { key ->
-                        NewFeedRestrict.entries.firstOrNull { it.code == key }?.let(feed.onRestrictSelected)
+    // 动态范围次级筛选：仅在已登录且处于动态页签时展示在列表顶部。
+    val headerContent: (@Composable () -> Unit)? = if (feed.isLoggedIn == true && feed.selectedMainTab == 0) {
+        {
+            Box(modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)) {
+                CouiSegmentedTabs(
+                    items = restrictLabels,
+                    selectedIndex = NewFeedRestrict.entries.indexOf(feed.selectedRestrict).coerceAtLeast(0),
+                    onSelect = { idx ->
+                        NewFeedRestrict.entries.getOrNull(idx)?.let(feed.onRestrictSelected)
                     },
+                    small = true,
                 )
             }
         }
+    } else {
+        null
     }
 
     CouiMainScaffold(
@@ -136,13 +128,13 @@ internal fun CouiNewScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = feed.refresh,
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
             )
             if (feed.isLoggedIn == false) {
                 CouiTopBarIconButton(
                     onClick = onLoginClick,
-                    icon = MiuixIcons.Contacts,
+                    icon = CouiIcons.Contacts,
                     contentDescription = strings.goLogin,
                 )
             }
@@ -174,12 +166,20 @@ internal fun CouiNewScreen(
                 }
             }
         },
+        topBarBottom = {
+            CouiTopBarSegmentedTabs(
+                items = mainTabLabels,
+                selectedIndex = if (feed.selectedMainTab == 1) 1 else 0,
+                onSelect = feed.onMainTabSelected,
+            )
+        },
     ) { padding ->
+        val safeHeader: @Composable () -> Unit = { headerContent?.invoke() }
         when (feed.isLoggedIn) {
             false -> CouiNewStateBody(
                 message = strings.loginNewNeedLogin,
                 padding = padding,
-                header = headerContent,
+                header = safeHeader,
                 actionText = strings.btnGoLogin,
                 onAction = onLoginClick,
             )
@@ -187,7 +187,7 @@ internal fun CouiNewScreen(
             null -> CouiNewStateBody(
                 message = strings.loading,
                 padding = padding,
-                header = headerContent,
+                header = safeHeader,
             )
 
             true -> if (feed.selectedMainTab == 1) {
@@ -195,7 +195,7 @@ internal fun CouiNewScreen(
                     feed = feed,
                     onSeriesClick = onSeriesClick,
                     padding = padding,
-                    header = headerContent,
+                    header = safeHeader,
                 )
             } else {
                 val currentIllusts = feed.listState.filteredIllusts
@@ -203,20 +203,20 @@ internal fun CouiNewScreen(
                     currentIllusts == null && feed.listState.initialError == null -> CouiNewStateBody(
                         message = strings.loading,
                         padding = padding,
-                        header = headerContent,
+                        header = safeHeader,
                     )
 
                     currentIllusts == null && feed.listState.initialError != null -> CouiNewErrorBody(
                         error = feed.listState.initialError,
                         onRetry = feed.refresh,
                         padding = padding,
-                        header = headerContent,
+                        header = safeHeader,
                     )
 
                     currentIllusts != null && currentIllusts.isEmpty() -> CouiNewStateBody(
                         message = strings.loginNewEmpty,
                         padding = padding,
-                        header = headerContent,
+                        header = safeHeader,
                     )
 
                     currentIllusts != null -> CouiIllustGrid(
@@ -458,7 +458,7 @@ private fun CouiWatchlistRow(
             )
         }
         CouiActionButton(
-            icon = MiuixIcons.Delete,
+            icon = CouiIcons.Delete,
             contentDescription = strings.watchlistRemoveConfirm,
             onClick = onRemoveClick,
         )

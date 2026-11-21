@@ -67,9 +67,8 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
+import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
@@ -79,6 +78,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.forActiveHistory
 import com.perol.pixez.shared.ui.screens.formatNovelHistoryTime
@@ -86,10 +86,6 @@ import com.perol.pixez.shared.ui.utils.filterHistoryByQuery
 import com.perol.pixez.shared.ui.utils.rememberHistoryResult
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Search
 
 /**
  * COUI 浏览历史页：折叠顶栏 + 搜索 + 插画/小说页签。
@@ -157,28 +153,17 @@ internal fun CouiHistoryScreen(
     val hasHistory = (if (selectedType == 0) historyResult.value else novelHistoryResult.value)
         ?.getOrNull().orEmpty().isNotEmpty()
     val emptyMessage = if (query.isBlank()) strings.historyEmpty else strings.historyNoMatch
-    val typeChips = remember(strings) {
-        listOf(
-            CouiFilterChip(key = "illust", label = strings.historyTypeIllust),
-            CouiFilterChip(key = "novel", label = strings.historyTypeNovel),
-        )
+    val typeLabels = remember(strings) {
+        listOf(strings.historyTypeIllust, strings.historyTypeNovel)
     }
-    // 搜索框与页签作为列表首项：滚出视野后没有查询词时用户仍可下拉找回，
-    // 空态下也能就地清除查询，不会把页面锁死。
+    // 搜索框作为列表首项；插画/小说分段页签吸顶在顶栏下方并采样正文毛玻璃。
     val header: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            CouiHistorySearchField(
-                query = query,
-                onQueryChange = { query = it },
-                placeholder = strings.tabSearch,
-                clearDescription = strings.actionClear,
-            )
-            CouiFilterChipBar(
-                chips = typeChips,
-                selectedKey = if (selectedType == 0) "illust" else "novel",
-                onSelect = { key -> selectedType = if (key == "illust") 0 else 1 },
-            )
-        }
+        CouiHistorySearchField(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = strings.tabSearch,
+            clearDescription = strings.actionClear,
+        )
     }
 
     CouiSecondaryScaffold(
@@ -187,9 +172,16 @@ internal fun CouiHistoryScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = { showClearConfirm = true },
-                icon = MiuixIcons.Delete,
+                icon = CouiIcons.Delete,
                 contentDescription = strings.actionClear,
                 enabled = hasHistory,
+            )
+        },
+        topBarBottom = {
+            CouiTopBarSegmentedTabs(
+                items = typeLabels,
+                selectedIndex = selectedType,
+                onSelect = { selectedType = it },
             )
         },
     ) { padding ->
@@ -333,7 +325,7 @@ private fun CouiHistorySearchField(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = rememberVectorPainter(MiuixIcons.Close),
+                    painter = rememberVectorPainter(CouiIcons.Close),
                     contentDescription = clearDescription,
                     colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
                     modifier = Modifier.size(16.dp),
@@ -354,7 +346,7 @@ private fun CouiHistorySearchField(
         contentPadding = PaddingValues(horizontal = 14.dp),
         leading = {
             Image(
-                painter = rememberVectorPainter(MiuixIcons.Search),
+                painter = rememberVectorPainter(CouiIcons.Search),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
                 modifier = Modifier.size(18.dp),
@@ -662,7 +654,7 @@ private fun CouiHistoryNovelRow(
             )
         }
         CouiActionButton(
-            icon = MiuixIcons.Delete,
+            icon = CouiIcons.Delete,
             contentDescription = strings.btnDelete,
             onClick = onDelete,
         )

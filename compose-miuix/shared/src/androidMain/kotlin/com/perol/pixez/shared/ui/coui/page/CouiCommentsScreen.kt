@@ -110,9 +110,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.emoji_304
 import pixez_miuix.shared.generated.resources.Res
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Send
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 评论页：COUI Scaffold（固定顶栏 + 评论列表 + 玻璃输入栏）。
@@ -297,7 +295,7 @@ internal fun CouiCommentsScreen(
                 onBack = onBack,
                 actions = {
                     CouiTopBarIconButton(
-                        icon = MiuixIcons.Refresh,
+                        icon = CouiIcons.Refresh,
                         contentDescription = strings.refresh,
                         onClick = triggerManualRefresh,
                     )
@@ -541,7 +539,7 @@ private fun CouiLibraryMessageInputBar(
             enabled = enabled,
         ),
         primaryAction = CouiMessageInputAction(
-            icon = rememberVectorPainter(MiuixIcons.Send),
+            icon = rememberVectorPainter(CouiIcons.Send),
             contentDescription = if (isSending) strings.commentsSending else strings.commentsSend,
             onClick = onSubmit,
             enabled = canSend,
@@ -677,7 +675,7 @@ private fun CouiSendButton(
             )
         } else {
             Image(
-                painter = rememberVectorPainter(MiuixIcons.Send),
+                painter = rememberVectorPainter(CouiIcons.Send),
                 contentDescription = strings.commentsSend,
                 colorFilter = ColorFilter.tint(if (enabled) scheme.onAccent else scheme.onSurfaceVariant),
                 modifier = Modifier.size(20.dp),

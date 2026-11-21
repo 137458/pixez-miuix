@@ -30,11 +30,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.format
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.ExpandLess
-import top.yukonga.miuix.kmp.icon.extended.ExpandMore
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 收藏标签页：设置页骨架 + 标签分组。
@@ -69,7 +65,7 @@ internal fun CouiBookTagScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = { showAddDialog = true },
-                icon = MiuixIcons.Add,
+                icon = CouiIcons.Add,
                 contentDescription = strings.btnAdd,
             )
         },
@@ -183,19 +179,19 @@ private fun CouiBookTagRow(
         onClick = onSearch,
         trailing = {
             CouiActionButton(
-                icon = MiuixIcons.ExpandLess,
+                icon = CouiIcons.ExpandLess,
                 contentDescription = LocalStrings.current.bookTagsMoveUp,
                 onClick = onMoveUp,
                 enabled = canMoveUp,
             )
             CouiActionButton(
-                icon = MiuixIcons.ExpandMore,
+                icon = CouiIcons.ExpandMore,
                 contentDescription = LocalStrings.current.bookTagsMoveDown,
                 onClick = onMoveDown,
                 enabled = canMoveDown,
             )
             CouiActionButton(
-                icon = MiuixIcons.Delete,
+                icon = CouiIcons.Delete,
                 contentDescription = LocalStrings.current.btnDelete,
                 onClick = onDelete,
             )

@@ -54,8 +54,7 @@ import com.perol.pixez.shared.ui.state.IllustPagedPage
 import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 插画系列页：二级页骨架 + 系列作品瀑布流。
@@ -174,7 +173,7 @@ internal fun CouiIllustSeriesScreen(
                 )
             }
             CouiTopBarIconButton(
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = triggerManualRefresh,
             )

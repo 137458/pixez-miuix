@@ -28,12 +28,14 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.NovelRankingMode
-import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
+import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
+import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
 import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
 import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.state.PagedListPage
@@ -41,8 +43,6 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /** 小说浏览分类：推荐与排行榜。 */
 private enum class CouiNovelBrowseTab {
@@ -123,24 +123,38 @@ internal fun CouiNovelScreen(
         }
     }
 
+    val mainTabLabels = remember(strings) {
+        listOf(strings.novelRecommend, strings.novelRanking)
+    }
+
     CouiSecondaryScaffold(
         title = strings.novelBrowseTitle,
         onBack = onBack,
         actions = {
             CouiTopBarIconButton(
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = { refreshToken++ },
             )
         },
+        topBarBottom = {
+            CouiTopBarSegmentedTabs(
+                items = mainTabLabels,
+                selectedIndex = if (currentTab == CouiNovelBrowseTab.Ranking) 1 else 0,
+                onSelect = { idx ->
+                    val next = if (idx == 1) CouiNovelBrowseTab.Ranking else CouiNovelBrowseTab.Recommend
+                    if (currentTab != next) currentTab = next
+                },
+            )
+        },
     ) { padding ->
         val header: @Composable () -> Unit = {
-            CouiNovelBrowseHeader(
-                currentTab = currentTab,
-                rankingMode = rankingMode,
-                onTabChange = { currentTab = it },
-                onRankingModeChange = { rankingMode = it },
-            )
+            if (currentTab == CouiNovelBrowseTab.Ranking) {
+                CouiNovelRankingPeriodHeader(
+                    rankingMode = rankingMode,
+                    onRankingModeChange = { rankingMode = it },
+                )
+            }
         }
         val novelItems = pagedList.items
         when {
@@ -209,69 +223,22 @@ internal fun CouiNovelScreen(
     }
 }
 
-/** 分类胶囊：推荐/排行榜与日/周/月两行，正文头部与占位态共用同一份实现。 */
+/** 排行榜周期分段切换（日 / 周 / 月）。 */
 @Composable
-private fun CouiNovelBrowseHeader(
-    currentTab: CouiNovelBrowseTab,
+private fun CouiNovelRankingPeriodHeader(
     rankingMode: NovelRankingMode,
-    onTabChange: (CouiNovelBrowseTab) -> Unit,
     onRankingModeChange: (NovelRankingMode) -> Unit,
 ) {
     val strings = LocalStrings.current
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CouiAssistChip(
-                text = strings.novelRecommend,
-                selected = currentTab == CouiNovelBrowseTab.Recommend,
-                onClick = {
-                    if (currentTab != CouiNovelBrowseTab.Recommend) {
-                        onTabChange(CouiNovelBrowseTab.Recommend)
-                    }
-                },
-            )
-            CouiAssistChip(
-                text = strings.novelRanking,
-                selected = currentTab == CouiNovelBrowseTab.Ranking,
-                onClick = {
-                    if (currentTab != CouiNovelBrowseTab.Ranking) {
-                        onTabChange(CouiNovelBrowseTab.Ranking)
-                    }
-                },
-            )
-        }
-
-        if (currentTab == CouiNovelBrowseTab.Ranking) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CouiAssistChip(
-                    text = strings.rankingDay,
-                    selected = rankingMode == NovelRankingMode.Day,
-                    onClick = { onRankingModeChange(NovelRankingMode.Day) },
-                )
-                CouiAssistChip(
-                    text = strings.rankingWeek,
-                    selected = rankingMode == NovelRankingMode.Week,
-                    onClick = { onRankingModeChange(NovelRankingMode.Week) },
-                )
-                CouiAssistChip(
-                    text = strings.rankingMonth,
-                    selected = rankingMode == NovelRankingMode.Month,
-                    onClick = { onRankingModeChange(NovelRankingMode.Month) },
-                )
-            }
-        }
-    }
+    val modes = remember { listOf(NovelRankingMode.Day, NovelRankingMode.Week, NovelRankingMode.Month) }
+    val labels = remember(strings) { listOf(strings.rankingDay, strings.rankingWeek, strings.rankingMonth) }
+    CouiSegmentedTabs(
+        items = labels,
+        selectedIndex = modes.indexOf(rankingMode).coerceAtLeast(0),
+        onSelect = { idx -> modes.getOrNull(idx)?.let(onRankingModeChange) },
+        small = true,
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
 }
 
 /** 占位态正文：分类胶囊固定在最上方，占位卡片吃掉剩余高度。 */

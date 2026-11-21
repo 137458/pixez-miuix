@@ -180,8 +180,8 @@ private class FunctionBody(val text: String, val startLine: Int)
  */
 private object SkinSeamSources {
 
-    /** 审计 R-06 记录的方法数基线。 */
-    const val SKIN_PAGES_METHOD_BASELINE = 40
+    /** 审计 R-06 记录的方法数基线（40 页面/底栏 + 5 根级覆盖层与侧栏接缝）。 */
+    const val SKIN_PAGES_METHOD_BASELINE = 45
 
     /** 审计记录的路由基线：sealed class Config 的子类数量。 */
     const val CONFIG_SUBCLASS_BASELINE = 41

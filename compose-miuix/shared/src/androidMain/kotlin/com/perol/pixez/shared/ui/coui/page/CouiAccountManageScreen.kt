@@ -48,9 +48,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /** 账号行头像尺寸：官方 Item 的图标槽按此尺寸让出入口。 */
 private val CouiAccountAvatarSize = 40.dp
@@ -105,7 +103,7 @@ internal fun CouiAccountManageScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = onAddAccount,
-                icon = MiuixIcons.Add,
+                icon = CouiIcons.Add,
                 contentDescription = strings.accountAdd,
             )
         },
@@ -223,7 +221,7 @@ private fun CouiAccountRow(
                 )
             }
             CouiActionButton(
-                icon = MiuixIcons.Delete,
+                icon = CouiIcons.Delete,
                 contentDescription = strings.accountDelete,
                 onClick = onDelete,
             )

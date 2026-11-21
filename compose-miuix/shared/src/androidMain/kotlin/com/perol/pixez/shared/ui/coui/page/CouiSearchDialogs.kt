@@ -44,9 +44,8 @@ import com.perol.pixez.shared.data.model.SauceNaoResult
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
+import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
@@ -125,10 +124,15 @@ internal fun CouiSearchFilterDialog(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CouiFilterSection(title = strings.searchTargetPartialTag) {
-                CouiFilterChipBar(
-                    chips = targetOptions.map { (label, value) -> CouiFilterChip(key = value, label = label) },
-                    selectedKey = draftState.searchTarget,
-                    onSelect = { key -> draftState = draftState.copy(searchTarget = key) },
+                CouiSegmentedTabs(
+                    items = targetOptions.map { it.first },
+                    selectedIndex = targetOptions.indexOfFirst { it.second == draftState.searchTarget }.coerceAtLeast(0),
+                    onSelect = { idx ->
+                        targetOptions.getOrNull(idx)?.let { (_, value) ->
+                            draftState = draftState.copy(searchTarget = value)
+                        }
+                    },
+                    small = true,
                 )
             }
 
@@ -172,22 +176,28 @@ internal fun CouiSearchFilterDialog(
             }
 
             CouiFilterSection(title = strings.searchTypeIllust) {
-                CouiFilterChipBar(
-                    chips = ugoiraOptions.map { (label, value) -> CouiFilterChip(key = value.toString(), label = label) },
-                    selectedKey = draftState.ugoiraFilter.toString(),
-                    onSelect = { key ->
-                        key.toIntOrNull()?.let { draftState = draftState.copy(ugoiraFilter = it) }
+                CouiSegmentedTabs(
+                    items = ugoiraOptions.map { it.first },
+                    selectedIndex = ugoiraOptions.indexOfFirst { it.second == draftState.ugoiraFilter }.coerceAtLeast(0),
+                    onSelect = { idx ->
+                        ugoiraOptions.getOrNull(idx)?.let { (_, value) ->
+                            draftState = draftState.copy(ugoiraFilter = value)
+                        }
                     },
+                    small = true,
                 )
             }
 
             CouiFilterSection(title = strings.searchRatioTitle) {
-                CouiFilterChipBar(
-                    chips = ratioOptions.map { (label, value) -> CouiFilterChip(key = value.toString(), label = label) },
-                    selectedKey = draftState.ratioFilter.toString(),
-                    onSelect = { key ->
-                        key.toIntOrNull()?.let { draftState = draftState.copy(ratioFilter = it) }
+                CouiSegmentedTabs(
+                    items = ratioOptions.map { it.first },
+                    selectedIndex = ratioOptions.indexOfFirst { it.second == draftState.ratioFilter }.coerceAtLeast(0),
+                    onSelect = { idx ->
+                        ratioOptions.getOrNull(idx)?.let { (_, value) ->
+                            draftState = draftState.copy(ratioFilter = value)
+                        }
                     },
+                    small = true,
                 )
             }
 

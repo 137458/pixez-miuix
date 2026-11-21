@@ -1,5 +1,12 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,8 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Illust
@@ -36,6 +47,8 @@ import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.skin.LocalUiSkin
+import com.perol.pixez.shared.ui.skin.UiSkin
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,7 +59,6 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.toggleScale
 import net.engawapg.lib.zoomable.zoomable
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.Text
 
 /**
  * Ugoira 播放视图状态。
@@ -241,10 +253,14 @@ fun UgoiraPlayer(
                     .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center,
             ) {
-                InfiniteProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    color = Color.White,
-                )
+                if (LocalUiSkin.current == UiSkin.COLOROS) {
+                    UgoiraMinimalSpinner(modifier = Modifier.size(16.dp), color = Color.White)
+                } else {
+                    InfiniteProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White,
+                    )
+                }
             }
         } else if (state is UgoiraState.Error) {
             Box(
@@ -257,10 +273,9 @@ fun UgoiraPlayer(
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                BasicText(
                     text = strings.retry,
-                    color = Color.White,
-                    fontSize = 12.sp,
+                    style = TextStyle(color = Color.White, fontSize = 12.sp),
                 )
             }
         }
@@ -358,18 +373,51 @@ internal fun ZoomableUgoiraViewer(
                 )
             }
             if (state is UgoiraState.Loading) {
-                Text(
+                BasicText(
                     text = state.stageText,
-                    color = Color.White,
-                    fontSize = 13.sp,
+                    style = TextStyle(color = Color.White, fontSize = 13.sp),
                 )
             } else if (state is UgoiraState.Error) {
-                Text(
+                BasicText(
                     text = state.message,
-                    color = Color.White,
-                    fontSize = 13.sp,
+                    style = TextStyle(color = Color.White, fontSize = 13.sp),
                 )
             }
         }
+    }
+}
+
+/** 皮肤无关的轻量圆弧加载指示器，供 COUI 路径使用以避免依赖 MIUIX 进度控件。 */
+@Composable
+private fun UgoiraMinimalSpinner(
+    modifier: Modifier = Modifier,
+    color: Color = Color.White,
+) {
+    val transition = rememberInfiniteTransition(label = "ugoiraSpinner")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "ugoiraSpinnerAngle",
+    )
+    Canvas(modifier = modifier) {
+        val strokeWidth = 2.dp.toPx()
+        drawArc(
+            color = color.copy(alpha = 0.25f),
+            startAngle = 0f,
+            sweepAngle = 360f,
+            useCenter = false,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+        )
+        drawArc(
+            color = color,
+            startAngle = angle,
+            sweepAngle = 240f,
+            useCenter = false,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+        )
     }
 }

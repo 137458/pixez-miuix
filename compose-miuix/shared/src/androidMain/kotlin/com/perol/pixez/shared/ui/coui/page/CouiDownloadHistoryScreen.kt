@@ -55,8 +55,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Delete
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 下载历史页：折叠顶栏 + 已下载任务卡片列表。
@@ -94,7 +93,7 @@ internal fun CouiDownloadHistoryScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = { showClearConfirm = true },
-                icon = MiuixIcons.Delete,
+                icon = CouiIcons.Delete,
                 contentDescription = strings.actionClear,
                 enabled = state.value?.getOrNull()?.isNotEmpty() == true,
             )
@@ -262,7 +261,7 @@ private fun CouiDownloadHistoryRow(
             maxLines = 1,
         )
         CouiActionButton(
-            icon = MiuixIcons.Delete,
+            icon = CouiIcons.Delete,
             contentDescription = strings.btnDelete,
             tint = CouiDialogDefaults.colors(CouiTheme.isDark).destructive,
             onClick = onDelete,

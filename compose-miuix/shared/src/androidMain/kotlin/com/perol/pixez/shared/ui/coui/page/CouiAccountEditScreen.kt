@@ -57,9 +57,7 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Hide
-import top.yukonga.miuix.kmp.icon.extended.Show
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 账号编辑页：账号信息、密码/邮箱修改、Refresh Token 复制与账号注销入口。
@@ -302,7 +300,7 @@ private fun CouiAccountEditPasswordField(
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter = rememberVectorPainter(if (visible) MiuixIcons.Hide else MiuixIcons.Show),
+                painter = rememberVectorPainter(if (visible) CouiIcons.Hide else CouiIcons.Show),
                 contentDescription = if (visible) {
                     strings.accountEditHidePassword
                 } else {

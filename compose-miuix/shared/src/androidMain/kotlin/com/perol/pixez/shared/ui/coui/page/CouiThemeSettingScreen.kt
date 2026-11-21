@@ -55,11 +55,9 @@ import com.perol.pixez.shared.ui.skin.isCouiSkinSupported
 import com.perol.pixez.shared.ui.skin.UiSkin
 
 /**
- * COUI 主题设置页：设置骨架 + 官方 Group 卡片（主题模式 / 皮肤 / 显示 / 个性化）。
+ * COUI 主题设置页：设置骨架 + 官方 Group 卡片（主题模式 / 皮肤 / 显示 / 种子色）。
  *
- * 主题模式、界面皮肤、AMOLED、动态取色、种子色、调色板风格与 2025 规范开关全部保留；
- * 差异只有表现层：分组与行走 core 原语（Group + Item），种子色改用 COUI `Dialog`
- * 承载预设色板与 HEX 输入（COUI 无连续拾色器，等价交互为预设色 + 自定义 HEX）。
+ * 仅展示对 COUI 皮肤实际生效的主题选项；MIUIX 专属的调色板风格与 2025 规范开关不在此页暴露。
  */
 @Composable
 internal fun CouiThemeSettingScreen(
@@ -72,23 +70,9 @@ internal fun CouiThemeSettingScreen(
     var isAmoled by remember { mutableStateOf(settingsRepository.isAmoled) }
     var useDynamicColor by remember { mutableStateOf(settingsRepository.useDynamicColor) }
     var seedColor by remember { mutableStateOf(settingsRepository.seedColor ?: 0xFF2196F3.toInt()) }
-    var paletteStyle by remember { mutableStateOf(settingsRepository.miuixPaletteStyle) }
-    var useSpec2025 by remember { mutableStateOf(settingsRepository.miuixUseSpec2025) }
     var uiSkinIndex by remember { mutableStateOf(settingsRepository.uiSkinIndex) }
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-
-    val paletteStyleOptions = listOf(
-        "TonalSpot (Material You)",
-        "Neutral",
-        "Vibrant",
-        "Expressive",
-        "Rainbow",
-        "FruitSalad",
-        "Monochrome",
-        "Fidelity",
-        "Content",
-    )
 
     CouiSettingsScaffold(
         title = strings.settingTheme,
@@ -189,34 +173,6 @@ internal fun CouiThemeSettingScreen(
                         onClick = { showColorPicker = true },
                     )
                 }
-            }
-        }
-
-        item(key = "coui_theme_personalization", contentType = "section") {
-            CouiSettingSection(title = strings.themePersonalization) {
-                CouiMenuSelectRow(
-                    title = strings.dialogPaletteStyle,
-                    items = paletteStyleOptions,
-                    selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
-                    onSelect = {
-                        paletteStyle = it
-                        settingsRepository.miuixPaletteStyle = it
-                    },
-                )
-                CouiRowDivider()
-                CouiToggleRow(
-                    title = strings.themeSpec2025,
-                    summary = if (useSpec2025) {
-                        strings.themeSpec2025SummaryOn
-                    } else {
-                        strings.themeSpec2025SummaryOff
-                    },
-                    checked = useSpec2025,
-                    onCheckedChange = {
-                        useSpec2025 = it
-                        settingsRepository.miuixUseSpec2025 = it
-                    },
-                )
             }
         }
     }

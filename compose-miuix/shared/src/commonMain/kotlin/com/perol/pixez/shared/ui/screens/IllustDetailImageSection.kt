@@ -343,6 +343,7 @@ internal fun IllustDetailFullScreenOverlay(
     detailBackdrop: LayerBackdrop?,
     onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
+    topOverlay: (@Composable (com.perol.pixez.shared.ui.components.ViewerTopOverlayState, Modifier) -> Unit)? = null,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
     val effectiveQuality = resolveIllustQuality(illust, settings)
@@ -391,5 +392,6 @@ internal fun IllustDetailFullScreenOverlay(
         onToast = onToast,
         onDismiss = onDismiss,
         detailBackdrop = detailBackdrop,
+        topOverlay = topOverlay,
     )
 }

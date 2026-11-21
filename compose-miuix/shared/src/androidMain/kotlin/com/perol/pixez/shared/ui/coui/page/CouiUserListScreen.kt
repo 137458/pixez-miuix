@@ -58,8 +58,7 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Refresh
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 用户列表页：关注 / 粉丝 / 相关画师共用一套实现。
@@ -147,7 +146,7 @@ internal fun CouiUserListScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = triggerManualRefresh,
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
             )
         },

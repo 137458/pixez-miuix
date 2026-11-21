@@ -28,11 +28,7 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.rememberHelloFeedState
 import kotlinx.coroutines.flow.Flow
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.AddCircle
-import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Settings
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 推荐页：复用 [rememberHelloFeedState] 的分页/登录/恢复逻辑，仅替换视觉壳。
@@ -59,20 +55,20 @@ internal fun CouiHelloScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = feed.refresh,
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
             )
             if (feed.isLoggedIn == false) {
                 CouiTopBarIconButton(
                     onClick = onLoginClick,
-                    icon = MiuixIcons.Contacts,
+                    icon = CouiIcons.Contacts,
                     contentDescription = strings.goLogin,
                 )
             }
             if (feed.isLoggedIn == true) {
                 CouiTopBarIconButton(
                     onClick = onRecomUserClick,
-                    icon = MiuixIcons.AddCircle,
+                    icon = CouiIcons.AddCircle,
                     contentDescription = strings.recomUserTitle,
                 )
                 val currentUser = feed.user
@@ -103,7 +99,7 @@ internal fun CouiHelloScreen(
             }
             CouiTopBarIconButton(
                 onClick = onSettingsClick,
-                icon = MiuixIcons.Settings,
+                icon = CouiIcons.Settings,
                 contentDescription = strings.tabSettings,
             )
         },

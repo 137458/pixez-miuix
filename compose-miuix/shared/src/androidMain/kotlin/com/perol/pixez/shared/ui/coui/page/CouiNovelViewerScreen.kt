@@ -78,13 +78,7 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.Favorites
-import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
-import top.yukonga.miuix.kmp.icon.extended.Messages
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Remove
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 private sealed interface CouiNovelViewState {
     data object Loading : CouiNovelViewState
@@ -210,7 +204,7 @@ internal fun CouiNovelViewerScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = { onCommentsClick(novelId) },
-                icon = MiuixIcons.Messages,
+                icon = CouiIcons.Messages,
                 contentDescription = strings.commentsTitle,
             )
             // 收藏需要长按（强制私密），CouiTopBarIconButton 不支持长按，故保留页面自绘圆钮。
@@ -227,7 +221,7 @@ internal fun CouiNovelViewerScreen(
                     fontSizeSp -= 1f
                     settings.novelFontSize = fontSizeSp
                 },
-                icon = MiuixIcons.Remove,
+                icon = CouiIcons.Remove,
                 contentDescription = strings.novelFontSize + " -",
                 enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
             )
@@ -236,14 +230,14 @@ internal fun CouiNovelViewerScreen(
                     fontSizeSp += 1f
                     settings.novelFontSize = fontSizeSp
                 },
-                icon = MiuixIcons.Add,
+                icon = CouiIcons.Add,
                 contentDescription = strings.novelFontSize + " +",
                 enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
             )
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
                 CouiTopBarIconButton(
                     onClick = { menuAnchor.open { menuExpanded = true } },
-                    icon = MiuixIcons.More,
+                    icon = CouiIcons.More,
                     contentDescription = strings.menuMoreActions,
                 )
                 Menu(
@@ -332,7 +326,7 @@ private fun CouiNovelBookmarkButton(
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.Image(
-            painter = rememberVectorPainter(if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites),
+            painter = rememberVectorPainter(if (isBookmarked) CouiIcons.HeartFill else CouiIcons.Heart),
             contentDescription = strings.bookmark,
             colorFilter = ColorFilter.tint(
                 if (isBookmarked) LocalAppExtraColors.current.bookmarkActive else CouiTheme.colorScheme.onSurface

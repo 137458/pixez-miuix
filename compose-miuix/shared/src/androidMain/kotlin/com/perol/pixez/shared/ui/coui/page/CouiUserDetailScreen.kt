@@ -68,14 +68,14 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
+import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalAccountRepository
@@ -91,9 +91,6 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
 
 /**
  * COUI 用户详情页（画师详情）：折叠大标题顶栏 + 资料区 +「作品 / 收藏」瀑布流。
@@ -267,14 +264,14 @@ private fun CouiUserDetailActions(
 
     CouiTopBarIconButton(
         onClick = onRefresh,
-        icon = MiuixIcons.Refresh,
+        icon = CouiIcons.Refresh,
         contentDescription = strings.refresh,
     )
     if (detail != null) {
         Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
             CouiTopBarIconButton(
                 onClick = { menuAnchor.open { menuExpanded = true } },
-                icon = MiuixIcons.More,
+                icon = CouiIcons.More,
                 contentDescription = strings.menuMoreActions,
             )
             CouiUserMoreMenu(
@@ -407,11 +404,8 @@ private fun CouiUserDetailTabs(
         if (selectedTabIndex == 1) bookmarksLoadedOnce = true
     }
 
-    val tabChips = remember(strings) {
-        listOf(
-            CouiFilterChip(key = "works", label = strings.userWorkTab),
-            CouiFilterChip(key = "bookmarks", label = strings.userBookmarkTab),
-        )
+    val tabLabels = remember(strings) {
+        listOf(strings.userWorkTab, strings.userBookmarkTab)
     }
 
     val headerContent: @Composable () -> Unit = {
@@ -427,11 +421,11 @@ private fun CouiUserDetailTabs(
                 onIllustClick = onIllustClick,
                 onToast = onToast,
             )
-            CouiFilterChipBar(
-                chips = tabChips,
-                selectedKey = if (selectedTabIndex == 0) "works" else "bookmarks",
-                onSelect = { key -> selectedTabIndex = if (key == "works") 0 else 1 },
-                modifier = Modifier.padding(horizontal = 6.dp),
+            CouiSegmentedTabs(
+                items = tabLabels,
+                selectedIndex = selectedTabIndex,
+                onSelect = { selectedTabIndex = it },
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
             )
         }
     }
@@ -593,6 +587,8 @@ private fun CouiUserProfileHeader(
                 onLinkClick = openExternalUrl,
                 style = LocalCouiTextStyle.current,
                 color = scheme.onSurfaceVariant,
+                linkColor = scheme.accent,
+                toggleStyle = LocalCouiTextStyle.current,
                 collapsible = true,
                 collapsedMaxLines = 2,
             )
@@ -770,20 +766,18 @@ private fun CouiUserBookmarksTab(
         coroutineScope.launch { activeState.loadMore() }
     }
 
-    val restrictChips = remember(strings) {
-        listOf(
-            CouiFilterChip(key = "public", label = strings.userPublicRestrict),
-            CouiFilterChip(key = "private", label = strings.userPrivateRestrict),
-        )
+    val restrictLabels = remember(strings) {
+        listOf(strings.userPublicRestrict, strings.userPrivateRestrict)
     }
     val bookmarkHeader: @Composable () -> Unit = {
         Column(modifier = Modifier.fillMaxWidth()) {
             header()
-            CouiFilterChipBar(
-                chips = restrictChips,
-                selectedKey = if (selectedRestrictIndex == 0) "public" else "private",
-                onSelect = { key -> selectedRestrictIndex = if (key == "public") 0 else 1 },
-                modifier = Modifier.padding(horizontal = 6.dp),
+            CouiSegmentedTabs(
+                items = restrictLabels,
+                selectedIndex = selectedRestrictIndex,
+                onSelect = { selectedRestrictIndex = it },
+                small = true,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
             )
         }
     }

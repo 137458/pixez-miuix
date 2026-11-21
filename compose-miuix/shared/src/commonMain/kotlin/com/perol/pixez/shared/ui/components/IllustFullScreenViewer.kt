@@ -95,6 +95,22 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 
 /**
+ * 全屏查看器顶栏浮层所需的只读状态与交互回调，供不同皮肤替换顶栏外观而不重复缩放/翻页逻辑。
+ */
+class ViewerTopOverlayState(
+    val visibleState: State<Boolean>,
+    val pageCount: Int,
+    val currentPageState: State<Int>,
+    val isVerticalScrollMode: Boolean,
+    val illust: Illust,
+    val coroutineScope: CoroutineScope,
+    val onDismiss: () -> Unit,
+    val onToggleScrollMode: () -> Unit,
+    val onDownloadClick: () -> Unit,
+    val onToast: (ToastData) -> Unit,
+)
+
+/**
  * 插画全屏/高清缩放预览组件：
  * 支持双指平滑手势缩放 (Pinch-to-zoom)、鼠标滚轮定点缩放、鼠标拖拽平移 (Pan)、双击放大/复原 (Double-tap-to-zoom)、
  * 键盘左右方向键/翻页键切页、ESC 快速退出以及多 P 左右切页。
@@ -112,6 +128,7 @@ fun IllustFullScreenViewer(
     detailBackdrop: Backdrop? = null,
     previewUrl: String? = null,
     illustRepository: IllustRepository? = null,
+    topOverlay: (@Composable (ViewerTopOverlayState, Modifier) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
@@ -261,25 +278,58 @@ fun IllustFullScreenViewer(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // 顶部浮层：返回按钮与页码指示器（带淡入淡出动画与液态玻璃效果）
-        ViewerTopOverlaySection(
-            visibleState = showControlsState,
-            strings = strings,
-            pageCount = pageCount,
-            currentPageState = currentPageState,
-            isVerticalScrollMode = isVerticalScrollMode,
-            pagerState = pagerState,
-            verticalListState = verticalListState,
-            coroutineScope = coroutineScope,
-            illust = illust,
-            effectiveBackdrop = effectiveBackdrop,
-            effectiveLayerBackdrop = effectiveLayerBackdrop,
-            onDismiss = onDismiss,
-            onVerticalScrollModeChange = { isVerticalScrollMode = it },
-            onDownloadClick = { triggerDownload(currentDisplayPage) },
-            onToast = onToast,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
+        // 顶部浮层：由皮肤定制时走 topOverlay，否则走 MIUIX 液态玻璃浮层
+        if (topOverlay != null) {
+            val toggleScrollMode: () -> Unit = {
+                if (isVerticalScrollMode) {
+                    val cur = verticalListState.firstVisibleItemIndex
+                    coroutineScope.launch {
+                        pagerState.scrollToPage(cur.coerceIn(0, pageCount - 1))
+                    }
+                    isVerticalScrollMode = false
+                } else {
+                    val cur = pagerState.currentPage
+                    coroutineScope.launch {
+                        verticalListState.scrollToItem(cur.coerceIn(0, pageCount - 1))
+                    }
+                    isVerticalScrollMode = true
+                }
+            }
+            topOverlay(
+                ViewerTopOverlayState(
+                    visibleState = showControlsState,
+                    pageCount = pageCount,
+                    currentPageState = currentPageState,
+                    isVerticalScrollMode = isVerticalScrollMode,
+                    illust = illust,
+                    coroutineScope = coroutineScope,
+                    onDismiss = onDismiss,
+                    onToggleScrollMode = toggleScrollMode,
+                    onDownloadClick = { triggerDownload(currentDisplayPage) },
+                    onToast = onToast,
+                ),
+                Modifier.align(Alignment.TopCenter),
+            )
+        } else {
+            ViewerTopOverlaySection(
+                visibleState = showControlsState,
+                strings = strings,
+                pageCount = pageCount,
+                currentPageState = currentPageState,
+                isVerticalScrollMode = isVerticalScrollMode,
+                pagerState = pagerState,
+                verticalListState = verticalListState,
+                coroutineScope = coroutineScope,
+                illust = illust,
+                effectiveBackdrop = effectiveBackdrop,
+                effectiveLayerBackdrop = effectiveLayerBackdrop,
+                onDismiss = onDismiss,
+                onVerticalScrollModeChange = { isVerticalScrollMode = it },
+                onDownloadClick = { triggerDownload(currentDisplayPage) },
+                onToast = onToast,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
     }
 }
 

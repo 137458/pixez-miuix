@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.components.updateDialogNotesState
 import com.perol.pixez.shared.ui.components.updatePrimaryCta
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
+import com.perol.pixez.shared.ui.coui.component.couiMarkdownColors
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
@@ -230,6 +231,12 @@ internal fun CouiUpdateSettingScreen(
         CouiUpdateDialog(
             releaseInfo = dialogReleaseInfo,
             onDismiss = { showDialog = false },
+            onUpdate = { url ->
+                showDialog = false
+                openSafeUrl(url, strings, onError = { message ->
+                    toastSink(ToastData(message, ToastType.Error))
+                })
+            },
             onIgnore = { version ->
                 coroutineScope.launch {
                     withContext(Dispatchers.Default) {
@@ -330,6 +337,7 @@ private fun CouiChangelogSection(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
                 baseFontSize = 14,
+                colors = couiMarkdownColors(),
                 onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
             )
             if (notesState.hiddenLineCount > 0 || notesExpanded) {
@@ -451,12 +459,13 @@ private fun CouiUpdateProgress(
     }
 }
 
-/** COUI 版本更新弹窗：说明、下载进度与主/次操作。 */
+/** COUI 版本更新弹窗：说明、下载进度与主/次操作，供更新设置页与根层自动检查共用。 */
 @Composable
-private fun CouiUpdateDialog(
+internal fun CouiUpdateDialog(
     releaseInfo: ReleaseInfo,
     onDismiss: () -> Unit,
-    onIgnore: (String) -> Unit,
+    onUpdate: (url: String) -> Unit,
+    onIgnore: ((String) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
@@ -471,13 +480,13 @@ private fun CouiUpdateDialog(
     val notesState = remember(releaseInfo.changelog, notesExpanded) {
         updateDialogNotesState(releaseInfo.changelog, notesExpanded)
     }
-    val plan = remember(releaseInfo, downloadState, strings) {
+    val plan = remember(releaseInfo, downloadState, strings, onIgnore) {
         buildUpdateDialogPlan(
             currentVersion = AppInfo.VERSION_NAME,
             release = releaseInfo,
             downloadState = downloadState,
             strings = strings,
-            canIgnore = true,
+            canIgnore = onIgnore != null,
             canCancelDownload = true,
         )
     }
@@ -501,7 +510,7 @@ private fun CouiUpdateDialog(
                     downloader = downloader,
                     installPath = plan.installPath,
                     installFailedMessage = strings.updateInstallFailed,
-                    openBrowser = { onDismiss() },
+                    openBrowser = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
                 )
             },
         ),
@@ -536,6 +545,7 @@ private fun CouiUpdateDialog(
                     .fillMaxWidth()
                     .padding(top = 12.dp),
                 baseFontSize = 13,
+                colors = couiMarkdownColors(),
                 onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
             )
             if (notesState.hiddenLineCount > 0 || notesExpanded) {
@@ -558,14 +568,12 @@ private fun CouiUpdateDialog(
             if (plan.showBrowserFallback) {
                 CouiTextButton(
                     text = strings.updateOpenInBrowser,
-                    onClick = {
-                        openSafeUrl(updateBrowserFallbackUrl(releaseInfo), strings, onError = {})
-                    },
+                    onClick = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     filled = false,
                 )
             }
-            if (plan.showIgnore) {
+            if (plan.showIgnore && onIgnore != null) {
                 CouiTextButton(
                     text = strings.updateDialogIgnore,
                     onClick = { onIgnore(releaseInfo.versionName) },

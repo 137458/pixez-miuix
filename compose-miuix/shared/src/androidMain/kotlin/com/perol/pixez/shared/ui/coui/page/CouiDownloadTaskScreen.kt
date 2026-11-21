@@ -74,8 +74,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
+import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
@@ -85,6 +84,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.TaskFilter
 import com.perol.pixez.shared.ui.screens.TaskFilterSaver
@@ -97,15 +97,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Ok
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.Report
-import top.yukonga.miuix.kmp.icon.extended.Show
-import top.yukonga.miuix.kmp.icon.extended.Stopwatch
 
 /**
  * COUI 下载任务页：折叠顶栏 + 全部/运行中/完成/失败胶囊筛选 + 任务卡片行。
@@ -165,10 +156,8 @@ internal fun CouiDownloadTaskScreen(
         downloadRepository.taskEventFlow.conflate().collect { refreshToken++ }
     }
 
-    val filterChips = remember(strings) {
-        TaskFilter.entries.map {
-            CouiFilterChip(key = it.name, label = it.label(strings))
-        }
+    val filterLabels = remember(strings) {
+        TaskFilter.entries.map { it.label(strings) }
     }
 
     /** 逐条重试失败任务：单个失败不影响其他任务，结束后给出汇总提示。 */
@@ -277,7 +266,7 @@ internal fun CouiDownloadTaskScreen(
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
                 CouiTopBarIconButton(
                     onClick = { menuAnchor.open { menuExpanded = true } },
-                    icon = MiuixIcons.More,
+                    icon = CouiIcons.More,
                     contentDescription = strings.menuMoreActions,
                     enabled = !isBatchProcessing,
                 )
@@ -301,6 +290,16 @@ internal fun CouiDownloadTaskScreen(
                 )
             }
         },
+        topBarBottom = {
+            CouiTopBarSegmentedTabs(
+                items = filterLabels,
+                selectedIndex = TaskFilter.entries.indexOf(selectedFilter).coerceAtLeast(0),
+                onSelect = { idx ->
+                    selectedFilter = TaskFilter.entries.getOrNull(idx) ?: TaskFilter.All
+                },
+                small = true,
+            )
+        },
     ) { padding ->
         val result = state.value
         val tasks = filteredTasks.orEmpty()
@@ -317,15 +316,6 @@ internal fun CouiDownloadTaskScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             overscrollEffect = rememberCouiOverscrollEffect(),
         ) {
-            item(key = "coui_download_task_filter", contentType = "header") {
-                CouiFilterChipBar(
-                    chips = filterChips,
-                    selectedKey = selectedFilter.name,
-                    onSelect = { key ->
-                        selectedFilter = TaskFilter.entries.firstOrNull { it.name == key } ?: TaskFilter.All
-                    },
-                )
-            }
             when {
                 result == null -> item(key = "coui_download_task_state", contentType = "state") {
                     CouiLoadingPlaceholder(
@@ -513,7 +503,7 @@ private fun CouiDownloadTaskRow(
             )
             if (task.status == DownloadStatus.Success) {
                 CouiActionButton(
-                    icon = MiuixIcons.Show,
+                    icon = CouiIcons.Show,
                     contentDescription = strings.downloadTaskShowInFolder,
                     tint = scheme.accent,
                     onClick = {
@@ -536,13 +526,13 @@ private fun CouiDownloadTaskRow(
                 )
             }
             CouiActionButton(
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.retry,
                 enabled = task.status == DownloadStatus.Failed && !isProcessing,
                 onClick = onRetry,
             )
             CouiActionButton(
-                icon = MiuixIcons.Delete,
+                icon = CouiIcons.Delete,
                 contentDescription = strings.btnDelete,
                 enabled = !isProcessing,
                 tint = destructive,
@@ -571,10 +561,10 @@ private fun CouiDownloadStatusIcon(
     val scheme = CouiTheme.colorScheme
     val destructive = CouiDialogDefaults.colors(CouiTheme.isDark).destructive
     val icon = when (status) {
-        DownloadStatus.Success -> MiuixIcons.Ok
-        DownloadStatus.Failed -> MiuixIcons.Report
-        DownloadStatus.Downloading -> MiuixIcons.Download
-        DownloadStatus.Pending -> MiuixIcons.Stopwatch
+        DownloadStatus.Success -> CouiIcons.Ok
+        DownloadStatus.Failed -> CouiIcons.Report
+        DownloadStatus.Downloading -> CouiIcons.Download
+        DownloadStatus.Pending -> CouiIcons.Stopwatch
     }
     val description = when (status) {
         DownloadStatus.Success -> strings.downloadStatusSuccess

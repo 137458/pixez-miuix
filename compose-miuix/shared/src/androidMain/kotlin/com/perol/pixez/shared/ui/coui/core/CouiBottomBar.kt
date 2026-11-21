@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -108,14 +109,58 @@ internal fun CouiBottomBar(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    isFloating: Boolean = true,
 ) {
     if (items.isEmpty()) return
     val backdrop = LocalCouiFloatingBackdrop.current
     val safeIndex = selectedIndex.coerceIn(0, items.lastIndex)
+    if (!isFloating) {
+        CouiDockedBottomBar(items, safeIndex, onSelect, modifier)
+        return
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && backdrop != null) {
         CouiGlassBottomBar(items, safeIndex, onSelect, backdrop, modifier)
     } else {
         CouiPlainBottomBar(items, safeIndex, onSelect, backdrop, modifier)
+    }
+}
+
+/** 贴底非浮动底栏：关闭「浮动底栏」时沿用 COUI 视觉与导航反馈，不回退 MIUIX 底栏。 */
+@Composable
+private fun CouiDockedBottomBar(
+    items: List<CouiBarItem>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier,
+) {
+    val dark = CouiTheme.isDark
+    val scheme = CouiTheme.colorScheme
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(scheme.surface)
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(0.5.dp)
+                .background(scheme.outlineVariant),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(CouiBottomBarMetrics.capsuleHeight),
+        ) {
+            CouiBarRow(
+                items = items,
+                selectedIndex = selectedIndex,
+                onSelect = onSelect,
+                dark = dark,
+            )
+        }
     }
 }
 

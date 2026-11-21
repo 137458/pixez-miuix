@@ -38,8 +38,7 @@ import com.perol.pixez.shared.ui.LocalBoardRepository
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Refresh
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 公告板页：二级页骨架 + 公告卡片列表。
@@ -88,7 +87,7 @@ internal fun CouiBoardScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = { coroutineScope.launch { loadBoardList() } },
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
                 enabled = !isRefreshing,
             )
@@ -173,6 +172,7 @@ private fun CouiBoardItem(
             style = LocalCouiTextStyle.current,
             color = scheme.onSurface,
             linkColor = scheme.accent,
+            toggleStyle = LocalCouiTextStyle.current,
             // 公告需要完整展示，不与作品简介共用折叠逻辑。
             collapsible = false,
         )

@@ -1,5 +1,8 @@
 package com.perol.pixez.shared.ui.coui.page
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,13 +25,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,19 +50,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.LocalPlatformContext
+import com.itos.coui.dialog.CouiDialogDefaults
+import com.itos.coui.effect.couiButtonFeedback
+import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.menu.CouiMenuAnchor
 import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
 import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.rememberCouiMenuAnchor
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
+import com.itos.coui.shape.CouiCapsuleShape
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -70,9 +83,11 @@ import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.illustDragAndDropSource
+import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
@@ -84,30 +99,34 @@ import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.LocalToastSink
+import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
 import com.perol.pixez.shared.ui.components.buildIllustDetailMoreMenuEntries
+import com.perol.pixez.shared.ui.components.buildIllustShareLink
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
+import com.perol.pixez.shared.ui.components.runClipboardShare
 import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
-import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
-import com.perol.pixez.shared.ui.coui.core.CouiValueRow
+import com.perol.pixez.shared.ui.coui.component.CouiIllustFullScreenOverlay
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
+import com.perol.pixez.shared.ui.coui.core.CouiCompactScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
-import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
+import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.core.CouiValueRow
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
-import com.perol.pixez.shared.ui.screens.IllustDetailFullScreenOverlay
-import com.perol.pixez.shared.ui.screens.IllustDetailViewport
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
-import com.perol.pixez.shared.ui.screens.resolveIllustDetailImageWidthPx
+import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
@@ -115,22 +134,64 @@ import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Download
-import top.yukonga.miuix.kmp.icon.extended.Favorites
-import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Recent
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Show
+
+/** 作品详情页属性徽章语义类别。 */
+internal enum class CouiIllustBadgeKind {
+    R18,
+    AI,
+    UGOIRA,
+    MULTI_PAGE,
+}
+
+/** 作品详情页展示的语义徽章。 */
+internal data class CouiIllustBadge(
+    val label: String,
+    val kind: CouiIllustBadgeKind,
+)
+
+/** 解析作品详情页头部徽章：顺序固定为 R-18 -> AI -> Ugoira -> 多页。 */
+internal fun resolveCouiIllustBadges(illust: Illust): List<CouiIllustBadge> = buildList {
+    if (illust.isR18()) {
+        add(CouiIllustBadge(label = "R-18", kind = CouiIllustBadgeKind.R18))
+    }
+    if (illust.illustAIType == 2) {
+        add(CouiIllustBadge(label = "AI", kind = CouiIllustBadgeKind.AI))
+    }
+    if (IllustType.isUgoira(illust.type)) {
+        add(CouiIllustBadge(label = "GIF", kind = CouiIllustBadgeKind.UGOIRA))
+    }
+    if (illust.pageCount > 1) {
+        add(CouiIllustBadge(label = "${illust.pageCount}P", kind = CouiIllustBadgeKind.MULTI_PAGE))
+    }
+}
+
+/** 判定作者行是否显示关注按钮：本人作品隐藏关注入口。 */
+internal fun shouldShowArtistFollowButton(illustUserId: Long, currentAccountUserId: Long?): Boolean =
+    currentAccountUserId == null || illustUserId != currentAccountUserId
+
+/** 计算快捷操作栏中的实时收藏数，在本地切换收藏后即时反馈。 */
+internal fun resolveDisplayedBookmarkCount(
+    baseCount: Int,
+    initiallyBookmarked: Boolean,
+    currentlyBookmarked: Boolean,
+): Int {
+    val delta = when {
+        !initiallyBookmarked && currentlyBookmarked -> 1
+        initiallyBookmarked && !currentlyBookmarked -> -1
+        else -> 0
+    }
+    return (baseCount + delta).coerceAtLeast(0)
+}
+
+/** 已收藏心形高亮色（ColorOS 暖红）。 */
+private val CouiBookmarkActiveColor = Color(0xFFFF4D6A)
 
 /**
- * COUI 插画详情页（第一期）：骨架、顶栏、图片区、作者行、操作区与简介/标签。
- *
- * 业务编排与 MIUIX 详情页一致：收藏/下载动作来自 [rememberIllustDetailActions]，
- * 全屏查看复用 [IllustDetailFullScreenOverlay]，图片 URL 与画质解析沿用同一套规则。
- * 壳层交给 [CouiSecondaryScaffold]：折叠顶栏、返回、护栏与底栏留白都由骨架提供，
- * 收藏/下载/更多收进顶栏 actions 槽；皮肤差异仅在正文卡片的材质与排版。
+ * COUI 插画详情页：
+ * - 紧凑悬浮顶栏（52dp [CouiCompactScaffold] + [TopAppBarButtonGroup]），进页直览画作；
+ * - 窄屏为顺畅单列流，宽屏（平板/折叠屏）自动切换为左右双栏（左画作流、右信息与互动，各自独立滚动）；
+ * - 信息卡内置语义徽章、一键复制 ID、四合一快捷操作条（收藏/下载/评论/分享）与作者关注按钮；
+ * - 全屏查看切入纯 COUI 顶栏与 COUI 锚点菜单（[CouiIllustFullScreenOverlay]），零 MIUIX 残留。
  */
 @Composable
 internal fun CouiIllustDetailScreen(
@@ -240,6 +301,10 @@ private fun CouiIllustDetailSingle(
     val historyRepository = LocalHistoryRepository.current
     val toastSink = LocalToastSink.current
     val coroutineScope = rememberCoroutineScope()
+    val clipboard = remember { IllustClipboard() }
+    val share = remember { IllustShare() }
+    val (sessionAccount, _) = rememberAccountSession()
+    val currentUserId = sessionAccount?.userId?.toLongOrNull()
 
     var retryCount by rememberSaveable { mutableIntStateOf(0) }
     val cachedIllust = remember(illustId) { repository.getCachedIllust(illustId) }
@@ -254,7 +319,6 @@ private fun CouiIllustDetailSingle(
     val result = state.value
     val illust = result?.getOrNull()
 
-    // 浏览历史只记录当前展示页，避免预加载页污染历史。
     LaunchedEffect(illust, isCurrentPage) {
         if (illust != null && isCurrentPage) {
             suspendRunCatchingNonCancel { historyRepository.insert(illust) }
@@ -265,10 +329,31 @@ private fun CouiIllustDetailSingle(
     var isBookmarkLoading by remember { mutableStateOf(false) }
     var bookmarkError by rememberSaveable { mutableStateOf<String?>(null) }
     var isDownloading by remember { mutableStateOf(false) }
+    var isFollowed by rememberSaveable(illust?.user?.id, illust?.user?.isFollowed) {
+        mutableStateOf(illust?.user?.isFollowed ?: false)
+    }
+    var isFollowLoading by remember { mutableStateOf(false) }
     var isBanned by rememberSaveable(illustId) { mutableStateOf(false) }
     var isTempView by rememberSaveable(illustId) { mutableStateOf(false) }
     var fullScreenPageIndex by rememberSaveable(illustId) { mutableStateOf<Int?>(null) }
-    val listState = rememberLazyListState()
+
+    val singleListState = rememberLazyListState()
+    val wideImageListState = rememberLazyListState()
+    val wideInfoListState = rememberLazyListState()
+
+    val bookmarkHeartScale = remember { Animatable(1f) }
+    LaunchedEffect(isBookmarked) {
+        if (isBookmarked) {
+            bookmarkHeartScale.animateTo(
+                targetValue = 1.28f,
+                animationSpec = spring(dampingRatio = 0.35f, stiffness = 700f),
+            )
+            bookmarkHeartScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+            )
+        }
+    }
 
     LaunchedEffect(illustId) {
         suspendRunCatchingNonCancel { banRepository.isBanIllust(illustId) }
@@ -278,6 +363,14 @@ private fun CouiIllustDetailSingle(
     val changeVersion = settings.changeVersion.collectAsState().value
     val isRestricted = remember(illust, isBanned, settings.hIsNotAllow, changeVersion) {
         isBanned || (settings.hIsNotAllow == true && illust?.isR18() == true)
+    }
+
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val isCardTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
+    val detailChromeAlpha = if (isCardTransitionActive) {
+        cardExpandDetailChromeAlpha(sharedBoundsRegistry.activeTransitionExpansion)
+    } else {
+        1f
     }
 
     val actions = rememberIllustDetailActions(
@@ -297,17 +390,73 @@ private fun CouiIllustDetailSingle(
         onToast = { data -> data?.let(toastSink) },
     )
 
-    // 全屏查看层必须盖住顶栏，而顶栏由骨架在正文之上绘制，因此它留在骨架之外、
-    // 与骨架同级后置绘制。外层盒子不画底色、不加安全区，页面底色仍由骨架提供。
+    val onFollowToggle: () -> Unit = {
+        val targetUser = illust?.user
+        if (targetUser != null && !isFollowLoading) {
+            coroutineScope.launch {
+                try {
+                    isFollowLoading = true
+                    val wasFollowed = isFollowed
+                    suspendRunCatchingNonCancel {
+                        if (wasFollowed) {
+                            bookmarkRepository.unfollowUser(targetUser.id)
+                        } else {
+                            bookmarkRepository.followUser(targetUser.id)
+                        }
+                    }.onSuccess {
+                        performHapticFeedback(HapticType.Confirm)
+                        isFollowed = !wasFollowed
+                    }.onFailure { error ->
+                        performHapticFeedback(HapticType.Reject)
+                        toastSink(
+                            ToastData(
+                                "${strings.follow}: ${PixivApiErrorFormatter.format(error, strings)}",
+                                ToastType.Error,
+                            ),
+                        )
+                    }
+                } finally {
+                    isFollowLoading = false
+                }
+            }
+        }
+    }
+
+    val onShareIllust: () -> Unit = {
+        illust?.let { target ->
+            runClipboardShare(
+                success = ToastData(strings.share, ToastType.Success),
+                failurePrefix = strings.share,
+                onToast = toastSink,
+            ) {
+                share.share(buildIllustShareLink(target), target.title)
+            }
+        }
+    }
+
+    val onCopyIllustId: () -> Unit = {
+        illust?.let { target ->
+            runClipboardShare(
+                success = ToastData(strings.copiedToClipboard, ToastType.Success),
+                failurePrefix = strings.copy,
+                onToast = toastSink,
+            ) {
+                clipboard.copy(target.id.toString())
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        CouiSecondaryScaffold(
+        CouiCompactScaffold(
             title = illust?.title.orEmpty(),
             onBack = onBack,
+            topBarModifier = Modifier.graphicsLayer { alpha = detailChromeAlpha },
             actions = {
                 CouiDetailTopBarActions(
                     illust = illust,
                     isBookmarked = isBookmarked,
                     isBookmarkLoading = isBookmarkLoading,
+                    bookmarkHeartScale = bookmarkHeartScale.value,
                     isDownloading = isDownloading,
                     isBanned = isBanned,
                     strings = strings,
@@ -324,11 +473,7 @@ private fun CouiIllustDetailSingle(
                     .fillMaxSize()
                     .consumeWindowInsets(padding),
             ) {
-                val viewport = IllustDetailViewport(
-                    isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp,
-                    containerWidthPx = constraints.maxWidth.toFloat(),
-                    containerHeightPx = constraints.maxHeight.toFloat(),
-                )
+                val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
                 when {
                     result == null -> CouiPlaceholder(
                         message = strings.loading,
@@ -339,8 +484,19 @@ private fun CouiIllustDetailSingle(
 
                     illust != null -> {
                         if (isRestricted && !isTempView) {
+                            val restrictionMessage = buildString {
+                                if (isBanned) {
+                                    append(strings.menuBanWork)
+                                } else {
+                                    append("R-18")
+                                }
+                                if (illust.title.isNotBlank()) {
+                                    append("\n")
+                                    append(illust.title)
+                                }
+                            }
                             CouiPlaceholder(
-                                message = illust.title,
+                                message = restrictionMessage,
                                 actionText = strings.confirm,
                                 onAction = { isTempView = true },
                                 modifier = Modifier
@@ -355,29 +511,185 @@ private fun CouiIllustDetailSingle(
                                     null
                                 }
                             }
-                            CouiIllustDetailList(
-                                illust = illust,
-                                illustAspectRatio = illustAspectRatio,
-                                viewport = viewport,
-                                settings = settings,
-                                listState = listState,
-                                padding = padding,
-                                repository = repository,
-                                downloadRepository = downloadRepository,
-                                isDownloading = isDownloading,
-                                coroutineScope = coroutineScope,
-                                strings = strings,
-                                onToast = { data -> data?.let(toastSink) },
-                                onDownloadAll = actions::downloadAll,
-                                onFullScreen = { fullScreenPageIndex = it },
-                                onUserClick = onUserClick,
-                                onCommentsClick = onCommentsClick,
-                                onRelatedIllustsClick = onRelatedIllustsClick,
-                                onIllustSeriesClick = onIllustSeriesClick,
-                                onTagClick = onTagClick,
-                                onIllustClick = onIllustClick,
-                                onNovelClick = onNovelClick,
+                            val showFollowButton = shouldShowArtistFollowButton(illust.user.id, currentUserId)
+                            val displayedBookmarks = resolveDisplayedBookmarkCount(
+                                baseCount = illust.totalBookmarks,
+                                initiallyBookmarked = illust.isBookmarked,
+                                currentlyBookmarked = isBookmarked,
                             )
+                            val chromeAlpha = if (singleListState.firstVisibleItemIndex == 0) detailChromeAlpha else 1f
+
+                            val imageItems: LazyListScope.() -> Unit = {
+                                if (illust.metaPages.isNotEmpty()) {
+                                    items(
+                                        count = illust.metaPages.size,
+                                        key = { "coui_page_$it" },
+                                        contentType = { "coui_meta_page" },
+                                    ) { pageIndex ->
+                                        CouiDetailImagePage(
+                                            illust = illust,
+                                            pageIndex = pageIndex,
+                                            illustAspectRatio = illustAspectRatio,
+                                            settings = settings,
+                                            downloadRepository = downloadRepository,
+                                            coroutineScope = coroutineScope,
+                                            strings = strings,
+                                            onToast = { data -> data?.let(toastSink) },
+                                            onPageClick = { fullScreenPageIndex = it },
+                                        )
+                                    }
+                                } else {
+                                    item(key = "coui_single_page", contentType = "coui_single_page") {
+                                        CouiDetailSinglePageImage(
+                                            illust = illust,
+                                            illustAspectRatio = illustAspectRatio,
+                                            settings = settings,
+                                            repository = repository,
+                                            onPageClick = { fullScreenPageIndex = it },
+                                        )
+                                    }
+                                }
+                            }
+
+                            val detailInfoItems: LazyListScope.() -> Unit = {
+                                item(key = "coui_info_card", contentType = "coui_info_card") {
+                                    CouiDetailInfoCard(
+                                        illust = illust,
+                                        isBookmarked = isBookmarked,
+                                        isBookmarkLoading = isBookmarkLoading,
+                                        displayedBookmarks = displayedBookmarks,
+                                        isDownloading = isDownloading,
+                                        showFollowButton = showFollowButton,
+                                        isFollowed = isFollowed,
+                                        isFollowLoading = isFollowLoading,
+                                        strings = strings,
+                                        onBookmarkClick = actions::bookmark,
+                                        onDownloadClick = {
+                                            if (illust.pageCount > 1) actions.downloadAll() else actions.download()
+                                        },
+                                        onCommentsClick = { onCommentsClick(illust.id) },
+                                        onShareClick = onShareIllust,
+                                        onCopyIdClick = onCopyIllustId,
+                                        onUserClick = onUserClick,
+                                        onFollowClick = onFollowToggle,
+                                        onIllustSeriesClick = onIllustSeriesClick,
+                                        onDownloadAll = actions::downloadAll,
+                                        modifier = Modifier.graphicsLayer { alpha = chromeAlpha },
+                                    )
+                                }
+
+                                if (illust.caption.isNotBlank()) {
+                                    item(key = "coui_caption", contentType = "coui_caption") {
+                                        val scheme = CouiTheme.colorScheme
+                                        CouiDetailSectionCard(
+                                            title = strings.searchTargetTitleCaption,
+                                            modifier = Modifier.graphicsLayer { alpha = chromeAlpha },
+                                        ) {
+                                            HtmlCaptionText(
+                                                html = illust.caption,
+                                                onUserClick = onUserClick,
+                                                onIllustClick = onIllustClick,
+                                                onIllustSeriesClick = onIllustSeriesClick,
+                                                onNovelClick = onNovelClick,
+                                                onTagClick = onTagClick,
+                                                onLinkClick = { url ->
+                                                    openSafeUrl(url, strings, onError = { toastSink(ToastData(it, ToastType.Error)) })
+                                                },
+                                                style = LocalCouiTextStyle.current.copy(lineHeight = 21.sp),
+                                                color = scheme.onSurface,
+                                                linkColor = scheme.accent,
+                                                toggleStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (illust.tags.isNotEmpty()) {
+                                    item(key = "coui_tags", contentType = "coui_tags") {
+                                        CouiDetailSectionCard(
+                                            title = strings.tags,
+                                            modifier = Modifier.graphicsLayer { alpha = chromeAlpha },
+                                        ) {
+                                            CouiDetailTagFlow(tags = illust.tags, onTagClick = onTagClick)
+                                        }
+                                    }
+                                }
+
+                                item(key = "coui_interaction", contentType = "coui_interaction") {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    CouiCard(
+                                        modifier = Modifier
+                                            .padding(horizontal = CouiPageDefaults.horizontalMargin)
+                                            .graphicsLayer { alpha = chromeAlpha },
+                                    ) {
+                                        CouiValueRow(
+                                            title = strings.commentsTitle,
+                                            value = "${illust.totalComments ?: 0}",
+                                            onClick = { onCommentsClick(illust.id) },
+                                        )
+                                        CouiRowDivider()
+                                        CouiValueRow(
+                                            title = strings.relatedIllusts,
+                                            onClick = { onRelatedIllustsClick(illust.id) },
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(28.dp))
+                                }
+                            }
+
+                            if (isWideScreen) {
+                                // 宽屏双栏：左栏专注画作浏览，右栏承载信息、快捷操作、简介、标签与互动，各自独立滚动。
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .consumeWindowInsets(padding),
+                                ) {
+                                    LazyColumn(
+                                        state = wideImageListState,
+                                        modifier = Modifier
+                                            .weight(0.56f)
+                                            .fillMaxHeight(),
+                                        contentPadding = PaddingValues(
+                                            start = CouiPageDefaults.horizontalMargin,
+                                            top = padding.calculateTopPadding() + 8.dp,
+                                            end = 8.dp,
+                                            bottom = padding.calculateBottomPadding() + 24.dp,
+                                        ),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        overscrollEffect = rememberCouiOverscrollEffect(),
+                                    ) {
+                                        imageItems()
+                                    }
+                                    LazyColumn(
+                                        state = wideInfoListState,
+                                        modifier = Modifier
+                                            .weight(0.44f)
+                                            .fillMaxHeight(),
+                                        contentPadding = PaddingValues(
+                                            top = padding.calculateTopPadding(),
+                                            bottom = padding.calculateBottomPadding() + 16.dp,
+                                        ),
+                                        overscrollEffect = rememberCouiOverscrollEffect(),
+                                    ) {
+                                        detailInfoItems()
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = singleListState,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .consumeWindowInsets(padding),
+                                    contentPadding = PaddingValues(
+                                        top = padding.calculateTopPadding(),
+                                        bottom = padding.calculateBottomPadding(),
+                                    ),
+                                    overscrollEffect = rememberCouiOverscrollEffect(),
+                                ) {
+                                    imageItems()
+                                    detailInfoItems()
+                                }
+                            }
                         }
                     }
 
@@ -395,13 +707,12 @@ private fun CouiIllustDetailSingle(
 
         val fullScreenPage = fullScreenPageIndex
         if (fullScreenPage != null && illust != null) {
-            IllustDetailFullScreenOverlay(
+            CouiIllustFullScreenOverlay(
                 illust = illust,
                 pageIndex = fullScreenPage,
                 settings = settings,
                 repository = repository,
                 downloadRepository = downloadRepository,
-                detailBackdrop = null,
                 onToast = toastSink,
                 onDismiss = { fullScreenPageIndex = null },
             )
@@ -416,17 +727,13 @@ private fun CouiIllustDetailSingle(
     }
 }
 
-/**
- * COUI 详情页顶栏动作：收藏、下载、更多菜单。
- *
- * 三个按钮都放在骨架的 actions 槽内，材质、按压反馈与图标色由顶栏下发
- * （API 34+ 官方按钮，API 31-33 同尺寸平替）。收藏态用实心图标表达。
- */
+/** COUI 详情页顶栏动作：收藏（含弹性缩放与高亮着色）、下载、更多菜单。 */
 @Composable
 private fun CouiDetailTopBarActions(
     illust: Illust?,
     isBookmarked: Boolean,
     isBookmarkLoading: Boolean,
+    bookmarkHeartScale: Float,
     isDownloading: Boolean,
     isBanned: Boolean,
     strings: AppStrings,
@@ -441,22 +748,26 @@ private fun CouiDetailTopBarActions(
 
     CouiTopBarIconButton(
         onClick = actions::bookmark,
-        icon = if (isBookmarked) MiuixIcons.FavoritesFill else MiuixIcons.Favorites,
+        icon = if (isBookmarked) CouiIcons.HeartFill else CouiIcons.Heart,
         contentDescription = if (isBookmarked) strings.bookmarked else strings.bookmark,
         enabled = !isBookmarkLoading && illust != null,
+        tint = if (isBookmarked) CouiBookmarkActiveColor else null,
+        modifier = Modifier.graphicsLayer {
+            scaleX = bookmarkHeartScale
+            scaleY = bookmarkHeartScale
+        },
     )
     CouiTopBarIconButton(
         onClick = actions::download,
-        icon = MiuixIcons.Download,
+        icon = CouiIcons.Download,
         contentDescription = strings.download,
         enabled = !isDownloading && illust != null,
     )
     if (illust != null) {
-        // 菜单挂在顶栏按钮的锚点上，位置由 couiMenuAnchor 按可见边界计算。
         Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
             CouiTopBarIconButton(
                 onClick = { menuAnchor.open { menuExpanded = true } },
-                icon = MiuixIcons.More,
+                icon = CouiIcons.More,
                 contentDescription = strings.menuMoreActions,
             )
             CouiDetailMoreMenu(
@@ -475,11 +786,7 @@ private fun CouiDetailTopBarActions(
     }
 }
 
-/**
- * COUI 更多操作菜单：复制/分享/浏览器/SauceNAO/屏蔽的动作编排统一取自共享构建器
- * buildIllustDetailMoreMenuEntries，这里只保留 COUI 自己的锚点弹层与条目材质。
- * 之前整份复制一份 when 分支，文案、屏蔽流程、异常提示会随 MIUIX 版各自漂移。
- */
+/** COUI 更多操作菜单：动作编排统一取自共享构建器 buildIllustDetailMoreMenuEntries。 */
 @Composable
 private fun CouiDetailMoreMenu(
     illust: Illust,
@@ -508,8 +815,6 @@ private fun CouiDetailMoreMenu(
         context = context,
         coroutineScope = coroutineScope,
     )
-    // CouiMenuItem 只有 value/text/分隔线，没有图标槽，因此把共享条目按组拍平，
-    // 用下标回查动作；分隔线按共享分组边界（非首组的第一项）还原。
     val flatItems = entries.flatMap { it.items }
     val items = buildList {
         var index = 0
@@ -534,145 +839,17 @@ private fun CouiDetailMoreMenu(
         items = items,
         onItemClick = { item ->
             onDismiss()
-            // value 是外部库的不透明类型，这里按值相等回查，不依赖它的具体类型。
             flatItems.getOrNull(items.indexOfFirst { it.value == item.value })?.onClick?.invoke()
         },
     )
 }
 
-/** COUI 详情页主列表：图片区、信息卡、简介卡、标签卡与互动卡。 */
-@Composable
-private fun CouiIllustDetailList(
-    illust: Illust,
-    illustAspectRatio: Float?,
-    viewport: IllustDetailViewport,
-    settings: SettingsRepository,
-    listState: LazyListState,
-    padding: PaddingValues,
-    repository: IllustRepository,
-    downloadRepository: DownloadRepository,
-    isDownloading: Boolean,
-    coroutineScope: CoroutineScope,
-    strings: AppStrings,
-    onToast: (ToastData?) -> Unit,
-    onDownloadAll: () -> Unit,
-    onFullScreen: (Int) -> Unit,
-    onUserClick: (Long) -> Unit,
-    onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
-    onIllustSeriesClick: (Long) -> Unit,
-    onTagClick: (String) -> Unit,
-    onIllustClick: ((Long) -> Unit)?,
-    onNovelClick: ((Long) -> Unit)?,
-) {
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .consumeWindowInsets(padding),
-        // 护栏交给列表内层：首图从收起后的顶栏下方开始，滚动时仍能滚进顶栏覆盖区。
-        contentPadding = PaddingValues(
-            top = padding.calculateTopPadding(),
-            bottom = padding.calculateBottomPadding(),
-        ),
-        overscrollEffect = rememberCouiOverscrollEffect(),
-    ) {
-        if (illust.metaPages.isNotEmpty()) {
-            items(
-                count = illust.metaPages.size,
-                key = { "coui_page_$it" },
-                contentType = { "coui_meta_page" },
-            ) { pageIndex ->
-                CouiDetailImagePage(
-                    illust = illust,
-                    pageIndex = pageIndex,
-                    illustAspectRatio = illustAspectRatio,
-                    viewport = viewport,
-                    settings = settings,
-                    downloadRepository = downloadRepository,
-                    coroutineScope = coroutineScope,
-                    strings = strings,
-                    onToast = onToast,
-                    onPageClick = onFullScreen,
-                )
-            }
-        } else {
-            item(key = "coui_single_page", contentType = "coui_single_page") {
-                CouiDetailSinglePageImage(
-                    illust = illust,
-                    illustAspectRatio = illustAspectRatio,
-                    viewport = viewport,
-                    settings = settings,
-                    repository = repository,
-                    onPageClick = onFullScreen,
-                )
-            }
-        }
-
-        item(key = "coui_info_card", contentType = "coui_info_card") {
-            CouiDetailInfoCard(
-                illust = illust,
-                isDownloading = isDownloading,
-                strings = strings,
-                onUserClick = onUserClick,
-                onIllustSeriesClick = onIllustSeriesClick,
-                onDownloadAll = onDownloadAll,
-            )
-        }
-
-        if (illust.caption.isNotBlank()) {
-            item(key = "coui_caption", contentType = "coui_caption") {
-                CouiDetailSectionCard(title = strings.searchTargetTitleCaption) {
-                    HtmlCaptionText(
-                        html = illust.caption,
-                        onUserClick = onUserClick,
-                        onIllustClick = onIllustClick,
-                        onIllustSeriesClick = onIllustSeriesClick,
-                        onNovelClick = onNovelClick,
-                        onTagClick = onTagClick,
-                        onLinkClick = { url ->
-                            openSafeUrl(url, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
-                        },
-                        style = LocalCouiTextStyle.current,
-                    )
-                }
-            }
-        }
-
-        if (illust.tags.isNotEmpty()) {
-            item(key = "coui_tags", contentType = "coui_tags") {
-                CouiDetailSectionCard(title = strings.tags) {
-                    CouiDetailTagFlow(tags = illust.tags, onTagClick = onTagClick)
-                }
-            }
-        }
-
-        item(key = "coui_interaction", contentType = "coui_interaction") {
-            Spacer(modifier = Modifier.height(10.dp))
-            CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
-                CouiValueRow(
-                    title = strings.commentsTitle,
-                    value = "${illust.totalComments ?: 0}",
-                    onClick = { onCommentsClick(illust.id) },
-                )
-                CouiRowDivider()
-                CouiValueRow(
-                    title = strings.relatedIllusts,
-                    onClick = { onRelatedIllustsClick(illust.id) },
-                )
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-/** COUI 详情页单张图片：按视口约束的宽度 + 右下角下载浮钮。 */
+/** COUI 详情页多页作品单张图片：带加载占位底色、右上角页码角标与右下角单页下载浮钮。 */
 @Composable
 private fun CouiDetailImagePage(
     illust: Illust,
     pageIndex: Int,
     illustAspectRatio: Float?,
-    viewport: IllustDetailViewport,
     settings: SettingsRepository,
     downloadRepository: DownloadRepository,
     coroutineScope: CoroutineScope,
@@ -709,9 +886,10 @@ private fun CouiDetailImagePage(
         }
     }
     var pageLoaded by remember(pageIndex) { mutableStateOf(false) }
-    val imageWidthDp = rememberCouiDetailImageWidthDp(viewport, illustAspectRatio)
+    val downloadInteraction = remember { MutableInteractionSource() }
     val imageModifier = Modifier
         .fillMaxWidth()
+        .background(CouiTheme.colorScheme.container)
         .then(
             if ((pageIndex == 0 || !pageLoaded) && illustAspectRatio != null) {
                 Modifier.aspectRatio(illustAspectRatio)
@@ -725,52 +903,67 @@ private fun CouiDetailImagePage(
             indication = null,
         ) { onPageClick(pageIndex) }
 
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        PixivAsyncImage(
+            model = pageUrl,
+            thumbnailUrl = thumbnailUrl,
+            contentDescription = "${illust.title} ($pageIndex)",
+            contentScale = ContentScale.FillWidth,
+            modifier = imageModifier,
+            onSuccess = { pageLoaded = true },
+        )
+
+        // 右上角轻量页码角标（多页作品每页清晰标示当前进度）
         Box(
-            modifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(10.dp)
+                .clip(CouiCapsuleShape)
+                .background(Color.Black.copy(alpha = 0.52f))
+                .padding(horizontal = 9.dp, vertical = 3.dp),
         ) {
-            PixivAsyncImage(
-                model = pageUrl,
-                thumbnailUrl = thumbnailUrl,
-                contentDescription = "${illust.title} ($pageIndex)",
-                contentScale = ContentScale.FillWidth,
-                modifier = imageModifier,
-                onSuccess = { pageLoaded = true },
+            BasicText(
+                text = "${pageIndex + 1} / ${illust.metaPages.size}",
+                style = TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium),
             )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(6.dp)
-                    .accessibleTouchTarget(48.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .clickable {
-                        coroutineScope.launch {
-                            val pageNumber = pageIndex + 1
-                            onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
-                            val task = downloadRepository.download(illust, pageIndex = pageIndex)
-                            onToast(
-                                when (task.status) {
-                                    DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
-                                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)
-                                    else -> null
-                                },
-                            )
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = rememberVectorPainter(MiuixIcons.Download),
-                    contentDescription = "${strings.download} P${pageIndex + 1}",
-                    colorFilter = ColorFilter.tint(Color.White),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+        }
+
+        // 右下角单页下载按钮
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(8.dp)
+                .accessibleTouchTarget(48.dp)
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.56f))
+                .couiButtonFeedback(dark = true, interactionSource = downloadInteraction, list = false)
+                .clickable(
+                    interactionSource = downloadInteraction,
+                    indication = null,
+                    role = Role.Button,
+                ) {
+                    coroutineScope.launch {
+                        val pageNumber = pageIndex + 1
+                        onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
+                        val task = downloadRepository.download(illust, pageIndex = pageIndex)
+                        onToast(
+                            when (task.status) {
+                                DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
+                                DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)
+                                else -> null
+                            },
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = rememberVectorPainter(CouiIcons.Download),
+                contentDescription = "${strings.download} P${pageIndex + 1}",
+                colorFilter = ColorFilter.tint(Color.White),
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
     if (pageIndex < illust.metaPages.lastIndex) {
@@ -783,23 +976,22 @@ private fun CouiDetailImagePage(
 private fun CouiDetailSinglePageImage(
     illust: Illust,
     illustAspectRatio: Float?,
-    viewport: IllustDetailViewport,
     settings: SettingsRepository,
     repository: IllustRepository,
     onPageClick: (Int) -> Unit,
 ) {
-    val imageWidthDp = rememberCouiDetailImageWidthDp(viewport, illustAspectRatio)
-    val sizedModifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth()
     if (IllustType.isUgoira(illust.type)) {
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CouiTheme.colorScheme.container),
             contentAlignment = Alignment.TopCenter,
         ) {
             UgoiraPlayer(
                 illust = illust,
                 illustRepository = repository,
                 onClick = { onPageClick(0) },
-                modifier = sizedModifier,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     } else {
@@ -828,6 +1020,7 @@ private fun CouiDetailSinglePageImage(
         }
         val imageModifier = Modifier
             .fillMaxWidth()
+            .background(CouiTheme.colorScheme.container)
             .then(
                 if (illustAspectRatio != null) {
                     Modifier.aspectRatio(illustAspectRatio)
@@ -841,77 +1034,291 @@ private fun CouiDetailSinglePageImage(
                 indication = null,
             ) { onPageClick(0) }
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            Box(modifier = sizedModifier) {
-                PixivAsyncImage(
-                    model = singleUrl,
-                    thumbnailUrl = thumbnailUrl,
-                    contentDescription = illust.title,
-                    contentScale = ContentScale.FillWidth,
-                    modifier = imageModifier,
-                )
-            }
-        }
+        PixivAsyncImage(
+            model = singleUrl,
+            thumbnailUrl = thumbnailUrl,
+            contentDescription = illust.title,
+            contentScale = ContentScale.FillWidth,
+            modifier = imageModifier,
+        )
     }
 }
 
-/** 信息卡：标题、指标、ID/尺寸、作者行、下载全部与系列入口。 */
+/** 信息卡：属性徽章、大标题、指标、一键复制 ID、四合一快捷操作条、作者关注行、多页下载全部与系列入口。 */
 @Composable
 private fun CouiDetailInfoCard(
     illust: Illust,
+    isBookmarked: Boolean,
+    isBookmarkLoading: Boolean,
+    displayedBookmarks: Int,
     isDownloading: Boolean,
+    showFollowButton: Boolean,
+    isFollowed: Boolean,
+    isFollowLoading: Boolean,
     strings: AppStrings,
+    onBookmarkClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onCommentsClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onCopyIdClick: () -> Unit,
     onUserClick: (Long) -> Unit,
+    onFollowClick: () -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onDownloadAll: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val scheme = CouiTheme.colorScheme
+    val badges = remember(illust) { resolveCouiIllustBadges(illust) }
+    val idInteraction = remember { MutableInteractionSource() }
+
     Spacer(modifier = Modifier.height(12.dp))
-    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+    CouiCard(modifier = modifier.padding(horizontal = CouiPageDefaults.horizontalMargin)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            if (badges.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                ) {
+                    badges.forEach { badge ->
+                        CouiDetailBadgePill(badge = badge)
+                    }
+                }
+            }
+
+            BasicText(
                 text = illust.title,
-                kind = CouiTextKind.ItemTitle,
-                color = CouiTheme.colorScheme.onSurface,
-                maxLines = 2,
+                style = TextStyle(
+                    fontSize = 19.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.onSurface,
+                ),
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
             )
+
             Spacer(modifier = Modifier.height(10.dp))
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CouiDetailMetric(icon = MiuixIcons.Show, text = illust.totalView.toString())
-                CouiDetailMetric(icon = MiuixIcons.Favorites, text = illust.totalBookmarks.toString())
-                CouiDetailMetric(icon = MiuixIcons.Recent, text = formatPixivDate(illust.createDate))
+                CouiDetailMetric(icon = CouiIcons.Show, text = illust.totalView.toString())
+                CouiDetailMetric(icon = CouiIcons.Heart, text = displayedBookmarks.toString())
+                CouiDetailMetric(icon = CouiIcons.Recent, text = formatPixivDate(illust.createDate))
             }
+
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "ID: ${illust.id}   ${illust.width}x${illust.height}",
-                kind = CouiTextKind.ItemSummary,
-                color = CouiTheme.colorScheme.onSurfaceVariant,
-            )
+
+            // 作品 ID 与尺寸：点击一键复制 ID，减少进入二级菜单的步骤。
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .couiPressFeedback(idInteraction, list = false)
+                    .clickable(
+                        interactionSource = idInteraction,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onCopyIdClick,
+                    )
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = "ID: ${illust.id}  ·  ${illust.width}×${illust.height}",
+                    kind = CouiTextKind.ItemSummary,
+                    color = scheme.onSurfaceVariant,
+                )
+                Image(
+                    painter = rememberVectorPainter(CouiIcons.Copy),
+                    contentDescription = strings.copy,
+                    colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
+                    modifier = Modifier.size(13.dp),
+                )
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
-            CouiDetailArtistRow(illust = illust, strings = strings, onUserClick = onUserClick)
-            if (illust.pageCount > 1) {
-                Spacer(modifier = Modifier.height(8.dp))
-                CouiValueRow(
-                    title = strings.downloadTaskFilterAll,
-                    value = "${illust.pageCount} P",
-                    onClick = {
-                        if (!isDownloading) onDownloadAll()
-                    },
-                )
-            }
-            illust.series?.let { series ->
-                Spacer(modifier = Modifier.height(4.dp))
-                CouiValueRow(
-                    title = series.title.orEmpty(),
-                    onClick = { onIllustSeriesClick(series.id) },
-                )
-            }
+
+            // 四合一快捷操作栏（收藏 / 下载 / 评论 / 分享）
+            CouiDetailQuickActionsBar(
+                isBookmarked = isBookmarked,
+                isBookmarkLoading = isBookmarkLoading,
+                displayedBookmarks = displayedBookmarks,
+                isDownloading = isDownloading,
+                commentCount = illust.totalComments ?: 0,
+                strings = strings,
+                onBookmarkClick = onBookmarkClick,
+                onDownloadClick = onDownloadClick,
+                onCommentsClick = onCommentsClick,
+                onShareClick = onShareClick,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 作者行（含快捷关注/已关注按钮）
+            CouiDetailArtistRow(
+                illust = illust,
+                showFollowButton = showFollowButton,
+                isFollowed = isFollowed,
+                isFollowLoading = isFollowLoading,
+                strings = strings,
+                onUserClick = onUserClick,
+                onFollowClick = onFollowClick,
+            )
         }
+
+        // 多页下载全部与系列入口位于卡片直属槽内，避免与上方 16dp padding 叠加导致双重缩进。
+        if (illust.pageCount > 1) {
+            CouiRowDivider()
+            CouiValueRow(
+                title = strings.downloadTaskFilterAll,
+                value = "${illust.pageCount} P",
+                enabled = !isDownloading,
+                onClick = {
+                    if (!isDownloading) onDownloadAll()
+                },
+            )
+        }
+        illust.series?.let { series ->
+            CouiRowDivider()
+            CouiValueRow(
+                title = series.title.orEmpty(),
+                value = strings.novelSeries,
+                onClick = { onIllustSeriesClick(series.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CouiDetailBadgePill(badge: CouiIllustBadge) {
+    val scheme = CouiTheme.colorScheme
+    val destructive = CouiDialogDefaults.colors(CouiTheme.isDark).destructive
+    val (bg, fg) = when (badge.kind) {
+        CouiIllustBadgeKind.R18 -> destructive.copy(alpha = 0.14f) to destructive
+        CouiIllustBadgeKind.AI -> scheme.accent.copy(alpha = 0.14f) to scheme.accent
+        CouiIllustBadgeKind.UGOIRA -> scheme.accent.copy(alpha = 0.14f) to scheme.accent
+        CouiIllustBadgeKind.MULTI_PAGE -> scheme.container to scheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .clip(CouiCapsuleShape)
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        BasicText(
+            text = badge.label,
+            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = fg),
+        )
+    }
+}
+
+/** 四合一快捷操作条：高频动作收进拇指热区。 */
+@Composable
+private fun CouiDetailQuickActionsBar(
+    isBookmarked: Boolean,
+    isBookmarkLoading: Boolean,
+    displayedBookmarks: Int,
+    isDownloading: Boolean,
+    commentCount: Int,
+    strings: AppStrings,
+    onBookmarkClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onCommentsClick: () -> Unit,
+    onShareClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CouiQuickActionTile(
+            icon = if (isBookmarked) CouiIcons.HeartFill else CouiIcons.Heart,
+            label = if (displayedBookmarks > 0) displayedBookmarks.toString() else strings.bookmark,
+            active = isBookmarked,
+            activeColor = CouiBookmarkActiveColor,
+            enabled = !isBookmarkLoading,
+            onClick = onBookmarkClick,
+            modifier = Modifier.weight(1f),
+        )
+        CouiQuickActionTile(
+            icon = CouiIcons.Download,
+            label = strings.download,
+            active = false,
+            enabled = !isDownloading,
+            onClick = onDownloadClick,
+            modifier = Modifier.weight(1f),
+        )
+        CouiQuickActionTile(
+            icon = CouiIcons.Messages,
+            label = if (commentCount > 0) commentCount.toString() else strings.comments,
+            active = false,
+            enabled = true,
+            onClick = onCommentsClick,
+            modifier = Modifier.weight(1f),
+        )
+        CouiQuickActionTile(
+            icon = CouiIcons.Share,
+            label = strings.share,
+            active = false,
+            enabled = true,
+            onClick = onShareClick,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun CouiQuickActionTile(
+    icon: ImageVector,
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    activeColor: Color = CouiTheme.colorScheme.accent,
+) {
+    val scheme = CouiTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val bgColor = if (active) activeColor.copy(alpha = 0.14f) else scheme.container
+    val tintColor = when {
+        !enabled -> scheme.onSurfaceVariant.copy(alpha = 0.45f)
+        active -> activeColor
+        else -> scheme.onSurface
+    }
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(bgColor)
+            .couiPressFeedback(interaction, enabled = enabled, list = false)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Image(
+            painter = rememberVectorPainter(icon),
+            contentDescription = label,
+            colorFilter = ColorFilter.tint(tintColor),
+            modifier = Modifier.size(20.dp),
+        )
+        BasicText(
+            text = label,
+            style = TextStyle(
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (active) activeColor else scheme.onSurfaceVariant,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -921,11 +1328,11 @@ private fun CouiDetailMetric(icon: ImageVector, text: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        androidx.compose.foundation.Image(
+        Image(
             painter = rememberVectorPainter(icon),
             contentDescription = null,
             colorFilter = ColorFilter.tint(CouiTheme.colorScheme.onSurfaceVariant),
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(15.dp),
         )
         Text(
             text = text,
@@ -938,19 +1345,26 @@ private fun CouiDetailMetric(icon: ImageVector, text: String) {
 @Composable
 private fun CouiDetailArtistRow(
     illust: Illust,
+    showFollowButton: Boolean,
+    isFollowed: Boolean,
+    isFollowLoading: Boolean,
     strings: AppStrings,
     onUserClick: (Long) -> Unit,
+    onFollowClick: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
+    val scheme = CouiTheme.colorScheme
+    val rowInteraction = remember { MutableInteractionSource() }
+    val followInteraction = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CouiTheme.colorScheme.container)
-            .couiPressFeedback(interactionSource)
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.container)
+            .couiPressFeedback(rowInteraction)
             .clickable(
-                interactionSource = interactionSource,
+                interactionSource = rowInteraction,
                 indication = null,
+                role = Role.Button,
             ) { onUserClick(illust.user.id) }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -968,33 +1382,55 @@ private fun CouiDetailArtistRow(
             Text(
                 text = illust.user.name,
                 kind = CouiTextKind.ItemTitle,
-                color = CouiTheme.colorScheme.onSurface,
+                color = scheme.onSurface,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = "@${illust.user.account}",
                 kind = CouiTextKind.ItemSummary,
-                color = CouiTheme.colorScheme.onSurfaceVariant,
+                color = scheme.onSurfaceVariant,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-        androidx.compose.foundation.Image(
-            painter = rememberVectorPainter(MiuixIcons.Search),
-            contentDescription = strings.author,
-            colorFilter = ColorFilter.tint(CouiTheme.colorScheme.onSurfaceVariant),
-            modifier = Modifier.size(18.dp),
-        )
+        if (showFollowButton) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(CouiCapsuleShape)
+                    .background(if (isFollowed) scheme.card else scheme.accent)
+                    .couiPressFeedback(followInteraction, enabled = !isFollowLoading, list = false)
+                    .clickable(
+                        interactionSource = followInteraction,
+                        indication = null,
+                        enabled = !isFollowLoading,
+                        role = Role.Button,
+                        onClick = onFollowClick,
+                    )
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (isFollowed) strings.followed else strings.follow,
+                    kind = CouiTextKind.ItemSummary,
+                    color = if (isFollowed) scheme.onSurfaceVariant else scheme.onAccent,
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 
-/** 通用分区卡片：标题 + 内容。 */
+/** 通用分区卡片：标题 + 内容，统一对齐 CouiPageDefaults.horizontalMargin。 */
 @Composable
 private fun CouiDetailSectionCard(
     title: String,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(10.dp))
-    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+    Spacer(modifier = Modifier.height(12.dp))
+    CouiCard(modifier = modifier.padding(horizontal = CouiPageDefaults.horizontalMargin)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
@@ -1043,25 +1479,3 @@ private fun resolveCouiIllustQuality(illust: Illust, settings: SettingsRepositor
     } else {
         settings?.pictureQuality ?: 0
     }
-
-/** 复用详情页视口约束：大屏图片收进内容列并限制高度，窄屏保持全出血。 */
-@Composable
-private fun rememberCouiDetailImageWidthDp(
-    viewport: IllustDetailViewport,
-    illustAspectRatio: Float?,
-): Dp {
-    val density = LocalDensity.current
-    return remember(viewport, illustAspectRatio, density) {
-        with(density) {
-            resolveIllustDetailImageWidthPx(
-                containerWidthPx = viewport.containerWidthPx,
-                containerHeightPx = viewport.containerHeightPx,
-                illustAspectRatio = illustAspectRatio,
-                isWideScreen = viewport.isWideScreen,
-                contentMaxWidthPx = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp.toPx(),
-                imageHorizontalPaddingPx = 12.dp.toPx(),
-                maxHeightFraction = AppConstants.Layout.DETAIL_IMAGE_MAX_HEIGHT_FRACTION,
-            ).toDp()
-        }
-    }
-}

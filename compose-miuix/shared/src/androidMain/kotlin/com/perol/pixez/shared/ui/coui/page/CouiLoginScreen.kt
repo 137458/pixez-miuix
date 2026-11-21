@@ -56,9 +56,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import pixez_miuix.shared.generated.resources.ic_pixez_logo
 import pixez_miuix.shared.generated.resources.Res
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 登录页：品牌区 + 快捷 OAuth 授权 + Refresh Token 登录 + 排障入口 + 条款链接。
@@ -103,7 +101,7 @@ internal fun CouiLoginScreen(
             if (onNetworkSettingClick != null) {
                 CouiTopBarIconButton(
                     onClick = onNetworkSettingClick,
-                    icon = MiuixIcons.Settings,
+                    icon = CouiIcons.Settings,
                     contentDescription = strings.loginGoNetworkSetting,
                 )
             }
@@ -328,7 +326,7 @@ private fun CouiLoginTokenField(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = rememberVectorPainter(MiuixIcons.Close),
+                    painter = rememberVectorPainter(CouiIcons.Close),
                     contentDescription = clearDescription,
                     colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
                     modifier = Modifier.size(16.dp),

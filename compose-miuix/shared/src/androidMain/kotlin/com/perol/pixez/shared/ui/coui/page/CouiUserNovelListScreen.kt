@@ -61,9 +61,7 @@ import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.extended.Favorites
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI 用户小说列表页：二级页骨架 + 小说卡片列表。
@@ -149,7 +147,7 @@ internal fun CouiUserNovelListScreen(
         actions = {
             CouiTopBarIconButton(
                 onClick = triggerManualRefresh,
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
             )
         },
@@ -349,7 +347,7 @@ internal fun CouiNovelCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Image(
-                            painter = rememberVectorPainter(MiuixIcons.Favorites),
+                            painter = rememberVectorPainter(CouiIcons.Heart),
                             contentDescription = strings.bookmark,
                             colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
                             modifier = Modifier.size(12.dp),

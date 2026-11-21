@@ -35,8 +35,8 @@ import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiContentColor
+import com.perol.pixez.shared.ui.coui.component.CouiChipTabRow
 import com.perol.pixez.shared.ui.coui.component.CouiFilterChip
-import com.perol.pixez.shared.ui.coui.component.CouiFilterChipBar
 import com.perol.pixez.shared.ui.coui.component.CouiIllustGrid
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
@@ -46,13 +46,11 @@ import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingMode
 import com.perol.pixez.shared.ui.state.rememberRankingFeedState
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Recent
-import top.yukonga.miuix.kmp.icon.extended.Refresh
 
 /**
  * COUI 排行榜页：复用 [rememberRankingFeedState] 的分页/日期/恢复逻辑，仅替换视觉壳。
@@ -80,17 +78,6 @@ internal fun CouiRankingScreen(
         )
     }
 
-    // 头部筛选条：chip 栏随列表滚动，进入顶栏覆盖区后被渐隐遮罩盖住。
-    val headerContent: @Composable () -> Unit = {
-        CouiFilterChipBar(
-            chips = rankingChips,
-            selectedKey = feed.selectedMode.code,
-            onSelect = { key ->
-                RankingMode.entries.firstOrNull { it.code == key }?.let(feed.onModeSelected)
-            },
-        )
-    }
-
     CouiMainScaffold(
         title = strings.tabRanking,
         actions = {
@@ -102,36 +89,51 @@ internal fun CouiRankingScreen(
             } else {
                 CouiTopBarIconButton(
                     onClick = { showDateDialog = true },
-                    icon = MiuixIcons.Recent,
+                    icon = CouiIcons.Calendar,
                     contentDescription = strings.rankingDateLabel,
                 )
             }
             CouiTopBarIconButton(
                 onClick = feed.refresh,
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
+            )
+        },
+        topBarBottom = {
+            CouiChipTabRow(
+                chips = rankingChips,
+                selectedKey = feed.selectedMode.code,
+                onSelect = { key ->
+                    RankingMode.entries.firstOrNull { it.code == key }?.let(feed.onModeSelected)
+                },
             )
         },
     ) { padding ->
         val currentIllusts = feed.listState.filteredIllusts
         when {
-            currentIllusts == null && feed.listState.initialError == null -> CouiRankingStateBody(
+            currentIllusts == null && feed.listState.initialError == null -> CouiPlaceholder(
                 message = strings.loading,
-                padding = padding,
-                header = headerContent,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
             )
 
-            currentIllusts == null && feed.listState.initialError != null -> CouiRankingStateBody(
+            currentIllusts == null && feed.listState.initialError != null -> CouiErrorPlaceholder(
                 error = feed.listState.initialError,
                 onRetry = feed.refresh,
-                padding = padding,
-                header = headerContent,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
             )
 
-            currentIllusts != null && currentIllusts.isEmpty() -> CouiRankingStateBody(
+            currentIllusts != null && currentIllusts.isEmpty() -> CouiPlaceholder(
                 message = strings.rankingEmpty,
-                padding = padding,
-                header = headerContent,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
             )
 
             currentIllusts != null -> CouiIllustGrid(
@@ -147,43 +149,11 @@ internal fun CouiRankingScreen(
                     end = 10.dp,
                     bottom = padding.calculateBottomPadding() + 8.dp,
                 ),
-                header = headerContent,
                 hasMore = feed.listState.nextUrl != null,
                 isLoadingMore = feed.listState.isLoadingMore,
                 loadMoreError = feed.listState.loadMoreError,
                 isRefreshing = feed.listState.isRefreshing,
                 onLoadMore = feed.loadMore,
-            )
-        }
-    }
-}
-
-/** 头部 chip 栏 + 居中占位：加载 / 错误 / 空态共用同一滚动起点。 */
-@Composable
-private fun CouiRankingStateBody(
-    padding: PaddingValues,
-    header: @Composable () -> Unit,
-    message: String? = null,
-    error: Throwable? = null,
-    onRetry: () -> Unit = {},
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .consumeWindowInsets(padding),
-    ) {
-        header()
-        if (error != null) {
-            CouiErrorPlaceholder(
-                error = error,
-                onRetry = onRetry,
-                modifier = Modifier.weight(1f),
-            )
-        } else if (message != null) {
-            CouiPlaceholder(
-                message = message,
-                modifier = Modifier.weight(1f),
             )
         }
     }

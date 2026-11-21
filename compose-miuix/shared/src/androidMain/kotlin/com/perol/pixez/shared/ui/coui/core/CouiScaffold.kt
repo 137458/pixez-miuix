@@ -3,6 +3,7 @@ package com.perol.pixez.shared.ui.coui.core
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -26,10 +27,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -39,43 +43,56 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.itos.coui.backdrop.CouiBackdrop
+import com.itos.coui.backdrop.couiBackdrop
+import com.itos.coui.backdrop.rememberCouiBackdrop
 import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.layout.Scaffold
 import com.itos.coui.scroll.couiVerticalScroll
-import com.itos.coui.search.CouiSearchBarState
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
+import com.itos.coui.search.CouiSearchBarState
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiContentColor
 import com.itos.coui.theme.LocalCouiTextStyle
-import com.itos.coui.topappbar.CouiTopAppBarDefaults
 import com.itos.coui.topappbar.CollapsingTopAppBar
+import com.itos.coui.topappbar.CouiTopAppBarDefaults
 import com.itos.coui.topappbar.CouiTopAppBarScrollBehavior
 import com.itos.coui.topappbar.LargeTopAppBar
 import com.itos.coui.topappbar.TopAppBar
 import com.itos.coui.topappbar.TopAppBarButton
+import com.itos.coui.topappbar.TopAppBarButtonGroup
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 
 /*
  * 页面骨架层：容器、顶栏、滚动与安全区全部收敛到这里，页面只提供业务内容。
  *
- * 三条官方规则决定了本文件的所有写法：
+ * 四条官方规则决定了本文件的所有写法：
  * 1. 顶栏背景是库内合成的两层 —— 采样正文的模糊层 + 颜色渐隐遮罩层。遮罩色取页面底色
- *    （对应官方 DemoTheme 的 materialTheme 分支：LocalDemoTopBarGradient provides colors.background）；
- *    留空只会回落到纯白/纯黑，与本工程的非纯色底板不同源，顶部会浮出一条色差带。
+ *    （CouiTheme.colorScheme.background）；留空只会回落到纯白/纯黑，与本工程非纯色底板不同源。
  * 2. 正文必须留在 Scaffold 的正文槽里滚动，把护栏 padding 交给列表的 contentPadding 或
- *    滚动容器之后的 .padding()。若在外层再包 .padding()，正文视口整体缩到顶栏之下，
- *    模糊层就采样不到任何会动的内容。
- * 3. 折叠顶栏的护栏要经过 state.contentPadding(padding, density) 补偿，展开/收起过程中
- *    标题才不会与首项重叠；正文还要 consumeWindowInsets，避免子级二次扣减安全区。
+ *    滚动容器之后的 .padding()。Scaffold 已自动为正文区挂接 couiBackdrop 并经
+ *    LocalCouiBackdrop 注入 topBar 槽，因此放在 topBarBottom 里的 ChipTabRow /
+ *    CouiTopBarSegmentedTabs 天然是正文的兄弟节点，可安全采样滚动正文而不自采样。
+ * 3. 折叠顶栏的护栏必须返回延迟求值的活对象（实时读取 state.contentPadding），切不可在组合期
+ *    静态冻结 calculateTopPadding()，否则顶栏折叠/展开或 topBarBottom 变化时正文留白会错位。
+ * 4. 顶栏多按钮在顶栏效果作用域内统一由 TopAppBarButtonGroup 承接，保持共享位移与原厂排布。
  */
+
+/**
+ * 正文区背景采样源（参考 jm3 `LocalCouiAppBackdrop`）：仅当页面装配了 `topBarBottom` 且
+ * 处于 API 34+ 时由骨架创建并注入 `topBar` 槽，让吸顶的 `CouiChipTabRow` / `CouiTopBarSegmentedTabs`
+ * 可采样滚动正文产生原厂凝光毛玻璃，同时与正文严格分离为兄弟节点避免自采样。
+ */
+internal val LocalCouiContentBackdrop = staticCompositionLocalOf<CouiBackdrop?> { null }
 
 /** 顶栏标题：官方顶栏只通过 [LocalCouiTextStyle] 下发标题样式，不用 COUI 的 8 个文字角色。 */
 @Composable
@@ -100,7 +117,7 @@ internal fun CouiBarTitle(
  *
  * API 34+ 走官方 [TopAppBarButton]（材质、按压反馈与图标色都由顶栏效果层提供）；
  * API 31-33 官方按钮不可用，用同尺寸自绘按钮平替，图标色仍取顶栏下发的内容色。
- * 两种分支都必须在顶栏槽内调用，超出槽位会拿不到内容色与材质。
+ * 传入 [tint] 时覆盖默认图标色（例如已收藏态高亮）。
  */
 @Composable
 internal fun CouiTopBarIconButton(
@@ -109,11 +126,26 @@ internal fun CouiTopBarIconButton(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    tint: Color? = null,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        CouiFloatingTopBarIconButton(onClick = onClick, icon = icon, contentDescription = contentDescription, modifier = modifier, enabled = enabled)
+        CouiFloatingTopBarIconButton(
+            onClick = onClick,
+            icon = icon,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            enabled = enabled,
+            tint = tint,
+        )
     } else {
-        CouiPlainTopBarIconButton(onClick = onClick, icon = icon, contentDescription = contentDescription, modifier = modifier, enabled = enabled)
+        CouiPlainTopBarIconButton(
+            onClick = onClick,
+            icon = icon,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            enabled = enabled,
+            tint = tint,
+        )
     }
 }
 
@@ -125,9 +157,10 @@ private fun CouiFloatingTopBarIconButton(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    tint: Color? = null,
 ) {
     TopAppBarButton(modifier = modifier, onClick = onClick, enabled = enabled) {
-        CouiBarIcon(imageVector = icon, contentDescription = contentDescription)
+        CouiBarIcon(imageVector = icon, contentDescription = contentDescription, tint = tint)
     }
 }
 
@@ -138,6 +171,7 @@ private fun CouiPlainTopBarIconButton(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    tint: Color? = null,
 ) {
     val source = remember { MutableInteractionSource() }
     Box(
@@ -154,32 +188,48 @@ private fun CouiPlainTopBarIconButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        CouiBarIcon(imageVector = icon, contentDescription = contentDescription)
+        CouiBarIcon(imageVector = icon, contentDescription = contentDescription, tint = tint)
     }
 }
 
 @Composable
-private fun CouiBarIcon(imageVector: ImageVector, contentDescription: String?) {
-    val tint = LocalCouiContentColor.current.takeOrElse { CouiTheme.colorScheme.onSurface }
+private fun CouiBarIcon(
+    imageVector: ImageVector,
+    contentDescription: String?,
+    tint: Color? = null,
+) {
+    val resolvedTint = tint ?: LocalCouiContentColor.current.takeOrElse { CouiTheme.colorScheme.onSurface }
     Image(
         painter = rememberVectorPainter(imageVector),
         contentDescription = contentDescription,
-        modifier = Modifier.size(24.dp),
-        colorFilter = ColorFilter.tint(tint),
+        modifier = Modifier.size(22.dp),
+        colorFilter = ColorFilter.tint(resolvedTint),
     )
 }
 
+/** 构造带额外底部留白的活 [PaddingValues]，避免在组合期静态冻结顶栏折叠高度。 */
+private fun PaddingValues.withExtraBottom(extraBottom: Dp): PaddingValues = object : PaddingValues {
+    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp =
+        this@withExtraBottom.calculateLeftPadding(layoutDirection)
+
+    override fun calculateTopPadding(): Dp =
+        this@withExtraBottom.calculateTopPadding()
+
+    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp =
+        this@withExtraBottom.calculateRightPadding(layoutDirection)
+
+    override fun calculateBottomPadding(): Dp =
+        this@withExtraBottom.calculateBottomPadding() + extraBottom
+}
+
 /**
- * 紧凑顶栏（52dp）：给不需要大标题的简单页面用。
- *
- * 遮罩色显式取页面底色（与 Scaffold 的 containerColor 同源）—— 顶部实色与页面无缝衔接、
- * 向下渐隐出模糊层；留空会让浅色主题出现一条比页面更白的渐隐带。
+ * 紧凑顶栏（52dp）：给不需要大标题的简单页面或沉浸内容页用。
  */
 @Composable
 internal fun CouiTopBar(
     title: String,
     onBack: (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     TopAppBar(
@@ -190,24 +240,80 @@ internal fun CouiTopBar(
         ),
         navigationIcon = {
             if (onBack != null) {
-                CouiTopBarIconButton(onClick = onBack, icon = MiuixIcons.Back, contentDescription = strings.back)
+                CouiTopBarIconButton(onClick = onBack, icon = CouiIcons.Back, contentDescription = strings.back)
             }
         },
-        actions = actions,
+        actions = {
+            if (actions != null) {
+                TopAppBarButtonGroup { actions() }
+            }
+        },
     )
 }
 
 /**
- * 折叠大标题顶栏（展开 110dp / 收起 52dp）。
+ * 紧凑顶栏骨架（52dp）：适合作品详情页等首屏以视觉内容为主的二级页面。
  *
- * 高度、折叠曲线、模糊半径、渐变速度与 topExtension 全部由库内部决定，宿主不传也不叠加
- * statusBarsPadding；这里只负责把滚动联动挂上，并把护栏交给正文。
+ * 首屏不被 110dp 大标题抢占高度，正文内容仍可向上滚进顶栏毛玻璃区；
+ * 若传入 [topBarBottom]，其位于顶栏槽内、与正文形成兄弟节点，可采样正文 [com.itos.coui.backdrop.LocalCouiBackdrop]。
+ */
+@Composable
+internal fun CouiCompactScaffold(
+    title: String,
+    onBack: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    topBarModifier: Modifier = Modifier,
+    actions: (@Composable RowScope.() -> Unit)? = null,
+    topBarBottom: (@Composable () -> Unit)? = null,
+    floatingActionButton: (@Composable BoxScope.() -> Unit)? = null,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val bottomReserve = LocalBottomBarContentPadding.current
+    val contentBackdrop = if (topBarBottom != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        rememberCouiBackdrop()
+    } else {
+        null
+    }
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
+        topBar = {
+            CompositionLocalProvider(LocalCouiContentBackdrop provides contentBackdrop) {
+                Column(modifier = Modifier.fillMaxWidth().then(topBarModifier)) {
+                    CouiTopBar(title = title, onBack = onBack, actions = actions)
+                    if (topBarBottom != null) topBarBottom()
+                }
+            }
+        },
+        floatingActionButton = floatingActionButton,
+    ) { innerPadding ->
+        val resolvedPadding = remember(innerPadding, bottomReserve) {
+            innerPadding.withExtraBottom(bottomReserve)
+        }
+        if (contentBackdrop != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .couiBackdrop(contentBackdrop)
+                    .background(CouiTheme.colorScheme.background),
+            ) {
+                content(resolvedPadding)
+            }
+        } else {
+            content(resolvedPadding)
+        }
+    }
+}
+
+/**
+ * 折叠大标题顶栏（展开 110dp / 收起 52dp）。
  */
 @Composable
 private fun CouiCollapsingTopBar(
     title: String,
     onBack: (() -> Unit)?,
-    actions: @Composable RowScope.() -> Unit,
+    actions: (@Composable RowScope.() -> Unit)?,
     behavior: CouiTopAppBarScrollBehavior,
 ) {
     val strings = LocalStrings.current
@@ -219,26 +325,28 @@ private fun CouiCollapsingTopBar(
         ),
         navigationIcon = {
             if (onBack != null) {
-                CouiTopBarIconButton(onClick = onBack, icon = MiuixIcons.Back, contentDescription = strings.back)
+                CouiTopBarIconButton(onClick = onBack, icon = CouiIcons.Back, contentDescription = strings.back)
             }
         },
-        actions = actions,
+        actions = {
+            if (actions != null) {
+                TopAppBarButtonGroup { actions() }
+            }
+        },
         scrollBehavior = behavior,
     )
 }
 
 /**
- * 二级页骨架：折叠大标题顶栏 + 返回按钮。
- *
- * [content] 拿到的是补偿过的护栏：底部已含悬浮底栏的留白。列表页直接把它当 contentPadding，
- * 非列表页在 .couiVerticalScroll() 之后 .padding(它) 并 .consumeWindowInsets(原始 padding)。
+ * 二级页骨架：折叠大标题顶栏 + 返回按钮 + 可选吸顶扩展条（[topBarBottom]）。
  */
 @Composable
 internal fun CouiSecondaryScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: (@Composable RowScope.() -> Unit)? = null,
+    topBarBottom: (@Composable () -> Unit)? = null,
     floatingActionButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -247,17 +355,19 @@ internal fun CouiSecondaryScaffold(
         onBack = onBack,
         modifier = modifier,
         actions = actions,
+        topBarBottom = topBarBottom,
         floatingActionButton = floatingActionButton,
         content = content,
     )
 }
 
-/** 一级页骨架：折叠大标题顶栏，无返回按钮。 */
+/** 一级页骨架：折叠大标题顶栏 + 可选吸顶扩展条（[topBarBottom]），无返回按钮。 */
 @Composable
 internal fun CouiMainScaffold(
     title: String,
     modifier: Modifier = Modifier,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: (@Composable RowScope.() -> Unit)? = null,
+    topBarBottom: (@Composable () -> Unit)? = null,
     floatingActionButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -266,6 +376,7 @@ internal fun CouiMainScaffold(
         onBack = null,
         modifier = modifier,
         actions = actions,
+        topBarBottom = topBarBottom,
         floatingActionButton = floatingActionButton,
         content = content,
     )
@@ -276,39 +387,54 @@ private fun CouiCollapsingScaffold(
     title: String,
     onBack: (() -> Unit)?,
     modifier: Modifier,
-    actions: @Composable RowScope.() -> Unit,
+    actions: (@Composable RowScope.() -> Unit)?,
+    topBarBottom: (@Composable () -> Unit)?,
     floatingActionButton: (@Composable BoxScope.() -> Unit)?,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val behavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val density = LocalDensity.current
     val bottomReserve = LocalBottomBarContentPadding.current
+    val contentBackdrop = if (topBarBottom != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        rememberCouiBackdrop()
+    } else {
+        null
+    }
     Scaffold(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
             .nestedScroll(behavior.nestedScrollConnection),
-        topBar = { CouiCollapsingTopBar(title = title, onBack = onBack, actions = actions, behavior = behavior) },
+        topBar = {
+            CompositionLocalProvider(LocalCouiContentBackdrop provides contentBackdrop) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    CouiCollapsingTopBar(title = title, onBack = onBack, actions = actions, behavior = behavior)
+                    if (topBarBottom != null) topBarBottom()
+                }
+            }
+        },
         floatingActionButton = floatingActionButton,
     ) { innerPadding ->
-        val guarded = behavior.state.contentPadding(innerPadding, density)
-        // 正文槽的左右护栏恒为 0（横向安全区由 Scaffold 自己消费），因此只透传上下。
-        content(
-            PaddingValues(
-                top = guarded.calculateTopPadding(),
-                bottom = guarded.calculateBottomPadding() + bottomReserve,
-            ),
-        )
+        val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
+            behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+        }
+        if (contentBackdrop != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .couiBackdrop(contentBackdrop)
+                    .background(CouiTheme.colorScheme.background),
+            ) {
+                content(resolvedPadding)
+            }
+        } else {
+            content(resolvedPadding)
+        }
     }
 }
 
 /**
  * 搜索页骨架：官方 [CollapsingTopAppBar] 的常驻搜索槽。
- *
- * 搜索框必须留在顶栏的搜索槽里：槽位在 TopAppBarSurface 内部，属于顶栏采样作用域，
- * 官方 SearchBar 才能拿到不含自身的背景源。放到正文里既没有该作用域（默认参数直接抛
- * 「搜索需要显式 backdrop 或独立的顶栏作用域」），显式传源又会把搜索框自己录进模糊层。
- * 该顶栏没有 actions 槽，页面动作要放在正文里。
  */
 @Composable
 internal fun CouiSearchScaffold(
@@ -337,13 +463,10 @@ internal fun CouiSearchScaffold(
             ) { searchBar(bar.collapsedFraction) }
         },
     ) { innerPadding ->
-        val guarded = bar.contentPadding(innerPadding, density)
-        content(
-            PaddingValues(
-                top = guarded.calculateTopPadding(),
-                bottom = guarded.calculateBottomPadding() + bottomReserve,
-            ),
-        )
+        val resolvedPadding = remember(bar, innerPadding, density, bottomReserve) {
+            bar.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+        }
+        content(resolvedPadding)
     }
 }
 
@@ -353,7 +476,7 @@ internal fun CouiSettingsScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: (@Composable RowScope.() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
     CouiSecondaryScaffold(
@@ -368,14 +491,12 @@ internal fun CouiSettingsScaffold(
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .consumeWindowInsets(padding),
-                // 横向留白由官方 Group 的 horizontalMargin 提供，这里不再叠加。
                 contentPadding = PaddingValues(
                     start = 0.dp,
                     top = padding.calculateTopPadding() + 8.dp,
                     end = 0.dp,
                     bottom = padding.calculateBottomPadding() + CouiPageDefaults.groupSpacing,
                 ),
-                // 分组之间由官方 Group 自己的 groupSpacing 撑开，列表不再重复加间距。
                 overscrollEffect = rememberCouiOverscrollEffect(),
             ) {
                 content()
@@ -390,7 +511,7 @@ internal fun CouiScrollableScaffold(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     CouiSecondaryScaffold(

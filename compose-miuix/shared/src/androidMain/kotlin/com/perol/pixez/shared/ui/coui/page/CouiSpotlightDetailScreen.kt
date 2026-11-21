@@ -65,10 +65,7 @@ import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import top.yukonga.miuix.kmp.icon.extended.ChevronForward
-import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.MiuixIcons
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
  * COUI Spotlight 特辑详情页：二级骨架 + 正文列表。
@@ -119,13 +116,13 @@ internal fun CouiSpotlightDetailScreen(
         onBack = onBack,
         actions = {
             CouiTopBarIconButton(
-                icon = MiuixIcons.Refresh,
+                icon = CouiIcons.Refresh,
                 contentDescription = strings.refresh,
                 onClick = triggerManualRefresh,
             )
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
                 CouiTopBarIconButton(
-                    icon = MiuixIcons.More,
+                    icon = CouiIcons.More,
                     contentDescription = strings.menuMoreActions,
                     onClick = { menuAnchor.open { menuExpanded = true } },
                 )
@@ -421,7 +418,7 @@ private fun CouiSpotlightWorkCard(
                 if (work.userId != null) {
                     // 行本身可点击进画师主页，箭头只是"还有下文"的视觉提示，故不给读屏描述（避免重复念一次）。
                     Image(
-                        painter = rememberVectorPainter(MiuixIcons.ChevronForward),
+                        painter = rememberVectorPainter(CouiIcons.ChevronForward),
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(scheme.onSurfaceVariant),
                         modifier = Modifier.size(16.dp),

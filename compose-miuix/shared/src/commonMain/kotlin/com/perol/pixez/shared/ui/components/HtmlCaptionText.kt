@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,6 +66,7 @@ fun HtmlCaptionText(
     style: TextStyle = MiuixTheme.textStyles.body2,
     color: Color = MiuixTheme.colorScheme.onSurface,
     linkColor: Color = MiuixTheme.colorScheme.primary,
+    toggleStyle: TextStyle = MiuixTheme.textStyles.footnote1,
     collapsible: Boolean = true,
     collapsedMaxLines: Int = 4,
     selectable: Boolean = true,
@@ -104,10 +106,9 @@ fun HtmlCaptionText(
 
     Column(modifier = modifier.animateContentSize()) {
         val textComposable = @Composable {
-            Text(
+            BasicText(
                 text = annotatedString,
-                style = style,
-                color = color,
+                style = style.copy(color = color),
                 maxLines = if (collapsible && !isExpanded && isLongText) collapsedMaxLines else Int.MAX_VALUE,
                 overflow = if (collapsible && !isExpanded && isLongText) TextOverflow.Ellipsis else TextOverflow.Clip,
                 modifier = Modifier.fillMaxWidth(),
@@ -130,10 +131,9 @@ fun HtmlCaptionText(
                     .clickable { isExpanded = !isExpanded },
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Text(
+                BasicText(
                     text = if (isExpanded) strings.collapse else strings.expand,
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = linkColor,
+                    style = toggleStyle.copy(color = linkColor),
                 )
             }
         }

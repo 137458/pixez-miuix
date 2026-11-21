@@ -82,9 +82,19 @@
 - 修复 COUI 正文视口被顶栏留白截断的问题：此前把顶栏与底栏留白当作整页外层内边距，正文永远停在顶栏下方，列表无法滚动进顶栏覆盖区，顶栏采样区里没有会动的内容。现留白只作用于滚动内容本身，正文可滚动到顶栏之下被实时采样。
 - 修复 COUI 页面重复铺底色与栏高硬编码的问题：每页只保留一个库容器提供底色，消除页内再叠背景；底栏留白改由容器实测栏高回传，不再使用固定常量。
 - 修复 COUI 控件与官方版式不一致的问题：设置分组、列表行、分隔线缩进（有图标时按 56dp 对齐）、卡片圆角与底色、胶囊按钮、加载/错误/分页占位统一改用库的页面色板与令牌，明暗取应用实际主题而非按底色亮度反推。
+- 修复 COUI 皮肤下的 MIUIX 残留与跨皮肤回退问题：
+  - 新增独立的线性矢量图标集 `CouiIcons`，全量替换 COUI 全部页面与导航栏中的 `MiuixIcons` 引用，并以单测约束 `ui/coui/` 目录零 MIUIX 依赖。
+  - 补齐 COUI 根级叠层与导航组件：新增 COUI 版全局 Toast、版本更新弹窗、登录失效弹窗、剪贴板 OAuth 提示弹窗、非浮动贴底导航栏与宽屏侧边导航栏，全屏看图器接入 COUI 顶栏叠层与官方锚点菜单。
+  - 修复共享组件在 COUI 下的样式泄露：`HtmlCaptionText`、`MarkdownText`、`UgoiraPlayer` 剥离对 MIUIX 控件与硬编码色板的依赖；COUI 主题设置页移除仅作用于 MIUIX 的调色板风格与 2025 规范开关。
 
 ### 优化
 
+- 重构优化 COUI 作品详情页：
+  - 顶栏改用 52dp 紧凑顶栏与官方按钮组（`TopAppBarButtonGroup`），补齐收藏暖红心形切换与卡片展开透明度联动；窄屏统一为 16dp 边距单列，宽屏自动切换为左侧画作流、右侧信息与互动区的双栏布局。
+  - 信息卡片新增语义化属性徽章（`R-18` / `AI` / `GIF` / `NP`）、ID 一键复制、4 格快捷操作条（收藏及实时计数、下载、评论数、分享）以及画师行内联关注胶囊按钮，修正信息行双倍缩进并补充多图页码角标与屏蔽占位提示。
+- 升级 COUI 多页面分段切换与胶囊页签：
+  - COUI 容器骨架（`CouiMainScaffold` / `CouiSecondaryScaffold` / `CouiCompactScaffold`）新增 `topBarBottom` 槽位与同级内容采样源 `LocalCouiContentBackdrop`，并修复折叠顶栏内边距静态冻结问题。
+  - 新增 `CouiSegmentedTabs`、`CouiTopBarSegmentedTabs` 与 `CouiChipTabRow`（API 34+ 走官方 `SegmentedControl` / `ChipTabRow`，API 31–33 退回同版式胶囊），统一升级排行榜、特辑、动态、历史、小说、下载任务、画师详情、搜索与筛选弹窗共 9 个页面/面板。
 - 全部 COUI 页面统一为单一容器骨架：二级页使用折叠大标题顶栏，一级页使用同一骨架的无返回按钮版本，设置类页面收敛到居中限宽列表；页面不再各自拼装顶栏、可读列与背景层。
 - 收紧 Android Release ProGuard/R8 混淆与日志裁剪规则，并加固桌面端与测试基建：
   - `proguard-rules.pro` 移除 `io.ktor.**`、`okhttp3.**`、`coil3.**`、`top.yukonga.miuix.**` 等过宽整包 keep 规则，收敛为仅保留序列化、`SqlDriver`/`SqlSchema` 与 Android 组件入口，同时剥离 Release 态 `Log.v/d/i/w` 调用。

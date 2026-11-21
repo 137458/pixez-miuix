@@ -4,6 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.data.repository.ReleaseInfo
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.coui.component.CouiAuthExpiredDialog
+import com.perol.pixez.shared.ui.coui.component.CouiClipboardOAuthDialog
+import com.perol.pixez.shared.ui.coui.component.CouiToastOverlay
 import com.perol.pixez.shared.ui.coui.page.CouiAboutScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAccountEditScreen
 import com.perol.pixez.shared.ui.coui.page.CouiAccountManageScreen
@@ -40,6 +45,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiSpotlightDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSpotlightScreen
 import com.perol.pixez.shared.ui.coui.page.CouiThanksScreen
 import com.perol.pixez.shared.ui.coui.page.CouiThemeSettingScreen
+import com.perol.pixez.shared.ui.coui.page.CouiUpdateDialog
 import com.perol.pixez.shared.ui.coui.page.CouiUpdateSettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserDetailScreen
 import com.perol.pixez.shared.ui.coui.page.CouiUserListScreen
@@ -57,19 +63,90 @@ import com.perol.pixez.shared.ui.state.UserDetailPageState
  * 于是皮肤差异只体现在「由谁实现」上，导航骨架与页面实现互不知情。
  */
 internal object CouiSkinPages : SkinPages {
-    /** 底栏绘制细节放在 UiSkinNavigationBar.kt，这里只委托，免得皮肤对象同时承担接缝与绘制两件事。 */
+    /** 底栏与侧栏绘制细节放在 UiSkinNavigationBar.kt，这里只委托，免得皮肤对象同时承担接缝与绘制两件事。 */
     @Composable
     override fun navigationBar(
         items: List<SkinNavItem>,
         selectedIndex: Int,
+        isFloating: Boolean,
         onSelect: (Int) -> Unit,
         modifier: Modifier,
     ) {
         CouiSkinNavigationBar(
             items = items,
             selectedIndex = selectedIndex,
+            isFloating = isFloating,
             onSelect = onSelect,
             modifier = modifier,
+        )
+    }
+
+    @Composable
+    override fun navigationRail(
+        items: List<SkinNavItem>,
+        selectedIndex: Int,
+        onSelect: (Int) -> Unit,
+        modifier: Modifier,
+    ) {
+        CouiSkinNavigationRail(
+            items = items,
+            selectedIndex = selectedIndex,
+            onSelect = onSelect,
+            modifier = modifier,
+        )
+    }
+
+    @Composable
+    override fun toastOverlay(
+        toast: ToastData?,
+        onDismiss: () -> Unit,
+        modifier: Modifier,
+    ) {
+        CouiToastOverlay(
+            toast = toast,
+            onDismiss = onDismiss,
+            modifier = modifier,
+        )
+    }
+
+    @Composable
+    override fun updateDialog(
+        releaseInfo: ReleaseInfo,
+        onDismiss: () -> Unit,
+        onUpdate: (url: String) -> Unit,
+        onIgnore: ((version: String) -> Unit)?,
+    ) {
+        CouiUpdateDialog(
+            releaseInfo = releaseInfo,
+            onDismiss = onDismiss,
+            onUpdate = onUpdate,
+            onIgnore = onIgnore,
+        )
+    }
+
+    @Composable
+    override fun authExpiredDialog(
+        show: Boolean,
+        onRelogin: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        CouiAuthExpiredDialog(
+            show = show,
+            onRelogin = onRelogin,
+            onDismiss = onDismiss,
+        )
+    }
+
+    @Composable
+    override fun clipboardOAuthDialog(
+        show: Boolean,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        CouiClipboardOAuthDialog(
+            show = show,
+            onConfirm = onConfirm,
+            onDismiss = onDismiss,
         )
     }
 
