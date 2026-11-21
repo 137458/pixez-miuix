@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * shared 模块没有引入 compose ui-test 依赖，纯 JVM 测试既无法组合这些页面，也无法观察
  * CompositionLocal 是否为 null；直接对源码文本断言跑得动、覆盖整棵树，失败时能指出缺哪个方法。
  *
- * 扫描范围：shared/src/commonMain 与 androidMain 的生产源码。RootChildScreens.kt 之外还有
+ * 扫描范围：shared/src/main 的生产源码。RootChildScreens.kt 之外还有
  * RootContent.kt 里的 skinPages.navigationBar 调用（底部导航栏），只扫 RootChildScreens.kt
  * 会漏掉这一条，因此必须扫整个生产源码树；测试源码不在扫描范围内，本文件中的断言字面量
  * 因此不会自己命中自己。
@@ -186,15 +186,15 @@ private object SkinSeamSources {
     /** 审计记录的路由基线：sealed class Config 的子类数量。 */
     const val CONFIG_SUBCLASS_BASELINE = 41
 
-    const val SKIN_PAGES_PATH = "compose-miuix/shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/skin/SkinPages.kt"
-    const val ROOT_CONTENT_PATH = "compose-miuix/shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/navigation/RootContent.kt"
-    const val CONFIG_PATH = "compose-miuix/shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/navigation/Config.kt"
+    const val SKIN_PAGES_PATH = "compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/skin/SkinPages.kt"
+    const val ROOT_CONTENT_PATH = "compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/navigation/RootContent.kt"
+    const val CONFIG_PATH = "compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/navigation/Config.kt"
 
     private const val SHARED_SRC = "compose-miuix/shared/src"
 
     val repoRoot: File = locateRepoRoot()
 
-    val scannedFiles: List<ScannedSource> = listOf("commonMain", "androidMain")
+    val scannedFiles: List<ScannedSource> = listOf("main")
         .map { File(repoRoot, SHARED_SRC + "/" + it + "/kotlin") }
         .filter { it.isDirectory }
         .flatMap { dir -> dir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }

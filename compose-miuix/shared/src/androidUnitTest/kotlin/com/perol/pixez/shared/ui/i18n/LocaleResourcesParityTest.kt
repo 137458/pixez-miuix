@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
  * 为什么在 shared 的 desktopTest 里做：语言码的单一来源是 shared 的
  * [com.perol.pixez.shared.platform.APP_LANGUAGE_CODES] 与
  * [com.perol.pixez.shared.platform.languageTagForNum]（同为 internal，只有同模块的测试源集
- * 看得见），而语言资源目录在 composeApp 的 androidMain/res。两侧都在本仓库工作区内，
+ * 看得见），而语言资源目录在 composeApp 的 main/res。两侧都在本仓库工作区内，
  * 纯 JVM 测试可以直接比对：不需要 Android 设备、不需要 Robolectric，也不会因为
  * 资源目录改名/漏建而在运行时才暴露。
  *
@@ -44,7 +44,7 @@ class LocaleResourcesParityTest {
         assertEquals(
             emptySet(),
             unmapped + missing,
-            "androidMain/res 下的 values* 目录与映射表不一致：" +
+            "main/res 下的 values* 目录与映射表不一致：" +
                 "未登记目录=" + unmapped.sorted() +
                 "，映射表登记但目录缺失=" + missing.sorted() +
                 "；取证目录=" + resDir.absolutePath,
@@ -70,7 +70,7 @@ class LocaleResourcesParityTest {
      * 这条断言把映射表的两个关键口径钉死在代码事实上，避免测试自己臆造：
      * - 数量 13，与 `AppLanguageCodes`（APP_LANGUAGE_CODES）一致；
      * - 序号 0 是 "en" 而不是 "en-US"：平台 Configuration 覆盖与 Android 资源目录都用基础标签
-     *   （取证：shared/src/commonMain/kotlin/com/perol/pixez/shared/platform/AppLanguageTags.kt
+     *   （取证：shared/src/main/kotlin/com/perol/pixez/shared/platform/AppLanguageTags.kt
      *   第 11-12 行注释与第 38-53 行 languageTagForNum）；
      * - 波斯语 fa 在表内且 isRtlLanguage(12) 为 true，RTL 不被漏掉。
      */
@@ -111,7 +111,7 @@ class LocaleResourcesParityTest {
  */
 private object LocaleResourceSources {
 
-    private const val ANDROID_RES = "compose-miuix/composeApp/src/androidMain/res"
+    private const val ANDROID_RES = "compose-miuix/composeApp/src/main/res"
     private const val SHARED_SRC = "compose-miuix/shared/src"
 
     /**

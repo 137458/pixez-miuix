@@ -15,7 +15,7 @@ import kotlin.io.path.readText
  */
 internal object StateSourceReader {
 
-    private val commonMainUiRoot = "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui"
+    private val mainUiRoot = "shared/src/main/kotlin/com/perol/pixez/shared/ui"
 
     /** 从 Gradle 测试工作目录向上定位仓库根：以 shared/src 目录为锚点。 */
     private fun repoRoot(): Path {
@@ -27,9 +27,9 @@ internal object StateSourceReader {
         error("未定位到仓库根目录（working dir=${System.getProperty("user.dir")}）")
     }
 
-    /** 读取 commonMain ui 下的源码文件，[relativePath] 形如 "state/NewFeedState.kt"。 */
+    /** 读取 main ui 下的源码文件，[relativePath] 形如 "state/NewFeedState.kt"。 */
     fun readUi(relativePath: String): String {
-        val file = repoRoot().resolve(commonMainUiRoot).resolve(relativePath)
+        val file = repoRoot().resolve(mainUiRoot).resolve(relativePath)
         check(file.exists()) { "缺少待守护源码：$file" }
         return file.readText()
     }

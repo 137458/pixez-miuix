@@ -13,14 +13,14 @@ import kotlin.test.assertTrue
  * CHANGELOG [未发布]「退出登录或切换账号后清空上一账号分页列表」的接线守护。
  *
  * 覆盖面：共 12 个来源文件，分三组。
- * 1. 5 个皮肤无关页面（shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/screens）：
+ * 1. 5 个皮肤无关页面（shared/src/main/kotlin/com/perol/pixez/shared/ui/screens）：
  *    NovelScreen / CommentsScreen / RecomUserScreen / SearchResultsState / SearchResultSection。
  *    搜索结果的两套状态机按皮肤无关状态下沉拆分：插画结果在 SearchResultsState（listState），
  *    画师与小说结果在 SearchResultSection（pagedList），各自独立守护。
- * 1b. 1 个共享实现（shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/components 的
+ * 1b. 1 个共享实现（shared/src/main/kotlin/com/perol/pixez/shared/ui/components 的
  *    UserPagedListScreen.kt）：用户关注、粉丝、小说、相关用户四页的重复骨架已合并到这里，
  *    切号作废逻辑只有这一份，四页薄壳必须委托它（见下方委托守护用例）。
- * 2. 6 个 COUI 手写接线页面（shared/src/androidMain/kotlin/com/perol/pixez/shared/ui/coui/page）：
+ * 2. 6 个 COUI 手写接线页面（shared/src/main/kotlin/com/perol/pixez/shared/ui/coui/page）：
  *    CouiCommentsScreen / CouiNovelScreen / CouiRecomUserScreen / CouiSearchResultLists /
  *    CouiUserListScreen / CouiUserNovelListScreen。COUI 侧不复用 MIUIX 页面实现，各自复制了一份
  *    切号重置逻辑，必须单独纳入守护，否则只改 MIUIX 侧仍会出现「切号后残留上一账号列表」。
@@ -48,18 +48,18 @@ class AccountSwitchPagedListResetWiringTest {
     )
 
     private val miuixScreensRoot =
-        "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/screens"
+        "shared/src/main/kotlin/com/perol/pixez/shared/ui/screens"
 
     private val miuixComponentsRoot =
-        "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/components"
+        "shared/src/main/kotlin/com/perol/pixez/shared/ui/components"
 
     private val couiPagesRoot =
-        "shared/src/androidMain/kotlin/com/perol/pixez/shared/ui/coui/page"
+        "shared/src/main/kotlin/com/perol/pixez/shared/ui/coui/page"
 
     private val accountSessionSource =
-        "shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/state/AccountSession.kt"
+        "shared/src/main/kotlin/com/perol/pixez/shared/ui/state/AccountSession.kt"
 
-    /** 皮肤无关页面：commonMain ui/screens。 */
+    /** 皮肤无关页面：main ui/screens。 */
     private val miuixPages: List<GuardedPage> = listOf(
         GuardedPage(miuixScreensRoot, "NovelScreen.kt", listOf("pagedList")),
         GuardedPage(miuixScreensRoot, "CommentsScreen.kt", listOf("pagedList")),
@@ -69,7 +69,7 @@ class AccountSwitchPagedListResetWiringTest {
         GuardedPage(miuixComponentsRoot, "UserPagedListScreen.kt", listOf("pagedList")),
     )
 
-    /** COUI 手写接线页面：androidMain coui/page（不复用 MIUIX 实现，需独立守护）。 */
+    /** COUI 手写接线页面：main coui/page（不复用 MIUIX 实现，需独立守护）。 */
     private val couiPages: List<GuardedPage> = listOf(
         GuardedPage(couiPagesRoot, "CouiCommentsScreen.kt", listOf("pagedList")),
         GuardedPage(couiPagesRoot, "CouiNovelScreen.kt", listOf("pagedList")),

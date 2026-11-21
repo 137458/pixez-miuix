@@ -23,7 +23,7 @@ class UserDetailPageStateWiringTest {
         var dir: Path? = Path.of(System.getProperty("user.dir")).toAbsolutePath()
         repeat(8) {
             val current = dir ?: return@repeat
-            val candidate = current.resolve("shared/src/commonMain/kotlin/com/perol/pixez/shared/ui")
+            val candidate = current.resolve("shared/src/main/kotlin/com/perol/pixez/shared/ui")
             if (candidate.isDirectory()) return candidate
             dir = current.parent
         }

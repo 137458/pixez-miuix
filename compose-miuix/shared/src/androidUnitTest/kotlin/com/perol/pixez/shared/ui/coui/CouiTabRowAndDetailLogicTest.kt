@@ -103,7 +103,7 @@ class CouiTabRowAndDetailLogicTest {
 
     private fun locateCouiSourceDir(): File {
         var dir: File? = File(System.getProperty("user.dir") ?: ".").absoluteFile
-        val suffix = "src/androidMain/kotlin/com/perol/pixez/shared/ui/coui"
+        val suffix = "src/main/kotlin/com/perol/pixez/shared/ui/coui"
         while (dir != null) {
             val direct = File(dir, suffix)
             if (direct.isDirectory) return direct

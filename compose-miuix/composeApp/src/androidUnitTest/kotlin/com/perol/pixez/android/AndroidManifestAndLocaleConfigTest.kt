@@ -8,7 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Android 资源与 Manifest 基础约束测试（运行于 composeApp androidUnitTest）：
+ * Android 资源与 Manifest 基础约束测试（运行于 composeApp test）：
  * 确保自定义 scheme 放开 host 限制、locales_config 与代码侧语言表精确一致、波斯语资源存在且完整。
  */
 class AndroidManifestAndLocaleConfigTest {
@@ -20,7 +20,7 @@ class AndroidManifestAndLocaleConfigTest {
 
     @Test
     fun `AndroidManifest 对 pixiv 和 pixez scheme 放开 host 过滤`() {
-        val manifest = File(composeAppDir(), "src/androidMain/AndroidManifest.xml").readText()
+        val manifest = File(composeAppDir(), "src/main/AndroidManifest.xml").readText()
         assertTrue(manifest.contains("""<data android:scheme="pixiv" />"""))
         assertTrue(manifest.contains("""<data android:scheme="pixez" />"""))
         val schemeLines = manifest.lines().filter {
@@ -39,21 +39,21 @@ class AndroidManifestAndLocaleConfigTest {
      *
      * 期望集合的取证（两侧对齐，不凭推测写常数）：
      * 1. 代码侧语言码（13 项）：
-     *    compose-miuix/shared/src/commonMain/kotlin/com/perol/pixez/shared/platform/AppLanguageTags.kt
+     *    compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/platform/AppLanguageTags.kt
      *    第 14-28 行 APP_LANGUAGE_CODES = en-US, zh-CN, zh-TW, ja, ko, ru, es, tr, id, fil, de, vi, fa。
-     * 2. 实现侧语言数（13 个）：compose-miuix/shared/src/commonMain/kotlin/com/perol/pixez/shared/ui/i18n/
+     * 2. 实现侧语言数（13 个）：compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/i18n/
      *    AppStrings.kt 第 755-769 行 fromLanguageNum 的 1..12 分支（ZhCn/ZhTw/Ja/Ko/Ru/Es/Tr/Id/Fil/De/Vi）
      *    加 else 的 EnStrings，共 12 个实现；FA 在 FaStrings.kt:7 的 FaStrings，合计 13 个语言实现，
      *    与第 1 条的 13 项语言码一一对应。
      * 3. 为什么还多一条 `en`：AppLanguageTags.kt 第 11-12 行注释与第 39 行 languageTagForNum(0) -> "en"
      *    规定「协议与展示沿用 en-US，平台层资源覆盖用基础标签 en」；而 compose-miuix/composeApp/src/
-     *    androidMain/res 下没有 values-en，英文由默认 values 目录承载（见同仓 LocaleResourcesParityTest
+     *    main/res 下没有 values-en，英文由默认 values 目录承载（见同仓 LocaleResourcesParityTest
      *    的目录映射表），所以 per-app language 声明的合法标签集合是 13 条语言码再并上基础标签 en，
      *    合计 14 条：14 = 13 ∪ {en}。
      */
     @Test
     fun `Android locales_config 精确声明 13 国语言码与 en 基础标签`() {
-        val configFile = File(composeAppDir(), "src/androidMain/res/xml/locales_config.xml")
+        val configFile = File(composeAppDir(), "src/main/res/xml/locales_config.xml")
         assertTrue(configFile.isFile, "未找到 locales_config.xml：" + configFile.absolutePath)
 
         val declaredInOrder = parseDeclaredLocales(configFile)
@@ -97,7 +97,7 @@ class AndroidManifestAndLocaleConfigTest {
                 "；实测声明=" + declared.sorted(),
         )
 
-        val faStrings = File(composeAppDir(), "src/androidMain/res/values-fa/strings.xml").readText()
+        val faStrings = File(composeAppDir(), "src/main/res/values-fa/strings.xml").readText()
         assertTrue(faStrings.contains("""name="shortcut_ranking""""))
         assertTrue(faStrings.contains("""name="widget_description""""))
     }

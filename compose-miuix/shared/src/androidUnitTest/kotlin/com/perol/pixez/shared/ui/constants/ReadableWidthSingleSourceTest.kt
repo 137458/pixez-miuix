@@ -14,9 +14,9 @@ import kotlin.test.assertTrue
  * 为什么用源码扫描而不是布局测试：
  * MIUIX 与 COUI 两侧的可读内容宽度都必须来自
  * `AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP`（760dp），当前全树共 36 个 .kt 文件引用它。
- * COUI 侧的封装 CouiReadableColumn.kt 位于 androidMain，MIUIX 侧的引用点散布在 commonMain
- * 数十个页面里；shared 模块没有引入 compose ui-test 依赖，纯 JVM 测试既无法组合这些页面，
- * 也无法测量 androidMain 组件的布局结果。而这类回归的真实形态是「有人新写一处
+ * COUI 侧的封装 CouiReadableColumn.kt 与 MIUIX 侧的引用点均位于 shared/src/main
+ * （MIUIX 侧散布在数十个页面里）；shared 模块没有引入 compose ui-test 依赖，纯 JVM 测试既无法组合这些页面，
+ * 也无法测量 Compose 组件的布局结果。而这类回归的真实形态是「有人新写一处
  * widthIn(max = 760.dp)」或者「新增一份同名常量」——两者都是源码事实、不是运行时行为，
  * 因此直接对源码文本断言：跑得动、覆盖整棵树，失败时能直接指到文件与行号。
  *
@@ -169,8 +169,8 @@ private data class SourceHit(val relativePath: String, val line: Int, val snippe
 /**
  * shared/src 源码树扫描器。
  *
- * 不复用 desktopTest 里的 StateSourceReader：那个工具只能按相对路径读取 commonMain/ui 下的
- * 单个文件，既不覆盖 androidMain 的 COUI 组件，也不能枚举整棵树；本测试的断言 1、2、4
+ * 不复用 StateSourceReader：那个工具只能按相对路径读取 main/ui 下的
+ * 单个文件，不能枚举整棵树；本测试的断言 1、2、4
  * 都要求全树扫描，因此这里实现最小读取器（定位仓库根的锚点与 StateSourceReader 保持一致，
  * 同样以 shared/src 目录为锚点向上找仓库根）。
  */
@@ -182,13 +182,13 @@ private object SharedKotlinSources {
     /** 常量声明的完整写法，用于统计「唯一定义」。 */
     val DECLARATION = "const val " + WIDTH_IDENTIFIER
 
-    const val APP_CONSTANTS_PATH = "commonMain/kotlin/com/perol/pixez/shared/ui/AppConstants.kt"
+    const val APP_CONSTANTS_PATH = "main/kotlin/com/perol/pixez/shared/ui/AppConstants.kt"
 
     const val COUI_READABLE_COLUMN_PATH =
-        "androidMain/kotlin/com/perol/pixez/shared/ui/coui/component/CouiReadableColumn.kt"
+        "main/kotlin/com/perol/pixez/shared/ui/coui/component/CouiReadableColumn.kt"
 
     const val MIUIX_READABLE_WIDTH_CONSUMER_PATH =
-        "commonMain/kotlin/com/perol/pixez/shared/ui/screens/IllustDetailInfoSection.kt"
+        "main/kotlin/com/perol/pixez/shared/ui/screens/IllustDetailInfoSection.kt"
 
     /** 从 Gradle 测试工作目录向上定位仓库根：以 shared/src 目录为锚点。 */
     private fun repoRoot(): Path {
