@@ -90,9 +90,8 @@ import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Send
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
-import pixez_miuix.shared.generated.resources.emoji_304
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 
 /**
  * 作品评论页：展示指定作品的用户评论列表，支持流式分页加载、下拉刷新与发表评论。
@@ -391,7 +390,7 @@ private fun CommentInputBar(
                     enabled = !isSending && isLoggedIn != false,
                 ) {
                     Image(
-                        painter = painterResource(Res.drawable.emoji_304),
+                        painter = painterResource(R.drawable.emoji_304),
                         contentDescription = strings.commentsEmojiPicker,
                         modifier = Modifier.size(24.dp),
                     )

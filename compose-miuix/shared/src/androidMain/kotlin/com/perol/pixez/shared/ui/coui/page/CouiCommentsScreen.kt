@@ -107,9 +107,8 @@ import com.perol.pixez.shared.ui.state.PagingFooterPhase
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.emoji_304
-import pixez_miuix.shared.generated.resources.Res
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
@@ -533,7 +532,7 @@ private fun CouiLibraryMessageInputBar(
         interactionSource = interactionSource,
         // backdrop 由 Scaffold 经 LocalCouiBackdrop 提供，这里不再自建采样源。
         leadingAction = CouiMessageInputAction(
-            icon = painterResource(Res.drawable.emoji_304),
+            icon = painterResource(R.drawable.emoji_304),
             contentDescription = strings.commentsEmojiPicker,
             onClick = onToggleEmojiPanel,
             enabled = enabled,
@@ -585,7 +584,7 @@ private fun CouiCommentInputRow(
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter = painterResource(Res.drawable.emoji_304),
+                painter = painterResource(R.drawable.emoji_304),
                 contentDescription = strings.commentsEmojiPicker,
                 modifier = Modifier.size(24.dp),
             )

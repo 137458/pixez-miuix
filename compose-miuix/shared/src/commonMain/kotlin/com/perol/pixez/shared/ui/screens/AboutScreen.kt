@@ -47,9 +47,8 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.i18n.LocalStrings
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -119,7 +118,7 @@ fun AboutScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
-                            painter = painterResource(Res.drawable.ic_pixez_logo),
+                            painter = painterResource(R.drawable.ic_pixez_logo),
                             contentDescription = strings.logoContentDescription,
                             modifier = Modifier.size(72.dp),
                         )

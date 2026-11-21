@@ -69,9 +69,8 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -425,7 +424,7 @@ private fun UpdateHeroSection(
                 .background(MiuixTheme.colorScheme.surfaceContainer),
         ) {
             Image(
-                painter = painterResource(Res.drawable.ic_pixez_logo),
+                painter = painterResource(R.drawable.ic_pixez_logo),
                 contentDescription = strings.logoContentDescription,
                 modifier = Modifier.size(72.dp),
             )

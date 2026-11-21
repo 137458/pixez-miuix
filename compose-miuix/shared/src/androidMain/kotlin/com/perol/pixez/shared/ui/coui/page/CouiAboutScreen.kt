@@ -54,9 +54,8 @@ import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
-import pixez_miuix.shared.generated.resources.Res
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 
 /**
  * COUI 关于页：折叠大标题顶栏 + 应用标识头 + 开发者 / 贡献者 / 项目三组入口。
@@ -208,7 +207,7 @@ private fun CouiAboutHeader() {
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter = painterResource(Res.drawable.ic_pixez_logo),
+                painter = painterResource(R.drawable.ic_pixez_logo),
                 contentDescription = strings.logoContentDescription,
                 modifier = Modifier.size(72.dp),
             )

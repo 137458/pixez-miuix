@@ -66,9 +66,8 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
-import pixez_miuix.shared.generated.resources.Res
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 
 /**
  * COUI 更新设置页：折叠大标题顶栏 + 应用标识头 + 更新日志卡片 + 设置组 + 渠道组。
@@ -273,7 +272,7 @@ private fun CouiUpdateHero(
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                painter = painterResource(Res.drawable.ic_pixez_logo),
+                painter = painterResource(R.drawable.ic_pixez_logo),
                 contentDescription = strings.logoContentDescription,
                 modifier = Modifier.size(56.dp),
             )

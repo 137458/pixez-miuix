@@ -56,9 +56,8 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -204,7 +203,7 @@ private fun GuideLanguageStep(
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
-                            painter = painterResource(Res.drawable.ic_pixez_logo),
+                            painter = painterResource(R.drawable.ic_pixez_logo),
                             contentDescription = strings.logoContentDescription,
                             modifier = Modifier.size(56.dp),
                         )

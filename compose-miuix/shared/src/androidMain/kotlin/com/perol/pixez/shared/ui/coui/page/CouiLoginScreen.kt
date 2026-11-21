@@ -53,9 +53,8 @@ import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
-import pixez_miuix.shared.generated.resources.Res
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 /**
@@ -123,7 +122,7 @@ internal fun CouiLoginScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(Res.drawable.ic_pixez_logo),
+                    painter = painterResource(R.drawable.ic_pixez_logo),
                     contentDescription = strings.logoContentDescription,
                     modifier = Modifier.size(64.dp),
                 )

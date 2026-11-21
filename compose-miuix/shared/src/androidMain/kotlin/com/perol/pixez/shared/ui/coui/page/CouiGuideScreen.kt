@@ -62,9 +62,8 @@ import com.perol.pixez.shared.ui.coui.core.CouiTextButton
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import org.jetbrains.compose.resources.painterResource
-import pixez_miuix.shared.generated.resources.Res
-import pixez_miuix.shared.generated.resources.ic_pixez_logo
+import androidx.compose.ui.res.painterResource
+import com.perol.pixez.shared.R
 
 /** 引导页分步切换的转场时长（毫秒）。 */
 private const val COUI_GUIDE_PAGE_TRANSITION_MILLIS = 300
@@ -216,7 +215,7 @@ private fun CouiGuideLanguageStep(
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
-                        painter = painterResource(Res.drawable.ic_pixez_logo),
+                        painter = painterResource(R.drawable.ic_pixez_logo),
                         contentDescription = strings.logoContentDescription,
                         modifier = Modifier.size(56.dp),
                     )

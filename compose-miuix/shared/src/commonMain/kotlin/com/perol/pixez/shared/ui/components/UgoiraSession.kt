@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.components
 
+import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.UgoiraFrame
 import com.perol.pixez.shared.data.repository.DownloadRepository
@@ -21,7 +23,6 @@ import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
 import okio.buffer
-import org.jetbrains.compose.resources.decodeToImageBitmap
 
 /**
  * Ugoira 动图双缓冲滑动窗口帧解码器。
@@ -111,7 +112,9 @@ internal class UgoiraFrameProvider(
                 null
             }
         }.getOrNull() ?: return null
-        return runCatching { bytes.decodeToImageBitmap() }.getOrNull()
+        return runCatching {
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
     }
 
     private companion object {
