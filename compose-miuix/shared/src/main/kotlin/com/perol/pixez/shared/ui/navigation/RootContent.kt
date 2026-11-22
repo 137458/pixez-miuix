@@ -683,7 +683,10 @@ private fun MainChildSection(
                         .fillMaxSize()
                         .blurBackdropSource(floatingBackdrop)
                         // COUI 皮肤开启时同一块正文再登记为 COUI 底栏的采样源（桌面端为空操作）。
-                        .skinFloatingBarSource(),
+                        .skinFloatingBarSource()
+                        // 采样源内必须自带不透明底色：Pager 过滚/拖动露出的空白区在图层里是透明的，
+                        // 底栏玻璃采到透明像素会渲染成黑块。
+                        .background(MiuixTheme.colorScheme.surface),
                 ) {
                     MainContent(
                         initialTab = tab,
