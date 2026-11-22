@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -28,7 +29,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
@@ -63,6 +66,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.coui.core.withExtra
+import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBookmarkRepository
@@ -79,8 +83,12 @@ import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 private sealed interface CouiNovelViewState {
     data object Loading : CouiNovelViewState
@@ -88,13 +96,14 @@ private sealed interface CouiNovelViewState {
     data class Error(val message: String) : CouiNovelViewState
 }
 
+
 /**
- * COUI 小说阅读器：库骨架 [CouiSecondaryScaffold] + COUI 卡片正文。
+ * COUI 小说阅读器：库骨架 [CouiSecondaryScaffold] + 整页正文画布。
  *
  * 业务编排与 MIUIX 版一致：正文/内嵌图源（`/webview/v2/novel`）与详情并行加载、收藏（点击常规 / 长按强制私密）、
  * 字号调节持久化、正文复制/分享/浏览器打开、内嵌插画与上传图、系列前后章节跳转。
- * 表现层：骨架负责折叠大标题与返回，动作（评论/收藏/更多）进 actions 槽，统一走 [CouiTopBarIconButton] 凝光视效，
- * 字号微调、复制、分享与浏览器打开收敛在更多菜单；正文为可选中的 COUI 卡片列表。
+ * 表现层：骨架负责折叠大标题与返回，动作槽只保留评论/收藏/更多三个图标，统一走 [CouiTopBarIconButton] 凝光视效，
+ * 字号微调、复制、分享与浏览器打开收敛在更多菜单；正文为可选中的整页长文列表，带本地阅读进度记忆。
  */
 @Composable
 internal fun CouiNovelViewerScreen(
@@ -117,6 +126,13 @@ internal fun CouiNovelViewerScreen(
     // 详情与正文并行加载：仅用于收藏初值与浏览历史，失败不阻塞正文。
     var novelDetail by remember(novelId) { mutableStateOf<Novel?>(null) }
     var isBookmarked by remember(novelId) { mutableStateOf(false) }
+
+    // 阅读进度：位置只记在本地库，导航路由不带任何位置参数；换书即换一套列表状态。
+    val listState = remember(novelId) { LazyListState() }
+    // 恢复门闩：进度读取完成（命中或确认无记录）前禁止回写，
+    // 否则正文首帧的 (0, 0) 会先落库，把上次位置覆盖成开头。
+    var progressRestored by remember(novelId) { mutableStateOf(false) }
+    val progressRestoredState = rememberUpdatedState(progressRestored)
 
     var fontSizeSp by remember(settings.novelFontSize) {
         mutableFloatStateOf(
@@ -186,6 +202,48 @@ internal fun CouiNovelViewerScreen(
         loadNovel()
     }
 
+    // 进度恢复：正文（列表数据）到位后读取本地进度并定位；无记录时直接放行回写。
+    val loadedData = (state as? CouiNovelViewState.Success)?.data
+    LaunchedEffect(novelId, loadedData) {
+        if (loadedData == null) return@LaunchedEffect
+        val progress = suspendRunCatchingNonCancel {
+            novelHistoryRepository.getReadingProgress(novelId)
+        }.getOrNull()
+        if (progress != null && (progress.blockIndex > 0 || progress.blockOffset > 0)) {
+            // 越界索引由 LazyListState 自行收敛到末尾，不会抛异常。
+            listState.scrollToItem(progress.blockIndex, progress.blockOffset)
+        }
+        progressRestored = true
+    }
+
+    // 进度回写：恢复完成后监听首可视项，collectLatest 取消未到期的写入即为防抖。
+    LaunchedEffect(novelId, listState, progressRestored) {
+        if (!progressRestored) return@LaunchedEffect
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .distinctUntilChanged()
+            .collectLatest { (index, offset) ->
+                delay(AppConstants.Novel.READING_PROGRESS_SAVE_DEBOUNCE_MILLIS)
+                suspendRunCatchingNonCancel {
+                    novelHistoryRepository.saveReadingProgress(novelId, index, offset)
+                }
+            }
+    }
+
+    // 离场兜底：rememberCoroutineScope 随组件离场一起取消，这里用 IO 上的一次性作用域写最后一次位置。
+    DisposableEffect(novelId, listState) {
+        onDispose {
+            if (progressRestoredState.value) {
+                val index = listState.firstVisibleItemIndex
+                val offset = listState.firstVisibleItemScrollOffset
+                CoroutineScope(Dispatchers.IO).launch {
+                    suspendRunCatchingNonCancel {
+                        novelHistoryRepository.saveReadingProgress(novelId, index, offset)
+                    }
+                }
+            }
+        }
+    }
+
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
     val transitionTarget = remember(novelId) {
         TransitionTarget(TransitionTargetKind.Novel, novelId)
@@ -207,8 +265,8 @@ internal fun CouiNovelViewerScreen(
         }
     }
 
-    val novelText = (state as? CouiNovelViewState.Success)?.data?.text
-    val webTitle = (state as? CouiNovelViewState.Success)?.data?.title
+    val novelText = loadedData?.text
+    val webTitle = loadedData?.title
 
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by remember { mutableStateOf(false) }
@@ -250,12 +308,12 @@ internal fun CouiNovelViewerScreen(
                     items = listOf(
                         CouiMenuItem(
                             value = "font_smaller",
-                            text = "${strings.novelFontSize} -",
+                            text = strings.novelFontSmaller,
                             enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
                         ),
                         CouiMenuItem(
                             value = "font_larger",
-                            text = "${strings.novelFontSize} +",
+                            text = strings.novelFontLarger,
                             enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
                         ),
                         CouiMenuItem(value = "copy_text", text = strings.copy, dividerBefore = true),
@@ -309,6 +367,7 @@ internal fun CouiNovelViewerScreen(
                 fontSizeSp = fontSizeSp,
                 strings = strings,
                 padding = padding,
+                listState = listState,
                 onNovelClick = onNovelClick,
                 onIllustClick = onIllustClick,
                 onUserClick = onUserClick,
@@ -322,7 +381,13 @@ internal fun CouiNovelViewerScreen(
     }
 }
 
-/** 正文区：COUI 卡片承载可选中的长文列表与系列章节导航。 */
+/**
+ * 正文区：整页阅读画布。
+ *
+ * 正文、章节与图片不再套卡片外框、圆角与外边距，直接以页面底色铺满可视区；
+ * 左右只保留阅读边距，上下沿用骨架安全区（已含底部栏预留），列表尾部再留少量呼吸空间。
+ * 详情头部固定为列表首项（无详情时为空项），使进度记录的条目下标在详情加载失败时也不偏移。
+ */
 @Composable
 private fun CouiNovelBody(
     data: NovelWebResponse,
@@ -330,6 +395,7 @@ private fun CouiNovelBody(
     fontSizeSp: Float,
     strings: AppStrings,
     padding: PaddingValues,
+    listState: LazyListState,
     onNovelClick: (Long) -> Unit,
     onIllustClick: (Long) -> Unit,
     onUserClick: (Long) -> Unit,
@@ -342,38 +408,29 @@ private fun CouiNovelBody(
         if (novelText.isBlank()) emptyList() else buildNovelViewerItems(novelText)
     }
     val contentPadding = remember(padding) {
-        padding.withExtra(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp)
+        padding.withExtra(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 28.dp)
     }
-    val cardBackground = CouiTheme.colorScheme.card
+    val pageBackground = CouiTheme.colorScheme.card
 
     SelectionContainer {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .background(pageBackground)
                 .consumeWindowInsets(padding),
             contentPadding = contentPadding,
             overscrollEffect = rememberCouiOverscrollEffect(),
         ) {
             item {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(16.dp)
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                        .background(cardBackground),
-                )
-            }
-
-            novelDetail?.let { detail ->
-                item {
+                if (novelDetail != null) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(cardBackground)
-                            .padding(horizontal = 18.dp),
+                            .padding(bottom = 16.dp),
                     ) {
                         Text(
-                            text = detail.title,
+                            text = novelDetail.title,
                             kind = CouiTextKind.ItemTitle,
                             color = CouiTheme.colorScheme.onSurface,
                         )
@@ -382,14 +439,14 @@ private fun CouiNovelBody(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .clickable { onUserClick(detail.user.id) }
+                                .clickable { onUserClick(novelDetail.user.id) }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             PixivAsyncImage(
-                                model = detail.user.profileImageUrls.medium,
-                                contentDescription = detail.user.name,
+                                model = novelDetail.user.profileImageUrls.medium,
+                                contentDescription = novelDetail.user.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(36.dp)
@@ -397,108 +454,84 @@ private fun CouiNovelBody(
                             )
                             Column {
                                 Text(
-                                    text = detail.user.name,
+                                    text = novelDetail.user.name,
                                     kind = CouiTextKind.ItemTitle,
                                     color = CouiTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                 )
                                 Text(
-                                    text = detail.user.account,
+                                    text = novelDetail.user.account,
                                     kind = CouiTextKind.ItemSummary,
                                     color = CouiTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
 
             if (viewerItems.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(cardBackground)
-                            .padding(horizontal = 18.dp),
-                    ) {
-                        BasicText(
-                            text = strings.novelTextEmpty,
-                            style = TextStyle(
-                                fontSize = fontSizeSp.sp,
-                                lineHeight = (fontSizeSp * 1.65f).sp,
-                                color = CouiTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        )
-                    }
+                    BasicText(
+                        text = strings.novelTextEmpty,
+                        style = TextStyle(
+                            fontSize = fontSizeSp.sp,
+                            lineHeight = (fontSizeSp * 1.65f).sp,
+                            color = CouiTheme.colorScheme.onSurfaceVariant,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             } else {
                 items(
                     count = viewerItems.size,
-                    key = { it },
+                    // 条目类型不唯一（多个 [newpage] 都是同一个 data object），只能用条目下标做 key。
+                    key = { index -> index },
                     contentType = { index -> viewerItems[index]::class },
                 ) { index ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(cardBackground),
-                    ) {
-                        CouiNovelViewerItemContent(
-                            item = viewerItems[index],
-                            webResource = data,
-                            fontSizeSp = fontSizeSp,
-                            onIllustClick = onIllustClick,
-                            onOpenUrl = onOpenUrl,
-                        )
-                    }
+                    CouiNovelViewerItemContent(
+                        item = viewerItems[index],
+                        webResource = data,
+                        fontSizeSp = fontSizeSp,
+                        onIllustClick = onIllustClick,
+                        onOpenUrl = onOpenUrl,
+                    )
                 }
             }
 
             if (seriesPrev != null || seriesNext != null) {
                 item {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(cardBackground)
-                            .padding(horizontal = 18.dp),
+                            .padding(top = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            if (seriesPrev != null) {
-                                CouiSeriesNavButton(
-                                    text = strings.novelPrevChapter,
-                                    onClick = { onNovelClick(seriesPrev.id) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                            if (seriesNext != null) {
-                                CouiSeriesNavButton(
-                                    text = strings.novelNextChapter,
-                                    onClick = { onNovelClick(seriesNext.id) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+                        if (seriesPrev != null) {
+                            CouiSeriesNavButton(
+                                text = strings.novelPrevChapter,
+                                onClick = { onNovelClick(seriesPrev.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                        if (seriesNext != null) {
+                            CouiSeriesNavButton(
+                                text = strings.novelNextChapter,
+                                onClick = { onNovelClick(seriesNext.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
             }
 
             item {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp)
-                        .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
-                        .background(cardBackground),
-                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -551,9 +584,7 @@ private fun CouiNovelViewerItemContent(
         is NovelViewerItem.TextChunk -> BasicText(
             text = item.text,
             style = bodyStyle,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
 
         is NovelViewerItem.Chapter -> BasicText(
@@ -566,7 +597,7 @@ private fun CouiNovelViewerItemContent(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 12.dp),
+                .padding(vertical = 12.dp),
         )
 
         is NovelViewerItem.NewPageSpacer -> Spacer(
@@ -580,7 +611,6 @@ private fun CouiNovelViewerItemContent(
             style = bodyStyle.copy(color = CouiTheme.colorScheme.accentOnSurface),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp)
                 .clickable { onOpenUrl(item.url) },
         )
 
@@ -588,9 +618,7 @@ private fun CouiNovelViewerItemContent(
         is NovelViewerItem.JumpRaw -> BasicText(
             text = item.raw,
             style = bodyStyle,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp),
+            modifier = Modifier.fillMaxWidth(),
         )
 
         is NovelViewerItem.EmbeddedIllust -> {
@@ -632,7 +660,7 @@ private fun CouiNovelEmbeddedImage(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 12.dp)
+            .padding(vertical = 12.dp)
             .height(AppConstants.Novel.EMBEDDED_IMAGE_HEIGHT_DP.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(CouiTheme.colorScheme.container)

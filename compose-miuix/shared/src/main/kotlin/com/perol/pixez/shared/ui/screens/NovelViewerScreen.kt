@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +57,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
@@ -66,9 +69,15 @@ import com.perol.pixez.shared.utils.NovelContentParser
 import com.perol.pixez.shared.utils.NovelSpan
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -83,7 +92,9 @@ import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.FavoritesFill
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.Messages
+import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.popup.OverlayDropdownPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private sealed interface NovelViewState {
@@ -156,6 +167,7 @@ fun NovelViewerScreen(
     var novelDetail by remember(novelId) { mutableStateOf<Novel?>(null) }
     // 收藏状态为 UI 本地可变状态，详情接口返回只做初值。
     var isBookmarked by remember(novelId) { mutableStateOf(false) }
+    var showMoreMenu by remember(novelId) { mutableStateOf(false) }
 
     // 字号持久化与微调（基准 AppConstants.Novel.DEFAULT_FONT_SIZE_SP，范围 MIN_FONT_SIZE_SP ~ MAX_FONT_SIZE_SP）
     var fontSizeSp by remember(settings.novelFontSize) {
@@ -310,77 +322,37 @@ fun NovelViewerScreen(
                                 )
                             }
                         }
-                        // 缩小字号
-                        IconButton(
-                            onClick = {
-                                if (fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP) {
-                                    fontSizeSp -= 1f
-                                    settings.novelFontSize = fontSizeSp
-                                }
-                            },
-                        ) {
-                            Text(
-                                text = "A-",
-                                style = MiuixTheme.textStyles.footnote1.copy(fontWeight = FontWeight.Bold),
-                                color = MiuixTheme.colorScheme.primary,
-                            )
-                        }
-                        // 放大字号
-                        IconButton(
-                            onClick = {
-                                if (fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP) {
-                                    fontSizeSp += 1f
-                                    settings.novelFontSize = fontSizeSp
-                                }
-                            },
-                        ) {
-                            Text(
-                                text = "A+",
-                                style = MiuixTheme.textStyles.body1.copy(fontWeight = FontWeight.Bold),
-                                color = MiuixTheme.colorScheme.primary,
-                            )
-                        }
-                        // 复制正文
-                        IconButton(
-                            onClick = {
-                                val currentText = (state as? NovelViewState.Success)?.data?.text
-                                if (!currentText.isNullOrBlank()) {
-                                    com.perol.pixez.shared.platform.IllustClipboard().copy(currentText)
-                                    toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
-                                }
-                            },
-                        ) {
+                        // 更多：字号、复制正文、分享与浏览器打开收进下拉菜单，
+                        // 顶栏只保留评论 / 收藏 / 更多 3 个动作，避免窄屏挤压标题。
+                        IconButton(onClick = { showMoreMenu = !showMoreMenu }) {
                             Icon(
-                                imageVector = MiuixIcons.Copy,
-                                contentDescription = strings.copy,
-                            )
-                        }
-                        // 分享
-                        IconButton(
-                            onClick = {
-                                val novelUrl = AppConstants.Urls.pixivNovelUrl(novelId)
-                                com.perol.pixez.shared.platform.IllustShare().share(novelUrl, strings.novelReaderTitle)
-                            },
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Share,
-                                contentDescription = strings.share,
-                            )
-                        }
-                        // 在浏览器中打开
-                        IconButton(
-                            onClick = {
-                                openSafeUrl(AppConstants.Urls.pixivNovelUrl(novelId), strings, onError = { message ->
-                                    toastSink(ToastData(message, ToastType.Error))
-                                })
-                            },
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Link,
-                                contentDescription = strings.openInBrowser,
+                                imageVector = MiuixIcons.More,
+                                contentDescription = strings.menuMoreActions,
                             )
                         }
                     },
+                )
+                // 更多菜单：锚定顶栏、于栏下展开；遮罩、进出场与点外关闭由 Miuix 弹层接管
+                // （对齐 IllustDetailTopBar 的更多菜单范式）。
+                OverlayDropdownPopup(
+                    entries = buildNovelReaderMoreMenuEntries(
+                        strings = strings,
+                        fontSizeSp = fontSizeSp,
+                        currentText = (state as? NovelViewState.Success)?.data?.text,
+                        novelId = novelId,
+                        onFontSizeChange = { nextFontSizeSp ->
+                            fontSizeSp = nextFontSizeSp
+                            settings.novelFontSize = nextFontSizeSp
+                        },
+                        onToast = toastSink,
+                    ),
+                    show = showMoreMenu,
+                    onDismiss = { showMoreMenu = false },
+                    onDismissFinished = {},
+                    maxHeight = null,
+                    dropdownColors = DropdownDefaults.dropdownColors(),
+                    renderInRootScaffold = true,
+                    collapseOnSelection = true,
                 )
             }
         },
@@ -439,19 +411,53 @@ fun NovelViewerScreen(
                         if (novelText.isBlank()) emptyList() else buildNovelViewerItems(novelText)
                     }
 
+                    // 阅读进度：恢复上次位置；恢复完成前不落库，避免把 0 覆盖真实进度。
+                    // 按 novelId 建独立滚动状态：切换章节后不复用上一本的偏移。
+                    val listState = remember(novelId) { LazyListState() }
+                    var progressRestored by remember(novelId) { mutableStateOf(false) }
+                    LaunchedEffect(novelId) {
+                        val saved = suspendRunCatchingNonCancel {
+                            novelHistoryRepository.getReadingProgress(novelId)
+                        }.getOrNull()
+                        if (saved != null) {
+                            suspendRunCatchingNonCancel {
+                                listState.scrollToItem(saved.blockIndex, saved.blockOffset)
+                            }
+                        }
+                        progressRestored = true
+                    }
+                    // 滚动停下后防抖落库；collectLatest 让连续滚动只写最后一次位置。
+                    LaunchedEffect(novelId, progressRestored) {
+                        if (!progressRestored) return@LaunchedEffect
+                        snapshotFlow {
+                            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                        }
+                            .distinctUntilChanged()
+                            .collectLatest { position ->
+                                delay(AppConstants.Novel.READING_PROGRESS_SAVE_DEBOUNCE_MILLIS)
+                                suspendRunCatchingNonCancel {
+                                    novelHistoryRepository.saveReadingProgress(
+                                        novelId = novelId,
+                                        blockIndex = position.first,
+                                        blockOffset = position.second,
+                                    )
+                                }
+                            }
+                    }
+
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.TopCenter,
                     ) {
-                        Card(
+                        Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
                         ) {
                             androidx.compose.foundation.text.selection.SelectionContainer {
                                 LazyColumn(
+                                    state = listState,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -462,8 +468,10 @@ fun NovelViewerScreen(
                                 ) {
                                     item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                                    novelDetail?.let { detail ->
-                                        item {
+                                    // 头部恒占首项：详情晚到也不改变正文下标，避免阅读进度恢复错位。
+                                    item {
+                                        val detail = novelDetail
+                                        if (detail != null) {
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -521,7 +529,7 @@ fun NovelViewerScreen(
                                     } else {
                                         items(
                                             count = viewerItems.size,
-                                            key = { it },
+                                            key = { index -> index },
                                             contentType = { index -> viewerItems[index]::class },
                                         ) { index ->
                                             val item = viewerItems[index]
@@ -719,3 +727,82 @@ private fun NovelEmbeddedImage(
     }
 }
 
+/**
+ * 阅读器更多菜单：字号档位与正文操作收进下拉，顶栏只留核心动作。
+ * 字号项超出上下限时置灰，避免点击无反馈。
+ */
+private fun buildNovelReaderMoreMenuEntries(
+    strings: AppStrings,
+    fontSizeSp: Float,
+    currentText: String?,
+    novelId: Long,
+    onFontSizeChange: (Float) -> Unit,
+    onToast: (ToastData) -> Unit,
+): List<DropdownEntry> = buildList {
+    add(
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = strings.novelFontSize,
+                    enabled = false,
+                    summary = fontSizeSp.toInt().toString() + " sp",
+                ),
+                DropdownItem(
+                    text = strings.novelFontSmaller,
+                    enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
+                    onClick = {
+                        onFontSizeChange(
+                            (fontSizeSp - 1f).coerceAtLeast(AppConstants.Novel.MIN_FONT_SIZE_SP),
+                        )
+                    },
+                ),
+                DropdownItem(
+                    text = strings.novelFontLarger,
+                    enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
+                    onClick = {
+                        onFontSizeChange(
+                            (fontSizeSp + 1f).coerceAtMost(AppConstants.Novel.MAX_FONT_SIZE_SP),
+                        )
+                    },
+                ),
+            ),
+        ),
+    )
+    add(
+        DropdownEntry(
+            items = listOf(
+                DropdownItem(
+                    text = strings.copy,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Copy, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        if (!currentText.isNullOrBlank()) {
+                            com.perol.pixez.shared.platform.IllustClipboard().copy(currentText)
+                            onToast(ToastData(strings.copiedToClipboard, ToastType.Success))
+                        }
+                    },
+                ),
+                DropdownItem(
+                    text = strings.share,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Share, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        com.perol.pixez.shared.platform.IllustShare().share(
+                            AppConstants.Urls.pixivNovelUrl(novelId),
+                            strings.novelReaderTitle,
+                        )
+                    },
+                ),
+                DropdownItem(
+                    text = strings.openInBrowser,
+                    icon = { modifier -> Icon(imageVector = MiuixIcons.Link, contentDescription = null, modifier = modifier) },
+                    onClick = {
+                        openSafeUrl(
+                            AppConstants.Urls.pixivNovelUrl(novelId),
+                            strings,
+                            onError = { message -> onToast(ToastData(message, ToastType.Error)) },
+                        )
+                    },
+                ),
+            ),
+        ),
+    )
+}

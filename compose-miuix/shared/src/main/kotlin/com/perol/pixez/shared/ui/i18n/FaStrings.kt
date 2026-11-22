@@ -14,6 +14,10 @@ object FaStrings : AppStrings {
     override val novelPrevChapter: String get() = "فصل قبل"
     override val novelNextChapter: String get() = "فصل بعد"
     override val novelFontSize: String get() = "اندازه قلم"
+
+    override val novelFontSmaller: String get() = "متن کوچک‌تر"
+
+    override val novelFontLarger: String get() = "متن بزرگ‌تر"
     override fun formatNovelWordCount(count: Int): String = "$count کلمه"
     override val menuSauceNao = "جستجو در SauceNAO"
     override val stamp = "تمبر"

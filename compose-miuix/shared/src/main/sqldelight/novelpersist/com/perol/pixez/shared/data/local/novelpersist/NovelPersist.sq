@@ -42,3 +42,27 @@ DELETE FROM novelpersist;
 
 -- 为按时间排序的全表查询建立索引，避免数据量增大后全表扫描排序。
 CREATE INDEX IF NOT EXISTS idx_novelpersist_time ON novelpersist(time);
+
+-- 阅读进度表：记录每本小说最后停留的条目索引与条目内偏移，供阅读器恢复滚动位置。
+-- 独立于 novelpersist：浏览历史每次访问都会按 novel_id 删除重写，进度不能挂在历史行上。
+CREATE TABLE novel_reading_progress (
+    novel_id INTEGER NOT NULL PRIMARY KEY,
+    block_index INTEGER NOT NULL,
+    block_offset INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+selectReadingProgress:
+SELECT * FROM novel_reading_progress WHERE novel_id = ?;
+
+-- 同一本小说只保留一条进度，重复保存覆盖旧位置。
+insertReadingProgress:
+INSERT OR REPLACE INTO novel_reading_progress (
+    novel_id, block_index, block_offset, updated_at
+) VALUES (?, ?, ?, ?);
+
+deleteReadingProgress:
+DELETE FROM novel_reading_progress WHERE novel_id = ?;
+
+deleteAllReadingProgress:
+DELETE FROM novel_reading_progress;

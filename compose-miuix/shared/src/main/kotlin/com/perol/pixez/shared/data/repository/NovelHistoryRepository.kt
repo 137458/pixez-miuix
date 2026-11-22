@@ -121,6 +121,46 @@ class NovelHistoryRepository(
     }
 
     /**
+     * 保存某本小说的阅读进度（条目索引 + 条目内偏移）。
+     *
+     * 同一小说只保留一条记录，重复保存覆盖旧位置，因此阅读器可以按需高频调用。
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     */
+    suspend fun saveReadingProgress(novelId: Long, blockIndex: Int, blockOffset: Int) = withContext(Dispatchers.IO) {
+        queries.insertReadingProgress(
+            novel_id = novelId,
+            block_index = blockIndex.toLong(),
+            block_offset = blockOffset.toLong(),
+            updated_at = nowMillis(),
+        )
+    }
+
+    /**
+     * 读取某本小说的阅读进度，没有记录时返回 null。
+     *
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     */
+    suspend fun getReadingProgress(novelId: Long): NovelReadingProgress? = withContext(Dispatchers.IO) {
+        queries.selectReadingProgress(novelId).executeAsOneOrNull()?.let { row ->
+            NovelReadingProgress(
+                novelId = row.novel_id,
+                blockIndex = row.block_index.toInt(),
+                blockOffset = row.block_offset.toInt(),
+                updatedAt = row.updated_at,
+            )
+        }
+    }
+
+    /**
+     * 清除某本小说的阅读进度。
+     *
+     * 数据库操作在 [Dispatchers.IO] 中执行，调用方无需自行切换调度器。
+     */
+    suspend fun clearReadingProgress(novelId: Long) = withContext(Dispatchers.IO) {
+        queries.deleteReadingProgress(novelId)
+    }
+
+    /**
      * 将数据库行转换为对外模型。
      */
     private fun Novelpersist.toNovelHistoryItem(): NovelHistoryItem = NovelHistoryItem(
@@ -137,6 +177,18 @@ class NovelHistoryRepository(
 /**
  * 小说浏览历史对外模型，字段名与旧 Flutter `NovelPersist` 的 JSON 序列化键保持一致。
  */
+/**
+ * 小说阅读进度模型：记录阅读器最后停留的条目索引与条目内滚动偏移。
+ *
+ * 值为 null 表示该小说没有已保存的进度，阅读器从顶部开始展示。
+ */
+data class NovelReadingProgress(
+    val novelId: Long,
+    val blockIndex: Int,
+    val blockOffset: Int,
+    val updatedAt: Long,
+)
+
 @Serializable
 data class NovelHistoryItem(
     @SerialName("id") val id: Long? = null,

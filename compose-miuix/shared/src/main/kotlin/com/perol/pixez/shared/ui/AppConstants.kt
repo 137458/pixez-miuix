@@ -170,6 +170,9 @@ object AppConstants {
         const val MIN_FONT_SIZE_SP = 12f
         const val MAX_FONT_SIZE_SP = 28f
 
+        /** 阅读位置保存防抖时长（毫秒）：滚动停下后才落库，避免高频写入。 */
+        const val READING_PROGRESS_SAVE_DEBOUNCE_MILLIS = 600L
+
         /** [newpage] 分页符渲染留白高度（dp）。 */
         const val NEW_PAGE_SPACING_DP = 48
 

@@ -716,6 +716,12 @@ interface AppStrings {
     val novelPrevChapter: String
     val novelNextChapter: String
     val novelFontSize: String
+
+    /** 阅读器「更多」菜单：缩小正文字号。 */
+    val novelFontSmaller: String
+
+    /** 阅读器「更多」菜单：放大正文字号。 */
+    val novelFontLarger: String
     val pixivId: String
     fun formatNovelWordCount(count: Int): String
 
@@ -816,6 +822,10 @@ object ZhCnStrings : AppStrings {
     override val novelPrevChapter = "上一章"
     override val novelNextChapter = "下一章"
     override val novelFontSize = "字号"
+
+    override val novelFontSmaller = "减小字号"
+
+    override val novelFontLarger = "增大字号"
     override val pixivId = "Pixiv ID"
     // 显式实现本语言全部 novel 展示成员，避免依赖接口中文默认值回退。
     override fun formatNovelWordCount(count: Int): String = "$count 字"
@@ -1511,6 +1521,10 @@ object ZhTwStrings : AppStrings {
     override val novelPrevChapter: String get() = "上一章"
     override val novelNextChapter: String get() = "下一章"
     override val novelFontSize: String get() = "字號"
+
+    override val novelFontSmaller: String get() = "縮小字級"
+
+    override val novelFontLarger: String get() = "放大字級"
     override fun formatNovelWordCount(count: Int): String = "$count 字"
     override val pixivId = "Pixiv ID"
 
@@ -2238,6 +2252,10 @@ object EnStrings : AppStrings {
     override val novelPrevChapter: String get() = "Previous Chapter"
     override val novelNextChapter: String get() = "Next Chapter"
     override val novelFontSize: String get() = "Font Size"
+
+    override val novelFontSmaller: String get() = "Smaller Text"
+
+    override val novelFontLarger: String get() = "Larger Text"
     override fun formatNovelWordCount(count: Int): String = "$count words"
     override val menuSauceNao = "SauceNAO"
     override val stamp = "Stamp"
@@ -2996,6 +3014,10 @@ object JaStrings : AppStrings {
     override val novelPrevChapter = "前の章"
     override val novelNextChapter = "次の章"
     override val novelFontSize = "文字サイズ"
+
+    override val novelFontSmaller = "文字を小さく"
+
+    override val novelFontLarger = "文字を大きく"
     override val pixivId = "Pixiv ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -3737,6 +3759,10 @@ object KoStrings : AppStrings {
     override val novelPrevChapter = "이전 장"
     override val novelNextChapter = "다음 장"
     override val novelFontSize = "글자 크기"
+
+    override val novelFontSmaller = "글자 작게"
+
+    override val novelFontLarger = "글자 크게"
     override val pixivId = "Pixiv ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -4460,6 +4486,10 @@ object RuStrings : AppStrings {
     override val novelPrevChapter = "Предыдущая глава"
     override val novelNextChapter = "Следующая глава"
     override val novelFontSize = "Размер шрифта"
+
+    override val novelFontSmaller = "Уменьшить шрифт"
+
+    override val novelFontLarger = "Увеличить шрифт"
     override val pixivId = "Pixiv ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -5185,6 +5215,10 @@ object EsStrings : AppStrings {
     override val novelPrevChapter = "Capítulo anterior"
     override val novelNextChapter = "Capítulo siguiente"
     override val novelFontSize = "Tamaño de la fuente"
+
+    override val novelFontSmaller = "Texto más pequeño"
+
+    override val novelFontLarger = "Texto más grande"
     override val pixivId = "ID de Pixiv"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -5908,6 +5942,10 @@ object TrStrings : AppStrings {
     override val novelPrevChapter = "Önceki bölüm"
     override val novelNextChapter = "Sonraki bölüm"
     override val novelFontSize = "Yazı tipi boyutu"
+
+    override val novelFontSmaller = "Daha küçük yazı"
+
+    override val novelFontLarger = "Daha büyük yazı"
     override val pixivId = "Pixiv ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -6633,6 +6671,10 @@ object IdStrings : AppStrings {
     override val novelPrevChapter = "Bab sebelumnya"
     override val novelNextChapter = "Bab berikutnya"
     override val novelFontSize = "Ukuran font"
+
+    override val novelFontSmaller = "Perkecil teks"
+
+    override val novelFontLarger = "Perbesar teks"
     override val pixivId = "ID Pixiv"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -7357,6 +7399,10 @@ object FilStrings : AppStrings {
     override val novelPrevChapter = "Naunang kabanata"
     override val novelNextChapter = "Susunod na kabanata"
     override val novelFontSize = "Laki ng font"
+
+    override val novelFontSmaller = "Paliitin ang teksto"
+
+    override val novelFontLarger = "Palakihin ang teksto"
     override val pixivId = "Pixiv ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -8081,6 +8127,10 @@ object DeStrings : AppStrings {
     override val novelPrevChapter = "Vorheriges Kapitel"
     override val novelNextChapter = "Nächstes Kapitel"
     override val novelFontSize = "Schriftgröße"
+
+    override val novelFontSmaller = "Kleinerer Text"
+
+    override val novelFontLarger = "Größerer Text"
     override val pixivId = "Pixiv-ID"
 
     // 显式实现 novel 展示成员，避免依赖接口中文默认值回退。
@@ -8761,6 +8811,10 @@ object ViStrings : AppStrings {
     override val novelPrevChapter: String get() = "Chương trước"
     override val novelNextChapter: String get() = "Chương sau"
     override val novelFontSize: String get() = "Cỡ chữ"
+
+    override val novelFontSmaller: String get() = "Chữ nhỏ hơn"
+
+    override val novelFontLarger: String get() = "Chữ lớn hơn"
     override fun formatNovelWordCount(count: Int): String = "$count từ"
     override val menuSauceNao = "SauceNAO"
     override val stamp = "Sticker"

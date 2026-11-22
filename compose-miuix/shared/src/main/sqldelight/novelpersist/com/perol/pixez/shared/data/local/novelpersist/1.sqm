@@ -1,0 +1,9 @@
+-- 迁移 v1 -> v2：新增阅读进度表。
+-- v1 只有旧 Flutter 的 novelpersist 浏览历史表；阅读进度是 v2 新增能力，
+-- 用 IF NOT EXISTS 兼容已经手动建过该表的开发机数据库。
+CREATE TABLE IF NOT EXISTS novel_reading_progress (
+    novel_id INTEGER NOT NULL PRIMARY KEY,
+    block_index INTEGER NOT NULL,
+    block_offset INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);

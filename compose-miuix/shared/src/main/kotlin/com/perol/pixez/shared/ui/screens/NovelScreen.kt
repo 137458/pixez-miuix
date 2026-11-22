@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -179,7 +179,7 @@ fun NovelScreen(
                 .blurBackdropSource(backdrop),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // 顶部分类切换药丸导航栏
+                // 顶部分类切换：主 Tab 等宽铺满一行；榜单周期单独成行，长文案语言下不再挤压溢出。
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -194,6 +194,7 @@ fun NovelScreen(
                                 pageState.currentTab = NovelBrowseTab.Recommend
                             }
                         },
+                        modifier = Modifier.weight(1f),
                     )
 
                     NovelTabChip(
@@ -204,28 +205,36 @@ fun NovelScreen(
                                 pageState.currentTab = NovelBrowseTab.Ranking
                             }
                         },
+                        modifier = Modifier.weight(1f),
                     )
+                }
 
-                    if (currentTab == NovelBrowseTab.Ranking) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        // 排行榜模式快速切换
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            NovelSubModeChip(
-                                title = strings.rankingDay,
-                                selected = rankingMode == NovelRankingMode.Day,
-                                onClick = { pageState.rankingMode = NovelRankingMode.Day },
-                            )
-                            NovelSubModeChip(
-                                title = strings.rankingWeek,
-                                selected = rankingMode == NovelRankingMode.Week,
-                                onClick = { pageState.rankingMode = NovelRankingMode.Week },
-                            )
-                            NovelSubModeChip(
-                                title = strings.rankingMonth,
-                                selected = rankingMode == NovelRankingMode.Month,
-                                onClick = { pageState.rankingMode = NovelRankingMode.Month },
-                            )
-                        }
+                // 榜单周期：仅排行 Tab 出现，日 / 周 / 月三段等宽，与主 Tab 分行互不挤压。
+                AnimatedVisibility(visible = currentTab == NovelBrowseTab.Ranking) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        NovelSubModeChip(
+                            title = strings.rankingDay,
+                            selected = rankingMode == NovelRankingMode.Day,
+                            onClick = { pageState.rankingMode = NovelRankingMode.Day },
+                            modifier = Modifier.weight(1f),
+                        )
+                        NovelSubModeChip(
+                            title = strings.rankingWeek,
+                            selected = rankingMode == NovelRankingMode.Week,
+                            onClick = { pageState.rankingMode = NovelRankingMode.Week },
+                            modifier = Modifier.weight(1f),
+                        )
+                        NovelSubModeChip(
+                            title = strings.rankingMonth,
+                            selected = rankingMode == NovelRankingMode.Month,
+                            onClick = { pageState.rankingMode = NovelRankingMode.Month },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
 
@@ -298,11 +307,12 @@ private fun NovelTabChip(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val bg = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.secondaryContainer
     val textColor = if (selected) MiuixTheme.colorScheme.onPrimary else MiuixTheme.colorScheme.onSurface
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(100.dp))
             .background(bg)
             .clickable(onClick = onClick)
@@ -324,11 +334,12 @@ private fun NovelSubModeChip(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val bg = if (selected) MiuixTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent
     val textColor = if (selected) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceVariantSummary
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(bg)
             .clickable(onClick = onClick)
