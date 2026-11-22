@@ -103,7 +103,6 @@ internal fun CouiSettingsScreen(
     onUserClick: (Long) -> Unit = {},
     onUserBookmarksClick: (Long) -> Unit = {},
     onAccountManageClick: () -> Unit = {},
-    onNovelBrowseClick: () -> Unit = {},
 ) {
     val accountRepository = LocalAccountRepository.current
     val boardRepository = LocalBoardRepository.current
@@ -254,12 +253,6 @@ internal fun CouiSettingsScreen(
                 )
                 CouiRowDivider()
                 CouiValueRow(title = strings.settingHistory, summary = strings.settingHistorySummary, onClick = onHistoryClick)
-                CouiRowDivider()
-                CouiValueRow(
-                    title = strings.novelBrowseTitle,
-                    summary = "${strings.novelRecommend} / ${strings.novelRanking}",
-                    onClick = onNovelBrowseClick,
-                )
                 CouiRowDivider()
                 CouiValueRow(title = strings.settingBookTags, summary = strings.settingBookTagsSummary, onClick = onBookTagClick)
             }

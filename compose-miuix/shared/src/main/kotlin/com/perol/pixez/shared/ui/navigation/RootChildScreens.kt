@@ -408,7 +408,6 @@ internal fun renderSettingsPage(
             onUserClick = { userId -> component.onUserClicked(userId, 0) },
             onUserBookmarksClick = { userId -> component.onUserClicked(userId, 1) },
             onAccountManageClick = component::onAccountManageClicked,
-            onNovelBrowseClick = component::onNovelBrowseClicked,
         )
     } else {
         SettingsScreen(
@@ -433,7 +432,6 @@ internal fun renderSettingsPage(
             onUpdateSettingClick = component::onUpdateSettingClicked,
             onAccountEditClick = component::onAccountEditClicked,
             onAccountManageClick = component::onAccountManageClicked,
-            onNovelBrowseClick = component::onNovelBrowseClicked,
             onHistoryClick = component::onHistoryClicked,
             onDownloadTaskClick = component::onDownloadTaskClicked,
             onDataExportClick = component::onDataExportClicked,

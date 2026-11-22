@@ -665,7 +665,6 @@ internal object CouiSkinPages : SkinPages {
         onUserClick: (Long) -> Unit,
         onUserBookmarksClick: (Long) -> Unit,
         onAccountManageClick: () -> Unit,
-        onNovelBrowseClick: () -> Unit,
     ) {
         CouiSettingsScreen(
             onBack = onBack,
@@ -694,7 +693,6 @@ internal object CouiSkinPages : SkinPages {
             onUserClick = onUserClick,
             onUserBookmarksClick = onUserBookmarksClick,
             onAccountManageClick = onAccountManageClick,
-            onNovelBrowseClick = onNovelBrowseClick,
         )
     }
 }

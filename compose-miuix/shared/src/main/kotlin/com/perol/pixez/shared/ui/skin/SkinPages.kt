@@ -251,7 +251,6 @@ internal interface SkinPages {
         onUserClick: (Long) -> Unit,
         onUserBookmarksClick: (Long) -> Unit,
         onAccountManageClick: () -> Unit,
-        onNovelBrowseClick: () -> Unit,
     )
 
     /** 公告板页的 COUI 实现。 */
