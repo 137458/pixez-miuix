@@ -91,7 +91,7 @@ internal fun CouiHelloScreen(
                             contentDescription = strings.myProfile,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(40.dp)
                                 .clip(CircleShape),
                         )
                     }
