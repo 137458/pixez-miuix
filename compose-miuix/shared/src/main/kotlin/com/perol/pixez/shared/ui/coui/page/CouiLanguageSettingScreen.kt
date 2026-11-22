@@ -15,29 +15,25 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
-import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.i18n.Sponsor
-import com.perol.pixez.shared.ui.LocalSettingsRepository
 
 /**
- * COUI 语言设置页：折叠大标题顶栏 + 语言单选分组 + 当前语言的 Sponsor 横滚条。
+ * COUI 语言设置页：折叠大标题顶栏 + 语言下拉弹窗选择行 + 当前语言的 Sponsor 横滚条。
  *
- * 语言索引写入 [SettingsRepository.languageNum] 后即刻生效（由根宿主订阅 changeVersion 实时切换语言与 RTL 排版）；
- * 选中态由 core 的 [CouiRadioOptionRow] 承担：整行 selectable 提供点击与无障碍语义，
- * 圆形指示器由官方 RadioButton 绘制，行与指示器共享同一 InteractionSource 以避免双重触发。
- * 分组间距、卡片圆角、行间分隔线全部来自官方 Group / Item / Divider。
+ * 语言索引写入 [com.perol.pixez.shared.data.settings.SettingsRepository.languageNum] 后即刻生效
+ * （由根宿主订阅 changeVersion 实时切换语言与 RTL 排版）。
  */
 @Composable
 internal fun CouiLanguageSettingScreen(
@@ -49,6 +45,9 @@ internal fun CouiLanguageSettingScreen(
         mutableIntStateOf(settingsRepository.languageNum.coerceIn(0, LANGUAGE_OPTIONS.size - 1))
     }
     val selectedLanguage = LANGUAGE_OPTIONS[selectedIndex]
+    val languageLabels = remember {
+        LANGUAGE_OPTIONS.map { option -> "${option.nativeName} (${option.displayName})" }
+    }
 
     CouiSettingsScaffold(
         title = strings.settingLanguage,
@@ -56,18 +55,16 @@ internal fun CouiLanguageSettingScreen(
     ) {
         item(key = "coui_language", contentType = "section") {
             CouiSettingSection(title = strings.settingLanguage) {
-                LANGUAGE_OPTIONS.forEachIndexed { index, option ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = "${option.nativeName} (${option.displayName})",
-                        selected = selectedIndex == index,
-                        onClick = {
-                            selectedIndex = index
-                            settingsRepository.languageNum = index
-                        },
-                        summary = option.code,
-                    )
-                }
+                CouiMenuSelectRow(
+                    title = strings.settingLanguage,
+                    items = languageLabels,
+                    selectedIndex = selectedIndex,
+                    summary = selectedLanguage.code,
+                    onSelect = { index ->
+                        selectedIndex = index
+                        settingsRepository.languageNum = index
+                    },
+                )
             }
         }
 

@@ -28,7 +28,6 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
-import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTextButton
@@ -38,12 +37,19 @@ import com.perol.pixez.shared.ui.screens.DEFAULT_IMAGE_HOST
 import com.perol.pixez.shared.ui.screens.MIRROR_IMAGE_HOST
 import com.perol.pixez.shared.ui.screens.NETWORK_MODE_STANDARD
 
+/** 解析当前图片源在预设/自定义下拉列表中的选中下标（0 默认 / 1 镜像 / 2 自定义）。 */
+internal fun resolveCouiPictureSourceOptionIndex(pictureSource: String): Int = when (pictureSource) {
+    DEFAULT_IMAGE_HOST -> 0
+    MIRROR_IMAGE_HOST -> 1
+    else -> 2
+}
+
 /**
- * COUI 网络设置页：设置骨架 + 官方 Group 卡片（OAuth/API 模式单选、图片源）。
+ * COUI 网络设置页：设置骨架 + 官方 Group 卡片（OAuth/API 模式与图片源下拉弹窗）。
  *
  * 模式切换与图片源重置、自定义 Host 校验口径完全保留；
  * 切到 standard 时清空自定义输入并回落到默认 Host；
- * 单选由 core [CouiRadioOptionRow] 承担（库 RadioButton 作指示器）；COUI 库无输入原语，输入框仍为自绘。
+ * 单选切换由共享下拉弹窗 [CouiMenuSelectRow] 承担，自定义 Host 输入框仍为 COUI 自绘。
  */
 @Composable
 internal fun CouiNetworkSettingScreen(
@@ -110,51 +116,55 @@ internal fun CouiNetworkSettingScreen(
         Triple("standard", strings.networkModeStandard, strings.networkModeStandardSummary),
     )
 
+    val oauthSelectedIndex = networkModes.indexOfFirst { it.first == oauthNetworkMode }.coerceAtLeast(0)
+    val apiSelectedIndex = networkModes.indexOfFirst { it.first == apiNetworkMode }.coerceAtLeast(0)
+    val pictureSourceOptions = remember(strings) {
+        listOf(DEFAULT_IMAGE_HOST, MIRROR_IMAGE_HOST, strings.customHost)
+    }
+    val pictureSourceIndex = resolveCouiPictureSourceOptionIndex(pictureSource)
+
     CouiSettingsScaffold(
         title = strings.settingNetwork,
         onBack = onBack,
     ) {
-        item(key = "coui_network_oauth", contentType = "section") {
-            CouiSettingSection(title = strings.oauthNetworkMode) {
-                networkModes.forEachIndexed { index, (code, label, description) ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = oauthNetworkMode == code,
-                        summary = description,
-                        onClick = { setOAuthNetworkMode(code) },
-                    )
-                }
-            }
-        }
-
-        item(key = "coui_network_api", contentType = "section") {
-            CouiSettingSection(title = strings.apiNetworkMode) {
-                networkModes.forEachIndexed { index, (code, label, description) ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = apiNetworkMode == code,
-                        summary = description,
-                        onClick = { setApiNetworkMode(code) },
-                    )
-                }
+        item(key = "coui_network_modes", contentType = "section") {
+            CouiSettingSection(title = strings.settingNetwork) {
+                CouiMenuSelectRow(
+                    title = strings.oauthNetworkMode,
+                    items = networkModes.map { it.second },
+                    selectedIndex = oauthSelectedIndex,
+                    summary = networkModes[oauthSelectedIndex].third,
+                    onSelect = { index ->
+                        networkModes.getOrNull(index)?.first?.let(::setOAuthNetworkMode)
+                    },
+                )
+                CouiRowDivider()
+                CouiMenuSelectRow(
+                    title = strings.apiNetworkMode,
+                    items = networkModes.map { it.second },
+                    selectedIndex = apiSelectedIndex,
+                    summary = networkModes[apiSelectedIndex].third,
+                    onSelect = { index ->
+                        networkModes.getOrNull(index)?.first?.let(::setApiNetworkMode)
+                    },
+                )
             }
         }
 
         if (allowsImageSource) {
             item(key = "coui_network_picture_source", contentType = "section") {
                 CouiSettingSection(title = strings.pictureSource) {
-                    CouiRadioOptionRow(
-                        title = DEFAULT_IMAGE_HOST,
-                        selected = pictureSource == DEFAULT_IMAGE_HOST,
-                        onClick = { setPresetPictureSource(DEFAULT_IMAGE_HOST) },
-                    )
-                    CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = MIRROR_IMAGE_HOST,
-                        selected = pictureSource == MIRROR_IMAGE_HOST,
-                        onClick = { setPresetPictureSource(MIRROR_IMAGE_HOST) },
+                    CouiMenuSelectRow(
+                        title = strings.pictureSource,
+                        items = pictureSourceOptions,
+                        selectedIndex = pictureSourceIndex,
+                        summary = if (pictureSourceIndex == 2) pictureSource else null,
+                        onSelect = { index ->
+                            when (index) {
+                                0 -> setPresetPictureSource(DEFAULT_IMAGE_HOST)
+                                1 -> setPresetPictureSource(MIRROR_IMAGE_HOST)
+                            }
+                        },
                     )
                     CouiRowDivider()
                     // 自定义 Host：分组内独立区块，留白与官方 Item 的 rowPadding 对齐。

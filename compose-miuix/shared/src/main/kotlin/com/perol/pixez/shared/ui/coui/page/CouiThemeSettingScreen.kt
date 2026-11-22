@@ -43,7 +43,6 @@ import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
 import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
 import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
-import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
@@ -73,36 +72,29 @@ internal fun CouiThemeSettingScreen(
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
 
+    val themeModeOptions = remember(strings) {
+        listOf(strings.themeModeSystem, strings.themeModeLight, strings.themeModeDark)
+    }
+    val skinOptions = remember(strings) {
+        listOf(
+            UiSkin.HYPEROS.storageIndex to strings.skinHyperOs,
+            UiSkin.COLOROS.storageIndex to strings.skinColorOs,
+        )
+    }
+
     CouiSettingsScaffold(
         title = strings.settingTheme,
         onBack = onBack,
     ) {
         item(key = "coui_theme_mode", contentType = "section") {
             CouiSettingSection(title = strings.settingTheme) {
-                CouiRadioOptionRow(
-                    title = strings.themeModeSystem,
-                    selected = themeMode == 0,
-                    onClick = {
-                        themeMode = 0
-                        settingsRepository.themeMode = 0
-                    },
-                )
-                CouiRowDivider()
-                CouiRadioOptionRow(
-                    title = strings.themeModeLight,
-                    selected = themeMode == 1,
-                    onClick = {
-                        themeMode = 1
-                        settingsRepository.themeMode = 1
-                    },
-                )
-                CouiRowDivider()
-                CouiRadioOptionRow(
-                    title = strings.themeModeDark,
-                    selected = themeMode == 2,
-                    onClick = {
-                        themeMode = 2
-                        settingsRepository.themeMode = 2
+                CouiMenuSelectRow(
+                    title = strings.settingTheme,
+                    items = themeModeOptions,
+                    selectedIndex = themeMode.coerceIn(0, themeModeOptions.lastIndex),
+                    onSelect = { index ->
+                        themeMode = index
+                        settingsRepository.themeMode = index
                     },
                 )
             }
@@ -114,21 +106,14 @@ internal fun CouiThemeSettingScreen(
                 title = strings.settingUiSkin,
                 footer = strings.settingUiSkinSummary,
             ) {
-                CouiRadioOptionRow(
-                    title = strings.skinHyperOs,
-                    selected = uiSkinIndex == UiSkin.HYPEROS.storageIndex,
-                    onClick = {
-                        uiSkinIndex = UiSkin.HYPEROS.storageIndex
-                        settingsRepository.uiSkinIndex = UiSkin.HYPEROS.storageIndex
-                    },
-                )
-                CouiRowDivider()
-                CouiRadioOptionRow(
-                    title = strings.skinColorOs,
-                    selected = uiSkinIndex == UiSkin.COLOROS.storageIndex,
-                    onClick = {
-                        uiSkinIndex = UiSkin.COLOROS.storageIndex
-                        settingsRepository.uiSkinIndex = UiSkin.COLOROS.storageIndex
+                CouiMenuSelectRow(
+                    title = strings.settingUiSkin,
+                    items = skinOptions.map { it.second },
+                    selectedIndex = skinOptions.indexOfFirst { it.first == uiSkinIndex }.coerceAtLeast(0),
+                    onSelect = { index ->
+                        val selectedSkin = skinOptions.getOrNull(index)?.first ?: return@CouiMenuSelectRow
+                        uiSkinIndex = selectedSkin
+                        settingsRepository.uiSkinIndex = selectedSkin
                     },
                 )
             }

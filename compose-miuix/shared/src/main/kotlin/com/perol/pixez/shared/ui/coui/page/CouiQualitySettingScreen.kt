@@ -6,16 +6,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
 /**
- * COUI 画质设置页：设置骨架 + 四项偏好的单选分组卡片。
+ * COUI 画质设置页：设置骨架 + 下拉弹窗分组卡片（与 MIUIX 版画质设置结构一致）。
  *
- * 四项画质偏好的取值索引与回写口径不变：每项偏好独立成组，候选顺序即索引顺序，
- * 选中下标仍按原口径 `coerceIn(0, lastIndex)` 收口，点中即写库。
+ * 四项画质偏好的取值索引与回写口径不变，选中下标按 `coerceIn(0, lastIndex)` 收口，点中即写库。
  */
 @Composable
 internal fun CouiQualitySettingScreen(
@@ -42,67 +40,47 @@ internal fun CouiQualitySettingScreen(
         title = strings.settingQuality,
         onBack = onBack,
     ) {
-        item(key = "coui_quality_feed_preview", contentType = "section") {
-            CouiSettingSection(title = strings.feedPreviewQuality) {
-                feedPreviewQualityOptions.forEachIndexed { index, label ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = feedPreviewQuality.coerceIn(0, feedPreviewQualityOptions.lastIndex) == index,
-                        onClick = {
-                            feedPreviewQuality = index
-                            settingsRepository.feedPreviewQuality = index
-                        },
-                    )
-                }
-            }
-        }
-
-        item(key = "coui_quality_picture", contentType = "section") {
-            CouiSettingSection(title = strings.pictureQuality) {
-                detailQualityOptions.forEachIndexed { index, label ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = pictureQuality.coerceIn(0, detailQualityOptions.lastIndex) == index,
-                        onClick = {
-                            pictureQuality = index
-                            settingsRepository.pictureQuality = index
-                        },
-                    )
-                }
-            }
-        }
-
-        item(key = "coui_quality_manga", contentType = "section") {
-            CouiSettingSection(title = strings.mangaQuality) {
-                detailQualityOptions.forEachIndexed { index, label ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = mangaQuality.coerceIn(0, detailQualityOptions.lastIndex) == index,
-                        onClick = {
-                            mangaQuality = index
-                            settingsRepository.mangaQuality = index
-                        },
-                    )
-                }
-            }
-        }
-
-        item(key = "coui_quality_zoom", contentType = "section") {
-            CouiSettingSection(title = strings.zoomQuality) {
-                zoomQualityOptions.forEachIndexed { index, label ->
-                    if (index > 0) CouiRowDivider()
-                    CouiRadioOptionRow(
-                        title = label,
-                        selected = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex) == index,
-                        onClick = {
-                            zoomQuality = index
-                            settingsRepository.zoomQuality = index
-                        },
-                    )
-                }
+        item(key = "coui_quality_options", contentType = "section") {
+            CouiSettingSection(title = strings.settingQuality) {
+                CouiMenuSelectRow(
+                    title = strings.feedPreviewQuality,
+                    items = feedPreviewQualityOptions,
+                    selectedIndex = feedPreviewQuality.coerceIn(0, feedPreviewQualityOptions.lastIndex),
+                    onSelect = { index ->
+                        feedPreviewQuality = index
+                        settingsRepository.feedPreviewQuality = index
+                    },
+                )
+                CouiRowDivider()
+                CouiMenuSelectRow(
+                    title = strings.pictureQuality,
+                    items = detailQualityOptions,
+                    selectedIndex = pictureQuality.coerceIn(0, detailQualityOptions.lastIndex),
+                    onSelect = { index ->
+                        pictureQuality = index
+                        settingsRepository.pictureQuality = index
+                    },
+                )
+                CouiRowDivider()
+                CouiMenuSelectRow(
+                    title = strings.mangaQuality,
+                    items = detailQualityOptions,
+                    selectedIndex = mangaQuality.coerceIn(0, detailQualityOptions.lastIndex),
+                    onSelect = { index ->
+                        mangaQuality = index
+                        settingsRepository.mangaQuality = index
+                    },
+                )
+                CouiRowDivider()
+                CouiMenuSelectRow(
+                    title = strings.zoomQuality,
+                    items = zoomQualityOptions,
+                    selectedIndex = zoomQuality.coerceIn(0, zoomQualityOptions.lastIndex),
+                    onSelect = { index ->
+                        zoomQuality = index
+                        settingsRepository.zoomQuality = index
+                    },
+                )
             }
         }
     }

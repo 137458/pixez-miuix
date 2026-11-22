@@ -11,8 +11,6 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
-import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -20,10 +18,9 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.launch
 
 /**
- * COUI AI 作品显示设置页：设置骨架 + 单选分组卡片。
+ * COUI AI 作品显示设置页：设置骨架 + 下拉弹窗选择行。
  *
- * 两个互斥选项与服务器同步逻辑与 MIUIX 版一致；选中态由官方的 RadioButton 指示器承担，
- * 整行 selectable 提供点击与无障碍语义，提交期间两行同时禁用以防重复提交。
+ * 两个互斥选项与服务器同步逻辑与 MIUIX 版一致；提交期间禁用触发行以防重复提交。
  */
 @Composable
 internal fun CouiAiSettingScreen(
@@ -54,26 +51,29 @@ internal fun CouiAiSettingScreen(
         }
     }
 
+    val options = remember(strings) {
+        listOf(
+            true to (strings.aiDisplayShow to strings.aiDisplayShowSummary),
+            false to (strings.aiDisplayHidePartial to strings.aiDisplayHidePartialSummary),
+        )
+    }
+    val selectedIndex = if (currentShowAI) 0 else 1
+
     CouiSettingsScaffold(
         title = strings.userAISettings,
         onBack = onBack,
     ) {
         item(key = "coui_ai_display", contentType = "section") {
             CouiSettingSection(title = strings.aiDisplayOptions) {
-                CouiRadioOptionRow(
-                    title = strings.aiDisplayShow,
-                    selected = currentShowAI,
-                    onClick = { changeShowAI(true) },
-                    summary = strings.aiDisplayShowSummary,
+                CouiMenuSelectRow(
+                    title = strings.aiDisplayOptions,
+                    items = options.map { it.second.first },
+                    selectedIndex = selectedIndex,
+                    summary = options[selectedIndex].second.second,
                     enabled = !isUpdating,
-                )
-                CouiRowDivider()
-                CouiRadioOptionRow(
-                    title = strings.aiDisplayHidePartial,
-                    selected = !currentShowAI,
-                    onClick = { changeShowAI(false) },
-                    summary = strings.aiDisplayHidePartialSummary,
-                    enabled = !isUpdating,
+                    onSelect = { index ->
+                        options.getOrNull(index)?.first?.let(::changeShowAI)
+                    },
                 )
             }
         }

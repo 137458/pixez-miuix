@@ -49,33 +49,19 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
-import coil3.ImageLoader
-import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.size.Dimension
-import coil3.size.Precision
-import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
-import com.perol.pixez.shared.platform.HapticType
-import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.platform.PlatformBackHandler
-import com.perol.pixez.shared.platform.performHapticFeedback
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
-import com.perol.pixez.shared.platform.resolveOptimizedImageModel
-import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -167,35 +153,15 @@ fun IllustFullScreenViewer(
     val effectiveLayerBackdrop = internalBackdrop ?: (detailBackdrop as? LayerBackdrop)
 
     val triggerDownload: (Int) -> Unit = { currentPage ->
-        val pageNumber = currentPage + 1
         coroutineScope.launch {
-            if (IllustType.isUgoira(illust.type) && illustRepository != null) {
-                // 动图保存复用与详情页顶栏同一条路径，避免两处各自维护下载流程。
-                onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
-                saveUgoiraIllust(
-                    illust = illust,
-                    illustRepository = illustRepository,
-                    downloadRepository = downloadRepository,
-                ).fold(
-                    onSuccess = {
-                        performHapticFeedback(HapticType.Confirm)
-                        onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
-                    },
-                    onFailure = { e ->
-                        performHapticFeedback(HapticType.Reject)
-                        onToast(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
-                    },
-                )
-            } else {
-                onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
-                val task = downloadRepository.download(illust, pageIndex = currentPage)
-                val toast = when (task.status) {
-                    DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
-                    DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)
-                    else -> null
-                }
-                if (toast != null) onToast(toast)
-            }
+            executeViewerDownload(
+                illust = illust,
+                currentPage = currentPage,
+                illustRepository = illustRepository,
+                downloadRepository = downloadRepository,
+                strings = strings,
+                onToast = onToast,
+            )
         }
     }
 
@@ -372,7 +338,7 @@ private fun ViewerPagesSection(
             // 当前页在此处按渲染模式就地取一次，避免把父层的派生状态再复制一份进来。
             val activePage = if (isVerticalScrollMode) verticalListState.firstVisibleItemIndex else pagerState.currentPage
             LaunchedEffect(activePage, pageCount, zoomQuality, settings.pictureSource) {
-                preloadAdjacentPages(
+                preloadViewerAdjacentPages(
                     context = context,
                     imageLoader = SingletonImageLoader.get(context),
                     illust = illust,
@@ -696,40 +662,19 @@ private fun ViewerPageItem(
     val settings = LocalSettingsRepository.current
     val page = illust.metaPages.getOrNull(pageIndex)
 
-    val rawZoomUrl = remember(page, zoomQuality) {
-        if (page != null) {
-            when (zoomQuality) {
-                0 -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-                1 -> page.imageUrls?.large.orEmpty().ifEmpty { page.imageUrls?.original.orEmpty() }
-                2 -> page.imageUrls?.medium ?: page.imageUrls?.large.orEmpty()
-                else -> page.imageUrls?.original ?: page.imageUrls?.large.orEmpty()
-            }
-        } else {
-            when (zoomQuality) {
-                0 -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-                1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
-                2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                else -> illust.metaSinglePage?.originalImageUrl ?: illust.imageUrls.large
-            }
-        }
+    val rawZoomUrl = remember(illust, pageIndex, zoomQuality) {
+        resolveViewerZoomUrl(illust, pageIndex, zoomQuality)
     }
     val zoomUrl = rememberOptimizedImageModel(
         illust = illust,
         pageIndex = pageIndex,
         targetUrl = rawZoomUrl,
-        originalUrl = page?.imageUrls?.original ?: illust.metaSinglePage?.originalImageUrl,
+        originalUrl = resolveViewerOriginalUrl(illust, pageIndex),
         customBasePath = settings.storePath,
         pictureSource = settings.pictureSource,
     )
-    val thumbnailUrl = remember(page, pageIndex, initialPage, previewUrl) {
-        if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
-            previewUrl
-        } else if (page != null) {
-            page.imageUrls?.let { it.large.ifEmpty { it.medium } }
-                ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
-        } else {
-            illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
-        }
+    val thumbnailUrl = remember(illust, pageIndex, initialPage, previewUrl) {
+        resolveViewerThumbnailUrl(illust, pageIndex, initialPage, previewUrl)
     }
     val contentSize = remember(illust.width, illust.height) {
         if (illust.width > 0 && illust.height > 0) {
@@ -749,64 +694,4 @@ private fun ViewerPageItem(
         onTap = onTap,
         modifier = modifier,
     )
-}
-
-
-/**
- * 预加载 [activePage] 前后各一页到磁盘缓存。
- *
- * 只写磁盘（Coil 在解码前落盘），解码结果随即丢弃；路径解析涉及目录遍历与缓存查询，
- * 因此整体切到 IO 线程并顺序执行，避免同时申请多份解码缓冲。
- */
-private suspend fun preloadAdjacentPages(
-    context: PlatformContext,
-    imageLoader: ImageLoader,
-    illust: Illust,
-    pageCount: Int,
-    activePage: Int,
-    zoomQuality: Int,
-    settings: SettingsRepository,
-) {
-    val adjacentPages = listOf(activePage + 1, activePage - 1).filter { it in 0 until pageCount }
-    withContext(Dispatchers.IO) {
-        for (pIndex in adjacentPages) {
-            val p = illust.metaPages.getOrNull(pIndex) ?: continue
-            val rawTarget = when (zoomQuality) {
-                0 -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-                1 -> p.imageUrls?.large.orEmpty().ifEmpty { p.imageUrls?.original.orEmpty() }
-                2 -> p.imageUrls?.medium ?: p.imageUrls?.large.orEmpty()
-                else -> p.imageUrls?.original ?: p.imageUrls?.large.orEmpty()
-            }
-            val optModel = resolveOptimizedImageModel(
-                context = context,
-                illust = illust,
-                pageIndex = pIndex,
-                targetUrl = rawTarget,
-                originalUrl = p.imageUrls?.original,
-                customBasePath = settings.storePath,
-                pictureSource = settings.pictureSource,
-            )
-            if (optModel.isBlank() || optModel.startsWith("file:")) continue
-            // 图源改写与图片组件走同一条 platform 接缝，避免预加载与最终加载指向不同 URL。
-            val transformed = optModel.mapToPictureSource(settings.pictureSource)
-            // 预加载只用于写入磁盘缓存，解码结果随即丢弃，因此禁用内存缓存并把解码尺寸压到最小，
-            // 避免原图全尺寸位图短暂驻留堆内存引发 OOM。
-            val request = ImageRequest.Builder(context)
-                .data(transformed)
-                .diskCacheKey(transformed)
-                .size(
-                    Dimension(AppConstants.Image.PRELOAD_DECODE_DIMENSION),
-                    Dimension(AppConstants.Image.PRELOAD_DECODE_DIMENSION),
-                )
-                .precision(Precision.INEXACT)
-                .memoryCachePolicy(CachePolicy.DISABLED)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .build()
-            // 不用 enqueue：其内部固定经 Dispatchers.Main 启动协程，而桌面 JVM 没有
-            // kotlinx-coroutines 的 Main dispatcher 实现，会反复抛「Module with the Main
-            // dispatcher is missing」且未捕获异常直接打在 AWT 事件线程上；execute 在
-            // 调用者上下文挂起（此处已在 IO 线程），预加载仅为写磁盘缓存，顺序执行无感。
-            imageLoader.execute(request)
-        }
-    }
 }

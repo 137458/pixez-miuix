@@ -1,10 +1,25 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import coil3.ImageLoader
 import coil3.PlatformContext
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.size.Dimension
+import coil3.size.Precision
+import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.data.repository.IllustRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.platform.mapToPictureSource
+import com.perol.pixez.shared.platform.performHapticFeedback
+import com.perol.pixez.shared.platform.resolveOptimizedImageModel
+import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +53,227 @@ internal fun resolveViewerTargetImageUrl(illust: Illust, pageIndex: Int): String
     } else {
         illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
     }
+}
+
+/**
+ * 解析全屏查看器目标页按 [zoomQuality] 选取的原始待加载 URL（优先 original / large / medium）。
+ */
+internal fun resolveViewerZoomUrl(illust: Illust, pageIndex: Int, zoomQuality: Int): String {
+    val page = illust.metaPages.getOrNull(pageIndex)
+    return if (page != null) {
+        val urls = page.imageUrls
+        when (zoomQuality) {
+            0 -> urls?.original?.ifEmpty { urls.large } ?: urls?.large.orEmpty()
+            1 -> urls?.large.orEmpty().ifEmpty { urls?.original.orEmpty() }
+            2 -> urls?.medium?.ifEmpty { urls.large } ?: urls?.large.orEmpty()
+            else -> urls?.original?.ifEmpty { urls.large } ?: urls?.large.orEmpty()
+        }
+    } else {
+        when (zoomQuality) {
+            0 -> illust.metaSinglePage?.originalImageUrl?.ifEmpty { illust.imageUrls.large } ?: illust.imageUrls.large
+            1 -> illust.imageUrls.large.ifEmpty { illust.metaSinglePage?.originalImageUrl.orEmpty() }
+            2 -> illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+            else -> illust.metaSinglePage?.originalImageUrl?.ifEmpty { illust.imageUrls.large } ?: illust.imageUrls.large
+        }
+    }
+}
+
+/**
+ * 解析全屏查看器目标页对应的原图 URL（供本地已下载文件直读命中优化）。
+ */
+internal fun resolveViewerOriginalUrl(illust: Illust, pageIndex: Int): String? =
+    illust.metaPages.getOrNull(pageIndex)?.imageUrls?.original
+        ?: illust.metaSinglePage?.originalImageUrl
+
+/**
+ * 解析全屏查看器目标页过渡缩略图 URL：仅首进页优先复用详情页已缓存的 [previewUrl]。
+ */
+internal fun resolveViewerThumbnailUrl(
+    illust: Illust,
+    pageIndex: Int,
+    initialPage: Int,
+    previewUrl: String?,
+): String {
+    val page = illust.metaPages.getOrNull(pageIndex)
+    return if (pageIndex == initialPage && !previewUrl.isNullOrBlank()) {
+        previewUrl
+    } else if (page != null) {
+        page.imageUrls?.let { it.large.ifEmpty { it.medium } }
+            ?: illust.imageUrls.large.ifEmpty { illust.imageUrls.medium }
+    } else {
+        illust.imageUrls.large.ifEmpty { illust.imageUrls.medium.ifBlank { illust.imageUrls.squareMedium } }
+    }
+}
+
+/**
+ * 执行全屏查看器单页或动图下载，并通过 [onToast] 反馈结果。
+ */
+internal suspend fun executeViewerDownload(
+    illust: Illust,
+    currentPage: Int,
+    illustRepository: IllustRepository?,
+    downloadRepository: DownloadRepository,
+    strings: AppStrings,
+    onToast: (ToastData) -> Unit,
+) {
+    val pageNumber = currentPage + 1
+    if (IllustType.isUgoira(illust.type) && illustRepository != null) {
+        onToast(ToastData("${strings.downloadStatusDownloading}…", ToastType.Normal))
+        saveUgoiraIllust(
+            illust = illust,
+            illustRepository = illustRepository,
+            downloadRepository = downloadRepository,
+        ).fold(
+            onSuccess = {
+                performHapticFeedback(HapticType.Confirm)
+                onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
+            },
+            onFailure = { e ->
+                performHapticFeedback(HapticType.Reject)
+                onToast(ToastData(PixivApiErrorFormatter.format(e, strings), ToastType.Error))
+            },
+        )
+    } else {
+        onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
+        val task = downloadRepository.download(illust, pageIndex = currentPage)
+        val toast = when (task.status) {
+            DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
+            DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)
+            else -> null
+        }
+        if (toast != null) onToast(toast)
+    }
+}
+
+/**
+ * 预加载 [activePage] 前后各一页到磁盘缓存（跳过内存缓存并缩减解码尺寸以控制堆内存）。
+ */
+internal suspend fun preloadViewerAdjacentPages(
+    context: PlatformContext,
+    imageLoader: ImageLoader,
+    illust: Illust,
+    pageCount: Int,
+    activePage: Int,
+    zoomQuality: Int,
+    settings: SettingsRepository,
+) {
+    val adjacentPages = listOf(activePage + 1, activePage - 1).filter { it in 0 until pageCount }
+    withContext(Dispatchers.IO) {
+        for (pIndex in adjacentPages) {
+            val rawTarget = resolveViewerZoomUrl(illust, pIndex, zoomQuality)
+            val optModel = resolveOptimizedImageModel(
+                context = context,
+                illust = illust,
+                pageIndex = pIndex,
+                targetUrl = rawTarget,
+                originalUrl = resolveViewerOriginalUrl(illust, pIndex),
+                customBasePath = settings.storePath,
+                pictureSource = settings.pictureSource,
+            )
+            if (optModel.isBlank() || optModel.startsWith("file:")) continue
+            val transformed = optModel.mapToPictureSource(settings.pictureSource)
+            val request = ImageRequest.Builder(context)
+                .data(transformed)
+                .diskCacheKey(transformed)
+                .size(
+                    Dimension(AppConstants.Image.PRELOAD_DECODE_DIMENSION),
+                    Dimension(AppConstants.Image.PRELOAD_DECODE_DIMENSION),
+                )
+                .precision(Precision.INEXACT)
+                .memoryCachePolicy(CachePolicy.DISABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .build()
+            imageLoader.execute(request)
+        }
+    }
+}
+
+/**
+ * 复制当前全屏展示页的缓存图片到系统剪贴板。
+ */
+internal fun triggerViewerCopyImage(
+    illust: Illust,
+    currentDisplayPage: Int,
+    context: PlatformContext,
+    coroutineScope: CoroutineScope,
+    strings: AppStrings,
+    onToast: (ToastData) -> Unit,
+) {
+    val targetUrl = resolveViewerTargetImageUrl(illust, currentDisplayPage)
+    coroutineScope.launch {
+        suspendRunClipboardShare(
+            success = ToastData(strings.imageCopySuccess, ToastType.Success),
+            failurePrefix = strings.menuCopyImage,
+            onToast = onToast,
+        ) {
+            withContext(Dispatchers.IO) {
+                val candidateUrls = listOfNotNull(
+                    targetUrl,
+                    illust.imageUrls.large,
+                    illust.imageUrls.medium,
+                )
+                val bytes = extractCachedImageBytes(context, candidateUrls)
+                bytes?.let { IllustClipboard().copyImage(it) }
+                    ?: throw IllegalStateException(strings.imageNoCacheFound)
+            }
+        }
+    }
+}
+
+/**
+ * 复制当前全屏展示页的 Pixiv 分享链接到剪贴板。
+ */
+internal fun triggerViewerCopyLink(
+    illust: Illust,
+    pageCount: Int,
+    currentDisplayPage: Int,
+    strings: AppStrings,
+    onToast: (ToastData) -> Unit,
+) {
+    val (link, _) = buildViewerShareInfo(illust, pageCount, currentDisplayPage)
+    runClipboardShare(
+        success = ToastData(strings.copiedToClipboard, ToastType.Success),
+        failurePrefix = "${strings.copy}${strings.failedSuffix}",
+        onToast = onToast,
+    ) { IllustClipboard().copy(link) }
+}
+
+/**
+ * 调起系统分享当前全屏展示页。
+ */
+internal fun triggerViewerShare(
+    illust: Illust,
+    pageCount: Int,
+    currentDisplayPage: Int,
+    strings: AppStrings,
+    onToast: (ToastData) -> Unit,
+) {
+    val (link, shareTitle) = buildViewerShareInfo(illust, pageCount, currentDisplayPage)
+    runClipboardShare(
+        success = ToastData(strings.share, ToastType.Success),
+        failurePrefix = strings.share,
+        onToast = onToast,
+    ) { IllustShare().share(link, shareTitle) }
+}
+
+/**
+ * 使用浏览器打开 SauceNAO 搜索当前全屏展示页。
+ */
+internal fun triggerViewerSauceNao(
+    illust: Illust,
+    currentDisplayPage: Int,
+    strings: AppStrings,
+    onToast: (ToastData) -> Unit,
+) {
+    val imgUrl = if (illust.metaPages.isNotEmpty() && currentDisplayPage in illust.metaPages.indices) {
+        illust.metaPages[currentDisplayPage].imageUrls?.medium
+            ?: illust.metaPages[currentDisplayPage].imageUrls?.squareMedium
+            ?: illust.imageUrls.medium
+    } else {
+        illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
+    }
+    val sauceUrl = buildSauceNaoUrl(imgUrl)
+    openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
 }
 
 /**
@@ -90,25 +326,14 @@ internal fun buildViewerMoreMenuEntries(
                     Icon(imageVector = MiuixIcons.Copy, contentDescription = null, modifier = modifier)
                 },
                 onClick = {
-                    val targetUrl = resolveViewerTargetImageUrl(illust, currentDisplayPage)
-                    coroutineScope.launch {
-                        suspendRunClipboardShare(
-                            success = ToastData(strings.imageCopySuccess, ToastType.Success),
-                            failurePrefix = strings.menuCopyImage,
-                            onToast = onToast,
-                        ) {
-                            withContext(Dispatchers.IO) {
-                                val candidateUrls = listOfNotNull(
-                                    targetUrl,
-                                    illust.imageUrls.large,
-                                    illust.imageUrls.medium,
-                                )
-                                val bytes = extractCachedImageBytes(context, candidateUrls)
-                                bytes?.let { IllustClipboard().copyImage(it) }
-                                    ?: throw IllegalStateException(strings.imageNoCacheFound)
-                            }
-                        }
-                    }
+                    triggerViewerCopyImage(
+                        illust = illust,
+                        currentDisplayPage = currentDisplayPage,
+                        context = context,
+                        coroutineScope = coroutineScope,
+                        strings = strings,
+                        onToast = onToast,
+                    )
                 },
             ),
             DropdownItem(
@@ -117,12 +342,13 @@ internal fun buildViewerMoreMenuEntries(
                     Icon(imageVector = MiuixIcons.Link, contentDescription = null, modifier = modifier)
                 },
                 onClick = {
-                    val (link, _) = buildViewerShareInfo(illust, pageCount, currentDisplayPage)
-                    runClipboardShare(
-                        success = ToastData(strings.copiedToClipboard, ToastType.Success),
-                        failurePrefix = "${strings.copy}${strings.failedSuffix}",
+                    triggerViewerCopyLink(
+                        illust = illust,
+                        pageCount = pageCount,
+                        currentDisplayPage = currentDisplayPage,
+                        strings = strings,
                         onToast = onToast,
-                    ) { IllustClipboard().copy(link) }
+                    )
                 },
             ),
         ),
@@ -135,12 +361,13 @@ internal fun buildViewerMoreMenuEntries(
                     Icon(imageVector = MiuixIcons.Share, contentDescription = null, modifier = modifier)
                 },
                 onClick = {
-                    val (link, shareTitle) = buildViewerShareInfo(illust, pageCount, currentDisplayPage)
-                    runClipboardShare(
-                        success = ToastData(strings.share, ToastType.Success),
-                        failurePrefix = strings.share,
+                    triggerViewerShare(
+                        illust = illust,
+                        pageCount = pageCount,
+                        currentDisplayPage = currentDisplayPage,
+                        strings = strings,
                         onToast = onToast,
-                    ) { IllustShare().share(link, shareTitle) }
+                    )
                 },
             ),
             DropdownItem(
@@ -149,16 +376,12 @@ internal fun buildViewerMoreMenuEntries(
                     Icon(imageVector = MiuixIcons.Search, contentDescription = null, modifier = modifier)
                 },
                 onClick = {
-                    val currentPage = currentDisplayPage
-                    val imgUrl = if (illust.metaPages.isNotEmpty() && currentPage in illust.metaPages.indices) {
-                        illust.metaPages[currentPage].imageUrls?.medium
-                            ?: illust.metaPages[currentPage].imageUrls?.squareMedium
-                            ?: illust.imageUrls.medium
-                    } else {
-                        illust.imageUrls.medium.ifEmpty { illust.imageUrls.large }
-                    }
-                    val sauceUrl = buildSauceNaoUrl(imgUrl)
-                    openSafeUrl(sauceUrl, strings, onError = { onToast(ToastData(it, ToastType.Error)) })
+                    triggerViewerSauceNao(
+                        illust = illust,
+                        currentDisplayPage = currentDisplayPage,
+                        strings = strings,
+                        onToast = onToast,
+                    )
                 },
             ),
         ),

@@ -628,6 +628,20 @@ internal object CouiIcons {
         curveTo(15.1f, 2f, 16f, 2.9f, 16f, 4f)
     }
 
+    /** `link-2` — 复制链接 / 打开链接 */
+    val Link: ImageVector = strokeIcon("Link") {
+        moveTo(9f, 17f)
+        horizontalLineTo(7f)
+        arcTo(5f, 5f, 0f, false, true, 7f, 7f)
+        horizontalLineTo(9f)
+        moveTo(15f, 7f)
+        horizontalLineTo(17f)
+        arcTo(5f, 5f, 0f, true, true, 17f, 17f)
+        horizontalLineTo(15f)
+        moveTo(8f, 12f)
+        horizontalLineTo(16f)
+    }
+
     /** `columns-2` — 水平翻页模式 */
     val HorizontalPages: ImageVector = strokeIcon("HorizontalPages") {
         moveTo(5f, 3f)

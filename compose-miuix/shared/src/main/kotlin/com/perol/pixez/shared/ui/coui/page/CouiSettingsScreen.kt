@@ -384,6 +384,8 @@ internal fun CouiMenuSelectRow(
     items: List<String>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
+    summary: String? = null,
+    enabled: Boolean = true,
 ) {
     val anchor = rememberCouiMenuAnchor()
     var expanded by remember { mutableStateOf(false) }
@@ -391,7 +393,11 @@ internal fun CouiMenuSelectRow(
         CouiValueRow(
             title = title,
             value = items.getOrNull(selectedIndex).orEmpty(),
-            onClick = { anchor.open { expanded = true } },
+            summary = summary,
+            enabled = enabled,
+            onClick = {
+                if (enabled) anchor.open { expanded = true }
+            },
         )
         Menu(
             expanded = expanded,
@@ -399,7 +405,11 @@ internal fun CouiMenuSelectRow(
             anchor = anchor,
             headerText = title,
             items = items.mapIndexed { index, label ->
-                CouiMenuItem(value = index.toString(), text = label)
+                CouiMenuItem(
+                    value = index.toString(),
+                    text = label,
+                    selected = index == selectedIndex,
+                )
             },
             onItemClick = { item ->
                 expanded = false
