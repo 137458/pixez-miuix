@@ -196,45 +196,61 @@ internal fun Modifier.cardExpandLayer(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBounds: Rect,
     containerCornerRadius: Dp,
-): Modifier {
+): Modifier = cardExpandLayer(
+    expansionProvider = { expansion },
+    sourceBounds = sourceBounds,
+    cardCornerRadiusDp = cardCornerRadiusDp,
+    containerBoundsProvider = { containerBounds },
+    containerCornerRadiusProvider = { containerCornerRadius },
+)
+
+/**
+ * [cardExpandLayer] 的绘制期延迟求值重载：在 `graphicsLayer` 块内即时读取展开度与容器几何，
+ * 避免每帧动画触发外层栈容器重组。
+ */
+internal fun Modifier.cardExpandLayer(
+    expansionProvider: () -> Float,
+    sourceBounds: Rect?,
+    cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
+    containerBoundsProvider: () -> Rect,
+    containerCornerRadiusProvider: () -> Dp,
+): Modifier = this.graphicsLayer {
+    val expansion = expansionProvider()
     val state = if (sourceBounds != null && expansion < 0.999f) {
         resolveCardExpandTransform(
             expansion = expansion,
             sourceBounds = sourceBounds,
-            containerBounds = containerBounds,
+            containerBounds = containerBoundsProvider(),
             cardCornerRadiusDp = cardCornerRadiusDp,
-            containerCornerRadiusDp = containerCornerRadius.value,
+            containerCornerRadiusDp = containerCornerRadiusProvider().value,
         )
     } else {
         null
     }
-
-    return this.graphicsLayer {
-        if (state == null) {
-            this.transformOrigin = TransformOrigin.Center
-            this.scaleX = 1f
-            this.scaleY = 1f
-            this.translationX = 0f
-            this.translationY = 0f
-            this.alpha = 1f
-            this.clip = false
-            this.shadowElevation = 0f
-        } else {
-            this.transformOrigin = TransformOrigin(0f, 0f)
-            this.scaleX = state.uniformScale
-            this.scaleY = state.uniformScale
-            this.translationX = state.transX
-            this.translationY = state.transY
-            this.alpha = state.contentAlpha
-            shape = ClippedContainerShape(
-                widthFraction = state.visibleWidthFraction,
-                heightFraction = state.visibleHeightFraction,
-                horizontalBias = state.windowHorizontalBias,
-                cornerRadius = state.localCornerRadiusDp.dp,
-            )
-            clip = true
-            this.shadowElevation = state.shadowElevation
-        }
+    if (state == null) {
+        this.transformOrigin = TransformOrigin.Center
+        this.scaleX = 1f
+        this.scaleY = 1f
+        this.translationX = 0f
+        this.translationY = 0f
+        this.alpha = 1f
+        this.clip = false
+        this.shadowElevation = 0f
+    } else {
+        this.transformOrigin = TransformOrigin(0f, 0f)
+        this.scaleX = state.uniformScale
+        this.scaleY = state.uniformScale
+        this.translationX = state.transX
+        this.translationY = state.transY
+        this.alpha = state.contentAlpha
+        shape = ClippedContainerShape(
+            widthFraction = state.visibleWidthFraction,
+            heightFraction = state.visibleHeightFraction,
+            horizontalBias = state.windowHorizontalBias,
+            cornerRadius = state.localCornerRadiusDp.dp,
+        )
+        clip = true
+        this.shadowElevation = state.shadowElevation
     }
 }
 
@@ -284,13 +300,16 @@ private data class ClippedContainerShape(
  */
 internal fun Modifier.cardExpandScrim(
     alpha: Float,
-): Modifier {
-    val scrimAlpha = alpha.coerceIn(0f, 1f)
-    return this.drawWithContent {
-        drawContent()
-        if (scrimAlpha > 0.001f) {
-            drawRect(Color.Black.copy(alpha = scrimAlpha))
-        }
+): Modifier = cardExpandScrim(alphaProvider = { alpha })
+
+/** [cardExpandScrim] 的绘制期延迟求值重载，避免动画帧触发组合。 */
+internal fun Modifier.cardExpandScrim(
+    alphaProvider: () -> Float,
+): Modifier = this.drawWithContent {
+    drawContent()
+    val scrimAlpha = alphaProvider().coerceIn(0f, 1f)
+    if (scrimAlpha > 0.001f) {
+        drawRect(Color.Black.copy(alpha = scrimAlpha))
     }
 }
 

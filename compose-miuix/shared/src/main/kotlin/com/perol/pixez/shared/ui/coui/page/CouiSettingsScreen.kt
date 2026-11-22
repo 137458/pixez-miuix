@@ -40,6 +40,7 @@ import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.AppInfo
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiRowIndicator
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiValueRow
@@ -395,6 +396,7 @@ internal fun CouiMenuSelectRow(
             value = items.getOrNull(selectedIndex).orEmpty(),
             summary = summary,
             enabled = enabled,
+            trailingIndicator = CouiRowIndicator.Dropdown,
             onClick = {
                 if (enabled) anchor.open { expanded = true }
             },

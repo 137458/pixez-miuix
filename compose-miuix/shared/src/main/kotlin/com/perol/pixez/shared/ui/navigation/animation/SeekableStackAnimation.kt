@@ -20,6 +20,14 @@ import com.arkivanov.decompose.router.stack.ChildStack
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+/** 按图层方向把转场主进度 [progress]（1=起点，0=完成）映射为 Decompose StackAnimator 语义的 factor。 */
+internal fun resolveStackLayerFactor(direction: Direction, progress: Float): Float = when (direction) {
+    Direction.ENTER_FRONT -> progress
+    Direction.EXIT_FRONT -> 1f - progress
+    Direction.ENTER_BACK -> -progress
+    Direction.EXIT_BACK -> progress - 1f
+}
+
 /** 简单可变容器：保存当前转场 Job（非组合状态，避免无关重组）。 */
 private class TransitionJobRef {
     var value: Job? = null
@@ -151,13 +159,11 @@ internal class SeekableStackAnimation<C : Any, T : Any>(
         Box(modifier = modifier) {
             layers.forEach { layer ->
                 key(layer.child.key) {
-                    val factor = when (layer.direction) {
-                        Direction.ENTER_FRONT -> progress.value
-                        Direction.EXIT_FRONT -> 1f - progress.value
-                        Direction.ENTER_BACK -> -progress.value
-                        Direction.EXIT_BACK -> progress.value - 1f
+                    val direction = layer.direction
+                    val factorProvider: () -> Float = remember(direction, progress) {
+                        { resolveStackLayerFactor(direction, progress.value) }
                     }
-                    frameFor(layer.child)(factor, layer.direction) { layerModifier ->
+                    frameFor(layer.child)(factorProvider, direction) { layerModifier ->
                         Box(modifier = layerModifier) {
                             childContent(layer.child)
                         }

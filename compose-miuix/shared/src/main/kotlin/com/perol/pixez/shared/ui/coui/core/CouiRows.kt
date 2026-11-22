@@ -93,6 +93,13 @@ internal fun CouiItemSummary(
     )
 }
 
+/** 列表行尾部指示器类型：区分“进入下级页面”与“弹出下拉菜单”。 */
+internal enum class CouiRowIndicator {
+    Navigation,
+    Dropdown,
+    None,
+}
+
 /** 尾部箭头：跟随主题描边色自绘，不引入图标依赖。 */
 @Composable
 internal fun CouiChevron(
@@ -115,6 +122,50 @@ internal fun CouiChevron(
             color = color,
             start = Offset(tipX, size.height * 0.5f),
             end = Offset(tailX, size.height * 0.72f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
+/** 下拉选择指示器：上下双尖括号（chevrons-up-down），与跳转下一页的横向箭头区分语义。 */
+@Composable
+internal fun CouiDropdownIndicator(
+    modifier: Modifier = Modifier,
+    color: Color = CouiTheme.colorScheme.onSurfaceVariant,
+) {
+    Canvas(modifier = modifier.size(16.dp)) {
+        val stroke = 1.6.dp.toPx()
+        val leftX = size.width * 0.31f
+        val midX = size.width * 0.50f
+        val rightX = size.width * 0.69f
+        // 上尖括号（^）
+        drawLine(
+            color = color,
+            start = Offset(leftX, size.height * 0.38f),
+            end = Offset(midX, size.height * 0.21f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = color,
+            start = Offset(midX, size.height * 0.21f),
+            end = Offset(rightX, size.height * 0.38f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+        // 下尖括号（v）
+        drawLine(
+            color = color,
+            start = Offset(leftX, size.height * 0.62f),
+            end = Offset(midX, size.height * 0.79f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = color,
+            start = Offset(midX, size.height * 0.79f),
+            end = Offset(rightX, size.height * 0.62f),
             strokeWidth = stroke,
             cap = StrokeCap.Round,
         )
@@ -161,7 +212,7 @@ internal fun CouiToggleRow(
     )
 }
 
-/** 值行：右侧展示当前值，可点时补箭头。 */
+/** 值行：右侧展示当前值，可点时按 [trailingIndicator] 补跳转箭头或下拉双箭头。 */
 @Composable
 internal fun CouiValueRow(
     title: String,
@@ -170,6 +221,7 @@ internal fun CouiValueRow(
     summary: String? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    trailingIndicator: CouiRowIndicator = CouiRowIndicator.Navigation,
 ) {
     val colors = CouiPageDefaults.themeColors()
     val summaryContent: (@Composable () -> Unit)? = summary?.let { text ->
@@ -196,7 +248,14 @@ internal fun CouiValueRow(
                         textAlign = TextAlign.End,
                     )
                 }
-                if (onClick != null) CouiChevron()
+                if (onClick != null) {
+                    val indicatorColor = if (enabled) CouiTheme.colorScheme.onSurfaceVariant else colors.disabled
+                    when (trailingIndicator) {
+                        CouiRowIndicator.Navigation -> CouiChevron(color = indicatorColor)
+                        CouiRowIndicator.Dropdown -> CouiDropdownIndicator(color = indicatorColor)
+                        CouiRowIndicator.None -> Unit
+                    }
+                }
             }
         },
     )

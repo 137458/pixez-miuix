@@ -119,7 +119,7 @@ fun RootContent(
     val stack by component.stack.subscribeAsState()
     val active = stack.active.instance
 
-    val floatingBackdrop = rememberBlurBackdrop()
+    val floatingBackdrop = rememberBlurBackdrop(enableBlur = uiSkin != UiSkin.COLOROS)
     // 作品卡片几何信息源：列表卡片登记矩形，二级页面转场据此播放「卡片展开/收回」动画。
     val sharedBounds = remember { SharedBoundsRegistry() }
     // SideEffect：成功应用后再同步路由锚点；被丢弃的重组不会污染不可回滚的注册表字段

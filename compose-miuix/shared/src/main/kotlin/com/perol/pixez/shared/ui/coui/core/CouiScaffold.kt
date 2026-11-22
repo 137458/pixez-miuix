@@ -13,13 +13,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -28,7 +32,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +46,7 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.itos.coui.backdrop.CouiBackdrop
+import com.itos.coui.backdrop.ProvideCouiBackdrop
 import com.itos.coui.backdrop.couiBackdrop
 import com.itos.coui.backdrop.rememberCouiBackdrop
 import com.itos.coui.effect.couiButtonFeedback
@@ -88,11 +97,100 @@ import com.perol.pixez.shared.ui.i18n.LocalStrings
  */
 
 /**
- * 正文区背景采样源（参考 jm3 `LocalCouiAppBackdrop`）：仅当页面装配了 `topBarBottom` 且
- * 处于 API 34+ 时由骨架创建并注入 `topBar` 槽，让吸顶的 `CouiChipTabRow` / `CouiTopBarSegmentedTabs`
- * 可采样滚动正文产生原厂凝光毛玻璃，同时与正文严格分离为兄弟节点避免自采样。
+ * 唯一共享正文采样源：COUI 库的 `LocalCouiBackdrop` 为 `internal`，
+ * 当页面装配 `topBarBottom` 时由 [CouiSingleBackdropScaffold] 持有唯一一个 [CouiBackdrop]，
+ * 经 `ProvideCouiBackdrop` 注入官方顶栏并经本 Local 共享给 `CouiChipTabRow` / `CouiTopBarSegmentedTabs`，
+ * 避免在 `Scaffold` 内部二次套壳 `couiBackdrop` 造成双层全屏离屏录制。
  */
-internal val LocalCouiContentBackdrop = staticCompositionLocalOf<CouiBackdrop?> { null }
+internal val LocalCouiSharedBackdrop = staticCompositionLocalOf<CouiBackdrop?> { null }
+
+private enum class SingleBackdropScaffoldSlot {
+    Content,
+    TopBar,
+    Fab,
+}
+
+private class LiveScaffoldPadding : PaddingValues {
+    var value by mutableStateOf(PaddingValues(0.dp))
+
+    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp =
+        value.calculateLeftPadding(layoutDirection)
+
+    override fun calculateTopPadding(): Dp = value.calculateTopPadding()
+
+    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp =
+        value.calculateRightPadding(layoutDirection)
+
+    override fun calculateBottomPadding(): Dp = value.calculateBottomPadding()
+}
+
+/**
+ * 单层 Backdrop 页面骨架：用于装配了 `topBarBottom` 的页面。
+ * 正文区仅挂载唯一一层 `couiBackdrop`，同时服务于顶栏渐变模糊与吸顶 Tab 凝光毛玻璃，零双层嵌套录制。
+ */
+@Composable
+private fun CouiSingleBackdropScaffold(
+    modifier: Modifier = Modifier,
+    topBar: @Composable () -> Unit,
+    floatingActionButton: (@Composable BoxScope.() -> Unit)? = null,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val backdrop = rememberCouiBackdrop()
+    val containerColor = CouiTheme.colorScheme.background
+    val insets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+    val livePadding = remember { LiveScaffoldPadding() }
+
+    SubcomposeLayout(modifier = modifier) { constraints ->
+        val layoutWidth = constraints.maxWidth
+        val layoutHeight = constraints.maxHeight
+        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+
+        val topBarPlaceables = subcompose(SingleBackdropScaffoldSlot.TopBar) {
+            ProvideCouiBackdrop(backdrop) {
+                CompositionLocalProvider(LocalCouiSharedBackdrop provides backdrop) {
+                    topBar()
+                }
+            }
+        }.map { it.measure(looseConstraints) }
+        val topBarHeight = topBarPlaceables.maxOfOrNull { it.height } ?: 0
+
+        val topDp = if (topBarHeight > 0) topBarHeight.toDp() else insets.getTop(this).toDp()
+        val bottomDp = insets.getBottom(this).toDp()
+        val nextPadding = PaddingValues(top = topDp, bottom = bottomDp)
+        if (livePadding.value != nextPadding) {
+            livePadding.value = nextPadding
+        }
+
+        val contentPlaceables = subcompose(SingleBackdropScaffoldSlot.Content) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .couiBackdrop(backdrop)
+                    .background(containerColor),
+            ) {
+                content(livePadding)
+            }
+        }.map { it.measure(constraints) }
+
+        val fabPlaceables = if (floatingActionButton != null) {
+            subcompose(SingleBackdropScaffoldSlot.Fab) {
+                ProvideCouiBackdrop(backdrop) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        floatingActionButton()
+                    }
+                }
+            }.map { it.measure(constraints) }
+        } else {
+            emptyList()
+        }
+
+        layout(layoutWidth, layoutHeight) {
+            contentPlaceables.forEach { it.place(0, 0) }
+            topBarPlaceables.forEach { it.place(0, 0) }
+            fabPlaceables.forEach { it.place(0, 0) }
+        }
+    }
+}
 
 /** 顶栏标题：官方顶栏只通过 [LocalCouiTextStyle] 下发标题样式，不用 COUI 的 8 个文字角色。 */
 @Composable
@@ -115,7 +213,8 @@ internal fun CouiBarTitle(
 /**
  * 顶栏图标按钮。
  *
- * API 34+ 走官方 [TopAppBarButton]（材质、按压反馈与图标色都由顶栏效果层提供）；
+ * API 34+ 走官方 [TopAppBarButton]（材质、按压反馈与图标色都由顶栏效果层提供，
+ * 底层 [com.itos.coui.effect.CouiFloatingRenderer] 经对象池借还复用，避免切页现编 AGSL Shader）；
  * API 31-33 官方按钮不可用，用同尺寸自绘按钮平替，图标色仍取顶栏下发的内容色。
  * 传入 [tint] 时覆盖默认图标色（例如已收藏态高亮）。
  */
@@ -127,6 +226,7 @@ internal fun CouiTopBarIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tint: Color? = null,
+    iconModifier: Modifier = Modifier,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         CouiFloatingTopBarIconButton(
@@ -136,6 +236,7 @@ internal fun CouiTopBarIconButton(
             modifier = modifier,
             enabled = enabled,
             tint = tint,
+            iconModifier = iconModifier,
         )
     } else {
         CouiPlainTopBarIconButton(
@@ -145,6 +246,7 @@ internal fun CouiTopBarIconButton(
             modifier = modifier,
             enabled = enabled,
             tint = tint,
+            iconModifier = iconModifier,
         )
     }
 }
@@ -158,9 +260,33 @@ private fun CouiFloatingTopBarIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tint: Color? = null,
+    iconModifier: Modifier = Modifier,
 ) {
-    TopAppBarButton(modifier = modifier, onClick = onClick, enabled = enabled) {
-        CouiBarIcon(imageVector = icon, contentDescription = contentDescription, tint = tint)
+    val renderer = rememberPooledCouiFloatingRenderer()
+    if (renderer == null) {
+        CouiPlainTopBarIconButton(
+            onClick = onClick,
+            icon = icon,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            enabled = enabled,
+            tint = tint,
+            iconModifier = iconModifier,
+        )
+        return
+    }
+    TopAppBarButton(
+        modifier = modifier,
+        onClick = onClick,
+        enabled = enabled,
+        renderer = renderer,
+    ) {
+        CouiBarIcon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = iconModifier,
+        )
     }
 }
 
@@ -172,6 +298,7 @@ private fun CouiPlainTopBarIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tint: Color? = null,
+    iconModifier: Modifier = Modifier,
 ) {
     val source = remember { MutableInteractionSource() }
     Box(
@@ -188,7 +315,12 @@ private fun CouiPlainTopBarIconButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        CouiBarIcon(imageVector = icon, contentDescription = contentDescription, tint = tint)
+        CouiBarIcon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = iconModifier,
+        )
     }
 }
 
@@ -197,12 +329,13 @@ private fun CouiBarIcon(
     imageVector: ImageVector,
     contentDescription: String?,
     tint: Color? = null,
+    modifier: Modifier = Modifier,
 ) {
     val resolvedTint = tint ?: LocalCouiContentColor.current.takeOrElse { CouiTheme.colorScheme.onSurface }
     Image(
         painter = rememberVectorPainter(imageVector),
         contentDescription = contentDescription,
-        modifier = Modifier.size(22.dp),
+        modifier = modifier.size(22.dp),
         colorFilter = ColorFilter.tint(resolvedTint),
     )
 }
@@ -269,38 +402,35 @@ internal fun CouiCompactScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val bottomReserve = LocalBottomBarContentPadding.current
-    val contentBackdrop = if (topBarBottom != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        rememberCouiBackdrop()
-    } else {
-        null
-    }
-    Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding(),
-        topBar = {
-            CompositionLocalProvider(LocalCouiContentBackdrop provides contentBackdrop) {
-                Column(modifier = Modifier.fillMaxWidth().then(topBarModifier)) {
-                    CouiTopBar(title = title, onBack = onBack, actions = actions)
-                    if (topBarBottom != null) topBarBottom()
-                }
-            }
-        },
-        floatingActionButton = floatingActionButton,
-    ) { innerPadding ->
-        val resolvedPadding = remember(innerPadding, bottomReserve) {
-            innerPadding.withExtraBottom(bottomReserve)
+    val scaffoldModifier = modifier
+        .fillMaxSize()
+        .imePadding()
+    val topBarSlot: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth().then(topBarModifier)) {
+            CouiTopBar(title = title, onBack = onBack, actions = actions)
+            if (topBarBottom != null) topBarBottom()
         }
-        if (contentBackdrop != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .couiBackdrop(contentBackdrop)
-                    .background(CouiTheme.colorScheme.background),
-            ) {
-                content(resolvedPadding)
+    }
+    if (topBarBottom != null) {
+        CouiSingleBackdropScaffold(
+            modifier = scaffoldModifier,
+            topBar = topBarSlot,
+            floatingActionButton = floatingActionButton,
+        ) { innerPadding ->
+            val resolvedPadding = remember(innerPadding, bottomReserve) {
+                innerPadding.withExtraBottom(bottomReserve)
             }
-        } else {
+            content(resolvedPadding)
+        }
+    } else {
+        Scaffold(
+            modifier = scaffoldModifier,
+            topBar = topBarSlot,
+            floatingActionButton = floatingActionButton,
+        ) { innerPadding ->
+            val resolvedPadding = remember(innerPadding, bottomReserve) {
+                innerPadding.withExtraBottom(bottomReserve)
+            }
             content(resolvedPadding)
         }
     }
@@ -395,39 +525,36 @@ private fun CouiCollapsingScaffold(
     val behavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val density = LocalDensity.current
     val bottomReserve = LocalBottomBarContentPadding.current
-    val contentBackdrop = if (topBarBottom != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        rememberCouiBackdrop()
-    } else {
-        null
-    }
-    Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
-            .nestedScroll(behavior.nestedScrollConnection),
-        topBar = {
-            CompositionLocalProvider(LocalCouiContentBackdrop provides contentBackdrop) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    CouiCollapsingTopBar(title = title, onBack = onBack, actions = actions, behavior = behavior)
-                    if (topBarBottom != null) topBarBottom()
-                }
-            }
-        },
-        floatingActionButton = floatingActionButton,
-    ) { innerPadding ->
-        val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
-            behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+    val scaffoldModifier = modifier
+        .fillMaxSize()
+        .imePadding()
+        .nestedScroll(behavior.nestedScrollConnection)
+    val topBarSlot: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            CouiCollapsingTopBar(title = title, onBack = onBack, actions = actions, behavior = behavior)
+            if (topBarBottom != null) topBarBottom()
         }
-        if (contentBackdrop != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .couiBackdrop(contentBackdrop)
-                    .background(CouiTheme.colorScheme.background),
-            ) {
-                content(resolvedPadding)
+    }
+    if (topBarBottom != null) {
+        CouiSingleBackdropScaffold(
+            modifier = scaffoldModifier,
+            topBar = topBarSlot,
+            floatingActionButton = floatingActionButton,
+        ) { innerPadding ->
+            val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
+                behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
             }
-        } else {
+            content(resolvedPadding)
+        }
+    } else {
+        Scaffold(
+            modifier = scaffoldModifier,
+            topBar = topBarSlot,
+            floatingActionButton = floatingActionButton,
+        ) { innerPadding ->
+            val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
+                behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+            }
             content(resolvedPadding)
         }
     }

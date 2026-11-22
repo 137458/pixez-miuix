@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.backdrop.CouiBackdrop
 import com.itos.coui.chip.ChipTabRow
 import com.itos.coui.chip.CouiChipTabItem
-import com.itos.coui.effect.CouiFloatingRenderer
 import com.itos.coui.effect.SpotlightPreset
 import com.itos.coui.effect.rememberCouiSpotlight
 import com.itos.coui.layout.CouiPageDefaults
@@ -41,7 +40,9 @@ import com.itos.coui.shape.CouiCapsuleShape
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.rememberCouiTextStyle
 import com.itos.coui.theme.CouiTheme
-import com.perol.pixez.shared.ui.coui.core.LocalCouiContentBackdrop
+import com.perol.pixez.shared.ui.coui.core.LocalCouiSharedBackdrop
+import com.perol.pixez.shared.ui.coui.core.rememberPooledCouiFloatingRenderer
+import com.perol.pixez.shared.ui.coui.core.rememberPooledCouiFloatingRenderers
 
 /** 将页签选中下标钳制到合法区间，列表为空时返回 -1。 */
 internal fun clampCouiTabIndex(selectedIndex: Int, itemCount: Int): Int =
@@ -70,6 +71,7 @@ internal fun CouiSegmentedTabs(
     small: Boolean = false,
     enabled: Boolean = true,
     backdrop: CouiBackdrop? = null,
+    commitOnRelease: Boolean = true,
 ) {
     val clampedIndex = clampCouiTabIndex(selectedIndex, items.size)
     if (clampedIndex < 0) return
@@ -82,6 +84,7 @@ internal fun CouiSegmentedTabs(
             small = small,
             enabled = enabled,
             backdrop = backdrop,
+            commitOnRelease = commitOnRelease,
         )
         return
     }
@@ -96,8 +99,8 @@ internal fun CouiSegmentedTabs(
 }
 
 /**
- * 固定在顶栏下方的分段胶囊栏（参考 jm3 `CouiTopBarSegmentedTabs`）：
- * 放置在 `Scaffold` 的 `topBarBottom` 槽位内，直接消费 [LocalCouiBackdrop] 采样滚动正文，
+ * 固定在顶栏下方的分段胶囊栏：
+ * 放置在 `Scaffold` 的 `topBarBottom` 槽位内，直接消费官方 [LocalCouiBackdrop] 采样滚动正文，
  * API 34+ 呈现原厂透明模糊与凝光滑块，API 31-33 退化为等分胶囊。
  */
 @Composable
@@ -108,8 +111,9 @@ internal fun CouiTopBarSegmentedTabs(
     modifier: Modifier = Modifier,
     small: Boolean = false,
     enabled: Boolean = true,
+    commitOnRelease: Boolean = true,
 ) {
-    val backdrop = LocalCouiContentBackdrop.current
+    val backdrop = LocalCouiSharedBackdrop.current
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -122,12 +126,13 @@ internal fun CouiTopBarSegmentedTabs(
             small = small,
             enabled = enabled,
             backdrop = backdrop,
+            commitOnRelease = commitOnRelease,
         )
     }
 }
 
 /**
- * 顶栏下方可横向滚动的分类 TabRow（参考 jm3 `CouiBrowseCategoryBar`）：
+ * 顶栏下方可横向滚动的分类 TabRow：
  * - API 34+ 且位于 `topBar` 采样作用域（[LocalCouiBackdrop] 非空且存在有效显示器）时，
  *   调用官方 [ChipTabRow]（含原厂凝光玻璃、边缘羽化、物理阻尼滚动与自动滚入选中项）；
  * - 低版本或无独立兄弟背景源时，退化为 32dp 轻量滚动胶囊轨，保持低高度占比与一致选中色。
@@ -140,7 +145,7 @@ internal fun CouiChipTabRow(
     modifier: Modifier = Modifier,
 ) {
     val effectiveKey = resolveCouiChipTabKey(selectedKey, chips) ?: return
-    val backdrop = LocalCouiContentBackdrop.current
+    val backdrop = LocalCouiSharedBackdrop.current
     val display = LocalView.current.display
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && backdrop != null && display != null) {
         CouiLibraryChipTabRow(
@@ -170,10 +175,9 @@ private fun CouiLibrarySegmentedControl(
     small: Boolean,
     enabled: Boolean,
     backdrop: CouiBackdrop?,
+    commitOnRelease: Boolean,
 ) {
-    val renderer = remember(backdrop != null) {
-        if (backdrop != null) runCatching { CouiFloatingRenderer.standalone() }.getOrNull() else null
-    }
+    val renderer = rememberPooledCouiFloatingRenderer(enabled = backdrop != null)
     val effectiveBackdrop = if (renderer != null) backdrop else null
     SegmentedControl(
         modifier = modifier.fillMaxWidth(),
@@ -184,6 +188,7 @@ private fun CouiLibrarySegmentedControl(
         dark = CouiTheme.isDark,
         enabled = enabled,
         small = small,
+        commitOnRelease = commitOnRelease,
         renderer = renderer,
     )
 }
@@ -200,9 +205,7 @@ private fun CouiLibraryChipTabRow(
     val items = remember(chips) {
         chips.map { chip -> CouiChipTabItem(key = chip.key, label = chip.label) }
     }
-    val renderers = remember(items.map { it.key }) {
-        runCatching { items.map { CouiFloatingRenderer.standalone() } }.getOrNull()
-    }
+    val renderers = rememberPooledCouiFloatingRenderers(items.size)
     if (renderers == null) {
         CouiFallbackChipTabRow(
             chips = chips,

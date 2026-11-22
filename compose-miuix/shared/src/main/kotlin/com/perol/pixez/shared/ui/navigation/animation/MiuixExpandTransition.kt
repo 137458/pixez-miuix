@@ -4,6 +4,9 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -64,16 +67,15 @@ internal fun resolveMiuixDefaultSlideFrame(direction: Direction, factor: Float):
         MiuixDefaultSlideFrame(isTopLayer = false, fraction = (-factor).coerceIn(0f, 1f))
     }
 
-/** 单层页面的转场帧渲染闭包：按 factor 与方向产出该层的视觉修饰符。 */
+/** 单层页面的转场帧渲染闭包：按绘制期延迟 [factorProvider] 与方向产出该层的视觉修饰符。 */
 internal typealias MiuixTransitionFrame =
-    @Composable (factor: Float, direction: Direction, content: @Composable (Modifier) -> Unit) -> Unit
+    @Composable (factorProvider: () -> Float, direction: Direction, content: @Composable (Modifier) -> Unit) -> Unit
 
 /**
  * 构造 MIUIX / HyperOS「卡片展开 / Miuix 默认侧滑」的帧渲染闭包。
  *
- * 帧渲染与动画驱动解耦：闭包只负责把 (factor, direction) 映射为视觉修饰符，
- * 并把转场状态上报 [SharedBoundsRegistry]；动画驱动（Decompose stackAnimator 或
- * 自研 [SeekableStackAnimation]）各自负责 factor 的产生节奏。
+ * 帧渲染与动画驱动解耦：闭包只负责把 `(factorProvider, direction)` 映射为绘制期延迟求值的视觉修饰符，
+ * 避免每帧动画在组合期重建修饰符与触发外层重组；动画驱动（自研 [SeekableStackAnimation]）只负责推进进度。
  *
  * 锚点解析、几何即时读取与回退规则见 [miuixSeekableStackAnimation] 文档。
  */
@@ -83,7 +85,7 @@ internal fun cardExpandFrame(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
-): MiuixTransitionFrame = { factor, direction, content ->
+): MiuixTransitionFrame = { factorProvider, direction, content ->
     val containerBounds = containerGeometry().bounds
     val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
     // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
@@ -96,39 +98,67 @@ internal fun cardExpandFrame(
     val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
 
     val geometry = containerGeometry()
+    val cornerShape = remember(geometry.cornerRadius) {
+        if (geometry.cornerRadius > 0.dp) RoundedCornerShape(geometry.cornerRadius) else null
+    }
     val layerModifier: Modifier
     if (activeSourceBounds == null) {
-        val frame = resolveMiuixDefaultSlideFrame(direction = direction, factor = factor)
-        if (frame.isTopLayer) {
-            registry?.updateTransitionState(null, 0f)
+        val isTopLayer = direction.isFront
+        LaunchedEffect(registry, isTopLayer) {
+            if (isTopLayer) {
+                registry?.updateTransitionState(null, 0f)
+            }
         }
         val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
-        layerModifier = Modifier.miuixDefaultSlideLayer(
-            isTopLayer = frame.isTopLayer,
-            fraction = frame.fraction,
-            widthPx = widthPx,
-            cornerRadius = geometry.cornerRadius,
-            registry = registry,
-        )
-    } else {
-        val frame = resolveCardExpandFrame(direction = direction, factor = factor, isTopLayer = direction.isFront)
-        registry?.updateTransitionState(
-            illustId = anchor?.illustId ?: candidates.firstOrNull { it != null },
-            expansion = frame.expansion,
-            sourceBounds = activeSourceBounds,
-            containerBounds = geometry.bounds,
-            isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK,
-        )
-        layerModifier = if (frame.isTopLayer) {
-            Modifier.cardExpandLayer(
-                expansion = frame.expansion,
-                sourceBounds = activeSourceBounds,
-                cardCornerRadiusDp = activeCornerRadiusDp,
-                containerBounds = geometry.bounds,
-                containerCornerRadius = geometry.cornerRadius,
+        layerModifier = remember(isTopLayer, factorProvider, direction, widthPx, cornerShape, registry) {
+            Modifier.miuixDefaultSlideLayer(
+                isTopLayer = isTopLayer,
+                fractionProvider = { resolveMiuixDefaultSlideFrame(direction = direction, factor = factorProvider()).fraction },
+                widthPx = widthPx,
+                cornerShape = cornerShape,
+                registry = registry,
             )
-        } else {
-            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(frame.expansion))
+        }
+    } else {
+        val targetIllustId = anchor?.illustId ?: candidates.firstOrNull { it != null }
+        val isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK
+        LaunchedEffect(registry, targetIllustId, activeSourceBounds, direction, factorProvider, isExiting) {
+            if (registry == null) return@LaunchedEffect
+            snapshotFlow { factorProvider() }.collect { factor ->
+                val frame = resolveCardExpandFrame(
+                    direction = direction,
+                    factor = factor,
+                    isTopLayer = direction.isFront,
+                )
+                registry.updateTransitionState(
+                    illustId = targetIllustId,
+                    expansion = frame.expansion,
+                    sourceBounds = activeSourceBounds,
+                    containerBounds = containerGeometry().bounds,
+                    isExiting = isExiting,
+                )
+            }
+        }
+        val isTopLayer = direction.isFront
+        layerModifier = remember(isTopLayer, factorProvider, direction, activeSourceBounds, activeCornerRadiusDp, containerGeometry) {
+            if (isTopLayer) {
+                Modifier.cardExpandLayer(
+                    expansionProvider = {
+                        resolveCardExpandFrame(direction = direction, factor = factorProvider(), isTopLayer = true).expansion
+                    },
+                    sourceBounds = activeSourceBounds,
+                    cardCornerRadiusDp = activeCornerRadiusDp,
+                    containerBoundsProvider = { containerGeometry().bounds },
+                    containerCornerRadiusProvider = { containerGeometry().cornerRadius },
+                )
+            } else {
+                Modifier.cardExpandScrim(
+                    alphaProvider = {
+                        val frame = resolveCardExpandFrame(direction = direction, factor = factorProvider(), isTopLayer = false)
+                        cardExpandScrimAlpha(frame.expansion)
+                    },
+                )
+            }
         }
     }
     // content 必须保持单一调用点：content 内部承载 movableContent 包裹的页面内容，
@@ -140,6 +170,9 @@ internal fun cardExpandFrame(
 
 /**
  * 为顶层或底层页面应用 Miuix 默认全宽侧滑与视差遮罩图层，并同步底层列表视差位移状态。
+ *
+ * 始终挂载稳定的 `graphicsLayer`（与底层 `drawWithContent`）节点，稳态下仅执行恒等变换，
+ * 避免在转场起止帧动态增删节点触发页面子树重排与 Backdrop 离屏重录。
  */
 internal fun Modifier.miuixDefaultSlideLayer(
     isTopLayer: Boolean,
@@ -147,33 +180,55 @@ internal fun Modifier.miuixDefaultSlideLayer(
     widthPx: Float,
     cornerRadius: Dp,
     registry: SharedBoundsRegistry? = null,
-): Modifier {
-    val clampedFraction = fraction.coerceIn(0f, 1f)
-    if (!isTopLayer) {
-        registry?.updateSlideParallax(widthPx = widthPx, fraction = clampedFraction)
-    }
-    if (clampedFraction <= 0.001f) return this
-    return if (isTopLayer) {
-        this.graphicsLayer {
+): Modifier = miuixDefaultSlideLayer(
+    isTopLayer = isTopLayer,
+    fractionProvider = { fraction },
+    widthPx = widthPx,
+    cornerShape = if (cornerRadius > 0.dp) RoundedCornerShape(cornerRadius) else null,
+    registry = registry,
+)
+
+private fun Modifier.miuixDefaultSlideLayer(
+    isTopLayer: Boolean,
+    fractionProvider: () -> Float,
+    widthPx: Float,
+    cornerShape: RoundedCornerShape?,
+    registry: SharedBoundsRegistry? = null,
+): Modifier = if (isTopLayer) {
+    this.graphicsLayer {
+        val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+        if (clampedFraction <= 0.001f) {
+            translationX = 0f
+            clip = false
+        } else {
             translationX = widthPx * clampedFraction
-            if (cornerRadius > 0.dp && clampedFraction > 0f) {
-                shape = RoundedCornerShape(cornerRadius)
+            if (cornerShape != null) {
+                shape = cornerShape
                 clip = true
+            } else {
+                clip = false
             }
         }
-    } else {
-        val parallaxX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clampedFraction
-        this
-            .graphicsLayer {
-                translationX = parallaxX
+    }
+} else {
+    this
+        .graphicsLayer {
+            val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+            registry?.updateSlideParallax(widthPx = widthPx, fraction = clampedFraction)
+            if (clampedFraction <= 0.001f) {
+                translationX = 0f
+                alpha = 1f
+            } else {
+                translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clampedFraction
                 alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * clampedFraction
             }
-            .drawWithContent {
-                drawContent()
-                val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * clampedFraction
-                if (dimAlpha > 0.001f) {
-                    drawRect(Color.Black.copy(alpha = dimAlpha))
-                }
+        }
+        .drawWithContent {
+            drawContent()
+            val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+            val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * clampedFraction
+            if (dimAlpha > 0.001f) {
+                drawRect(Color.Black.copy(alpha = dimAlpha))
             }
-    }
+        }
 }
