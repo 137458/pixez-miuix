@@ -306,7 +306,7 @@ class UpdateDialogPlanTest {
 
     @Test
     fun `COUI 弹窗预览行数阈值折叠常规更新说明并在展开与收起间切换`() {
-        assertEquals(2, COUI_UPDATE_NOTES_PREVIEW_LINES)
+        assertEquals(6, COUI_UPDATE_NOTES_PREVIEW_LINES)
 
         val shortNotes = "- 修复下载\n- 优化弹窗"
         val shortCollapsed = updateDialogNotesState(
@@ -316,13 +316,13 @@ class UpdateDialogPlanTest {
         )
         assertEquals(0, shortCollapsed.hiddenLineCount)
 
-        val longNotes = (1..8).joinToString("\n") { "- 第 $it 条更新说明" }
+        val longNotes = (1..10).joinToString("\n") { "- 第 $it 条更新说明" }
         val longCollapsed = updateDialogNotesState(
             markdown = longNotes,
             expanded = false,
             previewLines = COUI_UPDATE_NOTES_PREVIEW_LINES,
         )
-        assertEquals(8 - COUI_UPDATE_NOTES_PREVIEW_LINES, longCollapsed.hiddenLineCount)
+        assertEquals(10 - COUI_UPDATE_NOTES_PREVIEW_LINES, longCollapsed.hiddenLineCount)
 
         val expanded = updateDialogNotesState(
             markdown = longNotes,
@@ -331,6 +331,33 @@ class UpdateDialogPlanTest {
         )
         assertEquals(0, expanded.hiddenLineCount)
         assertEquals(longNotes, expanded.visibleMarkdown)
+    }
+
+    @Test
+    fun `带空行与标题的发行说明折叠态必须展示正文条目且不留孤立尾标题`() {
+        val releaseNotes = """
+            # PixEz MIUIX v0.9.110.0-miuix
+
+            ## 新增
+
+            - 新增 ColorOS 界面皮肤
+            - 新增登录凭证失效提醒
+            - 新增剪贴板登录链接二次确认
+
+            ## 修复
+
+            - 修复列表刷新异常
+        """.trimIndent()
+
+        val collapsed = updateDialogNotesState(
+            markdown = releaseNotes,
+            expanded = false,
+            previewLines = COUI_UPDATE_NOTES_PREVIEW_LINES,
+        )
+        assertTrue(collapsed.visibleMarkdown.contains("- 新增 ColorOS 界面皮肤"))
+        assertTrue(collapsed.visibleMarkdown.contains("- 新增剪贴板登录链接二次确认"))
+        assertFalse(collapsed.visibleMarkdown.endsWith("## 修复"))
+        assertTrue(collapsed.hiddenLineCount > 0)
     }
 
     @Test

@@ -13,8 +13,8 @@ import com.perol.pixez.shared.ui.i18n.formatFileSize
 /** 弹窗折叠态只展示前 12 行，展开后整段说明放进弹窗自己的滚动区。 */
 internal const val UPDATE_NOTES_PREVIEW_LINES = 12
 
-/** COUI 弹窗折叠态只展示前 2 行，控制底栏弹出卡片初始高度。 */
-internal const val COUI_UPDATE_NOTES_PREVIEW_LINES = 2
+/** COUI 弹窗折叠态默认展示前 6 行有效内容，保证发行标题与首批更新条目立即可见。 */
+internal const val COUI_UPDATE_NOTES_PREVIEW_LINES = 6
 
 /** 更新页长正文的预览行数上限；超出后折叠并提供「展开」。 */
 internal const val UPDATE_PAGE_PREVIEW_LINES = 16
@@ -130,14 +130,23 @@ internal fun updateDialogNotesState(
 }
 
 /**
- * 取前 [limit] 行的安全版本。
+ * 取前 [limit] 条非空行的安全版本。
  *
- * 1) 截断点落在未闭合的 ``` 围栏内：延伸到闭合围栏；没有闭合围栏则回退到开围栏之前。
- * 2) 截断后仍存在未闭合的 `[`（半截链接）：逐行回退到上一个安全行。
+ * 1) 空行不计入预览行数配额，避免 `# 标题` 与 `## 分组` 之间的空行挤掉正文条目。
+ * 2) 截断点落在未闭合的 ``` 围栏内：延伸到闭合围栏；没有闭合围栏则回退到开围栏之前。
+ * 3) 截断后仍存在未闭合的 `[`（半截链接）：逐行回退到上一个安全行。
+ * 4) 截断末尾若悬空孤立标题（如 `## 修复` 后没有任何条目），一并回退到上一条正文。
  */
 internal fun safeMarkdownPreviewLines(lines: List<String>, limit: Int): List<String> {
     if (lines.isEmpty()) return emptyList()
-    var end = limit.coerceIn(1, lines.size)
+    val targetNonBlank = limit.coerceAtLeast(1)
+    var end = 0
+    var nonBlankCount = 0
+    while (end < lines.size && nonBlankCount < targetNonBlank) {
+        if (lines[end].isNotBlank()) nonBlankCount++
+        end++
+    }
+    end = end.coerceIn(1, lines.size)
 
     var insideFence = false
     var fenceStart = 0
@@ -163,7 +172,25 @@ internal fun safeMarkdownPreviewLines(lines: List<String>, limit: Int): List<Str
     while (end > 0 && lines[end - 1].isBlank()) {
         end--
     }
+
+    if (end < lines.size) {
+        var trimmedEnd = end
+        while (trimmedEnd > 1 && (lines[trimmedEnd - 1].isBlank() || isMarkdownHeadingLine(lines[trimmedEnd - 1]))) {
+            trimmedEnd--
+        }
+        if (trimmedEnd > 0 && !isMarkdownHeadingLine(lines[trimmedEnd - 1])) {
+            end = trimmedEnd
+        }
+    }
     return lines.take(end)
+}
+
+private fun isMarkdownHeadingLine(line: String): Boolean {
+    val trimmed = line.trimStart()
+    return trimmed.startsWith("# ") ||
+        trimmed.startsWith("## ") ||
+        trimmed.startsWith("### ") ||
+        trimmed.startsWith("#### ")
 }
 
 /** 粗判链接是否完整：未闭合的 `[` 或 `](` 后缺少 `)` 都说明截断切在了链接中间。 */
