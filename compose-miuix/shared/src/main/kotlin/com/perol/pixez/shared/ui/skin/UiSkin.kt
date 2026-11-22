@@ -30,6 +30,18 @@ enum class UiSkin(val storageIndex: Int) {
     COLOROS(1),
     ;
 
+    /**
+     * 默认侧滑转场中底层页是否做视差位移（见 [com.perol.pixez.shared.ui.navigation.animation.miuixSeekableStackAnimation]）。
+     *
+     * 两套系统的侧滑语义不同：MIUIX 是「撑开」，底层页随进度左移 25% 并轻微淡出；
+     * ColorOS 是「覆盖」，底层页原地不动、只叠暗色遮罩。
+     *
+     * COUI 皮肤下底层页常驻窗口级 Backdrop 采样源与瀑布流大图，整页位移会迫使每帧把整页
+     * 重新合成进离屏层：实测「作品列表 -> 一级设置页」稳态帧时长 30ms（关掉后 20ms）、
+     * 首帧 145ms（关掉后 100ms），位移幅度降到 8% 无改善，故按语义差异直接关闭。
+     */
+    val coverParallax: Boolean get() = this == HYPEROS
+
     companion object {
         fun fromIndex(index: Int): UiSkin = entries.firstOrNull { it.storageIndex == index } ?: HYPEROS
     }

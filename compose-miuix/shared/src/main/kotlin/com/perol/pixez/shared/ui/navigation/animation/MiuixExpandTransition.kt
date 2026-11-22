@@ -85,6 +85,7 @@ internal fun cardExpandFrame(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
+    coverParallax: Boolean = true,
 ): MiuixTransitionFrame = { factorProvider, direction, content ->
     val containerBounds = containerGeometry().bounds
     val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
@@ -110,13 +111,15 @@ internal fun cardExpandFrame(
             }
         }
         val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
-        layerModifier = remember(isTopLayer, factorProvider, direction, widthPx, cornerShape, registry) {
+        val parallaxFraction = if (coverParallax) MIUIX_DEFAULT_COVER_PARALLAX_FRACTION else 0f
+        layerModifier = remember(isTopLayer, factorProvider, direction, widthPx, cornerShape, registry, parallaxFraction) {
             Modifier.miuixDefaultSlideLayer(
                 isTopLayer = isTopLayer,
                 fractionProvider = { resolveMiuixDefaultSlideFrame(direction = direction, factor = factorProvider()).fraction },
                 widthPx = widthPx,
                 cornerShape = cornerShape,
                 registry = registry,
+                parallaxFraction = parallaxFraction,
             )
         }
     } else {
@@ -173,6 +176,9 @@ internal fun cardExpandFrame(
  *
  * 始终挂载稳定的 `graphicsLayer`（与底层 `drawWithContent`）节点，稳态下仅执行恒等变换，
  * 避免在转场起止帧动态增删节点触发页面子树重排与 Backdrop 离屏重录。
+ *
+ * [parallaxFraction] 为底层页位移比例，0 表示覆盖语义（底层页静止、仅叠暗色遮罩）。
+ * 比例必须与 [SharedBoundsRegistry.updateSlideParallax] 收到的值一致，否则收回终点会偏移。
  */
 internal fun Modifier.miuixDefaultSlideLayer(
     isTopLayer: Boolean,
@@ -180,12 +186,14 @@ internal fun Modifier.miuixDefaultSlideLayer(
     widthPx: Float,
     cornerRadius: Dp,
     registry: SharedBoundsRegistry? = null,
+    parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
 ): Modifier = miuixDefaultSlideLayer(
     isTopLayer = isTopLayer,
     fractionProvider = { fraction },
     widthPx = widthPx,
     cornerShape = if (cornerRadius > 0.dp) RoundedCornerShape(cornerRadius) else null,
     registry = registry,
+    parallaxFraction = parallaxFraction,
 )
 
 private fun Modifier.miuixDefaultSlideLayer(
@@ -194,6 +202,7 @@ private fun Modifier.miuixDefaultSlideLayer(
     widthPx: Float,
     cornerShape: RoundedCornerShape?,
     registry: SharedBoundsRegistry? = null,
+    parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
 ): Modifier = if (isTopLayer) {
     this.graphicsLayer {
         val clampedFraction = fractionProvider().coerceIn(0f, 1f)
@@ -214,12 +223,16 @@ private fun Modifier.miuixDefaultSlideLayer(
     this
         .graphicsLayer {
             val clampedFraction = fractionProvider().coerceIn(0f, 1f)
-            registry?.updateSlideParallax(widthPx = widthPx, fraction = clampedFraction)
+            registry?.updateSlideParallax(
+                widthPx = widthPx,
+                fraction = clampedFraction,
+                parallaxFraction = parallaxFraction,
+            )
             if (clampedFraction <= 0.001f) {
                 translationX = 0f
                 alpha = 1f
             } else {
-                translationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clampedFraction
+                translationX = -widthPx * parallaxFraction * clampedFraction
                 alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * clampedFraction
             }
         }

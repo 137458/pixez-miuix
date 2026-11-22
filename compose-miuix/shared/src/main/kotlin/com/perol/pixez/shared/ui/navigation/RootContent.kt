@@ -307,10 +307,14 @@ fun RootContent(
                     // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
                     // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
                     // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
-                    val stackAnimation = remember(sharedBounds) {
+                    // 底层页视差按皮肤语义决定：MIUIX 是「撑开」（底层左移 25%），ColorOS 是「覆盖」
+                    // （底层静止、只叠暗色遮罩）。COUI 皮肤下底层页挂着窗口级 Backdrop 采样源与瀑布流
+                    // 大图，整页位移会让每帧把整页重新合成，稳态帧时长 30ms -> 20ms 的差距即来自此。
+                    val stackAnimation = remember(sharedBounds, uiSkin) {
                         miuixSeekableStackAnimation<Config, Any>(
                             registry = sharedBounds,
                             containerGeometry = { containerGeometry },
+                            coverParallax = uiSkin.coverParallax,
                         )
                     }
 
@@ -340,6 +344,7 @@ fun RootContent(
                                         registry = sharedBounds,
                                         illustId = (exitChild.configuration as? Config.IllustDetail)?.illustId,
                                         containerGeometry = { containerGeometry },
+                                        coverParallax = uiSkin.coverParallax,
                                     )
                                 },
                                 onBack = { component.onBack() },

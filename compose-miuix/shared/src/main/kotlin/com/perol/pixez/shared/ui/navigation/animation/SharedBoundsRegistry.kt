@@ -268,13 +268,20 @@ class SharedBoundsRegistry {
 
     /**
      * 按 Miuix 默认侧滑进度更新底层页面的视差位移；当进度处于起点（<= 0.001f）或终点（>= 0.999f）时自动归零。
+     *
+     * [parallaxFraction] 为 0 表示当前皮肤采用覆盖语义、底层页静止（ColorOS），此时不登记位移，
+     * 卡片坐标也就无需逆变换。默认值与底层页图层实际使用的位移比例必须一致，否则收回终点会偏移。
      */
-    fun updateSlideParallax(widthPx: Float, fraction: Float) {
+    fun updateSlideParallax(
+        widthPx: Float,
+        fraction: Float,
+        parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
+    ) {
         val clamped = fraction.coerceIn(0f, 1f)
-        if (widthPx <= 0f || clamped <= 0.001f || clamped >= 0.999f) {
+        if (widthPx <= 0f || parallaxFraction <= 0f || clamped <= 0.001f || clamped >= 0.999f) {
             listTranslationX = 0f
         } else {
-            listTranslationX = -widthPx * MIUIX_DEFAULT_COVER_PARALLAX_FRACTION * clamped
+            listTranslationX = -widthPx * parallaxFraction * clamped
         }
     }
 

@@ -33,12 +33,14 @@ val HyperOSDecelerateEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
  *
  * @param registry 卡片几何信息源，由 [LocalSharedBoundsRegistry] 提供。
  * @param containerGeometry 页面容器几何的即时读取源。
+ * @param coverParallax 底层页是否做视差位移；ColorOS 转场为覆盖语义，传 false 关闭。
  * @return 可直接交给 Children(animation = ...) 使用的 [StackAnimation]。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun <C : Any, T : Any> miuixSeekableStackAnimation(
     registry: SharedBoundsRegistry,
     containerGeometry: () -> PageContainerGeometry,
+    coverParallax: Boolean = true,
 ): StackAnimation<C, T> =
     SeekableStackAnimation { child ->
         // 路由参数只在 configuration 上（中-6b 起详情页 child 实例为子组件，不承载作品 ID）。
@@ -47,6 +49,7 @@ fun <C : Any, T : Any> miuixSeekableStackAnimation(
             rawIllustId = rawIllustId,
             containerGeometry = containerGeometry,
             registry = registry,
+            coverParallax = coverParallax,
         )
     }
 
@@ -66,6 +69,7 @@ fun <C : Any, T : Any> miuixSeekableStackAnimation(
  * @param registry 卡片几何信息源，用于取出手势来源页对应的卡片矩形。
  * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
  * @param containerGeometry 页面容器几何的即时读取源，用于归一化卡片几何与回退平移方案。
+ * @param coverParallax 回退侧滑时底层页是否做视差位移（ColorOS 覆盖语义传 false）。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixCardExpandPredictiveBackAnimatable(
@@ -73,6 +77,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
     registry: SharedBoundsRegistry,
     illustId: Long?,
     containerGeometry: () -> PageContainerGeometry,
+    coverParallax: Boolean = true,
 ): PredictiveBackAnimatable {
     val geometry = containerGeometry()
     val anchor = registry.resolveAnchor(
@@ -85,6 +90,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
             containerGeometry = containerGeometry,
             registry = registry,
+            coverParallax = coverParallax,
         )
     }
     val sourceCard = anchor.card
@@ -126,18 +132,21 @@ fun miuixCardExpandPredictiveBackAnimatable(
  *
  * 1. **顶层页面全行程平移**：随手势从 0 平移至容器宽度（100% 屏幕宽度滑出），
  *    滑动中贴合设备屏幕物理圆角裁切，无边框阴影。
- * 2. **被露出页面 25% 视差与轻微淡出**：从 -25% 屏幕宽度与 alpha 0.9 随手势还原至 0 与 1.0。
+ * 2. **被露出页面 25% 视差与轻微淡出**：从 -25% 屏幕宽度与 alpha 0.9 随手势还原至 0 与 1.0；
+ *    覆盖语义（ColorOS）下底层页静止，只保留淡出与暗色遮罩。
  * 3. **线性暗色遮罩**：被露出页面随覆盖进度叠加最深 0.5 的遮罩，手势结束完全消退。
  *
  * @param initialBackEvent 手势起始事件。
  * @param containerGeometry 页面容器几何的即时读取源，提供全行程位移宽度与设备圆角。
  * @param registry 卡片几何信息源，用于同步底层列表视差位移。
+ * @param coverParallax 底层页是否做视差位移；为 false 时位移恒为 0（覆盖语义）。
  */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixSlidePredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
+    coverParallax: Boolean = true,
 ): PredictiveBackAnimatable {
     return MiuixSmoothedPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
@@ -160,6 +169,7 @@ fun miuixSlidePredictiveBackAnimatable(
                 widthPx = geometry.widthPx,
                 cornerRadius = geometry.cornerRadius,
                 registry = registry,
+                parallaxFraction = if (coverParallax) MIUIX_DEFAULT_COVER_PARALLAX_FRACTION else 0f,
             )
         },
     )
