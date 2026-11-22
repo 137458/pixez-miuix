@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.components.SquircleShape
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.perol.pixez.shared.R
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -190,7 +191,6 @@ private fun GuideLanguageStep(
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
             contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
                 Column(
@@ -289,32 +289,18 @@ private fun GuideNetworkStep(
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
             contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // 步标题由顶栏承载，正文只保留一行居中说明，避免标题在两处重复出现。
             item {
-                Column(
+                Text(
+                    text = strings.guideStepNetworkDesc,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = strings.guideStepNetwork,
-                        style = MiuixTheme.textStyles.headline1,
-                        fontWeight = FontWeight.Bold,
-                        color = MiuixTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = strings.guideStepNetworkDesc,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                )
             }
 
             // 分组标题取自设置页既有词条，避免与页标题重复。
@@ -434,32 +420,18 @@ private fun GuideWelcomeStep(
                 .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
             contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // 步标题由顶栏承载，正文只保留一行居中说明，避免标题在两处重复出现。
             item {
-                Column(
+                Text(
+                    text = strings.guideStepWelcomeDesc,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = strings.guideStepWelcome,
-                        style = MiuixTheme.textStyles.headline1,
-                        fontWeight = FontWeight.Bold,
-                        color = MiuixTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = strings.guideStepWelcomeDesc,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                )
             }
 
             // 核心特性高光卡片
@@ -566,9 +538,10 @@ private fun GuideWelcomeStep(
 }
 
 /**
- * 底部向导导航栏：单行三槽布局（左跳过 / 中胶囊步骤指示器 / 右主操作）。
+ * 底部向导导航栏：上行居中的胶囊步骤指示器，下行「左跳过 / 右主操作」。
  *
- * 左右两槽等权重占位，使中间指示器在任意文案宽度下保持绝对居中；末步不显示跳过入口，左槽留空而非固定宽度占位。
+ * 跳过文案在中文与拉丁语系下均较长（「稍后登录，直接体验」/ "Skip login and explore"），
+ * 与主操作同处一行等宽三槽时必然折行，故拆为两行：动作行让跳过独占剩余宽度，主操作始终贴右。
  */
 @Composable
 private fun GuideBottomBar(
@@ -579,21 +552,13 @@ private fun GuideBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            if (currentStep < totalSteps - 1) {
-                TextButton(
-                    text = strings.guideSkipLogin,
-                    onClick = onSkip,
-                )
-            }
-        }
-
         // 平滑伸缩胶囊指示器
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -615,17 +580,32 @@ private fun GuideBottomBar(
                         .width(indicatorWidth)
                         .clip(RoundedCornerShape(4.dp))
                         .background(
+                            // 未选中段用主色的低透明度，保证在 surface 与卡片底色上都可见。
                             if (isActive) MiuixTheme.colorScheme.primary
-                            else MiuixTheme.colorScheme.surfaceContainerHighest
+                            else MiuixTheme.colorScheme.primary.copy(alpha = 0.24f)
                         ),
                 )
             }
         }
 
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterEnd,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (currentStep < totalSteps - 1) {
+                TextButton(
+                    text = strings.guideSkipLogin,
+                    onClick = onSkip,
+                    minWidth = 0.dp,
+                    insideMargin = PaddingValues(horizontal = 10.dp),
+                    // 次要动作用纯文字，避免与大按钮并排成两颗胶囊而争夺视觉焦点。
+                    colors = ButtonDefaults.textButtonColors(
+                        color = Color.Transparent,
+                        textColor = MiuixTheme.colorScheme.primary,
+                    ),
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
             Button(
                 colors = ButtonDefaults.buttonColorsPrimary(),
                 onClick = onNext,

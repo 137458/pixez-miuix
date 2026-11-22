@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -270,11 +271,8 @@ private fun CouiGuideNetworkStep(
         contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
-        item(key = "coui_guide_network_title") {
-            CouiGuideStepHeader(
-                title = strings.guideStepNetwork,
-                description = strings.guideStepNetworkDesc,
-            )
+        item(key = "coui_guide_network_desc") {
+            CouiGuideStepDescription(description = strings.guideStepNetworkDesc)
         }
 
         item(key = "coui_guide_image_source") {
@@ -372,11 +370,8 @@ private fun CouiGuideWelcomeStep(
         contentPadding = contentPadding,
         overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
-        item(key = "coui_guide_welcome_title") {
-            CouiGuideStepHeader(
-                title = strings.guideStepWelcome,
-                description = strings.guideStepWelcomeDesc,
-            )
+        item(key = "coui_guide_welcome_desc") {
+            CouiGuideStepDescription(description = strings.guideStepWelcomeDesc)
         }
 
         item(key = "coui_guide_features") {
@@ -456,33 +451,21 @@ private fun CouiGuideWelcomeStep(
     }
 }
 
-/** 步骤标题与说明：三步共用同一套居中版式。 */
+/**
+ * 步骤说明：步标题由顶栏承载，正文只留一行居中说明，避免标题在两处重复出现。
+ */
 @Composable
-private fun CouiGuideStepHeader(
-    title: String,
-    description: String,
-) {
+private fun CouiGuideStepDescription(description: String) {
     val scheme = CouiTheme.colorScheme
-    Column(
+    Text(
+        text = description,
+        kind = CouiTextKind.ItemSummary,
+        color = scheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = title,
-            kind = CouiTextKind.GroupTitle,
-            color = scheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = description,
-            kind = CouiTextKind.ItemSummary,
-            color = scheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 6.dp, start = 12.dp, end = 12.dp),
-        )
-    }
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    )
 }
 
 /** 特性行：标题 + 说明，版式对齐官方 Item 的行内边距。 */
@@ -503,9 +486,10 @@ private fun CouiGuideFeatureRow(
 }
 
 /**
- * 底部步骤导航：单行三槽，左右两槽等宽占位，中间胶囊指示器因此绝对居中。
+ * 底部步骤导航：上行居中的胶囊指示器，下行「左跳过 / 右主操作」。
  *
- * 左槽跳过（末步留空）、右槽主操作；返回上一页只走顶栏返回箭头，底栏不再提供"上一步"。
+ * 跳过文案在中文与拉丁语系下均较长，与主操作同处一行等宽三槽时必然折行，故拆为两行；
+ * 返回上一页只走顶栏返回箭头，底栏不提供"上一步"。
  */
 @Composable
 private fun CouiGuideBottomBar(
@@ -517,31 +501,31 @@ private fun CouiGuideBottomBar(
 ) {
     val strings = LocalStrings.current
     val isLastStep = currentStep == totalSteps - 1
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(modifier = Modifier.weight(1f)) {
-            if (!isLastStep) {
-                CouiTextButton(
-                    text = strings.guideSkipLogin,
-                    onClick = onSkip,
-                    filled = false,
-                )
-            }
-        }
-
         CouiGuideStepIndicator(
             currentStep = currentStep,
             totalSteps = totalSteps,
         )
 
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterEnd,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (!isLastStep) {
+                CouiTextButton(
+                    text = strings.guideSkipLogin,
+                    onClick = onSkip,
+                    filled = false,
+                    horizontalPadding = 10.dp,
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
             CouiTextButton(
                 text = if (isLastStep) strings.guideFinish else strings.guideNext,
                 onClick = onNext,
@@ -576,7 +560,8 @@ private fun CouiGuideStepIndicator(
                     .height(8.dp)
                     .width(indicatorWidth)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(if (isActive) scheme.accent else scheme.container),
+                    // 未选中段用强调色的低透明度，保证在容器底色与页面底色上都可见。
+                    .background(if (isActive) scheme.accent else scheme.accent.copy(alpha = 0.24f)),
             )
         }
     }
