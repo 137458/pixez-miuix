@@ -12,7 +12,7 @@ Aplikasi menjangkau Pixiv dari Tiongkok Daratan tanpa proxy. Resolusi nama domai
 | :--- | :--- |
 | Android | [`PixEz-MIUIX-v*.apk`](https://github.com/137458/pixez-miuix/releases) |
 
-Rilis saat ini: `0.9.109.7-miuix`. Membutuhkan Android 12 (API 31) atau lebih baru untuk ponsel dan tablet.
+Rilis saat ini: `0.9.110.0-miuix`. Membutuhkan Android 12 (API 31) atau lebih baru untuk ponsel dan tablet.
 
 ## Pratinjau
 

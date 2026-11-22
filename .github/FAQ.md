@@ -28,7 +28,7 @@
 ## 一、项目声明与版本说明
 
 - **PixEz MIUIX**：基于 Kotlin 与 Jetpack Compose 构建的 Android 客户端，支持 HyperOS（MIUIX）与 ColorOS（COUI）双皮肤。
-- **版本标识**：当前版本名为 `0.9.109.7-miuix`，与 `compose-miuix/composeApp/build.gradle.kts` 中的 `versionName` 一致。
+- **版本标识**：当前版本名为 `0.9.110.0-miuix`，与 `compose-miuix/composeApp/build.gradle.kts` 中的 `versionName` 一致。
 - **关于本 FAQ**：本指南面向 PixEz MIUIX 版本的功能、设置项与常见问题。
 - **免责声明与版权提示**：
   - 本项目由个人及开源社区出于学习研究与技术交流目的开发，与 pixiv Inc. 无关联或商业合作。

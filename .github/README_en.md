@@ -79,7 +79,7 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 
 ## Download & Installation
 
-Download the latest Android APK from [GitHub Releases](https://github.com/137458/pixez-miuix/releases). The current release is `0.9.109.7-miuix`.
+Download the latest Android APK from [GitHub Releases](https://github.com/137458/pixez-miuix/releases). The current release is `0.9.110.0-miuix`.
 
 ### Android
 
