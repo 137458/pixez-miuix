@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +44,7 @@ import com.itos.coui.scroll.rememberCouiOverscrollEffect
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
+import com.perol.pixez.shared.R
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -52,9 +52,9 @@ import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.coui.core.CouiCompactScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
 import com.perol.pixez.shared.ui.coui.core.CouiItemTitle
-import com.perol.pixez.shared.ui.coui.core.CouiMainScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiRadioOptionRow
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
@@ -62,8 +62,6 @@ import com.perol.pixez.shared.ui.coui.core.CouiTextButton
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
-import androidx.compose.ui.res.painterResource
-import com.perol.pixez.shared.R
 
 /** 引导页分步切换的转场时长（毫秒）。 */
 private const val COUI_GUIDE_PAGE_TRANSITION_MILLIS = 300
@@ -75,9 +73,14 @@ private const val COUI_GUIDE_STEP_COUNT = 3
  * COUI 首次启动引导页：库骨架 + 三步内容 + 底部步骤导航。
  *
  * 三步的写入项（语言、图源、网络模式、完成标记）与 MIUIX 版完全一致；
- * 第三步保留账号状态检测、登录入口、游客模式与开始旅程。
- * 页面只保留 [CouiMainScaffold] 一个容器：顶栏由骨架提供，底部步骤导航与正文同处骨架正文，
+ * 第三屏保留账号状态检测、登录入口与游客模式。
+ * 页面只保留一个库 Scaffold 容器：顶栏由骨架提供，底部步骤导航与正文同处骨架正文，
  * 各步列表的顶部留白来自骨架下发的 padding，滚动时内容会进入顶栏覆盖区。
+ *
+ * 骨架选 [CouiCompactScaffold] 而非二级页骨架：core 里只有它的 onBack 可空
+ * （`CouiSecondaryScaffold` 的 onBack 非空，`CouiMainScaffold` 固定无返回），
+ * 才能做到"第一步不显示返回箭头"。同时它让 AnimatedContent 始终挂在同一个调用点上，
+ * 0↔1 步切换不会因为骨架换型而重建子树、丢掉过场动画。
  */
 @Composable
 internal fun CouiGuideScreen(
@@ -94,20 +97,16 @@ internal fun CouiGuideScreen(
         onFinish()
     }
 
-    CouiMainScaffold(
-        title = when (currentStep) {
-            0 -> "1. ${strings.guideStepLanguage}"
-            1 -> "2. ${strings.guideStepNetwork}"
-            else -> "3. ${strings.guideStepWelcome}"
-        },
-        actions = {
-            CouiTextButton(
-                text = strings.guideSkipLogin,
-                onClick = finishGuide,
-                modifier = Modifier.padding(end = 12.dp),
-                filled = false,
-            )
-        },
+    val stepTitle = when (currentStep) {
+        0 -> strings.guideStepLanguage
+        1 -> strings.guideStepNetwork
+        else -> strings.guideStepWelcome
+    }
+
+    CouiCompactScaffold(
+        title = stepTitle,
+        // 第一步没有上一页：onBack 传 null，库骨架据此不渲染返回箭头。
+        onBack = if (currentStep > 0) ({ currentStep-- }) else null,
     ) { padding ->
         val stepPadding = PaddingValues(
             top = padding.calculateTopPadding() + 4.dp,
@@ -125,21 +124,15 @@ internal fun CouiGuideScreen(
                 AnimatedContent(
                     targetState = currentStep,
                     transitionSpec = {
-                        if (targetState > initialState) {
-                            (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
-                                fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
-                                .togetherWith(
-                                    slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
-                                        fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
-                                )
-                        } else {
-                            (slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } +
-                                fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)))
-                                .togetherWith(
-                                    slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } +
-                                        fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)),
-                                )
-                        }
+                        // 前进向左滑入、旧页向左滑出；后退反向，方向按步号大小自适应。
+                        val direction = if (targetState > initialState) 1 else -1
+                        val enter = slideInHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width ->
+                            width * direction
+                        } + fadeIn(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS))
+                        val exit = slideOutHorizontally(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS)) { width ->
+                            -width * direction
+                        } + fadeOut(tween(COUI_GUIDE_PAGE_TRANSITION_MILLIS))
+                        enter.togetherWith(exit)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,7 +161,7 @@ internal fun CouiGuideScreen(
                 CouiGuideBottomBar(
                     currentStep = currentStep,
                     totalSteps = COUI_GUIDE_STEP_COUNT,
-                    onPrevious = { if (currentStep > 0) currentStep-- },
+                    onSkip = finishGuide,
                     onNext = {
                         if (currentStep < COUI_GUIDE_STEP_COUNT - 1) {
                             currentStep++
@@ -183,7 +176,7 @@ internal fun CouiGuideScreen(
     }
 }
 
-/** 第一步：欢迎语与界面语言。 */
+/** 第一步：欢迎 hero 与界面语言。 */
 @Composable
 private fun CouiGuideLanguageStep(
     settingsRepository: SettingsRepository,
@@ -210,7 +203,7 @@ private fun CouiGuideLanguageStep(
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(scheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -222,16 +215,17 @@ private fun CouiGuideLanguageStep(
                 }
                 Text(
                     text = strings.guideHeroWelcome,
-                    kind = CouiTextKind.GroupTitle,
+                    kind = CouiTextKind.TopBar,
                     color = scheme.onSurface,
-                    modifier = Modifier.padding(top = 14.dp),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 14.dp, start = 20.dp, end = 20.dp),
                 )
                 Text(
                     text = strings.guideHeroWelcomeSub,
                     kind = CouiTextKind.ItemSummary,
                     color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp, start = 12.dp, end = 12.dp),
+                    modifier = Modifier.padding(top = 6.dp, start = 20.dp, end = 20.dp),
                 )
             }
         }
@@ -284,7 +278,7 @@ private fun CouiGuideNetworkStep(
         }
 
         item(key = "coui_guide_image_source") {
-            CouiSettingsGroup(title = strings.guideImageSource) {
+            CouiSettingsGroup(title = strings.pictureSource) {
                 CouiRadioOptionRow(
                     title = strings.guideImageMirror,
                     summary = "${strings.guideImageMirrorDesc} • ${strings.guideMirrorRecommendDirect}",
@@ -308,7 +302,7 @@ private fun CouiGuideNetworkStep(
         }
 
         item(key = "coui_guide_network_mode") {
-            CouiSettingsGroup(title = strings.guideStepNetwork) {
+            CouiSettingsGroup(title = strings.apiNetworkMode) {
                 CouiRadioOptionRow(
                     title = strings.guideNetworkDirect,
                     summary = strings.guideNetworkDirectDesc,
@@ -349,7 +343,7 @@ private fun CouiGuideNetworkStep(
     }
 }
 
-/** 第三步：特性说明、账号状态与完成入口。 */
+/** 第三步：特性说明与账号状态。 */
 @Composable
 private fun CouiGuideWelcomeStep(
     accountRepository: AccountRepository,
@@ -459,21 +453,10 @@ private fun CouiGuideWelcomeStep(
                 }
             }
         }
-
-        item(key = "coui_guide_start") {
-            CouiTextButton(
-                text = strings.guideStartJourney,
-                onClick = onFinish,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .heightIn(min = 44.dp),
-            )
-        }
     }
 }
 
-/** 步骤标题与说明。 */
+/** 步骤标题与说明：三步共用同一套居中版式。 */
 @Composable
 private fun CouiGuideStepHeader(
     title: String,
@@ -490,6 +473,7 @@ private fun CouiGuideStepHeader(
             text = title,
             kind = CouiTextKind.GroupTitle,
             color = scheme.onSurface,
+            textAlign = TextAlign.Center,
         )
         Text(
             text = description,
@@ -518,61 +502,82 @@ private fun CouiGuideFeatureRow(
     }
 }
 
-/** 底部步骤导航：伸缩胶囊指示器 + 上一步/下一步/完成。 */
+/**
+ * 底部步骤导航：单行三槽，左右两槽等宽占位，中间胶囊指示器因此绝对居中。
+ *
+ * 左槽跳过（末步留空）、右槽主操作；返回上一页只走顶栏返回箭头，底栏不再提供"上一步"。
+ */
 @Composable
 private fun CouiGuideBottomBar(
     currentStep: Int,
     totalSteps: Int,
-    onPrevious: () -> Unit,
+    onSkip: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val strings = LocalStrings.current
-    val scheme = CouiTheme.colorScheme
+    val isLastStep = currentStep == totalSteps - 1
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (currentStep > 0) {
-            CouiTextButton(
-                text = strings.guidePrev,
-                onClick = onPrevious,
-                filled = false,
-            )
-        } else {
-            Spacer(modifier = Modifier.width(64.dp))
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(totalSteps) { step ->
-                val isActive = step == currentStep
-                val indicatorWidth by animateDpAsState(
-                    targetValue = if (isActive) 24.dp else 8.dp,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow,
-                    ),
-                )
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .width(indicatorWidth)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (isActive) scheme.accent else scheme.container),
+        Box(modifier = Modifier.weight(1f)) {
+            if (!isLastStep) {
+                CouiTextButton(
+                    text = strings.guideSkipLogin,
+                    onClick = onSkip,
+                    filled = false,
                 )
             }
         }
 
-        CouiTextButton(
-            text = if (currentStep == totalSteps - 1) strings.guideFinish else strings.guideNext,
-            onClick = onNext,
-            filled = false,
+        CouiGuideStepIndicator(
+            currentStep = currentStep,
+            totalSteps = totalSteps,
         )
+
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            CouiTextButton(
+                text = if (isLastStep) strings.guideFinish else strings.guideNext,
+                onClick = onNext,
+                filled = true,
+            )
+        }
+    }
+}
+
+/** 胶囊步骤指示器：当前页拉长，切步时走弹簧动画。 */
+@Composable
+private fun CouiGuideStepIndicator(
+    currentStep: Int,
+    totalSteps: Int,
+) {
+    val scheme = CouiTheme.colorScheme
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(totalSteps) { step ->
+            val isActive = step == currentStep
+            val indicatorWidth by animateDpAsState(
+                targetValue = if (isActive) 24.dp else 8.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow,
+                ),
+            )
+            Box(
+                modifier = Modifier
+                    .height(8.dp)
+                    .width(indicatorWidth)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (isActive) scheme.accent else scheme.container),
+            )
+        }
     }
 }

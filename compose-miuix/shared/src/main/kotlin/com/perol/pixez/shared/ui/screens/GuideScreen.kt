@@ -53,6 +53,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.LocalAccountRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.components.SquircleShape
 import com.perol.pixez.shared.ui.i18n.LANGUAGE_OPTIONS
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -71,11 +72,19 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 /** 引导页分步切换的转场时长（毫秒），四段位移动画与两段淡入淡出共用。 */
 private const val GUIDE_PAGE_TRANSITION_MILLIS = 300
 
+/** 引导页固定三步：语言 → 网络 → 完成/账号。顶栏标题、胶囊指示器与末步判定共用该常量。 */
+private const val GUIDE_TOTAL_STEPS = 3
+
+/** Hero 品牌图标底座的超椭圆圆角，按 72dp 图标尺度对齐 MIUIX 视觉比例。 */
+private val GUIDE_HERO_LOGO_CORNER_RADIUS = 22.dp
+
 /**
- * 首次启动引导向导页（Onboarding Guide）：
- * Step 1: 语言与界面偏好（品牌 Hero 欢迎区、即时语言切换、贡献者感谢）
- * Step 2: 网络模式与加速源配置（镜像源直连免翻推荐、SNI 绕过与代理提示）
- * Step 3: 账号与开启旅程（特性高光卡片、登录状态同步、游客体验模式）
+ * 首次启动引导向导页（Onboarding Guide），三步固定信息架构：
+ * 语言与界面偏好（品牌 Hero 欢迎区、即时语言切换）
+ * 网络模式与加速源配置（镜像源直连免翻推荐、SNI 绕过与代理提示）
+ * 完成与账号（特性高光卡片、登录状态同步、游客体验模式）
+ *
+ * 返回能力只保留顶栏一处（step > 0 时出现），底栏为单行三槽：左跳过、中步骤指示器、右主操作。
  */
 @Composable
 fun GuideScreen(
@@ -99,27 +108,21 @@ fun GuideScreen(
     BlurTopBarScaffold(
         modifier = modifier.fillMaxSize(),
         title = when (currentStep) {
-            0 -> "1. ${strings.guideStepLanguage}"
-            1 -> "2. ${strings.guideStepNetwork}"
-            else -> "3. ${strings.guideStepWelcome}"
+            0 -> strings.guideStepLanguage
+            1 -> strings.guideStepNetwork
+            else -> strings.guideStepWelcome
         },
         backdrop = backdrop,
         // 引导页内容为分步 AnimatedContent 中的 LazyColumn，未接 nestedScroll，故传 null 关闭滚动联动。
         scrollBehavior = null,
         onBack = if (currentStep > 0) ({ currentStep-- }) else null,
-        actions = {
-            TextButton(
-                text = strings.guideSkipLogin,
-                onClick = finishGuide,
-            )
-        },
         bottomBar = {
             GuideBottomBar(
                 currentStep = currentStep,
-                totalSteps = 3,
-                onPrevious = { if (currentStep > 0) currentStep-- },
+                totalSteps = GUIDE_TOTAL_STEPS,
+                onSkip = finishGuide,
                 onNext = {
-                    if (currentStep < 2) {
+                    if (currentStep < GUIDE_TOTAL_STEPS - 1) {
                         currentStep++
                     } else {
                         finishGuide()
@@ -137,6 +140,7 @@ fun GuideScreen(
             AnimatedContent(
                 targetState = currentStep,
                 transitionSpec = {
+                    // 前进向左推、后退向右推；步骤号为 Int，可直接比较确定方向。
                     if (targetState > initialState) {
                         (slideInHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> width } + fadeIn(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
                             .togetherWith(slideOutHorizontally(tween(GUIDE_PAGE_TRANSITION_MILLIS)) { width -> -width } + fadeOut(tween(GUIDE_PAGE_TRANSITION_MILLIS)))
@@ -164,7 +168,7 @@ fun GuideScreen(
 }
 
 /**
- * Step 1: 欢迎与语言选择
+ * 第一步：品牌 Hero 欢迎区与语言选择（hero 变体头部，无额外步标题）
  */
 @Composable
 private fun GuideLanguageStep(
@@ -195,10 +199,11 @@ private fun GuideLanguageStep(
                         .padding(vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    // Hero 图标底座采用连续曲率超椭圆，与 MIUIX 图标造型一致。
                     Box(
                         modifier = Modifier
                             .size(72.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(SquircleShape(GUIDE_HERO_LOGO_CORNER_RADIUS))
                             .background(MiuixTheme.colorScheme.surfaceContainer),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -216,6 +221,8 @@ private fun GuideLanguageStep(
                         style = MiuixTheme.textStyles.headline1,
                         fontWeight = FontWeight.Bold,
                         color = MiuixTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
@@ -257,7 +264,7 @@ private fun GuideLanguageStep(
 }
 
 /**
- * Step 2: 网络与镜像模式配置
+ * 第二步：网络与镜像模式配置（步标题 + 说明的居中头部）
  */
 @Composable
 private fun GuideNetworkStep(
@@ -296,6 +303,8 @@ private fun GuideNetworkStep(
                         style = MiuixTheme.textStyles.headline1,
                         fontWeight = FontWeight.Bold,
                         color = MiuixTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -308,8 +317,9 @@ private fun GuideNetworkStep(
                 }
             }
 
+            // 分组标题取自设置页既有词条，避免与页标题重复。
             item {
-                SmallTitle(text = strings.guideImageSource)
+                SmallTitle(text = strings.pictureSource)
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
@@ -336,7 +346,7 @@ private fun GuideNetworkStep(
 
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                SmallTitle(text = strings.guideStepNetwork)
+                SmallTitle(text = strings.apiNetworkMode)
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 ) {
@@ -390,7 +400,7 @@ private fun GuideNetworkStep(
 }
 
 /**
- * Step 3: 登录状态检测、特性展示与完成欢迎页
+ * 第三步：登录状态检测与完成欢迎页（头部样式与第二步一致，收束动作交给底栏主按钮）
  */
 @Composable
 private fun GuideWelcomeStep(
@@ -434,10 +444,12 @@ private fun GuideWelcomeStep(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "✨ ${strings.guideStepWelcome}",
-                        style = MiuixTheme.textStyles.title1,
+                        text = strings.guideStepWelcome,
+                        style = MiuixTheme.textStyles.headline1,
                         fontWeight = FontWeight.Bold,
                         color = MiuixTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -445,7 +457,7 @@ private fun GuideWelcomeStep(
                         style = MiuixTheme.textStyles.body2,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 24.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
                 }
             }
@@ -547,17 +559,6 @@ private fun GuideWelcomeStep(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
-                Button(
-                    colors = ButtonDefaults.buttonColorsPrimary(),
-                    onClick = onFinish,
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                ) {
-                    Text(
-                        text = strings.guideStartJourney,
-                        style = MiuixTheme.textStyles.button,
-                    )
-                }
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -565,13 +566,15 @@ private fun GuideWelcomeStep(
 }
 
 /**
- * 底部向导导航栏：平滑伸缩胶囊指示器 + 上一步 / 下一步 / 完成按钮。
+ * 底部向导导航栏：单行三槽布局（左跳过 / 中胶囊步骤指示器 / 右主操作）。
+ *
+ * 左右两槽等权重占位，使中间指示器在任意文案宽度下保持绝对居中；末步不显示跳过入口，左槽留空而非固定宽度占位。
  */
 @Composable
 private fun GuideBottomBar(
     currentStep: Int,
     totalSteps: Int,
-    onPrevious: () -> Unit,
+    onSkip: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -580,23 +583,15 @@ private fun GuideBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (currentStep > 0) {
-            Button(
-                onClick = onPrevious,
-                colors = ButtonDefaults.buttonColors(
-                    color = MiuixTheme.colorScheme.surfaceContainerHigh,
-                ),
-            ) {
-                Text(
-                    text = strings.guidePrev,
-                    color = MiuixTheme.colorScheme.onSurface,
+        Box(modifier = Modifier.weight(1f)) {
+            if (currentStep < totalSteps - 1) {
+                TextButton(
+                    text = strings.guideSkipLogin,
+                    onClick = onSkip,
                 )
             }
-        } else {
-            Spacer(modifier = Modifier.width(80.dp))
         }
 
         // 平滑伸缩胶囊指示器
@@ -627,14 +622,18 @@ private fun GuideBottomBar(
             }
         }
 
-        Button(
-            colors = ButtonDefaults.buttonColorsPrimary(),
-            onClick = onNext,
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd,
         ) {
-            Text(
-                text = if (currentStep == totalSteps - 1) strings.guideFinish else strings.guideNext,
-            )
+            Button(
+                colors = ButtonDefaults.buttonColorsPrimary(),
+                onClick = onNext,
+            ) {
+                Text(
+                    text = if (currentStep == totalSteps - 1) strings.guideFinish else strings.guideNext,
+                )
+            }
         }
     }
 }
-
