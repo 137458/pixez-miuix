@@ -21,20 +21,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.State
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.repository.getLocalReleaseInfo
 import com.perol.pixez.shared.data.repository.ReleaseInfo
@@ -151,14 +146,15 @@ fun UpdateSettingScreen(
         doCheck(userInitiated = false)
     }
 
+    // Hero 作为列表首项随内容滚动，进度以它在视口内滚出的比例衡量，仅用于顶栏标题与背景特效的淡入淡出。
     val scrollProgressState = remember(lazyListState) {
         derivedStateOf {
             when {
                 lazyListState.firstVisibleItemIndex > 0 -> 1f
                 else -> {
-                    val spacer = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "logoSpacer" }
-                    if (spacer != null && spacer.size > 0) {
-                        (lazyListState.firstVisibleItemScrollOffset.toFloat() / spacer.size).coerceIn(0f, 1f)
+                    val hero = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "hero" }
+                    if (hero != null && hero.size > 0) {
+                        (lazyListState.firstVisibleItemScrollOffset.toFloat() / hero.size).coerceIn(0f, 1f)
                     } else {
                         0f
                     }
@@ -167,9 +163,6 @@ fun UpdateSettingScreen(
         }
     }
     val scrollProgress by scrollProgressState
-
-    val density = LocalDensity.current
-    var logoHeightDp by remember { mutableStateOf(192.dp) }
 
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
@@ -213,23 +206,6 @@ fun UpdateSettingScreen(
             modifier = Modifier.fillMaxSize(),
             alpha = { 1f - scrollProgress },
         ) {
-            // ── 顶部官方规范 Hero 视觉 ──
-            UpdateHeroSection(
-                topPadding = innerPadding.calculateTopPadding(),
-                scrollProgressState = scrollProgressState,
-                isChecking = isChecking,
-                hasNew = hasNew,
-                releaseVersionName = releaseInfo?.versionName ?: "",
-                strings = strings,
-                onHeroSizeMeasured = { size ->
-                    val topOffset = innerPadding.calculateTopPadding()
-                    val bodyHeight = with(density) { size.height.toDp() } - topOffset
-                    if (bodyHeight > 0.dp && kotlin.math.abs((bodyHeight - logoHeightDp).value) > 1f) {
-                        logoHeightDp = bodyHeight
-                    }
-                },
-            )
-
             // ── 滚动内容列表 ──
             LazyColumn(
                 state = lazyListState,
@@ -241,11 +217,13 @@ fun UpdateSettingScreen(
                     bottom = innerPadding.calculateBottomPadding() + 24.dp,
                 ),
             ) {
-                item(key = "logoSpacer") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(logoHeightDp + 48.dp),
+                // ── 顶部官方规范 Hero 视觉：列表首项，随内容滚出，不被更新日志覆盖 ──
+                item(key = "hero", contentType = "hero") {
+                    UpdateHeroSection(
+                        isChecking = isChecking,
+                        hasNew = hasNew,
+                        releaseVersionName = releaseInfo?.versionName ?: "",
+                        strings = strings,
                     )
                 }
 
@@ -386,27 +364,20 @@ fun UpdateSettingScreen(
 }
 
 /**
- * 顶部官方规范 Hero 视觉：logo、名称与版本状态文案，随滚动进度做缩放与淡出。
- * scrollProgress 以 State 引用传入，保持 graphicsLayer 绘制期读取的原有语义。
+ * 顶部官方规范 Hero 视觉：logo、名称与版本状态文案。
+ * 作为列表首项随内容整体滚动，滚出视口时由顶栏模糊层自然接管，不会被后续卡片覆盖。
  */
 @Composable
 private fun UpdateHeroSection(
-    topPadding: Dp,
-    scrollProgressState: State<Float>,
     isChecking: Boolean,
     hasNew: Boolean,
     releaseVersionName: String,
     strings: com.perol.pixez.shared.ui.i18n.AppStrings,
-    onHeroSizeMeasured: (IntSize) -> Unit,
 ) {
-    val scrollProgress by scrollProgressState
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = topPadding + 24.dp)
-            .onSizeChanged { size ->
-                onHeroSizeMeasured(size)
-            },
+            .padding(top = 24.dp, bottom = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -414,12 +385,8 @@ private fun UpdateHeroSection(
             modifier = Modifier
                 .size(88.dp)
                 .graphicsLayer {
-                    val iconProgress = ((scrollProgress - 0.35f) / 0.15f).coerceIn(0f, 1f)
                     clip = true
                     shape = com.perol.pixez.shared.ui.components.SquircleShape(24.dp)
-                    alpha = 1 - iconProgress
-                    scaleX = 1 - (iconProgress * 0.05f)
-                    scaleY = 1 - (iconProgress * 0.05f)
                 }
                 .background(MiuixTheme.colorScheme.surfaceContainer),
         ) {
@@ -435,14 +402,7 @@ private fun UpdateHeroSection(
             color = MiuixTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             fontSize = 32.sp,
-            modifier = Modifier
-                .padding(top = 16.dp, bottom = 4.dp)
-                .graphicsLayer {
-                    val nameProgress = ((scrollProgress - 0.20f) / 0.15f).coerceIn(0f, 1f)
-                    alpha = 1 - nameProgress
-                    scaleX = 1 - (nameProgress * 0.05f)
-                    scaleY = 1 - (nameProgress * 0.05f)
-                },
+            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
         )
 
         if (isChecking) {
@@ -451,12 +411,7 @@ private fun UpdateHeroSection(
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        val verProgress = ((scrollProgress - 0.05f) / 0.15f).coerceIn(0f, 1f)
-                        alpha = 1 - verProgress
-                    },
+                modifier = Modifier.fillMaxWidth(),
             )
         } else if (hasNew) {
             Text(
@@ -465,12 +420,7 @@ private fun UpdateHeroSection(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        val verProgress = ((scrollProgress - 0.05f) / 0.15f).coerceIn(0f, 1f)
-                        alpha = 1 - verProgress
-                    },
+                modifier = Modifier.fillMaxWidth(),
             )
         } else {
             Text(
@@ -478,12 +428,7 @@ private fun UpdateHeroSection(
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        val verProgress = ((scrollProgress - 0.05f) / 0.15f).coerceIn(0f, 1f)
-                        alpha = 1 - verProgress
-                    },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
