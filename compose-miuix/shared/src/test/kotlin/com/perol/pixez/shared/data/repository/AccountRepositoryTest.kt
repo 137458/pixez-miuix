@@ -764,4 +764,25 @@ class AccountRepositoryTest {
         job.join()
         assertEquals(false, repository.isRefreshingSession.value, "静默恢复结束后必须复位为 false")
     }
+
+    @Test
+    fun `cachedCurrentAccount 与 hasCachedAccount 在读取 登录 登出后同步更新`() = runBlocking {
+        assertEquals(false, repository.hasCachedAccount, "初始未读取前 hasCachedAccount 应为 false")
+        assertNull(repository.cachedCurrentAccount(), "初始缓存账号应为 null")
+
+        // 首次读取（未登录空库）
+        assertNull(repository.currentAccount())
+        assertEquals(true, repository.hasCachedAccount, "读取过后即使未登录也应标记缓存已初始化")
+        assertNull(repository.cachedCurrentAccount())
+
+        // 登录后同步更新快照
+        oauth.exchangeResult = oauthEnvelope("777")
+        repository.loginWithCode("auth-code")
+        assertEquals("777", repository.cachedCurrentAccount()?.userId)
+
+        // 登出后快照立即清为 null 且保持已初始化标记
+        repository.logout()
+        assertEquals(true, repository.hasCachedAccount)
+        assertNull(repository.cachedCurrentAccount())
+    }
 }

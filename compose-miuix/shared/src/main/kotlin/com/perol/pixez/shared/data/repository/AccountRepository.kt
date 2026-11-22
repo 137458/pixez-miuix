@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.Volatile
 
 /**
  * 账号仓库：封装 OAuth 登录、token 刷新、账号信息编辑与本地账号持久化。
@@ -48,6 +49,14 @@ class AccountRepository(
     /** 启动静默恢复是否正在进行中；UI 首帧据此前置等待，避免把软失效账号误判为未登录。 */
     val isRefreshingSession: StateFlow<Boolean> = _isRefreshingSession.asStateFlow()
 
+    @Volatile
+    private var cachedAccount: AccountPersist? = null
+
+    /** 是否已同步过至少一次当前账号内存快照（区分「未读取」与「已读取为未登录」）。 */
+    @Volatile
+    var hasCachedAccount: Boolean = false
+        private set
+
     /**
      * 凭证失效事件：刷新失败或启动自检发现账号凭证为空时发出，UI 根层据此提示重新登录。
      */
@@ -61,14 +70,23 @@ class AccountRepository(
      * 缓存清单由各模块向 [SessionCache] 自登记，新增缓存自动被覆盖清理。
      */
     private suspend fun onSessionIdentityChanged() {
+        cachedAccount = tokenStorage.getCurrentAccount()?.toPersist()
+        hasCachedAccount = true
         sessionCache.invalidateAll()
         _loginEventFlow.tryEmit(Unit)
     }
 
+    /** 同步读取最近一次已缓存的当前账号，供设置页等二级页退回重建首帧免延迟渲染。 */
+    fun cachedCurrentAccount(): AccountPersist? = cachedAccount
+
     /**
      * 当前已登录账号，未登录返回 null。
      */
-    suspend fun currentAccount(): AccountPersist? = tokenStorage.getCurrentAccount()?.toPersist()
+    suspend fun currentAccount(): AccountPersist? =
+        tokenStorage.getCurrentAccount()?.toPersist().also {
+            cachedAccount = it
+            hasCachedAccount = true
+        }
 
     /**
      * 启动自检：凭证缺失时先尝试静默恢复，恢复不了才发失效事件。
@@ -314,6 +332,8 @@ class AccountRepository(
                 mail_address = if (!newMailAddress.isNullOrBlank()) newMailAddress else account.mail_address,
             )
         }
+        cachedAccount = tokenStorage.getCurrentAccount()?.toPersist()
+        hasCachedAccount = true
     }
 }
 

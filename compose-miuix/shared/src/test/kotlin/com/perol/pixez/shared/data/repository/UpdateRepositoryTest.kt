@@ -211,4 +211,14 @@ class UpdateRepositoryTest {
             "失败消息应说明非官方仓库，实际为: ${error?.message}",
         )
     }
+
+    @Test
+    fun `fetchLatestReleaseInfo 成功后可通过 cachedReleaseInfo 同步读取`() = runBlocking {
+        assertNull(repository.cachedReleaseInfo, "初始缓存应为 null")
+        respondBody = releaseJson(tagName = "v99.0.0")
+
+        val info = repository.fetchLatestReleaseInfo().getOrThrow()
+
+        assertEquals(info, repository.cachedReleaseInfo, "请求成功后应同步更新 cachedReleaseInfo")
+    }
 }

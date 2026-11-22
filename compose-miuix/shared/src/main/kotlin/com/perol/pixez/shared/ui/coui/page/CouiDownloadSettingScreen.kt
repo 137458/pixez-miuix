@@ -20,7 +20,11 @@ import com.itos.coui.dialog.CouiDialogAction
 import com.itos.coui.dialog.CouiDialogActionStyle
 import com.itos.coui.dialog.Dialog
 import com.perol.pixez.shared.data.repository.DownloadRepository
+import com.perol.pixez.shared.platform.FileLocator
 import com.perol.pixez.shared.platform.rememberDirectoryPicker
+import com.perol.pixez.shared.ui.components.LocalToastSink
+import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
 import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
@@ -48,6 +52,7 @@ internal fun CouiDownloadSettingScreen(
 ) {
     val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
+    val toastSink = LocalToastSink.current
 
     var storePath by remember { mutableStateOf(settingsRepository.storePath.orEmpty()) }
     val effectiveStorePath = remember(storePath) {
@@ -139,14 +144,13 @@ internal fun CouiDownloadSettingScreen(
                     title = strings.downloadTaskShowInFolder,
                     summary = effectiveStorePath,
                     onClick = {
-                        runCatching {
-                            okio.FileSystem.SYSTEM.createDirectories(
-                                with(okio.Path) { effectiveStorePath.toPath() },
-                            )
-                            com.perol.pixez.shared.platform.FileLocator()
-                                .showInFileManager(effectiveStorePath)
+                        val opened = runCatching {
+                            FileLocator().showInFileManager(effectiveStorePath)
                         }.onFailure {
                             Napier.e("打开所在文件夹失败 storePath=$effectiveStorePath", it)
+                        }.getOrDefault(false)
+                        if (!opened) {
+                            toastSink(ToastData(strings.loadFailed, ToastType.Error))
                         }
                     },
                 )
@@ -195,7 +199,7 @@ internal fun CouiDownloadSettingScreen(
         }
 
         item(key = "coui_download_bookmark", contentType = "section") {
-            CouiSettingSection(title = strings.settingSectionBookmarkShare) {
+            CouiSettingSection(title = strings.downloadSectionBookmarkActions) {
                 CouiToggleRow(
                     title = strings.defaultPrivateLike,
                     summary = if (defaultPrivateLike) {
@@ -302,7 +306,7 @@ private fun CouiSaveFormatDialog(
     val chips = remember(strings) {
         listOf(
             strings.copyTextChipIllustId to "{illust_id}",
-            "part" to "{part}",
+            strings.copyTextChipPart to "{part}",
             strings.copyTextChipTitle to "{title}",
             strings.copyTextChipUserId to "{user_id}",
             strings.copyTextChipUserName to "{user_name}",

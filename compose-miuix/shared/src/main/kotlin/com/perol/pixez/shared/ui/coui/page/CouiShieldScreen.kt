@@ -131,7 +131,7 @@ internal fun CouiShieldScreen(
     ) {
         // 1. 分级与敏感内容过滤
         item(key = "coui_shield_privacy", contentType = "section") {
-            CouiSettingSection(title = strings.settingPrivacy) {
+            CouiSettingSection(title = strings.shieldSectionContentFilter) {
                 CouiToggleRow(
                     title = strings.interactionSettingHNotAllow,
                     summary = if (hIsNotAllow) {
@@ -187,7 +187,7 @@ internal fun CouiShieldScreen(
                 CouiRowDivider()
                 CouiValueRow(
                     title = strings.userAISettings,
-                    summary = if (isLoadingAISetting) strings.loading else strings.userAISettings,
+                    summary = if (isLoadingAISetting) strings.loading else strings.userAISettingsSummary,
                     onClick = {
                         if (isLoadingAISetting) return@CouiValueRow
                         coroutineScope.launch {
@@ -259,7 +259,7 @@ internal fun CouiShieldScreen(
 
         // 5. 屏蔽作品
         item(key = "coui_shield_illusts", contentType = "section") {
-            CouiSettingSection(title = strings.includedWorks) {
+            CouiSettingSection(title = strings.shieldSectionBannedWorks) {
                 Text(
                     text = strings.banIllustCount.format(banIllusts.size),
                     kind = CouiTextKind.ItemSummary,
@@ -286,6 +286,7 @@ internal fun CouiShieldScreen(
                         suspendRunCatchingNonCancel {
                             banRepository.insertBanTag(name, translateName = "")
                         }.onSuccess {
+                            settingsRepository.notifyFilterChanged()
                             showAddDialog = false
                             loadAll()
                         }.onFailure { e ->
@@ -336,6 +337,7 @@ internal fun CouiShieldScreen(
                                     is CouiShieldDeleteTarget.Illust -> banRepository.deleteBanIllust(target.illust.id)
                                 }
                             }.onSuccess {
+                                settingsRepository.notifyFilterChanged()
                                 loadAll()
                             }.onFailure { e ->
                                 Napier.e("删除屏蔽项失败", e)

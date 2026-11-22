@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableLongStateOf
@@ -115,9 +116,10 @@ internal fun CouiSettingsScreen(
 
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
     var isClearingCache by remember { mutableStateOf(false) }
-    var cacheSizeBytes by remember { mutableLongStateOf(0L) }
-    var boardList by remember { mutableStateOf<List<BoardInfo>?>(null) }
-    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var cacheSizeBytes by rememberSaveable { mutableLongStateOf(0L) }
+    var boardList by remember(boardRepository) { mutableStateOf(boardRepository.cachedBoardList) }
+    var releaseInfo by remember(updateRepository) { mutableStateOf(updateRepository.cachedReleaseInfo) }
+    val changeVersion = settingsRepository.changeVersion.collectAsState().value
 
     LaunchedEffect(isClearingCache) {
         if (isClearingCache) return@LaunchedEffect
@@ -127,11 +129,9 @@ internal fun CouiSettingsScreen(
         }
     }
 
-    // 账号卡片的当前账号：经 rememberAccountSession 读取，账号存储异常时回落到未登录而不是让设置页崩溃；
-    // 登出成功后要立即本地置空，故保留一份可变副本，由会话值回灌。
+    // 账号卡片的当前账号：首帧即同步读取会话缓存，避免退栈重建时从 null 闪跳撑高导致列表滚动错位。
     val (sessionAccount, _) = rememberAccountSession()
-    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
-    LaunchedEffect(sessionAccount) { currentAccount = sessionAccount }
+    var currentAccount by remember(sessionAccount) { mutableStateOf(sessionAccount) }
 
     LaunchedEffect(boardRepository) {
         boardList = suspendRunCatchingNonCancel { boardRepository.loadBoardList() }
@@ -181,7 +181,7 @@ internal fun CouiSettingsScreen(
                     CouiRowDivider()
                     CouiValueRow(
                         title = strings.accountManageTitle,
-                        summary = strings.accountSwitch,
+                        summary = strings.settingAccountManageSummary,
                         onClick = onAccountManageClick,
                     )
                     CouiRowDivider()
@@ -201,7 +201,7 @@ internal fun CouiSettingsScreen(
                     CouiRowDivider()
                     CouiValueRow(
                         title = strings.accountManageTitle,
-                        summary = strings.accountSwitch,
+                        summary = strings.settingAccountManageSummary,
                         onClick = onAccountManageClick,
                     )
                 }
@@ -243,7 +243,7 @@ internal fun CouiSettingsScreen(
             CouiSettingSection(title = strings.settingSectionGeneral) {
                 CouiValueRow(
                     title = strings.interactionSettingTitle,
-                    summary = strings.interactionSettingSwipeChange,
+                    summary = strings.settingInteractionSummary,
                     onClick = onInteractionSettingClick,
                 )
                 CouiRowDivider()
@@ -274,7 +274,7 @@ internal fun CouiSettingsScreen(
 
         // ── 6. 系统与数据 ──
         item(key = "coui_settings_storage", contentType = "section") {
-            CouiSettingSection(title = strings.settingSectionStorage) {
+            CouiSettingSection(title = strings.settingSectionSystemNetwork) {
                 CouiValueRow(
                     title = strings.platformSettingDefaultOpenLinks,
                     summary = strings.platformSettingDefaultOpenLinksSummary,
@@ -335,10 +335,13 @@ internal fun CouiSettingsScreen(
                     CouiValueRow(title = strings.settingBoard, summary = strings.settingBoardSummary, onClick = onBoardClick)
                     CouiRowDivider()
                 }
-                val hasNewUpdate = releaseInfo?.isNew == true &&
-                    releaseInfo?.versionName != settingsRepository.ignoreUpdateVersion
+                val hasNewUpdate = remember(releaseInfo, settingsRepository.ignoreUpdateVersion, changeVersion) {
+                    releaseInfo?.isNew == true &&
+                        releaseInfo?.versionName != settingsRepository.ignoreUpdateVersion
+                }
                 CouiValueRow(
                     title = strings.settingUpdate,
+                    value = if (hasNewUpdate) "v${releaseInfo?.versionName.orEmpty()}" else null,
                     summary = if (hasNewUpdate) {
                         strings.updateFoundNew.format(
                             releaseInfo?.versionName ?: "",

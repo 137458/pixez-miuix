@@ -177,8 +177,8 @@ internal fun CouiUpdateSettingScreen(
                         else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName.orEmpty())
                     },
                     checked = hasNew && ignoredVersion == releaseInfo?.versionName,
+                    enabled = hasNew,
                     onCheckedChange = { checked ->
-                        // COUI 开关无禁用态：无新版本时保持原状态，不写入忽略值。
                         if (hasNew) {
                             val newValue = if (checked) releaseInfo?.versionName else null
                             coroutineScope.launch {

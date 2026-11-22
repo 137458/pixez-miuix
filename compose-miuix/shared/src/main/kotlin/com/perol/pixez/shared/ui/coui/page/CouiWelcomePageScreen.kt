@@ -21,7 +21,13 @@ internal fun CouiWelcomePageScreen(
 ) {
     val settingsRepository = LocalSettingsRepository.current
     val strings = LocalStrings.current
-    var selectedType by remember { mutableStateOf(settingsRepository.welcomePageType) }
+    var selectedType by remember {
+        mutableStateOf(
+            settingsRepository.welcomePageType.let { saved ->
+                if (saved == "search") "home" else saved
+            },
+        )
+    }
 
     val options = remember(strings) {
         listOf(

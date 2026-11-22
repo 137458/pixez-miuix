@@ -336,6 +336,7 @@ fun ShieldScreen(
                         suspendRunCatchingNonCancel {
                             banRepository.insertBanTag(name, translateName = "")
                         }.onSuccess {
+                            settingsRepository.notifyFilterChanged()
                             showAddDialog = false
                             loadAll()
                         }.onFailure { e ->
@@ -378,6 +379,7 @@ fun ShieldScreen(
                             }
                         }
                         result.onSuccess {
+                            settingsRepository.notifyFilterChanged()
                             loadAll()
                         }.onFailure { e ->
                             Napier.e("删除屏蔽项失败", e)

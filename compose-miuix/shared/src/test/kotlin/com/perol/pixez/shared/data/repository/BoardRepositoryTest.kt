@@ -131,4 +131,14 @@ class BoardRepositoryTest {
         assertEquals(listOf(primary), capturedUrls, "默认 urls 应保持内置镜像顺序且主源成功即短路")
         assertEquals("主源公告", boards.single().title)
     }
+
+    @Test
+    fun `loadBoardList 成功后可通过 cachedBoardList 同步读取内存缓存`() = runBlocking {
+        stubbed[primaryUrl] = StubResponse(HttpStatusCode.OK, primaryJson)
+        val repo = repository(primaryUrl)
+
+        assertEquals(null, repo.cachedBoardList, "加载前内存缓存应为 null")
+        val loaded = repo.loadBoardList()
+        assertEquals(loaded, repo.cachedBoardList, "加载成功后应同步暴露内存缓存")
+    }
 }

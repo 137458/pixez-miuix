@@ -11,6 +11,7 @@ import io.ktor.client.request.header
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
+import kotlin.concurrent.Volatile
 
 /**
  * GitHub Release Asset 信息。
@@ -134,6 +135,10 @@ private fun compareVersion(v1: String, v2: String): Int {
 class UpdateRepository(
     private val client: HttpClient,
 ) {
+    /** 最近一次成功检查到的版本发布信息缓存（供设置页重建首帧同步展示更新标记）。 */
+    @Volatile
+    var cachedReleaseInfo: ReleaseInfo? = null
+        private set
     /**
      * 从 GitHub Release API 获取完整版本发布信息。
      */
@@ -181,6 +186,7 @@ class UpdateRepository(
                 fileSize = fileSize,
                 digest = matchedAsset?.digest,
             )
+            cachedReleaseInfo = releaseInfo
             Result.success(releaseInfo)
         } catch (e: CancellationException) {
             throw e

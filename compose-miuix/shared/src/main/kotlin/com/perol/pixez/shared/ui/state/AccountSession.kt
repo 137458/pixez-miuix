@@ -32,8 +32,14 @@ internal data class AccountSession(val user: AccountPersist?, val isLoggedIn: Bo
 @Composable
 internal fun rememberAccountSession(): AccountSession {
     val accountRepository = LocalAccountRepository.current
-    var user by remember(accountRepository) { mutableStateOf<AccountPersist?>(null) }
-    var isLoggedIn by remember(accountRepository) { mutableStateOf<Boolean?>(null) }
+    var user by remember(accountRepository) {
+        mutableStateOf(accountRepository.cachedCurrentAccount())
+    }
+    var isLoggedIn by remember(accountRepository) {
+        mutableStateOf(
+            if (accountRepository.hasCachedAccount) user.isLoggedIn else null
+        )
+    }
 
     LaunchedEffect(accountRepository) {
         suspend fun refresh() {

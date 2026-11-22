@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.THANKS_PEOPLES
 import com.perol.pixez.shared.ui.coui.core.CouiItemSummary
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
+import com.perol.pixez.shared.ui.coui.core.CouiSettingsGroup
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiValueRow
 import com.perol.pixez.shared.ui.i18n.LocalStrings
@@ -29,7 +30,7 @@ internal fun CouiThanksScreen(
         onBack = onBack,
     ) {
         item(key = "coui_thanks_desc", contentType = "section") {
-            CouiSettingSection(title = strings.aboutThanksDesc) {
+            CouiSettingsGroup {
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     CouiItemSummary(text = strings.aboutThanksDesc)
                 }

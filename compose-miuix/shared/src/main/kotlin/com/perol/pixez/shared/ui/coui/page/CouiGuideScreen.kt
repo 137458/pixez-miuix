@@ -310,6 +310,7 @@ private fun CouiGuideNetworkStep(
                         currentNetworkMode = HttpEngineDefaults.MODE_STANDARD
                         settingsRepository.apiNetworkMode = HttpEngineDefaults.MODE_STANDARD
                         settingsRepository.oauthNetworkMode = HttpEngineDefaults.MODE_STANDARD
+                        settingsRepository.pictureSource = PixivHosts.HOST_PXIMG
                     },
                 )
                 CouiRowDivider()

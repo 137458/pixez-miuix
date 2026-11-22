@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import com.itos.coui.backdrop.couiBackdrop
 import com.itos.coui.backdrop.rememberCouiBackdrop
 import com.itos.coui.menu.ProvideCouiMenuBackdrop
@@ -61,14 +62,29 @@ val LocalUiSkin = compositionLocalOf { UiSkin.HYPEROS }
  * 底栏选中色、弹层材质）全部以它为准，不允许组件内部再从底色亮度反推。
  */
 @Composable
-fun CouiSkinHost(enabled: Boolean, dark: Boolean, content: @Composable () -> Unit) {
+fun CouiSkinHost(
+    enabled: Boolean,
+    dark: Boolean,
+    isAmoled: Boolean = false,
+    useDynamicColor: Boolean = true,
+    seedColor: Int = 0xFF0096FA.toInt(),
+    content: @Composable () -> Unit,
+) {
     if (!enabled) {
         content()
         return
     }
     val colors = MiuixTheme.colorScheme
     val textStyles = MiuixTheme.textStyles
-    val colorScheme = remember(colors, dark) { couiColorSchemeOf(colors, dark) }
+    val colorScheme = remember(colors, dark, isAmoled, useDynamicColor, seedColor) {
+        couiColorSchemeOf(
+            colors = colors,
+            isDark = dark,
+            isAmoled = isAmoled,
+            useDynamicColor = useDynamicColor,
+            seedColor = seedColor,
+        )
+    }
     val typography = remember(textStyles) {
         CouiTypography(
             body = textStyles.body1,
@@ -116,23 +132,43 @@ fun Modifier.skinFloatingBarSource(): Modifier {
     return couiBackdrop(backdrop)
 }
 
-private fun couiColorSchemeOf(colors: Colors, isDark: Boolean): CouiColorScheme =
-    CouiColorScheme(
-        accent = colors.primary,
-        onAccent = colors.onPrimary,
-        surface = colors.surfaceContainer,
-        container = if (isDark) {
-            colors.surfaceContainerHighest
-        } else {
-            lerp(colors.surface, colors.surfaceContainerHigh, 0.55f)
-        },
+internal fun couiColorSchemeOf(
+    colors: Colors,
+    isDark: Boolean,
+    isAmoled: Boolean = false,
+    useDynamicColor: Boolean = true,
+    seedColor: Int = 0xFF0096FA.toInt(),
+): CouiColorScheme {
+    val seed = if (useDynamicColor) null else Color(seedColor)
+    val accentColor = seed ?: colors.primary
+    val onAccentColor = seed?.let {
+        if (it.luminance() > 0.5f) Color.Black else Color.White
+    } ?: colors.onPrimary
+    val accentOnSurfaceColor = seed?.let {
+        if (isDark) lerp(it, Color.White, 0.25f) else it
+    } ?: if (isDark) colors.onPrimaryVariant else colors.primary
+    val amoledPureBlack = isDark && isAmoled
+    val backgroundColor = if (amoledPureBlack) Color.Black else colors.surface
+    val cardColor = if (amoledPureBlack) Color(0xFF141414) else colors.surfaceContainer
+    val menuSurfaceColor = if (amoledPureBlack) Color(0xFF1C1C1E) else colors.surfaceContainer
+    val containerColor = when {
+        amoledPureBlack -> Color(0xFF1F1F1F)
+        isDark -> colors.surfaceContainerHighest
+        else -> lerp(colors.surface, colors.surfaceContainerHigh, 0.55f)
+    }
+    return CouiColorScheme(
+        accent = accentColor,
+        onAccent = onAccentColor,
+        surface = backgroundColor,
+        container = containerColor,
         onSurface = colors.onSurface,
         onSurfaceVariant = colors.onSurfaceVariantSummary,
         outlineVariant = if (isDark) colors.dividerLine else colors.dividerLine.copy(alpha = 0.7f),
-        accentOnSurface = if (isDark) colors.onPrimaryVariant else colors.primary,
-        menuSurface = colors.surfaceContainer,
-        checkboxAccent = colors.primary,
-        menuCheckboxAccent = if (isDark) colors.onPrimaryVariant else colors.primary,
-        background = colors.surface,
-        card = colors.surfaceContainer,
+        accentOnSurface = accentOnSurfaceColor,
+        menuSurface = menuSurfaceColor,
+        checkboxAccent = accentColor,
+        menuCheckboxAccent = accentOnSurfaceColor,
+        background = backgroundColor,
+        card = cardColor,
     )
+}

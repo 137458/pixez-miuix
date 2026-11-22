@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import top.yukonga.miuix.kmp.theme.Colors
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
@@ -94,23 +96,45 @@ internal fun resolveAppThemeSpec(
     )
 }
 
-/** 按本策略装配 MIUIX 主题控制器；未开启 AMOLED 时不下发深色色板，沿用 MIUIX 默认深色。 */
-internal fun AppThemeSpec.toThemeController(): ThemeController = if (darkColors != null) {
-    ThemeController(
-        colorSchemeMode = colorSchemeMode,
-        keyColor = keyColor,
-        lightColors = lightColors,
-        darkColors = darkColors,
-        colorSpec = colorSpec,
-        paletteStyle = paletteStyle,
-    )
-} else {
-    ThemeController(
-        colorSchemeMode = colorSchemeMode,
-        keyColor = keyColor,
-        lightColors = lightColors,
-        colorSpec = colorSpec,
-        paletteStyle = paletteStyle,
+/** 按本策略装配 MIUIX 主题控制器；非动态取色模式下同步把种子色注入浅色/深色主强调槽位。 */
+internal fun AppThemeSpec.toThemeController(): ThemeController {
+    val effectiveLightColors = keyColor?.let { seed -> lightColors.withSeedAccent(seed, isDark = false) }
+        ?: lightColors
+    val effectiveDarkColors = if (keyColor != null) {
+        (darkColors ?: darkColorScheme()).withSeedAccent(keyColor, isDark = true)
+    } else {
+        darkColors
+    }
+    return if (effectiveDarkColors != null) {
+        ThemeController(
+            colorSchemeMode = colorSchemeMode,
+            keyColor = keyColor,
+            lightColors = effectiveLightColors,
+            darkColors = effectiveDarkColors,
+            colorSpec = colorSpec,
+            paletteStyle = paletteStyle,
+        )
+    } else {
+        ThemeController(
+            colorSchemeMode = colorSchemeMode,
+            keyColor = keyColor,
+            lightColors = effectiveLightColors,
+            colorSpec = colorSpec,
+            paletteStyle = paletteStyle,
+        )
+    }
+}
+
+private fun Colors.withSeedAccent(seed: Color, isDark: Boolean): Colors {
+    val onAccent = if (seed.luminance() > 0.5f) Color.Black else Color.White
+    val accentVariant = if (isDark) lerp(seed, Color.White, 0.22f) else seed
+    return copy(
+        primary = seed,
+        onPrimary = onAccent,
+        primaryVariant = accentVariant,
+        onPrimaryVariant = accentVariant,
+        primaryContainer = seed,
+        onPrimaryContainer = onAccent,
     )
 }
 

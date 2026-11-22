@@ -117,9 +117,9 @@ fun SettingsScreen(
 
     var isLoggingOut by rememberSaveable { mutableStateOf(false) }
 
-    // 清除缓存的加载态与提示信息；ToastData 不是 Saveable 支持的原生类型，故用 remember。
+    // 清除缓存的加载态与占用统计；缓存体积使用 rememberSaveable 保留，避免退栈重建时文本行跳变。
     var isClearingCache by remember { mutableStateOf(false) }
-    var cacheSizeBytes by remember { mutableLongStateOf(0L) }
+    var cacheSizeBytes by rememberSaveable { mutableLongStateOf(0L) }
     val toastSink = LocalToastSink.current
 
     LaunchedEffect(isClearingCache) {
@@ -130,15 +130,14 @@ fun SettingsScreen(
         }
     }
 
-    // 当前账号信息来自统一会话；登出成功后要立即本地置空，故仍保留一份可变副本，由会话值回灌。
+    // 当前账号信息来自统一会话缓存，退栈重建首帧即保持原高度；登出后本地置空。
     val (sessionAccount, _) = rememberAccountSession()
-    var currentAccount by remember { mutableStateOf<AccountPersist?>(null) }
-    LaunchedEffect(sessionAccount) { currentAccount = sessionAccount }
+    var currentAccount by remember(sessionAccount) { mutableStateOf(sessionAccount) }
 
-    // 公告板入口动态状态：仅在公告列表非空时显示。
-    var boardList by remember { mutableStateOf<List<BoardInfo>?>(null) }
+    // 公告板与版本更新缓存：避免返回设置页时条目数先少后多引起列表位移。
+    var boardList by remember(boardRepository) { mutableStateOf(boardRepository.cachedBoardList) }
     val settingsRepository = LocalSettingsRepository.current
-    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var releaseInfo by remember(updateRepository) { mutableStateOf(updateRepository.cachedReleaseInfo) }
 
     // 页面进入时异步加载公告列表与最新版本信息。
     LaunchedEffect(boardRepository) {
@@ -220,7 +219,7 @@ fun SettingsScreen(
                         }
                         ArrowPreference(
                             title = strings.accountManageTitle,
-                            summary = strings.accountSwitch,
+                            summary = strings.settingAccountManageSummary,
                             onClick = onAccountManageClick,
                         )
                         ArrowPreference(
@@ -237,7 +236,7 @@ fun SettingsScreen(
                         )
                         ArrowPreference(
                             title = strings.accountManageTitle,
-                            summary = strings.accountSwitch,
+                            summary = strings.settingAccountManageSummary,
                             onClick = onAccountManageClick,
                         )
                     }
@@ -314,7 +313,7 @@ fun SettingsScreen(
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = strings.interactionSettingTitle,
-                        summary = strings.interactionSettingSwipeChange,
+                        summary = strings.settingInteractionSummary,
                         onClick = onInteractionSettingClick,
                     )
                     ArrowPreference(

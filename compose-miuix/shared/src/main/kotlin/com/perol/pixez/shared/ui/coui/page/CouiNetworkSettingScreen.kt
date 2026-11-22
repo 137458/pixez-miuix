@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -74,6 +76,10 @@ internal fun CouiNetworkSettingScreen(
             },
         )
     }
+    var isCustomHostSelected by rememberSaveable {
+        mutableStateOf(resolveCouiPictureSourceOptionIndex(pictureSource) == 2)
+    }
+    var customHostFocusTrigger by remember { mutableIntStateOf(0) }
 
     val allowsImageSource = apiNetworkMode != NETWORK_MODE_STANDARD
 
@@ -89,10 +95,12 @@ internal fun CouiNetworkSettingScreen(
             pictureSource = DEFAULT_IMAGE_HOST
             settingsRepository.pictureSource = DEFAULT_IMAGE_HOST
             customHostInput = ""
+            isCustomHostSelected = false
         }
     }
 
     fun setPresetPictureSource(host: String) {
+        isCustomHostSelected = false
         pictureSource = host
         settingsRepository.pictureSource = host
         customHostInput = ""
@@ -108,6 +116,7 @@ internal fun CouiNetworkSettingScreen(
             toastSink(ToastData(strings.hostNoSpace, ToastType.Error))
             return
         }
+        isCustomHostSelected = true
         pictureSource = trimmed
         settingsRepository.pictureSource = trimmed
     }
@@ -123,8 +132,13 @@ internal fun CouiNetworkSettingScreen(
     val pictureSourceOptions = remember(strings) {
         listOf(DEFAULT_IMAGE_HOST, MIRROR_IMAGE_HOST, strings.customHost)
     }
-    val pictureSourceIndex = resolveCouiPictureSourceOptionIndex(pictureSource)
+    val pictureSourceIndex = if (isCustomHostSelected) 2 else resolveCouiPictureSourceOptionIndex(pictureSource)
     val customHostFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(customHostFocusTrigger) {
+        if (customHostFocusTrigger > 0) {
+            customHostFocusRequester.requestFocus()
+        }
+    }
 
     CouiSettingsScaffold(
         title = strings.settingNetwork,
@@ -166,7 +180,10 @@ internal fun CouiNetworkSettingScreen(
                             when (index) {
                                 0 -> setPresetPictureSource(DEFAULT_IMAGE_HOST)
                                 1 -> setPresetPictureSource(MIRROR_IMAGE_HOST)
-                                2 -> customHostFocusRequester.requestFocus()
+                                2 -> {
+                                    isCustomHostSelected = true
+                                    customHostFocusTrigger++
+                                }
                             }
                         },
                     )

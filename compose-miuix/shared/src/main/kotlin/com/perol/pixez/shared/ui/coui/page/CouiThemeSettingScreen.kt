@@ -87,7 +87,7 @@ internal fun CouiThemeSettingScreen(
         onBack = onBack,
     ) {
         item(key = "coui_theme_mode", contentType = "section") {
-            CouiSettingSection(title = strings.settingTheme) {
+            CouiSettingSection(title = strings.settingSectionAppearance) {
                 CouiMenuSelectRow(
                     title = strings.settingTheme,
                     items = themeModeOptions,
@@ -120,7 +120,7 @@ internal fun CouiThemeSettingScreen(
         }
 
         item(key = "coui_theme_layout", contentType = "section") {
-            CouiSettingSection(title = strings.settingSectionDisplayLayout) {
+            CouiSettingSection(title = strings.themeSectionColorOptions) {
                 CouiToggleRow(
                     title = strings.themeAmoled,
                     summary = strings.themeAmoledSummary,

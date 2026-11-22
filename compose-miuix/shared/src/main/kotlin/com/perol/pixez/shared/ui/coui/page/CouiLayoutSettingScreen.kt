@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.coui.page
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,7 @@ internal fun CouiLayoutSettingScreen(
     var hCrossAdapterWidth by remember { mutableIntStateOf(settingsRepository.hCrossAdapterWidth) }
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
     var displayMode by remember { mutableIntStateOf(settingsRepository.displayMode) }
+    val floatingSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
     val crossCountOptions = SettingsRepository.CROSS_COUNT_OPTIONS
     // 显示模式下拉选项：索引与 displayMode 数值一一对应（0 跟随系统 / 1 60Hz / 2 高刷）。
@@ -93,15 +95,18 @@ internal fun CouiLayoutSettingScreen(
             CouiSettingSection(title = strings.floatingBottomBar) {
                 CouiToggleRow(
                     title = strings.floatingBottomBar,
-                    summary = if (useFloatingBottomBar) {
-                        strings.floatingBottomBarSummaryOn
-                    } else {
-                        strings.floatingBottomBarSummaryOff
+                    summary = when {
+                        !floatingSupported -> strings.couiFloatingBottomBarRequiresAndroid14
+                        useFloatingBottomBar -> strings.couiFloatingBottomBarSummaryOn
+                        else -> strings.couiFloatingBottomBarSummaryOff
                     },
-                    checked = useFloatingBottomBar,
+                    checked = floatingSupported && useFloatingBottomBar,
+                    enabled = floatingSupported,
                     onCheckedChange = { checked ->
-                        useFloatingBottomBar = checked
-                        settingsRepository.useFloatingBottomBar = checked
+                        if (floatingSupported) {
+                            useFloatingBottomBar = checked
+                            settingsRepository.useFloatingBottomBar = checked
+                        }
                     },
                 )
             }
@@ -122,7 +127,7 @@ internal fun CouiLayoutSettingScreen(
         }
 
         item(key = "coui_layout_portrait", contentType = "section") {
-            CouiSettingSection(title = strings.crossCountPortrait) {
+            CouiSettingSection(title = strings.couiLayoutPortraitSection) {
                 CouiToggleRow(
                     title = strings.crossAdaptAuto,
                     summary = if (crossAdapt) {
@@ -161,7 +166,7 @@ internal fun CouiLayoutSettingScreen(
         }
 
         item(key = "coui_layout_landscape", contentType = "section") {
-            CouiSettingSection(title = strings.crossCountLandscape) {
+            CouiSettingSection(title = strings.couiLayoutLandscapeSection) {
                 CouiToggleRow(
                     title = strings.crossAdaptAuto,
                     summary = if (hCrossAdapt) {

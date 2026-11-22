@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -153,6 +154,7 @@ internal fun CouiBottomBar(
             items = items,
             selectedIndex = safeIndex,
             onSelect = onSelect,
+            leftAccessory = leftAccessory,
             rightAccessory = rightAccessory,
             modifier = modifier,
         )
@@ -212,12 +214,13 @@ private fun CouiOfficialNavigationBar(
     }
 }
 
-/** 官方 Demo 同款简洁贴底栏：供关闭浮动底栏或 API 31-33 降级时使用，末尾保留搜索入口。 */
+/** 官方 Demo 同款简洁贴底栏：供关闭浮动底栏或 API 31-33 降级时使用，首尾对称保留设置与搜索入口。 */
 @Composable
 private fun CouiPlainDockedBottomBar(
     items: List<CouiBarItem>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
+    leftAccessory: CouiBarAccessory?,
     rightAccessory: CouiBarAccessory?,
     modifier: Modifier = Modifier,
 ) {
@@ -245,6 +248,9 @@ private fun CouiPlainDockedBottomBar(
                 .selectableGroup(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (leftAccessory != null) {
+                CouiDockedAccessoryItem(accessory = leftAccessory, dark = dark)
+            }
             items.forEachIndexed { index, item ->
                 val selected = index == selectedIndex
                 val source = remember { MutableInteractionSource() }
@@ -297,43 +303,52 @@ private fun CouiPlainDockedBottomBar(
                 }
             }
             if (rightAccessory != null) {
-                val source = remember { MutableInteractionSource() }
-                val tint = scheme.onSurfaceVariant
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(CouiCapsuleShape)
-                        .couiNavigationFeedback(dark = dark, interactionSource = source)
-                        .clickable(
-                            interactionSource = source,
-                            indication = null,
-                            role = Role.Button,
-                            onClick = rightAccessory.onClick,
-                        )
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(
-                        painter = rememberVectorPainter(rightAccessory.icon),
-                        contentDescription = null,
-                        colorFilter = ColorFilter.tint(tint),
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    BasicText(
-                        text = rightAccessory.description,
-                        style = TextStyle(
-                            fontSize = 10.sp,
-                            lineHeight = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = tint,
-                            textAlign = TextAlign.Center,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                CouiDockedAccessoryItem(accessory = rightAccessory, dark = dark)
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.CouiDockedAccessoryItem(
+    accessory: CouiBarAccessory,
+    dark: Boolean,
+) {
+    val scheme = CouiTheme.colorScheme
+    val source = remember { MutableInteractionSource() }
+    val tint = scheme.onSurfaceVariant
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clip(CouiCapsuleShape)
+            .couiNavigationFeedback(dark = dark, interactionSource = source)
+            .clickable(
+                interactionSource = source,
+                indication = null,
+                role = Role.Button,
+                onClick = accessory.onClick,
+            )
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = rememberVectorPainter(accessory.icon),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(tint),
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(Modifier.height(2.dp))
+        BasicText(
+            text = accessory.description,
+            style = TextStyle(
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = tint,
+                textAlign = TextAlign.Center,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

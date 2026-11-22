@@ -233,7 +233,7 @@ private fun CouiAboutHeader() {
             )
         }
         Text(
-            text = strings.aboutDesc,
+            text = strings.couiAboutAppDesc,
             kind = CouiTextKind.ItemSummary,
             color = scheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

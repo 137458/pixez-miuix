@@ -29,6 +29,10 @@ class BoardRepository(
     @Volatile
     private var memoryCache: List<BoardInfo>? = null
 
+    /** 最近一次成功拉取的公告内存缓存（供设置页重建首帧同步初始化，防止公告行延迟插入）。 */
+    val cachedBoardList: List<BoardInfo>?
+        get() = memoryCache
+
     /**
      * 从远端加载公告列表，支持 GitHub Raw 与 CDN 镜像多源重试与内存缓存兜底。
      */
