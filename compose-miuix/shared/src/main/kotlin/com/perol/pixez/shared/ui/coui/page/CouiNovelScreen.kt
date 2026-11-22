@@ -252,9 +252,9 @@ internal fun CouiNovelScreen(
 }
 
 /**
- * 排行榜周期分段切换（日 / 周 / 月）。
+ * 排行榜周期分段切换（日 / 周）。
  *
- * 独占一行、三等分铺满（[CouiSegmentedTabs] 内部每段 weight(1f)，长文案省略号收敛），
+ * 独占一行、两等分铺满（[CouiSegmentedTabs] 内部每段 weight(1f)，长文案省略号收敛），
  * 与顶栏的主 Tab 分段控件分属两行，任何语言下都不会互相挤压或溢出。
  */
 @Composable
@@ -263,8 +263,8 @@ private fun CouiNovelRankingPeriodHeader(
     onRankingModeChange: (NovelRankingMode) -> Unit,
 ) {
     val strings = LocalStrings.current
-    val modes = remember { listOf(NovelRankingMode.Day, NovelRankingMode.Week, NovelRankingMode.Month) }
-    val labels = remember(strings) { listOf(strings.rankingDay, strings.rankingWeek, strings.rankingMonth) }
+    val modes = remember { listOf(NovelRankingMode.Day, NovelRankingMode.Week) }
+    val labels = remember(strings) { listOf(strings.rankingDay, strings.rankingWeek) }
     CouiSegmentedTabs(
         items = labels,
         selectedIndex = modes.indexOf(rankingMode).coerceAtLeast(0),

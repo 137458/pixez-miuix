@@ -209,7 +209,7 @@ fun NovelScreen(
                     )
                 }
 
-                // 榜单周期：仅排行 Tab 出现，日 / 周 / 月三段等宽，与主 Tab 分行互不挤压。
+                // 榜单周期：仅排行 Tab 出现，日 / 周两段等宽，与主 Tab 分行互不挤压。
                 AnimatedVisibility(visible = currentTab == NovelBrowseTab.Ranking) {
                     Row(
                         modifier = Modifier
@@ -227,12 +227,6 @@ fun NovelScreen(
                             title = strings.rankingWeek,
                             selected = rankingMode == NovelRankingMode.Week,
                             onClick = { pageState.rankingMode = NovelRankingMode.Week },
-                            modifier = Modifier.weight(1f),
-                        )
-                        NovelSubModeChip(
-                            title = strings.rankingMonth,
-                            selected = rankingMode == NovelRankingMode.Month,
-                            onClick = { pageState.rankingMode = NovelRankingMode.Month },
                             modifier = Modifier.weight(1f),
                         )
                     }

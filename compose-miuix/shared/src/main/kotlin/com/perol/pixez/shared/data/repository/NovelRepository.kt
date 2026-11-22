@@ -19,6 +19,11 @@ enum class NovelRankingMode(val value: String) {
     DayFemale("day_female"),
     WeekRookie("week_rookie"),
     Week("week"),
+
+    /**
+     * 月榜：pixiv app-api 已不接受该取值（/v1/novel/ranking 对 month 系列一律返回 400 不正确的请求），
+     * 界面不再提供入口；保留枚举值仅为兼容既有测试与历史数据。
+     */
     Month("month"),
     DayR18("day_r18"),
     DayMaleR18("day_male_r18"),
