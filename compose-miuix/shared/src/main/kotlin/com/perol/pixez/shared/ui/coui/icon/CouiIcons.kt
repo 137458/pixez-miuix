@@ -693,4 +693,19 @@ internal object CouiIcons {
         moveTo(3f, 10f)
         horizontalLineTo(21f)
     }
+
+    /** `book` — 小说浏览入口 */
+    val Book: ImageVector = strokeIcon("Book") {
+        moveTo(4f, 19.5f)
+        arcTo(2.5f, 2.5f, 0f, false, true, 6.5f, 17f)
+        horizontalLineTo(20f)
+        moveTo(6.5f, 2f)
+        horizontalLineTo(20f)
+        verticalLineTo(22f)
+        horizontalLineTo(6.5f)
+        arcTo(2.5f, 2.5f, 0f, false, true, 4f, 19.5f)
+        verticalLineTo(4.5f)
+        arcTo(2.5f, 2.5f, 0f, false, true, 6.5f, 2f)
+        close()
+    }
 }

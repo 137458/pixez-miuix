@@ -44,6 +44,7 @@ internal fun CouiHelloScreen(
     onSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
     onRecomUserClick: () -> Unit,
+    onNovelBrowseClick: () -> Unit,
     feedRestore: IllustFeedRestoreCache,
     reselectFlow: Flow<Unit>?,
 ) {
@@ -97,6 +98,11 @@ internal fun CouiHelloScreen(
                     }
                 }
             }
+            CouiTopBarIconButton(
+                onClick = onNovelBrowseClick,
+                icon = CouiIcons.Book,
+                contentDescription = strings.novelBrowseTitle,
+            )
             CouiTopBarIconButton(
                 onClick = onSettingsClick,
                 icon = CouiIcons.Settings,

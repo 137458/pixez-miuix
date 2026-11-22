@@ -49,6 +49,7 @@ internal val MAIN_TAB_DESCRIPTORS: List<MainTabDescriptor> = listOf(
                 onSettingsClick = component::onSettingsClicked,
                 onLoginClick = component::onLoginClicked,
                 onRecomUserClick = component::onRecomUserListClicked,
+                onNovelBrowseClick = component::onNovelBrowseClicked,
                 feedRestore = feedRestore.hello,
                 reselectFlow = remember(component) {
                     component.reselectFlowOf(RootComponent.MainTab.Hello)

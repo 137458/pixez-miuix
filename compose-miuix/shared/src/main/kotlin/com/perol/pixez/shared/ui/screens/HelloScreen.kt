@@ -38,9 +38,10 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Contacts
+import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 
 /**
@@ -53,6 +54,7 @@ fun HelloScreen(
     onSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
     onRecomUserClick: () -> Unit,
+    onNovelBrowseClick: () -> Unit = {},
     feedRestore: IllustFeedRestoreCache,
     reselectFlow: kotlinx.coroutines.flow.Flow<Unit>? = null,
 ) {
@@ -142,6 +144,14 @@ fun HelloScreen(
                         )
                     }
                 }
+            }
+            IconButton(
+                onClick = onNovelBrowseClick,
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Notes,
+                    contentDescription = strings.novelBrowseTitle,
+                )
             }
             IconButton(
                 onClick = onSettingsClick,

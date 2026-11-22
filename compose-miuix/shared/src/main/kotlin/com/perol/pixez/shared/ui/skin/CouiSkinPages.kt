@@ -176,6 +176,7 @@ internal object CouiSkinPages : SkinPages {
                     onSettingsClick = component::onSettingsClicked,
                     onLoginClick = component::onLoginClicked,
                     onRecomUserClick = component::onRecomUserListClicked,
+                    onNovelBrowseClick = component::onNovelBrowseClicked,
                     feedRestore = feedRestore.hello,
                     reselectFlow = reselectFlow,
                 )
