@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -89,8 +90,8 @@ import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.itos.coui.theme.LocalCouiTextStyle
 import com.itos.coui.topappbar.CouiTopAppBarDefaults
-import com.itos.coui.topappbar.TopAppBar
 import com.itos.coui.topappbar.TopAppBarButtonGroup
+import com.itos.coui.topappbar.TopAppBarSurface
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustTag
@@ -205,6 +206,13 @@ internal fun resolveDisplayedBookmarkCount(
 /** 计算 COUI 作品详情页浮动顶栏标题透明度：在顶部不展示作品名，上滑滚过画作后才平滑淡入。 */
 internal fun resolveCouiDetailTopBarTitleAlpha(collapseProgress: Float): Float =
     ((collapseProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+
+/**
+ * 计算 COUI 作品详情页顶栏渐变模糊透明度：
+ * 初次进入（顶部及轻微滑动）返回 0f，保持画作顶部完全无遮挡；向下滑动一段距离后才平滑渐显。
+ */
+internal fun resolveCouiDetailTopBarBlurAlpha(collapseProgress: Float): Float =
+    ((collapseProgress - 0.18f) / 0.52f).coerceIn(0f, 1f)
 
 /** 已收藏心形高亮色（ColorOS 暖红）。 */
 private val CouiBookmarkActiveColor = Color(0xFFFF4D6A)
@@ -765,10 +773,18 @@ private fun CouiIllustDetailSingle(
                     else -> 0f
                 }
             }
+            val blurAlphaProvider: () -> Float = {
+                when {
+                    isImmersive -> resolveCouiDetailTopBarBlurAlpha(collapseProgressState.value)
+                    isWideScreen && isShowingContent && wideInfoListState.firstVisibleItemIndex > 0 -> 1f
+                    else -> 0f
+                }
+            }
             CouiIllustDetailFloatingTopBar(
                 illust = illust,
                 backdrop = contentBackdrop,
                 titleAlphaProvider = titleAlphaProvider,
+                blurAlphaProvider = blurAlphaProvider,
                 isBookmarked = isBookmarked,
                 isBookmarkLoading = isBookmarkLoading,
                 bookmarkHeartScale = bookmarkHeartScale,
@@ -818,6 +834,7 @@ private fun CouiIllustDetailFloatingTopBar(
     illust: Illust?,
     backdrop: CouiBackdrop,
     titleAlphaProvider: () -> Float,
+    blurAlphaProvider: () -> Float,
     isBookmarked: Boolean,
     isBookmarkLoading: Boolean,
     bookmarkHeartScale: Animatable<Float, AnimationVector1D>,
@@ -835,23 +852,45 @@ private fun CouiIllustDetailFloatingTopBar(
     val scheme = CouiTheme.colorScheme
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
+    val barBlurAlpha by remember(blurAlphaProvider) {
+        derivedStateOf { blurAlphaProvider().coerceIn(0f, 1f) }
+    }
+    val barColors = CouiTopAppBarDefaults.colors(
+        backgroundColor = scheme.background,
+        dark = CouiTheme.isDark,
+    )
 
-    TopAppBar(
+    TopAppBarSurface(
         modifier = modifier.fillMaxWidth(),
-        title = {
-            CouiBarTitle(
-                text = illust?.title.orEmpty(),
-                modifier = Modifier.graphicsLayer { alpha = titleAlphaProvider() },
-            )
-        },
-        navigationIcon = {
+        backdrop = backdrop,
+        backgroundAlpha = barBlurAlpha,
+        gradientColor = barColors.backgroundColor,
+        dark = CouiTheme.isDark,
+    ) {
+        Row(
+            modifier = Modifier
+                .windowInsetsPadding(CouiTopAppBarDefaults.windowInsets)
+                .fillMaxWidth()
+                .height(CouiTopAppBarDefaults.height)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             CouiTopBarIconButton(
                 onClick = onBack,
                 icon = CouiIcons.Back,
                 contentDescription = strings.back,
             )
-        },
-        actions = {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                CouiBarTitle(
+                    text = illust?.title.orEmpty(),
+                    modifier = Modifier.graphicsLayer { alpha = titleAlphaProvider() },
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             TopAppBarButtonGroup {
                 CouiTopBarIconButton(
                     onClick = actions::bookmark,
@@ -893,14 +932,8 @@ private fun CouiIllustDetailFloatingTopBar(
                     }
                 }
             }
-        },
-        dark = CouiTheme.isDark,
-        colors = CouiTopAppBarDefaults.colors(
-            backgroundColor = scheme.background,
-            dark = CouiTheme.isDark,
-        ),
-        backdrop = backdrop,
-    )
+        }
+    }
 }
 
 /** COUI 更多操作菜单：动作编排统一取自共享构建器 buildIllustDetailMoreMenuEntries。 */

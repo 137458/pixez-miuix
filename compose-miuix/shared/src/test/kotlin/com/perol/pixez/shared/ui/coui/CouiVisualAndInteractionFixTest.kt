@@ -2,6 +2,8 @@ package com.perol.pixez.shared.ui.coui
 
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.perol.pixez.shared.ui.coui.core.BoundedObjectPool
+import com.perol.pixez.shared.ui.coui.core.shouldCommitCouiBottomBarTap
+import com.perol.pixez.shared.ui.coui.page.resolveCouiDetailTopBarBlurAlpha
 import com.perol.pixez.shared.ui.navigation.animation.resolveStackLayerFactor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -69,15 +71,17 @@ class CouiVisualAndInteractionFixTest {
     }
 
     @Test
-    fun couiIllustDetailTopBarUsesOfficialGradientBlurAndGlareTopAppBarButtons() {
+    fun couiIllustDetailTopBarUsesScrollGatedGradientBlurAndGlareTopAppBarButtons() {
         val source = locateSharedSourceFile("ui/coui/page/CouiIllustDetailScreen.kt").readText()
         assertTrue(
             "CouiIllustDetailScreen must record content with rememberCouiBackdrop() and couiBackdrop(...)",
             source.contains("rememberCouiBackdrop(") && source.contains(".couiBackdrop("),
         )
         assertTrue(
-            "CouiIllustDetailFloatingTopBar must use official COUI TopAppBar for gradient blur",
-            source.contains("TopAppBar(") && source.contains("CouiTopAppBarDefaults.colors("),
+            "CouiIllustDetailFloatingTopBar must use TopAppBarSurface with scroll-driven backgroundAlpha and resolveCouiDetailTopBarBlurAlpha",
+            source.contains("TopAppBarSurface(") &&
+                source.contains("backgroundAlpha = ") &&
+                source.contains("resolveCouiDetailTopBarBlurAlpha("),
         )
         assertTrue(
             "CouiIllustDetailFloatingTopBar must use CouiTopBarIconButton and TopAppBarButtonGroup for glare buttons",
@@ -86,6 +90,16 @@ class CouiVisualAndInteractionFixTest {
         assertFalse(
             "CouiIllustDetailFloatingTopBar must not use flat alpha solid background or custom dark circle button",
             source.contains("CouiDetailTopCircleButton") || source.contains("scheme.background.copy(alpha = 0.94f)"),
+        )
+    }
+
+    @Test
+    fun couiBottomBarPreventsSlideOverSelection() {
+        val source = locateSharedSourceFile("ui/coui/core/CouiBottomBar.kt").readText()
+        assertTrue(
+            "CouiOfficialNavigationBar must install CouiCenterCapsuleTapOverlay and validate tap-only commits via shouldCommitCouiBottomBarTap",
+            source.contains("CouiCenterCapsuleTapOverlay(") &&
+                source.contains("shouldCommitCouiBottomBarTap("),
         )
     }
 
@@ -171,6 +185,68 @@ class CouiVisualAndInteractionFixTest {
         assertEquals(-0.25f, resolveStackLayerFactor(Direction.ENTER_BACK, 0.25f), 1e-5f)
         assertEquals(0f, resolveStackLayerFactor(Direction.EXIT_BACK, 1f), 1e-5f)
         assertEquals(-0.75f, resolveStackLayerFactor(Direction.EXIT_BACK, 0.25f), 1e-5f)
+    }
+
+    @Test
+    fun resolveCouiDetailTopBarBlurAlphaStaysZeroOnEntryAndFadesInAfterScrollingDown() {
+        assertEquals(0f, resolveCouiDetailTopBarBlurAlpha(0f), 1e-5f)
+        assertEquals(0f, resolveCouiDetailTopBarBlurAlpha(0.18f), 1e-5f)
+        val midAlpha = resolveCouiDetailTopBarBlurAlpha(0.44f)
+        assertTrue("Expected fade progress in (0, 1), got $midAlpha", midAlpha in 0.49f..0.51f)
+        assertEquals(1f, resolveCouiDetailTopBarBlurAlpha(0.70f), 1e-5f)
+        assertEquals(1f, resolveCouiDetailTopBarBlurAlpha(1.25f), 1e-5f)
+    }
+
+    @Test
+    fun shouldCommitCouiBottomBarTapCommitsOnlyInsideItemWithinTouchSlop() {
+        // 正常轻点同一条目：位移 <= touchSlop 且落在 [0..100]x[0..80] 内 -> 提交
+        assertTrue(
+            shouldCommitCouiBottomBarTap(
+                startX = 50f,
+                startY = 40f,
+                endX = 56f,
+                endY = 44f,
+                widthPx = 100f,
+                heightPx = 80f,
+                touchSlopPx = 12f,
+            ),
+        )
+        // 滑动离开当前条目到邻近图标处抬手 -> 即使距离或跨界也不得提交
+        assertFalse(
+            shouldCommitCouiBottomBarTap(
+                startX = 95f,
+                startY = 40f,
+                endX = 104f,
+                endY = 40f,
+                widthPx = 100f,
+                heightPx = 80f,
+                touchSlopPx = 12f,
+            ),
+        )
+        // 条目内拖拽位移超过 touchSlop -> 视作滑动而非点击
+        assertFalse(
+            shouldCommitCouiBottomBarTap(
+                startX = 20f,
+                startY = 40f,
+                endX = 45f,
+                endY = 40f,
+                widthPx = 100f,
+                heightPx = 80f,
+                touchSlopPx = 12f,
+            ),
+        )
+        // 无效尺寸兜底 -> 不提交
+        assertFalse(
+            shouldCommitCouiBottomBarTap(
+                startX = 0f,
+                startY = 0f,
+                endX = 0f,
+                endY = 0f,
+                widthPx = 0f,
+                heightPx = 80f,
+                touchSlopPx = 12f,
+            ),
+        )
     }
 
     private fun locateSharedSourceFile(relativePath: String): File {
