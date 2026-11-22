@@ -132,6 +132,7 @@ object FaStrings : AppStrings {
     override val updateLatestVersion = "آخرین نسخه"
     override val updateDownloadSuccess = "به‌روزرسانی بارگیری شد و آماده نصب است"
     override val updateNotesTitle = "یادداشت‌های به‌روزرسانی"
+    override val updateNotesExpandWithCount = "باز کردن همه (%d خط دیگر)"
     override val updateDialogCurrentLabel = "فعلی"
     override val updateDialogLatestLabel = "جدیدترین"
     override val updateDialogDownloadNow = "همین حالا دانلود کنید"

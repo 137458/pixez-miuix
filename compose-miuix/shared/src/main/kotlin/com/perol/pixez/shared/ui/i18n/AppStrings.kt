@@ -466,6 +466,7 @@ interface AppStrings {
     // 更新弹窗：标题下只有一行版本跃迁摘要，动作按下载状态推导。
     // 全部语种显式实现，AppStringsCompletenessTest 会拦截漏翻。
     val updateNotesTitle: String
+    val updateNotesExpandWithCount: String
     val updateDialogCurrentLabel: String
     val updateDialogLatestLabel: String
     val updateDialogDownloadNow: String
@@ -915,6 +916,7 @@ object ZhCnStrings : AppStrings {
     override val updateLatestVersion = "最新版本"
     override val updateDownloadSuccess = "更新包下载完成，准备安装"
     override val updateNotesTitle = "更新说明"
+    override val updateNotesExpandWithCount = "展开全部（还有 %d 行）"
     override val updateDialogCurrentLabel = "当前"
     override val updateDialogLatestLabel = "最新"
     override val updateDialogDownloadNow = "立即下载"
@@ -1591,6 +1593,7 @@ object ZhTwStrings : AppStrings {
     override val updateLatestVersion = "最新版本"
     override val updateDownloadSuccess = "更新包下載完成，準備安裝"
     override val updateNotesTitle = "更新說明"
+    override val updateNotesExpandWithCount = "展開全部（還有 %d 行）"
     override val updateDialogCurrentLabel = "目前"
     override val updateDialogLatestLabel = "最新"
     override val updateDialogDownloadNow = "立即下載"
@@ -2302,6 +2305,7 @@ object EnStrings : AppStrings {
     override val updateLatestVersion = "Latest"
     override val updateDownloadSuccess = "Update downloaded, ready to install"
     override val updateNotesTitle = "Update notes"
+    override val updateNotesExpandWithCount = "Expand all (%d more lines)"
     override val updateDialogCurrentLabel = "Current"
     override val updateDialogLatestLabel = "Latest"
     override val updateDialogDownloadNow = "Download now"
@@ -3042,6 +3046,7 @@ object JaStrings : AppStrings {
     override val updateLatestVersion = "最新バージョン"
     override val updateDownloadSuccess = "アップデートのダウンロードが完了しました。インストールを開始します"
     override val updateNotesTitle = "更新内容"
+    override val updateNotesExpandWithCount = "すべて表示（残り %d 行）"
     override val updateDialogCurrentLabel = "現在"
     override val updateDialogLatestLabel = "最新"
     override val updateDialogDownloadNow = "今すぐダウンロード"
@@ -3765,6 +3770,7 @@ object KoStrings : AppStrings {
     override val updateLatestVersion = "최신 버전"
     override val updateDownloadSuccess = "업데이트 다운로드 완료, 설치 준비 중"
     override val updateNotesTitle = "업데이트 안내"
+    override val updateNotesExpandWithCount = "전체 펼치기 (%d줄 더 보기)"
     override val updateDialogCurrentLabel = "현재"
     override val updateDialogLatestLabel = "최신"
     override val updateDialogDownloadNow = "지금 다운로드"
@@ -4470,6 +4476,7 @@ object RuStrings : AppStrings {
     override val updateLatestVersion = "Новая"
     override val updateDownloadSuccess = "Обновление загружено, подготовка к установке"
     override val updateNotesTitle = "Описание обновления"
+    override val updateNotesExpandWithCount = "Развернуть всё (ещё %d строк)"
     override val updateDialogCurrentLabel = "Текущая"
     override val updateDialogLatestLabel = "Последняя"
     override val updateDialogDownloadNow = "Скачать сейчас"
@@ -5177,6 +5184,7 @@ object EsStrings : AppStrings {
     override val updateLatestVersion = "Más reciente"
     override val updateDownloadSuccess = "Actualización descargada, lista para instalar"
     override val updateNotesTitle = "Notas de la actualización"
+    override val updateNotesExpandWithCount = "Expandir todo (%d líneas más)"
     override val updateDialogCurrentLabel = "Actual"
     override val updateDialogLatestLabel = "Última"
     override val updateDialogDownloadNow = "Descargar ahora"
@@ -5882,6 +5890,7 @@ object TrStrings : AppStrings {
     override val updateLatestVersion = "En Son"
     override val updateDownloadSuccess = "Güncelleme indirildi, yüklemeye hazır"
     override val updateNotesTitle = "Güncelleme notları"
+    override val updateNotesExpandWithCount = "Tümünü genişlet (%d satır daha)"
     override val updateDialogCurrentLabel = "Mevcut"
     override val updateDialogLatestLabel = "En son"
     override val updateDialogDownloadNow = "Şimdi indir"
@@ -6589,6 +6598,7 @@ object IdStrings : AppStrings {
     override val updateLatestVersion = "Terbaru"
     override val updateDownloadSuccess = "Pembaruan telah diunduh, siap dipasang"
     override val updateNotesTitle = "Catatan pembaruan"
+    override val updateNotesExpandWithCount = "Tampilkan semua (%d baris lagi)"
     override val updateDialogCurrentLabel = "Saat ini"
     override val updateDialogLatestLabel = "Terbaru"
     override val updateDialogDownloadNow = "Unduh sekarang"
@@ -7295,6 +7305,7 @@ object FilStrings : AppStrings {
     override val updateLatestVersion = "Pinakabago"
     override val updateDownloadSuccess = "Na-download na ang update, handa nang i-install"
     override val updateNotesTitle = "Mga tala ng update"
+    override val updateNotesExpandWithCount = "Palawakin lahat (%d pang linya)"
     override val updateDialogCurrentLabel = "Kasalukuyan"
     override val updateDialogLatestLabel = "Pinakabago"
     override val updateDialogDownloadNow = "I-download ngayon"
@@ -8001,6 +8012,7 @@ object DeStrings : AppStrings {
     override val updateLatestVersion = "Neueste"
     override val updateDownloadSuccess = "Update heruntergeladen, bereit zur Installation"
     override val updateNotesTitle = "Update-Hinweise"
+    override val updateNotesExpandWithCount = "Alle ausklappen (%d weitere Zeilen)"
     override val updateDialogCurrentLabel = "Aktuell"
     override val updateDialogLatestLabel = "Neueste"
     override val updateDialogDownloadNow = "Jetzt herunterladen"
@@ -8663,6 +8675,7 @@ object ViStrings : AppStrings {
     override val updateLatestVersion = "Mới nhất"
     override val updateDownloadSuccess = "Đã tải xong bản cập nhật, sẵn sàng cài đặt"
     override val updateNotesTitle = "Ghi chú cập nhật"
+    override val updateNotesExpandWithCount = "Mở rộng tất cả (%d dòng nữa)"
     override val updateDialogCurrentLabel = "Hiện tại"
     override val updateDialogLatestLabel = "Mới nhất"
     override val updateDialogDownloadNow = "Tải xuống ngay"

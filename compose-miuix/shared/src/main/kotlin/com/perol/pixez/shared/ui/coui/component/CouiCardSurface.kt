@@ -1,18 +1,31 @@
 package com.perol.pixez.shared.ui.coui.component
 
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.itos.coui.dialog.CouiDialogActionColors
 import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.dialog.CouiDialogMaterial
 import com.itos.coui.dialog.CouiDialogPlacement
+import com.itos.coui.effect.CouiContour
+import com.itos.coui.effect.CouiContourStyle
+import com.itos.coui.effect.LocalCouiContourGlowEnabled
 import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.menu.rememberCouiWindowBackdrop
 import com.itos.coui.theme.CouiTheme
@@ -102,4 +115,122 @@ internal fun couiPrimaryActionColors(danger: Boolean = false): CouiDialogActionC
         CouiTheme.colorScheme.accent
     }
     return CouiDialogDefaults.primaryActionColors(accent)
+}
+
+/** 玻璃弹窗内内容区（说明卡等）使用的半透明表面底色，直接承接弹窗玻璃而不叠不透明卡片。 */
+@Composable
+internal fun couiDialogSurfaceColor(elevated: Boolean = false): Color {
+    val dark = CouiTheme.isDark
+    val scheme = CouiTheme.colorScheme
+    val alpha = when {
+        elevated && dark -> 0.13f
+        elevated -> 0.08f
+        dark -> 0.09f
+        else -> 0.055f
+    }
+    return scheme.onSurface.copy(alpha = alpha)
+}
+
+/** 轮廓凝光材质与弹窗背景材质同门槛（API 33+）。 */
+internal fun couiContourSurfaceEnabled(sdkInt: Int): Boolean =
+    sdkInt >= COUI_DIALOG_MATERIAL_MIN_SDK
+
+/**
+ * COUI 原厂凝光轮廓材质修饰符：
+ * - API 33+ 通过 [CouiContour] 运行时着色器在底色上叠加柔光边缘与内高光；
+ * - API 31–32 退化为纯底色（按需叠加 0.5dp 细腻描边）。
+ */
+@Composable
+internal fun Modifier.couiContourSurface(
+    shape: Shape,
+    surfaceColor: Color,
+    cornerRadius: Dp,
+    cornerWeight: Float = 2f,
+    style: CouiContourStyle = CouiContourStyle.Button,
+    dark: Boolean = CouiTheme.isDark,
+    emphasized: Boolean = false,
+    edgeAlpha: Float = when {
+        emphasized -> if (dark) 0.24f else 0.16f
+        dark -> 0.14f
+        else -> 0.05f
+    },
+    innerGlowAlpha: Float = when {
+        emphasized -> if (dark) 0.10f else 0.06f
+        dark -> 0.04f
+        else -> 0.02f
+    },
+    edgeWidthDp: Float = if (emphasized) 2.5f else 2.2f,
+    fallbackBorderColor: Color = Color.Transparent,
+): Modifier {
+    if (Build.VERSION.SDK_INT < COUI_DIALOG_MATERIAL_MIN_SDK || !couiContourSurfaceEnabled(Build.VERSION.SDK_INT)) {
+        return this
+            .clip(shape)
+            .background(surfaceColor)
+            .then(
+                if (fallbackBorderColor.alpha > 0f) {
+                    Modifier.border(0.5.dp, fallbackBorderColor, shape)
+                } else {
+                    Modifier
+                },
+            )
+    }
+
+    return couiContourSurface33(
+        shape = shape,
+        surfaceColor = surfaceColor,
+        cornerRadius = cornerRadius,
+        cornerWeight = cornerWeight,
+        style = style,
+        edgeAlpha = edgeAlpha,
+        innerGlowAlpha = innerGlowAlpha,
+        edgeWidthDp = edgeWidthDp,
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+private fun Modifier.couiContourSurface33(
+    shape: Shape,
+    surfaceColor: Color,
+    cornerRadius: Dp,
+    cornerWeight: Float,
+    style: CouiContourStyle,
+    edgeAlpha: Float,
+    innerGlowAlpha: Float,
+    edgeWidthDp: Float,
+): Modifier {
+    val contourGlow = LocalCouiContourGlowEnabled.current
+    val contour = remember(contourGlow, style) {
+        if (contourGlow) CouiContour(floating = false, style = style) else null
+    }
+    val shaderPaint = remember { android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG) }
+    val density = LocalDensity.current.density
+    val cornerRadiusPx = with(LocalDensity.current) { cornerRadius.toPx() }
+
+    return this
+        .clip(shape)
+        .drawWithContent {
+            drawRect(surfaceColor)
+            if (contour != null && size.width > 0f && size.height > 0f) {
+                val resolvedRadius = minOf(cornerRadiusPx, size.minDimension / 2f)
+                val resolvedWeight = if (style == CouiContourStyle.Button && size.width == size.height) {
+                    2f
+                } else {
+                    cornerWeight
+                }
+                shaderPaint.shader = contour.shader(
+                    size = size,
+                    density = density,
+                    radiusPx = resolvedRadius,
+                    cornerWeight = resolvedWeight,
+                    surfaceColor = Color.Transparent,
+                    innerGlowAlpha = innerGlowAlpha,
+                    lineAlpha = edgeAlpha,
+                    effectAlpha = 1f,
+                    lineWidthPx = edgeWidthDp * density,
+                )
+                drawContext.canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, shaderPaint)
+            }
+            drawContent()
+        }
 }

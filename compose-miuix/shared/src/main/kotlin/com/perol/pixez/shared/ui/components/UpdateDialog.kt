@@ -21,14 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.AppInfo
@@ -240,41 +232,6 @@ fun UpdateDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
-    }
-}
-
-/**
- * 边缘羽化底座：离屏合成后用 DstIn 遮罩把内容在指定边缘淡出。
- */
-internal fun Modifier.edgeFadeMask(brushFactory: DrawScope.() -> Brush): Modifier =
-    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
-        drawContent()
-        if (size.width <= 0f || size.height <= 0f) return@drawWithContent
-        drawRect(brush = brushFactory(), blendMode = BlendMode.DstIn)
-    }
-
-/**
- * 竖向边缘羽化：只在 [top] / [bottom] 为 true 的一侧铺渐变，滚到端点时对应侧完全实心。
- */
-internal fun Modifier.verticalEdgeFade(
-    top: Boolean,
-    bottom: Boolean,
-    fade: Dp = UPDATE_NOTES_FADE_DP.dp,
-): Modifier {
-    if (!top && !bottom) return this
-    return edgeFadeMask {
-        val fadePx = fade.toPx().coerceAtMost(size.height / 2f)
-        val stop = (fadePx / size.height).coerceIn(0f, 0.5f)
-        when {
-            top && bottom -> Brush.verticalGradient(
-                0f to Color.Transparent,
-                stop to Color.Black,
-                1f - stop to Color.Black,
-                1f to Color.Transparent,
-            )
-            top -> Brush.verticalGradient(0f to Color.Transparent, stop to Color.Black)
-            else -> Brush.verticalGradient(1f - stop to Color.Black, 1f to Color.Transparent)
         }
     }
 }

@@ -1,7 +1,10 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.platform.UpdateDownloadState
+import com.perol.pixez.shared.ui.i18n.EnStrings
+import com.perol.pixez.shared.ui.i18n.FaStrings
 import com.perol.pixez.shared.ui.i18n.ZhCnStrings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -299,5 +302,72 @@ class UpdateDialogPlanTest {
 
         assertNull(release.copy(downloadUrl = null).updateAsset())
         assertNull(release.copy(fileName = null).updateAsset())
+    }
+
+    @Test
+    fun `COUI 弹窗预览行数阈值折叠常规更新说明并在展开与收起间切换`() {
+        assertEquals(2, COUI_UPDATE_NOTES_PREVIEW_LINES)
+
+        val shortNotes = "- 修复下载\n- 优化弹窗"
+        val shortCollapsed = updateDialogNotesState(
+            markdown = shortNotes,
+            expanded = false,
+            previewLines = COUI_UPDATE_NOTES_PREVIEW_LINES,
+        )
+        assertEquals(0, shortCollapsed.hiddenLineCount)
+
+        val longNotes = (1..8).joinToString("\n") { "- 第 $it 条更新说明" }
+        val longCollapsed = updateDialogNotesState(
+            markdown = longNotes,
+            expanded = false,
+            previewLines = COUI_UPDATE_NOTES_PREVIEW_LINES,
+        )
+        assertEquals(8 - COUI_UPDATE_NOTES_PREVIEW_LINES, longCollapsed.hiddenLineCount)
+
+        val expanded = updateDialogNotesState(
+            markdown = longNotes,
+            expanded = true,
+            previewLines = COUI_UPDATE_NOTES_PREVIEW_LINES,
+        )
+        assertEquals(0, expanded.hiddenLineCount)
+        assertEquals(longNotes, expanded.visibleMarkdown)
+    }
+
+    @Test
+    fun `说明视口规格收敛非法高度与过长羽化`() {
+        val normal = notesViewportSpec(maxHeight = 240.dp, fade = 40.dp)
+        assertEquals(240.dp, normal.maxHeight)
+        assertEquals(40.dp, normal.fade)
+
+        val unbounded = notesViewportSpec(maxHeight = androidx.compose.ui.unit.Dp.Infinity, fade = 200.dp)
+        assertEquals(NotesViewportMinHeight, unbounded.maxHeight)
+        assertEquals(NotesViewportMinHeight / 2f, unbounded.fade)
+
+        val negativeFade = notesViewportSpec(maxHeight = 30.dp, fade = (-10).dp)
+        assertEquals(NotesViewportMinHeight, negativeFade.maxHeight)
+        assertEquals(0.dp, negativeFade.fade)
+    }
+
+    @Test
+    fun `说明折叠行显隐与多语言文案随折叠状态切换`() {
+        assertFalse(updateNotesFoldVisible(hiddenLineCount = 0, expanded = false))
+        assertTrue(updateNotesFoldVisible(hiddenLineCount = 3, expanded = false))
+        assertTrue(updateNotesFoldVisible(hiddenLineCount = 0, expanded = true))
+
+        assertEquals(
+            "展开全部（还有 6 行）",
+            updateNotesFoldLabel(expanded = false, hiddenLineCount = 6, strings = ZhCnStrings),
+        )
+        assertEquals(
+            ZhCnStrings.collapse,
+            updateNotesFoldLabel(expanded = true, hiddenLineCount = 0, strings = ZhCnStrings),
+        )
+        assertEquals(
+            "Expand all (4 more lines)",
+            updateNotesFoldLabel(expanded = false, hiddenLineCount = 4, strings = EnStrings),
+        )
+        assertTrue(
+            updateNotesFoldLabel(expanded = false, hiddenLineCount = 5, strings = FaStrings).contains("5"),
+        )
     }
 }

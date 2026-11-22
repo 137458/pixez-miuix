@@ -13,6 +13,9 @@ import com.perol.pixez.shared.ui.i18n.formatFileSize
 /** 弹窗折叠态只展示前 12 行，展开后整段说明放进弹窗自己的滚动区。 */
 internal const val UPDATE_NOTES_PREVIEW_LINES = 12
 
+/** COUI 弹窗折叠态只展示前 2 行，控制底栏弹出卡片初始高度。 */
+internal const val COUI_UPDATE_NOTES_PREVIEW_LINES = 2
+
 /** 更新页长正文的预览行数上限；超出后折叠并提供「展开」。 */
 internal const val UPDATE_PAGE_PREVIEW_LINES = 16
 

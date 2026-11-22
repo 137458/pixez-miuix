@@ -2,16 +2,16 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,9 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.itos.coui.dialog.CouiDialogAction
-import com.itos.coui.dialog.CouiDialogActionStyle
-import com.itos.coui.dialog.Dialog
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -37,7 +34,7 @@ import com.perol.pixez.shared.network.GitHubReleaseEndpoints
 import com.perol.pixez.shared.platform.forAsset
 import com.perol.pixez.shared.platform.installPathFor
 import com.perol.pixez.shared.platform.UpdateDownloadState
-import com.perol.pixez.shared.ui.components.buildUpdateDialogPlan
+import com.perol.pixez.shared.platform.updateProgressFraction
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.MarkdownText
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -48,11 +45,10 @@ import com.perol.pixez.shared.ui.components.UPDATE_PAGE_PREVIEW_LINES
 import com.perol.pixez.shared.ui.components.updateAsset
 import com.perol.pixez.shared.ui.components.updateBrowserFallbackUrl
 import com.perol.pixez.shared.ui.components.updateDialogNotesState
+import com.perol.pixez.shared.ui.components.updateDialogProgressDetail
 import com.perol.pixez.shared.ui.components.updatePrimaryCta
-import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
-import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
+import com.perol.pixez.shared.ui.coui.component.CouiLinearProgressBar
 import com.perol.pixez.shared.ui.coui.component.couiMarkdownColors
-import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.core.CouiRowDivider
 import com.perol.pixez.shared.ui.coui.core.CouiSettingsScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTextButton
@@ -422,164 +418,31 @@ private fun CouiChangelogSection(
     }
 }
 
-/** 下载进度：自绘轨道，避免引入 MIUIX 进度组件。 */
+/** 下载进度：与更新弹窗共用 [CouiLinearProgressBar]，总长未知时展示不定态流光。 */
 @Composable
 private fun CouiUpdateProgress(
     state: UpdateDownloadState.Downloading,
 ) {
     val strings = LocalStrings.current
     val scheme = CouiTheme.colorScheme
-    val detail = if (state.total > 0L) {
-        strings.updateDialogDownloadingPercent.format((state.progress * 100).toInt())
-    } else {
-        strings.updateDownloading
-    }
+    val progress = if (state.total > 0L) updateProgressFraction(state.downloaded, state.total) else null
     Column(modifier = Modifier.padding(top = 12.dp)) {
-        Text(
-            text = detail,
-            kind = CouiTextKind.ItemSummary,
-            color = scheme.onSurfaceVariant,
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(scheme.container),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(state.progress.coerceIn(0f, 1f))
-                    .height(6.dp)
-                    .background(scheme.accent),
+            Text(
+                text = strings.updateDownloading,
+                kind = CouiTextKind.ItemSummary,
+                color = scheme.accent,
+            )
+            Text(
+                text = updateDialogProgressDetail(state, strings),
+                kind = CouiTextKind.ItemSummary,
+                color = scheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-/** COUI 版本更新弹窗：说明、下载进度与主/次操作，供更新设置页与根层自动检查共用。 */
-@Composable
-internal fun CouiUpdateDialog(
-    releaseInfo: ReleaseInfo,
-    onDismiss: () -> Unit,
-    onUpdate: (url: String) -> Unit,
-    onIgnore: ((String) -> Unit)? = null,
-) {
-    val strings = LocalStrings.current
-    val scheme = CouiTheme.colorScheme
-    val downloader = LocalUpdateDownloader.current
-    val rawDownloadState by downloader.state.collectAsState()
-    val asset = remember(releaseInfo) { releaseInfo.updateAsset() }
-    val downloadState = remember(rawDownloadState, asset) { rawDownloadState.forAsset(asset) }
-    LaunchedEffect(asset) { downloader.syncTarget(asset) }
-
-    var notesExpanded by remember(releaseInfo.tagName) { mutableStateOf(false) }
-    var installErrorText by remember(releaseInfo.tagName) { mutableStateOf<String?>(null) }
-    val notesState = remember(releaseInfo.changelog, notesExpanded) {
-        updateDialogNotesState(releaseInfo.changelog, notesExpanded)
-    }
-    val plan = remember(releaseInfo, downloadState, strings, onIgnore) {
-        buildUpdateDialogPlan(
-            currentVersion = AppInfo.VERSION_NAME,
-            release = releaseInfo,
-            downloadState = downloadState,
-            strings = strings,
-            canIgnore = onIgnore != null,
-            canCancelDownload = true,
-        )
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        visible = true,
-        material = couiDialogMaterialOrNull(),
-        title = strings.dialogNewVersionFound,
-        message = plan.summary,
-        placement = couiDialogPlacement(),
-        confirmAction = CouiDialogAction(
-            text = plan.primaryText,
-            enabled = plan.primaryEnabled,
-            style = CouiDialogActionStyle.Primary,
-            colors = couiPrimaryActionColors(),
-            onClick = {
-                installErrorText = runUpdatePrimaryAction(
-                    action = plan.primaryAction,
-                    asset = asset,
-                    downloader = downloader,
-                    installPath = plan.installPath,
-                    installFailedMessage = strings.updateInstallFailed,
-                    openBrowser = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
-                )
-            },
-        ),
-        dismissAction = CouiDialogAction(
-            text = plan.dismissText,
-            onClick = onDismiss,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 320.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            if (downloadState is UpdateDownloadState.Downloading) {
-                CouiUpdateProgress(downloadState)
-            }
-
-            val errorText = installErrorText ?: plan.errorText
-            if (errorText != null) {
-                Text(
-                    text = errorText,
-                    kind = CouiTextKind.ItemSummary,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            MarkdownText(
-                markdown = notesState.visibleMarkdown.ifBlank { strings.updateChangelogEmpty },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                baseFontSize = 13,
-                colors = couiMarkdownColors(),
-                onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
-            )
-            if (notesState.hiddenLineCount > 0 || notesExpanded) {
-                CouiTextButton(
-                    text = if (notesExpanded) strings.collapse else strings.expand,
-                    onClick = { notesExpanded = !notesExpanded },
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    filled = false,
-                )
-            }
-
-            if (plan.showCancelDownload) {
-                CouiTextButton(
-                    text = strings.updateCancelDownload,
-                    onClick = downloader::cancel,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    filled = false,
-                )
-            }
-            if (plan.showBrowserFallback) {
-                CouiTextButton(
-                    text = strings.updateOpenInBrowser,
-                    onClick = { onUpdate(updateBrowserFallbackUrl(releaseInfo)) },
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    filled = false,
-                )
-            }
-            if (plan.showIgnore && onIgnore != null) {
-                CouiTextButton(
-                    text = strings.updateDialogIgnore,
-                    onClick = { onIgnore(releaseInfo.versionName) },
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    filled = false,
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(8.dp))
+        CouiLinearProgressBar(progress = progress)
     }
 }
