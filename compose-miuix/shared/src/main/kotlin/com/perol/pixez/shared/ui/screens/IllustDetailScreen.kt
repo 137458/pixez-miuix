@@ -27,12 +27,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -295,34 +291,14 @@ private fun IllustDetailSingleContent(
     val detailBackdrop = rememberBlurBackdrop()
     val listState = rememberLazyListState()
     val density = LocalDensity.current
-    // 折叠进度累计阈值收敛到 AppConstants（UI-7），与搜索页折叠手势共用同一组纯函数。
+    // 直接依据 LazyListState 距顶部实际位置计算折叠进度，避免中途回拉提前清除顶部模糊（到顶才消失）。
     val scrollThresholdPx = with(density) { AppConstants.Layout.DETAIL_COLLAPSE_THRESHOLD_DP.dp.toPx() }
-    var scrollOffset by remember { mutableStateOf(0f) }
-
-    val detailNestedScrollConnection = remember(scrollThresholdPx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                scrollOffset = CollapseGesture.accumulateCollapseOffset(
-                    delta = available.y,
-                    currentOffset = scrollOffset,
-                    thresholdPx = scrollThresholdPx,
-                )
-                return Offset.Zero
-            }
-        }
-    }
-
-    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
-            scrollOffset = 0f
-        }
-    }
 
     val collapseProgressState = remember(scrollThresholdPx) {
         derivedStateOf {
             CollapseGesture.resolveCollapseProgress(
                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
-                scrollOffset = scrollOffset,
+                scrollOffset = listState.firstVisibleItemScrollOffset.toFloat(),
                 thresholdPx = scrollThresholdPx,
             )
         }
@@ -394,7 +370,6 @@ private fun IllustDetailSingleContent(
                         viewport = detailViewport,
                         settings = settings,
                         listState = listState,
-                        nestedScrollConnection = detailNestedScrollConnection,
                         detailBackdrop = detailBackdrop,
                         detailChromeAlpha = if (listState.firstVisibleItemIndex == 0) detailChromeAlpha else 1f,
                         repository = repository,
@@ -508,7 +483,6 @@ private fun IllustDetailContentList(
     viewport: IllustDetailViewport,
     settings: SettingsRepository?,
     listState: LazyListState,
-    nestedScrollConnection: NestedScrollConnection,
     detailBackdrop: LayerBackdrop?,
     detailChromeAlpha: Float = 1f,
     repository: IllustRepository,
@@ -536,8 +510,7 @@ private fun IllustDetailContentList(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .blurBackdropSource(detailBackdrop)
-            .nestedScroll(nestedScrollConnection),
+            .blurBackdropSource(detailBackdrop),
     ) {
         // 1. 沉浸式顶部大图（从屏幕最顶端开始渲染，消除生硬的一刀切顶栏）
         if (illust.metaPages.isNotEmpty()) {

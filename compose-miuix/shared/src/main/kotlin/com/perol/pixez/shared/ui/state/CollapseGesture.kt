@@ -95,13 +95,16 @@ internal object CollapseGesture {
         thresholdPx: Float,
     ): Float = (currentOffset - delta).coerceIn(0f, thresholdPx)
 
-    /** 详情页折叠进度：首项已移出视口即视为完全折叠，否则按累计位移比例。 */
+    /** 详情页折叠进度：首项已移出视口即视为完全折叠，否则按距顶部的实际滚动偏移比例。 */
     fun resolveCollapseProgress(
         firstVisibleItemIndex: Int,
         scrollOffset: Float,
         thresholdPx: Float,
-    ): Float =
-        if (firstVisibleItemIndex > 0) 1f else (scrollOffset / thresholdPx).coerceIn(0f, 1f)
+    ): Float {
+        if (firstVisibleItemIndex > 0) return 1f
+        if (thresholdPx <= 0f) return if (scrollOffset > 0f) 1f else 0f
+        return (scrollOffset / thresholdPx).coerceIn(0f, 1f)
+    }
 
     /** 高度偏移按上限收敛：无折叠空间（limit >= 0）时原样保留。 */
     private fun applyHeightOffset(heightOffset: Float, delta: Float, heightOffsetLimit: Float): Float =

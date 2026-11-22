@@ -43,7 +43,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -54,15 +53,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -484,32 +479,12 @@ private fun CouiIllustDetailSingle(
     val scheme = CouiTheme.colorScheme
     val density = LocalDensity.current
     val scrollThresholdPx = with(density) { AppConstants.Layout.DETAIL_COLLAPSE_THRESHOLD_DP.dp.toPx() }
-    var scrollOffset by remember { mutableFloatStateOf(0f) }
-
-    val detailNestedScrollConnection = remember(scrollThresholdPx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                scrollOffset = CollapseGesture.accumulateCollapseOffset(
-                    delta = available.y,
-                    currentOffset = scrollOffset,
-                    thresholdPx = scrollThresholdPx,
-                )
-                return Offset.Zero
-            }
-        }
-    }
-
-    LaunchedEffect(singleListState.firstVisibleItemIndex, singleListState.firstVisibleItemScrollOffset) {
-        if (singleListState.firstVisibleItemIndex == 0 && singleListState.firstVisibleItemScrollOffset == 0) {
-            scrollOffset = 0f
-        }
-    }
 
     val collapseProgressState = remember(scrollThresholdPx) {
         derivedStateOf {
             CollapseGesture.resolveCollapseProgress(
                 firstVisibleItemIndex = singleListState.firstVisibleItemIndex,
-                scrollOffset = scrollOffset,
+                scrollOffset = singleListState.firstVisibleItemScrollOffset.toFloat(),
                 thresholdPx = scrollThresholdPx,
             )
         }
@@ -736,9 +711,7 @@ private fun CouiIllustDetailSingle(
                         } else {
                             LazyColumn(
                                 state = singleListState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .nestedScroll(detailNestedScrollConnection),
+                                modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(
                                     top = 0.dp,
                                     bottom = bottomInsetPadding,

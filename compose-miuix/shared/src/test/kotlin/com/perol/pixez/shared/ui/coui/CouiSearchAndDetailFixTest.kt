@@ -132,6 +132,29 @@ class CouiSearchAndDetailFixTest {
     }
 
     @Test
+    fun detailScreensDriveTopBarCollapseFromActualListPositionNotClampedDelta() {
+        val couiSource = locateSharedSourceFile("ui/coui/page/CouiIllustDetailScreen.kt").readText()
+        val miuixSource = locateSharedSourceFile("ui/screens/IllustDetailScreen.kt").readText()
+
+        assertFalse(
+            "IllustDetailScreen must not accumulate clamped delta via accumulateCollapseOffset (would clear top blur before reaching top)",
+            miuixSource.contains("accumulateCollapseOffset("),
+        )
+        assertTrue(
+            "IllustDetailScreen must resolve collapse progress from listState.firstVisibleItemScrollOffset",
+            miuixSource.contains("listState.firstVisibleItemScrollOffset.toFloat()"),
+        )
+        assertFalse(
+            "CouiIllustDetailScreen must not accumulate clamped delta via accumulateCollapseOffset (would clear top blur before reaching top)",
+            couiSource.contains("accumulateCollapseOffset("),
+        )
+        assertTrue(
+            "CouiIllustDetailScreen must resolve collapse progress from singleListState.firstVisibleItemScrollOffset",
+            couiSource.contains("singleListState.firstVisibleItemScrollOffset.toFloat()"),
+        )
+    }
+
+    @Test
     fun couiMinorFixesAreWiredInSource() {
         val rowsSource = locateSharedSourceFile("ui/coui/core/CouiRows.kt").readText()
         val iconsSource = locateSharedSourceFile("ui/coui/icon/CouiIcons.kt").readText()

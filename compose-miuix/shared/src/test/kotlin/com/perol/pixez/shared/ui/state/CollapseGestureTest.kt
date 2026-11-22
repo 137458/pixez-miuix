@@ -208,5 +208,17 @@ class CollapseGestureTest {
             1f,
             CollapseGesture.resolveCollapseProgress(firstVisibleItemIndex = 0, scrollOffset = 100f, thresholdPx = thresholdPx),
         )
+        // 在长图内部先下划再回拉但未到顶：只要距顶仍超过阈值，折叠进度保持 1f（模糊不提前消失）
+        assertEquals(
+            1f,
+            CollapseGesture.resolveCollapseProgress(firstVisibleItemIndex = 0, scrollOffset = 500f, thresholdPx = thresholdPx),
+        )
+        assertEquals(
+            1f,
+            CollapseGesture.resolveCollapseProgress(firstVisibleItemIndex = 0, scrollOffset = 72f, thresholdPx = thresholdPx),
+        )
+        // 非正阈值边界不产生 NaN
+        assertEquals(0f, CollapseGesture.resolveCollapseProgress(firstVisibleItemIndex = 0, scrollOffset = 0f, thresholdPx = 0f))
+        assertEquals(1f, CollapseGesture.resolveCollapseProgress(firstVisibleItemIndex = 0, scrollOffset = 10f, thresholdPx = 0f))
     }
 }
