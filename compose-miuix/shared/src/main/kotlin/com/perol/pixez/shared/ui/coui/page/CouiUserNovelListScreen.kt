@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -240,6 +241,7 @@ internal fun CouiNovelCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .novelTransitionBounds(novelId = novel.id, cornerRadius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(scheme.card)
             .couiPressFeedback(pressInteraction)

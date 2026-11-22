@@ -125,7 +125,7 @@ fun RootContent(
     val sharedBounds = remember { SharedBoundsRegistry() }
     // SideEffect：成功应用后再同步路由锚点；被丢弃的重组不会污染不可回滚的注册表字段
     SideEffect {
-        sharedBounds.syncActiveRouteIllustId((stack.active.configuration as? Config.IllustDetail)?.illustId)
+        sharedBounds.syncActiveRouteTarget(stack.active.configuration.toTransitionTarget())
     }
     val bottomBarVisible = remember { mutableStateOf(true) }
     val currentLanguageNum = settingsRepository.languageNum
@@ -181,7 +181,13 @@ fun RootContent(
 
     MiuixTheme(controller = themeController) {
         // 皮肤主题宿主：ColorOS 时由 androidMain 叠加 COUI 配色与排版，其余平台/皮肤直接透传。
-        CouiSkinHost(enabled = uiSkin == UiSkin.COLOROS, dark = appThemeSpec.resolvedDark) {
+        CouiSkinHost(
+            enabled = uiSkin == UiSkin.COLOROS,
+            dark = appThemeSpec.resolvedDark,
+            isAmoled = themeSettings.isAmoled,
+            useDynamicColor = themeSettings.useDynamicColor,
+            seedColor = themeSettings.seedColor,
+        ) {
         // 仓储通道统一由 RepositoryRegistry 展开（nav3/DN14）：组合根不再逐条 provides 仓储 Local，
         // 新增仓储只需改 AppDependencies 字段 / Registry 字段 / ui.LocalRepositories.kt 的 provide 一行。
         ProvideRepositories(registry) {
@@ -338,20 +344,18 @@ fun RootContent(
                                 fallbackAnimation = stackAnimation,
                                 selector = { initialBackEvent, exitChild, _ ->
                                     // 预测性返回手势来源页直接取自 exitChild 的 configuration，
-                                    // 避免依赖 child 实例类型（中-6b 起详情页实例为子组件，路由参数只在配置上）。
-                                    // 手势预览与常规转场共用同一锚点解析：能落点则按卡片收回，否则回退侧滑。
+                                    // 覆盖插画详情页与小说阅读器两种卡片展开目标；无锚点则回退侧滑。
                                     miuixCardExpandPredictiveBackAnimatable(
                                         initialBackEvent = initialBackEvent,
                                         registry = sharedBounds,
-                                        illustId = (exitChild.configuration as? Config.IllustDetail)?.illustId,
+                                        target = exitChild.configuration.toTransitionTarget(),
                                         containerGeometry = { containerGeometry },
                                         coverParallax = uiSkin.coverParallax,
                                     )
                                 },
                                 onBack = { component.onBack() },
-                                // 应用内拖拽线性关页：仅作品详情页启用（平台开关见 rememberDragBackGestureEnabled）。
-                                // 实例判定：详情页 child 实例为中-6b 试点引入的子组件。
-                                dragBackEligible = { it is IllustDetailComponent },
+                                // 应用内拖拽线性关页：插画详情页与小说阅读器均启用（平台开关见 rememberDragBackGestureEnabled）。
+                                dragBackEligible = { it is IllustDetailComponent || it is Config.NovelViewer },
                             ),
                         ) { child ->
                             RootChildContent(

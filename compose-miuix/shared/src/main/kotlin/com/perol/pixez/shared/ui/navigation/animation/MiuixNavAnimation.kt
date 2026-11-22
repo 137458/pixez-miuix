@@ -7,6 +7,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.Config
+import com.perol.pixez.shared.ui.navigation.toTransitionTarget
 
 /**
  * Xiaomi HyperOS / MIUIX 核心动效曲线：
@@ -43,49 +44,31 @@ fun <C : Any, T : Any> miuixSeekableStackAnimation(
     coverParallax: Boolean = true,
 ): StackAnimation<C, T> =
     SeekableStackAnimation { child ->
-        // 路由参数只在 configuration 上（中-6b 起详情页 child 实例为子组件，不承载作品 ID）。
-        val rawIllustId = (child.configuration as? Config.IllustDetail)?.illustId
+        // 路由参数只在 configuration 上，同时覆盖插画详情页与小说阅读器两种卡片展开目标。
+        val rawTarget = (child.configuration as? Config)?.toTransitionTarget()
         cardExpandFrame(
-            rawIllustId = rawIllustId,
+            rawTarget = rawTarget,
             containerGeometry = containerGeometry,
             registry = registry,
             coverParallax = coverParallax,
         )
     }
 
-/**
- * 创建 MIUIX / HyperOS「卡片收回」预测性返回动画。
- *
- * 手势拖拽期间，顶层详情页随手指进度从整屏收缩回列表卡片位置，
- * 圆角同步由设备屏幕物理圆角渐变到卡片圆角，并在收缩态投出边界阴影；
- * 底层页面随手势进度由 0.96 缩放还原至 1.0 并消退遮罩，让「收回卡片」的纵深关系清晰可读。
- *
- * 以下情况没有可用的来源卡片几何，一律显式回退为经典纯左右平移：
- * 1. 当前栈顶不是作品详情页（[illustId] 为 null）；
- * 2. 该详情页由分享链接直达、进程重建恢复进入，或用户在详情页内滑动切换到了不在当前列表的作品；
- * 3. 卡片矩形随列表滚出可视区超过阈值或已被注销。
- *
- * @param initialBackEvent 手势起始事件。
- * @param registry 卡片几何信息源，用于取出手势来源页对应的卡片矩形。
- * @param illustId 当前栈顶作品详情页的作品 ID，非作品详情页时为 null。
- * @param containerGeometry 页面容器几何的即时读取源，用于归一化卡片几何与回退平移方案。
- * @param coverParallax 回退侧滑时底层页是否做视差位移（ColorOS 覆盖语义传 false）。
- */
+/** 通用卡片收回预测性返回动画（支持插画详情与小说阅读器）。 */
 @OptIn(ExperimentalDecomposeApi::class)
 fun miuixCardExpandPredictiveBackAnimatable(
     initialBackEvent: BackEvent,
     registry: SharedBoundsRegistry,
-    illustId: Long?,
+    target: TransitionTarget?,
     containerGeometry: () -> PageContainerGeometry,
     coverParallax: Boolean = true,
 ): PredictiveBackAnimatable {
     val geometry = containerGeometry()
-    val anchor = registry.resolveAnchor(
-        // 与出栈动画同一套候选顺序：当前展示的作品 → 本次打开的作品。
-        illustIdCandidates = listOf(registry.resolveEffectiveIllustId(illustId), illustId),
+    val anchor = registry.resolveTargetAnchor(
+        targetCandidates = listOf(registry.resolveEffectiveTarget(target), target),
         containerBounds = geometry.bounds,
     ) ?: run {
-        registry.updateTransitionState(null, 0f)
+        registry.updateTargetTransitionState(null, 0f)
         return miuixSlidePredictiveBackAnimatable(
             initialBackEvent = initialBackEvent,
             containerGeometry = containerGeometry,
@@ -101,8 +84,8 @@ fun miuixCardExpandPredictiveBackAnimatable(
         getExitModifier = { progress, _ ->
             val current = containerGeometry()
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
-            registry.updateTransitionState(
-                illustId = anchor.illustId,
+            registry.updateTargetTransitionState(
+                target = anchor.target,
                 expansion = expansion,
                 sourceBounds = sourceCard.rect,
                 containerBounds = current.bounds,
@@ -116,12 +99,29 @@ fun miuixCardExpandPredictiveBackAnimatable(
             )
         },
         getEnterModifier = { progress, _ ->
-            val current = containerGeometry()
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
             Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(expansion))
         },
     )
 }
+
+/**
+ * 创建 MIUIX / HyperOS「卡片收回」预测性返回动画。
+ */
+@OptIn(ExperimentalDecomposeApi::class)
+fun miuixCardExpandPredictiveBackAnimatable(
+    initialBackEvent: BackEvent,
+    registry: SharedBoundsRegistry,
+    illustId: Long?,
+    containerGeometry: () -> PageContainerGeometry,
+    coverParallax: Boolean = true,
+): PredictiveBackAnimatable = miuixCardExpandPredictiveBackAnimatable(
+    initialBackEvent = initialBackEvent,
+    registry = registry,
+    target = illustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) },
+    containerGeometry = containerGeometry,
+    coverParallax = coverParallax,
+)
 
 /**
  * 创建 Miuix 默认全宽平移预测性返回手势（MiuixDefault Predictive Back Animatable）。

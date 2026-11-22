@@ -1,15 +1,43 @@
 package com.perol.pixez.shared.data.model
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.nullable
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonTransformingSerializer
+
+/**
+ * PHP 接口在空字典时常输出 `[]`（JsonArray）而非 `{}`（JsonObject）；
+ * 反序列化遇到 `JsonArray` 时归一为空对象，其余保持原始结构。
+ */
+private open class PhpMapSerializer<V>(
+    valueSerializer: KSerializer<V>,
+) : JsonTransformingSerializer<Map<String, V>>(
+    MapSerializer(String.serializer(), valueSerializer),
+) {
+    override fun transformDeserialize(element: JsonElement): JsonElement =
+        if (element is JsonArray) JsonObject(emptyMap()) else element
+}
+
+private object NullableIllustMapSerializer :
+    PhpMapSerializer<NovelWebIllustEntry?>(NovelWebIllustEntry.serializer().nullable)
+
+private object UploadedImageMapSerializer :
+    PhpMapSerializer<NovelWebUploadedImage>(NovelWebUploadedImage.serializer())
 
 /**
  * /webview/v2/novel 内嵌 novel 数据（从 HTML script 提取的 JSON）。
  *
  * 字段名逐字段核对旧 Flutter 版 models/novel_web_response.dart：
- * - illusts 键为 "作品ID-页码"（如 "12345-1"），值形如 {"illust": {...缩略图 url...}}，可为 null；
+ * - illusts 键为 "作品ID-页码"（如 "12345-1"），值形如 {"illust": {...缩略图 url...}}，可为 null，
+ *   且内嵌插画被删/不可见时可能为 `{"illust": null}`，空集合时 PHP 可能返回 `[]`；
  * - images 键为上传图 ID（如 "777"），urls 尺寸键为 wire 原始键（"128x128"/"1200x1200" 等，
- *   旧 Dart 模型因标识符不能以数字开头写作 the128X128，归档缺失 .g.dart，按真实 wire 键声明）。
+ *   空集合时 PHP 可能返回 `[]`）；
  * 仅保留阅读器富文本渲染所需字段，未知字段由 commonJson 的 ignoreUnknownKeys 忽略。
  */
 @Serializable
@@ -17,15 +45,17 @@ data class NovelWebResponse(
     val id: String = "",
     val title: String = "",
     val text: String = "",
+    @Serializable(with = NullableIllustMapSerializer::class)
     val illusts: Map<String, NovelWebIllustEntry?> = emptyMap(),
+    @Serializable(with = UploadedImageMapSerializer::class)
     val images: Map<String, NovelWebUploadedImage> = emptyMap(),
     val seriesNavigation: NovelWebSeriesNavigation? = null,
 )
 
-/** illusts 映射条目：{"illust": {...}}。 */
+/** illusts 映射条目：{"illust": {...}}；作品已删或不可见时 `illust` 为 null。 */
 @Serializable
 data class NovelWebIllustEntry(
-    val illust: NovelWebIllust,
+    val illust: NovelWebIllust? = null,
 )
 
 /** 内嵌插画：{"images": {"small"/"medium"/"original"}}。 */

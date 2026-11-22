@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Novel
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -90,6 +91,7 @@ fun NovelCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .novelTransitionBounds(novelId = novel.id, cornerRadius = 16.dp)
             // 连续曲率裁剪；半径对齐 MIUIX Card 默认 16dp 圆角，保持视觉等效（MIUIX_Spec 3.3）。
             .squircleClip(16.dp)
             .semantics(mergeDescendants = true) {

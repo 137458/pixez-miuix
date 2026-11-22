@@ -16,13 +16,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +32,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.appendDistinct
-import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.repository.NovelRankingMode
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
@@ -47,6 +46,8 @@ import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.state.NovelBrowsePageState
+import com.perol.pixez.shared.ui.state.NovelBrowseTab
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
@@ -60,14 +61,10 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private enum class NovelBrowseTab {
-    Recommend,
-    Ranking,
-}
-
 /**
  * 小说浏览页：提供推荐与排行榜两类作品流，
- * 遵循 Xiaomi HyperOS / MIUIX 规范，支持多榜单切换、平滑滚动、自适应分页拉取与阅读器跳转。
+ * 遵循 Xiaomi HyperOS / MIUIX 规范，支持多榜单切换、平滑滚动、自适应分页拉取与阅读器跳转；
+ * 状态容器 [pageState] 挂在导航栈 InstanceKeeper 上，切 Tab 或从阅读器返回不重拉首屏。
  */
 @Composable
 fun NovelScreen(
@@ -75,6 +72,7 @@ fun NovelScreen(
     onNovelClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     onUserClick: ((Long) -> Unit)? = null,
+    pageState: NovelBrowsePageState = remember { NovelBrowsePageState() },
 ) {
     // 中-9：数据仓储统一经 CompositionLocal 注入（RootContent 根部 provide）。
     val novelRepository = LocalNovelRepository.current
@@ -83,44 +81,73 @@ fun NovelScreen(
     val backdrop = rememberBlurBackdrop()
     val scrollBehavior = MiuixScrollBehavior()
 
-    var currentTab by rememberSaveable { mutableStateOf(NovelBrowseTab.Recommend) }
-    var rankingMode by rememberSaveable { mutableStateOf(NovelRankingMode.Day) }
-    var refreshToken by rememberSaveable { mutableIntStateOf(0) }
+    val currentTab = pageState.currentTab
+    val rankingMode = pageState.rankingMode
+    var refreshTrigger by remember { mutableIntStateOf(0) }
 
-    // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时作废旧账号列表并重拉首屏。
     // 登录状态与账号身份：登录/登出/切号（loginEventFlow）到达时刷新，供页面作废旧账号数据并重拉首屏。
     val (user, isLoggedIn) = rememberAccountSession()
 
-    // 分页状态机单点实现（含 generation 竞态守卫）；tab/榜单切换以身份键重建，等效旧代次自增。
-    val pagedList = remember(currentTab, rankingMode) {
+    // 分页状态机由 pageState 按 (tab, mode) 持久池化，切 Tab 或阅读器退栈返回直接复用既有数据。
+    val pagedList = remember(pageState, currentTab, rankingMode) {
         val tab = currentTab
         val mode = rankingMode
-        PagedListState(
-            fetch = { nextUrl ->
-                val response = when (tab) {
-                    NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = nextUrl)
-                    NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = nextUrl)
-                }
-                PagedListPage(response.novels, response.nextUrl)
-            },
-            mergeItems = { old, new -> old.appendDistinct(new) },
-        )
+        pageState.getOrCreateList(tab, mode) {
+            PagedListState(
+                fetch = { nextUrl ->
+                    val response = when (tab) {
+                        NovelBrowseTab.Recommend -> novelRepository.getRecommendedNovels(nextUrl = nextUrl)
+                        NovelBrowseTab.Ranking -> novelRepository.getNovelRanking(mode = mode, nextUrl = nextUrl)
+                    }
+                    PagedListPage(response.novels, response.nextUrl)
+                },
+                mergeItems = { old, new -> old.appendDistinct(new) },
+            )
+        }
     }
 
-    // 账号身份跟踪：登录/登出/切号（loginEventFlow 更新 user/isLoggedIn）时作废旧账号列表并重拉首屏。
-    val accountUnloaded = remember { Any() }
-    var loadedForAccount by remember { mutableStateOf<Any?>(accountUnloaded) }
-    LaunchedEffect(currentTab, rankingMode, refreshToken, isLoggedIn, user) {
+    // 账号身份跟踪：仅登录/登出/切号时作废旧账号列表；已有数据直接缓存早退，不重拉首屏。
+    LaunchedEffect(pageState, currentTab, rankingMode, refreshTrigger, isLoggedIn, user) {
         // 登录态未检测完成（null）时不发起加载，避免账号解析前后误判为账号切换。
         if (isLoggedIn == null) return@LaunchedEffect
-        val accountSwitched = loadedForAccount !== accountUnloaded && loadedForAccount != user
+        val loadedForAccount = pageState.loadedAccount
+        val accountSwitched = pageState.hasLoadedAccount && loadedForAccount != user
         if (accountSwitched) pagedList.reset()
-        loadedForAccount = user
-        // refreshToken 变化（手动刷新/重试）时强制重新拉取首屏。
-        pagedList.loadFirst(force = refreshToken > 0)
+        if (accountSwitched) {
+            pageState.resetAll()
+            pageState.putList(currentTab, rankingMode, pagedList)
+        }
+        pageState.hasLoadedAccount = true
+        pageState.loadedAccount = user
+        val forceRefresh = pageState.pendingForceRefresh
+        pageState.pendingForceRefresh = false
+        pagedList.loadFirst(force = forceRefresh)
     }
 
-    val listState = rememberLazyListState()
+    val listState = key(pageState, currentTab, rankingMode) {
+        val savedScroll = remember(pageState, currentTab, rankingMode) {
+            pageState.getScrollPosition(currentTab, rankingMode)
+        }
+        rememberLazyListState(
+            initialFirstVisibleItemIndex = savedScroll.index,
+            initialFirstVisibleItemScrollOffset = savedScroll.offset,
+        )
+    }
+    DisposableEffect(pageState, currentTab, rankingMode, listState) {
+        onDispose {
+            pageState.saveScrollPosition(
+                tab = currentTab,
+                rankingMode = rankingMode,
+                index = listState.firstVisibleItemIndex,
+                offset = listState.firstVisibleItemScrollOffset,
+            )
+        }
+    }
+
+    fun triggerRefresh() {
+        pageState.pendingForceRefresh = true
+        refreshTrigger++
+    }
 
     fun loadMore() {
         coroutineScope.launch { pagedList.loadMore() }
@@ -137,7 +164,7 @@ fun NovelScreen(
         scrollBehavior = scrollBehavior,
         onBack = onBack,
         actions = {
-            IconButton(onClick = { refreshToken++ }) {
+            IconButton(onClick = ::triggerRefresh) {
                 Icon(
                     imageVector = MiuixIcons.Refresh,
                     contentDescription = strings.refresh,
@@ -164,7 +191,7 @@ fun NovelScreen(
                         selected = currentTab == NovelBrowseTab.Recommend,
                         onClick = {
                             if (currentTab != NovelBrowseTab.Recommend) {
-                                currentTab = NovelBrowseTab.Recommend
+                                pageState.currentTab = NovelBrowseTab.Recommend
                             }
                         },
                     )
@@ -174,7 +201,7 @@ fun NovelScreen(
                         selected = currentTab == NovelBrowseTab.Ranking,
                         onClick = {
                             if (currentTab != NovelBrowseTab.Ranking) {
-                                currentTab = NovelBrowseTab.Ranking
+                                pageState.currentTab = NovelBrowseTab.Ranking
                             }
                         },
                     )
@@ -186,17 +213,17 @@ fun NovelScreen(
                             NovelSubModeChip(
                                 title = strings.rankingDay,
                                 selected = rankingMode == NovelRankingMode.Day,
-                                onClick = { rankingMode = NovelRankingMode.Day },
+                                onClick = { pageState.rankingMode = NovelRankingMode.Day },
                             )
                             NovelSubModeChip(
                                 title = strings.rankingWeek,
                                 selected = rankingMode == NovelRankingMode.Week,
-                                onClick = { rankingMode = NovelRankingMode.Week },
+                                onClick = { pageState.rankingMode = NovelRankingMode.Week },
                             )
                             NovelSubModeChip(
                                 title = strings.rankingMonth,
                                 selected = rankingMode == NovelRankingMode.Month,
-                                onClick = { rankingMode = NovelRankingMode.Month },
+                                onClick = { pageState.rankingMode = NovelRankingMode.Month },
                             )
                         }
                     }
@@ -210,7 +237,7 @@ fun NovelScreen(
                     pagedList.initialError != null -> {
                         ErrorPlaceholder(
                             error = pagedList.initialError,
-                            onRetry = { refreshToken++ },
+                            onRetry = ::triggerRefresh,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }

@@ -1,6 +1,8 @@
 package com.perol.pixez.shared.ui.navigation
 
 import com.perol.pixez.shared.data.model.SpotlightArticle
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -192,4 +194,11 @@ sealed class Config {
     @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "NovelViewer")
     data class NovelViewer(val novelId: Long) : Config()
+}
+
+/** 把路由配置映射为卡片展开转场目标（插画详情页或小说阅读器；其余页面返回 null）。 */
+internal fun Config.toTransitionTarget(): TransitionTarget? = when (this) {
+    is Config.IllustDetail -> TransitionTarget(TransitionTargetKind.Illust, illustId)
+    is Config.NovelViewer -> TransitionTarget(TransitionTargetKind.Novel, novelId)
+    else -> null
 }

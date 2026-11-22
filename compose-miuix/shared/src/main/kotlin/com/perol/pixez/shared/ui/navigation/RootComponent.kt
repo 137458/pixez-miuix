@@ -16,6 +16,7 @@ import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.state.IllustFeedRestoreCache
 import com.perol.pixez.shared.ui.state.IllustFeedSnapshot
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.NovelBrowsePageState
 import com.perol.pixez.shared.ui.state.RankingFeedRestoreCache
 import com.perol.pixez.shared.ui.state.RankingFeedSnapshot
 import kotlinx.serialization.builtins.serializer
@@ -46,6 +47,10 @@ class RootComponent(
      * 恢复容器实例保留（desktopTest 有守护），仅异配置重置或进程死亡时随 child 重建。
      */
     lateinit var mainFeedRestore: MainFeedRestore
+        private set
+
+    /** 小说浏览页跨 Tab 与退栈状态容器：挂在 Config.Novel 的 InstanceKeeper 上。 */
+    var novelBrowsePageState: NovelBrowsePageState = NovelBrowsePageState()
         private set
 
     /**
@@ -502,6 +507,13 @@ class RootComponent(
                 instanceKeeper = componentContext.instanceKeeper,
             )
         }
+        if (config is Config.Novel) {
+            novelBrowsePageState = componentContext.instanceKeeper.getOrCreateSimple(
+                KEY_NOVEL_BROWSE_PAGE_STATE,
+            ) {
+                NovelBrowsePageState()
+            }
+        }
         if (config is Config.IllustDetail) {
             return IllustDetailComponent(
                 componentContext = componentContext,
@@ -567,6 +579,7 @@ private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): Co
 /** Main child 跨页恢复快照（高-5）的 stateKeeper / InstanceKeeper key。 */
 internal const val KEY_MAIN_HELLO_FEED = "key_main_hello_feed"
 internal const val KEY_MAIN_RANKING_FEED = "key_main_ranking_feed"
+internal const val KEY_NOVEL_BROWSE_PAGE_STATE = "key_novel_browse_page_state"
 
 /**
  * Main child 跨页恢复接线（高-5）：consume / stateKeeper 注册 / InstanceKeeper 实例获取

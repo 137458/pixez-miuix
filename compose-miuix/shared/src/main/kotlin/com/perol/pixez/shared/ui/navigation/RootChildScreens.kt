@@ -905,14 +905,17 @@ internal fun renderNovel(
     component: RootComponent,
 ) {
     val skinPages = LocalSkinPages.current
+    val pageState = component.novelBrowsePageState
     if (skinPages != null) {
         skinPages.novel(
+            pageState = pageState,
             onBack = component::onBack,
             onNovelClick = component::onNovelClicked,
             onUserClick = component::onUserClicked,
         )
     } else {
         NovelScreen(
+            pageState = pageState,
             onBack = component::onBack,
             onNovelClick = component::onNovelClicked,
             onUserClick = component::onUserClicked,

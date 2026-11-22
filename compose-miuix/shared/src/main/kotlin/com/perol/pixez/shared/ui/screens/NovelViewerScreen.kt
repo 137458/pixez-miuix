@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -31,13 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Novel
-import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.data.model.NovelWebResponse
 import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.performHapticFeedback
@@ -55,6 +56,10 @@ import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
+import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.NovelContentParser
@@ -83,7 +88,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private sealed interface NovelViewState {
     data object Loading : NovelViewState
-    data class Success(val data: NovelTextResponse) : NovelViewState
+    data class Success(val data: NovelWebResponse) : NovelViewState
     data class Error(val message: String) : NovelViewState
 }
 
@@ -151,9 +156,6 @@ fun NovelViewerScreen(
     var novelDetail by remember(novelId) { mutableStateOf<Novel?>(null) }
     // 收藏状态为 UI 本地可变状态，详情接口返回只做初值。
     var isBookmarked by remember(novelId) { mutableStateOf(false) }
-    // webview 内嵌图源映射并行加载：失败仅记日志并置 null，
-    // 富文本渲染降级为无图纯文本（chapter/newpage/jumpuri 不依赖映射，仍然生效）。
-    var webResource by remember(novelId) { mutableStateOf<NovelWebResponse?>(null) }
 
     // 字号持久化与微调（基准 AppConstants.Novel.DEFAULT_FONT_SIZE_SP，范围 MIN_FONT_SIZE_SP ~ MAX_FONT_SIZE_SP）
     var fontSizeSp by remember(settings.novelFontSize) {
@@ -171,7 +173,7 @@ fun NovelViewerScreen(
         scope.launch {
             state = NovelViewState.Loading
             val result = suspendRunCatchingNonCancel {
-                novelRepository.getNovelText(novelId)
+                novelRepository.getNovelWebResource(novelId)
             }
             result.onSuccess { data ->
                 state = NovelViewState.Success(data)
@@ -195,16 +197,6 @@ fun NovelViewerScreen(
                 }
             }.onFailure { err ->
                 Napier.e("加载小说详情失败 novelId=$novelId", err, tag = "NovelViewer")
-            }
-        }
-        // 内嵌图源映射并行加载：仅服务于 pixivimage/uploadedimage 渲染，失败降级为占位框。
-        scope.launch {
-            suspendRunCatchingNonCancel {
-                novelRepository.getNovelWebResource(novelId)
-            }.onSuccess { resource ->
-                webResource = resource
-            }.onFailure { err ->
-                Napier.w("加载小说内嵌资源失败，降级为无图纯文本 novelId=$novelId", err, tag = "NovelViewer")
             }
         }
     }
@@ -242,17 +234,42 @@ fun NovelViewerScreen(
         loadNovel()
     }
 
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val transitionTarget = remember(novelId) {
+        TransitionTarget(TransitionTargetKind.Novel, novelId)
+    }
+    DisposableEffect(sharedBoundsRegistry, transitionTarget) {
+        sharedBoundsRegistry.updateDisplayedTarget(
+            originTarget = transitionTarget,
+            displayedTarget = transitionTarget,
+        )
+        onDispose {
+            sharedBoundsRegistry.onDetailTargetDisposed(transitionTarget)
+        }
+    }
+    val chromeAlphaModifier = Modifier.graphicsLayer {
+        alpha = if (sharedBoundsRegistry.activeTransitionTarget == transitionTarget) {
+            cardExpandDetailChromeAlpha(sharedBoundsRegistry.activeTransitionExpansion)
+        } else {
+            1f
+        }
+    }
+
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
+    val webTitle = (state as? NovelViewState.Success)?.data?.title
 
     Scaffold(
         topBar = {
             BlurredBar(
                 backdrop = backdrop,
                 scrollBehavior = scrollBehavior,
+                modifier = chromeAlphaModifier,
             ) {
                 TopAppBar(
-                    title = strings.novelReaderTitle,
+                    title = novelDetail?.title?.takeIf { it.isNotBlank() }
+                        ?: webTitle?.takeIf { it.isNotBlank() }
+                        ?: strings.novelReaderTitle,
                     scrollBehavior = scrollBehavior,
                     color = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
                     navigationIcon = {
@@ -326,7 +343,7 @@ fun NovelViewerScreen(
                         // 复制正文
                         IconButton(
                             onClick = {
-                                val currentText = (state as? NovelViewState.Success)?.data?.novelText
+                                val currentText = (state as? NovelViewState.Success)?.data?.text
                                 if (!currentText.isNullOrBlank()) {
                                     com.perol.pixez.shared.platform.IllustClipboard().copy(currentText)
                                     toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
@@ -413,9 +430,9 @@ fun NovelViewerScreen(
                     }
                 }
                 is NovelViewState.Success -> {
-                    val novelText = st.data.novelText
-                    val seriesPrev = st.data.seriesPrev
-                    val seriesNext = st.data.seriesNext
+                    val novelText = st.data.text
+                    val seriesPrev = st.data.seriesNavigation?.prevNovel
+                    val seriesNext = st.data.seriesNavigation?.nextNovel
 
                     // 标记解析 → 展示条目：Text 段沿用 chunked(10) 切分保持长文渲染性能。
                     val viewerItems = remember(novelText) {
@@ -510,7 +527,7 @@ fun NovelViewerScreen(
                                             val item = viewerItems[index]
                                             NovelViewerItemContent(
                                                 item = item,
-                                                webResource = webResource,
+                                                webResource = st.data,
                                                 fontSizeSp = fontSizeSp,
                                                 onIllustClick = onIllustClick,
                                                 onOpenUrl = { url ->
@@ -523,7 +540,7 @@ fun NovelViewerScreen(
                                     }
 
                                     // 系列上下章节导航
-                                    if (seriesPrev?.id != null || seriesNext?.id != null) {
+                                    if (seriesPrev != null || seriesNext != null) {
                                         item {
                                             Spacer(modifier = Modifier.height(24.dp))
                                             Row(
@@ -532,7 +549,7 @@ fun NovelViewerScreen(
                                                     .padding(horizontal = 18.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                             ) {
-                                                if (seriesPrev?.id != null) {
+                                                if (seriesPrev != null) {
                                                     Button(
                                                         onClick = { onNovelClick(seriesPrev.id) },
                                                         modifier = Modifier.weight(1f).height(44.dp),
@@ -546,7 +563,7 @@ fun NovelViewerScreen(
                                                     Spacer(modifier = Modifier.weight(1f))
                                                 }
 
-                                                if (seriesNext?.id != null) {
+                                                if (seriesNext != null) {
                                                     Button(
                                                         onClick = { onNovelClick(seriesNext.id) },
                                                         modifier = Modifier.weight(1f).height(44.dp),

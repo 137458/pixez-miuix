@@ -63,6 +63,8 @@ import com.perol.pixez.shared.data.repository.HistoryItem
 import com.perol.pixez.shared.data.repository.NovelHistoryItem
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
@@ -465,6 +467,7 @@ private fun CouiHistoryIllustCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .illustTransitionBounds(illustId = item.illustId, cornerRadius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
             .couiPressFeedback(pressInteraction)
@@ -612,6 +615,7 @@ private fun CouiHistoryNovelRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .novelTransitionBounds(novelId = item.novelId, cornerRadius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(CouiTheme.colorScheme.card)
             .couiPressFeedback(pressInteraction)

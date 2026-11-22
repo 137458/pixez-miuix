@@ -58,6 +58,7 @@ import com.perol.pixez.shared.ui.coui.page.CouiWidgetRecommendScreen
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.NovelBrowsePageState
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 
 /**
@@ -622,11 +623,13 @@ internal object CouiSkinPages : SkinPages {
 
     @Composable
     override fun novel(
+        pageState: NovelBrowsePageState,
         onBack: () -> Unit,
         onNovelClick: (Long) -> Unit,
         onUserClick: ((Long) -> Unit)?,
     ) {
         CouiNovelScreen(
+            pageState = pageState,
             onBack = onBack,
             onNovelClick = onNovelClick,
             onUserClick = onUserClick,

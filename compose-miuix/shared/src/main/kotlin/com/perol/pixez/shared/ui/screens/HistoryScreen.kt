@@ -5,6 +5,7 @@ import com.perol.pixez.shared.ui.components.ConfirmDialog
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
 
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -553,6 +554,7 @@ private fun NovelHistoryRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
+            .novelTransitionBounds(novelId = item.novelId, cornerRadius = 12.dp)
             .clip(SquircleShape(12.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp),

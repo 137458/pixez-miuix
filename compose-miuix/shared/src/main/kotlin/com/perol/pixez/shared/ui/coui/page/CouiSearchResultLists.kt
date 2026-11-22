@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
 import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
@@ -340,6 +341,7 @@ private fun CouiNovelRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .novelTransitionBounds(novelId = novel.id, cornerRadius = 12.dp)
             .couiPressFeedback(pressInteraction)
             .clickable(
                 interactionSource = pressInteraction,

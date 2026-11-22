@@ -2,9 +2,14 @@ package com.perol.pixez.shared.ui.coui.core
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,7 +51,10 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.SubcomposeLayout
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -227,6 +235,7 @@ internal fun CouiTopBarIconButton(
     enabled: Boolean = true,
     tint: Color? = null,
     iconModifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         CouiFloatingTopBarIconButton(
@@ -237,6 +246,7 @@ internal fun CouiTopBarIconButton(
             enabled = enabled,
             tint = tint,
             iconModifier = iconModifier,
+            onLongClick = onLongClick,
         )
     } else {
         CouiPlainTopBarIconButton(
@@ -247,6 +257,7 @@ internal fun CouiTopBarIconButton(
             enabled = enabled,
             tint = tint,
             iconModifier = iconModifier,
+            onLongClick = onLongClick,
         )
     }
 }
@@ -261,6 +272,7 @@ private fun CouiFloatingTopBarIconButton(
     enabled: Boolean = true,
     tint: Color? = null,
     iconModifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val renderer = rememberPooledCouiFloatingRenderer()
     if (renderer == null) {
@@ -272,12 +284,47 @@ private fun CouiFloatingTopBarIconButton(
             enabled = enabled,
             tint = tint,
             iconModifier = iconModifier,
+            onLongClick = onLongClick,
         )
         return
     }
+    val longPressConsumed = remember { booleanArrayOf(false) }
+    val longPressModifier = if (onLongClick != null && enabled) {
+        Modifier.pointerInput(onLongClick) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                longPressConsumed[0] = false
+                val timedOut = try {
+                    withTimeout(viewConfiguration.longPressTimeoutMillis) {
+                        waitForUpOrCancellation()
+                        false
+                    }
+                } catch (_: TimeoutCancellationException) {
+                    true
+                }
+                if (timedOut) {
+                    longPressConsumed[0] = true
+                    onLongClick()
+                }
+            }
+        }
+    } else {
+        Modifier
+    }
+    val resolvedOnClick: () -> Unit = if (onLongClick != null) {
+        {
+            if (longPressConsumed[0]) {
+                longPressConsumed[0] = false
+            } else {
+                onClick()
+            }
+        }
+    } else {
+        onClick
+    }
     TopAppBarButton(
-        modifier = modifier,
-        onClick = onClick,
+        modifier = modifier.then(longPressModifier),
+        onClick = resolvedOnClick,
         enabled = enabled,
         renderer = renderer,
     ) {
@@ -290,6 +337,7 @@ private fun CouiFloatingTopBarIconButton(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CouiPlainTopBarIconButton(
     onClick: () -> Unit,
@@ -299,20 +347,33 @@ private fun CouiPlainTopBarIconButton(
     enabled: Boolean = true,
     tint: Color? = null,
     iconModifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val source = remember { MutableInteractionSource() }
+    val clickModifier = if (onLongClick != null) {
+        Modifier.combinedClickable(
+            interactionSource = source,
+            indication = null,
+            enabled = enabled,
+            role = Role.Button,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+    } else {
+        Modifier.clickable(
+            interactionSource = source,
+            indication = null,
+            enabled = enabled,
+            role = Role.Button,
+            onClick = onClick,
+        )
+    }
     Box(
         modifier = modifier
             .size(40.dp)
             .clip(CircleShape)
             .couiButtonFeedback(dark = CouiTheme.isDark, interactionSource = source, enabled = enabled, list = false)
-            .clickable(
-                interactionSource = source,
-                indication = null,
-                enabled = enabled,
-                role = Role.Button,
-                onClick = onClick,
-            ),
+            .then(clickModifier),
         contentAlignment = Alignment.Center,
     ) {
         CouiBarIcon(
@@ -340,20 +401,33 @@ private fun CouiBarIcon(
     )
 }
 
-/** 构造带额外底部留白的活 [PaddingValues]，避免在组合期静态冻结顶栏折叠高度。 */
-private fun PaddingValues.withExtraBottom(extraBottom: Dp): PaddingValues = object : PaddingValues {
-    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp =
-        this@withExtraBottom.calculateLeftPadding(layoutDirection)
+/** 构造带额外四向留白的活 [PaddingValues]，避免在组合期静态冻结顶栏折叠高度。 */
+internal fun PaddingValues.withExtra(
+    start: Dp = 0.dp,
+    top: Dp = 0.dp,
+    end: Dp = 0.dp,
+    bottom: Dp = 0.dp,
+): PaddingValues = object : PaddingValues {
+    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp {
+        val extra = if (layoutDirection == LayoutDirection.Ltr) start else end
+        return this@withExtra.calculateLeftPadding(layoutDirection) + extra
+    }
 
     override fun calculateTopPadding(): Dp =
-        this@withExtraBottom.calculateTopPadding()
+        this@withExtra.calculateTopPadding() + top
 
-    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp =
-        this@withExtraBottom.calculateRightPadding(layoutDirection)
+    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp {
+        val extra = if (layoutDirection == LayoutDirection.Ltr) end else start
+        return this@withExtra.calculateRightPadding(layoutDirection) + extra
+    }
 
     override fun calculateBottomPadding(): Dp =
-        this@withExtraBottom.calculateBottomPadding() + extraBottom
+        this@withExtra.calculateBottomPadding() + bottom
 }
+
+/** 构造带额外底部留白的活 [PaddingValues]，避免在组合期静态冻结顶栏折叠高度。 */
+private fun PaddingValues.withExtraBottom(extraBottom: Dp): PaddingValues =
+    withExtra(bottom = extraBottom)
 
 /**
  * 紧凑顶栏（52dp）：给不需要大标题的简单页面或沉浸内容页用。
@@ -613,17 +687,15 @@ internal fun CouiSettingsScaffold(
         actions = actions,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            val resolvedPadding = remember(padding) {
+                padding.withExtra(top = 8.dp, bottom = CouiPageDefaults.groupSpacing)
+            }
             LazyColumn(
                 modifier = Modifier
                     .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .consumeWindowInsets(padding),
-                contentPadding = PaddingValues(
-                    start = 0.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    end = 0.dp,
-                    bottom = padding.calculateBottomPadding() + CouiPageDefaults.groupSpacing,
-                ),
+                contentPadding = resolvedPadding,
                 overscrollEffect = rememberCouiOverscrollEffect(),
             ) {
                 content()

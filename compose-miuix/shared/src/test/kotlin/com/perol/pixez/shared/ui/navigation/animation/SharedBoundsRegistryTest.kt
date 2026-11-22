@@ -388,4 +388,44 @@ class SharedBoundsRegistryTest {
         assertNull(registry.resolveTransitionIllustId(rawIllustId = null, direction = Direction.EXIT_FRONT))
         assertNull(registry.resolveTransitionIllustId(rawIllustId = 42, direction = Direction.ENTER_BACK))
     }
+
+    @Test
+    fun `插画与小说同 ID 登记互不覆盖且各自正确解析锚点`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        val illustRect = Rect(left = 24f, top = 120f, right = 500f, bottom = 620f)
+        val novelRect = Rect(left = 24f, top = 700f, right = 1056f, bottom = 1000f)
+
+        val illustTarget = TransitionTarget(TransitionTargetKind.Illust, 100L)
+        val novelTarget = TransitionTarget(TransitionTargetKind.Novel, 100L)
+
+        registry.put(illustId = 100L, rect = illustRect)
+        registry.putTarget(novelTarget, rect = novelRect, cornerRadiusDp = 18f)
+
+        assertEquals(illustRect, registry.get(100L))
+        assertEquals(novelRect, registry.getTarget(novelTarget)?.rect)
+
+        registry.syncActiveRouteTarget(novelTarget)
+        val enterCandidates = registry.resolveTransitionTargetCandidates(novelTarget, Direction.ENTER_FRONT)
+        val enterAnchor = registry.resolveTargetAnchor(enterCandidates, container)
+        assertEquals(novelTarget, enterAnchor?.target)
+        assertEquals(novelRect, enterAnchor?.card?.rect)
+
+        registry.syncActiveRouteTarget(null)
+        val exitCandidates = registry.resolveTransitionTargetCandidates(novelTarget, Direction.EXIT_FRONT)
+        val backCandidates = registry.resolveTransitionTargetCandidates(null, Direction.ENTER_BACK)
+        assertEquals(novelTarget, registry.resolveTargetAnchor(exitCandidates, container)?.target)
+        assertEquals(novelTarget, registry.resolveTargetAnchor(backCandidates, container)?.target)
+    }
+
+    @Test
+    fun `未登记的小说 ID 返回空锚点以优雅回退侧滑`() {
+        val registry = SharedBoundsRegistry()
+        val container = Rect(left = 0f, top = 0f, right = 1080f, bottom = 2400f)
+        val novelTarget = TransitionTarget(TransitionTargetKind.Novel, 999L)
+
+        registry.syncActiveRouteTarget(novelTarget)
+        val candidates = registry.resolveTransitionTargetCandidates(novelTarget, Direction.ENTER_FRONT)
+        assertNull(registry.resolveTargetAnchor(candidates, container))
+    }
 }

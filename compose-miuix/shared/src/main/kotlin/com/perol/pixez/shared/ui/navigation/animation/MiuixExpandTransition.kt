@@ -81,6 +81,7 @@ internal typealias MiuixTransitionFrame =
  */
 internal fun cardExpandFrame(
     rawIllustId: Long? = null,
+    rawTarget: TransitionTarget? = rawIllustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) },
     sourceBounds: Rect? = null,
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerGeometry: () -> PageContainerGeometry,
@@ -88,10 +89,10 @@ internal fun cardExpandFrame(
     coverParallax: Boolean = true,
 ): MiuixTransitionFrame = { factorProvider, direction, content ->
     val containerBounds = containerGeometry().bounds
-    val candidates = registry?.resolveTransitionIllustIdCandidates(rawIllustId, direction) ?: listOf(rawIllustId)
+    val candidates = registry?.resolveTransitionTargetCandidates(rawTarget, direction) ?: listOf(rawTarget)
     // 锚点优先取当前展示的作品（详情页内滑动切换后），其卡片已不在列表时退回本次打开的作品，
     // 保证收回终点始终落在用户点进来的那张卡片上；两者都不可用才回退默认侧滑。
-    val anchor = registry?.resolveAnchor(candidates, containerBounds)
+    val anchor = registry?.resolveTargetAnchor(candidates, containerBounds)
     // 无卡片几何、或卡片/容器尺寸非法（见 hasUsableCardExpandGeometry）时回退默认侧滑。
     // 纵横比不参与否决：等比缩放 + 双向视口裁切保证任意横纵比卡片在收回终点都能落位，故不做纵横比预筛。
     val activeSourceBounds = anchor?.card?.rect
@@ -107,7 +108,7 @@ internal fun cardExpandFrame(
         val isTopLayer = direction.isFront
         LaunchedEffect(registry, isTopLayer) {
             if (isTopLayer) {
-                registry?.updateTransitionState(null, 0f)
+                registry?.updateTargetTransitionState(null, 0f)
             }
         }
         val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
@@ -123,9 +124,9 @@ internal fun cardExpandFrame(
             )
         }
     } else {
-        val targetIllustId = anchor?.illustId ?: candidates.firstOrNull { it != null }
+        val target = anchor?.target ?: candidates.firstOrNull { it != null }
         val isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK
-        LaunchedEffect(registry, targetIllustId, activeSourceBounds, direction, factorProvider, isExiting) {
+        LaunchedEffect(registry, target, activeSourceBounds, direction, factorProvider, isExiting) {
             if (registry == null) return@LaunchedEffect
             snapshotFlow { factorProvider() }.collect { factor ->
                 val frame = resolveCardExpandFrame(
@@ -133,8 +134,8 @@ internal fun cardExpandFrame(
                     factor = factor,
                     isTopLayer = direction.isFront,
                 )
-                registry.updateTransitionState(
-                    illustId = targetIllustId,
+                registry.updateTargetTransitionState(
+                    target = target,
                     expansion = frame.expansion,
                     sourceBounds = activeSourceBounds,
                     containerBounds = containerGeometry().bounds,

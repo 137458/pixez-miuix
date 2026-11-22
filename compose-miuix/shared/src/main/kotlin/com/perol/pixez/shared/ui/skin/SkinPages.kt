@@ -9,6 +9,7 @@ import com.perol.pixez.shared.data.repository.ReleaseInfo
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
+import com.perol.pixez.shared.ui.state.NovelBrowsePageState
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 
 /** 底栏单项：文案、图标与未读标记由一级标签目录求值后传入，避免皮肤层反向依赖导航目录。 */
@@ -365,6 +366,7 @@ internal interface SkinPages {
     /** 小说浏览页的 COUI 实现。 */
     @Composable
     fun novel(
+        pageState: NovelBrowsePageState,
         onBack: () -> Unit,
         onNovelClick: (Long) -> Unit,
         onUserClick: ((Long) -> Unit)?,

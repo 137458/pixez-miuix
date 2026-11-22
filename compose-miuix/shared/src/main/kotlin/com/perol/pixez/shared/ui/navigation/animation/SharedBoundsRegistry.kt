@@ -10,8 +10,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 
+/** 转场锚点类型：区分插画作品与小说作品，防止两者共用同一数字 ID 时互相覆盖。 */
+enum class TransitionTargetKind {
+    Illust,
+    Novel,
+}
+
+/** 一次卡片展开转场的唯一目标标识。 */
+@Stable
+data class TransitionTarget(
+    val kind: TransitionTargetKind,
+    val id: Long,
+)
+
 /**
- * 作品列表卡片到作品详情页「卡片展开式」转场的几何信息源。
+ * 作品列表卡片到详情页「卡片展开式」转场的几何信息源（支持插画与小说）。
  *
  * 列表中的作品卡片在布局完成后把自己的窗口坐标矩形登记进来，
  * 转场动画据此把详情页从卡片位置放大展开、返回时收回卡片；
@@ -20,78 +33,92 @@ import androidx.compose.ui.geometry.Rect
 @Stable
 class SharedBoundsRegistry {
 
-    private val bounds = mutableStateMapOf<Long, IllustCardBounds>()
+    private val bounds = mutableStateMapOf<TransitionTarget, IllustCardBounds>()
 
-    private var _activeDetailIllustId: Long? by mutableStateOf(null)
+    private var _activeDetailTarget: TransitionTarget? by mutableStateOf(null)
 
-    /** 按详情页打开时的初始路由作品 ID 记录该页面内当前实际展示的作品 ID（隔离多实例快速进出时的生命周期延迟回调）。 */
-    private val displayedIllustIdByOrigin = mutableMapOf<Long, Long>()
+    /** 按详情页打开时的初始路由目标记录该页面内当前实际展示的目标（隔离多实例快速进出时的生命周期延迟回调）。 */
+    private val displayedTargetByOrigin = mutableMapOf<TransitionTarget, TransitionTarget>()
 
     /**
-     * 当前详情页实际展示的作品 ID（支持详情页内左右滑动切换作品后按真实展示的作品定位收回卡片）。
+     * 当前插画详情页实际展示的作品 ID（支持详情页内左右滑动切换作品后按真实展示的作品定位收回卡片）。
      */
     var activeDetailIllustId: Long?
-        get() = _activeDetailIllustId
+        get() = _activeDetailTarget?.takeIf { it.kind == TransitionTargetKind.Illust }?.id
         set(value) {
-            _activeDetailIllustId = value
-            if (value != null) {
-                lastActiveDetailIllustId = value
-                val origin = currentRouteIllustId
+            val target = value?.let { TransitionTarget(TransitionTargetKind.Illust, it) }
+            _activeDetailTarget = target
+            if (target != null) {
+                lastActiveDetailTarget = target
+                val origin = currentRouteTarget
                 if (origin != null) {
-                    displayedIllustIdByOrigin[origin] = value
+                    displayedTargetByOrigin[origin] = target
                 }
             }
         }
 
     /**
-     * 登记指定详情页（初始路由为 [originIllustId]）当前正在展示的作品 ID [displayedIllustId]。
-     *
-     * 仅当 [originIllustId] 仍为当前栈顶路由时才同步刷新全局 [activeDetailIllustId]，
-     * 防止快速多次进出时前一个正在执行 340ms 退场动画的详情页重组或异步返回后篡改新详情页的返回锚点。
+     * 登记指定详情页（初始路由为 [originTarget]）当前正在展示的目标 [displayedTarget]。
      */
+    fun updateDisplayedTarget(originTarget: TransitionTarget, displayedTarget: TransitionTarget) {
+        displayedTargetByOrigin[originTarget] = displayedTarget
+        if (currentRouteTarget == originTarget) {
+            _activeDetailTarget = displayedTarget
+            lastActiveDetailTarget = displayedTarget
+        } else if (exitingOriginRouteTarget == originTarget && currentRouteTarget == null) {
+            exitingFrontTarget = displayedTarget
+        }
+    }
+
+    /** 兼容插画专用调用：[updateDisplayedTarget] 的 [TransitionTargetKind.Illust] 便捷封装。 */
     fun updateDisplayedIllustId(originIllustId: Long, displayedIllustId: Long) {
-        displayedIllustIdByOrigin[originIllustId] = displayedIllustId
-        if (currentRouteIllustId == originIllustId) {
-            _activeDetailIllustId = displayedIllustId
-            lastActiveDetailIllustId = displayedIllustId
-        } else if (exitingOriginRouteIllustId == originIllustId && currentRouteIllustId == null) {
-            exitingFrontIllustId = displayedIllustId
-        }
+        updateDisplayedTarget(
+            originTarget = TransitionTarget(TransitionTargetKind.Illust, originIllustId),
+            displayedTarget = TransitionTarget(TransitionTargetKind.Illust, displayedIllustId),
+        )
     }
 
     /**
-     * 当初始路由为 [originIllustId] 的详情页从组合树销毁时调用。
+     * 当初始路由为 [originTarget] 的详情页从组合树销毁时调用。
      *
-     * 仅当当前栈顶仍为该页面时才清空 [activeDetailIllustId]，避免旧页面退场销毁时误清空新打开页面的状态。
+     * 仅当当前栈顶仍为该页面时才清空 [_activeDetailTarget]，避免旧页面退场销毁时误清空新打开页面的状态。
      */
-    fun onDetailDisposed(originIllustId: Long) {
-        if (currentRouteIllustId == originIllustId) {
-            _activeDetailIllustId = null
+    fun onDetailTargetDisposed(originTarget: TransitionTarget) {
+        if (currentRouteTarget == originTarget) {
+            _activeDetailTarget = null
         }
-        // 同步清理 origin→displayed 映射，长会话反复进出详情页不再无界增长
-        displayedIllustIdByOrigin.remove(originIllustId)
+        displayedTargetByOrigin.remove(originTarget)
     }
 
-    /** 最近一次在作品详情页内确认展示的作品 ID（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */
-    private var lastActiveDetailIllustId: Long? = null
+    /** 兼容插画专用调用：[onDetailTargetDisposed] 的 [TransitionTargetKind.Illust] 便捷封装。 */
+    fun onDetailDisposed(originIllustId: Long) {
+        onDetailTargetDisposed(TransitionTarget(TransitionTargetKind.Illust, originIllustId))
+    }
 
-    /** 最近一次同步的栈顶路由作品 ID（非详情页时为 null）。 */
-    private var currentRouteIllustId: Long? = null
+    /** 最近一次在详情页内确认展示的目标（供详情页出栈时 DisposableEffect 清空后仍能定位目标卡片）。 */
+    private var lastActiveDetailTarget: TransitionTarget? = null
 
-    /** 当前入栈转场的前层作品 ID（仅当新栈顶为作品详情页时非空）。 */
-    private var enteringFrontIllustId: Long? = null
+    /** 最近一次同步的栈顶路由目标（非详情页时为 null）。 */
+    private var currentRouteTarget: TransitionTarget? = null
 
-    /** 当前出栈转场的前层作品 ID（仅当刚退出的原栈顶为作品详情页时非空）。 */
-    private var exitingFrontIllustId: Long? = null
+    /** 当前入栈转场的前层目标（仅当新栈顶为详情页时非空）。 */
+    private var enteringFrontTarget: TransitionTarget? = null
 
-    /** 当前出栈的详情页最初打开时的路由作品 ID（详情页内滑切到其他作品后，供底层 ENTER_BACK 同样回退到打开时的卡片）。 */
-    private var exitingOriginRouteIllustId: Long? = null
+    /** 当前出栈转场的前层目标（仅当刚退出的原栈顶为详情页时非空）。 */
+    private var exitingFrontTarget: TransitionTarget? = null
+
+    /** 当前出栈的详情页最初打开时的路由目标（详情页内滑切到其他作品后，供底层 ENTER_BACK 同样回退到打开时的卡片）。 */
+    private var exitingOriginRouteTarget: TransitionTarget? = null
+
+    /** 当前正在执行卡片展开/收回转场的通用目标（插画或小说）。 */
+    var activeTransitionTarget: TransitionTarget? by mutableStateOf(null)
+        private set
 
     /**
-     * 当前正在执行卡片展开/收回转场的目标作品 ID。
+     * 当前正在执行卡片展开/收回转场的目标插画作品 ID（兼容既有调用点）。
      */
-    var activeTransitionIllustId: Long? by mutableStateOf(null)
-        private set
+    val activeTransitionIllustId: Long?
+        get() = activeTransitionTarget?.takeIf { it.kind == TransitionTargetKind.Illust }?.id
 
     /**
      * 当前正在执行的卡片展开度（0f..1f），用于驱动列表源卡片交叉淡出避免分身重影。
@@ -113,42 +140,48 @@ class SharedBoundsRegistry {
     private var listTranslationX = 0f
 
     /**
-     * 登记某个作品卡片的窗口坐标矩形与卡片圆角。
+     * 登记某个目标卡片的窗口坐标矩形与卡片圆角。
      */
-    fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
+    fun putTarget(
+        target: TransitionTarget,
+        rect: Rect?,
+        cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
+    ) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
-            // 零尺寸矩形来自 LazyGrid item 被回收（详情页稳态期间底层列表销毁）前的最后一次布局回调，
-            // 属于组合噪声而非「卡片已失效」；据此清除登记会让返回转场丢失锚点而退化侧滑，故仅忽略本次上报。
             return
         }
         // 正在执行展开/收回动画的目标卡片自身锁定静止态坐标，确保单次动画全程终点锚点恒定不漂移。
-        if (illustId == activeTransitionIllustId && bounds.containsKey(illustId)) {
+        if (target == activeTransitionTarget && bounds.containsKey(target)) {
             return
         }
         val isListTransformed = listTranslationX != 0f || (backdropScale > 0f && backdropScale < 0.999f)
         if (isListTransformed) {
-            if (bounds.containsKey(illustId)) {
+            if (bounds.containsKey(target)) {
                 return
             }
-            bounds[illustId] = IllustCardBounds(rect = rect.toStationaryBounds(), cornerRadiusDp = cornerRadiusDp)
+            bounds[target] = IllustCardBounds(rect = rect.toStationaryBounds(), cornerRadiusDp = cornerRadiusDp)
             return
         }
-        bounds[illustId] = IllustCardBounds(rect = rect, cornerRadiusDp = cornerRadiusDp)
+        bounds[target] = IllustCardBounds(rect = rect, cornerRadiusDp = cornerRadiusDp)
     }
 
-    /**
-     * 取出某个作品卡片最近一次登记的窗口坐标矩形。
-     */
-    fun get(illustId: Long): Rect? = bounds[illustId]?.rect
+    /** 登记某个插画卡片的窗口坐标矩形与卡片圆角。 */
+    fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
+        putTarget(TransitionTarget(TransitionTargetKind.Illust, illustId), rect, cornerRadiusDp)
+    }
+
+    /** 取出某个目标卡片最近一次登记的窗口坐标矩形与圆角。 */
+    fun getTarget(target: TransitionTarget): IllustCardBounds? = bounds[target]
+
+    /** 取出某个插画卡片最近一次登记的窗口坐标矩形。 */
+    fun get(illustId: Long): Rect? = bounds[TransitionTarget(TransitionTargetKind.Illust, illustId)]?.rect
 
     /**
-     * 取出卡片在当前容器可视区域内的有效登记；
+     * 取出目标卡片在当前容器可视区域内的有效登记；
      * 若卡片大部分（超过 75%）已滚出容器可视范围则返回 null，使转场优雅回退为视差侧滑。
      */
-    fun getVisibleInContainer(illustId: Long, containerBounds: Rect): IllustCardBounds? {
-        val card = bounds[illustId] ?: run {
-            return null
-        }
+    fun getVisibleTargetInContainer(target: TransitionTarget, containerBounds: Rect): IllustCardBounds? {
+        val card = bounds[target] ?: return null
         val rect = card.rect
         if (rect.width <= 0f || rect.height <= 0f) return null
         if (containerBounds.width <= 0f || containerBounds.height <= 0f) {
@@ -167,110 +200,141 @@ class SharedBoundsRegistry {
         val heightVisibleRatio = visibleHeight / rect.height
 
         return card.takeIf {
-            val ok = widthVisibleRatio >= MIN_VISIBLE_RATIO && heightVisibleRatio >= MIN_VISIBLE_RATIO
-            ok
+            widthVisibleRatio >= MIN_VISIBLE_RATIO && heightVisibleRatio >= MIN_VISIBLE_RATIO
         }
     }
 
-    /**
-     * 解析转场应该使用的有效作品 ID（优先取详情页内滑动切换后的当前作品 ID）。
-     */
-    fun resolveEffectiveIllustId(routeIllustId: Long?): Long? {
-        if (routeIllustId == null) return null
-        return displayedIllustIdByOrigin[routeIllustId] ?: _activeDetailIllustId ?: routeIllustId
+    /** 兼容插画专用调用：[getVisibleTargetInContainer] 的 [TransitionTargetKind.Illust] 便捷封装。 */
+    fun getVisibleInContainer(illustId: Long, containerBounds: Rect): IllustCardBounds? =
+        getVisibleTargetInContainer(TransitionTarget(TransitionTargetKind.Illust, illustId), containerBounds)
+
+    /** 解析转场应该使用的有效目标（优先取详情页内切换后的当前目标）。 */
+    fun resolveEffectiveTarget(routeTarget: TransitionTarget?): TransitionTarget? {
+        if (routeTarget == null) return null
+        return displayedTargetByOrigin[routeTarget]
+            ?: _activeDetailTarget?.takeIf { it.kind == routeTarget.kind }
+            ?: routeTarget
     }
 
-    /**
-     * 同步当前页面栈栈顶路由的作品 ID（栈顶非作品详情页时传入 null）。
-     */
-    fun syncActiveRouteIllustId(routeIllustId: Long?) {
-        if (routeIllustId != currentRouteIllustId) {
-            val previousOrigin = currentRouteIllustId
+    /** 解析转场应该使用的有效插画作品 ID（优先取详情页内滑动切换后的当前作品 ID）。 */
+    fun resolveEffectiveIllustId(routeIllustId: Long?): Long? =
+        resolveEffectiveTarget(routeIllustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) })?.id
+
+    /** 同步当前页面栈栈顶路由的目标（栈顶非详情页/阅读器时传入 null）。 */
+    fun syncActiveRouteTarget(routeTarget: TransitionTarget?) {
+        if (routeTarget != currentRouteTarget) {
+            val previousOrigin = currentRouteTarget
             if (previousOrigin != null) {
-                exitingOriginRouteIllustId = previousOrigin
-                exitingFrontIllustId = displayedIllustIdByOrigin[previousOrigin]
-                    ?: _activeDetailIllustId
-                    ?: lastActiveDetailIllustId
+                exitingOriginRouteTarget = previousOrigin
+                exitingFrontTarget = displayedTargetByOrigin[previousOrigin]
+                    ?: _activeDetailTarget?.takeIf { it.kind == previousOrigin.kind }
+                    ?: lastActiveDetailTarget?.takeIf { it.kind == previousOrigin.kind }
                     ?: previousOrigin
             } else {
-                exitingOriginRouteIllustId = null
-                exitingFrontIllustId = null
+                exitingOriginRouteTarget = null
+                exitingFrontTarget = null
             }
-            currentRouteIllustId = routeIllustId
-            if (routeIllustId != null) {
-                val displayed = displayedIllustIdByOrigin[routeIllustId] ?: routeIllustId
-                displayedIllustIdByOrigin[routeIllustId] = displayed
-                _activeDetailIllustId = displayed
-                lastActiveDetailIllustId = displayed
+            currentRouteTarget = routeTarget
+            if (routeTarget != null) {
+                val displayed = displayedTargetByOrigin[routeTarget] ?: routeTarget
+                displayedTargetByOrigin[routeTarget] = displayed
+                _activeDetailTarget = displayed
+                lastActiveDetailTarget = displayed
             } else {
-                _activeDetailIllustId = null
+                _activeDetailTarget = null
             }
             listTranslationX = 0f
         }
-        enteringFrontIllustId = routeIllustId
+        enteringFrontTarget = routeTarget
     }
 
-    /**
-     * 按当前层自身的 `rawIllustId` 与转场方向 [direction] 解析本次转场对应的目标作品 ID。
-     */
-    fun resolveTransitionIllustId(
-        rawIllustId: Long?,
+    /** 兼容插画专用调用：同步当前页面栈栈顶路由的插画作品 ID（非插画详情页传 null）。 */
+    fun syncActiveRouteIllustId(routeIllustId: Long?) {
+        syncActiveRouteTarget(routeIllustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) })
+    }
+
+    /** 按当前层自身的 [rawTarget] 与转场方向 [direction] 解析本次转场对应的目标。 */
+    fun resolveTransitionTarget(
+        rawTarget: TransitionTarget?,
         direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
-    ): Long? = when (direction) {
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> rawIllustId
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
-            displayedIllustIdByOrigin[rawIllustId]
-                ?: _activeDetailIllustId
-                ?: exitingFrontIllustId
-                ?: lastActiveDetailIllustId
-                ?: rawIllustId
+    ): TransitionTarget? = when (direction) {
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> rawTarget
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawTarget != null) {
+            displayedTargetByOrigin[rawTarget]
+                ?: _activeDetailTarget?.takeIf { it.kind == rawTarget.kind }
+                ?: exitingFrontTarget?.takeIf { it.kind == rawTarget.kind }
+                ?: lastActiveDetailTarget?.takeIf { it.kind == rawTarget.kind }
+                ?: rawTarget
         } else {
             null
         }
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> enteringFrontIllustId
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> enteringFrontTarget
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> {
-            val origin = exitingOriginRouteIllustId
+            val origin = exitingOriginRouteTarget
             if (origin != null) {
-                displayedIllustIdByOrigin[origin] ?: exitingFrontIllustId ?: origin
+                displayedTargetByOrigin[origin] ?: exitingFrontTarget ?: origin
             } else {
-                exitingFrontIllustId
+                exitingFrontTarget
             }
         }
     }
 
-    /**
-     * 按转场方向解析本次转场的锚点作品 ID 候选序列（当前展示的作品 -> 本次打开的作品）。
-     */
-    fun resolveTransitionIllustIdCandidates(
+    /** 按当前层自身的 [rawIllustId] 与转场方向 [direction] 解析本次转场对应的目标作品 ID。 */
+    fun resolveTransitionIllustId(
         rawIllustId: Long?,
         direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
-    ): List<Long?> = when (direction) {
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> listOf(rawIllustId)
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawIllustId != null) {
+    ): Long? = resolveTransitionTarget(
+        rawTarget = rawIllustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) },
+        direction = direction,
+    )?.takeIf { it.kind == TransitionTargetKind.Illust }?.id
+
+    /** 按转场方向解析本次转场的锚点目标候选序列（当前展示的目标 -> 本次打开的目标）。 */
+    fun resolveTransitionTargetCandidates(
+        rawTarget: TransitionTarget?,
+        direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
+    ): List<TransitionTarget?> = when (direction) {
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_FRONT -> listOf(rawTarget)
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT -> if (rawTarget != null) {
             listOf(
-                displayedIllustIdByOrigin[rawIllustId]
-                    ?: (if (exitingOriginRouteIllustId == rawIllustId) exitingFrontIllustId else null)
-                    ?: rawIllustId,
-                rawIllustId,
+                displayedTargetByOrigin[rawTarget]
+                    ?: (if (exitingOriginRouteTarget == rawTarget) exitingFrontTarget else null)
+                    ?: rawTarget,
+                rawTarget,
             ).distinct()
         } else {
             emptyList()
         }
-        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> listOf(enteringFrontIllustId)
+        com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_BACK -> listOf(enteringFrontTarget)
         com.arkivanov.decompose.extensions.compose.stack.animation.Direction.ENTER_BACK -> {
-            val origin = exitingOriginRouteIllustId
+            val origin = exitingOriginRouteTarget
             listOf(
-                origin?.let { displayedIllustIdByOrigin[it] } ?: exitingFrontIllustId,
+                origin?.let { displayedTargetByOrigin[it] } ?: exitingFrontTarget,
                 origin,
             ).distinct()
         }
     }
 
+    /** 按转场方向解析本次转场的锚点插画作品 ID 候选序列。 */
+    fun resolveTransitionIllustIdCandidates(
+        rawIllustId: Long?,
+        direction: com.arkivanov.decompose.extensions.compose.stack.animation.Direction,
+    ): List<Long?> = resolveTransitionTargetCandidates(
+        rawTarget = rawIllustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) },
+        direction = direction,
+    ).map { candidate ->
+        if (candidate == null) null
+        else if (candidate.kind == TransitionTargetKind.Illust) candidate.id
+        else null
+    }.let { mapped ->
+        if (direction == com.arkivanov.decompose.extensions.compose.stack.animation.Direction.EXIT_FRONT && rawIllustId == null) {
+            emptyList()
+        } else {
+            mapped
+        }
+    }
+
     /**
      * 按 Miuix 默认侧滑进度更新底层页面的视差位移；当进度处于起点（<= 0.001f）或终点（>= 0.999f）时自动归零。
-     *
-     * [parallaxFraction] 为 0 表示当前皮肤采用覆盖语义、底层页静止（ColorOS），此时不登记位移，
-     * 卡片坐标也就无需逆变换。默认值与底层页图层实际使用的位移比例必须一致，否则收回终点会偏移。
      */
     fun updateSlideParallax(
         widthPx: Float,
@@ -285,44 +349,36 @@ class SharedBoundsRegistry {
         }
     }
 
-    /**
-     * 更新当前转场的激活状态；当展开度到达端点（0 或 1）时自动释放激活标记。
-     *
-     * 快速多次进出时，若已有更新的转场目标处于激活态，旧页面残余退场帧的上报会被忽略，防止清空新转场状态。
-     */
-    fun updateTransitionState(
-        illustId: Long?,
+    /** 更新通用转场激活状态（支持插画与小说）；展开度到端点（0 或 1）时释放激活标记。 */
+    fun updateTargetTransitionState(
+        target: TransitionTarget?,
         expansion: Float,
         sourceBounds: Rect? = null,
         containerBounds: Rect = Rect.Zero,
         isExiting: Boolean = false,
     ) {
         val clamped = expansion.coerceIn(0f, 1f)
-        val expectedOwner = currentRouteIllustId
-            ?.let { displayedIllustIdByOrigin[it] ?: it }
-            ?: exitingOriginRouteIllustId?.let { displayedIllustIdByOrigin[it] ?: it }
+        val expectedOwner = currentRouteTarget
+            ?.let { displayedTargetByOrigin[it] ?: it }
+            ?: exitingOriginRouteTarget?.let { displayedTargetByOrigin[it] ?: it }
 
-        if (illustId == null || clamped <= 0.001f || clamped >= 0.999f) {
-            if (illustId == null || activeTransitionIllustId == null || activeTransitionIllustId == illustId) {
-                if (activeTransitionIllustId != null) {
-                }
-                activeTransitionIllustId = null
+        if (target == null || clamped <= 0.001f || clamped >= 0.999f) {
+            if (target == null || activeTransitionTarget == null || activeTransitionTarget == target) {
+                activeTransitionTarget = null
                 activeTransitionExpansion = 0f
                 isExitingTransition = false
                 backdropScale = 1f
             }
         } else {
-            if (activeTransitionIllustId != null &&
-                activeTransitionIllustId != illustId &&
+            if (activeTransitionTarget != null &&
+                activeTransitionTarget != target &&
                 expectedOwner != null &&
-                illustId != expectedOwner &&
-                illustId != currentRouteIllustId
+                target != expectedOwner &&
+                target != currentRouteTarget
             ) {
                 return
             }
-            if (activeTransitionIllustId != illustId) {
-            }
-            activeTransitionIllustId = illustId
+            activeTransitionTarget = target
             activeTransitionExpansion = clamped
             isExitingTransition = isExiting
             listTranslationX = 0f
@@ -336,37 +392,63 @@ class SharedBoundsRegistry {
     }
 
     /**
+     * 更新当前转场的激活状态；当展开度到达端点（0 或 1）时自动释放激活标记。
+     */
+    fun updateTransitionState(
+        illustId: Long?,
+        expansion: Float,
+        sourceBounds: Rect? = null,
+        containerBounds: Rect = Rect.Zero,
+        isExiting: Boolean = false,
+    ) {
+        updateTargetTransitionState(
+            target = illustId?.let { TransitionTarget(TransitionTargetKind.Illust, it) },
+            expansion = expansion,
+            sourceBounds = sourceBounds,
+            containerBounds = containerBounds,
+            isExiting = isExiting,
+        )
+    }
+
+    /** 解析本次转场应收回的通用目标卡片锚点。 */
+    fun resolveTargetAnchor(
+        targetCandidates: List<TransitionTarget?>,
+        containerBounds: Rect,
+    ): ResolvedTargetAnchor? =
+        targetCandidates.filterNotNull().distinct().firstNotNullOfOrNull { target ->
+            getVisibleTargetInContainer(target, containerBounds)
+                ?.takeIf { hasUsableCardExpandGeometry(it.rect, containerBounds) }
+                ?.let { ResolvedTargetAnchor(target = target, card = it) }
+        }
+
+    /**
      * 解析本次转场应收回的卡片锚点。
-     *
-     * 按 [illustIdCandidates] 的顺序（当前展示的作品 → 本次打开的作品）取第一个在当前容器内可用且可落点的登记：
-     * 详情页内左右滑动切换到关联作品后，该作品的卡片往往不在原列表里，
-     * 此时必须退回用户点进来的那张卡片，否则收回动画会整页平移走人、终点不在原作品位置。
-     *
-     * 候选全部不可用（未登记、已滚出容器可视范围，或卡片/容器尺寸非法，
-     * 见 [hasUsableCardExpandGeometry]；纵横比不参与否决）时返回 null，调用方回退为默认侧滑。
      */
     fun resolveAnchor(illustIdCandidates: List<Long?>, containerBounds: Rect): Anchor? =
-        illustIdCandidates.filterNotNull().distinct().firstNotNullOfOrNull { id ->
-            getVisibleInContainer(id, containerBounds)
-                ?.takeIf { hasUsableCardExpandGeometry(it.rect, containerBounds) }
-                ?.let { Anchor(illustId = id, card = it) }
+        resolveTargetAnchor(
+            targetCandidates = illustIdCandidates.map { it?.let { id -> TransitionTarget(TransitionTargetKind.Illust, id) } },
+            containerBounds = containerBounds,
+        )?.let { resolved ->
+            Anchor(illustId = resolved.target.id, card = resolved.card)
         }
 
     /**
      * 更新底层页面当前的水平位移（视差侧滑期间由底层页面层逐帧上报，归零表示底层已回到静止态）。
-     *
-     * 侧滑转场期间底层列表整体平移，未登记的卡片此时上报的是平移后的瞬时坐标，
-     * 必须按该位移逆变换回静止态，否则会被当作真实坐标驻留到下次转场，导致收回终点错位。
      */
     fun updateListTranslation(translationX: Float) {
         listTranslationX = if (kotlin.math.abs(translationX) <= 0.5f) 0f else translationX
     }
 
+    /** 移除某个目标卡片的登记，避免已销毁页面的陈旧几何信息被复用。 */
+    fun removeTarget(target: TransitionTarget) {
+        bounds.remove(target)
+    }
+
     /**
-     * 移除某个作品卡片的登记，避免已销毁页面的陈旧几何信息被复用。
+     * 移除某个插画卡片的登记，避免已销毁页面的陈旧几何信息被复用。
      */
     fun remove(illustId: Long) {
-        bounds.remove(illustId)
+        removeTarget(TransitionTarget(TransitionTargetKind.Illust, illustId))
     }
 
     /**
@@ -374,14 +456,14 @@ class SharedBoundsRegistry {
      */
     fun clear() {
         bounds.clear()
-        displayedIllustIdByOrigin.clear()
-        _activeDetailIllustId = null
-        lastActiveDetailIllustId = null
-        currentRouteIllustId = null
-        enteringFrontIllustId = null
-        exitingFrontIllustId = null
-        exitingOriginRouteIllustId = null
-        activeTransitionIllustId = null
+        displayedTargetByOrigin.clear()
+        _activeDetailTarget = null
+        lastActiveDetailTarget = null
+        currentRouteTarget = null
+        enteringFrontTarget = null
+        exitingFrontTarget = null
+        exitingOriginRouteTarget = null
+        activeTransitionTarget = null
         activeTransitionExpansion = 0f
         isExitingTransition = false
         backdropScale = 1f
@@ -428,6 +510,13 @@ internal const val DEFAULT_CARD_CORNER_RADIUS_DP = 16f
 /** 线性插值。 */
 private fun lerp(start: Float, stop: Float, fraction: Float): Float =
     start + (stop - start) * fraction
+
+/** 通用目标锚点（支持插画与小说卡片收回定位）。 */
+@Stable
+data class ResolvedTargetAnchor(
+    val target: TransitionTarget,
+    val card: IllustCardBounds,
+)
 
 /**
  * 一次转场应收回的卡片锚点：作品 ID 与其卡片静止态几何。

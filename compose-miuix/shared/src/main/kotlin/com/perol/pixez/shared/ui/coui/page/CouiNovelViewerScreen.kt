@@ -2,7 +2,6 @@ package com.perol.pixez.shared.ui.coui.page
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -31,8 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +47,6 @@ import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.Novel
-import com.perol.pixez.shared.data.model.NovelTextResponse
 import com.perol.pixez.shared.data.model.NovelWebResponse
 import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
@@ -60,17 +58,21 @@ import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
-import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
+import com.perol.pixez.shared.ui.coui.core.withExtra
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalBookmarkRepository
 import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
+import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
+import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.screens.buildNovelViewerItems
 import com.perol.pixez.shared.ui.screens.NovelViewerItem
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
@@ -82,17 +84,17 @@ import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 
 private sealed interface CouiNovelViewState {
     data object Loading : CouiNovelViewState
-    data class Success(val data: NovelTextResponse) : CouiNovelViewState
+    data class Success(val data: NovelWebResponse) : CouiNovelViewState
     data class Error(val message: String) : CouiNovelViewState
 }
 
 /**
  * COUI 小说阅读器：库骨架 [CouiSecondaryScaffold] + COUI 卡片正文。
  *
- * 业务编排与 MIUIX 版一致：正文/详情/内嵌图源并行加载、收藏（点击常规 / 长按强制私密）、
+ * 业务编排与 MIUIX 版一致：正文/内嵌图源（`/webview/v2/novel`）与详情并行加载、收藏（点击常规 / 长按强制私密）、
  * 字号调节持久化、正文复制/分享/浏览器打开、内嵌插画与上传图、系列前后章节跳转。
- * 表现层：骨架负责折叠大标题与返回，动作（评论/收藏/字号/更多）进 actions 槽；正文为可选中的
- * COUI 卡片列表。复制/分享/浏览器打开收敛在更多菜单，避免挤占标题。
+ * 表现层：骨架负责折叠大标题与返回，动作（评论/收藏/更多）进 actions 槽，统一走 [CouiTopBarIconButton] 凝光视效，
+ * 字号微调、复制、分享与浏览器打开收敛在更多菜单；正文为可选中的 COUI 卡片列表。
  */
 @Composable
 internal fun CouiNovelViewerScreen(
@@ -115,8 +117,6 @@ internal fun CouiNovelViewerScreen(
     // 详情与正文并行加载：仅用于收藏初值与浏览历史，失败不阻塞正文。
     var novelDetail by remember(novelId) { mutableStateOf<Novel?>(null) }
     var isBookmarked by remember(novelId) { mutableStateOf(false) }
-    // 内嵌图源映射：失败降级为无图纯文本。
-    var webResource by remember(novelId) { mutableStateOf<NovelWebResponse?>(null) }
 
     var fontSizeSp by remember(settings.novelFontSize) {
         mutableFloatStateOf(
@@ -130,7 +130,7 @@ internal fun CouiNovelViewerScreen(
     fun loadNovel() {
         scope.launch {
             state = CouiNovelViewState.Loading
-            suspendRunCatchingNonCancel { novelRepository.getNovelText(novelId) }
+            suspendRunCatchingNonCancel { novelRepository.getNovelWebResource(novelId) }
                 .onSuccess { data -> state = CouiNovelViewState.Success(data) }
                 .onFailure { err ->
                     Napier.e("加载小说正文失败 novelId=$novelId", err, tag = "CouiNovelViewer")
@@ -150,13 +150,6 @@ internal fun CouiNovelViewerScreen(
                 }
                 .onFailure { err ->
                     Napier.e("加载小说详情失败 novelId=$novelId", err, tag = "CouiNovelViewer")
-                }
-        }
-        scope.launch {
-            suspendRunCatchingNonCancel { novelRepository.getNovelWebResource(novelId) }
-                .onSuccess { resource -> webResource = resource }
-                .onFailure { err ->
-                    Napier.w("加载小说内嵌资源失败，降级为无图纯文本 novelId=$novelId", err, tag = "CouiNovelViewer")
                 }
         }
     }
@@ -193,52 +186,61 @@ internal fun CouiNovelViewerScreen(
         loadNovel()
     }
 
-    val novelty = (state as? CouiNovelViewState.Success)?.data?.novelText
+    val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val transitionTarget = remember(novelId) {
+        TransitionTarget(TransitionTargetKind.Novel, novelId)
+    }
+    DisposableEffect(sharedBoundsRegistry, transitionTarget) {
+        sharedBoundsRegistry.updateDisplayedTarget(
+            originTarget = transitionTarget,
+            displayedTarget = transitionTarget,
+        )
+        onDispose {
+            sharedBoundsRegistry.onDetailTargetDisposed(transitionTarget)
+        }
+    }
+    val chromeAlphaModifier = Modifier.graphicsLayer {
+        alpha = if (sharedBoundsRegistry.activeTransitionTarget == transitionTarget) {
+            cardExpandDetailChromeAlpha(sharedBoundsRegistry.activeTransitionExpansion)
+        } else {
+            1f
+        }
+    }
+
+    val novelText = (state as? CouiNovelViewState.Success)?.data?.text
+    val webTitle = (state as? CouiNovelViewState.Success)?.data?.title
 
     val menuAnchor = rememberCouiMenuAnchor()
     var menuExpanded by remember { mutableStateOf(false) }
 
     CouiSecondaryScaffold(
-        title = novelDetail?.title?.takeIf { it.isNotBlank() } ?: strings.novelReaderTitle,
+        title = novelDetail?.title?.takeIf { it.isNotBlank() }
+            ?: webTitle?.takeIf { it.isNotBlank() }
+            ?: strings.novelReaderTitle,
         onBack = onBack,
         actions = {
             CouiTopBarIconButton(
                 onClick = { onCommentsClick(novelId) },
                 icon = CouiIcons.Messages,
                 contentDescription = strings.commentsTitle,
+                modifier = chromeAlphaModifier,
             )
-            // 收藏需要长按（强制私密），CouiTopBarIconButton 不支持长按，故保留页面自绘圆钮。
             if (novelDetail != null) {
-                CouiNovelBookmarkButton(
-                    isBookmarked = isBookmarked,
-                    strings = strings,
+                CouiTopBarIconButton(
                     onClick = { toggleNovelBookmark(forcePrivate = false) },
                     onLongClick = { toggleNovelBookmark(forcePrivate = true) },
+                    icon = if (isBookmarked) CouiIcons.HeartFill else CouiIcons.Heart,
+                    contentDescription = strings.bookmark,
+                    tint = if (isBookmarked) LocalAppExtraColors.current.bookmarkActive else null,
+                    modifier = chromeAlphaModifier,
                 )
             }
-            CouiTopBarIconButton(
-                onClick = {
-                    fontSizeSp -= 1f
-                    settings.novelFontSize = fontSizeSp
-                },
-                icon = CouiIcons.Remove,
-                contentDescription = strings.novelFontSize + " -",
-                enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
-            )
-            CouiTopBarIconButton(
-                onClick = {
-                    fontSizeSp += 1f
-                    settings.novelFontSize = fontSizeSp
-                },
-                icon = CouiIcons.Add,
-                contentDescription = strings.novelFontSize + " +",
-                enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
-            )
             Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
                 CouiTopBarIconButton(
                     onClick = { menuAnchor.open { menuExpanded = true } },
                     icon = CouiIcons.More,
                     contentDescription = strings.menuMoreActions,
+                    modifier = chromeAlphaModifier,
                 )
                 Menu(
                     expanded = menuExpanded,
@@ -246,15 +248,33 @@ internal fun CouiNovelViewerScreen(
                     anchor = menuAnchor,
                     headerText = strings.menuMoreActions,
                     items = listOf(
-                        CouiMenuItem(value = "copy_text", text = strings.copy),
+                        CouiMenuItem(
+                            value = "font_smaller",
+                            text = "${strings.novelFontSize} -",
+                            enabled = fontSizeSp > AppConstants.Novel.MIN_FONT_SIZE_SP,
+                        ),
+                        CouiMenuItem(
+                            value = "font_larger",
+                            text = "${strings.novelFontSize} +",
+                            enabled = fontSizeSp < AppConstants.Novel.MAX_FONT_SIZE_SP,
+                        ),
+                        CouiMenuItem(value = "copy_text", text = strings.copy, dividerBefore = true),
                         CouiMenuItem(value = "share", text = strings.share),
                         CouiMenuItem(value = "browser", text = strings.openInBrowser),
                     ),
                     onItemClick = { item ->
                         menuExpanded = false
                         when (item.value) {
-                            "copy_text" -> if (!novelty.isNullOrBlank()) {
-                                IllustClipboard().copy(novelty)
+                            "font_smaller" -> {
+                                fontSizeSp = (fontSizeSp - 1f).coerceAtLeast(AppConstants.Novel.MIN_FONT_SIZE_SP)
+                                settings.novelFontSize = fontSizeSp
+                            }
+                            "font_larger" -> {
+                                fontSizeSp = (fontSizeSp + 1f).coerceAtMost(AppConstants.Novel.MAX_FONT_SIZE_SP)
+                                settings.novelFontSize = fontSizeSp
+                            }
+                            "copy_text" -> if (!novelText.isNullOrBlank()) {
+                                IllustClipboard().copy(novelText)
                                 toastSink(ToastData(strings.copiedToClipboard, ToastType.Success))
                             }
                             "share" -> IllustShare().share(
@@ -286,7 +306,6 @@ internal fun CouiNovelViewerScreen(
             is CouiNovelViewState.Success -> CouiNovelBody(
                 data = st.data,
                 novelDetail = novelDetail,
-                webResource = webResource,
                 fontSizeSp = fontSizeSp,
                 strings = strings,
                 padding = padding,
@@ -303,45 +322,11 @@ internal fun CouiNovelViewerScreen(
     }
 }
 
-/** 收藏按钮：点击常规收藏，长按强制私密收藏；已收藏时高亮。 */
-@Composable
-private fun CouiNovelBookmarkButton(
-    isBookmarked: Boolean,
-    strings: AppStrings,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .couiPressFeedback(interactionSource, list = false)
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        androidx.compose.foundation.Image(
-            painter = rememberVectorPainter(if (isBookmarked) CouiIcons.HeartFill else CouiIcons.Heart),
-            contentDescription = strings.bookmark,
-            colorFilter = ColorFilter.tint(
-                if (isBookmarked) LocalAppExtraColors.current.bookmarkActive else CouiTheme.colorScheme.onSurface
-            ),
-            modifier = Modifier.size(22.dp),
-        )
-    }
-}
-
 /** 正文区：COUI 卡片承载可选中的长文列表与系列章节导航。 */
 @Composable
 private fun CouiNovelBody(
-    data: NovelTextResponse,
+    data: NovelWebResponse,
     novelDetail: Novel?,
-    webResource: NovelWebResponse?,
     fontSizeSp: Float,
     strings: AppStrings,
     padding: PaddingValues,
@@ -350,80 +335,94 @@ private fun CouiNovelBody(
     onUserClick: (Long) -> Unit,
     onOpenUrl: (String) -> Unit,
 ) {
-    val novelText = data.novelText
-    val seriesPrev = data.seriesPrev
-    val seriesNext = data.seriesNext
+    val novelText = data.text
+    val seriesPrev = data.seriesNavigation?.prevNovel
+    val seriesNext = data.seriesNavigation?.nextNovel
     val viewerItems = remember(novelText) {
         if (novelText.isBlank()) emptyList() else buildNovelViewerItems(novelText)
     }
+    val contentPadding = remember(padding) {
+        padding.withExtra(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp)
+    }
+    val cardBackground = CouiTheme.colorScheme.card
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .consumeWindowInsets(padding)
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(CouiTheme.colorScheme.card)
-    ) {
-        SelectionContainer {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
-                overscrollEffect = rememberCouiOverscrollEffect(),
-            ) {
-                novelDetail?.let { detail ->
-                    item {
-                        Column(
+    SelectionContainer {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(padding),
+            contentPadding = contentPadding,
+            overscrollEffect = rememberCouiOverscrollEffect(),
+        ) {
+            item {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                        .background(cardBackground),
+                )
+            }
+
+            novelDetail?.let { detail ->
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(cardBackground)
+                            .padding(horizontal = 18.dp),
+                    ) {
+                        Text(
+                            text = detail.title,
+                            kind = CouiTextKind.ItemTitle,
+                            color = CouiTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 18.dp),
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onUserClick(detail.user.id) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            Text(
-                                text = detail.title,
-                                kind = CouiTextKind.ItemTitle,
-                                color = CouiTheme.colorScheme.onSurface,
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
+                            PixivAsyncImage(
+                                model = detail.user.profileImageUrls.medium,
+                                contentDescription = detail.user.name,
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable { onUserClick(detail.user.id) }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                PixivAsyncImage(
-                                    model = detail.user.profileImageUrls.medium,
-                                    contentDescription = detail.user.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape),
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                            )
+                            Column {
+                                Text(
+                                    text = detail.user.name,
+                                    kind = CouiTextKind.ItemTitle,
+                                    color = CouiTheme.colorScheme.onSurface,
+                                    maxLines = 1,
                                 )
-                                Column {
-                                    Text(
-                                        text = detail.user.name,
-                                        kind = CouiTextKind.ItemTitle,
-                                        color = CouiTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                    )
-                                    Text(
-                                        text = detail.user.account,
-                                        kind = CouiTextKind.ItemSummary,
-                                        color = CouiTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                    )
-                                }
+                                Text(
+                                    text = detail.user.account,
+                                    kind = CouiTextKind.ItemSummary,
+                                    color = CouiTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
+            }
 
-                if (viewerItems.isEmpty()) {
-                    item {
+            if (viewerItems.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(cardBackground)
+                            .padding(horizontal = 18.dp),
+                    ) {
                         BasicText(
                             text = strings.novelTextEmpty,
                             style = TextStyle(
@@ -431,35 +430,45 @@ private fun CouiNovelBody(
                                 lineHeight = (fontSizeSp * 1.65f).sp,
                                 color = CouiTheme.colorScheme.onSurfaceVariant,
                             ),
-                            modifier = Modifier.padding(horizontal = 18.dp),
                         )
                     }
-                } else {
-                    items(
-                        count = viewerItems.size,
-                        key = { it },
-                        contentType = { index -> viewerItems[index]::class },
-                    ) { index ->
+                }
+            } else {
+                items(
+                    count = viewerItems.size,
+                    key = { it },
+                    contentType = { index -> viewerItems[index]::class },
+                ) { index ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(cardBackground),
+                    ) {
                         CouiNovelViewerItemContent(
                             item = viewerItems[index],
-                            webResource = webResource,
+                            webResource = data,
                             fontSizeSp = fontSizeSp,
                             onIllustClick = onIllustClick,
                             onOpenUrl = onOpenUrl,
                         )
                     }
                 }
+            }
 
-                if (seriesPrev?.id != null || seriesNext?.id != null) {
-                    item {
+            if (seriesPrev != null || seriesNext != null) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(cardBackground)
+                            .padding(horizontal = 18.dp),
+                    ) {
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 18.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            if (seriesPrev?.id != null) {
+                            if (seriesPrev != null) {
                                 CouiSeriesNavButton(
                                     text = strings.novelPrevChapter,
                                     onClick = { onNovelClick(seriesPrev.id) },
@@ -468,7 +477,7 @@ private fun CouiNovelBody(
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
-                            if (seriesNext?.id != null) {
+                            if (seriesNext != null) {
                                 CouiSeriesNavButton(
                                     text = strings.novelNextChapter,
                                     onClick = { onNovelClick(seriesNext.id) },
@@ -480,8 +489,16 @@ private fun CouiNovelBody(
                         }
                     }
                 }
+            }
 
-                item { Spacer(modifier = Modifier.height(32.dp)) }
+            item {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
+                        .background(cardBackground),
+                )
             }
         }
     }

@@ -257,4 +257,44 @@ class NovelRepositoryTest {
         assertEquals("30", nextReq.query["offset"])
         assertEquals(0, nextPage.novels.size)
     }
+
+    @Test
+    fun `getNovelWebResource 兼容 PHP 空数组 illusts 与 images 及 null illust 条目`() = runBlocking {
+        responseBody = """
+            <html><body><script>
+            window.__INITIAL_STATE__ = {novel:{"id":"101","title":"无图章节","text":"正文第一段\n正文第二段",
+            "illusts":[],"images":[],
+            "seriesNavigation":{"prevNovel":{"id":100,"viewable":true,"contentOrder":"1","title":"上一章"},"nextNovel":{"id":"102","viewable":false,"contentOrder":"3","title":"下一章"}}}};
+            </script></body></html>
+        """.trimIndent()
+
+        val result = repository.getNovelWebResource(101)
+
+        assertEquals("101", result.id)
+        assertEquals("无图章节", result.title)
+        assertEquals("正文第一段\n正文第二段", result.text)
+        assertTrue(result.illusts.isEmpty(), "illusts 为 PHP 空数组 [] 时应解析为空 Map")
+        assertTrue(result.images.isEmpty(), "images 为 PHP 空数组 [] 时应解析为空 Map")
+        assertEquals(100L, result.seriesNavigation?.prevNovel?.id)
+        assertEquals(true, result.seriesNavigation?.prevNovel?.viewable)
+        assertEquals(102L, result.seriesNavigation?.nextNovel?.id)
+        assertEquals(false, result.seriesNavigation?.nextNovel?.viewable)
+    }
+
+    @Test
+    fun `getNovelWebResource 兼容 illusts 条目中 illust 为 null 的失效插画`() = runBlocking {
+        responseBody = """
+            <html><body><script>
+            window.__INITIAL_STATE__ = {novel:{"id":"202","title":"含失效插画","text":"[pixivimage:999-1]",
+            "illusts":{"999-1":{"illust":null}},
+            "images":{}}};
+            </script></body></html>
+        """.trimIndent()
+
+        val result = repository.getNovelWebResource(202)
+
+        assertEquals("202", result.id)
+        assertTrue(result.illusts.containsKey("999-1"))
+        assertNull(result.illusts["999-1"]?.illust, "illust 为 null 时应容错解析为 null 而不抛异常")
+    }
 }
