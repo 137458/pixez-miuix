@@ -21,7 +21,7 @@ Rilis saat ini: `0.9.109.7-miuix`. Membutuhkan Android 12 (API 31) atau lebih ba
 
 ## Tentang Repositori Ini
 
-PixEz MIUIX adalah versi tulis-ulang PixEz, klien pihak ketiga Pixiv. `shared/src/main/kotlin` memuat 384 berkas Kotlin, termasuk 87 berkas `*Screen.kt` (mencakup tema HyperOS dan ColorOS). Tumpukan utamanya: Kotlin 2.4.10, Jetpack Compose BOM 2026.08.01, MIUIX 0.9.4, COUI 0.0.1-alpha12, Ktor 3.1.2, SQLDelight 2.0.2, Coil 3.6.3, dan Decompose 3.3.0. Proyek memakai `compileSdk` 36 dan `minSdk` 31.
+PixEz MIUIX adalah versi tulis-ulang PixEz, klien pihak ketiga Pixiv. `shared/src/main/kotlin` memuat 385 berkas Kotlin, termasuk 87 berkas `*Screen.kt` (mencakup tema HyperOS dan ColorOS). Tumpukan utamanya: Kotlin 2.4.10, Jetpack Compose BOM 2026.08.01, MIUIX 0.9.4, COUI 0.0.1-alpha12, Ktor 3.1.2, SQLDelight 2.0.2, Coil 3.6.3, dan Decompose 3.3.0. Proyek memakai `compileSdk` 36 dan `minSdk` 31.
 
 Komponen utama:
 
@@ -33,7 +33,7 @@ Komponen utama:
 - Novel: pencarian dalam aplikasi, penjelajahan detail, dan pembaca dengan rendering teks kaya (ilustrasi tersemat, penanda bab, dan tautan halaman); bookmark, riwayat bacaan, dan komentar.
 - Feed mengikuti menyertakan daftar pantauan serial manga; serial dapat dipantau atau batal dipantau langsung dari halaman serial.
 - Daftar mendukung tarik-turun untuk menyegarkan dan memuat lebih banyak konten secara otomatis saat mencapai dasar daftar.
-- `TrustedUrlPolicy` memvalidasi URL API, gambar, Pixivision, dan aset rilis terhadap host yang diizinkan sebelum permintaan dikirim.
+- URL API, gambar, Pixivision, dan aset rilis divalidasi terhadap daftar host tepercaya sebelum permintaan dikirim.
 
 ## Kontribusi
 

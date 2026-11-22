@@ -38,12 +38,12 @@ The app reaches Pixiv from Mainland China without a proxy. Host resolution uses 
 
 ### Android Architecture
 
-- `shared/src/main/kotlin` holds 384 Kotlin files, including 87 `*Screen.kt` (covering both HyperOS and ColorOS skins).
+- `shared/src/main/kotlin` holds 385 Kotlin files, including 87 `*Screen.kt` (covering both HyperOS and ColorOS skins).
 - Decompose drives routing and navigation.
 - Ktor Client handles networking: OAuth2 PKCE login, automatic token refresh with a retry of the original request, and multi-account switching.
 - SQLDelight stores local data; Coil 3 loads images.
 - Network: DNS-over-HTTPS resolution with a system DNS fallback and a five-minute circuit breaker. The image source can be the default host, a mirror host, or a custom host.
-- `TrustedUrlPolicy` validates API, image, Pixivision, and release-asset URLs against allowed hosts before any request.
+- API, image, Pixivision, and release-asset URLs are validated against an allowlist of trusted hosts before any request is sent.
 
 ### Pixiv Core Capabilities
 

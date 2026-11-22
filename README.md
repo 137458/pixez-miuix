@@ -78,7 +78,7 @@
   - 域名解析走 DoH；DoH 失败后熔断 5 分钟，冷却期内回退系统 DNS。
   - 图源支持默认 Host、镜像 Host 与自定义 Host。
   - `standard` 档强制回落默认 Host，并隐藏图源选项。
-  - `TrustedUrlPolicy` 将分页、图片与特辑请求收敛到受信任域名。
+  - 分页、图片与特辑请求统一收敛到受信任域名后才放行。
 
 ***
 
@@ -129,7 +129,7 @@ pixez-flutter-MIUIX/
 └── README.md                           # 项目说明
 ```
 
-`shared/src/main/kotlin` 共 384 个 Kotlin 源文件，包含 87 个 `*Screen.kt`（涵盖 HyperOS 与 ColorOS 双皮肤页面）。
+`shared/src/main/kotlin` 共 385 个 Kotlin 源文件，包含 87 个 `*Screen.kt`（涵盖 HyperOS 与 ColorOS 双皮肤页面）。
 
 ### 技术栈
 
