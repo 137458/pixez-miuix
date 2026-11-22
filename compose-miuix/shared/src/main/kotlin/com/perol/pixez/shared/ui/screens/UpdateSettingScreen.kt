@@ -100,6 +100,8 @@ fun UpdateSettingScreen(
 
     var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
     var isChecking by remember { mutableStateOf(false) }
+    // 检查失败与「已是最新」必须区分：网络或限流失败时不能继续声称已是最新。
+    var checkFailed by remember { mutableStateOf(false) }
     val toastSink = LocalToastSink.current
     var showDialog by remember { mutableStateOf(false) }
     var isOs3Effect by remember(settingsRepository) {
@@ -126,6 +128,7 @@ fun UpdateSettingScreen(
             result
                 .onSuccess { info ->
                     releaseInfo = info
+                    checkFailed = false
                     if (info.isNew && userInitiated) {
                         showDialog = true
                     } else if (!info.isNew && userInitiated) {
@@ -133,6 +136,7 @@ fun UpdateSettingScreen(
                     }
                 }
                 .onFailure { error ->
+                    checkFailed = true
                     if (userInitiated) {
                         toastSink(ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error))
                     }
@@ -222,6 +226,7 @@ fun UpdateSettingScreen(
                     UpdateHeroSection(
                         isChecking = isChecking,
                         hasNew = hasNew,
+                        checkFailed = checkFailed,
                         releaseVersionName = releaseInfo?.versionName ?: "",
                         strings = strings,
                     )
@@ -288,6 +293,7 @@ fun UpdateSettingScreen(
                         autoCheckUpdate = autoCheckUpdate,
                         isChecking = isChecking,
                         hasNew = hasNew,
+                        checkFailed = checkFailed,
                         ignored = ignoredVersion == releaseInfo?.versionName,
                         releaseVersionName = releaseInfo?.versionName ?: "",
                         onAutoCheckChange = { checked ->
@@ -371,6 +377,7 @@ fun UpdateSettingScreen(
 private fun UpdateHeroSection(
     isChecking: Boolean,
     hasNew: Boolean,
+    checkFailed: Boolean,
     releaseVersionName: String,
     strings: com.perol.pixez.shared.ui.i18n.AppStrings,
 ) {
@@ -424,8 +431,8 @@ private fun UpdateHeroSection(
             )
         } else {
             Text(
-                text = strings.updateLatest.format(AppInfo.VERSION_NAME),
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                text = if (checkFailed) strings.loadFailed else strings.updateLatest.format(AppInfo.VERSION_NAME),
+                color = if (checkFailed) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -551,6 +558,7 @@ private fun UpdateSettingsSection(
     autoCheckUpdate: Boolean,
     isChecking: Boolean,
     hasNew: Boolean,
+    checkFailed: Boolean,
     ignored: Boolean,
     releaseVersionName: String,
     onAutoCheckChange: (Boolean) -> Unit,
@@ -573,6 +581,7 @@ private fun UpdateSettingsSection(
             title = strings.updateIgnoreVersion,
             summary = when {
                 isChecking -> strings.loading
+                checkFailed -> strings.loadFailed
                 !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
                 ignored -> strings.updateIgnoreVersionIgnored
                 else -> strings.updateIgnoreVersionSummary.format(releaseVersionName)

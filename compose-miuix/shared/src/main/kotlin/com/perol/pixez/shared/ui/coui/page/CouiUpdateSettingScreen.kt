@@ -90,6 +90,8 @@ internal fun CouiUpdateSettingScreen(
 
     var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
     var isChecking by remember { mutableStateOf(false) }
+    // 检查失败与「已是最新」必须区分：网络或限流失败时不能继续声称已是最新。
+    var checkFailed by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var ignoredVersion by remember { mutableStateOf(settingsRepository.ignoreUpdateVersion) }
     var autoCheckUpdate by remember { mutableStateOf(settingsRepository.autoCheckUpdate) }
@@ -108,6 +110,7 @@ internal fun CouiUpdateSettingScreen(
             updateRepository.fetchLatestReleaseInfo()
                 .onSuccess { info ->
                     releaseInfo = info
+                    checkFailed = false
                     if (info.isNew && userInitiated) {
                         showDialog = true
                     } else if (!info.isNew && userInitiated) {
@@ -115,6 +118,7 @@ internal fun CouiUpdateSettingScreen(
                     }
                 }
                 .onFailure { error ->
+                    checkFailed = true
                     if (userInitiated) {
                         toastSink(ToastData(PixivApiErrorFormatter.format(error, strings), ToastType.Error))
                     }
@@ -136,6 +140,7 @@ internal fun CouiUpdateSettingScreen(
             CouiUpdateHero(
                 isChecking = isChecking,
                 hasNew = hasNew,
+                checkFailed = checkFailed,
                 releaseVersionName = releaseInfo?.versionName.orEmpty(),
             )
         }
@@ -172,6 +177,7 @@ internal fun CouiUpdateSettingScreen(
                     title = strings.updateIgnoreVersion,
                     summary = when {
                         isChecking -> strings.loading
+                        checkFailed -> strings.loadFailed
                         !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
                         ignoredVersion == releaseInfo?.versionName -> strings.updateIgnoreVersionIgnored
                         else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName.orEmpty())
@@ -250,6 +256,7 @@ internal fun CouiUpdateSettingScreen(
 private fun CouiUpdateHero(
     isChecking: Boolean,
     hasNew: Boolean,
+    checkFailed: Boolean,
     releaseVersionName: String,
 ) {
     val strings = LocalStrings.current
@@ -283,6 +290,7 @@ private fun CouiUpdateHero(
             text = when {
                 isChecking -> strings.updateChecking
                 hasNew -> strings.updateFoundNew.format(releaseVersionName, AppInfo.VERSION_NAME)
+                checkFailed -> strings.loadFailed
                 else -> strings.updateLatest.format(AppInfo.VERSION_NAME)
             },
             kind = CouiTextKind.ItemSummary,

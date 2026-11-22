@@ -8,6 +8,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
@@ -126,7 +129,16 @@ private fun compareVersion(v1: String, v2: String): Int {
 }
 
 /**
- * 更新检查仓库：从 GitHub Release API 获取最新版本发布信息。
+ * 仅表示「REST API 通道不可用」：网络异常、非 2xx（含 403 限流耗尽）或条件请求缺少缓存。
+ * 只有这类失败才回退到 Atom Feed；载荷错误与安全校验失败照原样上抛，避免掩盖真实问题。
+ */
+private class UpdateApiUnavailableException(
+    message: String,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
+
+/**
+ * 更新检查仓库：优先请求 GitHub Release API，限流耗尽时回退到 releases.atom + expanded_assets。
  *
  * 网络请求逻辑自 ui 层 UpdateChecker.kt 收编（架构审查 中-4），
  * [client] 由调用方注入并管理生命周期（AppDependencies.close()），
@@ -139,55 +151,16 @@ class UpdateRepository(
     @Volatile
     var cachedReleaseInfo: ReleaseInfo? = null
         private set
+
+    /** 上次成功响应的 ETag：命中 304 时不消耗限流配额。 */
+    private var cachedEtag: String? = null
+
     /**
-     * 从 GitHub Release API 获取完整版本发布信息。
+     * 获取完整版本发布信息：API 优先，限流或网络异常时回退 Atom Feed。
      */
     suspend fun fetchLatestReleaseInfo(): Result<ReleaseInfo> {
         return try {
-            val response = client
-                .get(GitHubReleaseEndpoints.LATEST_API) {
-                    header("User-Agent", "PixEz-MIUIX/${AppInfo.VERSION_NAME}")
-                }
-            if (!response.status.isSuccess()) {
-                throw IllegalStateException("GitHub Release 请求异常: HTTP ${response.status.value}")
-            }
-            val release: GitHubRelease = response.body()
-            val tag = release.tag_name
-            if (tag.isNullOrBlank()) {
-                throw IllegalStateException("GitHub Release 响应缺少有效 tag_name，可能触发未认证速率限制")
-            }
-            val versionName = tag.removePrefix("v").ifBlank { "unknown" }
-            val isNew = hasNewVersion(versionName)
-
-            val matchedAsset = selectPlatformReleaseAsset(assets = release.assets)
-            // asset 直链必须指向官方仓库（owner/repo 白名单），拒绝 GitHub 域内第三方仓库投毒。
-            val downloadUrl = matchedAsset?.browser_download_url?.let {
-                TrustedUrlPolicy.officialReleaseAssetUrl(it, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
-            }
-            val fileName = matchedAsset?.name?.let {
-                com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
-            }
-            val fileSize = matchedAsset?.size
-
-            // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
-            val changelog = release.body?.takeIf { it.isNotBlank() }
-                ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
-
-            val releaseInfo = ReleaseInfo(
-                tagName = tag,
-                versionName = versionName,
-                title = release.name ?: "PixEz MIUIX $tag",
-                changelog = changelog,
-                releaseUrl = release.html_url ?: GitHubReleaseEndpoints.RELEASES_PAGE,
-                publishedAt = release.published_at,
-                isNew = isNew,
-                downloadUrl = downloadUrl,
-                fileName = fileName,
-                fileSize = fileSize,
-                digest = matchedAsset?.digest,
-            )
-            cachedReleaseInfo = releaseInfo
-            Result.success(releaseInfo)
+            Result.success(fetchReleaseInfoOrThrow())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -195,4 +168,165 @@ class UpdateRepository(
             Result.failure(e)
         }
     }
+
+    /**
+     * 双通道获取：API 通道确认不可用时才回退，兜底同样失败时合并两侧原因返回。
+     */
+    private suspend fun fetchReleaseInfoOrThrow(): ReleaseInfo {
+        val apiFailure = try {
+            return fetchFromApi()
+        } catch (e: UpdateApiUnavailableException) {
+            e
+        }
+        Napier.w("GitHub Release API 不可用，回退 Atom Feed: ${apiFailure.message}")
+        return try {
+            fetchFromAtomFeed()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                (apiFailure.message ?: "GitHub Release 请求异常") +
+                    "；Atom 兜底同样失败：" + (e.message ?: e::class.simpleName.orEmpty()),
+                apiFailure,
+            )
+        }
+    }
+
+    /** API 通道：带 ETag 条件请求，200 走完整解析，304 直接复用缓存。 */
+    private suspend fun fetchFromApi(): ReleaseInfo {
+        val etag = cachedEtag
+        val useConditionalRequest = etag != null && cachedReleaseInfo != null
+        val response = try {
+            client.get(GitHubReleaseEndpoints.LATEST_API) {
+                header("User-Agent", userAgent())
+                if (useConditionalRequest) header(HttpHeaders.IfNoneMatch, etag)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw UpdateApiUnavailableException(
+                "GitHub Release 请求异常: " + (e.message ?: e::class.simpleName.orEmpty()),
+                e,
+            )
+        }
+        if (response.status == HttpStatusCode.NotModified) {
+            val cached = cachedReleaseInfo
+                ?: throw UpdateApiUnavailableException("GitHub Release 条件请求返回 304 但缺少本地缓存")
+            return cached.copy(isNew = hasNewVersion(cached.versionName))
+        }
+        if (!response.status.isSuccess()) {
+            throw UpdateApiUnavailableException("GitHub Release 请求异常: HTTP ${response.status.value}")
+        }
+        val release: GitHubRelease = response.body()
+        val tag = release.tag_name
+        if (tag.isNullOrBlank()) {
+            throw IllegalStateException("GitHub Release 响应缺少有效 tag_name，可能触发未认证速率限制")
+        }
+        val versionName = tag.removePrefix("v").ifBlank { "unknown" }
+        val isNew = hasNewVersion(versionName)
+
+        val matchedAsset = selectPlatformReleaseAsset(assets = release.assets)
+        // asset 直链必须指向官方仓库（owner/repo 白名单），拒绝 GitHub 域内第三方仓库投毒。
+        val downloadUrl = matchedAsset?.browser_download_url?.let {
+            TrustedUrlPolicy.officialReleaseAssetUrl(it, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
+        }
+        val fileName = matchedAsset?.name?.let {
+            com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(it)
+        }
+        val fileSize = matchedAsset?.size
+
+        // 当远端日志为空且为当前版本时，优雅回退到本地内置日志
+        val changelog = release.body?.takeIf { it.isNotBlank() }
+            ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
+
+        val releaseInfo = ReleaseInfo(
+            tagName = tag,
+            versionName = versionName,
+            title = release.name ?: "PixEz MIUIX $tag",
+            changelog = changelog,
+            releaseUrl = release.html_url ?: GitHubReleaseEndpoints.RELEASES_PAGE,
+            publishedAt = release.published_at,
+            isNew = isNew,
+            downloadUrl = downloadUrl,
+            fileName = fileName,
+            fileSize = fileSize,
+            digest = matchedAsset?.digest,
+        )
+        cachedEtag = response.headers[HttpHeaders.ETag]
+        cachedReleaseInfo = releaseInfo
+        return releaseInfo
+    }
+
+    /**
+     * Atom 兜底通道：feed 不限流，正文是 XML 转义的 HTML，转换为 Markdown 后直接展示。
+     * 资产直链需再请求 expanded_assets 片段；该片段失败只降级为「无直链」，不影响版本信息。
+     */
+    private suspend fun fetchFromAtomFeed(): ReleaseInfo {
+        val response = try {
+            client.get(GitHubReleaseEndpoints.RELEASES_ATOM) {
+                header("User-Agent", userAgent())
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "GitHub Release Feed 请求异常: " + (e.message ?: e::class.simpleName.orEmpty()),
+                e,
+            )
+        }
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("GitHub Release Feed 请求异常: HTTP ${response.status.value}")
+        }
+        val entry = parseLatestFeedEntry(response.bodyAsText())
+            ?: throw IllegalStateException("GitHub Release Feed 响应缺少有效 entry")
+        val versionName = entry.tagName.removePrefix("v").ifBlank { "unknown" }
+        val isNew = hasNewVersion(versionName)
+        val asset = resolveFeedAsset(entry.tagName)
+        val changelog = entry.changelogMarkdown.takeIf { it.isNotBlank() }
+            ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
+
+        val releaseInfo = ReleaseInfo(
+            tagName = entry.tagName,
+            versionName = versionName,
+            title = entry.title,
+            changelog = changelog,
+            releaseUrl = entry.releaseUrl,
+            publishedAt = entry.publishedAt,
+            isNew = isNew,
+            downloadUrl = asset?.browser_download_url,
+            fileName = asset?.name,
+            fileSize = asset?.size,
+            digest = asset?.digest,
+        )
+        cachedReleaseInfo = releaseInfo
+        return releaseInfo
+    }
+
+    /** 解析 Atom 兜底通道下的安装包直链，任何一步失败都降级为「无直链」。 */
+    private suspend fun resolveFeedAsset(tagName: String): GitHubReleaseAsset? {
+        val response = try {
+            client.get(GitHubReleaseEndpoints.expandedAssetsUrl(tagName)) {
+                header("User-Agent", userAgent())
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Napier.w("GitHub 发布资产列表请求失败，降级为无直链更新: " + (e.message ?: ""))
+            return null
+        }
+        if (!response.status.isSuccess()) {
+            Napier.w("GitHub 发布资产列表不可用: HTTP ${response.status.value}")
+            return null
+        }
+        val asset = parseExpandedAssetApk(response.bodyAsText()) ?: return null
+        // 与 API 通道同一条白名单：直链必须指向官方仓库，否则整体失败（fail closed）。
+        val downloadUrl = TrustedUrlPolicy.officialReleaseAssetUrl(
+            asset.browser_download_url.orEmpty(),
+            GitHubReleaseEndpoints.OFFICIAL_REPO_PATH,
+        )
+        val fileName = com.perol.pixez.shared.platform.FileNamePolicy.requireSafeBaseName(asset.name.orEmpty())
+        return asset.copy(name = fileName, browser_download_url = downloadUrl)
+    }
+
+    private fun userAgent(): String = "PixEz-MIUIX/" + AppInfo.VERSION_NAME
 }

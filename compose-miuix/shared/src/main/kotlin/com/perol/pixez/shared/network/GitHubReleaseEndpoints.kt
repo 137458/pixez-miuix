@@ -17,5 +17,13 @@ object GitHubReleaseEndpoints {
 
     const val RELEASES_PAGE = "https://github.com/" + OFFICIAL_REPO_PATH + "/releases"
 
+    /** 最新发布的 REST API：按出口 IP 限流（未认证 60 次/小时），只作首选通道。 */
     const val LATEST_API = "https://api.github.com/repos/" + OFFICIAL_REPO_PATH + "/releases/latest"
+
+    /** 发布 Atom Feed：不限流、无需鉴权，作为限流耗尽时的兜底通道。 */
+    const val RELEASES_ATOM = "https://github.com/" + OFFICIAL_REPO_PATH + "/releases.atom"
+
+    /** 发布资产的展开列表片段端点：只含资产名、直链与摘要，用于兜底解析安装包。 */
+    fun expandedAssetsUrl(tagName: String): String =
+        "https://github.com/" + OFFICIAL_REPO_PATH + "/releases/expanded_assets/" + tagName
 }
