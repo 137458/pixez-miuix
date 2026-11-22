@@ -11,6 +11,7 @@ package com.perol.pixez.shared.ui.components
 import coil3.PlatformContext
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -46,6 +47,7 @@ internal fun buildIllustDetailMoreMenuEntries(
     share: IllustShare,
     context: PlatformContext,
     coroutineScope: CoroutineScope,
+    copyInfoTemplate: String = SettingsRepository.DEFAULT_COPY_TEXT_FORMAT,
 ): List<DropdownEntry> = buildList {
     add(
         DropdownEntry(
@@ -54,7 +56,7 @@ internal fun buildIllustDetailMoreMenuEntries(
                     text = strings.menuCopyInfo,
                     icon = { modifier -> Icon(imageVector = MiuixIcons.Copy, contentDescription = null, modifier = modifier) },
                     onClick = {
-                        val text = buildIllustCopyInfo(illust)
+                        val text = buildIllustCopyInfo(illust, copyInfoTemplate)
                         runClipboardShare(
                             success = ToastData(strings.copiedToClipboard, ToastType.Success),
                             failurePrefix = "${strings.copy}${strings.failedSuffix}",

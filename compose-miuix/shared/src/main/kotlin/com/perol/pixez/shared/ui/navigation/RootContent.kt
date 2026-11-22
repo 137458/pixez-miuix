@@ -70,6 +70,7 @@ import com.perol.pixez.shared.ui.theme.resolveAppThemeSpec
 import com.perol.pixez.shared.ui.theme.toThemeController
 import com.perol.pixez.shared.ui.skin.LocalSkinPages
 import com.perol.pixez.shared.ui.skin.CouiSkinHost
+import com.perol.pixez.shared.ui.coui.core.resolveCouiEffectiveFloatingBottomBar
 import com.perol.pixez.shared.ui.skin.skinFloatingBarSource
 import com.perol.pixez.shared.ui.skin.LocalUiSkin
 import com.perol.pixez.shared.ui.skin.SkinNavItem
@@ -646,13 +647,19 @@ private fun MainChildSection(
             component.onMainTabSelected(it.tab)
         }
     }
+    val effectiveFloatingBottomBar = resolveCouiEffectiveFloatingBottomBar(
+        isCouiSkin = isCouiSkin,
+        sdkInt = android.os.Build.VERSION.SDK_INT,
+        isWideScreen = isWideScreen,
+        useFloatingBottomBar = useFloatingBottomBar,
+    )
     // 底栏内容边距只在 Main 子树内提供且转场全程不随 active 翻转，
     // 消除进出详情页时列表因边距变化发生的重排；二级页面无底栏，
     // 回落为 CompositionLocal 默认值 16.dp。
     CompositionLocalProvider(
         LocalBottomBarContentPadding provides when {
             showNavigationRailInMain -> 16.dp
-            bottomBarVisible.value && useFloatingBottomBar -> 100.dp
+            bottomBarVisible.value && effectiveFloatingBottomBar -> 100.dp
             bottomBarVisible.value -> 68.dp
             else -> 16.dp
         },
@@ -705,7 +712,7 @@ private fun MainChildSection(
                         skinPages.navigationBar(
                             items = couiNavItems,
                             selectedIndex = selectedNavIndex,
-                            isFloating = useFloatingBottomBar,
+                            isFloating = effectiveFloatingBottomBar,
                             onSelect = onNavIndexSelected,
                             onLeftAccessoryClick = component::onSettingsClicked,
                             onRightAccessoryClick = { component.onSearchClicked("") },

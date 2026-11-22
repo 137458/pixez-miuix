@@ -329,7 +329,12 @@ private fun CouiNovelRow(
     onUserClick: ((Long) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
+    val settings = LocalSettingsRepository.current
+    val changeVersion = settings.changeVersion.collectAsState().value
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
+    val showAIBadge = remember(isAI, settings.feedAIBadge, changeVersion) {
+        isAI && settings.feedAIBadge
+    }
 
     val pressInteraction = remember { MutableInteractionSource() }
     Row(
@@ -356,7 +361,7 @@ private fun CouiNovelRow(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (isAI) {
+            if (showAIBadge) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)

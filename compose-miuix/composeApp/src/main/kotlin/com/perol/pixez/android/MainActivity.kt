@@ -17,6 +17,9 @@ import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -29,16 +32,6 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
  * 使用 ComponentActivity + setContent 承载 Compose Multiplatform 应用。
  */
 class MainActivity : ComponentActivity() {
-
-    private companion object {
-        // SettingsRepository.displayMode 的档位取值
-        const val DISPLAY_MODE_LIMIT_60HZ = 1
-        const val DISPLAY_MODE_HIGH_REFRESH = 2
-
-        // 各档位对应的刷新率过滤区间（Hz）：60Hz 档容忍 58-62，高刷档取 >= 88（90/120Hz）
-        val REFRESH_RATE_60HZ_RANGE = 58f..62f
-        const val REFRESH_RATE_HIGH_MIN = 88f
-    }
 
     private lateinit var dependencies: AppDependencies
     private lateinit var rootComponent: RootComponent
@@ -60,6 +53,7 @@ class MainActivity : ComponentActivity() {
         )
         setupBackPressHandler()
         applyDisplayMode()
+        observeDisplayModeChanges()
         if (savedInstanceState == null) {
             handleIntent(intent)
         }
@@ -132,24 +126,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun observeDisplayModeChanges() {
+        lifecycleScope.launch {
+            dependencies.settingsRepository.changeVersion
+                .map { dependencies.settingsRepository.displayMode }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect {
+                    applyDisplayMode()
+                }
+        }
+    }
+
     private fun applyDisplayMode() {
         // minSdk 31 恒高于 M（23）与 R（30）：Activity.display 与 preferredRefreshRate 恒可用，
-        // 原先的 defaultDisplay 回退与 preferredRefreshRate 条件分支都是死代码，已收敛为单一路径。
-        val modes = display?.supportedModes.orEmpty()
-        val maxMode = modes.maxByOrNull { it.refreshRate }
-        val maxRefreshRate = maxMode?.refreshRate ?: 60f
-        val isLimit60 = dependencies.settingsRepository.displayMode == DISPLAY_MODE_LIMIT_60HZ
-
-        val targetMode = if (isLimit60) {
-            modes.filter { it.refreshRate in REFRESH_RATE_60HZ_RANGE }.maxByOrNull { it.physicalWidth * it.physicalHeight }
-        } else {
-            // 跟随系统（模式 0）或高刷档位（模式 2）：主动向 Window 请求高刷新率管道，避免 Xiaomi HyperOS 等系统默认将其限制在 60Hz 导致动画割裂
-            modes.filter { it.refreshRate >= REFRESH_RATE_HIGH_MIN }.maxByOrNull { it.refreshRate } ?: maxMode
+        // 各档位（0 跟随系统 / 1 60Hz / 2 高刷）统一由 DisplayModePolicy 决策。
+        val candidates = display?.supportedModes.orEmpty().map { mode ->
+            DisplayModeCandidate(
+                modeId = mode.modeId,
+                refreshRate = mode.refreshRate,
+                physicalWidth = mode.physicalWidth,
+                physicalHeight = mode.physicalHeight,
+            )
         }
+        val selection = DisplayModePolicy.select(
+            displayMode = dependencies.settingsRepository.displayMode,
+            modes = candidates,
+        )
 
         val layoutParams = window.attributes
-        layoutParams.preferredDisplayModeId = targetMode?.modeId ?: 0
-        layoutParams.preferredRefreshRate = if (isLimit60) 60f else maxRefreshRate
+        layoutParams.preferredDisplayModeId = selection.modeId
+        layoutParams.preferredRefreshRate = selection.preferredRefreshRate
         window.attributes = layoutParams
     }
 

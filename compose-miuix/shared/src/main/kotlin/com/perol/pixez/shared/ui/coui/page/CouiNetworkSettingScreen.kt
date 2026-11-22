@@ -17,6 +17,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -122,6 +124,7 @@ internal fun CouiNetworkSettingScreen(
         listOf(DEFAULT_IMAGE_HOST, MIRROR_IMAGE_HOST, strings.customHost)
     }
     val pictureSourceIndex = resolveCouiPictureSourceOptionIndex(pictureSource)
+    val customHostFocusRequester = remember { FocusRequester() }
 
     CouiSettingsScaffold(
         title = strings.settingNetwork,
@@ -163,6 +166,7 @@ internal fun CouiNetworkSettingScreen(
                             when (index) {
                                 0 -> setPresetPictureSource(DEFAULT_IMAGE_HOST)
                                 1 -> setPresetPictureSource(MIRROR_IMAGE_HOST)
+                                2 -> customHostFocusRequester.requestFocus()
                             }
                         },
                     )
@@ -179,6 +183,7 @@ internal fun CouiNetworkSettingScreen(
                             value = customHostInput,
                             placeholder = strings.customHost,
                             onValueChange = { customHostInput = it },
+                            focusRequester = customHostFocusRequester,
                         )
                         CouiTextButton(
                             text = strings.confirm,
@@ -198,6 +203,7 @@ private fun CouiNetworkHostField(
     value: String,
     placeholder: String,
     onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
 ) {
     val scheme = CouiTheme.colorScheme
     Box(
@@ -223,7 +229,9 @@ private fun CouiNetworkHostField(
             textStyle = LocalCouiTextStyle.current.copy(color = scheme.onSurface),
             cursorBrush = SolidColor(scheme.accent),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
         )
     }
 }

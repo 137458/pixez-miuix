@@ -49,6 +49,7 @@ import com.perol.pixez.shared.R
 import com.perol.pixez.shared.data.model.AccountPersist
 import com.perol.pixez.shared.data.repository.AccountRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalAccountRepository
@@ -304,22 +305,22 @@ private fun CouiGuideNetworkStep(
                 CouiRadioOptionRow(
                     title = strings.guideNetworkDirect,
                     summary = strings.guideNetworkDirectDesc,
-                    selected = currentNetworkMode == "direct",
+                    selected = currentNetworkMode == HttpEngineDefaults.MODE_STANDARD,
                     onClick = {
-                        currentNetworkMode = "direct"
-                        settingsRepository.apiNetworkMode = "direct"
-                        settingsRepository.oauthNetworkMode = "direct"
+                        currentNetworkMode = HttpEngineDefaults.MODE_STANDARD
+                        settingsRepository.apiNetworkMode = HttpEngineDefaults.MODE_STANDARD
+                        settingsRepository.oauthNetworkMode = HttpEngineDefaults.MODE_STANDARD
                     },
                 )
                 CouiRowDivider()
                 CouiRadioOptionRow(
                     title = strings.guideNetworkSni,
                     summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
-                    selected = currentNetworkMode == "sni",
+                    selected = currentNetworkMode != HttpEngineDefaults.MODE_STANDARD,
                     onClick = {
-                        currentNetworkMode = "sni"
-                        settingsRepository.apiNetworkMode = "sni"
-                        settingsRepository.oauthNetworkMode = "sni"
+                        currentNetworkMode = "ech"
+                        settingsRepository.apiNetworkMode = "ech"
+                        settingsRepository.oauthNetworkMode = "ech"
                     },
                 )
             }

@@ -83,6 +83,7 @@ import com.itos.coui.shape.CouiCapsuleShape
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -140,6 +141,9 @@ internal fun CouiIllustFullScreenOverlay(
     downloadRepository: DownloadRepository,
     onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarked: (() -> Unit)? = null,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
     val effectiveQuality = if (illust.type == IllustType.MANGA) {
@@ -193,6 +197,10 @@ internal fun CouiIllustFullScreenOverlay(
         previewUrl = currentPreviewUrl,
         onToast = onToast,
         onDismiss = onDismiss,
+        settings = settings,
+        bookmarkRepository = bookmarkRepository,
+        isBookmarked = isBookmarked,
+        onBookmarked = onBookmarked,
     )
 }
 
@@ -206,6 +214,10 @@ private fun CouiFullScreenViewer(
     previewUrl: String?,
     onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
+    settings: SettingsRepository? = LocalSettingsRepository.current,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarked: (() -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
@@ -240,6 +252,10 @@ private fun CouiFullScreenViewer(
                 downloadRepository = downloadRepository,
                 strings = strings,
                 onToast = onToast,
+                settings = settings,
+                bookmarkRepository = bookmarkRepository,
+                isBookmarked = isBookmarked,
+                onBookmarked = onBookmarked,
             )
         }
     }

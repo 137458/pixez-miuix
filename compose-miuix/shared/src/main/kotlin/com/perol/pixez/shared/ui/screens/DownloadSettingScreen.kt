@@ -72,7 +72,6 @@ fun DownloadSettingScreen(
         storePath.ifBlank { com.perol.pixez.shared.platform.getDefaultPictureDirectory() }
     }
     var format by remember { mutableStateOf(settingsRepository.format) }
-    var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
     var singleFolder by remember { mutableStateOf(settingsRepository.singleFolder) }
     var overSanityLevelFolder by remember { mutableStateOf(settingsRepository.overSanityLevelFolder) }
     // 并发档位与夹取边界由 DownloadRepository 单点派生（架构审查 R5）：设置页不再自建 1..6 字面列表。
@@ -215,7 +214,7 @@ fun DownloadSettingScreen(
                     top.yukonga.miuix.kmp.basic.Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                         ArrowPreference(
                             title = strings.dialogSaveFormat,
-                            summary = if (fileNameEval) strings.settingShareFormat else format,
+                            summary = format,
                             onClick = { showFormatDialog = true },
                         )
                         OverlayDropdownPreference(

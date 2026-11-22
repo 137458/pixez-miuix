@@ -75,7 +75,7 @@ internal fun CouiLayoutSettingScreen(
     var useFloatingBottomBar by remember { mutableStateOf(settingsRepository.useFloatingBottomBar) }
     var displayMode by remember { mutableIntStateOf(settingsRepository.displayMode) }
 
-    val crossCountOptions = remember { listOf("2", "3", "4", "5", "6") }
+    val crossCountOptions = SettingsRepository.CROSS_COUNT_OPTIONS
     // 显示模式下拉选项：索引与 displayMode 数值一一对应（0 跟随系统 / 1 60Hz / 2 高刷）。
     val displayModeLabels = remember(strings) {
         listOf(

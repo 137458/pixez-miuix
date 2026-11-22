@@ -557,6 +557,7 @@ private fun resolveWelcomePageConfig(settingsRepository: SettingsRepository): Co
     return when (settingsRepository.welcomePageType) {
         "rank" -> Config.Main(RootComponent.MainTab.Ranking)
         "quick_view" -> Config.Main(RootComponent.MainTab.New)
+        "spotlight" -> Config.Main(RootComponent.MainTab.Spotlight)
         "search" -> Config.Main(RootComponent.MainTab.Search)
         "setting" -> Config.Settings
         else -> Config.Main(RootComponent.MainTab.Hello)

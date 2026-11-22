@@ -137,14 +137,13 @@ internal fun rememberIllustDetailActions(
                         ).getOrThrow()
                         if (settings?.starAfterSave == true && !isBookmarked) {
                             coroutineScope.launch {
-                                suspendRunCatchingNonCancel {
-                                    bookmarkRepository.addBookmark(
-                                        illustId = targetIllust.id,
-                                        isPrivate = settings.defaultPrivateLike,
-                                    )
-                                }.onSuccess {
-                                    onBookmarkedChange(true)
-                                }
+                                starAfterSaveIfNeeded(
+                                    illustId = targetIllust.id,
+                                    isBookmarked = isBookmarked,
+                                    settings = settings,
+                                    bookmarkRepository = bookmarkRepository,
+                                    onBookmarked = { onBookmarkedChange(true) },
+                                )
                             }
                         }
                         performHapticFeedback(HapticType.Confirm)
@@ -157,14 +156,13 @@ internal fun rememberIllustDetailActions(
                                     performHapticFeedback(HapticType.Confirm)
                                     if (settings?.starAfterSave == true && !isBookmarked) {
                                         coroutineScope.launch {
-                                            suspendRunCatchingNonCancel {
-                                                bookmarkRepository.addBookmark(
-                                                    illustId = targetIllust.id,
-                                                    isPrivate = settings.defaultPrivateLike,
-                                                )
-                                            }.onSuccess {
-                                                onBookmarkedChange(true)
-                                            }
+                                            starAfterSaveIfNeeded(
+                                                illustId = targetIllust.id,
+                                                isBookmarked = isBookmarked,
+                                                settings = settings,
+                                                bookmarkRepository = bookmarkRepository,
+                                                onBookmarked = { onBookmarkedChange(true) },
+                                            )
                                         }
                                     }
                                     ToastData(strings.downloadStatusSuccess, ToastType.Success)
@@ -213,14 +211,13 @@ internal fun rememberIllustDetailActions(
                     val failedCount = tasks.count { it.status == DownloadStatus.Failed }
                     if (successCount > 0 && settings?.starAfterSave == true && !isBookmarked) {
                         coroutineScope.launch {
-                            suspendRunCatchingNonCancel {
-                                bookmarkRepository.addBookmark(
-                                    illustId = targetIllust.id,
-                                    isPrivate = settings.defaultPrivateLike,
-                                )
-                            }.onSuccess {
-                                onBookmarkedChange(true)
-                            }
+                            starAfterSaveIfNeeded(
+                                illustId = targetIllust.id,
+                                isBookmarked = isBookmarked,
+                                settings = settings,
+                                bookmarkRepository = bookmarkRepository,
+                                onBookmarked = { onBookmarkedChange(true) },
+                            )
                         }
                     }
                     onToast(
@@ -242,4 +239,25 @@ internal fun rememberIllustDetailActions(
         onDownload = performDownload,
         onDownloadAll = performDownloadAll,
     )
+}
+
+/**
+ * 若启用「保存后自动收藏」且当前未收藏，则在保存成功后补写一次收藏。
+ */
+internal suspend fun starAfterSaveIfNeeded(
+    illustId: Long,
+    isBookmarked: Boolean,
+    settings: SettingsRepository?,
+    bookmarkRepository: BookmarkRepository?,
+    onBookmarked: () -> Unit = {},
+) {
+    if (settings?.starAfterSave != true || isBookmarked || bookmarkRepository == null) return
+    suspendRunCatchingNonCancel {
+        bookmarkRepository.addBookmark(
+            illustId = illustId,
+            isPrivate = settings.defaultPrivateLike,
+        )
+    }.onSuccess {
+        onBookmarked()
+    }
 }

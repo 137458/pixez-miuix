@@ -2,6 +2,7 @@ package com.perol.pixez.shared.ui.coui.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.runtime.Composable
@@ -30,6 +30,7 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.rememberIllustGridColumns
 import com.perol.pixez.shared.ui.components.rememberPagingPreload
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
@@ -67,53 +68,59 @@ internal fun CouiIllustGrid(
     }
 
     // 长按菜单用官方锚点菜单贴着被按卡片弹出：入栈到条目自身，随卡片回收一起销毁。
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
-        state = state,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalItemSpacing = 10.dp,
-        overscrollEffect = rememberCouiOverscrollEffect(),
-    ) {
-        if (header != null) {
-            item(
-                key = "coui_grid_header",
-                span = StaggeredGridItemSpan.FullLine,
-                contentType = "coui_grid_header",
-            ) {
-                header()
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val columns = rememberIllustGridColumns(
+            isLandscape = maxWidth > maxHeight,
+            changeVersion = changeVersion,
+        )
+        LazyVerticalStaggeredGrid(
+            columns = columns,
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalItemSpacing = 10.dp,
+            overscrollEffect = rememberCouiOverscrollEffect(),
+        ) {
+            if (header != null) {
+                item(
+                    key = "coui_grid_header",
+                    span = StaggeredGridItemSpan.FullLine,
+                    contentType = "coui_grid_header",
+                ) {
+                    header()
+                }
             }
-        }
-        items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
-            val menuAnchor = rememberCouiMenuAnchor()
-            var menuExpanded by remember { mutableStateOf(false) }
-            Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
-                CouiIllustCard(
-                    illust = illust,
-                    changeVersion = changeVersion,
-                    onClick = { onIllustClick(illust.id) },
-                    onLongClick = { menuAnchor.open { menuExpanded = true } },
-                )
-                CouiIllustActionMenu(
-                    illust = illust,
-                    expanded = menuExpanded,
-                    anchor = menuAnchor,
-                    onDismiss = { menuExpanded = false },
-                )
+            items(items = illusts, key = { it.id }, contentType = { "coui_illust" }) { illust ->
+                val menuAnchor = rememberCouiMenuAnchor()
+                var menuExpanded by remember { mutableStateOf(false) }
+                Box(modifier = Modifier.couiMenuAnchor(menuAnchor)) {
+                    CouiIllustCard(
+                        illust = illust,
+                        changeVersion = changeVersion,
+                        onClick = { onIllustClick(illust.id) },
+                        onLongClick = { menuAnchor.open { menuExpanded = true } },
+                    )
+                    CouiIllustActionMenu(
+                        illust = illust,
+                        expanded = menuExpanded,
+                        anchor = menuAnchor,
+                        onDismiss = { menuExpanded = false },
+                    )
+                }
             }
-        }
-        if (onLoadMore != null && (hasMore || isLoadingMore || loadMoreError != null)) {
-            item(
-                key = "coui_load_more_footer",
-                span = StaggeredGridItemSpan.FullLine,
-                contentType = "coui_load_more_footer",
-            ) {
-                CouiLoadMoreFooter(
-                    isLoading = isLoadingMore,
-                    error = loadMoreError,
-                    onRetry = onLoadMore,
-                )
+            if (onLoadMore != null && (hasMore || isLoadingMore || loadMoreError != null)) {
+                item(
+                    key = "coui_load_more_footer",
+                    span = StaggeredGridItemSpan.FullLine,
+                    contentType = "coui_load_more_footer",
+                ) {
+                    CouiLoadMoreFooter(
+                        isLoading = isLoadingMore,
+                        error = loadMoreError,
+                        onRetry = onLoadMore,
+                    )
+                }
             }
         }
     }

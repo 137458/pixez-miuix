@@ -50,7 +50,8 @@ fun WelcomePageSettingScreen(
         listOf(
             WelcomePageOption(type = "home", label = strings.tabRecommend),
             WelcomePageOption(type = "rank", label = strings.tabRanking),
-            WelcomePageOption(type = "quick_view", label = strings.tabSpotlight),
+            WelcomePageOption(type = "quick_view", label = strings.tabNew),
+            WelcomePageOption(type = "spotlight", label = strings.tabSpotlight),
             WelcomePageOption(type = "search", label = strings.tabSearch),
             WelcomePageOption(type = "setting", label = strings.tabSettings),
         )

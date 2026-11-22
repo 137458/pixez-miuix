@@ -84,6 +84,21 @@ internal fun shouldUseOfficialCouiNavigationBar(
 ): Boolean = sdkInt >= COUI_NAVIGATION_BAR_MIN_SDK && isFloating && hasBackdrop && hasRenderer
 
 /**
+ * 计算当前环境下是否实际以浮动底栏形态呈现（用于底栏内容留白与皮肤底栏模式对齐）：
+ * COUI 皮肤在非宽屏且低于 API 34 时强制退回贴底栏，此时不再多预留浮动底栏高度。
+ */
+internal fun resolveCouiEffectiveFloatingBottomBar(
+    isCouiSkin: Boolean,
+    sdkInt: Int,
+    isWideScreen: Boolean,
+    useFloatingBottomBar: Boolean,
+): Boolean {
+    if (!useFloatingBottomBar) return false
+    if (!isCouiSkin || isWideScreen) return true
+    return sdkInt >= COUI_NAVIGATION_BAR_MIN_SDK
+}
+
+/**
  * COUI 底栏。
  *
  * API 34+ 且处于浮动模式且背景源与三主体 [CouiFloatingRenderer] 就绪时，直接装配官方

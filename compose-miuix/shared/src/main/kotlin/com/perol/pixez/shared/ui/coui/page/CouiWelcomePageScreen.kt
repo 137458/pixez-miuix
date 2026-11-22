@@ -27,8 +27,8 @@ internal fun CouiWelcomePageScreen(
         listOf(
             "home" to strings.tabRecommend,
             "rank" to strings.tabRanking,
-            "quick_view" to strings.tabSpotlight,
-            "search" to strings.tabSearch,
+            "quick_view" to strings.tabNew,
+            "spotlight" to strings.tabSpotlight,
             "setting" to strings.tabSettings,
         )
     }

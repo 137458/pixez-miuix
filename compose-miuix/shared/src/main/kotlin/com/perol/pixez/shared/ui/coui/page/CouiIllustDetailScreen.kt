@@ -92,6 +92,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.IllustTag
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.data.repository.BanRepository
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -140,6 +141,7 @@ import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlph
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberSyncedDetailToggle
+import com.perol.pixez.shared.ui.screens.starAfterSaveIfNeeded
 import com.perol.pixez.shared.ui.state.CollapseGesture
 import com.perol.pixez.shared.ui.state.rememberAccountSession
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
@@ -575,6 +577,9 @@ private fun CouiIllustDetailSingle(
                                         strings = strings,
                                         onToast = { data -> data?.let(toastSink) },
                                         onPageClick = { fullScreenPageIndex = it },
+                                        bookmarkRepository = bookmarkRepository,
+                                        isBookmarked = isBookmarked,
+                                        onBookmarkedChange = bookmarkState.setLocal,
                                     )
                                 }
                             } else {
@@ -783,6 +788,9 @@ private fun CouiIllustDetailSingle(
                 downloadRepository = downloadRepository,
                 onToast = toastSink,
                 onDismiss = { fullScreenPageIndex = null },
+                bookmarkRepository = bookmarkRepository,
+                isBookmarked = isBookmarked,
+                onBookmarked = { bookmarkState.setLocal(true) },
             )
         }
 
@@ -926,6 +934,7 @@ private fun CouiDetailMoreMenu(
     val clipboard = remember { IllustClipboard() }
     val share = remember { IllustShare() }
     val context = LocalPlatformContext.current
+    val settings = LocalSettingsRepository.current
     val entries = buildIllustDetailMoreMenuEntries(
         strings = strings,
         illust = illust,
@@ -937,6 +946,7 @@ private fun CouiDetailMoreMenu(
         share = share,
         context = context,
         coroutineScope = coroutineScope,
+        copyInfoTemplate = settings.copyInfoText,
     )
     val flatItems = entries.flatMap { it.items }
     val items = buildList {
@@ -979,6 +989,9 @@ private fun CouiDetailImagePage(
     strings: AppStrings,
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarkedChange: (Boolean) -> Unit = {},
 ) {
     val page = illust.metaPages[pageIndex]
     val changeVersion = settings.changeVersion.collectAsState().value
@@ -1070,6 +1083,15 @@ private fun CouiDetailImagePage(
                         val pageNumber = pageIndex + 1
                         onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
                         val task = downloadRepository.download(illust, pageIndex = pageIndex)
+                        if (task.status == DownloadStatus.Success) {
+                            starAfterSaveIfNeeded(
+                                illustId = illust.id,
+                                isBookmarked = isBookmarked,
+                                settings = settings,
+                                bookmarkRepository = bookmarkRepository,
+                                onBookmarked = { onBookmarkedChange(true) },
+                            )
+                        }
                         onToast(
                             when (task.status) {
                                 DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)

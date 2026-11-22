@@ -36,6 +36,7 @@ import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.repository.BanRepository
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.utils.accessibleTouchTarget
 import kotlinx.coroutines.Dispatchers
@@ -117,6 +118,7 @@ fun IllustDetailTopBar(
         // 3. 更多操作下拉菜单：锚定顶栏容器、展开于其下方右缘；
         // 遮罩、进出场动画、点外关闭与返回键处理均由 Miuix 弹层接管。
         if (illust != null) {
+            val settings = LocalSettingsRepository.current
             OverlayDropdownPopup(
                 entries = buildIllustDetailMoreMenuEntries(
                     strings = LocalStrings.current,
@@ -129,6 +131,7 @@ fun IllustDetailTopBar(
                     share = share,
                     context = context,
                     coroutineScope = coroutineScope,
+                    copyInfoTemplate = settings.copyInfoText,
                 ),
                 show = showMoreMenu,
                 onDismiss = { showMoreMenu = false },

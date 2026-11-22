@@ -54,7 +54,6 @@ internal fun CouiDownloadSettingScreen(
         storePath.ifBlank { com.perol.pixez.shared.platform.getDefaultPictureDirectory() }
     }
     var format by remember { mutableStateOf(settingsRepository.format) }
-    var fileNameEval by remember { mutableStateOf(settingsRepository.fileNameEval) }
     var singleFolder by remember { mutableStateOf(settingsRepository.singleFolder) }
     var overSanityLevelFolder by remember { mutableStateOf(settingsRepository.overSanityLevelFolder) }
     var maxRunningTask by remember {
@@ -178,7 +177,7 @@ internal fun CouiDownloadSettingScreen(
             CouiSettingSection(title = strings.dialogSaveFormat) {
                 CouiValueRow(
                     title = strings.dialogSaveFormat,
-                    summary = if (fileNameEval) strings.settingShareFormat else format,
+                    summary = format,
                     onClick = { showFormatDialog = true },
                 )
                 CouiRowDivider()

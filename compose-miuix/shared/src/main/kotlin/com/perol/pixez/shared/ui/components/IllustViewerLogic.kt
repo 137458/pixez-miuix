@@ -9,9 +9,11 @@ import coil3.size.Dimension
 import coil3.size.Precision
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
+import com.perol.pixez.shared.ui.screens.starAfterSaveIfNeeded
 import com.perol.pixez.shared.platform.HapticType
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
@@ -115,6 +117,10 @@ internal suspend fun executeViewerDownload(
     downloadRepository: DownloadRepository,
     strings: AppStrings,
     onToast: (ToastData) -> Unit,
+    settings: SettingsRepository? = null,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarked: (() -> Unit)? = null,
 ) {
     val pageNumber = currentPage + 1
     if (IllustType.isUgoira(illust.type) && illustRepository != null) {
@@ -126,6 +132,13 @@ internal suspend fun executeViewerDownload(
         ).fold(
             onSuccess = {
                 performHapticFeedback(HapticType.Confirm)
+                starAfterSaveIfNeeded(
+                    illustId = illust.id,
+                    isBookmarked = isBookmarked,
+                    settings = settings,
+                    bookmarkRepository = bookmarkRepository,
+                    onBookmarked = { onBookmarked?.invoke() },
+                )
                 onToast(ToastData(strings.downloadStatusSuccess, ToastType.Success))
             },
             onFailure = { e ->
@@ -136,6 +149,15 @@ internal suspend fun executeViewerDownload(
     } else {
         onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
         val task = downloadRepository.download(illust, pageIndex = currentPage)
+        if (task.status == DownloadStatus.Success) {
+            starAfterSaveIfNeeded(
+                illustId = illust.id,
+                isBookmarked = isBookmarked,
+                settings = settings,
+                bookmarkRepository = bookmarkRepository,
+                onBookmarked = { onBookmarked?.invoke() },
+            )
+        }
         val toast = when (task.status) {
             DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
             DownloadStatus.Failed -> ToastData("${strings.downloadStatusFailed}: ${task.error.toLocalizedDownloadError(strings)}", ToastType.Error)

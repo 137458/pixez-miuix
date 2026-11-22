@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.platform.PlatformBackHandler
@@ -115,6 +116,10 @@ fun IllustFullScreenViewer(
     previewUrl: String? = null,
     illustRepository: IllustRepository? = null,
     topOverlay: (@Composable (ViewerTopOverlayState, Modifier) -> Unit)? = null,
+    settings: SettingsRepository? = LocalSettingsRepository.current,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarked: (() -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
@@ -161,6 +166,10 @@ fun IllustFullScreenViewer(
                 downloadRepository = downloadRepository,
                 strings = strings,
                 onToast = onToast,
+                settings = settings,
+                bookmarkRepository = bookmarkRepository,
+                isBookmarked = isBookmarked,
+                onBookmarked = onBookmarked,
             )
         }
     }

@@ -1,4 +1,5 @@
 package com.perol.pixez.shared.data.settings
+import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
@@ -77,18 +78,22 @@ class SettingsRepository(
         set(value) { settings[SettingsKeys.PICTURE_SOURCE] = value; notifyChanged() }
 
     var apiNetworkMode: String
-        get() = tracked().getStringWithLegacyFallback(
-            SettingsKeys.API_NETWORK_MODE,
-            DEFAULT_NETWORK_MODE,
+        get() = normalizeNetworkMode(
+            tracked().getStringWithLegacyFallback(
+                SettingsKeys.API_NETWORK_MODE,
+                DEFAULT_NETWORK_MODE,
+            ),
         )
-        set(value) { settings[SettingsKeys.API_NETWORK_MODE] = value; notifyChanged() }
+        set(value) { settings[SettingsKeys.API_NETWORK_MODE] = normalizeNetworkMode(value); notifyChanged() }
 
     var oauthNetworkMode: String
-        get() = tracked().getStringWithLegacyFallback(
-            SettingsKeys.OAUTH_NETWORK_MODE,
-            DEFAULT_NETWORK_MODE,
+        get() = normalizeNetworkMode(
+            tracked().getStringWithLegacyFallback(
+                SettingsKeys.OAUTH_NETWORK_MODE,
+                DEFAULT_NETWORK_MODE,
+            ),
         )
-        set(value) { settings[SettingsKeys.OAUTH_NETWORK_MODE] = value; notifyChanged() }
+        set(value) { settings[SettingsKeys.OAUTH_NETWORK_MODE] = normalizeNetworkMode(value); notifyChanged() }
 
     // region 主题与显示
     var themeMode: Int
@@ -482,7 +487,7 @@ class SettingsRepository(
         }
 
     /**
-     * 竖屏固定网格列数（2-4）。
+     * 竖屏固定网格列数（2-6）。
      */
     var crossCount: Int
         get() = tracked().getIntWithLegacyFallback(SettingsKeys.CROSS_COUNT, 2)
@@ -493,7 +498,7 @@ class SettingsRepository(
         }
 
     /**
-     * 横屏固定网格列数（2-4）。
+     * 横屏固定网格列数（2-6）。
      */
     var hCrossCount: Int
         get() = tracked().getIntWithLegacyFallback(SettingsKeys.H_CROSS_COUNT, 2)
@@ -669,8 +674,18 @@ class SettingsRepository(
         private const val PAD_MODE_MAX = 2
 
         // 固定网格列数范围
-        private const val CROSS_COUNT_MIN = 2
-        private const val CROSS_COUNT_MAX = 4
+        const val CROSS_COUNT_MIN = 2
+        const val CROSS_COUNT_MAX = 6
+
+        /** 固定网格列数下拉选项，设置页与仓库夹取范围共用同一来源。 */
+        val CROSS_COUNT_OPTIONS: List<String> = (CROSS_COUNT_MIN..CROSS_COUNT_MAX).map(Int::toString)
+
+        /** 统一把引导页历史取值（direct / sni）收敛为网络层与设置页约定的契约值。 */
+        fun normalizeNetworkMode(mode: String): String = when (mode) {
+            "direct" -> HttpEngineDefaults.MODE_STANDARD
+            "sni" -> DEFAULT_NETWORK_MODE
+            else -> mode
+        }
     }
 }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.perol.pixez.shared.data.model.Novel
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -52,8 +54,13 @@ fun NovelCard(
     onUserClick: ((Long) -> Unit)? = null,
 ) {
     val strings = LocalStrings.current
+    val settings = LocalSettingsRepository.current
+    val changeVersion = settings.changeVersion.collectAsState().value
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
-    val novelA11yDescription = remember(novel.title, novel.user.name, novel.series?.title, isAI, novel.textLength, novel.totalBookmarks) {
+    val showAIBadge = remember(isAI, settings.feedAIBadge, changeVersion) {
+        isAI && settings.feedAIBadge
+    }
+    val novelA11yDescription = remember(novel.title, novel.user.name, novel.series?.title, showAIBadge, novel.textLength, novel.totalBookmarks) {
         buildString {
             append(strings.categoryNovel)
             append(": ")
@@ -68,7 +75,7 @@ fun NovelCard(
             append(strings.author)
             append(": ")
             append(novel.user.name)
-            if (isAI) {
+            if (showAIBadge) {
                 append(", ")
                 append(strings.filterAi)
             }
@@ -116,7 +123,7 @@ fun NovelCard(
                 )
 
                 // AI 生成标识
-                if (isAI) {
+                if (showAIBadge) {
                     MicroGlassBadge(
                         text = "AI",
                         modifier = Modifier

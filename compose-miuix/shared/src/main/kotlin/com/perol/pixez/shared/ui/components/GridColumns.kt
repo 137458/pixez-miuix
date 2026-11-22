@@ -1,9 +1,13 @@
 package com.perol.pixez.shared.ui.components
 
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 
 /**
  * 网格列数参数（架构审查 UI-9）：自适应最小卡宽与固定列数二选一。
@@ -78,3 +82,29 @@ internal fun resolveGridColumns(
 internal fun GridColumns.toStaggeredGridCells(): StaggeredGridCells =
     adaptiveMinWidthDp?.let { StaggeredGridCells.Adaptive(it.dp) }
         ?: StaggeredGridCells.Fixed(fixedCount ?: 1)
+
+/**
+ * 读取布局设置并返回作品瀑布流应使用的 [StaggeredGridCells]，供 MIUIX 与 COUI 共用。
+ */
+@Composable
+internal fun rememberIllustGridColumns(
+    isLandscape: Boolean,
+    settings: SettingsRepository = LocalSettingsRepository.current,
+    changeVersion: Int = settings.changeVersion.collectAsState().value,
+): StaggeredGridCells = remember(
+    isLandscape,
+    settings.crossAdapt,
+    settings.crossAdapterWidth,
+    settings.crossCount,
+    settings.hCrossAdapt,
+    settings.hCrossAdapterWidth,
+    settings.hCrossCount,
+    changeVersion,
+) {
+    resolveGridColumns(
+        adapt = if (isLandscape) settings.hCrossAdapt else settings.crossAdapt,
+        adapterWidthDp = if (isLandscape) settings.hCrossAdapterWidth else settings.crossAdapterWidth,
+        configuredCount = if (isLandscape) settings.hCrossCount else settings.crossCount,
+        policy = IllustGridColumnPolicy,
+    ).toStaggeredGridCells()
+}

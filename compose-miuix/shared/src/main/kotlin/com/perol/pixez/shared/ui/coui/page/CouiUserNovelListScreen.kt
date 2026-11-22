@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import com.itos.coui.theme.CouiTheme
 import com.perol.pixez.shared.data.model.appendDistinct
 import com.perol.pixez.shared.data.model.isLoggedIn
 import com.perol.pixez.shared.data.model.Novel
+import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.core.CouiErrorPlaceholder
@@ -226,9 +228,14 @@ internal fun CouiNovelCard(
     onUserClick: ((Long) -> Unit)?,
 ) {
     val strings = LocalStrings.current
+    val settings = LocalSettingsRepository.current
+    val changeVersion = settings.changeVersion.collectAsState().value
     val scheme = CouiTheme.colorScheme
     val pressInteraction = remember { MutableInteractionSource() }
     val isAI = remember(novel.novelAIType) { novel.novelAIType == 2 }
+    val showAIBadge = remember(isAI, settings.feedAIBadge, changeVersion) {
+        isAI && settings.feedAIBadge
+    }
 
     Row(
         modifier = Modifier
@@ -256,7 +263,7 @@ internal fun CouiNovelCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),
             )
-            if (isAI) {
+            if (showAIBadge) {
                 Text(
                     text = "AI",
                     kind = CouiTextKind.ItemSummary,

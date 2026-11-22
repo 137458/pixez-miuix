@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.screens
 
+import com.perol.pixez.shared.network.HttpEngineDefaults
 import com.perol.pixez.shared.network.PixivHosts
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
@@ -339,21 +340,21 @@ private fun GuideNetworkStep(
                     RadioButtonPreference(
                         title = strings.guideNetworkDirect,
                         summary = strings.guideNetworkDirectDesc,
-                        selected = currentNetworkMode == "direct",
+                        selected = currentNetworkMode == HttpEngineDefaults.MODE_STANDARD,
                         onClick = {
-                            currentNetworkMode = "direct"
-                            settingsRepository.apiNetworkMode = "direct"
-                            settingsRepository.oauthNetworkMode = "direct"
+                            currentNetworkMode = HttpEngineDefaults.MODE_STANDARD
+                            settingsRepository.apiNetworkMode = HttpEngineDefaults.MODE_STANDARD
+                            settingsRepository.oauthNetworkMode = HttpEngineDefaults.MODE_STANDARD
                         },
                     )
                     RadioButtonPreference(
                         title = strings.guideNetworkSni,
                         summary = "${strings.guideNetworkSniDesc} • ${strings.guideSniRecommendCn}",
-                        selected = currentNetworkMode == "sni",
+                        selected = currentNetworkMode != HttpEngineDefaults.MODE_STANDARD,
                         onClick = {
-                            currentNetworkMode = "sni"
-                            settingsRepository.apiNetworkMode = "sni"
-                            settingsRepository.oauthNetworkMode = "sni"
+                            currentNetworkMode = "ech"
+                            settingsRepository.apiNetworkMode = "ech"
+                            settingsRepository.oauthNetworkMode = "ech"
                         },
                     )
                 }

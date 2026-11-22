@@ -373,6 +373,9 @@ private fun IllustDetailSingleContent(
                         detailBackdrop = detailBackdrop,
                         detailChromeAlpha = if (listState.firstVisibleItemIndex == 0) detailChromeAlpha else 1f,
                         repository = repository,
+                        bookmarkRepository = bookmarkRepository,
+                        isBookmarked = isBookmarked,
+                        onBookmarkedChange = bookmarkState.setLocal,
                         downloadRepository = downloadRepository,
                         isDownloading = isDownloading,
                         coroutineScope = coroutineScope,
@@ -458,6 +461,9 @@ private fun IllustDetailSingleContent(
                 detailBackdrop = detailBackdrop,
                 onToast = toastSink,
                 onDismiss = { fullScreenPageIndex = null },
+                bookmarkRepository = bookmarkRepository,
+                isBookmarked = isBookmarked,
+                onBookmarked = { bookmarkState.setLocal(true) },
             )
         }
 
@@ -486,6 +492,9 @@ private fun IllustDetailContentList(
     detailBackdrop: LayerBackdrop?,
     detailChromeAlpha: Float = 1f,
     repository: IllustRepository,
+    bookmarkRepository: BookmarkRepository,
+    isBookmarked: Boolean,
+    onBookmarkedChange: (Boolean) -> Unit,
     downloadRepository: DownloadRepository,
     isDownloading: Boolean,
     coroutineScope: CoroutineScope,
@@ -531,6 +540,9 @@ private fun IllustDetailContentList(
                     strings = strings,
                     onToast = onToast,
                     onPageClick = onFullScreen,
+                    bookmarkRepository = bookmarkRepository,
+                    isBookmarked = isBookmarked,
+                    onBookmarkedChange = onBookmarkedChange,
                 )
             }
         } else {

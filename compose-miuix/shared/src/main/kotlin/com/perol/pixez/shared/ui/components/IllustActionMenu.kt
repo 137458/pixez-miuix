@@ -4,16 +4,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import coil3.compose.LocalPlatformContext
+import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
+import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.network.SauceNaoEndpoints
 import com.perol.pixez.shared.platform.IllustClipboard
 import com.perol.pixez.shared.platform.IllustShare
 import com.perol.pixez.shared.platform.mapToPictureSource
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.LocalBanRepository
+import com.perol.pixez.shared.ui.LocalBookmarkRepository
 import com.perol.pixez.shared.ui.LocalDownloadRepository
+import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.screens.starAfterSaveIfNeeded
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -125,6 +130,8 @@ internal fun rememberIllustQuickActions(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
     val downloadRepository = LocalDownloadRepository.current
+    val bookmarkRepository = LocalBookmarkRepository.current
+    val illustRepository = LocalIllustRepository.current
     val banRepository = LocalBanRepository.current
     // 长按菜单经全局 Toast 通道反馈，列表页无需逐层透传承载容器。
     val toastSink = LocalToastSink.current
@@ -133,8 +140,24 @@ internal fun rememberIllustQuickActions(
         onDownload = {
             onDismiss()
             coroutineScope.launch {
-                suspendRunCatchingNonCancel {
-                    downloadRepository.download(illust, pageIndex = 0)
+                val succeeded = suspendRunCatchingNonCancel {
+                    if (AppConstants.IllustType.isUgoira(illust.type)) {
+                        saveUgoiraIllust(
+                            illust = illust,
+                            illustRepository = illustRepository,
+                            downloadRepository = downloadRepository,
+                        ).isSuccess
+                    } else {
+                        downloadRepository.download(illust, pageIndex = 0).status == DownloadStatus.Success
+                    }
+                }.getOrDefault(false)
+                if (succeeded) {
+                    starAfterSaveIfNeeded(
+                        illustId = illust.id,
+                        isBookmarked = illust.isBookmarked,
+                        settings = settings,
+                        bookmarkRepository = bookmarkRepository,
+                    )
                 }
             }
         },
@@ -144,7 +167,7 @@ internal fun rememberIllustQuickActions(
                 success = ToastData(strings.copiedToClipboard, ToastType.Success),
                 failurePrefix = "${strings.copy}${strings.failedSuffix}",
                 onToast = toastSink,
-            ) { IllustClipboard().copy(buildIllustCopyInfo(illust)) }
+            ) { IllustClipboard().copy(buildIllustCopyInfo(illust, settings.copyInfoText)) }
         },
         onCopyImage = {
             onDismiss()
@@ -196,17 +219,23 @@ internal fun rememberIllustQuickActions(
 }
 
 /**
- * 构造「复制信息」文本。
+ * 按模板构造「复制信息」文本；模板为空时回落至默认模板。
  *
- * 格式与原 Flutter 应用保持一致：
- * ```
- * title:{title}
- * painter:{user.name}
- * illust id:{id}
- * ```
+ * 支持占位符：`{title}`、`{illust_id}`、`{user_id}`、`{user_name}`、`{author}`、`{tags}`。
  */
-internal fun buildIllustCopyInfo(illust: Illust): String {
-    return "title:${illust.title}\npainter:${illust.user.name}\nillust id:${illust.id}"
+internal fun buildIllustCopyInfo(
+    illust: Illust,
+    template: String = SettingsRepository.DEFAULT_COPY_TEXT_FORMAT,
+): String {
+    val effectiveTemplate = template.takeIf { it.isNotBlank() } ?: SettingsRepository.DEFAULT_COPY_TEXT_FORMAT
+    val tagsText = illust.tags.joinToString(", ") { it.name }
+    return effectiveTemplate
+        .replace("{title}", illust.title)
+        .replace("{illust_id}", illust.id.toString())
+        .replace("{user_id}", illust.user.id.toString())
+        .replace("{user_name}", illust.user.name)
+        .replace("{author}", illust.user.name)
+        .replace("{tags}", tagsText)
 }
 
 /**

@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +66,7 @@ import com.perol.pixez.shared.ui.LocalNovelHistoryRepository
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.actionFailureToast
+import com.perol.pixez.shared.ui.components.rememberIllustGridColumns
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
@@ -371,21 +372,25 @@ private fun CouiHistoryIllustTab(
     onIllustClick: (Long) -> Unit,
     onDelete: (HistoryItem) -> Unit,
 ) {
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Adaptive(minSize = 150.dp),
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .consumeWindowInsets(padding),
-        contentPadding = PaddingValues(
-            start = 8.dp,
-            top = padding.calculateTopPadding() + 8.dp,
-            end = 8.dp,
-            bottom = padding.calculateBottomPadding(),
-        ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalItemSpacing = 10.dp,
-        overscrollEffect = rememberCouiOverscrollEffect(),
     ) {
+        val columns = rememberIllustGridColumns(isLandscape = maxWidth > maxHeight)
+        LazyVerticalStaggeredGrid(
+            columns = columns,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 8.dp,
+                top = padding.calculateTopPadding() + 8.dp,
+                end = 8.dp,
+                bottom = padding.calculateBottomPadding(),
+            ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalItemSpacing = 10.dp,
+            overscrollEffect = rememberCouiOverscrollEffect(),
+        ) {
         item(key = "coui_history_header", contentType = "header", span = StaggeredGridItemSpan.FullLine) {
             header()
         }
@@ -441,6 +446,7 @@ private fun CouiHistoryIllustTab(
                     onLongClick = { onDelete(item) },
                 )
             }
+        }
         }
     }
 }

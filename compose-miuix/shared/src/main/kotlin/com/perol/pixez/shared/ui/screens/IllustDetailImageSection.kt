@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.DownloadStatus
 import com.perol.pixez.shared.data.model.Illust
 import com.perol.pixez.shared.data.model.MetaPage
+import com.perol.pixez.shared.data.repository.BookmarkRepository
 import com.perol.pixez.shared.data.repository.DownloadRepository
 import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
@@ -142,6 +143,9 @@ internal fun IllustDetailImagePage(
     strings: AppStrings,
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarkedChange: (Boolean) -> Unit = {},
 ) {
     val changeVersion = settings?.changeVersion?.collectAsState()?.value
     val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, changeVersion) {
@@ -217,6 +221,15 @@ internal fun IllustDetailImagePage(
                             val pageNumber = pageIndex + 1
                             onToast(ToastData("${strings.downloadStatusDownloading} P$pageNumber…", ToastType.Normal))
                             val task = downloadRepository.download(illust, pageIndex = pageIndex)
+                            if (task.status == DownloadStatus.Success) {
+                                starAfterSaveIfNeeded(
+                                    illustId = illust.id,
+                                    isBookmarked = isBookmarked,
+                                    settings = settings,
+                                    bookmarkRepository = bookmarkRepository,
+                                    onBookmarked = { onBookmarkedChange(true) },
+                                )
+                            }
                             onToast(
                                 when (task.status) {
                                     DownloadStatus.Success -> ToastData("${strings.downloadStatusSuccess} (P$pageNumber)", ToastType.Success)
@@ -344,6 +357,9 @@ internal fun IllustDetailFullScreenOverlay(
     onToast: (ToastData) -> Unit,
     onDismiss: () -> Unit,
     topOverlay: (@Composable (com.perol.pixez.shared.ui.components.ViewerTopOverlayState, Modifier) -> Unit)? = null,
+    bookmarkRepository: BookmarkRepository? = null,
+    isBookmarked: Boolean = illust.isBookmarked,
+    onBookmarked: (() -> Unit)? = null,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
     val effectiveQuality = resolveIllustQuality(illust, settings)
@@ -393,5 +409,9 @@ internal fun IllustDetailFullScreenOverlay(
         onDismiss = onDismiss,
         detailBackdrop = detailBackdrop,
         topOverlay = topOverlay,
+        settings = settings,
+        bookmarkRepository = bookmarkRepository,
+        isBookmarked = isBookmarked,
+        onBookmarked = onBookmarked,
     )
 }
