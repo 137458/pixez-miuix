@@ -39,8 +39,8 @@ android {
         // COUI AAR 清单固定 minSdkVersion=31（Android 12），整体抬齐而非使用 overrideLibrary 门控。
         minSdk = 31
         targetSdk = 35
-        versionCode = 10010099
-        versionName = "0.9.110.1-miuix"
+        versionCode = 10010100
+        versionName = "0.9.111.0-miuix"
     }
 
     buildFeatures {
