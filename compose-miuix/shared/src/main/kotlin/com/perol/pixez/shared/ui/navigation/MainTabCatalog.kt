@@ -119,3 +119,25 @@ internal fun shouldShowUnreadFeedBadge(
     activeTab: RootComponent.MainTab,
     hasUnreadFeedBadge: Boolean,
 ): Boolean = descriptor.carriesUnreadFeedBadge && hasUnreadFeedBadge && activeTab != descriptor.tab
+
+/**
+ * 解析当前皮肤在主页 Pager 与底栏中展示的标签列表。
+ *
+ * COUI 皮肤采用官方 3 段式底栏结构（中间胶囊 + 右侧圆形搜索按钮），搜索入口独立在右侧按钮，
+ * 因此中间胶囊与主页 Pager 只保留 `[Hello, Ranking, New, Spotlight]` 4 个标签；
+ * HyperOS 皮肤保留全部 5 个标签。
+ */
+internal fun resolveVisibleMainTabDescriptors(isCouiSkin: Boolean): List<MainTabDescriptor> =
+    if (isCouiSkin) {
+        MAIN_TAB_DESCRIPTORS.filter { it.tab != RootComponent.MainTab.Search }
+    } else {
+        MAIN_TAB_DESCRIPTORS
+    }
+
+/**
+ * 将当前激活标签映射到可见标签列表的索引，不在列表中（如 COUI 皮肤下从历史状态切入）时收敛到 0。
+ */
+internal fun resolveMainTabIndex(
+    descriptors: List<MainTabDescriptor>,
+    activeTab: RootComponent.MainTab,
+): Int = descriptors.indexOfFirst { it.tab == activeTab }.coerceAtLeast(0)

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,69 +85,79 @@ internal fun MainContent(
     // 只执行一次）；快照存原始 ID 列表，恢复经仓库 illustsCache 回查。
     feedRestore: MainFeedRestore,
 ) {
-    val initialIndex = remember { RootComponent.MAIN_TAB_ORDER.indexOf(initialTab).coerceAtLeast(0) }
-    val pagerState = rememberPagerState(
-        initialPage = initialIndex,
-        pageCount = { RootComponent.MAIN_TAB_ORDER.size },
-    )
+    val skinPages = LocalSkinPages.current
+    val isCouiSkin = skinPages != null
+    val visibleDescriptors = remember(isCouiSkin) {
+        resolveVisibleMainTabDescriptors(isCouiSkin)
+    }
     val selectedTab by component.selectedTab.collectAsState()
-
-    // 点击/外部触发的滚动期间不回传手势位置，底栏滑块保持 spring 动画手感。
-    var programmaticScroll by remember { mutableStateOf(false) }
     val tabGesturePosition = LocalTabGesturePosition.current
 
-    // 响应外部或底部导航栏点击驱动 Pager 平滑滚动
-    LaunchedEffect(selectedTab) {
-        val targetIndex = RootComponent.MAIN_TAB_ORDER.indexOf(selectedTab)
-        if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
-            programmaticScroll = true
-            try {
-                if (kotlin.math.abs(pagerState.currentPage - targetIndex) > 1) {
-                    pagerState.scrollToPage(targetIndex)
-                } else {
-                    pagerState.animateScrollToPage(targetIndex)
+    key(isCouiSkin) {
+        val initialTarget = if (selectedTab in visibleDescriptors.map { it.tab }) selectedTab else initialTab
+        val initialIndex = remember(visibleDescriptors) {
+            resolveMainTabIndex(visibleDescriptors, initialTarget)
+        }
+        val pagerState = rememberPagerState(
+            initialPage = initialIndex,
+            pageCount = { visibleDescriptors.size },
+        )
+
+        // 点击/外部触发的滚动期间不回传手势位置，底栏滑块保持 spring 动画手感。
+        var programmaticScroll by remember { mutableStateOf(false) }
+
+        // 响应外部或底部导航栏点击驱动 Pager 平滑滚动
+        LaunchedEffect(selectedTab, visibleDescriptors) {
+            val targetIndex = visibleDescriptors.indexOfFirst { it.tab == selectedTab }
+            if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+                programmaticScroll = true
+                try {
+                    if (kotlin.math.abs(pagerState.currentPage - targetIndex) > 1) {
+                        pagerState.scrollToPage(targetIndex)
+                    } else {
+                        pagerState.animateScrollToPage(targetIndex)
+                    }
+                } finally {
+                    programmaticScroll = false
                 }
-            } finally {
-                programmaticScroll = false
             }
         }
-    }
 
-    // 手势翻页全程回传连续位置：底栏滑块逐帧跟手（松手落位后回写 null，滑块切回 spring 值）。
-    LaunchedEffect(pagerState) {
-        snapshotFlow {
-            if (pagerState.isScrollInProgress && !programmaticScroll) {
-                pagerState.currentPage + pagerState.currentPageOffsetFraction
+        // 手势翻页全程回传连续位置：底栏滑块逐帧跟手（松手落位后回写 null，滑块切回 spring 值）。
+        LaunchedEffect(pagerState) {
+            snapshotFlow {
+                if (pagerState.isScrollInProgress && !programmaticScroll) {
+                    pagerState.currentPage + pagerState.currentPageOffsetFraction
+                } else {
+                    null
+                }
+            }.collect { position -> tabGesturePosition.value = position }
+        }
+
+        // 响应用户手势滑动 Pager 同步组件状态
+        LaunchedEffect(pagerState.currentPage, visibleDescriptors) {
+            val currentTab = visibleDescriptors.getOrNull(pagerState.currentPage)?.tab ?: return@LaunchedEffect
+            if (component.selectedTab.value != currentTab) {
+                component.onPageSwiped(currentTab)
+            }
+        }
+
+        HorizontalPager(
+            state = pagerState,
+            beyondViewportPageCount = (visibleDescriptors.size - 1).coerceAtLeast(0),
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            val descriptor = visibleDescriptors[page]
+            if (skinPages != null) {
+                // 皮肤接缝收敛在页面宿主：COUI 标签走皮肤实现，皮肤关闭时走下方 else 分支的 MIUIX 页面。
+                skinPages.mainTabPage(
+                    tab = descriptor.tab,
+                    component = component,
+                    feedRestore = feedRestore,
+                )
             } else {
-                null
+                descriptor.content(component, feedRestore)
             }
-        }.collect { position -> tabGesturePosition.value = position }
-    }
-
-    // 响应用户手势滑动 Pager 同步组件状态
-    LaunchedEffect(pagerState.currentPage) {
-        val currentTab = RootComponent.MAIN_TAB_ORDER.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
-        if (component.selectedTab.value != currentTab) {
-            component.onPageSwiped(currentTab)
-        }
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        beyondViewportPageCount = 4,
-        modifier = Modifier.fillMaxSize(),
-    ) { page ->
-        val descriptor = MAIN_TAB_DESCRIPTORS[page]
-        val skinPages = LocalSkinPages.current
-        if (skinPages != null) {
-            // 皮肤接缝收敛在页面宿主：COUI 标签走皮肤实现，皮肤关闭时走下方 else 分支的 MIUIX 页面。
-            skinPages.mainTabPage(
-                tab = descriptor.tab,
-                component = component,
-                feedRestore = feedRestore,
-            )
-        } else {
-            descriptor.content(component, feedRestore)
         }
     }
 }

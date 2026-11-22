@@ -613,22 +613,31 @@ private fun MainChildSection(
     val settingsRepository = LocalSettingsRepository.current
     val changeVersion = settingsRepository.changeVersion.collectAsState().value
     val skinPages = LocalSkinPages.current
+    val isCouiSkin = skinPages != null
     val strings = LocalStrings.current
     val hasUnreadFeedBadge = settingsRepository.hasUnreadFeedBadge
-    val couiNavItems = remember(strings, hasUnreadFeedBadge, activeTab, changeVersion) {
-        MAIN_TAB_DESCRIPTORS.map { descriptor ->
+    // COUI 皮肤将搜索拆出到右侧独立按钮；若从历史状态/HyperOS 皮肤切入且停在 Search 页签，切回首页。
+    LaunchedEffect(isCouiSkin, activeTab) {
+        if (isCouiSkin && activeTab == RootComponent.MainTab.Search) {
+            component.onMainTabSelected(RootComponent.MainTab.Hello)
+        }
+    }
+    val visibleDescriptors = remember(isCouiSkin) {
+        resolveVisibleMainTabDescriptors(isCouiSkin)
+    }
+    val couiNavItems = remember(visibleDescriptors, strings, hasUnreadFeedBadge, activeTab, changeVersion) {
+        visibleDescriptors.map { descriptor ->
             SkinNavItem(
                 title = descriptor.label(strings),
                 icon = descriptor.icon,
                 showBadge = shouldShowUnreadFeedBadge(descriptor, activeTab, hasUnreadFeedBadge),
+                tab = descriptor.tab,
             )
         }
     }
-    val selectedNavIndex = MAIN_TAB_DESCRIPTORS
-        .indexOfFirst { it.tab == activeTab }
-        .coerceAtLeast(0)
+    val selectedNavIndex = resolveMainTabIndex(visibleDescriptors, activeTab)
     val onNavIndexSelected: (Int) -> Unit = { index ->
-        MAIN_TAB_DESCRIPTORS.getOrNull(index)?.let {
+        visibleDescriptors.getOrNull(index)?.let {
             component.onMainTabSelected(it.tab)
         }
     }
@@ -654,6 +663,7 @@ private fun MainChildSection(
                         items = couiNavItems,
                         selectedIndex = selectedNavIndex,
                         onSelect = onNavIndexSelected,
+                        onSearchClick = { component.onSearchClicked("") },
                     )
                 } else {
                     MainNavigationRail(
@@ -689,6 +699,8 @@ private fun MainChildSection(
                             selectedIndex = selectedNavIndex,
                             isFloating = useFloatingBottomBar,
                             onSelect = onNavIndexSelected,
+                            onLeftAccessoryClick = component::onSettingsClicked,
+                            onRightAccessoryClick = { component.onSearchClicked("") },
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
                     } else {

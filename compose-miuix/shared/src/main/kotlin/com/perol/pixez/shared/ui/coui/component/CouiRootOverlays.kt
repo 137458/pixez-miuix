@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -248,11 +249,13 @@ internal fun CouiNavigationRail(
     items: List<CouiBarItem>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
+    onSearchClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
     val dark = CouiTheme.isDark
     val scheme = CouiTheme.colorScheme
+    val strings = LocalStrings.current
     val safeIndex = selectedIndex.coerceIn(0, items.lastIndex)
 
     Row(modifier = modifier.fillMaxHeight()) {
@@ -292,7 +295,7 @@ internal fun CouiNavigationRail(
                 ) {
                     Box {
                         Image(
-                            painter = rememberVectorPainter(item.icon),
+                            painter = rememberVectorPainter(if (selected) item.selectedIcon else item.icon),
                             contentDescription = null,
                             colorFilter = ColorFilter.tint(tint),
                             modifier = Modifier.size(22.dp),
@@ -313,6 +316,44 @@ internal fun CouiNavigationRail(
                             fontSize = 11.sp,
                             lineHeight = 13.sp,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                            color = tint,
+                            textAlign = TextAlign.Center,
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (onSearchClick != null) {
+                val interactionSource = remember { MutableInteractionSource() }
+                val tint = scheme.onSurfaceVariant
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(CouiCapsuleShape)
+                        .couiNavigationFeedback(dark = dark, interactionSource = interactionSource)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            role = Role.Button,
+                            onClick = onSearchClick,
+                        )
+                        .padding(vertical = 10.dp, horizontal = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Image(
+                        painter = rememberVectorPainter(CouiIcons.Search),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(tint),
+                        modifier = Modifier.size(22.dp),
+                    )
+                    BasicText(
+                        text = strings.tabSearch,
+                        style = TextStyle(
+                            fontSize = 11.sp,
+                            lineHeight = 13.sp,
+                            fontWeight = FontWeight.Medium,
                             color = tint,
                             textAlign = TextAlign.Center,
                         ),

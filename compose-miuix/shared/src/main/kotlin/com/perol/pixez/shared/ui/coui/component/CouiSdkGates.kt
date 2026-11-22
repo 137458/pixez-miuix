@@ -13,3 +13,6 @@ internal const val COUI_DIALOG_MATERIAL_MIN_SDK = 33
 
 /** `MessageInputBar` 与 `CouiFloatingRenderer.standalone()` 门槛（API 34）。 */
 internal const val COUI_MESSAGE_INPUT_MIN_SDK = 34
+
+/** `NavigationBar` 三主体浮动渲染门槛（API 34）。 */
+internal const val COUI_NAVIGATION_BAR_MIN_SDK = 34

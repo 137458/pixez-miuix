@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.coui.icon
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -12,7 +13,8 @@ import androidx.compose.ui.unit.dp
  * COUI 专属线性图标集合（24dp / 24x24 viewport，Lucide 描边风格：stroke=2f、round cap/join）。
  *
  * 彻底解耦 COUI 皮肤对 MIUIX 图标集的依赖，与 ColorOS 轻盈纤细的界面语言保持一致。
- * 仅 [HeartFill] 采用实心填充以清晰表达“已收藏”状态，其余全部为纯描边线性图标。
+ * [HeartFill] 及底栏选中态图标（`GridFill`、`RankFill`、`RecentFill`、`CompassFill`）采用实心填充，
+ * 其余全部为纯描边线性图标。
  */
 internal object CouiIcons {
 
@@ -37,8 +39,75 @@ internal object CouiIcons {
         )
     }.build()
 
+    private inline fun fillIcon(
+        name: String,
+        pathFillType: PathFillType = PathFillType.NonZero,
+        strokeWidth: Float = 0f,
+        crossinline block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit,
+    ): ImageVector = ImageVector.Builder(
+        name = "CouiIcons.$name",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(
+            fill = SolidColor(Color.Black),
+            stroke = if (strokeWidth > 0f) SolidColor(Color.Black) else null,
+            strokeLineWidth = strokeWidth,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+            pathFillType = pathFillType,
+            pathBuilder = block,
+        )
+    }.build()
+
     /** `layout-grid` — 推荐 / 宫格 */
     val Grid: ImageVector = strokeIcon("Grid") {
+        moveTo(4f, 3f)
+        horizontalLineTo(9f)
+        arcTo(1f, 1f, 0f, false, true, 10f, 4f)
+        verticalLineTo(9f)
+        arcTo(1f, 1f, 0f, false, true, 9f, 10f)
+        horizontalLineTo(4f)
+        arcTo(1f, 1f, 0f, false, true, 3f, 9f)
+        verticalLineTo(4f)
+        arcTo(1f, 1f, 0f, false, true, 4f, 3f)
+        close()
+        moveTo(15f, 3f)
+        horizontalLineTo(20f)
+        arcTo(1f, 1f, 0f, false, true, 21f, 4f)
+        verticalLineTo(9f)
+        arcTo(1f, 1f, 0f, false, true, 20f, 10f)
+        horizontalLineTo(15f)
+        arcTo(1f, 1f, 0f, false, true, 14f, 9f)
+        verticalLineTo(4f)
+        arcTo(1f, 1f, 0f, false, true, 15f, 3f)
+        close()
+        moveTo(15f, 14f)
+        horizontalLineTo(20f)
+        arcTo(1f, 1f, 0f, false, true, 21f, 15f)
+        verticalLineTo(20f)
+        arcTo(1f, 1f, 0f, false, true, 20f, 21f)
+        horizontalLineTo(15f)
+        arcTo(1f, 1f, 0f, false, true, 14f, 20f)
+        verticalLineTo(15f)
+        arcTo(1f, 1f, 0f, false, true, 15f, 14f)
+        close()
+        moveTo(4f, 14f)
+        horizontalLineTo(9f)
+        arcTo(1f, 1f, 0f, false, true, 10f, 15f)
+        verticalLineTo(20f)
+        arcTo(1f, 1f, 0f, false, true, 9f, 21f)
+        horizontalLineTo(4f)
+        arcTo(1f, 1f, 0f, false, true, 3f, 20f)
+        verticalLineTo(15f)
+        arcTo(1f, 1f, 0f, false, true, 4f, 14f)
+        close()
+    }
+
+    /** `layout-grid` — 推荐 / 宫格（实心选中态） */
+    val GridFill: ImageVector = fillIcon("GridFill", strokeWidth = 1.5f) {
         moveTo(4f, 3f)
         horizontalLineTo(9f)
         arcTo(1f, 1f, 0f, false, true, 10f, 4f)
@@ -116,8 +185,77 @@ internal object CouiIcons {
         horizontalLineTo(6f)
     }
 
+    /** `trophy` — 排行榜（实心选中态） */
+    val RankFill: ImageVector = ImageVector.Builder(
+        name = "CouiIcons.RankFill",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(
+            fill = SolidColor(Color.Black),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 1.5f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        ) {
+            moveTo(6f, 9f)
+            arcTo(6f, 6f, 0f, false, false, 18f, 9f)
+            verticalLineTo(3f)
+            arcTo(1f, 1f, 0f, false, false, 17f, 2f)
+            horizontalLineTo(7f)
+            arcTo(1f, 1f, 0f, false, false, 6f, 3f)
+            close()
+        }
+        path(
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        ) {
+            moveTo(10f, 14.66f)
+            verticalLineTo(17f)
+            arcTo(1f, 1f, 0f, false, true, 9f, 18f)
+            arcTo(2f, 2f, 0f, false, false, 7f, 20f)
+            verticalLineTo(22f)
+            moveTo(14f, 14.66f)
+            verticalLineTo(17f)
+            arcTo(1f, 1f, 0f, false, false, 15f, 18f)
+            arcTo(2f, 2f, 0f, false, true, 17f, 20f)
+            verticalLineTo(22f)
+            moveTo(17.916f, 10f)
+            horizontalLineTo(19.5f)
+            arcTo(2.5f, 2.5f, 0f, false, false, 22f, 7.5f)
+            verticalLineTo(5f)
+            arcTo(1f, 1f, 0f, false, false, 21f, 4f)
+            horizontalLineTo(18f)
+            moveTo(4f, 22f)
+            horizontalLineTo(20f)
+            moveTo(6.084f, 10f)
+            horizontalLineTo(4.5f)
+            arcTo(2.5f, 2.5f, 0f, false, true, 2f, 7.5f)
+            verticalLineTo(5f)
+            arcTo(1f, 1f, 0f, false, true, 3f, 4f)
+            horizontalLineTo(6f)
+        }
+    }.build()
+
     /** `compass` — Spotlight 发现特辑 */
     val Compass: ImageVector = strokeIcon("Compass") {
+        moveTo(2f, 12f)
+        arcTo(10f, 10f, 0f, true, false, 22f, 12f)
+        arcTo(10f, 10f, 0f, true, false, 2f, 12f)
+        close()
+        moveTo(16.24f, 7.76f)
+        lineTo(14.12f, 14.12f)
+        lineTo(7.76f, 16.24f)
+        lineTo(9.88f, 9.88f)
+        close()
+    }
+
+    /** `compass` — Spotlight 发现特辑（实心选中态） */
+    val CompassFill: ImageVector = fillIcon("CompassFill", pathFillType = PathFillType.EvenOdd) {
         moveTo(2f, 12f)
         arcTo(10f, 10f, 0f, true, false, 22f, 12f)
         arcTo(10f, 10f, 0f, true, false, 2f, 12f)
@@ -354,6 +492,21 @@ internal object CouiIcons {
         moveTo(12f, 6f)
         verticalLineTo(12f)
         lineTo(16f, 14f)
+    }
+
+    /** `clock` — 时间 / 动态（实心选中态） */
+    val RecentFill: ImageVector = fillIcon("RecentFill", pathFillType = PathFillType.EvenOdd) {
+        moveTo(2f, 12f)
+        arcTo(10f, 10f, 0f, true, false, 22f, 12f)
+        arcTo(10f, 10f, 0f, true, false, 2f, 12f)
+        close()
+        moveTo(11f, 6.5f)
+        lineTo(13f, 6.5f)
+        lineTo(13f, 11.4f)
+        lineTo(16.45f, 13.11f)
+        lineTo(15.55f, 14.89f)
+        lineTo(11f, 12.6f)
+        close()
     }
 
     /** `refresh-cw` — 刷新 */

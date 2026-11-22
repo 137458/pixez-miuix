@@ -74,6 +74,8 @@ internal object CouiSkinPages : SkinPages {
         selectedIndex: Int,
         isFloating: Boolean,
         onSelect: (Int) -> Unit,
+        onLeftAccessoryClick: (() -> Unit)?,
+        onRightAccessoryClick: (() -> Unit)?,
         modifier: Modifier,
     ) {
         CouiSkinNavigationBar(
@@ -81,6 +83,8 @@ internal object CouiSkinPages : SkinPages {
             selectedIndex = selectedIndex,
             isFloating = isFloating,
             onSelect = onSelect,
+            onLeftAccessoryClick = onLeftAccessoryClick,
+            onRightAccessoryClick = onRightAccessoryClick,
             modifier = modifier,
         )
     }
@@ -90,12 +94,14 @@ internal object CouiSkinPages : SkinPages {
         items: List<SkinNavItem>,
         selectedIndex: Int,
         onSelect: (Int) -> Unit,
+        onSearchClick: (() -> Unit)?,
         modifier: Modifier,
     ) {
         CouiSkinNavigationRail(
             items = items,
             selectedIndex = selectedIndex,
             onSelect = onSelect,
+            onSearchClick = onSearchClick,
             modifier = modifier,
         )
     }

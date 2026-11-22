@@ -11,11 +11,12 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 import com.perol.pixez.shared.ui.state.MainFeedRestore
 import com.perol.pixez.shared.ui.state.UserDetailPageState
 
-/** 底栏单项：文案与图标由一级标签目录求值后传入，避免皮肤层反向依赖导航目录。 */
+/** 底栏单项：文案、图标与未读标记由一级标签目录求值后传入，避免皮肤层反向依赖导航目录。 */
 internal data class SkinNavItem(
     val title: String,
     val icon: ImageVector,
     val showBadge: Boolean,
+    val tab: RootComponent.MainTab? = null,
 )
 
 /** 用户列表的三种来源：关注 / 粉丝 / 相关画师，三页共用一套 COUI 实现。 */
@@ -33,7 +34,8 @@ internal enum class CouiUserListKind {
  */
 internal interface SkinPages {
     /**
-     * COUI 底栏。浮动模式走玻璃胶囊，非浮动模式走贴底 COUI 栏，不回退 MIUIX 底栏。
+     * COUI 底栏。浮动模式走官方 NavigationBar（左设置圆钮 + 中间胶囊 + 右搜索圆钮），
+     * 非浮动模式或 API < 34 退回简洁贴底 COUI 栏。
      */
     @Composable
     fun navigationBar(
@@ -41,6 +43,8 @@ internal interface SkinPages {
         selectedIndex: Int,
         isFloating: Boolean,
         onSelect: (Int) -> Unit,
+        onLeftAccessoryClick: (() -> Unit)? = null,
+        onRightAccessoryClick: (() -> Unit)? = null,
         modifier: Modifier = Modifier,
     )
 
@@ -50,6 +54,7 @@ internal interface SkinPages {
         items: List<SkinNavItem>,
         selectedIndex: Int,
         onSelect: (Int) -> Unit,
+        onSearchClick: (() -> Unit)? = null,
         modifier: Modifier = Modifier,
     )
 
