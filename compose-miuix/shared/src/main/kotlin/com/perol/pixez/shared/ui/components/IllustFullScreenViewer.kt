@@ -37,7 +37,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -68,8 +70,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
@@ -120,6 +122,7 @@ fun IllustFullScreenViewer(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarked: (() -> Unit)? = null,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val strings = LocalStrings.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
@@ -148,6 +151,29 @@ fun IllustFullScreenViewer(
     val showControlsState = remember { mutableStateOf(true) }
     var showControls by showControlsState
 
+    val imageAspectRatio = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.1f, 10f)
+        } else {
+            null
+        }
+    }
+    val transitionState = rememberFullScreenViewerTransitionState(
+        initialPage = initialPage.coerceIn(0, pageCount - 1),
+        imageAspectRatio = imageAspectRatio,
+        tracker = imageBoundsTracker,
+        onDismissComplete = onDismiss,
+    )
+    LaunchedEffect(currentDisplayPage, transitionState) {
+        transitionState.currentPage = currentDisplayPage
+    }
+    LaunchedEffect(isVerticalScrollMode, transitionState) {
+        transitionState.isVerticalScrollMode = isVerticalScrollMode
+    }
+    val effectiveDismiss: () -> Unit = {
+        coroutineScope.launch { transitionState.requestDismiss() }
+    }
+
     val internalBackdrop = if (isRuntimeShaderSupported()) {
         rememberLayerBackdrop {
             drawRect(Color.Black)
@@ -174,7 +200,7 @@ fun IllustFullScreenViewer(
         }
     }
 
-    PlatformBackHandler(onBack = onDismiss)
+    PlatformBackHandler(onBack = effectiveDismiss)
 
     LaunchedEffect(Unit) {
         try {
@@ -185,10 +211,17 @@ fun IllustFullScreenViewer(
         }
     }
 
+    CompositionLocalProvider(LocalFullScreenViewerZoomedState provides transitionState.isZoomedState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .drawBehind {
+                val alpha = transitionState.currentTransform().backgroundAlpha
+                if (alpha > 0.001f) {
+                    drawRect(Color.Black.copy(alpha = alpha))
+                }
+            }
+            .fullScreenViewerDismissContainer(transitionState)
             .focusRequester(focusRequester)
             .focusable()
             .onKeyEvent { keyEvent ->
@@ -198,7 +231,7 @@ fun IllustFullScreenViewer(
                         true
                     } else when (keyEvent.key) {
                         Key.Escape -> {
-                            onDismiss()
+                            effectiveDismiss()
                             true
                         }
                         Key.DirectionLeft, Key.PageUp, Key.A -> {
@@ -250,7 +283,9 @@ fun IllustFullScreenViewer(
             previewUrl = previewUrl,
             internalBackdrop = internalBackdrop,
             onTap = { showControls = !showControls },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .fullScreenViewerContentTransform(transitionState),
         )
 
         // 顶部浮层：由皮肤定制时走 topOverlay，否则走 MIUIX 液态玻璃浮层
@@ -278,12 +313,14 @@ fun IllustFullScreenViewer(
                     isVerticalScrollMode = isVerticalScrollMode,
                     illust = illust,
                     coroutineScope = coroutineScope,
-                    onDismiss = onDismiss,
+                    onDismiss = effectiveDismiss,
                     onToggleScrollMode = toggleScrollMode,
                     onDownloadClick = { triggerDownload(currentDisplayPage) },
                     onToast = onToast,
                 ),
-                Modifier.align(Alignment.TopCenter),
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = transitionState.currentTransform().controlsAlpha },
             )
         } else {
             ViewerTopOverlaySection(
@@ -298,13 +335,16 @@ fun IllustFullScreenViewer(
                 illust = illust,
                 effectiveBackdrop = effectiveBackdrop,
                 effectiveLayerBackdrop = effectiveLayerBackdrop,
-                onDismiss = onDismiss,
+                onDismiss = effectiveDismiss,
                 onVerticalScrollModeChange = { isVerticalScrollMode = it },
                 onDownloadClick = { triggerDownload(currentDisplayPage) },
                 onToast = onToast,
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = transitionState.currentTransform().controlsAlpha },
             )
         }
+    }
     }
 }
 

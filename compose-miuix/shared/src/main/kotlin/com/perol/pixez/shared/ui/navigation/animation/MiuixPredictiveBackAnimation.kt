@@ -42,19 +42,25 @@ private val PredictiveFollowSpec = spring<Float>(
 )
 
 /** 手势确认后的收尾动画：复用转场的 HyperOS 减速曲线。 */
-private val PredictiveFinishSpec = tween<Float>(durationMillis = 240, easing = HyperOSDecelerateEasing)
-
-/** 手势取消后的回弹动画。 */
-private val PredictiveCancelSpec = tween<Float>(durationMillis = 200, easing = HyperOSDecelerateEasing)
+private const val PREDICTIVE_FINISH_DURATION_MS = 240
+private const val PREDICTIVE_CANCEL_DURATION_MS = 200
 
 /**
  * 支持跟手直驱（snap）的预测性返回动画器：应用内拖拽路径用 [snap] 1:1 贴合手指，
- * 系统手势路径仍走 [animate] 弹簧跟随。
+ * 系统手势路径仍走 [animate] 弹簧跟随，松手支持速度连续交接。
  */
 @ExperimentalDecomposeApi
 internal interface MiuixSnapBackAnimatable : PredictiveBackAnimatable {
     /** 手势跟手期直驱：进度立即落位，无补间。 */
     suspend fun snap(event: BackEvent)
+
+    suspend fun finish(velocityFractionPerSec: Float) {
+        finish()
+    }
+
+    suspend fun cancel(velocityFractionPerSec: Float) {
+        cancel()
+    }
 }
 
 /**
@@ -95,11 +101,31 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
     }
 
     override suspend fun finish() {
-        progressAnimatable.animateTo(targetValue = 1f, animationSpec = PredictiveFinishSpec)
+        finish(velocityFractionPerSec = 0f)
+    }
+
+    override suspend fun finish(velocityFractionPerSec: Float) {
+        val remaining = (1f - progressAnimatable.value).coerceAtLeast(0f)
+        val spec = resolveVelocityHandoffSpec(
+            remainingDistance = remaining,
+            initialVelocityPerSec = velocityFractionPerSec,
+            durationMillis = PREDICTIVE_FINISH_DURATION_MS,
+        )
+        progressAnimatable.animateTo(targetValue = 1f, animationSpec = spec)
     }
 
     override suspend fun cancel() {
-        progressAnimatable.animateTo(targetValue = 0f, animationSpec = PredictiveCancelSpec)
+        cancel(velocityFractionPerSec = 0f)
+    }
+
+    override suspend fun cancel(velocityFractionPerSec: Float) {
+        val remaining = (-progressAnimatable.value).coerceAtMost(0f)
+        val spec = resolveVelocityHandoffSpec(
+            remainingDistance = remaining,
+            initialVelocityPerSec = velocityFractionPerSec,
+            durationMillis = PREDICTIVE_CANCEL_DURATION_MS,
+        )
+        progressAnimatable.animateTo(targetValue = 0f, animationSpec = spec)
     }
 }
 
@@ -132,6 +158,7 @@ fun <C : Any, T : Any> miuixPredictiveBackAnimation(
     selector: (initialBackEvent: BackEvent, exitChild: Child.Created<C, T>, enterChild: Child.Created<C, T>) -> PredictiveBackAnimatable,
     onBack: () -> Unit,
     dragBackEligible: ((T) -> Boolean)? = null,
+    modalDismissEligible: ((T) -> Boolean)? = null,
 ): StackAnimation<C, T> =
     MiuixPredictiveBackAnimation(
         backHandler = backHandler,
@@ -139,6 +166,7 @@ fun <C : Any, T : Any> miuixPredictiveBackAnimation(
         selector = selector,
         onBack = onBack,
         dragBackEligible = dragBackEligible,
+        modalDismissEligible = modalDismissEligible,
     )
 
 @OptIn(ExperimentalDecomposeApi::class, com.arkivanov.decompose.InternalDecomposeApi::class)
@@ -148,6 +176,7 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
     private val selector: (BackEvent, exitChild: Child.Created<C, T>, enterChild: Child.Created<C, T>) -> PredictiveBackAnimatable,
     private val onBack: () -> Unit,
     private val dragBackEligible: ((T) -> Boolean)? = null,
+    private val modalDismissEligible: ((T) -> Boolean)? = null,
 ) : StackAnimation<C, T> {
 
     @Composable
@@ -177,25 +206,43 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
         // 松手的 commit/cancel 回调随之丢失，双层结构卡死。激活时机改由 isEligible
         // （稳态单页，同 isGestureEnabled 判定）在按下阶段检查；与系统手势流的互斥由
         // handler 状态机的 isDragSession 门闩保证。
+        val currentActiveInstance = handler.items.last().stack.active.instance
         val dragBackMounted = dragBackEligible != null &&
             rememberDragBackGestureEnabled() &&
-            dragBackEligible.invoke(handler.items.last().stack.active.instance)
+            dragBackEligible.invoke(currentActiveInstance)
+        val modalDismissMounted = modalDismissEligible != null &&
+            handler.items.last().stack.backStack.isNotEmpty() &&
+            modalDismissEligible.invoke(currentActiveInstance)
 
-        Box(
-            modifier = if (dragBackMounted) {
-                modifier.then(
+        val gestureModifier = modifier
+            .then(
+                if (dragBackMounted) {
                     Modifier.miuixDragBackGesture(
                         isEligible = { activeKeys.size == 1 },
                         onStart = handler::onDragStarted,
                         onProgress = handler::onDragProgressed,
                         onCommit = handler::onDragCommit,
                         onCancel = handler::onDragCancel,
-                    ),
-                )
-            } else {
-                modifier
-            },
-        ) {
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (modalDismissMounted) {
+                    Modifier.miuixModalSwipeDismissGesture(
+                        isEligible = { activeKeys.size == 1 },
+                        onStart = handler::onDragStarted,
+                        onProgress = handler::onDragProgressed,
+                        onCommit = handler::onDragCommit,
+                        onCancel = handler::onDragCancel,
+                    )
+                } else {
+                    Modifier
+                },
+            )
+
+        Box(modifier = gestureModifier) {
             handler.items.forEach { item ->
                 key(item.key) {
                     anim(
@@ -311,14 +358,14 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         progressed(backEvent, snapToFollow = true)
     }
 
-    /** 应用内拖拽确认（位移/速度越阈值松手）：与 [onBack] 同路径收尾并出栈。 */
-    fun onDragCommit() {
-        onBack()
+    /** 应用内拖拽确认（位移/速度越阈值松手）：以松手速度连续交接收尾并出栈。 */
+    fun onDragCommit(velocityFractionPerSec: Float = 0f) {
+        finishWithVelocity(velocityFractionPerSec)
     }
 
-    /** 应用内拖拽取消（未达阈值松手）：与 [onBackCancelled] 同路径回弹。 */
-    fun onDragCancel() {
-        onBackCancelled()
+    /** 应用内拖拽取消（未达阈值松手）：以松手速度连续交接回弹。 */
+    fun onDragCancel(velocityFractionPerSec: Float = 0f) {
+        cancelWithVelocity(velocityFractionPerSec)
     }
 
     override fun onBackProgressed(backEvent: BackEvent) {
@@ -370,6 +417,10 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         ChildStack(active = backStack.last(), backStack = backStack.dropLast(1))
 
     override fun onBack() {
+        finishWithVelocity(velocityFractionPerSec = 0f)
+    }
+
+    private fun finishWithVelocity(velocityFractionPerSec: Float) {
         isBackConfirmed = true
         isDragSession = false
         val current = animatable
@@ -379,7 +430,8 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
             cancelAnimationJob?.cancel()
             cancelAnimationJob = null
             scope.launch {
-                current.finish()
+                val snap = current as? MiuixSnapBackAnimatable
+                if (snap != null) snap.finish(velocityFractionPerSec) else current.finish()
                 animatable = null
                 onBack.invoke()
             }
@@ -387,16 +439,19 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     }
 
     override fun onBackCancelled() {
+        cancelWithVelocity(velocityFractionPerSec = 0f)
+    }
+
+    private fun cancelWithVelocity(velocityFractionPerSec: Float) {
         if (isBackConfirmed) return
         // 手势生命周期已终止：丢弃尚未消费的起始事件，防止取消后杂散进度凭空激活假手势。
         initialBackEvent = null
         isDragSession = false
         val current = animatable ?: return
         cancelAnimationJob?.cancel()
-        // 等回弹动画完成后再重置回单层：期间若系统乱序补发确认返回（onBack），
-        // 动画器仍存在，可从当前位置连续收起，避免「回弹到全屏再整段重播收起」的双重转场。
         cancelAnimationJob = scope.launch {
-            current.cancel()
+            val snap = current as? MiuixSnapBackAnimatable
+            if (snap != null) snap.cancel(velocityFractionPerSec) else current.cancel()
             animatable = null
             items = listOf(MiuixPredictiveBackGestureItem(stack = stack, key = key))
         }

@@ -2,11 +2,13 @@ package com.perol.pixez.shared.ui.navigation.animation
 
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.PredictiveBackAnimatable
 import com.arkivanov.essenty.backhandler.BackEvent
 import com.perol.pixez.shared.ui.navigation.Config
+import com.perol.pixez.shared.ui.navigation.isModalRoute
 import com.perol.pixez.shared.ui.navigation.toTransitionTarget
 
 /**
@@ -42,15 +44,18 @@ fun <C : Any, T : Any> miuixSeekableStackAnimation(
     registry: SharedBoundsRegistry,
     containerGeometry: () -> PageContainerGeometry,
     coverParallax: Boolean = true,
+    isLightBackground: Boolean = false,
 ): StackAnimation<C, T> =
-    SeekableStackAnimation { child ->
-        // 路由参数只在 configuration 上，同时覆盖插画详情页与小说阅读器两种卡片展开目标。
+    SeekableStackAnimation { child, frontChild ->
         val rawTarget = (child.configuration as? Config)?.toTransitionTarget()
+        val isFrontModal = (frontChild.configuration as? Config)?.isModalRoute() == true
         cardExpandFrame(
             rawTarget = rawTarget,
             containerGeometry = containerGeometry,
             registry = registry,
             coverParallax = coverParallax,
+            isModal = isFrontModal,
+            isLightBackground = isLightBackground,
         )
     }
 
@@ -62,6 +67,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
     target: TransitionTarget?,
     containerGeometry: () -> PageContainerGeometry,
     coverParallax: Boolean = true,
+    isLightBackground: Boolean = false,
 ): PredictiveBackAnimatable {
     val geometry = containerGeometry()
     val anchor = registry.resolveTargetAnchor(
@@ -74,6 +80,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
             containerGeometry = containerGeometry,
             registry = registry,
             coverParallax = coverParallax,
+            isLightBackground = isLightBackground,
         )
     }
     val sourceCard = anchor.card
@@ -100,7 +107,14 @@ fun miuixCardExpandPredictiveBackAnimatable(
         },
         getEnterModifier = { progress, _ ->
             val expansion = predictiveBackCardExpandExpansion(progress = progress)
-            Modifier.cardExpandScrim(alpha = cardExpandScrimAlpha(expansion))
+            Modifier
+                .navigationDepthBlur {
+                    resolveNavigationBlurBlendFrame(
+                        progress = expansion,
+                        isLightBackground = isLightBackground,
+                    )
+                }
+                .cardExpandScrim(alpha = cardExpandScrimAlpha(expansion))
         },
     )
 }
@@ -147,6 +161,7 @@ fun miuixSlidePredictiveBackAnimatable(
     containerGeometry: () -> PageContainerGeometry,
     registry: SharedBoundsRegistry? = null,
     coverParallax: Boolean = true,
+    isLightBackground: Boolean = false,
 ): PredictiveBackAnimatable {
     return MiuixSmoothedPredictiveBackAnimatable(
         initialBackEvent = initialBackEvent,
@@ -158,6 +173,7 @@ fun miuixSlidePredictiveBackAnimatable(
                 widthPx = geometry.widthPx,
                 cornerRadius = geometry.cornerRadius,
                 registry = registry,
+                isLightBackground = isLightBackground,
             )
         },
         getEnterModifier = { progress, _ ->
@@ -170,7 +186,47 @@ fun miuixSlidePredictiveBackAnimatable(
                 cornerRadius = geometry.cornerRadius,
                 registry = registry,
                 parallaxFraction = if (coverParallax) MIUIX_DEFAULT_COVER_PARALLAX_FRACTION else 0f,
+                isLightBackground = isLightBackground,
             )
         },
     )
 }
+
+/** 模态页自顶向下预测性返回 / 顶部拖拽解散动画器（底层页保持静止、渐褪模糊与遮罩）。 */
+@OptIn(ExperimentalDecomposeApi::class)
+fun miuixModalPredictiveBackAnimatable(
+    initialBackEvent: BackEvent,
+    containerGeometry: () -> PageContainerGeometry,
+    isLightBackground: Boolean = false,
+): PredictiveBackAnimatable = MiuixSmoothedPredictiveBackAnimatable(
+    initialBackEvent = initialBackEvent,
+    getExitModifier = { progress, _ ->
+        val geometry = containerGeometry()
+        val heightPx = geometry.heightPx.takeIf { it > 0f }
+            ?: geometry.bounds.height.takeIf { it > 0f }
+            ?: (geometry.widthPx.takeIf { it > 0f } ?: 1080f) * 2f
+        val topCorner = geometry.cornerRadius.coerceAtLeast(24.dp)
+        Modifier.miuixModalLayer(
+            isTopLayer = true,
+            fraction = progress,
+            heightPx = heightPx,
+            topCornerRadius = topCorner,
+            isLightBackground = isLightBackground,
+        )
+    },
+    getEnterModifier = { progress, _ ->
+        val geometry = containerGeometry()
+        val coveredFraction = (1f - progress).coerceIn(0f, 1f)
+        val heightPx = geometry.heightPx.takeIf { it > 0f }
+            ?: geometry.bounds.height.takeIf { it > 0f }
+            ?: (geometry.widthPx.takeIf { it > 0f } ?: 1080f) * 2f
+        val topCorner = geometry.cornerRadius.coerceAtLeast(24.dp)
+        Modifier.miuixModalLayer(
+            isTopLayer = false,
+            fraction = coveredFraction,
+            heightPx = heightPx,
+            topCornerRadius = topCorner,
+            isLightBackground = isLightBackground,
+        )
+    },
+)

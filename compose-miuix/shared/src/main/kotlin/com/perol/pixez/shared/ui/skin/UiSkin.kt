@@ -100,11 +100,13 @@ fun CouiSkinHost(
     }
     // 浮动底栏的采样源：根层持有，正文容器用 [skinFloatingBarSource] 登记，底栏消费。
     val floatingBackdrop = rememberCouiBackdrop(diagnosticName = "coui-floating-bar")
+    // COUI alpha17 起全库统一模糊材质染色管道：开启动态取色且非 AMOLED 纯黑时，以当前 surface 为基准色做保亮度染色。
+    val materialTint = if (useDynamicColor && !(dark && isAmoled)) colorScheme.surface else Color.Transparent
     CouiKitTheme(
         darkTheme = dark,
         colorScheme = colorScheme,
         typography = typography,
-        materialTint = Color.Transparent,
+        materialTint = materialTint,
         content = {
             // 窗口级采样源：菜单与弹层材质采样「被它覆盖的整屏内容」，必须在根层登记一次。
             ProvideCouiMenuBackdrop(isolateContent = false) { windowSource ->

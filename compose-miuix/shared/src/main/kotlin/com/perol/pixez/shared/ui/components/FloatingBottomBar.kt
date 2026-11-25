@@ -68,13 +68,12 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.highlight.BloomStroke
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.LightPosition
-import top.yukonga.miuix.kmp.blur.highlight.LightSource
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
+import top.yukonga.miuix.kmp.material.EdgeLightSource
+import top.yukonga.miuix.kmp.material.EdgePeak
+import top.yukonga.miuix.kmp.material.EdgeStroke
+import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.material.sensor.rememberDeviceTilt
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.PI
 import kotlin.math.abs
@@ -129,24 +128,25 @@ enum class FloatingBottomBarMode {
     None,
 }
 
-private val iosIndicatorSpecular: Highlight = Highlight(
+private val iosIndicatorSpecular: EdgeStroke = EdgeStroke(
     width = 1.dp,
-    alpha = 1f,
-    style = BloomStroke(
-        color = Color.White.copy(alpha = 0.12f),
-        innerBlurRadius = 2.0.dp,
-        primaryLight = LightSource(
-            position = LightPosition(0.5f, -0.3f, -0.05f),
-            color = Color.White,
-            intensity = 1f,
-        ),
-        secondaryLight = LightSource(
-            position = LightPosition(0.5f, 0.8f, -0.5f),
-            color = Color.White,
-            intensity = 0.4f,
-        ),
-        dualPeak = true,
+    bevel = 2.0.dp,
+    color = Color.White.copy(alpha = 0.12f),
+    primary = EdgeLightSource(
+        x = 0.5f,
+        y = -0.3f,
+        z = -0.05f,
+        color = Color.White,
+        intensity = 1f,
     ),
+    secondary = EdgeLightSource(
+        x = 0.5f,
+        y = 0.8f,
+        z = -0.5f,
+        color = Color.White,
+        intensity = 0.4f,
+    ),
+    peak = EdgePeak.Axial,
 )
 
 // Light reference point in normalized UV coordinate system
@@ -178,29 +178,27 @@ private fun rememberQuantizedGravityAngle(): State<Float> {
 }
 
 /**
- * Tracks gravity angle for specular Bloom highlight with an extra UV-clockwise angle offset.
- * Value should be read in draw phase lambda (e.g. `highlight = { ... }`).
+ * Tracks gravity angle for specular edge stroke with an extra UV-clockwise angle offset.
+ * Value should be read in draw phase lambda (e.g. `onDrawFront = { drawEdgeStroke(...) }`).
  */
 @Composable
 private fun rememberGravityRotatedHighlight(
-    base: Highlight,
+    base: EdgeStroke,
     extraDegrees: Float = 0f,
-): State<Highlight> {
+): State<EdgeStroke> {
     val gravityAngle = rememberQuantizedGravityAngle()
     return remember(gravityAngle, base, extraDegrees) {
         derivedStateOf {
-            val baseStyle = base.style as? BloomStroke ?: return@derivedStateOf base
-            val basePrimary = baseStyle.primaryLight
             val rad = gravityAngle.value + (extraDegrees * PI / 180.0).toFloat()
+            val opposite = rad + PI.toFloat()
             base.copy(
-                style = baseStyle.copy(
-                    primaryLight = basePrimary.copy(
-                        position = LightPosition(
-                            x = LIGHT_REF_X + cos(rad),
-                            y = LIGHT_REF_Y + sin(rad),
-                            z = basePrimary.position.z,
-                        ),
-                    ),
+                primary = base.primary.copy(
+                    x = LIGHT_REF_X + cos(rad),
+                    y = LIGHT_REF_Y + sin(rad),
+                ),
+                secondary = base.secondary.copy(
+                    x = LIGHT_REF_X + cos(opposite),
+                    y = LIGHT_REF_Y + sin(opposite),
                 ),
             )
         }

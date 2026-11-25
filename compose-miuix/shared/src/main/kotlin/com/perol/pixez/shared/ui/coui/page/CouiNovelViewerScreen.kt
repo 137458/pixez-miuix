@@ -77,6 +77,8 @@ import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
+import com.perol.pixez.shared.ui.navigation.animation.commentsTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.screens.buildNovelViewerItems
 import com.perol.pixez.shared.ui.screens.NovelViewerItem
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
@@ -281,7 +283,11 @@ internal fun CouiNovelViewerScreen(
                 onClick = { onCommentsClick(novelId) },
                 icon = CouiIcons.Messages,
                 contentDescription = strings.commentsTitle,
-                modifier = chromeAlphaModifier,
+                modifier = chromeAlphaModifier.commentsTransitionBounds(
+                    targetId = novelId,
+                    isNovel = true,
+                    cornerRadius = 20.dp,
+                ),
             )
             if (novelDetail != null) {
                 CouiTopBarIconButton(
@@ -631,6 +637,7 @@ private fun CouiNovelViewerItemContent(
                 url = url,
                 placeholderText = item.key,
                 contentDescription = item.key,
+                illustId = item.illustId,
                 onClick = { onIllustClick(item.illustId) },
             )
         }
@@ -655,6 +662,7 @@ private fun CouiNovelEmbeddedImage(
     url: String?,
     placeholderText: String,
     contentDescription: String,
+    illustId: Long? = null,
     onClick: (() -> Unit)?,
 ) {
     Box(
@@ -662,6 +670,10 @@ private fun CouiNovelEmbeddedImage(
             .fillMaxWidth()
             .padding(vertical = 12.dp)
             .height(AppConstants.Novel.EMBEDDED_IMAGE_HEIGHT_DP.dp)
+            .illustTransitionBounds(
+                illustId = illustId?.takeIf { it > 0L },
+                cornerRadius = 12.dp,
+            )
             .clip(RoundedCornerShape(12.dp))
             .background(CouiTheme.colorScheme.container)
             .then(

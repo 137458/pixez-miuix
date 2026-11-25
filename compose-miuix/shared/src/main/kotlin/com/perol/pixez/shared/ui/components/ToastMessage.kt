@@ -35,14 +35,15 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.BloomStroke
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.LightPosition
-import top.yukonga.miuix.kmp.blur.highlight.LightSource
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Report
+import top.yukonga.miuix.kmp.material.EdgeLightSource
+import top.yukonga.miuix.kmp.material.EdgePeak
+import top.yukonga.miuix.kmp.material.EdgeStroke
+import top.yukonga.miuix.kmp.material.GlassShape
+import top.yukonga.miuix.kmp.material.drawEdgeStroke
+import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -50,44 +51,46 @@ import com.perol.pixez.shared.ui.libs.liquid.lens
 import com.perol.pixez.shared.ui.libs.liquid.vibrancy
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 
-private val ToastHighlightLight = Highlight(
+private val ToastHighlightLight = EdgeStroke(
     width = 0.8.dp,
-    alpha = 0.85f,
-    style = BloomStroke(
-        color = Color.White.copy(alpha = 0.15f),
-        innerBlurRadius = 2.0.dp,
-        primaryLight = LightSource(
-            position = LightPosition(0.5f, -0.2f, -0.15f),
-            color = Color.White,
-            intensity = 0.6f,
-        ),
-        secondaryLight = LightSource(
-            position = LightPosition(0.5f, 0.8f, -0.4f),
-            color = Color.White,
-            intensity = 0.25f,
-        ),
-        dualPeak = true,
+    bevel = 2.0.dp,
+    color = Color.White.copy(alpha = 0.15f),
+    primary = EdgeLightSource(
+        x = 0.5f,
+        y = -0.2f,
+        z = -0.15f,
+        color = Color.White,
+        intensity = 0.6f,
     ),
+    secondary = EdgeLightSource(
+        x = 0.5f,
+        y = 0.8f,
+        z = -0.4f,
+        color = Color.White,
+        intensity = 0.25f,
+    ),
+    peak = EdgePeak.Axial,
 )
 
-private val ToastHighlightDark = Highlight(
+private val ToastHighlightDark = EdgeStroke(
     width = 0.8.dp,
-    alpha = 0.9f,
-    style = BloomStroke(
-        color = Color.White.copy(alpha = 0.18f),
-        innerBlurRadius = 1.8.dp,
-        primaryLight = LightSource(
-            position = LightPosition(0.5f, -0.15f, -0.1f),
-            color = Color.White,
-            intensity = 0.7f,
-        ),
-        secondaryLight = LightSource(
-            position = LightPosition(0.5f, 0.8f, -0.4f),
-            color = Color.White,
-            intensity = 0.3f,
-        ),
-        dualPeak = true,
+    bevel = 1.8.dp,
+    color = Color.White.copy(alpha = 0.18f),
+    primary = EdgeLightSource(
+        x = 0.5f,
+        y = -0.15f,
+        z = -0.1f,
+        color = Color.White,
+        intensity = 0.7f,
     ),
+    secondary = EdgeLightSource(
+        x = 0.5f,
+        y = 0.8f,
+        z = -0.4f,
+        color = Color.White,
+        intensity = 0.3f,
+    ),
+    peak = EdgePeak.Axial,
 )
 
 /**
@@ -192,6 +195,7 @@ private fun ToastSurface(
     val isDark = extra.isDark
     val cornerRadius = 24.dp
     val shape = remember(cornerRadius) { SquircleShape(cornerRadius) }
+    val glassStrokeShape = remember(cornerRadius) { GlassShape(cornerRadius) }
     val effectiveType = type ?: ToastType.Normal
 
     Box(
@@ -237,7 +241,13 @@ private fun ToastSurface(
                                 chromaticAberration = 0.12f,
                             )
                         },
-                        highlight = { if (isDark) ToastHighlightDark else ToastHighlightLight },
+                        onDrawFront = {
+                            drawEdgeStroke(
+                                shape = glassStrokeShape,
+                                stroke = if (isDark) ToastHighlightDark else ToastHighlightLight,
+                                alpha = if (isDark) 0.9f else 0.85f,
+                            )
+                        },
                         onDrawSurface = {
                             drawRect(
                                 color = if (isDark) {

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 data class PageContainerGeometry(
     val bounds: Rect = Rect.Zero,
     val widthPx: Float = 0f,
+    val heightPx: Float = 0f,
     val cornerRadius: Dp = 0.dp,
 ) {
     /** 仅替换窗口矩形，保留其余测量结果。 */

@@ -27,6 +27,7 @@ import com.perol.pixez.shared.ui.navigation.toRepositoryRegistry
 fun App(
     dependencies: AppDependencies,
     rootComponent: RootComponent? = null,
+    systemTransitionSessionToken: String? = null,
 ) {
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)
@@ -64,6 +65,7 @@ fun App(
         RootContent(
             component = component,
             registry = registry,
+            systemTransitionSessionToken = systemTransitionSessionToken,
         )
     }
 }

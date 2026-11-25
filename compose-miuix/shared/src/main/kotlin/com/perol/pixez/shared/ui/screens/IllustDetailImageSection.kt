@@ -34,11 +34,13 @@ import com.perol.pixez.shared.data.repository.IllustRepository
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.platform.illustDragAndDropSource
 import com.perol.pixez.shared.platform.rememberOptimizedImageModel
+import com.perol.pixez.shared.ui.components.DetailImageBoundsTracker
 import com.perol.pixez.shared.ui.components.IllustFullScreenViewer
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.UgoiraPlayer
+import com.perol.pixez.shared.ui.components.detailImageBounds
 import com.perol.pixez.shared.ui.components.resolveIllustCoverUrl
 import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
 import com.perol.pixez.shared.ui.AppConstants
@@ -146,6 +148,7 @@ internal fun IllustDetailImagePage(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarkedChange: (Boolean) -> Unit = {},
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val changeVersion = settings?.changeVersion?.collectAsState()?.value
     val effectiveQuality = remember(illust.type, settings?.pictureQuality, settings?.mangaQuality, changeVersion) {
@@ -205,7 +208,7 @@ internal fun IllustDetailImagePage(
                 thumbnailUrl = thumbnailUrl,
                 contentDescription = "${illust.title} ($pageIndex)",
                 contentScale = ContentScale.FillWidth,
-                modifier = pageModifier,
+                modifier = pageModifier.detailImageBounds(imageBoundsTracker, pageIndex),
                 onSuccess = { pageLoaded = true },
             )
             Box(
@@ -269,6 +272,7 @@ internal fun IllustDetailSinglePageImage(
     strings: AppStrings,
     onToast: (ToastData?) -> Unit,
     onPageClick: (Int) -> Unit,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val imageWidthDp = rememberDetailImageWidthDp(viewport, illustAspectRatio)
     val sizedModifier = if (viewport.isWideScreen) Modifier.width(imageWidthDp) else Modifier.fillMaxWidth()
@@ -281,7 +285,7 @@ internal fun IllustDetailSinglePageImage(
                 illust = illust,
                 illustRepository = repository,
                 onClick = { onPageClick(0) },
-                modifier = sizedModifier,
+                modifier = sizedModifier.detailImageBounds(imageBoundsTracker, 0),
             )
         }
     } else {
@@ -336,7 +340,7 @@ internal fun IllustDetailSinglePageImage(
                     thumbnailUrl = thumbnailUrl,
                     contentDescription = illust.title,
                     contentScale = ContentScale.FillWidth,
-                    modifier = singleModifier,
+                    modifier = singleModifier.detailImageBounds(imageBoundsTracker, 0),
                 )
             }
         }
@@ -360,6 +364,7 @@ internal fun IllustDetailFullScreenOverlay(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarked: (() -> Unit)? = null,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
     val effectiveQuality = resolveIllustQuality(illust, settings)
@@ -413,5 +418,6 @@ internal fun IllustDetailFullScreenOverlay(
         bookmarkRepository = bookmarkRepository,
         isBookmarked = isBookmarked,
         onBookmarked = onBookmarked,
+        imageBoundsTracker = imageBoundsTracker,
     )
 }

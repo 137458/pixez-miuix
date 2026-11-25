@@ -317,6 +317,10 @@ internal fun ZoomableUgoiraViewer(
         maxScale = 8f,
         contentSize = ugoiraContentSize,
     )
+    val viewerZoomedState = LocalFullScreenViewerZoomedState.current
+    LaunchedEffect(fullZoomState.scale, viewerZoomedState) {
+        viewerZoomedState?.value = fullZoomState.scale > 1.03f
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),

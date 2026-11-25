@@ -50,6 +50,8 @@ android {
 }
 
 dependencies {
+    compileOnly(projects.systemAnimationStubs)
+    implementation(libs.sharedview.kit)
     implementation(platform(libs.androidx.compose.bom.alpha))
     implementation(libs.androidx.compose.runtime)
     implementation(libs.androidx.compose.foundation)
@@ -60,6 +62,8 @@ dependencies {
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
     implementation(libs.miuix.blur)
+    implementation(libs.miuix.material)
+    implementation(libs.miuix.glass)
 
     implementation(libs.zoomable)
 

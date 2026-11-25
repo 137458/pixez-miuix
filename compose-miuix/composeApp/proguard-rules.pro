@@ -13,12 +13,18 @@
 # 2. Android 核心组件与小部件
 # ------------------------------------------------------------------------------
 -keep class com.perol.pixez.android.MainActivity { *; }
+-keep class com.perol.pixez.android.IllustDetailActivity { *; }
 -keep class com.perol.pixez.android.PixEzApplication { *; }
 -keep class com.perol.pixez.android.service.PixEzQuickSearchTileService { *; }
 -keep class com.perol.pixez.shared.platform.PhotoPickerActivity { *; }
 -keep class com.perol.pixez.android.widget.PixEzAppWidgetProvider { *; }
 -keep class com.perol.pixez.shared.platform.ShareActionReceiver { *; }
 -keep class androidx.core.content.FileProvider { *; }
+
+# 系统级原生窗口转场回调桥与 compileOnly 系统桩
+-keep class com.perol.pixez.shared.ui.navigation.animation.system.OplusAnimationCallbackBridge { *; }
+-dontwarn com.oplus.animation.OplusViewSeamless
+-dontwarn com.oplus.animation.OplusViewSeamless$AnimationCallback
 
 # ------------------------------------------------------------------------------
 # 3. Kotlin & Kotlinx 协程与序列化

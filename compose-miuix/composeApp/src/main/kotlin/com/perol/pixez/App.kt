@@ -13,6 +13,11 @@ import com.perol.pixez.shared.ui.navigation.RootComponent
 fun PixEzApp(
     dependencies: AppDependencies,
     rootComponent: RootComponent? = null,
+    systemTransitionSessionToken: String? = null,
 ) {
-    App(dependencies = dependencies, rootComponent = rootComponent)
+    App(
+        dependencies = dependencies,
+        rootComponent = rootComponent,
+        systemTransitionSessionToken = systemTransitionSessionToken,
+    )
 }

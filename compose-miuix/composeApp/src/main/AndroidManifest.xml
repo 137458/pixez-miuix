@@ -104,6 +104,14 @@
             android:foregroundServiceType="dataSync" />
 
         <activity
+            android:name="com.perol.pixez.android.IllustDetailActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:colorMode="wideColorGamut"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
+            android:theme="@style/Theme.PixEz.IllustDetail" />
+
+        <activity
             android:name="com.perol.pixez.shared.platform.PhotoPickerActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="false" />

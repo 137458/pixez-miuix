@@ -35,6 +35,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -96,7 +97,14 @@ import com.perol.pixez.shared.ui.AppConstants.IllustType
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
+import com.perol.pixez.shared.ui.components.DetailImageBoundsTracker
+import com.perol.pixez.shared.ui.components.LocalFullScreenViewerZoomedState
 import com.perol.pixez.shared.ui.components.ZoomableUgoiraViewer
+import com.perol.pixez.shared.ui.components.fullScreenViewerContentTransform
+import com.perol.pixez.shared.ui.components.fullScreenViewerDismissContainer
+import com.perol.pixez.shared.ui.components.rememberFullScreenViewerTransitionState
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import com.perol.pixez.shared.ui.components.executeViewerDownload
 import com.perol.pixez.shared.ui.components.preloadViewerAdjacentPages
 import com.perol.pixez.shared.ui.components.resolveViewerOriginalUrl
@@ -144,6 +152,7 @@ internal fun CouiIllustFullScreenOverlay(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarked: (() -> Unit)? = null,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val pageIdx = pageIndex.coerceAtLeast(0)
     val effectiveQuality = if (illust.type == IllustType.MANGA) {
@@ -201,6 +210,7 @@ internal fun CouiIllustFullScreenOverlay(
         bookmarkRepository = bookmarkRepository,
         isBookmarked = isBookmarked,
         onBookmarked = onBookmarked,
+        imageBoundsTracker = imageBoundsTracker,
     )
 }
 
@@ -218,6 +228,7 @@ private fun CouiFullScreenViewer(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarked: (() -> Unit)? = null,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val strings = LocalStrings.current
     val pageCount = if (illust.metaPages.isNotEmpty()) illust.metaPages.size else 1
@@ -260,7 +271,30 @@ private fun CouiFullScreenViewer(
         }
     }
 
-    PlatformBackHandler(onBack = onDismiss)
+    val imageAspectRatio = remember(illust.width, illust.height) {
+        if (illust.width > 0 && illust.height > 0) {
+            (illust.width.toFloat() / illust.height.toFloat()).coerceIn(0.1f, 10f)
+        } else {
+            null
+        }
+    }
+    val transitionState = rememberFullScreenViewerTransitionState(
+        initialPage = initialPage.coerceIn(0, pageCount - 1),
+        imageAspectRatio = imageAspectRatio,
+        tracker = imageBoundsTracker,
+        onDismissComplete = onDismiss,
+    )
+    LaunchedEffect(currentDisplayPage, transitionState) {
+        transitionState.currentPage = currentDisplayPage
+    }
+    LaunchedEffect(isVerticalScrollMode, transitionState) {
+        transitionState.isVerticalScrollMode = isVerticalScrollMode
+    }
+    val effectiveDismiss: () -> Unit = {
+        coroutineScope.launch { transitionState.requestDismiss() }
+    }
+
+    PlatformBackHandler(onBack = effectiveDismiss)
 
     LaunchedEffect(Unit) {
         try {
@@ -270,10 +304,17 @@ private fun CouiFullScreenViewer(
         }
     }
 
+    CompositionLocalProvider(LocalFullScreenViewerZoomedState provides transitionState.isZoomedState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .drawBehind {
+                val alpha = transitionState.currentTransform().backgroundAlpha
+                if (alpha > 0.001f) {
+                    drawRect(Color.Black.copy(alpha = alpha))
+                }
+            }
+            .fullScreenViewerDismissContainer(transitionState)
             .focusRequester(focusRequester)
             .focusable()
             .onKeyEvent { keyEvent ->
@@ -284,7 +325,7 @@ private fun CouiFullScreenViewer(
                 } else {
                     when (keyEvent.key) {
                         Key.Escape -> {
-                            onDismiss()
+                            effectiveDismiss()
                             true
                         }
                         Key.DirectionLeft, Key.PageUp, Key.A -> handleViewerPageStep(
@@ -319,7 +360,9 @@ private fun CouiFullScreenViewer(
             initialPage = initialPage,
             previewUrl = previewUrl,
             onTap = { showControls = !showControls },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .fullScreenViewerContentTransform(transitionState),
         )
 
         val toggleScrollMode: () -> Unit = {
@@ -345,12 +388,15 @@ private fun CouiFullScreenViewer(
             isVerticalScrollMode = isVerticalScrollMode,
             illust = illust,
             coroutineScope = coroutineScope,
-            onDismiss = onDismiss,
+            onDismiss = effectiveDismiss,
             onToggleScrollMode = toggleScrollMode,
             onDownloadClick = { triggerDownload(currentDisplayPage) },
             onToast = onToast,
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .graphicsLayer { alpha = transitionState.currentTransform().controlsAlpha },
         )
+    }
     }
 }
 
@@ -557,6 +603,13 @@ private fun CouiZoomableImage(
     LaunchedEffect(isCurrentPage) {
         if (!isCurrentPage && zoomState.scale > 1f) {
             zoomState.reset()
+        }
+    }
+
+    val viewerZoomedState = LocalFullScreenViewerZoomedState.current
+    LaunchedEffect(zoomState.scale, isCurrentPage, viewerZoomedState) {
+        if (isCurrentPage) {
+            viewerZoomedState?.value = zoomState.scale > 1.03f
         }
     }
 

@@ -17,9 +17,6 @@ import com.perol.pixez.shared.navigation.DeepLinkParser
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.RootComponent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -51,6 +48,7 @@ class MainActivity : ComponentActivity() {
             componentContext = defaultComponentContext(),
             settingsRepository = dependencies.settingsRepository,
         )
+        attachIllustWindowInterceptor(this, rootComponent)
         setupBackPressHandler()
         applyDisplayMode()
         observeDisplayModeChanges()
@@ -127,37 +125,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun observeDisplayModeChanges() {
-        lifecycleScope.launch {
-            dependencies.settingsRepository.changeVersion
-                .map { dependencies.settingsRepository.displayMode }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect {
-                    applyDisplayMode()
-                }
-        }
+        observeWindowDisplayModeChanges(
+            activity = this,
+            settingsRepository = dependencies.settingsRepository,
+            displayModeSelector = { dependencies.settingsRepository.displayMode },
+            onApply = { applyDisplayMode() },
+        )
     }
 
     private fun applyDisplayMode() {
-        // minSdk 31 恒高于 M（23）与 R（30）：Activity.display 与 preferredRefreshRate 恒可用，
-        // 各档位（0 跟随系统 / 1 60Hz / 2 高刷）统一由 DisplayModePolicy 决策。
-        val candidates = display?.supportedModes.orEmpty().map { mode ->
-            DisplayModeCandidate(
-                modeId = mode.modeId,
-                refreshRate = mode.refreshRate,
-                physicalWidth = mode.physicalWidth,
-                physicalHeight = mode.physicalHeight,
-            )
-        }
-        val selection = DisplayModePolicy.select(
-            displayMode = dependencies.settingsRepository.displayMode,
-            modes = candidates,
-        )
-
-        val layoutParams = window.attributes
-        layoutParams.preferredDisplayModeId = selection.modeId
-        layoutParams.preferredRefreshRate = selection.preferredRefreshRate
-        window.attributes = layoutParams
+        applyWindowDisplayMode(this, dependencies.settingsRepository)
     }
 
     override fun onNewIntent(intent: Intent) {

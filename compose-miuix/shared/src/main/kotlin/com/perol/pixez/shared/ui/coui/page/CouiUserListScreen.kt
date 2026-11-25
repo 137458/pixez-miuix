@@ -52,6 +52,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
+import com.perol.pixez.shared.ui.navigation.animation.userTransitionBounds
 import com.perol.pixez.shared.ui.skin.CouiUserListKind
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
@@ -239,6 +240,7 @@ internal fun CouiUserPreviewRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .userTransitionBounds(userId = preview.user.id, cornerRadius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(scheme.card)
             .couiPressFeedback(pressInteraction)

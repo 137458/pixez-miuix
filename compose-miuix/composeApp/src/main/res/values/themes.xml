@@ -5,4 +5,6 @@
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="postSplashScreenTheme">@android:style/Theme.Material.NoActionBar</item>
     </style>
+
+    <style name="Theme.PixEz.IllustDetail" parent="@android:style/Theme.Material.NoActionBar" />
 </resources>

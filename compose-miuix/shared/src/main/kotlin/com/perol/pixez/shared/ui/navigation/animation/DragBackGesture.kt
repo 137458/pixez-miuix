@@ -26,6 +26,13 @@ internal const val DRAG_BACK_COMMIT_VELOCITY_PX_PER_SEC = 2000f
 /** 左缘起手感应区宽度。 */
 internal val DRAG_BACK_EDGE_ZONE: Dp = 24.dp
 
+/** 模态页顶部下滑解散的起手感应区高度（覆盖状态栏与顶栏抓手区域）。 */
+internal val MODAL_DISMISS_TOP_ZONE: Dp = 112.dp
+
+/** 模态页下拉松手确认返回的最小进度（占屏高比例）与最小速度（px/s）。 */
+internal const val MODAL_DISMISS_COMMIT_PROGRESS = 0.22f
+internal const val MODAL_DISMISS_COMMIT_VELOCITY_PX_PER_SEC = 1400f
+
 /**
  * 松手结果判定：进度过阈值或速度过阈值即确认返回，否则回弹。
  */
@@ -33,6 +40,14 @@ internal fun resolveDragBackOutcome(progress: Float, velocityPxPerSec: Float): D
     when {
         progress >= DRAG_BACK_COMMIT_PROGRESS -> DragBackOutcome.COMMIT
         velocityPxPerSec >= DRAG_BACK_COMMIT_VELOCITY_PX_PER_SEC -> DragBackOutcome.COMMIT
+        else -> DragBackOutcome.CANCEL
+    }
+
+/** 模态页顶部下拉解散的松手判定：位移达屏高 22% 或向下甩动达 1400 px/s 即关闭。 */
+internal fun resolveModalDismissOutcome(progress: Float, velocityYPxPerSec: Float): DragBackOutcome =
+    when {
+        progress >= MODAL_DISMISS_COMMIT_PROGRESS -> DragBackOutcome.COMMIT
+        velocityYPxPerSec >= MODAL_DISMISS_COMMIT_VELOCITY_PX_PER_SEC -> DragBackOutcome.COMMIT
         else -> DragBackOutcome.CANCEL
     }
 
@@ -56,8 +71,8 @@ internal fun Modifier.miuixDragBackGesture(
     isEligible: () -> Boolean,
     onStart: (BackEvent) -> Unit,
     onProgress: (BackEvent) -> Unit,
-    onCommit: () -> Unit,
-    onCancel: () -> Unit,
+    onCommit: (velocityFractionPerSec: Float) -> Unit,
+    onCancel: (velocityFractionPerSec: Float) -> Unit,
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         // 全程 Initial pass：父层先于子层（pager/列表）看到事件。激活后消费事件即可
@@ -77,13 +92,16 @@ internal fun Modifier.miuixDragBackGesture(
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             if (!change.pressed) {
                 if (activated) {
+                    val width = size.width.toFloat().takeIf { it > 0f } ?: 1f
+                    val velocityX = tracker.calculateVelocity().x
                     val outcome = resolveDragBackOutcome(
                         progress = draggedProgress(down.position, change.position, this),
-                        velocityPxPerSec = tracker.calculateVelocity().x,
+                        velocityPxPerSec = velocityX,
                     )
+                    val velocityFraction = (velocityX / width).coerceAtLeast(0f)
                     when (outcome) {
-                        DragBackOutcome.COMMIT -> onCommit()
-                        DragBackOutcome.CANCEL -> onCancel()
+                        DragBackOutcome.COMMIT -> onCommit(velocityFraction)
+                        DragBackOutcome.CANCEL -> onCancel(-velocityFraction)
                     }
                 }
                 break
@@ -111,6 +129,71 @@ internal fun Modifier.miuixDragBackGesture(
     }
 }
 
+/**
+ * 模态页顶部下滑解散手势：从顶栏及状态栏抓手区域 [MODAL_DISMISS_TOP_ZONE] 内向下滑动，
+ * 以与系统预测性返回共享的状态机驱动模态页 1:1 跟手下滑与释放速度交接。
+ */
+@ExperimentalDecomposeApi
+internal fun Modifier.miuixModalSwipeDismissGesture(
+    isEligible: () -> Boolean,
+    onStart: (BackEvent) -> Unit,
+    onProgress: (BackEvent) -> Unit,
+    onCommit: (velocityFractionPerSec: Float) -> Unit,
+    onCancel: (velocityFractionPerSec: Float) -> Unit,
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (!isEligible()) return@awaitEachGesture
+        val topZonePx = MODAL_DISMISS_TOP_ZONE.toPx()
+        if (down.position.y > topZonePx) return@awaitEachGesture
+
+        val tracker = VelocityTracker()
+        tracker.addPosition(down.uptimeMillis, down.position)
+        var activated = false
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (!change.pressed) {
+                if (activated) {
+                    val height = size.height.toFloat().takeIf { it > 0f } ?: 1f
+                    val velocityY = tracker.calculateVelocity().y
+                    val outcome = resolveModalDismissOutcome(
+                        progress = modalDraggedProgress(down.position, change.position, this),
+                        velocityYPxPerSec = velocityY,
+                    )
+                    val velocityFraction = (velocityY / height).coerceAtLeast(0f)
+                    when (outcome) {
+                        DragBackOutcome.COMMIT -> onCommit(velocityFraction)
+                        DragBackOutcome.CANCEL -> onCancel(-velocityFraction)
+                    }
+                }
+                break
+            }
+            if (!activated) {
+                val dx = abs(change.position.x - down.position.x)
+                val dy = change.position.y - down.position.y
+                if (dx > abs(dy) && dx > viewConfiguration.touchSlop) {
+                    return@awaitEachGesture
+                }
+                if (dy <= viewConfiguration.touchSlop) {
+                    tracker.addPosition(change.uptimeMillis, change.position)
+                    continue
+                }
+                activated = true
+                onStart(BackEvent(progress = 0f, swipeEdge = BackEvent.SwipeEdge.LEFT))
+            }
+            tracker.addPosition(change.uptimeMillis, change.position)
+            onProgress(
+                BackEvent(
+                    progress = modalDraggedProgress(down.position, change.position, this),
+                    swipeEdge = BackEvent.SwipeEdge.LEFT,
+                ),
+            )
+            event.changes.forEach { it.consume() }
+        }
+    }
+}
+
 private fun isVerticalIntent(downPosition: Offset, currentPosition: Offset, touchSlop: Float): Boolean {
     val dx = abs(currentPosition.x - downPosition.x)
     val dy = abs(currentPosition.y - downPosition.y)
@@ -120,4 +203,9 @@ private fun isVerticalIntent(downPosition: Offset, currentPosition: Offset, touc
 private fun draggedProgress(downPosition: Offset, currentPosition: Offset, scope: AwaitPointerEventScope): Float {
     val width = scope.size.width.toFloat().takeIf { it > 0f } ?: 1f
     return ((currentPosition.x - downPosition.x) / width).coerceIn(0f, 1f)
+}
+
+private fun modalDraggedProgress(downPosition: Offset, currentPosition: Offset, scope: AwaitPointerEventScope): Float {
+    val height = scope.size.height.toFloat().takeIf { it > 0f } ?: 1f
+    return ((currentPosition.y - downPosition.y) / height).coerceIn(0f, 1f)
 }

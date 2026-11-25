@@ -60,8 +60,9 @@ import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.material.EdgeStroke
+import top.yukonga.miuix.kmp.material.drawEdgeStroke
 
 /**
  * Layer 1：底层外壳。
@@ -79,7 +80,7 @@ internal fun BottomBarBaseLayer(
     containerColor: Color,
     backdrop: Backdrop?,
     dampedDragAnimation: DampedDragAnimation,
-    baseHighlight: State<Highlight>,
+    baseHighlight: State<EdgeStroke>,
     interactiveHighlight: InteractiveHighlight?,
     onSizeChanged: (IntSize) -> Unit,
     content: @Composable RowScope.() -> Unit,
@@ -117,7 +118,13 @@ internal fun BottomBarBaseLayer(
                                     refractionAmount = 24.dp.toPx(),
                                 )
                             },
-                            highlight = { baseHighlight.value.copy(alpha = 0.75f) },
+                            onDrawFront = {
+                                drawEdgeStroke(
+                                    shape = pillShape,
+                                    stroke = baseHighlight.value,
+                                    alpha = 0.75f,
+                                )
+                            },
                             layerBlock = {
                                 val width = size.width.coerceAtLeast(1f)
                                 val s = lerp(1f, 1f + 16.dp.toPx() / width, dampedDragAnimation.pressProgress)
@@ -220,7 +227,7 @@ internal fun BottomBarIndicatorLayer(
     gesturePosition: State<Float?>,
     panelOffsetState: State<Float>,
     interactiveHighlight: InteractiveHighlight?,
-    pillHighlight: State<Highlight>,
+    pillHighlight: State<EdgeStroke>,
     pillShape: Shape,
     colors: FloatingBottomBarColors,
     isDark: Boolean,
@@ -251,7 +258,13 @@ internal fun BottomBarIndicatorLayer(
                                 chromaticAberration = 0.5f,
                             )
                         },
-                        highlight = { pillHighlight.value.copy(alpha = dampedDragAnimation.pressProgress) },
+                        onDrawFront = {
+                            drawEdgeStroke(
+                                shape = pillShape,
+                                stroke = pillHighlight.value,
+                                alpha = dampedDragAnimation.pressProgress,
+                            )
+                        },
                         layerBlock = {
                             scaleX = dampedDragAnimation.scaleX
                             scaleY = dampedDragAnimation.scaleY

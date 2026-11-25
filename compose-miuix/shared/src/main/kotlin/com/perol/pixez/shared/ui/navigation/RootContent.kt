@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -39,9 +41,16 @@ import com.perol.pixez.shared.ui.theme.lightAppExtraColors
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
+import androidx.compose.ui.graphics.luminance
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
+import com.perol.pixez.shared.ui.navigation.animation.miuixModalPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixSeekableStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
+import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemCardBackgroundColor
+import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemCardTransitionCapable
+import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
+import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
+import com.perol.pixez.shared.ui.navigation.animation.system.findComponentActivity
 
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -88,6 +97,7 @@ fun RootContent(
     component: RootComponent,
     registry: RepositoryRegistry,
     modifier: Modifier = Modifier,
+    systemTransitionSessionToken: String? = null,
 ) {
     val settingsRepository = registry.settingsRepository
     // 主题状态：每次重组直接从 SettingsRepository 读取当前值，
@@ -191,6 +201,12 @@ fun RootContent(
         // 仓储通道统一由 RepositoryRegistry 展开（nav3/DN14）：组合根不再逐条 provides 仓储 Local，
         // 新增仓储只需改 AppDependencies 字段 / Registry 字段 / ui.LocalRepositories.kt 的 provide 一行。
         ProvideRepositories(registry) {
+            val hostContext = LocalContext.current
+            val hostConfiguration = LocalConfiguration.current
+            val hostActivity = remember(hostContext) { hostContext.findComponentActivity() }
+            val systemCardTransitionCapable = remember(hostActivity, hostConfiguration) {
+                SystemIllustCardTransition.isDeviceSupported(hostActivity)
+            }
             CompositionLocalProvider(
                 LocalUiSkin provides uiSkin,
                 LocalBottomBarVisibility provides bottomBarVisible,
@@ -200,6 +216,9 @@ fun RootContent(
                 LocalSharedBoundsRegistry provides sharedBounds,
                 LocalAppExtraColors provides appExtraColors,
                 LocalTabGesturePosition provides remember { mutableStateOf<Float?>(null) },
+                LocalSystemCardTransitionCapable provides systemCardTransitionCapable,
+                LocalSystemCardBackgroundColor provides MiuixTheme.colorScheme.surface,
+                LocalSystemTransitionSessionToken provides systemTransitionSessionToken,
             ) {
                 val skinPages = LocalSkinPages.current
                 val updateInfo = appReleaseInfo
@@ -296,32 +315,33 @@ fun RootContent(
                     val density = LocalDensity.current
                     val screenCornerRadius = rememberScreenCornerRadius()
                     val containerWidthPx = with(density) { maxWidth.toPx() }
-                    // 页面容器几何：矩形由布局回填，宽度与圆角由本层测量得出。
+                    val containerHeightPx = with(density) { maxHeight.toPx() }
+                    val isLightBackground = MiuixTheme.colorScheme.surface.luminance() > 0.5f
+                    // 页面容器几何：矩形由布局回填，宽高与圆角由本层测量得出。
                     var containerGeometry by remember {
-                        mutableStateOf(PageContainerGeometry(widthPx = containerWidthPx, cornerRadius = screenCornerRadius))
+                        mutableStateOf(
+                            PageContainerGeometry(
+                                widthPx = containerWidthPx,
+                                heightPx = containerHeightPx,
+                                cornerRadius = screenCornerRadius,
+                            ),
+                        )
                     }
-                    // 宽度与圆角随环境变化时同步到几何快照；矩形保持布局回填的最新值。
-                    LaunchedEffect(containerWidthPx, screenCornerRadius) {
+                    // 宽高与圆角随环境变化时同步到几何快照；矩形保持布局回填的最新值。
+                    LaunchedEffect(containerWidthPx, containerHeightPx, screenCornerRadius) {
                         containerGeometry = containerGeometry.copy(
                             widthPx = containerWidthPx,
+                            heightPx = containerHeightPx,
                             cornerRadius = screenCornerRadius,
                         )
                     }
 
-                    // 转场动画器按容器几何记忆化：容器尺寸变化（旋转/分栏切换）时才重建，
-                    // 避免每次重组都新建 StackAnimation 而击穿 Decompose 内部的按页动画器缓存。
-                    // 几何以即时读取源传入：Decompose 会按 child 缓存动画器实例，
-                    // 快照捕获会让冷启动首帧未回填的 Rect.Zero 被过期缓存固化。
-                    // 各尺寸设备统一卡片展开/收回转场（双向视口裁切支持任意横纵比落点），
-                    // 两层按同一锚点解析路径，无锚点时统一回退 Miuix 默认侧滑。
-                    // 底层页视差按皮肤语义决定：MIUIX 是「撑开」（底层左移 25%），ColorOS 是「覆盖」
-                    // （底层静止、只叠暗色遮罩）。COUI 皮肤下底层页挂着窗口级 Backdrop 采样源与瀑布流
-                    // 大图，整页位移会让每帧把整页重新合成，稳态帧时长 30ms -> 20ms 的差距即来自此。
-                    val stackAnimation = remember(sharedBounds, uiSkin) {
+                    val stackAnimation = remember(sharedBounds, uiSkin, isLightBackground) {
                         miuixSeekableStackAnimation<Config, Any>(
                             registry = sharedBounds,
                             containerGeometry = { containerGeometry },
                             coverParallax = uiSkin.coverParallax,
+                            isLightBackground = isLightBackground,
                         )
                     }
 
@@ -343,19 +363,33 @@ fun RootContent(
                                 backHandler = component.backHandler,
                                 fallbackAnimation = stackAnimation,
                                 selector = { initialBackEvent, exitChild, _ ->
-                                    // 预测性返回手势来源页直接取自 exitChild 的 configuration，
-                                    // 覆盖插画详情页与小说阅读器两种卡片展开目标；无锚点则回退侧滑。
-                                    miuixCardExpandPredictiveBackAnimatable(
-                                        initialBackEvent = initialBackEvent,
-                                        registry = sharedBounds,
-                                        target = exitChild.configuration.toTransitionTarget(),
-                                        containerGeometry = { containerGeometry },
-                                        coverParallax = uiSkin.coverParallax,
-                                    )
+                                    if ((exitChild.configuration as? Config)?.isModalRoute() == true) {
+                                        miuixModalPredictiveBackAnimatable(
+                                            initialBackEvent = initialBackEvent,
+                                            containerGeometry = { containerGeometry },
+                                            isLightBackground = isLightBackground,
+                                        )
+                                    } else {
+                                        // 预测性返回手势来源页直接取自 exitChild 的 configuration，
+                                        // 覆盖插画详情页与小说阅读器两种卡片展开目标；无锚点则回退侧滑。
+                                        miuixCardExpandPredictiveBackAnimatable(
+                                            initialBackEvent = initialBackEvent,
+                                            registry = sharedBounds,
+                                            target = exitChild.configuration.toTransitionTarget(),
+                                            containerGeometry = { containerGeometry },
+                                            coverParallax = uiSkin.coverParallax,
+                                            isLightBackground = isLightBackground,
+                                        )
+                                    }
                                 },
                                 onBack = { component.onBack() },
-                                // 应用内拖拽线性关页：插画详情页与小说阅读器均启用（平台开关见 rememberDragBackGestureEnabled）。
-                                dragBackEligible = { it is IllustDetailComponent || it is Config.NovelViewer },
+                                // 应用内拖拽线性关页：卡片展开目标页均启用（平台开关见 rememberDragBackGestureEnabled）。
+                                dragBackEligible = {
+                                    it is IllustDetailComponent ||
+                                        it is Config.NovelViewer ||
+                                        it is Config.Comments
+                                },
+                                modalDismissEligible = { (it as? Config)?.isModalRoute() == true },
                             ),
                         ) { child ->
                             RootChildContent(

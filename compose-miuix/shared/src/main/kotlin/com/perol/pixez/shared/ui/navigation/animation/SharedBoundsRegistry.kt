@@ -10,10 +10,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 
-/** 转场锚点类型：区分插画作品与小说作品，防止两者共用同一数字 ID 时互相覆盖。 */
+/** 转场锚点类型：区分不同业务实体，防止共用同一数字 ID 时互相覆盖。 */
 enum class TransitionTargetKind {
     Illust,
     Novel,
+    Spotlight,
+    User,
+    Comments,
+    NovelComments,
 }
 
 /** 一次卡片展开转场的唯一目标标识。 */

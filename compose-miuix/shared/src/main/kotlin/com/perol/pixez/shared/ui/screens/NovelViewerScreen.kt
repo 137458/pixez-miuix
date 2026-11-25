@@ -64,6 +64,8 @@ import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
+import com.perol.pixez.shared.ui.navigation.animation.commentsTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.theme.LocalAppExtraColors
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.NovelContentParser
@@ -295,7 +297,14 @@ fun NovelViewerScreen(
                     },
                     actions = {
                         // 评论：跳转小说评论页。
-                        IconButton(onClick = { onCommentsClick(novelId) }) {
+                        IconButton(
+                            onClick = { onCommentsClick(novelId) },
+                            modifier = Modifier.commentsTransitionBounds(
+                                targetId = novelId,
+                                isNovel = true,
+                                cornerRadius = 20.dp,
+                            ),
+                        ) {
                             Icon(
                                 imageVector = MiuixIcons.Messages,
                                 contentDescription = strings.commentsTitle,
@@ -671,6 +680,7 @@ private fun NovelViewerItemContent(
                 url = url,
                 placeholderText = item.key,
                 contentDescription = item.key,
+                illustId = item.illustId,
                 onClick = { onIllustClick(item.illustId) },
             )
         }
@@ -697,6 +707,7 @@ private fun NovelEmbeddedImage(
     url: String?,
     placeholderText: String,
     contentDescription: String,
+    illustId: Long? = null,
     onClick: (() -> Unit)?,
 ) {
     Box(
@@ -704,6 +715,10 @@ private fun NovelEmbeddedImage(
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 12.dp)
             .height(AppConstants.Novel.EMBEDDED_IMAGE_HEIGHT_DP.dp)
+            .illustTransitionBounds(
+                illustId = illustId?.takeIf { it > 0L },
+                cornerRadius = 12.dp,
+            )
             .clip(RoundedCornerShape(12.dp))
             .background(MiuixTheme.colorScheme.surfaceContainerHighest)
             .then(

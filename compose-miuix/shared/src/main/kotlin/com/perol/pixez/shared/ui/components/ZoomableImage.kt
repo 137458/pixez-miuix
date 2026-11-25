@@ -102,6 +102,13 @@ internal fun ZoomableImage(
         }
     }
 
+    val viewerZoomedState = LocalFullScreenViewerZoomedState.current
+    LaunchedEffect(zoomState.scale, isCurrentPage, viewerZoomedState) {
+        if (isCurrentPage) {
+            viewerZoomedState?.value = zoomState.scale > 1.03f
+        }
+    }
+
     LaunchedEffect(isLoading, model) {
         if (isLoading) {
             delay(LOADING_INDICATOR_DELAY_MILLIS)

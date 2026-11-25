@@ -38,6 +38,8 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.SpotlightGridColumnPolicy
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.navigation.animation.spotlightTransitionBounds
+import com.perol.pixez.shared.ui.navigation.transitionTargetId
 import com.perol.pixez.shared.ui.components.resolveGridColumns
 import com.perol.pixez.shared.ui.components.toStaggeredGridCells
 import com.perol.pixez.shared.ui.i18n.AppStrings
@@ -233,6 +235,10 @@ internal fun SpotlightArticleCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .spotlightTransitionBounds(
+                articleId = article.transitionTargetId(),
+                cornerRadius = 16.dp,
+            )
             .clickable(onClick = onClick),
     ) {
         Column(

@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import com.perol.pixez.shared.data.model.UserPreview
 import com.perol.pixez.shared.data.model.isR18
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.navigation.animation.userTransitionBounds
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -47,6 +48,7 @@ internal fun UserPreviewItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .userTransitionBounds(userId = preview.user.id, cornerRadius = 16.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

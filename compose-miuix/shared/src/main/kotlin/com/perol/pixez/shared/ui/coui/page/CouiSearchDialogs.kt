@@ -9,16 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,10 +31,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.itos.coui.dialog.CouiDialogAction
-import com.itos.coui.dialog.CouiDialogActionStyle
-import com.itos.coui.dialog.Dialog
 import com.itos.coui.scroll.rememberCouiOverscrollEffect
+import com.itos.coui.sheet.BottomSheet
+import com.itos.coui.sheet.CouiSheetButton
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -46,25 +46,22 @@ import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
-import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
-import com.perol.pixez.shared.ui.coui.component.couiDialogPlacement
-import com.perol.pixez.shared.ui.coui.component.couiPrimaryActionColors
 import com.perol.pixez.shared.ui.coui.component.CouiTextInput
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.screens.SearchFilterState
 
 /**
- * COUI 搜索筛选弹窗：匹配目标、H 不显示、AI 作品、收藏门槛、动图/比例过滤与发布时间范围。
+ * COUI 搜索筛选底部面板：匹配目标、H 不显示、AI 作品、收藏门槛、动图/比例过滤与发布时间范围。
  *
- * 采用草稿状态，仅在确认时统一提交；弹窗为官方 `Dialog`，手机端贴底、宽屏居中，
- * API 33+ 且窗口可采样背景时启用玻璃材质。
+ * 使用 COUI 0.0.1-alpha13+ 原生 [BottomSheet]，保持常驻组合由 [visible] 驱动显隐与退场动画；
+ * 采用草稿状态，仅在确认时统一提交；API 33+ 且窗口可采样背景时自动启用模糊材质染色。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun CouiSearchFilterDialog(
+internal fun CouiSearchFilterSheet(
+    visible: MutableState<Boolean>,
     filterState: SearchFilterState,
-    onDismissRequest: () -> Unit,
     onApply: (SearchFilterState) -> Unit,
 ) {
     val strings = LocalStrings.current
@@ -92,16 +89,25 @@ internal fun CouiSearchFilterDialog(
         strings.searchRatioSquare to 3,
     )
 
-    var draftState by remember(filterState) { mutableStateOf(filterState) }
+    var draftState by remember(visible.value, filterState) { mutableStateOf(filterState) }
 
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        visible = true,
-        material = couiDialogMaterialOrNull(),
-        title = strings.searchFilter,
-        placement = couiDialogPlacement(),
-        confirmAction = CouiDialogAction(
-            text = strings.confirm,
+    BottomSheet(
+        visible = visible,
+        nestedScrollEnabled = true,
+        titleContent = {
+            Text(
+                text = strings.searchFilter,
+                kind = CouiTextKind.SheetTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingButton = CouiSheetButton(
+            onClick = { visible.value = false },
+            label = strings.cancel,
+            enabled = visible.value,
+        ),
+        trailingButton = CouiSheetButton(
             onClick = {
                 onApply(
                     draftState.copy(
@@ -109,18 +115,16 @@ internal fun CouiSearchFilterDialog(
                         endDate = draftState.endDate.trim(),
                     ),
                 )
-                onDismissRequest()
+                visible.value = false
             },
-            style = CouiDialogActionStyle.Primary,
-            colors = couiPrimaryActionColors(),
+            label = strings.confirm,
+            enabled = visible.value,
         ),
-        dismissAction = CouiDialogAction(text = strings.cancel, onClick = onDismissRequest),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 520.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CouiFilterSection(title = strings.searchTargetPartialTag) {
@@ -244,108 +248,101 @@ internal fun CouiSearchFilterDialog(
 }
 
 /**
- * COUI SauceNAO 结果弹窗：上传中 / 失败重试 / 空结果 / 结果列表四态。
+ * COUI SauceNAO 结果底部面板：上传中 / 失败重试 / 空结果 / 结果列表四态。
  *
- * 与 MIUIX 抽屉同一套状态与回调，渲染改为官方 `Dialog` 与 COUI 卡片行。
+ * 与 MIUIX 抽屉同一套状态与回调，使用 COUI 原生 [BottomSheet]（含内嵌 `LazyColumn` 时关闭内置滚动并开启嵌套拖拽关闭）。
  */
 @Composable
-internal fun CouiSauceNaoDialog(
+internal fun CouiSauceNaoSheet(
+    visible: MutableState<Boolean>,
     isLoading: Boolean,
     error: String?,
     results: List<SauceNaoResult>,
-    onDismissRequest: () -> Unit,
     onRetry: () -> Unit,
     onPickAnother: () -> Unit,
     onIllustClick: (Long) -> Unit,
 ) {
     val strings = LocalStrings.current
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        visible = true,
-        material = couiDialogMaterialOrNull(),
-        title = strings.menuSauceNao,
-        message = error,
-        placement = couiDialogPlacement(),
-        confirmAction = CouiDialogAction(
-            text = strings.cancel,
-            onClick = onDismissRequest,
+    BottomSheet(
+        visible = visible,
+        scrollableContent = false,
+        nestedScrollEnabled = true,
+        titleContent = {
+            Text(
+                text = strings.menuSauceNao,
+                kind = CouiTextKind.SheetTitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingButton = CouiSheetButton(
+            onClick = { visible.value = false },
+            label = strings.cancel,
+            enabled = visible.value,
+        ),
+        trailingButton = CouiSheetButton(
+            onClick = onPickAnother,
+            label = strings.sauceNaoPickImage,
+            enabled = visible.value && !isLoading,
         ),
     ) {
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 180.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 180.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = strings.sauceNaoUploading,
+                            kind = CouiTextKind.ItemSummary,
+                            color = CouiTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                error != null -> {
                     Text(
-                        text = strings.sauceNaoUploading,
+                        text = error,
                         kind = CouiTextKind.ItemSummary,
                         color = CouiTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            error != null -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CouiTextButton(
-                        text = strings.sauceNaoPickImage,
-                        onClick = onPickAnother,
-                        filled = false,
                     )
                     CouiTextButton(text = strings.retry, onClick = onRetry)
                 }
-            }
 
-            results.isEmpty() -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = strings.searchEmptyIllust,
-                        kind = CouiTextKind.ItemSummary,
-                        color = CouiTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CouiTextButton(
-                        text = strings.sauceNaoPickImage,
-                        onClick = onPickAnother,
-                        filled = false,
-                    )
-                }
-            }
-
-            else -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                results.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 140.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "${strings.menuSauceNao} (${results.size})",
-                            kind = CouiTextKind.GroupFooter,
+                            text = strings.searchEmptyIllust,
+                            kind = CouiTextKind.ItemSummary,
                             color = CouiTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
-                        CouiTextButton(
-                            text = strings.sauceNaoPickImage,
-                            onClick = onPickAnother,
-                            filled = false,
                         )
                     }
+                }
+
+                else -> {
+                    Text(
+                        text = "${strings.menuSauceNao} (${results.size})",
+                        kind = CouiTextKind.GroupFooter,
+                        color = CouiTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 400.dp),
+                            .heightIn(max = 420.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         overscrollEffect = rememberCouiOverscrollEffect(),
                     ) {
@@ -353,12 +350,13 @@ internal fun CouiSauceNaoDialog(
                             CouiSauceNaoResultRow(
                                 item = item,
                                 onClick = {
-                                    onDismissRequest()
+                                    visible.value = false
                                     onIllustClick(item.illustId)
                                 },
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
             }
         }

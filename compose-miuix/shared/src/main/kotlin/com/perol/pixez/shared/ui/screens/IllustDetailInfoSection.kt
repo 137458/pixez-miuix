@@ -30,6 +30,7 @@ import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.i18n.AppStrings
+import com.perol.pixez.shared.ui.navigation.animation.commentsTransitionBounds
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -342,24 +343,31 @@ internal fun IllustDetailInteractionCard(
     onRelatedIllustsClick: (Long) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentWidth(Alignment.CenterHorizontally)
-            .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
-            .padding(horizontal = 12.dp),
-    ) {
-        BasicComponent(
-            title = strings.commentsTitle,
-            summary = "${illust.totalComments ?: 0}",
-            onClick = { onCommentsClick(illust.id) },
-        )
-        BasicComponent(
-            title = strings.relatedIllusts,
-            summary = "",
-            onClick = { onRelatedIllustsClick(illust.id) },
-        )
-    }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
+                .padding(horizontal = 12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .commentsTransitionBounds(targetId = illust.id, cornerRadius = 16.dp)
+                    .background(MiuixTheme.colorScheme.surfaceContainer),
+            ) {
+                BasicComponent(
+                    title = strings.commentsTitle,
+                    summary = "${illust.totalComments ?: 0}",
+                    onClick = { onCommentsClick(illust.id) },
+                )
+            }
+            BasicComponent(
+                title = strings.relatedIllusts,
+                summary = "",
+                onClick = { onRelatedIllustsClick(illust.id) },
+            )
+        }
     Spacer(modifier = Modifier.height(32.dp))
 }
 

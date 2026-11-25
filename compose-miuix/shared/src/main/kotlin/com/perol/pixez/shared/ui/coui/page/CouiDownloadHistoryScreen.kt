@@ -53,6 +53,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiSecondaryScaffold
 import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.launch
 import com.perol.pixez.shared.ui.coui.icon.CouiIcons
@@ -210,6 +211,10 @@ private fun CouiDownloadHistoryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .illustTransitionBounds(
+                illustId = task.illustId.takeIf { it > 0L },
+                cornerRadius = 18.dp,
+            )
             .clip(RoundedCornerShape(18.dp))
             .background(scheme.card)
             .couiPressFeedback(pressInteraction)

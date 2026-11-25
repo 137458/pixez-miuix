@@ -14,11 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import com.itos.coui.layout.CouiPageDefaults
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
+import com.perol.pixez.shared.ui.navigation.animation.spotlightTransitionBounds
+import com.perol.pixez.shared.ui.navigation.transitionTargetId
 
 /** 特辑卡片：16:9 封面加标题副标题，仅特辑列表使用。 */
 
@@ -38,6 +41,10 @@ internal fun CouiSpotlightCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .spotlightTransitionBounds(
+                articleId = article.transitionTargetId(),
+                cornerRadius = 18.dp,
+            )
             .clip(CouiPageDefaults.shape)
             .background(pageColors.card)
             .couiPressFeedback(pressInteraction)

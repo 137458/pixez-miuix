@@ -5,6 +5,7 @@ import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTargetKind
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** 序列化判别符共用前缀：平移前 [Config] 嵌套于 RootComponent 时的包级 FQN 前缀。 */
 private const val LEGACY_CONFIG_SERIAL_PREFIX = "com.perol.pixez.shared.ui.navigation.RootComponent.Config."
@@ -196,9 +197,32 @@ sealed class Config {
     data class NovelViewer(val novelId: Long) : Config()
 }
 
-/** 把路由配置映射为卡片展开转场目标（插画详情页或小说阅读器；其余页面返回 null）。 */
+/** 将特辑文章映射为稳定的卡片转场数字标识。 */
+internal fun SpotlightArticle.transitionTargetId(): Long =
+    if (id > 0L) id else (articleUrl.hashCode().toLong() and 0x7FFF_FFFFL).coerceAtLeast(1L)
+
+/** 把路由配置映射为卡片展开转场目标；其余页面返回 null。 */
 internal fun Config.toTransitionTarget(): TransitionTarget? = when (this) {
     is Config.IllustDetail -> TransitionTarget(TransitionTargetKind.Illust, illustId)
     is Config.NovelViewer -> TransitionTarget(TransitionTargetKind.Novel, novelId)
+    is Config.SpotlightDetail -> TransitionTarget(TransitionTargetKind.Spotlight, article.transitionTargetId())
+    is Config.UserDetail -> TransitionTarget(TransitionTargetKind.User, userId)
+    is Config.Comments -> TransitionTarget(
+        if (isNovel) TransitionTargetKind.NovelComments else TransitionTargetKind.Comments,
+        illustId,
+    )
     else -> null
 }
+
+/** 是否采用自底向上模态弹出及下拉跟手关闭转场。 */
+internal fun Config.isModalRoute(): Boolean = false
+
+private val windowConfigJson = Json { ignoreUnknownKeys = true }
+
+/** 将 [Config] 编码为独立窗口 Intent 可传输的字符串。 */
+fun encodeWindowConfig(config: Config): String =
+    windowConfigJson.encodeToString(Config.serializer(), config)
+
+/** 从独立窗口 Intent 字符串解码 [Config]，解析失败返回 null。 */
+fun decodeWindowConfig(raw: String?): Config? =
+    raw?.let { runCatching { windowConfigJson.decodeFromString(Config.serializer(), it) }.getOrNull() }

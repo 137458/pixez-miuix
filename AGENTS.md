@@ -5,7 +5,7 @@ PixEz（Pixiv 第三方客户端）Android 原生 Jetpack Compose + MIUIX / COUI
 ## 工具链与平台矩阵
 
 - **基线**：JDK 17、Gradle 8.14.4、Kotlin 2.4.10、AGP 8.13.0
-- **应用栈**：Android Gradle 模块（`com.android.library` + `com.android.application`）、Jetpack Compose（`compose-bom-alpha 2026.08.01`）、MIUIX 0.9.4、COUI 0.0.1-alpha12、Coil 3.6.3、SQLDelight 2.0.2
+- **应用栈**：Android Gradle 模块（`com.android.library` + `com.android.application`）、Jetpack Compose（`compose-bom-alpha 2026.08.01`）、MIUIX 0.9.4、COUI 0.0.1-alpha17、Coil 3.6.3、SQLDelight 2.0.2
 - **平台支持**：仅 Android（API 31+，COUI AAR 清单固定 `minSdkVersion=31`）；已移除 Desktop 与 Flutter 归档
 - **SDK 与版本**：`compileSdk 36`、`targetSdk 35`；`versionCode` 为 `10010101`，`versionName` 为 `0.9.111.1-miuix`，与 `AppInfo.kt` 的 `VERSION_NAME` 由 `AppInfoVersionParityTest` 约束一致
 - **CI 状态**：无远程 CI，所有验证与打包均在本地执行

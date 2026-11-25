@@ -17,30 +17,31 @@ import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.BloomStroke
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
-import top.yukonga.miuix.kmp.blur.highlight.LightPosition
-import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.material.EdgeLightSource
+import top.yukonga.miuix.kmp.material.EdgePeak
+import top.yukonga.miuix.kmp.material.EdgeStroke
+import top.yukonga.miuix.kmp.material.drawEdgeStroke
 
-private val LiquidGlassHighlightLight = Highlight(
+private val LiquidGlassHighlightLight = EdgeStroke(
     width = 1.dp,
-    alpha = 0.85f,
-    style = BloomStroke(
-        color = Color.White.copy(alpha = 0.08f),
-        innerBlurRadius = 2.8.dp,
-        primaryLight = LightSource(
-            position = LightPosition(0.5f, -0.2f, -0.15f),
-            color = Color.White,
-            intensity = 0.55f,
-        ),
-        secondaryLight = LightSource(
-            position = LightPosition(0.5f, 0.85f, -0.5f),
-            color = Color.White,
-            intensity = 0.3f,
-        ),
-        dualPeak = true,
+    bevel = 2.8.dp,
+    color = Color.White.copy(alpha = 0.08f),
+    primary = EdgeLightSource(
+        x = 0.5f,
+        y = -0.2f,
+        z = -0.15f,
+        color = Color.White,
+        intensity = 0.55f,
     ),
+    secondary = EdgeLightSource(
+        x = 0.5f,
+        y = 0.85f,
+        z = -0.5f,
+        color = Color.White,
+        intensity = 0.3f,
+    ),
+    peak = EdgePeak.Axial,
 )
 
 /**
@@ -64,7 +65,7 @@ fun Modifier.backdropBlur(
         effects = {
             blur(blurRadius.toPx(), blurRadius.toPx())
         },
-        highlight = null,
+        onDrawFront = null,
         onDrawSurface = {
             val color = if (tintColor != Color.Unspecified) tintColor else Color.White
             drawRect(color.copy(alpha = tintAlpha))
@@ -100,8 +101,12 @@ fun Modifier.liquidGlass(
             blur(blurRadius.toPx(), blurRadius.toPx())
             lens(16.dp.toPx(), 20.dp.toPx())
         },
-        highlight = {
-            LiquidGlassHighlightLight
+        onDrawFront = {
+            drawEdgeStroke(
+                shape = shape,
+                stroke = LiquidGlassHighlightLight,
+                alpha = 0.85f,
+            )
         },
         onDrawSurface = {
             val color = if (tintColor != Color.Unspecified) tintColor else Color.White

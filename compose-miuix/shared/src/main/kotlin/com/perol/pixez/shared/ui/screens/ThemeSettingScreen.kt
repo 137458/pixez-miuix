@@ -122,6 +122,7 @@ fun ThemeSettingScreen(
             "Monochrome",
             "Fidelity",
             "Content",
+            "CMF",
         )
     }
 
@@ -270,10 +271,12 @@ fun ThemeSettingScreen(
                             selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
                             onSelectedIndexChange = { setPaletteStyle(it) },
                         )
+                        val supportsSpec2025 = paletteStyle in 0..3
                         SwitchPreference(
                             title = strings.themeSpec2025,
-                            summary = if (useSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
+                            summary = if (useSpec2025 && supportsSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
                             checked = useSpec2025,
+                            enabled = supportsSpec2025,
                             onCheckedChange = { setUseSpec2025(it) },
                         )
                     }

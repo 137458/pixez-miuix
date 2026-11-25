@@ -16,6 +16,7 @@ import com.arkivanov.decompose.Child
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
 import com.arkivanov.decompose.router.stack.ChildStack
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -60,7 +61,7 @@ private class TransitionJobRef {
  */
 @ExperimentalDecomposeApi
 internal class SeekableStackAnimation<C : Any, T : Any>(
-    private val frameFor: (child: Child.Created<C, T>) -> MiuixTransitionFrame,
+    private val frameFor: (child: Child.Created<C, T>, frontChild: Child.Created<C, T>) -> MiuixTransitionFrame,
 ) : StackAnimation<C, T> {
 
     @Composable
@@ -157,13 +158,14 @@ internal class SeekableStackAnimation<C : Any, T : Any>(
         }
 
         Box(modifier = modifier) {
+            val frontChild = layers.lastOrNull { it.direction.isFront }?.child ?: layers.last().child
             layers.forEach { layer ->
                 key(layer.child.key) {
                     val direction = layer.direction
                     val factorProvider: () -> Float = remember(direction, progress) {
                         { resolveStackLayerFactor(direction, progress.value) }
                     }
-                    frameFor(layer.child)(factorProvider, direction) { layerModifier ->
+                    frameFor(layer.child, frontChild)(factorProvider, direction) { layerModifier ->
                         Box(modifier = layerModifier) {
                             childContent(layer.child)
                         }

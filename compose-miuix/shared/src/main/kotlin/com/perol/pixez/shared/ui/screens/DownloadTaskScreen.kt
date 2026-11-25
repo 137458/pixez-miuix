@@ -57,6 +57,7 @@ import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.actionFailureToast
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.CancellationException
@@ -461,6 +462,10 @@ private fun DownloadTaskItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .illustTransitionBounds(
+                    illustId = task.illustId.takeIf { it > 0L },
+                    cornerRadius = 12.dp,
+                )
                 .clickable(onClick = onClick, enabled = !isProcessing)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,

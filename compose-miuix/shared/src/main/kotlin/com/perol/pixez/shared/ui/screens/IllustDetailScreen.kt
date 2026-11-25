@@ -29,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.perol.pixez.shared.ui.components.DetailImageBoundsTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -61,6 +64,8 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
+import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
+import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -96,6 +101,7 @@ fun IllustDetailScreen(
     val settings = LocalSettingsRepository.current
     val swipeChangeArtwork = settings.swipeChangeArtwork
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val sessionToken = LocalSystemTransitionSessionToken.current
 
     DisposableEffect(sharedBoundsRegistry, illustId) {
         onDispose {
@@ -116,11 +122,12 @@ fun IllustDetailScreen(
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { idList.size })
         val currentDisplayedId = idList.getOrElse(pagerState.currentPage) { illustId }
 
-        LaunchedEffect(sharedBoundsRegistry, illustId, currentDisplayedId) {
+        LaunchedEffect(sharedBoundsRegistry, illustId, currentDisplayedId, sessionToken) {
             sharedBoundsRegistry.updateDisplayedIllustId(
                 originIllustId = illustId,
                 displayedIllustId = currentDisplayedId,
             )
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId)
         }
 
         HorizontalPager(
@@ -148,11 +155,12 @@ fun IllustDetailScreen(
             )
         }
     } else {
-        LaunchedEffect(sharedBoundsRegistry, illustId) {
+        LaunchedEffect(sharedBoundsRegistry, illustId, sessionToken) {
             sharedBoundsRegistry.updateDisplayedIllustId(
                 originIllustId = illustId,
                 displayedIllustId = illustId,
             )
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId)
         }
 
         IllustDetailSingleContent(
@@ -309,6 +317,7 @@ private fun IllustDetailSingleContent(
     }
 
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val imageBoundsTracker = remember(illust?.id) { DetailImageBoundsTracker() }
     val isCardTransitionActive = sharedBoundsRegistry.activeTransitionIllustId != null
     val detailChromeAlpha = if (isCardTransitionActive) {
         com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha(
@@ -321,7 +330,12 @@ private fun IllustDetailSingleContent(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(MiuixTheme.colorScheme.surface),
+            .background(MiuixTheme.colorScheme.surface)
+            .onGloballyPositioned { coords ->
+                if (coords.isAttached) {
+                    imageBoundsTracker.viewportBounds = coords.boundsInWindow()
+                }
+            },
         contentAlignment = Alignment.TopCenter,
     ) {
         // 视口约束快照：大屏下图片收进内容列并限制显示高度（详见 resolveIllustDetailImageWidthPx）。
@@ -390,6 +404,7 @@ private fun IllustDetailSingleContent(
                         onTagClick = onTagClick,
                         onIllustClick = onIllustClick,
                         onNovelClick = onNovelClick,
+                        imageBoundsTracker = imageBoundsTracker,
                     )
                 }
             }
@@ -464,6 +479,7 @@ private fun IllustDetailSingleContent(
                 bookmarkRepository = bookmarkRepository,
                 isBookmarked = isBookmarked,
                 onBookmarked = { bookmarkState.setLocal(true) },
+                imageBoundsTracker = imageBoundsTracker,
             )
         }
 
@@ -509,6 +525,7 @@ private fun IllustDetailContentList(
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)?,
     onNovelClick: ((Long) -> Unit)?,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val chromeModifier = if (detailChromeAlpha < 0.999f) {
         Modifier.graphicsLayer { alpha = detailChromeAlpha }
@@ -543,6 +560,7 @@ private fun IllustDetailContentList(
                     bookmarkRepository = bookmarkRepository,
                     isBookmarked = isBookmarked,
                     onBookmarkedChange = onBookmarkedChange,
+                    imageBoundsTracker = imageBoundsTracker,
                 )
             }
         } else {
@@ -557,6 +575,7 @@ private fun IllustDetailContentList(
                     strings = strings,
                     onToast = onToast,
                     onPageClick = onFullScreen,
+                    imageBoundsTracker = imageBoundsTracker,
                 )
             }
         }

@@ -45,11 +45,12 @@ import androidx.compose.ui.unit.sp
 import com.itos.coui.backdrop.CouiBackdrop
 import com.itos.coui.effect.CouiFloatingRenderer
 import com.itos.coui.effect.couiNavigationFeedback
+import com.itos.coui.navigation.CouiNavigationBarAction
+import com.itos.coui.navigation.CouiNavigationBarDefaults
 import com.itos.coui.navigation.CouiNavigationItem
 import com.itos.coui.navigation.NavigationBar
 import com.itos.coui.shape.CouiCapsuleShape
 import com.itos.coui.theme.CouiTheme
-import com.itos.coui.topappbar.CouiTopAppBarButtonDefaults
 import com.perol.pixez.shared.ui.coui.component.COUI_NAVIGATION_BAR_MIN_SDK
 
 /**
@@ -193,19 +194,24 @@ private fun CouiOfficialNavigationBar(
             renderer = renderer,
             items = navItems,
             selectedIndex = selectedIndex,
-            leftIcon = leftAccessory?.icon,
-            leftDescription = leftAccessory?.description,
-            rightIcon = rightAccessory?.icon,
-            rightDescription = rightAccessory?.description,
-            leftVisible = leftAccessory != null,
-            rightVisible = rightAccessory != null,
-            onLeftClick = leftAccessory?.onClick,
-            onRightClick = rightAccessory?.onClick,
-            rightContainerColor = Color.Unspecified,
+            leftAction = leftAccessory?.let {
+                CouiNavigationBarAction(
+                    icon = it.icon,
+                    contentDescription = it.description,
+                    onClick = it.onClick,
+                    style = CouiNavigationBarDefaults.transparentActionStyle(),
+                )
+            },
+            rightAction = rightAccessory?.let {
+                CouiNavigationBarAction(
+                    icon = it.icon,
+                    contentDescription = it.description,
+                    onClick = it.onClick,
+                    style = CouiNavigationBarDefaults.coloredActionStyle(),
+                )
+            },
             dark = CouiTheme.isDark,
             lightColor = Color.White,
-            circleShape = CouiTopAppBarButtonDefaults.circleShape,
-            capsuleShape = CouiCapsuleShape,
             onSelection = onSelect,
         )
         if (badgeOverlay != null && items.any { it.showBadge }) {

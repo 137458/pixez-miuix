@@ -62,6 +62,8 @@ import com.perol.pixez.shared.ui.coui.core.CouiTopBarIconButton
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.LocalPixivisionRepository
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.spotlightTransitionBounds
+import com.perol.pixez.shared.ui.navigation.transitionTargetId
 import com.perol.pixez.shared.ui.utils.formatPixivDate
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
@@ -343,7 +345,14 @@ private fun CouiSpotlightArticleCard(
     onClick: () -> Unit,
 ) {
     val scheme = CouiTheme.colorScheme
-    CouiCard(modifier = Modifier.clickable(onClick = onClick)) {
+    CouiCard(
+        modifier = Modifier
+            .spotlightTransitionBounds(
+                articleId = article.transitionTargetId(),
+                cornerRadius = 18.dp,
+            )
+            .clickable(onClick = onClick),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

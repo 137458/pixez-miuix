@@ -73,6 +73,7 @@ import com.perol.pixez.shared.ui.components.PixivAsyncImage
 import com.perol.pixez.shared.ui.components.ToastData
 import com.perol.pixez.shared.ui.components.ToastType
 import com.perol.pixez.shared.ui.components.actionFailureToast
+import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.coui.component.CouiActionButton
 import com.perol.pixez.shared.ui.coui.component.CouiTopBarSegmentedTabs
 import com.perol.pixez.shared.ui.coui.component.couiDialogMaterialOrNull
@@ -455,6 +456,10 @@ private fun CouiDownloadTaskRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .illustTransitionBounds(
+                illustId = task.illustId.takeIf { it > 0L },
+                cornerRadius = 18.dp,
+            )
             .clip(RoundedCornerShape(18.dp))
             .background(scheme.card),
     ) {

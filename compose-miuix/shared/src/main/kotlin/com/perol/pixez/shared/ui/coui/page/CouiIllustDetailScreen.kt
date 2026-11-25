@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -110,7 +112,9 @@ import com.perol.pixez.shared.ui.LocalDownloadRepository
 import com.perol.pixez.shared.ui.LocalHistoryRepository
 import com.perol.pixez.shared.ui.LocalIllustRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
+import com.perol.pixez.shared.ui.components.DetailImageBoundsTracker
 import com.perol.pixez.shared.ui.components.HtmlCaptionText
+import com.perol.pixez.shared.ui.components.detailImageBounds
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
@@ -138,6 +142,9 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
+import com.perol.pixez.shared.ui.navigation.animation.commentsTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
+import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberSyncedDetailToggle
@@ -237,6 +244,7 @@ internal fun CouiIllustDetailScreen(
     val repository = LocalIllustRepository.current
     val settings = LocalSettingsRepository.current
     val sharedBoundsRegistry = LocalSharedBoundsRegistry.current
+    val sessionToken = LocalSystemTransitionSessionToken.current
 
     DisposableEffect(sharedBoundsRegistry, illustId) {
         onDispose {
@@ -257,11 +265,12 @@ internal fun CouiIllustDetailScreen(
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { idList.size })
         val currentDisplayedId = idList.getOrElse(pagerState.currentPage) { illustId }
 
-        LaunchedEffect(sharedBoundsRegistry, illustId, currentDisplayedId) {
+        LaunchedEffect(sharedBoundsRegistry, illustId, currentDisplayedId, sessionToken) {
             sharedBoundsRegistry.updateDisplayedIllustId(
                 originIllustId = illustId,
                 displayedIllustId = currentDisplayedId,
             )
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId)
         }
 
         HorizontalPager(
@@ -285,11 +294,12 @@ internal fun CouiIllustDetailScreen(
             )
         }
     } else {
-        LaunchedEffect(sharedBoundsRegistry, illustId) {
+        LaunchedEffect(sharedBoundsRegistry, illustId, sessionToken) {
             sharedBoundsRegistry.updateDisplayedIllustId(
                 originIllustId = illustId,
                 displayedIllustId = illustId,
             )
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId)
         }
 
         CouiIllustDetailSingle(
@@ -498,11 +508,17 @@ private fun CouiIllustDetailSingle(
     val topBarReserve = statusBarTopPadding + 56.dp
     // 正文区独立采样源：供兄弟节点 TopAppBar 渐变模糊与 TopAppBarButton 凝光视效采样，避免自采样。
     val contentBackdrop = rememberCouiBackdrop()
+    val imageBoundsTracker = remember(illust?.id) { DetailImageBoundsTracker() }
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(scheme.background),
+            .background(scheme.background)
+            .onGloballyPositioned { coords ->
+                if (coords.isAttached) {
+                    imageBoundsTracker.viewportBounds = coords.boundsInWindow()
+                }
+            },
     ) {
         val isWideScreen = maxWidth >= AppConstants.Layout.WIDE_SCREEN_MIN_WIDTH_DP.dp
         val isShowingContent = result != null && illust != null && (!isRestricted || isTempView)
@@ -580,6 +596,7 @@ private fun CouiIllustDetailSingle(
                                         bookmarkRepository = bookmarkRepository,
                                         isBookmarked = isBookmarked,
                                         onBookmarkedChange = bookmarkState.setLocal,
+                                        imageBoundsTracker = imageBoundsTracker,
                                     )
                                 }
                             } else {
@@ -590,6 +607,7 @@ private fun CouiIllustDetailSingle(
                                         settings = settings,
                                         repository = repository,
                                         onPageClick = { fullScreenPageIndex = it },
+                                        imageBoundsTracker = imageBoundsTracker,
                                     )
                                 }
                             }
@@ -665,11 +683,18 @@ private fun CouiIllustDetailSingle(
                                         .padding(horizontal = CouiPageDefaults.horizontalMargin)
                                         .then(chromeAlphaModifier),
                                 ) {
-                                    CouiValueRow(
-                                        title = strings.commentsTitle,
-                                        value = "${illust.totalComments ?: 0}",
-                                        onClick = { onCommentsClick(illust.id) },
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .commentsTransitionBounds(targetId = illust.id, cornerRadius = 18.dp)
+                                            .background(CouiTheme.colorScheme.card),
+                                    ) {
+                                        CouiValueRow(
+                                            title = strings.commentsTitle,
+                                            value = "${illust.totalComments ?: 0}",
+                                            onClick = { onCommentsClick(illust.id) },
+                                        )
+                                    }
                                     CouiRowDivider()
                                     CouiValueRow(
                                         title = strings.relatedIllusts,
@@ -791,6 +816,7 @@ private fun CouiIllustDetailSingle(
                 bookmarkRepository = bookmarkRepository,
                 isBookmarked = isBookmarked,
                 onBookmarked = { bookmarkState.setLocal(true) },
+                imageBoundsTracker = imageBoundsTracker,
             )
         }
 
@@ -992,6 +1018,7 @@ private fun CouiDetailImagePage(
     bookmarkRepository: BookmarkRepository? = null,
     isBookmarked: Boolean = illust.isBookmarked,
     onBookmarkedChange: (Boolean) -> Unit = {},
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     val page = illust.metaPages[pageIndex]
     val changeVersion = settings.changeVersion.collectAsState().value
@@ -1045,7 +1072,7 @@ private fun CouiDetailImagePage(
             thumbnailUrl = thumbnailUrl,
             contentDescription = "${illust.title} ($pageIndex)",
             contentScale = ContentScale.FillWidth,
-            modifier = imageModifier,
+            modifier = imageModifier.detailImageBounds(imageBoundsTracker, pageIndex),
             onSuccess = { pageLoaded = true },
         )
 
@@ -1124,11 +1151,11 @@ private fun CouiDetailSinglePageImage(
     settings: SettingsRepository,
     repository: IllustRepository,
     onPageClick: (Int) -> Unit,
+    imageBoundsTracker: DetailImageBoundsTracker? = null,
 ) {
     if (IllustType.isUgoira(illust.type)) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
                 .background(CouiTheme.colorScheme.container),
             contentAlignment = Alignment.TopCenter,
         ) {
@@ -1136,7 +1163,7 @@ private fun CouiDetailSinglePageImage(
                 illust = illust,
                 illustRepository = repository,
                 onClick = { onPageClick(0) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().detailImageBounds(imageBoundsTracker, 0),
             )
         }
     } else {
@@ -1184,7 +1211,7 @@ private fun CouiDetailSinglePageImage(
             thumbnailUrl = thumbnailUrl,
             contentDescription = illust.title,
             contentScale = ContentScale.FillWidth,
-            modifier = imageModifier,
+            modifier = imageModifier.detailImageBounds(imageBoundsTracker, 0),
         )
     }
 }
@@ -1288,6 +1315,7 @@ private fun CouiDetailInfoCard(
 
             // 四合一快捷操作栏（收藏 / 下载 / 评论 / 分享）
             CouiDetailQuickActionsBar(
+                illustId = illust.id,
                 isBookmarked = isBookmarked,
                 isBookmarkLoading = isBookmarkLoading,
                 displayedBookmarks = displayedBookmarks,
@@ -1363,6 +1391,7 @@ private fun CouiDetailBadgePill(badge: CouiIllustBadge) {
 /** 四合一快捷操作条：高频动作收进拇指热区。 */
 @Composable
 private fun CouiDetailQuickActionsBar(
+    illustId: Long,
     isBookmarked: Boolean,
     isBookmarkLoading: Boolean,
     displayedBookmarks: Int,
@@ -1401,7 +1430,9 @@ private fun CouiDetailQuickActionsBar(
             active = false,
             enabled = true,
             onClick = onCommentsClick,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .commentsTransitionBounds(targetId = illustId, cornerRadius = 14.dp),
         )
         CouiQuickActionTile(
             icon = CouiIcons.Share,

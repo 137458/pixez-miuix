@@ -58,6 +58,7 @@ import com.perol.pixez.shared.ui.coui.core.CouiLoadingPlaceholder
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.userTransitionBounds
 import com.perol.pixez.shared.ui.state.PagedListPage
 import com.perol.pixez.shared.ui.state.PagedListState
 import com.perol.pixez.shared.ui.state.PagingFooterPhase
@@ -89,6 +90,9 @@ internal fun CouiSearchUserResultList(
             PagedListPage(response.userPreviews, response.nextUrl)
         },
         mergeItems = { old, new -> old.appendDistinct(new) },
+        cardModifier = { preview ->
+            Modifier.userTransitionBounds(userId = preview.user.id, cornerRadius = 18.dp)
+        },
     ) { preview ->
         CouiSearchUserRow(
             preview = preview,
@@ -121,6 +125,9 @@ internal fun CouiSearchNovelResultList(
             PagedListPage(response.novels, response.nextUrl)
         },
         mergeItems = { old, new -> old.appendDistinct(new) },
+        cardModifier = { novel ->
+            Modifier.novelTransitionBounds(novelId = novel.id, cornerRadius = 18.dp)
+        },
     ) { novel ->
         CouiNovelRow(
             novel = novel,
@@ -146,6 +153,7 @@ private fun <T> CouiSearchPagedColumn(
     header: (@Composable () -> Unit)? = null,
     fetch: suspend (nextUrl: String?) -> PagedListPage<T>,
     mergeItems: (old: List<T>, new: List<T>) -> List<T>,
+    cardModifier: (T) -> Modifier = { Modifier },
     itemContent: @Composable (item: T) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -238,7 +246,11 @@ private fun <T> CouiSearchPagedColumn(
                     items = currentItems,
                     key = itemKey,
                 ) { item ->
-                    CouiCard(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    CouiCard(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .then(cardModifier(item)),
+                    ) {
                         itemContent(item)
                     }
                 }
@@ -341,7 +353,6 @@ private fun CouiNovelRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .novelTransitionBounds(novelId = novel.id, cornerRadius = 12.dp)
             .couiPressFeedback(pressInteraction)
             .clickable(
                 interactionSource = pressInteraction,

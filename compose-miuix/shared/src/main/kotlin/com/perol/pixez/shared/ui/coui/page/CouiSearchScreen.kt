@@ -125,7 +125,7 @@ internal fun CouiSearchScreen(
     var searchExpanded by rememberSaveable { mutableStateOf(initialQuery.isNotBlank()) }
     val searchBarState = rememberCouiSearchBarState(expanded = searchExpanded)
 
-    var showSauceNaoSheet by remember { mutableStateOf(false) }
+    val showSauceNaoSheetState = remember { mutableStateOf(false) }
     var isSauceNaoLoading by remember { mutableStateOf(false) }
     var sauceNaoError by remember { mutableStateOf<String?>(null) }
     var sauceNaoResults by remember { mutableStateOf<List<SauceNaoResult>>(emptyList()) }
@@ -135,7 +135,7 @@ internal fun CouiSearchScreen(
     val performSauceNaoSearch: (ByteArray, String?) -> Unit = { bytes, fileName ->
         currentSauceNaoBytes = bytes
         currentSauceNaoName = fileName
-        showSauceNaoSheet = true
+        showSauceNaoSheetState.value = true
         isSauceNaoLoading = true
         sauceNaoError = null
         sauceNaoResults = emptyList()
@@ -159,10 +159,10 @@ internal fun CouiSearchScreen(
         }
     }
 
-    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+    val showFilterSheetState = rememberSaveable { mutableStateOf(false) }
     val bottomBarVisibility = LocalBottomBarVisibility.current
-    LaunchedEffect(showFilterSheet) {
-        bottomBarVisibility.value = !showFilterSheet
+    LaunchedEffect(showFilterSheetState.value) {
+        bottomBarVisibility.value = !showFilterSheetState.value
     }
 
     val showingResults = core.isSearching && core.query.isNotBlank()
@@ -182,7 +182,7 @@ internal fun CouiSearchScreen(
             isActive = isActive,
             showingResults = showingResults,
             searchExpanded = searchExpanded,
-            hasBlockingDialog = showFilterSheet || showSauceNaoSheet,
+            hasBlockingDialog = showFilterSheetState.value || showSauceNaoSheetState.value,
         ),
         onBack = exitToSuggestions,
     )
@@ -230,7 +230,7 @@ internal fun CouiSearchScreen(
                     {
                         CouiSearchQuickFilterRow(
                             core = core,
-                            onOpenFilter = { showFilterSheet = true },
+                            onOpenFilter = { showFilterSheetState.value = true },
                         )
                     }
                 } else {
@@ -295,29 +295,25 @@ internal fun CouiSearchScreen(
         }
     }
 
-    if (showFilterSheet) {
-        CouiSearchFilterDialog(
-            filterState = core.filterState,
-            onDismissRequest = { showFilterSheet = false },
-            onApply = core.onApplyFilters,
-        )
-    }
+    CouiSearchFilterSheet(
+        visible = showFilterSheetState,
+        filterState = core.filterState,
+        onApply = core.onApplyFilters,
+    )
 
-    if (showSauceNaoSheet) {
-        CouiSauceNaoDialog(
-            isLoading = isSauceNaoLoading,
-            error = sauceNaoError,
-            results = sauceNaoResults,
-            onDismissRequest = { showSauceNaoSheet = false },
-            onRetry = {
-                currentSauceNaoBytes?.let { bytes ->
-                    performSauceNaoSearch(bytes, currentSauceNaoName)
-                } ?: launchPickPhoto()
-            },
-            onPickAnother = launchPickPhoto,
-            onIllustClick = onIllustClick,
-        )
-    }
+    CouiSauceNaoSheet(
+        visible = showSauceNaoSheetState,
+        isLoading = isSauceNaoLoading,
+        error = sauceNaoError,
+        results = sauceNaoResults,
+        onRetry = {
+            currentSauceNaoBytes?.let { bytes ->
+                performSauceNaoSearch(bytes, currentSauceNaoName)
+            } ?: launchPickPhoto()
+        },
+        onPickAnother = launchPickPhoto,
+        onIllustClick = onIllustClick,
+    )
 }
 
 /**

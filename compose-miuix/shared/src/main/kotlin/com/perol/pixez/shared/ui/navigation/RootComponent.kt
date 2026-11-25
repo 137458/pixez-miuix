@@ -32,9 +32,20 @@ import kotlinx.serialization.builtins.serializer
 class RootComponent(
     componentContext: ComponentContext,
     private val settingsRepository: SettingsRepository,
+    private val initialConfig: Config? = null,
+    private val onExitRoot: (() -> Unit)? = null,
 ) : ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Config>()
+
+    /**
+     * 系统级原生窗口转场拦截器：返回 true 表示已异步接管打开独立详情窗口（失败时自行调用 fallback）；
+     * 返回 false 时直接走既有 Decompose 入栈与 CardExpandLayer。
+     */
+    var illustWindowInterceptor: ((illustId: Long, fallback: () -> Unit) -> Boolean)? = null
+
+    /** 通用系统卡片窗口转场拦截器，支持插画/小说/特辑/用户卡片进入独立窗口。 */
+    var cardWindowInterceptor: ((config: Config, fallback: () -> Unit) -> Boolean)? = null
 
     /**
      * Main child 跨页恢复容器（高-5）。Child 镜像删除（中-6a）后 childStack 的 child 实例
@@ -60,7 +71,7 @@ class RootComponent(
     val stack: Value<ChildStack<Config, Any>> = childStack(
         source = navigation,
         serializer = Config.serializer(),
-        initialConfiguration = resolveWelcomePageConfig(settingsRepository),
+        initialConfiguration = initialConfig ?: resolveWelcomePageConfig(settingsRepository),
         // 返回事件由 RootContent 中的 predictiveBackAnimation 显式接管与渲染，
         // 并在单页面/主页标签时自动禁用以允许系统退出。
         handleBackButton = false,
@@ -169,16 +180,32 @@ class RootComponent(
         val active = stack.value.active.instance
         // 一级页面不拦截返回事件，让系统决定是否退出应用。
         if (active is Config.Main) return false
+        if (stack.value.backStack.isEmpty()) {
+            val exit = onExitRoot ?: return false
+            exit()
+            return true
+        }
         // 二级页面消费返回事件，执行出栈。
         navigation.pop()
         return true
+    }
+
+    private fun pushWithCardWindow(config: Config) {
+        val fallback = { navigation.pushToFront(config) }
+        if (config is Config.IllustDetail && illustWindowInterceptor?.invoke(config.illustId, fallback) == true) {
+            return
+        }
+        if (cardWindowInterceptor?.invoke(config, fallback) == true) {
+            return
+        }
+        fallback()
     }
 
     /**
      * 打开作品详情页。
      */
     fun onIllustClicked(illustId: Long) {
-        navigation.pushToFront(Config.IllustDetail(illustId))
+        pushWithCardWindow(Config.IllustDetail(illustId))
     }
 
     /**
@@ -187,7 +214,7 @@ class RootComponent(
      * @param initialTab 初始选中的标签页：0 = 作品，1 = 收藏。
      */
     fun onUserClicked(userId: Long, initialTab: Int = 0) {
-        navigation.pushToFront(Config.UserDetail(userId, initialTab))
+        pushWithCardWindow(Config.UserDetail(userId, initialTab))
     }
 
     fun onUserClicked(userId: Long) {
@@ -319,7 +346,7 @@ class RootComponent(
      * 打开小说阅读页。
      */
     fun onNovelClicked(novelId: Long) {
-        navigation.pushToFront(Config.NovelViewer(novelId))
+        pushWithCardWindow(Config.NovelViewer(novelId))
     }
 
     /**
@@ -391,14 +418,14 @@ class RootComponent(
      * 打开作品评论页。
      */
     fun onCommentsClicked(illustId: Long) {
-        navigation.pushToFront(Config.Comments(illustId))
+        pushWithCardWindow(Config.Comments(illustId))
     }
 
     /**
      * 打开小说评论页。
      */
     fun onNovelCommentsClicked(novelId: Long) {
-        navigation.pushToFront(Config.Comments(novelId, isNovel = true))
+        pushWithCardWindow(Config.Comments(novelId, isNovel = true))
     }
 
     /**
@@ -468,7 +495,7 @@ class RootComponent(
      * 打开 Spotlight 原生特辑阅读页。
      */
     fun onSpotlightArticleClicked(article: SpotlightArticle) {
-        navigation.pushToFront(Config.SpotlightDetail(article))
+        pushWithCardWindow(Config.SpotlightDetail(article))
     }
 
     /**
