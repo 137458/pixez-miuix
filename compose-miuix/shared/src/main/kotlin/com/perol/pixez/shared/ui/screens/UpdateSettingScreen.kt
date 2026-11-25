@@ -98,7 +98,9 @@ fun UpdateSettingScreen(
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val lazyListState = rememberLazyListState()
 
-    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
+    var releaseInfo by remember {
+        mutableStateOf<ReleaseInfo?>(updateRepository.cachedReleaseInfo ?: getLocalReleaseInfo())
+    }
     var isChecking by remember { mutableStateOf(false) }
     // 检查失败与「已是最新」必须区分：网络或限流失败时不能继续声称已是最新。
     var checkFailed by remember { mutableStateOf(false) }
@@ -581,7 +583,7 @@ private fun UpdateSettingsSection(
             title = strings.updateIgnoreVersion,
             summary = when {
                 isChecking -> strings.loading
-                checkFailed -> strings.loadFailed
+                !hasNew && checkFailed -> strings.loadFailed
                 !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
                 ignored -> strings.updateIgnoreVersionIgnored
                 else -> strings.updateIgnoreVersionSummary.format(releaseVersionName)

@@ -63,9 +63,11 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
 import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import com.perol.pixez.shared.ui.utils.openSafeUrl
 import com.perol.pixez.shared.utils.suspendRunCatchingNonCancel
 import io.github.aakira.napier.Napier
@@ -127,7 +129,7 @@ fun IllustDetailScreen(
                 originIllustId = illustId,
                 displayedIllustId = currentDisplayedId,
             )
-            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId)
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId, originIllustId = illustId)
         }
 
         HorizontalPager(
@@ -160,7 +162,7 @@ fun IllustDetailScreen(
                 originIllustId = illustId,
                 displayedIllustId = illustId,
             )
-            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId)
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId, originIllustId = illustId)
         }
 
         IllustDetailSingleContent(
@@ -327,6 +329,7 @@ private fun IllustDetailSingleContent(
         1f
     }
 
+    ProvideTransitionViewportScope {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -464,6 +467,7 @@ private fun IllustDetailSingleContent(
                 onBack = onBack,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .transitionTopBarOccluder()
                     .graphicsLayer { alpha = detailChromeAlpha },
             )
         } else if (fullScreenPage != null && illust != null) {
@@ -490,6 +494,7 @@ private fun IllustDetailSingleContent(
                 bookmarkError = null
             }
         }
+    }
     }
 }
 

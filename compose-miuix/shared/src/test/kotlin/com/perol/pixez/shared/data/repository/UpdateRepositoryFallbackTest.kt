@@ -243,4 +243,54 @@ class UpdateRepositoryFallbackTest {
             "载荷错误不是配额问题，不应触发 Atom 兜底",
         )
     }
+
+    @Test
+    fun `Atom 兜底清除估算 fileSize 且使旧 API ETag 失效并对非官方 releaseUrl 回退`() = runBlocking {
+        // 1. 先经 API 缓存 v98.0.0 与 ETag
+        apiStatus = HttpStatusCode.OK
+        apiEtag = "\"etag-v98\""
+        apiBody = """
+            {
+              "tag_name": "v98.0.0",
+              "name": "PixEz MIUIX v98.0.0",
+              "body": "old",
+              "html_url": "https://evil.example.com/phishing",
+              "published_at": "2026-09-01T00:00:00Z",
+              "assets": []
+            }
+        """.trimIndent()
+        val apiInfo = repository.fetchLatestReleaseInfo().getOrThrow()
+        assertEquals("https://github.com/137458/pixez-miuix/releases", apiInfo.releaseUrl)
+
+        // 2. API 403 回退 Atom（带 8.04 MB 文本估算体积），应产出 fileSize = null 且清空 apiCache
+        apiStatus = HttpStatusCode.Forbidden
+        assetsBody = """
+            <ul>
+              <li class="Box-row">
+                <a href="/137458/pixez-miuix/releases/download/v99.0.0/PixEz-MIUIX-v99.0.0.apk">PixEz-MIUIX-v99.0.0.apk</a>
+                <span>8.04 MB</span>
+                <span>sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee</span>
+              </li>
+            </ul>
+        """.trimIndent()
+        val atomInfo = repository.fetchLatestReleaseInfo().getOrThrow()
+        assertNull(atomInfo.fileSize, "Atom 估算体积不应写入 fileSize，避免重启后精确字节比对误删已完成包")
+
+        // 3. 再次请求 API 时不应携带已失效的 etag-v98
+        apiStatus = HttpStatusCode.OK
+        apiEtag = "\"etag-v100\""
+        apiBody = """
+            {
+              "tag_name": "v100.0.0",
+              "name": "PixEz MIUIX v100.0.0",
+              "body": "new",
+              "html_url": "https://github.com/137458/pixez-miuix/releases/tag/v100.0.0",
+              "published_at": "2026-10-02T00:00:00Z",
+              "assets": []
+            }
+        """.trimIndent()
+        val third = repository.fetchLatestReleaseInfo().getOrThrow()
+        assertEquals("v100.0.0", third.tagName)
+        assertNull(captured.last().ifNoneMatch, "Atom 覆盖缓存后不应继续发送旧 API ETag")
+    }
 }

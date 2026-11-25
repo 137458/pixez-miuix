@@ -13,7 +13,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
 import com.arkivanov.decompose.extensions.compose.stack.animation.isFront
@@ -95,8 +97,9 @@ internal fun cardExpandFrame(
     isModal: Boolean = false,
     isLightBackground: Boolean = false,
 ): MiuixTransitionFrame = { factorProvider, direction, content ->
-    val containerBounds = containerGeometry().bounds
+    val layoutDirection = LocalLayoutDirection.current
     val geometry = containerGeometry()
+    val containerBounds = geometry.bounds
     val cornerShape = remember(geometry.cornerRadius) {
         if (geometry.cornerRadius > 0.dp) RoundedCornerShape(geometry.cornerRadius) else null
     }
@@ -108,15 +111,13 @@ internal fun cardExpandFrame(
                 registry?.updateTargetTransitionState(null, 0f)
             }
         }
-        val heightPx = geometry.heightPx.takeIf { it > 0f }
-            ?: containerBounds.height.takeIf { it > 0f }
-            ?: ((geometry.widthPx.takeIf { it > 0f } ?: 1080f) * 2f)
+        val heightPx = resolveModalLayerHeightPx(geometry)
         val modalTopCorner = geometry.cornerRadius.coerceAtLeast(MIUIX_MODAL_TOP_CORNER_DP)
         layerModifier = remember(isTopLayer, factorProvider, direction, heightPx, modalTopCorner, isLightBackground) {
             Modifier.miuixModalLayer(
                 isTopLayer = isTopLayer,
                 fractionProvider = { resolveMiuixDefaultSlideFrame(direction = direction, factor = factorProvider()).fraction },
-                heightPx = heightPx,
+                heightPxProvider = { heightPx },
                 topCornerRadius = modalTopCorner,
                 isLightBackground = isLightBackground,
             )
@@ -127,7 +128,6 @@ internal fun cardExpandFrame(
         val activeSourceBounds = anchor?.card?.rect
             ?: sourceBounds?.takeIf { hasUsableCardExpandGeometry(it, containerBounds) }
         val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
-        val activeSafeViewport = anchor?.card?.safeViewport
 
         if (activeSourceBounds == null) {
             val isTopLayer = direction.isFront
@@ -138,27 +138,29 @@ internal fun cardExpandFrame(
             }
             val widthPx = geometry.widthPx.takeIf { it > 0f } ?: containerBounds.width.takeIf { it > 0f } ?: 1080f
             val parallaxFraction = if (coverParallax) MIUIX_DEFAULT_COVER_PARALLAX_FRACTION else 0f
-            layerModifier = remember(isTopLayer, factorProvider, direction, widthPx, cornerShape, registry, parallaxFraction, isLightBackground) {
+            layerModifier = remember(isTopLayer, factorProvider, direction, widthPx, cornerShape, registry, parallaxFraction, isLightBackground, layoutDirection) {
                 Modifier.miuixDefaultSlideLayer(
                     isTopLayer = isTopLayer,
                     fractionProvider = { resolveMiuixDefaultSlideFrame(direction = direction, factor = factorProvider()).fraction },
-                    widthPx = widthPx,
-                    cornerShape = cornerShape,
+                    widthPxProvider = { widthPx },
+                    cornerShapeProvider = { cornerShape },
                     registry = registry,
                     parallaxFraction = parallaxFraction,
                     isLightBackground = isLightBackground,
+                    layoutDirection = layoutDirection,
                 )
             }
         } else {
+            val isTopLayer = direction.isFront
             val target = anchor?.target ?: candidates.firstOrNull { it != null }
             val isExiting = direction == Direction.EXIT_FRONT || direction == Direction.ENTER_BACK
-            LaunchedEffect(registry, target, activeSourceBounds, direction, factorProvider, isExiting) {
-                if (registry == null) return@LaunchedEffect
+            LaunchedEffect(registry, isTopLayer, target, activeSourceBounds, direction, factorProvider, isExiting) {
+                if (registry == null || !isTopLayer) return@LaunchedEffect
                 snapshotFlow { factorProvider() }.collect { factor ->
                     val frame = resolveCardExpandFrame(
                         direction = direction,
                         factor = factor,
-                        isTopLayer = direction.isFront,
+                        isTopLayer = true,
                     )
                     registry.updateTargetTransitionState(
                         target = target,
@@ -169,14 +171,13 @@ internal fun cardExpandFrame(
                     )
                 }
             }
-            val isTopLayer = direction.isFront
             layerModifier = remember(
                 isTopLayer,
                 factorProvider,
                 direction,
                 activeSourceBounds,
                 activeCornerRadiusDp,
-                activeSafeViewport,
+                anchor,
                 containerGeometry,
                 isLightBackground,
             ) {
@@ -189,7 +190,7 @@ internal fun cardExpandFrame(
                         cardCornerRadiusDp = activeCornerRadiusDp,
                         containerBoundsProvider = { containerGeometry().bounds },
                         containerCornerRadiusProvider = { containerGeometry().cornerRadius },
-                        safeViewportProvider = { activeSafeViewport },
+                        safeViewportProvider = { anchor?.card?.resolveSafeViewport() },
                     )
                 } else {
                     Modifier
@@ -214,6 +215,11 @@ internal fun cardExpandFrame(
     content(layerModifier)
 }
 
+internal fun resolveModalLayerHeightPx(geometry: PageContainerGeometry): Float =
+    geometry.heightPx.takeIf { it > 0f }
+        ?: geometry.bounds.height.takeIf { it > 0f }
+        ?: ((geometry.widthPx.takeIf { it > 0f } ?: 1080f) * 2f)
+
 /**
  * 为顶层或底层页面应用 Miuix 默认全宽侧滑与视差遮罩图层，并同步底层列表视差位移状态。
  *
@@ -231,73 +237,85 @@ internal fun Modifier.miuixDefaultSlideLayer(
     registry: SharedBoundsRegistry? = null,
     parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
     isLightBackground: Boolean = false,
-): Modifier = miuixDefaultSlideLayer(
-    isTopLayer = isTopLayer,
-    fractionProvider = { fraction },
-    widthPx = widthPx,
-    cornerShape = if (cornerRadius > 0.dp) RoundedCornerShape(cornerRadius) else null,
-    registry = registry,
-    parallaxFraction = parallaxFraction,
-    isLightBackground = isLightBackground,
-)
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+): Modifier {
+    val shape = if (cornerRadius > 0.dp) RoundedCornerShape(cornerRadius) else null
+    return miuixDefaultSlideLayer(
+        isTopLayer = isTopLayer,
+        fractionProvider = { fraction },
+        widthPxProvider = { widthPx },
+        cornerShapeProvider = { shape },
+        registry = registry,
+        parallaxFraction = parallaxFraction,
+        isLightBackground = isLightBackground,
+        layoutDirection = layoutDirection,
+    )
+}
 
-private fun Modifier.miuixDefaultSlideLayer(
+internal fun Modifier.miuixDefaultSlideLayer(
     isTopLayer: Boolean,
     fractionProvider: () -> Float,
-    widthPx: Float,
-    cornerShape: RoundedCornerShape?,
+    widthPxProvider: () -> Float,
+    cornerShapeProvider: () -> RoundedCornerShape?,
     registry: SharedBoundsRegistry? = null,
     parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
     isLightBackground: Boolean = false,
-): Modifier = if (isTopLayer) {
-    this.graphicsLayer {
-        val clampedFraction = fractionProvider().coerceIn(0f, 1f)
-        if (clampedFraction <= 0.001f) {
-            translationX = 0f
-            clip = false
-        } else {
-            // 整像素对齐避免圆角裁剪边缘在亚像素位置 sobre scrim 产生微闪。
-            translationX = (widthPx * clampedFraction).roundToInt().toFloat()
-            if (cornerShape != null) {
-                shape = cornerShape
-                clip = true
-            } else {
-                clip = false
-            }
-        }
-    }
-} else {
-    this
-        .navigationDepthBlur {
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+): Modifier {
+    val dir = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
+    return if (isTopLayer) {
+        this.graphicsLayer {
             val clampedFraction = fractionProvider().coerceIn(0f, 1f)
-            resolveNavigationBlurBlendFrame(
-                progress = clampedFraction,
-                isLightBackground = isLightBackground,
-            )
-        }
-        .graphicsLayer {
-            val clampedFraction = fractionProvider().coerceIn(0f, 1f)
-            registry?.updateSlideParallax(
-                widthPx = widthPx,
-                fraction = clampedFraction,
-                parallaxFraction = parallaxFraction,
-            )
             if (clampedFraction <= 0.001f) {
                 translationX = 0f
-                alpha = 1f
+                clip = false
             } else {
-                translationX = (-widthPx * parallaxFraction * clampedFraction).roundToInt().toFloat()
-                alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * clampedFraction
+                // 整像素对齐避免圆角裁剪边缘在亚像素位置 sobre scrim 产生微闪。
+                translationX = (widthPxProvider() * clampedFraction * dir).roundToInt().toFloat()
+                val cornerShape = cornerShapeProvider()
+                if (cornerShape != null) {
+                    shape = cornerShape
+                    clip = true
+                } else {
+                    clip = false
+                }
             }
         }
-        .drawWithContent {
-            drawContent()
-            val clampedFraction = fractionProvider().coerceIn(0f, 1f)
-            val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * clampedFraction
-            if (dimAlpha > 0.001f) {
-                drawRect(Color.Black.copy(alpha = dimAlpha))
+    } else {
+        this
+            .navigationDepthBlur {
+                val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+                resolveNavigationBlurBlendFrame(
+                    progress = clampedFraction,
+                    isLightBackground = isLightBackground,
+                )
             }
-        }
+            .graphicsLayer {
+                val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+                val widthPx = widthPxProvider()
+                registry?.updateSlideParallax(
+                    widthPx = widthPx,
+                    fraction = clampedFraction,
+                    parallaxFraction = parallaxFraction,
+                    directionSign = dir,
+                )
+                if (clampedFraction <= 0.001f) {
+                    translationX = 0f
+                    alpha = 1f
+                } else {
+                    translationX = (-widthPx * parallaxFraction * clampedFraction * dir).roundToInt().toFloat()
+                    alpha = 1f - MIUIX_DEFAULT_COVER_ALPHA_FALLOFF * clampedFraction
+                }
+            }
+            .drawWithContent {
+                drawContent()
+                val clampedFraction = fractionProvider().coerceIn(0f, 1f)
+                val dimAlpha = MIUIX_DEFAULT_DIM_MAX_ALPHA * clampedFraction
+                if (dimAlpha > 0.001f) {
+                    drawRect(Color.Black.copy(alpha = dimAlpha))
+                }
+            }
+    }
 }
 
 /**
@@ -313,15 +331,15 @@ internal fun Modifier.miuixModalLayer(
 ): Modifier = miuixModalLayer(
     isTopLayer = isTopLayer,
     fractionProvider = { fraction },
-    heightPx = heightPx,
+    heightPxProvider = { heightPx },
     topCornerRadius = topCornerRadius,
     isLightBackground = isLightBackground,
 )
 
-private fun Modifier.miuixModalLayer(
+internal fun Modifier.miuixModalLayer(
     isTopLayer: Boolean,
     fractionProvider: () -> Float,
-    heightPx: Float,
+    heightPxProvider: () -> Float,
     topCornerRadius: Dp,
     isLightBackground: Boolean = false,
 ): Modifier = if (isTopLayer) {
@@ -332,7 +350,7 @@ private fun Modifier.miuixModalLayer(
             translationY = 0f
             clip = false
         } else {
-            translationY = (heightPx * clampedFraction).roundToInt().toFloat()
+            translationY = (heightPxProvider() * clampedFraction).roundToInt().toFloat()
             shape = modalShape
             clip = true
         }

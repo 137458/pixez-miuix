@@ -147,13 +147,19 @@ private class UpdateApiUnavailableException(
 class UpdateRepository(
     private val client: HttpClient,
 ) {
+    private data class ApiReleaseCache(
+        val etag: String,
+        val releaseInfo: ReleaseInfo,
+    )
+
     /** 最近一次成功检查到的版本发布信息缓存（供设置页重建首帧同步展示更新标记）。 */
     @Volatile
     var cachedReleaseInfo: ReleaseInfo? = null
         private set
 
-    /** 上次成功响应的 ETag：命中 304 时不消耗限流配额。 */
-    private var cachedEtag: String? = null
+    /** 上次 API 通道响应的 ETag 与对应载荷快照：命中 304 时原子复用，不被 Atom 回退覆盖。 */
+    @Volatile
+    private var apiCache: ApiReleaseCache? = null
 
     /**
      * 获取完整版本发布信息：API 优先，限流或网络异常时回退 Atom Feed。
@@ -192,14 +198,13 @@ class UpdateRepository(
         }
     }
 
-    /** API 通道：带 ETag 条件请求，200 走完整解析，304 直接复用缓存。 */
+    /** API 通道：带 ETag 条件请求，200 走完整解析，304 直接复用对应 API 缓存快照。 */
     private suspend fun fetchFromApi(): ReleaseInfo {
-        val etag = cachedEtag
-        val useConditionalRequest = etag != null && cachedReleaseInfo != null
+        val snapshot = apiCache
         val response = try {
             client.get(GitHubReleaseEndpoints.LATEST_API) {
                 header("User-Agent", userAgent())
-                if (useConditionalRequest) header(HttpHeaders.IfNoneMatch, etag)
+                if (snapshot != null) header(HttpHeaders.IfNoneMatch, snapshot.etag)
             }
         } catch (e: CancellationException) {
             throw e
@@ -210,9 +215,11 @@ class UpdateRepository(
             )
         }
         if (response.status == HttpStatusCode.NotModified) {
-            val cached = cachedReleaseInfo
+            val cached = snapshot?.releaseInfo
                 ?: throw UpdateApiUnavailableException("GitHub Release 条件请求返回 304 但缺少本地缓存")
-            return cached.copy(isNew = hasNewVersion(cached.versionName))
+            val refreshed = cached.copy(isNew = hasNewVersion(cached.versionName))
+            cachedReleaseInfo = refreshed
+            return refreshed
         }
         if (!response.status.isSuccess()) {
             throw UpdateApiUnavailableException("GitHub Release 请求异常: HTTP ${response.status.value}")
@@ -239,12 +246,18 @@ class UpdateRepository(
         val changelog = release.body?.takeIf { it.isNotBlank() }
             ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
 
+        val safeReleaseUrl = release.html_url?.let { raw ->
+            runCatching {
+                TrustedUrlPolicy.officialReleasePageUrl(raw, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
+            }.getOrNull()
+        } ?: GitHubReleaseEndpoints.RELEASES_PAGE
+
         val releaseInfo = ReleaseInfo(
             tagName = tag,
             versionName = versionName,
             title = release.name ?: "PixEz MIUIX $tag",
             changelog = changelog,
-            releaseUrl = release.html_url ?: GitHubReleaseEndpoints.RELEASES_PAGE,
+            releaseUrl = safeReleaseUrl,
             publishedAt = release.published_at,
             isNew = isNew,
             downloadUrl = downloadUrl,
@@ -252,7 +265,8 @@ class UpdateRepository(
             fileSize = fileSize,
             digest = matchedAsset?.digest,
         )
-        cachedEtag = response.headers[HttpHeaders.ETag]
+        val etag = response.headers[HttpHeaders.ETag]?.takeIf { it.isNotBlank() }
+        apiCache = etag?.let { ApiReleaseCache(etag = it, releaseInfo = releaseInfo) }
         cachedReleaseInfo = releaseInfo
         return releaseInfo
     }
@@ -284,25 +298,35 @@ class UpdateRepository(
         val asset = resolveFeedAsset(entry.tagName)
         val changelog = entry.changelogMarkdown.takeIf { it.isNotBlank() }
             ?: if (!isNew) AppInfo.CURRENT_CHANGELOG else ""
+        val safeReleaseUrl = runCatching {
+            TrustedUrlPolicy.officialReleasePageUrl(entry.releaseUrl, GitHubReleaseEndpoints.OFFICIAL_REPO_PATH)
+        }.getOrDefault(GitHubReleaseEndpoints.RELEASES_PAGE)
 
+        // Atom expanded_assets 仅提供两位小数估算体积（如 8.04 MB），不得作为 fileSize 传入
+        // AppUpdateDownloader.restoreCompletedFile 参与精确字节相等校验，避免已下载包重启后被丢弃；
+        // 下载进度由 HTTP Content-Length 接管，完成包完整性由 SHA-256 校验保证。
         val releaseInfo = ReleaseInfo(
             tagName = entry.tagName,
             versionName = versionName,
             title = entry.title,
             changelog = changelog,
-            releaseUrl = entry.releaseUrl,
+            releaseUrl = safeReleaseUrl,
             publishedAt = entry.publishedAt,
             isNew = isNew,
             downloadUrl = asset?.browser_download_url,
             fileName = asset?.name,
-            fileSize = asset?.size,
+            fileSize = null,
             digest = asset?.digest,
         )
+        apiCache = null
         cachedReleaseInfo = releaseInfo
         return releaseInfo
     }
 
-    /** 解析 Atom 兜底通道下的安装包直链，任何一步失败都降级为「无直链」。 */
+    /**
+     * 解析 Atom 兜底通道下的安装包直链：网络异常、非 2xx 或缺失 APK 时降级为「无直链」；
+     * 若解析出的直链或文件名违反安全白名单（fail-closed），则按原样上抛异常拒绝整个更新结果。
+     */
     private suspend fun resolveFeedAsset(tagName: String): GitHubReleaseAsset? {
         val response = try {
             client.get(GitHubReleaseEndpoints.expandedAssetsUrl(tagName)) {

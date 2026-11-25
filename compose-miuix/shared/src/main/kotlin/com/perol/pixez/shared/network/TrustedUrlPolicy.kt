@@ -2,6 +2,7 @@ package com.perol.pixez.shared.network
 
 import io.ktor.http.URLProtocol
 import io.ktor.http.Url
+import java.net.URI
 
 /**
  * Validates URLs received from API responses, persisted history, or user settings
@@ -47,9 +48,39 @@ object TrustedUrlPolicy {
         val path = url.encodedPath
         require(
             url.host.lowercase() == "github.com" &&
-                (path == "/$officialRepoPath" || path.startsWith("/$officialRepoPath/")),
+                isSafeOfficialRepoPath(normalized, path, officialRepoPath),
         ) { "GitHub 更新包直链必须指向官方仓库 $officialRepoPath" }
         return normalized
+    }
+
+    /**
+     * GitHub Release 页面 URL（html_url / Atom alternate link）的白名单校验：
+     * 必须为 HTTPS、host 为 `github.com`、无凭据、无路径遍历，且路径归属官方仓库。
+     */
+    fun officialReleasePageUrl(raw: String, officialRepoPath: String): String {
+        val normalized = requireHost(raw, setOf("github.com"), "GitHub 发布页 URL")
+        val url = Url(normalized)
+        require(isSafeOfficialRepoPath(normalized, url.encodedPath, officialRepoPath)) {
+            "GitHub 发布页 URL 必须指向官方仓库 $officialRepoPath"
+        }
+        return normalized
+    }
+
+    private fun isSafeOfficialRepoPath(rawUrl: String, encodedPath: String, officialRepoPath: String): Boolean {
+        val lower = encodedPath.lowercase()
+        if (encodedPath.contains('\\') ||
+            lower.contains("%2e") ||
+            lower.contains("%2f") ||
+            lower.contains("%5c")
+        ) {
+            return false
+        }
+        val segments = encodedPath.split('/')
+        if (segments.any { it == "." || it == ".." }) {
+            return false
+        }
+        val normalizedPath = runCatching { URI(rawUrl).normalize().rawPath }.getOrNull() ?: return false
+        return normalizedPath == "/$officialRepoPath" || normalizedPath.startsWith("/$officialRepoPath/")
     }
 
     /**

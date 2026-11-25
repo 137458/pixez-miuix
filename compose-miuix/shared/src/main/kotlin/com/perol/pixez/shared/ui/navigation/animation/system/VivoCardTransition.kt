@@ -226,8 +226,8 @@ internal object VivoCardTransition {
                 mainHandler,
                 started,
                 finished,
-            ) as ActivityOptions
-            api.blur?.invoke(options, blurEnabled)
+            ) as? ActivityOptions ?: return null
+            runCatching { api.blur?.invoke(options, blurEnabled) }
             options
         } catch (error: ReflectiveOperationException) {
             Napier.w(tag = TAG, throwable = cause(error)) { "OneShot 参数构造失败" }
@@ -237,6 +237,9 @@ internal object VivoCardTransition {
             null
         } catch (error: IllegalArgumentException) {
             Napier.w(tag = TAG, throwable = error) { "OneShot 回调参数不匹配" }
+            null
+        } catch (error: LinkageError) {
+            Napier.w(tag = TAG, throwable = error) { "OneShot 协议依赖不可用" }
             null
         }
     }

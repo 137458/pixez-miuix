@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.itos.coui.dialog.CouiDialogDefaults
 import com.itos.coui.text.CouiTextKind
 import com.itos.coui.text.Text
 import com.itos.coui.theme.CouiTheme
@@ -88,7 +89,9 @@ internal fun CouiUpdateSettingScreen(
     val coroutineScope = rememberCoroutineScope()
     val toastSink = LocalToastSink.current
 
-    var releaseInfo by remember { mutableStateOf<ReleaseInfo?>(getLocalReleaseInfo()) }
+    var releaseInfo by remember {
+        mutableStateOf<ReleaseInfo?>(updateRepository.cachedReleaseInfo ?: getLocalReleaseInfo())
+    }
     var isChecking by remember { mutableStateOf(false) }
     // 检查失败与「已是最新」必须区分：网络或限流失败时不能继续声称已是最新。
     var checkFailed by remember { mutableStateOf(false) }
@@ -177,7 +180,7 @@ internal fun CouiUpdateSettingScreen(
                     title = strings.updateIgnoreVersion,
                     summary = when {
                         isChecking -> strings.loading
-                        checkFailed -> strings.loadFailed
+                        !hasNew && checkFailed -> strings.loadFailed
                         !hasNew -> strings.updateLatest.format(AppInfo.VERSION_NAME)
                         ignoredVersion == releaseInfo?.versionName -> strings.updateIgnoreVersionIgnored
                         else -> strings.updateIgnoreVersionSummary.format(releaseInfo?.versionName.orEmpty())
@@ -294,7 +297,11 @@ private fun CouiUpdateHero(
                 else -> strings.updateLatest.format(AppInfo.VERSION_NAME)
             },
             kind = CouiTextKind.ItemSummary,
-            color = if (hasNew) scheme.accent else scheme.onSurfaceVariant,
+            color = when {
+                hasNew -> scheme.accent
+                checkFailed -> CouiDialogDefaults.colors(CouiTheme.isDark).destructive
+                else -> scheme.onSurfaceVariant
+            },
         )
     }
 }
@@ -341,7 +348,11 @@ private fun CouiChangelogSection(
                     .padding(top = 8.dp),
                 baseFontSize = 14,
                 colors = couiMarkdownColors(),
-                onLinkClick = { url -> openSafeUrl(url, strings, onError = {}) },
+                onLinkClick = { url ->
+                    openSafeUrl(url, strings, onError = { message ->
+                        toastSink(ToastData(message, ToastType.Error))
+                    })
+                },
             )
             if (notesState.hiddenLineCount > 0 || notesExpanded) {
                 CouiTextButton(

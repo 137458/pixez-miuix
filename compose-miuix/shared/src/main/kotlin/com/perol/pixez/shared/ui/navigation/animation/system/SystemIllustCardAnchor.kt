@@ -16,7 +16,10 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
 import com.perol.pixez.shared.ui.navigation.animation.isRectContainedInViewport
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.lang.ref.WeakReference
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -143,7 +146,14 @@ internal class SystemIllustCardAnchor(source: SystemIllustCardSource) {
         val source = reference.get()
             ?.takeIf { SystemIllustCardAnchorRegistry.isAttached(it) }
             ?: return null
-        val snapshot = runCatching { source.preCapturedSnapshot?.await() }.getOrNull()
+        val snapshot = try {
+            source.preCapturedSnapshot?.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            null
+        }
+        currentCoroutineContext().ensureActive()
         val expectedSize = source.coordinates?.size
         if (snapshot != null && expectedSize != null &&
             snapshot.width == expectedSize.width &&
@@ -152,7 +162,13 @@ internal class SystemIllustCardAnchor(source: SystemIllustCardSource) {
             source.preCapturedSnapshot = null
             return snapshot
         }
-        return runCatching { source.captureLayer()?.toImageBitmap() }.getOrNull()
+        return try {
+            source.captureLayer()?.toImageBitmap()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     fun matchesWindowGeometry(
@@ -180,6 +196,7 @@ internal object SystemIllustCardAnchorRegistry {
     fun detach(source: SystemIllustCardSource) {
         sources.remove(source)
         source.coordinates = null
+        source.safeViewportProvider = null
         if (lastTouched?.get() === source) lastTouched = null
     }
 

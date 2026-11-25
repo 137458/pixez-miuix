@@ -109,4 +109,43 @@ class UpdateFeedParserTest {
     fun `parseExpandedAssetApk 无 apk 时返回 null`() {
         assertNull(parseExpandedAssetApk("<div><a href=\"/137458/pixez-miuix/releases/download/v1.0.0/src.zip\">src.zip</a></div>"))
     }
+
+    @Test
+    fun `parseLatestFeedEntry 保留补充平面 Emoji 实体并拦截非官方 alternateUrl`() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <id>tag:github.com,2008:Repository/1/v2.0.0</id>
+                <link rel="alternate" href="https://evil.example.com/phish/releases/tag/v9.9.9"/>
+                <title type="text">Release &#x1F680; v2.0.0</title>
+                <content type="html">&lt;p&gt;修复 &#128027;&lt;/p&gt;</content>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val entry = parseLatestFeedEntry(xml)
+        assertTrue(entry != null)
+        assertEquals("v2.0.0", entry.tagName)
+        assertEquals("https://github.com/137458/pixez-miuix/releases/tag/v2.0.0", entry.releaseUrl)
+        assertEquals("Release \uD83D\uDE80 v2.0.0", entry.title)
+        assertEquals("修复 \uD83D\uDC1B", entry.changelogMarkdown)
+    }
+
+    @Test
+    fun `parseExpandedAssetApk 拒绝 query 伪装后缀且无 li 边界时不串读其他资产摘要`() {
+        val html = """
+            <div>
+              <a href="/137458/pixez-miuix/releases/download/v1.0/src.zip?next=fake.apk">src.zip</a>
+              <a href="/137458/pixez-miuix/releases/download/v1.0/real.apk?download=1">real.apk</a>
+              <span>sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</span>
+            </div>
+        """.trimIndent()
+
+        val asset = parseExpandedAssetApk(html)
+        assertTrue(asset != null)
+        assertEquals("real.apk", asset.name)
+        assertEquals("https://github.com/137458/pixez-miuix/releases/download/v1.0/real.apk?download=1", asset.browser_download_url)
+        assertNull(asset.digest, "脱离 <li> 窗口后不得回退整页误匹配其他区块摘要")
+        assertNull(asset.size)
+    }
 }

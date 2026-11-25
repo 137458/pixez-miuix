@@ -19,6 +19,10 @@ internal data class SystemCardCapability(
     val oplusSdkWindow: Boolean = false,
     val systemConditionSummary: String? = null,
     val officialSupport: Int? = null,
+    val canConfigureBackgroundScale: Boolean = false,
+    val canConfigureColor: Boolean = false,
+    val canRefreshBitmap: Boolean = false,
+    val officialBoundsWindowCoordinates: Boolean = false,
 ) {
     val available: Boolean get() = method != SystemCardTransitionMethod.NONE
 }

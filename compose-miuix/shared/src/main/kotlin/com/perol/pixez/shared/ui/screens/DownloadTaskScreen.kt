@@ -5,6 +5,7 @@ import com.perol.pixez.shared.platform.FileNamePolicy
 import com.perol.pixez.shared.platform.getDefaultPictureDirectory
 import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.blurBackdropSource
@@ -198,7 +199,8 @@ fun DownloadTaskScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .transitionTopBarOccluder(),
                 )
 
                 when (val result = state.value) {

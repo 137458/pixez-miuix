@@ -103,9 +103,10 @@ internal fun ZoomableImage(
     }
 
     val viewerZoomedState = LocalFullScreenViewerZoomedState.current
-    LaunchedEffect(zoomState.scale, isCurrentPage, viewerZoomedState) {
-        if (isCurrentPage) {
-            viewerZoomedState?.value = zoomState.scale > 1.03f
+    LaunchedEffect(zoomState, isCurrentPage, viewerZoomedState) {
+        if (isCurrentPage && viewerZoomedState != null) {
+            androidx.compose.runtime.snapshotFlow { zoomState.scale > 1.03f }
+                .collect { viewerZoomedState.value = it }
         }
     }
 

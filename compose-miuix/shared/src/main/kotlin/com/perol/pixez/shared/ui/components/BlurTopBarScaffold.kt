@@ -1,5 +1,6 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
@@ -7,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
+import com.perol.pixez.shared.ui.navigation.animation.transitionBottomBarOccluder
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -62,7 +64,11 @@ fun BlurTopBarScaffold(
                 )
             }
         },
-        bottomBar = bottomBar,
+        bottomBar = {
+            Box(modifier = Modifier.transitionBottomBarOccluder()) {
+                bottomBar()
+            }
+        },
         content = content,
     )
     }

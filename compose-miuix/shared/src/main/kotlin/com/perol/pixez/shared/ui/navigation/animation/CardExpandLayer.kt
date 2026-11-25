@@ -220,12 +220,21 @@ internal fun Modifier.cardExpandLayer(
 ): Modifier = this
     .graphicsLayer {
         val containerBounds = containerBoundsProvider()
-        val clipRect = resolveCardExpandViewportClip(
-            safeViewport = safeViewportProvider(),
-            containerBounds = containerBounds,
-            expansion = expansionProvider(),
-            minEdgeProgress = CONTENT_FADE_THRESHOLD,
-        )
+        val safeViewport = safeViewportProvider()
+        val clipRect = if (
+            sourceBounds != null &&
+            safeViewport != null &&
+            isRectContainedInViewport(sourceBounds, safeViewport)
+        ) {
+            null
+        } else {
+            resolveCardExpandViewportClip(
+                safeViewport = safeViewport,
+                containerBounds = containerBounds,
+                expansion = expansionProvider(),
+                minEdgeProgress = CONTENT_FADE_THRESHOLD,
+            )
+        }
         if (clipRect == null) {
             this.clip = false
         } else {
@@ -285,13 +294,6 @@ internal fun Modifier.cardExpandLayer(
     }
 }
 
-/**
- * 支持水平与垂直双向比例裁切的圆角矩形 Shape。
- *
- * 用于在等比缩放下将顶层页面容器裁切至卡片当前对应的真实宽高并保留补偿后的圆角。
- * 水平裁切时窗口按 [horizontalBias] 在页面内偏移（0 贴左缘、0.5 居中），
- * 居中收窄保证宽屏下以页面中心呈现的大图在收回全程不被单侧裁出画面。
- */
 private data class ViewportClipShape(
     val left: Float,
     val top: Float,
@@ -307,6 +309,13 @@ private data class ViewportClipShape(
     )
 }
 
+/**
+ * 支持水平与垂直双向比例裁切的圆角矩形 Shape。
+ *
+ * 用于在等比缩放下将顶层页面容器裁切至卡片当前对应的真实宽高并保留补偿后的圆角。
+ * 水平裁切时窗口按 [horizontalBias] 在页面内偏移（0 贴左缘、0.5 居中），
+ * 居中收窄保证宽屏下以页面中心呈现的大图在收回全程不被单侧裁出画面。
+ */
 private data class ClippedContainerShape(
     val widthFraction: Float = 1f,
     val heightFraction: Float,

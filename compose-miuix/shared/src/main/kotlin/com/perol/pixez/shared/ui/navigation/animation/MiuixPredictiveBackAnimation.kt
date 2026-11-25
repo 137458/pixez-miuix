@@ -15,8 +15,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.arkivanov.decompose.Child
 import com.arkivanov.decompose.ExperimentalDecomposeApi
 import com.arkivanov.decompose.Ref
@@ -83,12 +85,40 @@ internal class MiuixSmoothedPredictiveBackAnimatable(
 
     private val progressAnimatable = Animatable(initialValue = initialBackEvent.progress)
     private var swipeEdge by mutableStateOf(initialBackEvent.swipeEdge)
+    private var cachedExitModifier: Modifier? = null
+    private var cachedEnterModifier: Modifier? = null
+    internal var onProgressSampled: ((Float) -> Unit)? = null
+
+    internal fun currentProgress(): Float = progressAnimatable.value
 
     override val exitModifier: Modifier
-        get() = getExitModifier(progressAnimatable.value, swipeEdge)
+        get() = cachedExitModifier ?: getExitModifier(progressAnimatable.value, swipeEdge)
 
     override val enterModifier: Modifier
-        get() = getEnterModifier(progressAnimatable.value, swipeEdge)
+        get() = cachedEnterModifier ?: getEnterModifier(progressAnimatable.value, swipeEdge)
+
+    companion object {
+        /**
+         * 构造绘制期延迟求值实例：只构建一次稳定的 [exitModifier] 与 [enterModifier]，
+         * 避免手势跟随或收尾期间每帧触发外层容器重组及重建模糊渲染管线。
+         */
+        fun lazy(
+            initialBackEvent: BackEvent,
+            buildExitModifier: (progressProvider: () -> Float, edgeProvider: () -> BackEvent.SwipeEdge) -> Modifier,
+            buildEnterModifier: (progressProvider: () -> Float, edgeProvider: () -> BackEvent.SwipeEdge) -> Modifier,
+            onProgressChanged: ((Float) -> Unit)? = null,
+        ): MiuixSmoothedPredictiveBackAnimatable {
+            val instance = MiuixSmoothedPredictiveBackAnimatable(
+                initialBackEvent = initialBackEvent,
+                getExitModifier = { _, _ -> Modifier },
+                getEnterModifier = { _, _ -> Modifier },
+            )
+            instance.cachedExitModifier = buildExitModifier({ instance.progressAnimatable.value }, { instance.swipeEdge })
+            instance.cachedEnterModifier = buildEnterModifier({ instance.progressAnimatable.value }, { instance.swipeEdge })
+            instance.onProgressSampled = onProgressChanged
+            return instance
+        }
+    }
 
     override suspend fun animate(event: BackEvent) {
         swipeEdge = event.swipeEdge
@@ -206,18 +236,23 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
         // 松手的 commit/cancel 回调随之丢失，双层结构卡死。激活时机改由 isEligible
         // （稳态单页，同 isGestureEnabled 判定）在按下阶段检查；与系统手势流的互斥由
         // handler 状态机的 isDragSession 门闩保证。
-        val currentActiveInstance = handler.items.last().stack.active.instance
+        val layoutDirection = LocalLayoutDirection.current
+        val currentStack = handler.items.last().stack
+        val currentActiveInstance = currentStack.active.instance
         val dragBackMounted = dragBackEligible != null &&
+            currentStack.backStack.isNotEmpty() &&
             rememberDragBackGestureEnabled() &&
             dragBackEligible.invoke(currentActiveInstance)
         val modalDismissMounted = modalDismissEligible != null &&
-            handler.items.last().stack.backStack.isNotEmpty() &&
+            currentStack.backStack.isNotEmpty() &&
             modalDismissEligible.invoke(currentActiveInstance)
 
         val gestureModifier = modifier
             .then(
                 if (dragBackMounted) {
                     Modifier.miuixDragBackGesture(
+                        key = handler,
+                        layoutDirection = layoutDirection,
                         isEligible = { activeKeys.size == 1 },
                         onStart = handler::onDragStarted,
                         onProgress = handler::onDragProgressed,
@@ -231,6 +266,7 @@ private class MiuixPredictiveBackAnimation<C : Any, T : Any>(
             .then(
                 if (modalDismissMounted) {
                     Modifier.miuixModalSwipeDismissGesture(
+                        key = handler,
                         isEligible = { activeKeys.size == 1 },
                         onStart = handler::onDragStarted,
                         onProgress = handler::onDragProgressed,
@@ -322,6 +358,7 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
     private var animatable: PredictiveBackAnimatable? = null
     private var initialBackEvent: BackEvent? = null
     private var cancelAnimationJob: Job? = null
+    private var progressObserverJob: Job? = null
 
     /**
      * 本次返回是否已被确认（[onBack] 已触发）。
@@ -397,8 +434,21 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
             // 杂散/乱序进度事件（澎湃 / HyperOS 确认返回后的补发等）不得凭空启动假手势，
             // 否则双层渲染会与常规转场争抢 movableContent，导致重影与列表绘制空白。
             initialBackEvent = null
-            val created = selector(initial, stack.active, stack.backStack.last())
+            val previous = stack.backStack.lastOrNull() ?: run {
+                isDragSession = false
+                return
+            }
+            val created = selector(initial, stack.active, previous)
             animatable = created
+            val smoothed = created as? MiuixSmoothedPredictiveBackAnimatable
+            if (smoothed?.onProgressSampled != null) {
+                progressObserverJob?.cancel()
+                progressObserverJob = scope.launch {
+                    snapshotFlow { smoothed.currentProgress() }.collect { progress ->
+                        smoothed.onProgressSampled?.invoke(progress)
+                    }
+                }
+            }
             items =
                 listOf(
                     MiuixPredictiveBackGestureItem(stack = stack.dropLast(), key = key + 1, modifier = created::enterModifier),
@@ -432,6 +482,9 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
             scope.launch {
                 val snap = current as? MiuixSnapBackAnimatable
                 if (snap != null) snap.finish(velocityFractionPerSec) else current.finish()
+                progressObserverJob?.cancel()
+                progressObserverJob = null
+                (current as? MiuixSmoothedPredictiveBackAnimatable)?.onProgressSampled?.invoke(1f)
                 animatable = null
                 onBack.invoke()
             }
@@ -452,6 +505,9 @@ internal class MiuixPredictiveBackGestureHandler<C : Any, T : Any>(
         cancelAnimationJob = scope.launch {
             val snap = current as? MiuixSnapBackAnimatable
             if (snap != null) snap.cancel(velocityFractionPerSec) else current.cancel()
+            progressObserverJob?.cancel()
+            progressObserverJob = null
+            (current as? MiuixSmoothedPredictiveBackAnimatable)?.onProgressSampled?.invoke(0f)
             animatable = null
             items = listOf(MiuixPredictiveBackGestureItem(stack = stack, key = key))
         }

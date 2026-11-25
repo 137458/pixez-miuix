@@ -244,5 +244,33 @@ class TrustedUrlPolicyTest {
         }
     }
 
+    @Test
+    fun `officialReleaseAssetUrl 拒绝点段路径遍历与编码绕过`() {
+        listOf(
+            "https://github.com/137458/pixez-miuix/../../attacker/evil/releases/download/v1/app.apk",
+            "https://github.com/137458/pixez-miuix/%2e%2e/attacker/evil/releases/download/v1/app.apk",
+            "https://github.com/137458/pixez-miuix/releases/download/v1/..\\evil.apk",
+        ).forEach { raw ->
+            assertFailsWith<IllegalArgumentException>("应拒绝路径遍历绕过: $raw") {
+                TrustedUrlPolicy.officialReleaseAssetUrl(raw, "137458/pixez-miuix")
+            }
+        }
+    }
+
+    @Test
+    fun `officialReleasePageUrl 放行官方发布页并拒绝非官方或遍历路径`() {
+        val official = "https://github.com/137458/pixez-miuix/releases/tag/v1.0.0"
+        assertEquals(official, TrustedUrlPolicy.officialReleasePageUrl(official, "137458/pixez-miuix"))
+        listOf(
+            "https://evil.example.com/137458/pixez-miuix/releases/tag/v1.0.0",
+            "https://github.com/other/repo/releases/tag/v1.0.0",
+            "https://github.com/137458/pixez-miuix/../../other/repo/releases/tag/v1.0.0",
+        ).forEach { raw ->
+            assertFailsWith<IllegalArgumentException>("应拒绝非官方发布页: $raw") {
+                TrustedUrlPolicy.officialReleasePageUrl(raw, "137458/pixez-miuix")
+            }
+        }
+    }
+
     // endregion
 }

@@ -1,6 +1,8 @@
 package com.perol.pixez.android
 
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.perol.pixez.shared.data.settings.SettingsRepository
 import com.perol.pixez.shared.ui.navigation.RootComponent
@@ -16,8 +18,25 @@ internal fun attachIllustWindowInterceptor(
     rootComponent: RootComponent,
 ) {
     var latestRequestId = 0L
+    var stackInitialized = false
+    val stackSubscription = rootComponent.stack.subscribe {
+        if (stackInitialized) {
+            // 栈发生切页/出栈时使在途异步 tryOpen 失效，避免慢速回退 fallback() 劫持后续页面。
+            latestRequestId++
+        } else {
+            stackInitialized = true
+        }
+    }
+    activity.lifecycle.addObserver(
+        object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                stackSubscription.cancel()
+            }
+        },
+    )
     rootComponent.cardWindowInterceptor = { config, fallback ->
         if (!SystemIllustCardTransition.canAttempt(activity, config)) {
+            latestRequestId++
             false
         } else {
             val requestId = ++latestRequestId

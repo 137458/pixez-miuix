@@ -1,6 +1,7 @@
 package com.perol.pixez.shared.ui.navigation.animation
 
 import android.os.Build
+import androidx.compose.ui.unit.LayoutDirection
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.navigation.Config
 import com.perol.pixez.shared.ui.navigation.isModalRoute
@@ -75,6 +76,34 @@ class NavigationTransitionsPolishTest {
             Config.SpotlightDetail(
                 SpotlightArticle(1L, "t", "t", "u", "a", "d"),
             ).isModalRoute(),
+        )
+    }
+
+    @Test
+    fun `resolveVelocityHandoffSpec 异号速度退回默认减速曲线且 RTL 拖拽进度与速度方向正确`() {
+        val mismatched = resolveVelocityHandoffSpec(
+            remainingDistance = -0.3f,
+            initialVelocityPerSec = 1.5f,
+            durationMillis = 200,
+        )
+        assertEquals(HyperOSDecelerateEasing, mismatched.easing)
+
+        // RTL 下从右缘向左滑动产生正进度，且左甩负 velocityX 映射为正返回速度
+        val rtlProgress = resolveDragBackProgress(
+            downX = 1060f,
+            currentX = 760f,
+            containerWidthPx = 1000f,
+            layoutDirection = LayoutDirection.Rtl,
+        )
+        assertEquals(0.3f, rtlProgress, 1e-4f)
+        assertEquals(
+            2.0f,
+            resolveDragBackSignedVelocityFraction(
+                velocityX = -2000f,
+                containerWidthPx = 1000f,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+            1e-4f,
         )
     }
 }

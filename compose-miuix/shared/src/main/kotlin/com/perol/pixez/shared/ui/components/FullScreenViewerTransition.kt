@@ -18,7 +18,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -30,6 +32,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.util.lerp
 import com.perol.pixez.shared.ui.navigation.animation.HyperOSDecelerateEasing
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -81,8 +84,15 @@ internal fun Modifier.detailImageBounds(
         onDispose { tracker.removePageBounds(pageIndex) }
     }
     return onGloballyPositioned { coordinates ->
-        if (coordinates.isAttached) {
-            tracker.updatePageBounds(pageIndex, coordinates.boundsInWindow())
+        if (coordinates.isAttached && coordinates.size.width > 0 && coordinates.size.height > 0) {
+            val topLeft = coordinates.localToWindow(Offset.Zero)
+            val bottomRight = coordinates.localToWindow(
+                Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat()),
+            )
+            val unclipped = Rect(topLeft, bottomRight)
+            if (unclipped.width > 1f && unclipped.height > 1f) {
+                tracker.updatePageBounds(pageIndex, unclipped)
+            }
         }
     }
 }
@@ -171,7 +181,8 @@ internal fun lerpViewerTransform(
 @Stable
 internal class FullScreenViewerTransitionState(
     initialPage: Int,
-    private val imageAspectRatio: Float?,
+    private val imageAspectRatio: Float? = null,
+    private val imageAspectRatioProvider: ((Int) -> Float?)? = null,
     private val originBoundsProvider: (Int) -> Rect?,
     private val onDismissComplete: () -> Unit,
 ) {
@@ -196,15 +207,19 @@ internal class FullScreenViewerTransitionState(
     private val cancelProgress: Animatable<Float, AnimationVector1D> = Animatable(0f)
     private var cancelStartTransform by mutableStateOf(FullScreenViewerTransform())
 
-    fun startOpenIfReady() {
-        if (hasPlayedOpen || containerBounds.width <= 1f || containerBounds.height <= 1f) return
+    private fun aspectRatioFor(page: Int): Float? =
+        imageAspectRatioProvider?.invoke(page) ?: imageAspectRatio
+
+    fun startOpenIfReady(): Boolean {
+        if (hasPlayedOpen || containerBounds.width <= 1f || containerBounds.height <= 1f) return false
         val origin = originBoundsProvider(currentPage)
         openStartTransform = if (origin != null) {
-            resolveViewerOriginEndpoint(origin, containerBounds, imageAspectRatio)
+            resolveViewerOriginEndpoint(origin, containerBounds, aspectRatioFor(currentPage))
         } else {
             FullScreenViewerTransform(scale = 0.92f, backgroundAlpha = 0f, contentAlpha = 0f, controlsAlpha = 0f)
         }
         hasPlayedOpen = true
+        return true
     }
 
     suspend fun runOpenAnimation() {
@@ -239,22 +254,25 @@ internal class FullScreenViewerTransitionState(
         isDragging = false
         isCanceling = false
         isClosing = true
-        val origin = originBoundsProvider(currentPage)
-        closeEndTransform = if (origin != null && containerBounds.width > 1f) {
-            resolveViewerOriginEndpoint(origin, containerBounds, imageAspectRatio)
-        } else {
-            FullScreenViewerTransform(
-                translationY = closeStartTransform.translationY + 120f,
-                scale = (closeStartTransform.scale * 0.85f).coerceAtLeast(0.5f),
-                cornerRadiusPx = 28f,
-                backgroundAlpha = 0f,
-                contentAlpha = 0f,
-                controlsAlpha = 0f,
-            )
+        try {
+            val origin = originBoundsProvider(currentPage)
+            closeEndTransform = if (origin != null && containerBounds.width > 1f) {
+                resolveViewerOriginEndpoint(origin, containerBounds, aspectRatioFor(currentPage))
+            } else {
+                FullScreenViewerTransform(
+                    translationY = closeStartTransform.translationY + 120f,
+                    scale = (closeStartTransform.scale * 0.85f).coerceAtLeast(0.5f),
+                    cornerRadiusPx = 28f,
+                    backgroundAlpha = 0f,
+                    contentAlpha = 0f,
+                    controlsAlpha = 0f,
+                )
+            }
+            closeProgress.snapTo(0f)
+            closeProgress.animateTo(1f, tween(FULLSCREEN_CLOSE_DURATION_MS, easing = HyperOSDecelerateEasing))
+        } finally {
+            onDismissComplete()
         }
-        closeProgress.snapTo(0f)
-        closeProgress.animateTo(1f, tween(FULLSCREEN_CLOSE_DURATION_MS, easing = HyperOSDecelerateEasing))
-        onDismissComplete()
     }
 
     fun canInterceptVerticalDrag(): Boolean =
@@ -296,18 +314,24 @@ internal fun rememberFullScreenViewerTransitionState(
     imageAspectRatio: Float?,
     tracker: DetailImageBoundsTracker?,
     onDismissComplete: () -> Unit,
+    imageAspectRatioProvider: ((Int) -> Float?)? = null,
 ): FullScreenViewerTransitionState {
+    val currentOnDismiss by rememberUpdatedState(onDismissComplete)
+    val currentAspectRatio by rememberUpdatedState(imageAspectRatio)
+    val currentAspectRatioProvider by rememberUpdatedState(imageAspectRatioProvider)
     val state = remember(initialPage, tracker) {
         FullScreenViewerTransitionState(
             initialPage = initialPage,
-            imageAspectRatio = imageAspectRatio,
+            imageAspectRatioProvider = { page ->
+                currentAspectRatioProvider?.invoke(page) ?: currentAspectRatio
+            },
             originBoundsProvider = { page -> tracker?.visibleBoundsFor(page) },
-            onDismissComplete = onDismissComplete,
+            onDismissComplete = { currentOnDismiss() },
         )
     }
-    LaunchedEffect(state, state.containerBounds) {
-        if (state.containerBounds.width > 1f && state.containerBounds.height > 1f) {
-            state.startOpenIfReady()
+    LaunchedEffect(state) {
+        snapshotFlow { state.containerBounds }.first { it.width > 1f && it.height > 1f }
+        if (state.startOpenIfReady()) {
             state.runOpenAnimation()
         }
     }
@@ -334,53 +358,62 @@ internal fun Modifier.fullScreenViewerDismissContainer(
                 val tracker = VelocityTracker()
                 tracker.addPosition(down.uptimeMillis, down.position)
                 var activated = false
+                var settled = false
                 var cumulative = Offset.Zero
                 var prevPosition = down.position
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    if (event.changes.count { it.pressed } > 1) {
-                        if (activated) {
-                            scope.launch { transitionState.cancelDrag() }
+                try {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.count { it.pressed } > 1) {
+                            if (activated) {
+                                settled = true
+                                scope.launch { transitionState.cancelDrag() }
+                            }
+                            break
                         }
-                        break
-                    }
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                    if (!change.pressed) {
-                        if (activated) {
-                            val vy = tracker.calculateVelocity().y
-                            val outcome = resolveViewerDismissOutcome(
-                                dragOffsetY = cumulative.y,
-                                velocityY = vy,
-                                containerHeightPx = size.height.toFloat(),
-                            )
-                            scope.launch {
-                                when (outcome) {
-                                    ViewerDismissOutcome.COMMIT -> transitionState.requestDismiss()
-                                    ViewerDismissOutcome.CANCEL -> transitionState.cancelDrag()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            if (activated) {
+                                val vy = tracker.calculateVelocity().y
+                                val outcome = resolveViewerDismissOutcome(
+                                    dragOffsetY = cumulative.y,
+                                    velocityY = vy,
+                                    containerHeightPx = size.height.toFloat(),
+                                )
+                                settled = true
+                                scope.launch {
+                                    when (outcome) {
+                                        ViewerDismissOutcome.COMMIT -> transitionState.requestDismiss()
+                                        ViewerDismissOutcome.CANCEL -> transitionState.cancelDrag()
+                                    }
                                 }
                             }
+                            break
                         }
-                        break
+                        val delta = change.position - prevPosition
+                        prevPosition = change.position
+                        tracker.addPosition(change.uptimeMillis, change.position)
+                        if (!activated) {
+                            if (!transitionState.canInterceptVerticalDrag()) return@awaitEachGesture
+                            val total = change.position - down.position
+                            val dx = abs(total.x)
+                            val dy = abs(total.y)
+                            if (dx >= dy * 0.9f && dx > viewConfiguration.touchSlop) {
+                                return@awaitEachGesture
+                            }
+                            if (dy <= viewConfiguration.touchSlop) {
+                                continue
+                            }
+                            activated = true
+                        }
+                        cumulative += delta
+                        transitionState.updateDrag(cumulative)
+                        event.changes.forEach { it.consume() }
                     }
-                    val delta = change.position - prevPosition
-                    prevPosition = change.position
-                    tracker.addPosition(change.uptimeMillis, change.position)
-                    if (!activated) {
-                        if (!transitionState.canInterceptVerticalDrag()) return@awaitEachGesture
-                        val total = change.position - down.position
-                        val dx = abs(total.x)
-                        val dy = abs(total.y)
-                        if (dx >= dy * 0.9f && dx > viewConfiguration.touchSlop) {
-                            return@awaitEachGesture
-                        }
-                        if (dy <= viewConfiguration.touchSlop) {
-                            continue
-                        }
-                        activated = true
+                } finally {
+                    if (activated && !settled) {
+                        scope.launch { transitionState.cancelDrag() }
                     }
-                    cumulative += delta
-                    transitionState.updateDrag(cumulative)
-                    event.changes.forEach { it.consume() }
                 }
             }
         }

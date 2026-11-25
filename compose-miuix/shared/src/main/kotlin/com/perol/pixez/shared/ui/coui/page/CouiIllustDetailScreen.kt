@@ -144,7 +144,9 @@ import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.navigation.animation.commentsTransitionBounds
 import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import com.perol.pixez.shared.ui.screens.IllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberIllustDetailActions
 import com.perol.pixez.shared.ui.screens.rememberSyncedDetailToggle
@@ -270,7 +272,7 @@ internal fun CouiIllustDetailScreen(
                 originIllustId = illustId,
                 displayedIllustId = currentDisplayedId,
             )
-            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId)
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, currentDisplayedId, originIllustId = illustId)
         }
 
         HorizontalPager(
@@ -299,7 +301,7 @@ internal fun CouiIllustDetailScreen(
                 originIllustId = illustId,
                 displayedIllustId = illustId,
             )
-            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId)
+            SystemIllustCardTransition.updateDisplayedIllust(sessionToken, illustId, originIllustId = illustId)
         }
 
         CouiIllustDetailSingle(
@@ -510,6 +512,7 @@ private fun CouiIllustDetailSingle(
     val contentBackdrop = rememberCouiBackdrop()
     val imageBoundsTracker = remember(illust?.id) { DetailImageBoundsTracker() }
 
+    ProvideTransitionViewportScope {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -802,6 +805,7 @@ private fun CouiIllustDetailSingle(
                 onToast = toastSink,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .transitionTopBarOccluder()
                     .graphicsLayer { alpha = detailChromeAlphaProvider() },
             )
         } else if (illust != null) {
@@ -826,6 +830,7 @@ private fun CouiIllustDetailSingle(
                 bookmarkError = null
             }
         }
+    }
     }
 }
 
@@ -1430,9 +1435,7 @@ private fun CouiDetailQuickActionsBar(
             active = false,
             enabled = true,
             onClick = onCommentsClick,
-            modifier = Modifier
-                .weight(1f)
-                .commentsTransitionBounds(targetId = illustId, cornerRadius = 14.dp),
+            modifier = Modifier.weight(1f),
         )
         CouiQuickActionTile(
             icon = CouiIcons.Share,

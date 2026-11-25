@@ -12,6 +12,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -19,7 +21,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
@@ -30,6 +32,7 @@ import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemCardBack
 import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemCardTransitionCapable
 import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardAnchorRegistry
 import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -90,20 +93,34 @@ internal fun Modifier.commentsTransitionBounds(
     targetId: Long?,
     isNovel: Boolean = false,
     cornerRadius: Dp = 16.dp,
+    respectSafeViewport: Boolean = true,
 ): Modifier = transitionTargetBounds(
     kind = if (isNovel) TransitionTargetKind.NovelComments else TransitionTargetKind.Comments,
     id = targetId,
     cornerRadius = cornerRadius,
+    respectSafeViewport = respectSafeViewport,
 )
+
+private fun LayoutCoordinates.unclippedWindowRect(): Rect? {
+    if (!isAttached) return null
+    val width = size.width.toFloat()
+    val height = size.height.toFloat()
+    if (width <= 0f || height <= 0f) return null
+    val topLeft = localToWindow(Offset.Zero)
+    val bottomRight = localToWindow(Offset(width, height))
+    return Rect(topLeft, bottomRight).takeIf { it.width > 0f && it.height > 0f }
+}
 
 private fun Modifier.transitionTargetBounds(
     kind: TransitionTargetKind,
     id: Long?,
     cornerRadius: Dp,
+    respectSafeViewport: Boolean = true,
 ): Modifier = composed {
     val registry = LocalSharedBoundsRegistry.current
     val view = LocalView.current
     val currentViewportState by rememberUpdatedState(LocalTransitionViewportState.current)
+    val currentRespectSafeViewport by rememberUpdatedState(respectSafeViewport)
     val currentId by rememberUpdatedState(id)
     val currentCornerRadius by rememberUpdatedState(cornerRadius)
     val systemCapable = LocalSystemCardTransitionCapable.current &&
@@ -129,11 +146,15 @@ private fun Modifier.transitionTargetBounds(
         SideEffect {
             source.cornerRadiusPx = cornerRadiusPx
             source.backgroundColorArgb = backgroundColorArgb
-            source.safeViewportProvider = {
-                currentViewportState?.resolveSafeViewport(
-                    fallbackWidth = view.rootView.width.toFloat(),
-                    fallbackHeight = view.rootView.height.toFloat(),
-                )
+            source.safeViewportProvider = if (currentRespectSafeViewport) {
+                {
+                    currentViewportState?.resolveSafeViewport(
+                        fallbackWidth = view.rootView.width.toFloat(),
+                        fallbackHeight = view.rootView.height.toFloat(),
+                    )
+                }
+            } else {
+                null
             }
         }
         DisposableEffect(source) {
@@ -157,7 +178,13 @@ private fun Modifier.transitionTargetBounds(
                     if (source.captureLayer() != null) {
                         source.preCapturedSnapshot?.cancel()
                         source.preCapturedSnapshot = captureScope.async(start = CoroutineStart.UNDISPATCHED) {
-                            runCatching { source.captureLayer()?.toImageBitmap() }.getOrNull()
+                            try {
+                                source.captureLayer()?.toImageBitmap()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Throwable) {
+                                null
+                            }
                         }
                     }
                     SystemIllustCardAnchorRegistry.markTouched(source)
@@ -194,20 +221,29 @@ private fun Modifier.transitionTargetBounds(
     }
 
     val registryModifier = remember(registry, kind, id, view) {
-        var latestCoordinates: androidx.compose.ui.layout.LayoutCoordinates? = null
+        var latestCoordinates: LayoutCoordinates? = null
+        val safeViewportProvider: () -> Rect? = {
+            if (currentRespectSafeViewport) {
+                currentViewportState?.resolveSafeViewport(
+                    fallbackWidth = view.rootView.width.toFloat(),
+                    fallbackHeight = view.rootView.height.toFloat(),
+                )
+            } else {
+                null
+            }
+        }
         Modifier
             .onGloballyPositioned { coordinates ->
                 latestCoordinates = coordinates
                 val resolvedId = currentId
-                if (resolvedId != null && resolvedId > 0 && coordinates.isAttached) {
+                val rect = coordinates.unclippedWindowRect()
+                if (resolvedId != null && resolvedId > 0 && rect != null) {
                     registry.putTarget(
                         target = TransitionTarget(kind, resolvedId),
-                        rect = coordinates.boundsInWindow(),
+                        rect = rect,
                         cornerRadiusDp = currentCornerRadius.value,
-                        safeViewport = currentViewportState?.resolveSafeViewport(
-                            fallbackWidth = view.rootView.width.toFloat(),
-                            fallbackHeight = view.rootView.height.toFloat(),
-                        ),
+                        safeViewport = safeViewportProvider(),
+                        safeViewportProvider = if (currentRespectSafeViewport) safeViewportProvider else null,
                     )
                 }
             }
@@ -216,15 +252,14 @@ private fun Modifier.transitionTargetBounds(
                     awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val coords = latestCoordinates
                     val resolvedId = currentId
-                    if (coords != null && coords.isAttached && resolvedId != null && resolvedId > 0) {
+                    val rect = coords?.unclippedWindowRect()
+                    if (resolvedId != null && resolvedId > 0 && rect != null) {
                         registry.putTarget(
                             target = TransitionTarget(kind, resolvedId),
-                            rect = coords.boundsInWindow(),
+                            rect = rect,
                             cornerRadiusDp = currentCornerRadius.value,
-                            safeViewport = currentViewportState?.resolveSafeViewport(
-                                fallbackWidth = view.rootView.width.toFloat(),
-                                fallbackHeight = view.rootView.height.toFloat(),
-                            ),
+                            safeViewport = safeViewportProvider(),
+                            safeViewportProvider = if (currentRespectSafeViewport) safeViewportProvider else null,
                         )
                     }
                 }

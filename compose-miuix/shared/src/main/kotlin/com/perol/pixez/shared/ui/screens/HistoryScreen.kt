@@ -6,6 +6,7 @@ import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.navigation.animation.illustTransitionBounds
 import com.perol.pixez.shared.ui.navigation.animation.novelTransitionBounds
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -227,7 +228,8 @@ fun HistoryScreen(
                     modifier = Modifier
                         .widthIn(max = AppConstants.Layout.TABLET_CONTENT_MAX_WIDTH_DP.dp)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .transitionTopBarOccluder(),
                 )
 
                 // 根据加载状态展示不同内容。

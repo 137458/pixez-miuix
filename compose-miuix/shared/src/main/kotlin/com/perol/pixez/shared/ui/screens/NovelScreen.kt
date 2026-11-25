@@ -38,6 +38,7 @@ import com.perol.pixez.shared.ui.components.BlurTopBarScaffold
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
 import com.perol.pixez.shared.ui.components.NovelCard
 import com.perol.pixez.shared.ui.components.PagingFooterAppearance
@@ -183,7 +184,8 @@ fun NovelScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .transitionTopBarOccluder(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     NovelTabChip(
@@ -214,7 +216,8 @@ fun NovelScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                            .transitionTopBarOccluder(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         NovelSubModeChip(

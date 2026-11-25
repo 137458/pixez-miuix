@@ -10,7 +10,9 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import com.itgsa.animation.sharedview.ViewAnimationListener
+import com.itgsa.animation.sharedview.ViewAnimationManager
 import io.github.aakira.napier.Napier
+import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.function.BiConsumer
@@ -25,6 +27,10 @@ internal object OplusCardTransition {
             Class.forName("android.app.viewseamless.OplusViewSeamlessRemoteManager", false, null)
         } catch (_: ClassNotFoundException) {
             null
+        } catch (_: SecurityException) {
+            null
+        } catch (_: LinkageError) {
+            null
         }
     }
 
@@ -38,6 +44,8 @@ internal object OplusCardTransition {
         val fromBundle: Method,
         val remoteTransition: Method,
         val callback: Class<*>,
+        val setPositionOffset: Method?,
+        val createBridge: Method?,
     )
 
     private val protocol: Protocol? by lazy {
@@ -63,7 +71,14 @@ internal object OplusCardTransition {
             val fromBundle = ActivityOptions::class.java.getMethod("fromBundle", Bundle::class.java)
             member = "ActivityOptions.getRemoteTransition"
             val remoteTransition = ActivityOptions::class.java.getMethod("getRemoteTransition")
-            Protocol(open, skipBack, cancel, fromBundle, remoteTransition, callback)
+            val setPositionOffset = runCatching {
+                callback.getMethod("setPositionOffset", PointF::class.java)
+            }.getOrNull()
+            val createBridge = runCatching {
+                Class.forName("com.perol.pixez.shared.ui.navigation.animation.system.OplusAnimationCallbackBridge")
+                    .getMethod("create", BiConsumer::class.java)
+            }.getOrNull()
+            Protocol(open, skipBack, cancel, fromBundle, remoteTransition, callback, setPositionOffset, createBridge)
         } catch (error: ClassNotFoundException) {
             if (hasSystemManager) Napier.w(tag = TAG) { "旧无缝窗口协议类查找失败: member=$member error=$error" }
             null
@@ -76,6 +91,60 @@ internal object OplusCardTransition {
         } catch (error: LinkageError) {
             Napier.w(tag = TAG, throwable = error) { "旧无缝窗口协议依赖不可用: member=$member" }
             null
+        }
+    }
+
+    private data class ConditionsReflection(
+        val featureField: Field?,
+        val dppField: Field?,
+        val animLevelField: Field?,
+        val getInstance: Method?,
+        val isFeatureEnable: Method?,
+        val inOplusCompatMode: Method?,
+        val flexibleGetInstance: Method?,
+        val getFlexibleWindowState: Method?,
+    )
+
+    private val conditionsReflection: ConditionsReflection? by lazy {
+        val manager = remoteManagerClass ?: return@lazy null
+        fun <T> probe(block: () -> T): T? = try {
+            block()
+        } catch (_: ReflectiveOperationException) {
+            null
+        } catch (_: SecurityException) {
+            null
+        } catch (_: LinkageError) {
+            null
+        }
+        val flexible = probe {
+            Class.forName("com.oplus.flexiblewindow.FlexibleWindowManager", false, null)
+        }
+        ConditionsReflection(
+            featureField = probe { manager.getDeclaredField("FEATURE_ENABLE").apply { isAccessible = true } },
+            dppField = probe { manager.getDeclaredField("DPP").apply { isAccessible = true } },
+            animLevelField = probe { manager.getDeclaredField("ANIM_LEVEL").apply { isAccessible = true } },
+            getInstance = probe { manager.getMethod("getInstance") },
+            isFeatureEnable = probe {
+                manager.getDeclaredMethod("isFeatureEnable", Context::class.java).apply { isAccessible = true }
+            },
+            inOplusCompatMode = probe {
+                manager.getMethod("inOplusCompatMode", Configuration::class.java)
+            },
+            flexibleGetInstance = probe { flexible?.getMethod("getInstance") },
+            getFlexibleWindowState = probe { flexible?.getMethod("getFlexibleWindowState", Activity::class.java) },
+        )
+    }
+
+    private val cachedSpringPositionOffsetSupported: Boolean by lazy {
+        try {
+            Class.forName("android.app.viewseamless.ViewSeamlessRemoteTransition", false, null)
+                .getDeclaredField("SPRING").apply { isAccessible = true }.getBoolean(null)
+        } catch (_: ReflectiveOperationException) {
+            false
+        } catch (_: SecurityException) {
+            false
+        } catch (_: LinkageError) {
+            false
         }
     }
 
@@ -99,9 +168,9 @@ internal object OplusCardTransition {
 
     fun conditions(activity: Activity?): Conditions {
         val errors = mutableListOf<String>()
-        val manager = remoteManagerClass
+        val refl = conditionsReflection
             ?: return Conditions(null, null, null, null, null, null, listOf("原生无缝管理器不存在"))
-        fun <T> read(name: String, block: () -> T): T? = try {
+        fun <T> read(name: String, block: () -> T?): T? = try {
             block()
         } catch (error: ReflectiveOperationException) {
             errors += "$name: ${cause(error)}"
@@ -109,26 +178,29 @@ internal object OplusCardTransition {
         } catch (error: SecurityException) {
             errors += "$name: $error"
             null
+        } catch (error: LinkageError) {
+            errors += "$name: $error"
+            null
+        } catch (error: ClassCastException) {
+            errors += "$name: $error"
+            null
+        } catch (error: NullPointerException) {
+            errors += "$name: $error"
+            null
         }
-        fun field(name: String): Any? = read(name) {
-            manager.getDeclaredField(name).apply { isAccessible = true }.get(null)
-        }
-        val feature = field("FEATURE_ENABLE") as? Boolean
-        val configuration = field("DPP") as? Boolean
-        val level = field("ANIM_LEVEL") as? Int
+        val feature = read("FEATURE_ENABLE") { refl.featureField?.get(null) as? Boolean }
+        val configuration = read("DPP") { refl.dppField?.get(null) as? Boolean }
+        val level = read("ANIM_LEVEL") { refl.animLevelField?.get(null) as? Int }
         val allowed = if (activity == null) null else read("isFeatureEnable") {
-            val instance = manager.getMethod("getInstance").invoke(null)
-            manager.getDeclaredMethod("isFeatureEnable", Context::class.java)
-                .apply { isAccessible = true }.invoke(instance, activity) as Boolean
+            val instance = refl.getInstance?.invoke(null) ?: return@read null
+            refl.isFeatureEnable?.invoke(instance, activity) as? Boolean
         }
         val windowState = if (activity == null) null else read("windowState") {
-            val flexible = Class.forName("com.oplus.flexiblewindow.FlexibleWindowManager", false, null)
-            flexible.getMethod("getFlexibleWindowState", Activity::class.java)
-                .invoke(flexible.getMethod("getInstance").invoke(null), activity) as Int
+            val instance = refl.flexibleGetInstance?.invoke(null) ?: return@read null
+            refl.getFlexibleWindowState?.invoke(instance, activity) as? Int
         }
         val compatMode = if (activity == null) null else read("compatMode") {
-            manager.getMethod("inOplusCompatMode", Configuration::class.java)
-                .invoke(null, activity.resources.configuration) as Boolean
+            refl.inOplusCompatMode?.invoke(null, activity.resources.configuration) as? Boolean
         }
         return Conditions(feature, configuration, level, allowed, windowState, compatMode, errors)
     }
@@ -136,11 +208,12 @@ internal object OplusCardTransition {
     internal class Opening(
         val options: Bundle,
         private val callback: Any,
-        private val offset: Method,
+        private val offset: Method?,
         val supportsPositionOffset: Boolean,
     ) {
         fun updatePosition(bounds: Rect, initialBounds: Rect) {
-            offset.invoke(
+            val method = offset ?: return
+            method.invoke(
                 callback,
                 PointF((bounds.left - initialBounds.left).toFloat(), (bounds.top - initialBounds.top).toFloat()),
             )
@@ -156,6 +229,7 @@ internal object OplusCardTransition {
         listener: ViewAnimationListener,
     ): Opening? {
         val api = protocol ?: return null
+        val createBridge = api.createBridge ?: return null
         val config = Bundle().apply {
             putParcelable("view_seamless_bitmap", bitmap)
             putParcelable("view_seamless_rect", Rect(bounds))
@@ -164,20 +238,18 @@ internal object OplusCardTransition {
             // 来源是窗口 View，不是独立卡片 View；不能让系统隐藏整页 Compose 内容。
             putBoolean("view_seamless_view_visible", true)
         }
+        var opened = false
         return try {
             val events = BiConsumer<String, Boolean> { event, isOpen ->
-                val mode = if (isOpen) 0 else 1
+                val mode = if (isOpen) ViewAnimationManager.ANIM_MODE_OPEN else ViewAnimationManager.ANIM_MODE_BACK
                 if (event == "start") listener.onAnimationStart(mode) else listener.onAnimationEnd(mode)
             }
-            val callback = Class.forName(
-                "com.perol.pixez.shared.ui.navigation.animation.system.OplusAnimationCallbackBridge",
-            ).getMethod("create", BiConsumer::class.java).invoke(null, events)
-                ?: return null
-            val offset = api.callback.getMethod("setPositionOffset", PointF::class.java)
+            val callback = createBridge.invoke(null, events) ?: return null
             if (api.open.invoke(null, activity.window.decorView, activity, config, callback) != true) {
                 Napier.i(tag = TAG) { "系统拒绝旧无缝展开，回退应用内转场" }
                 return null
             }
+            opened = true
             val options = api.fromBundle.invoke(null, config) as? ActivityOptions
             if (options == null || api.remoteTransition.invoke(options) == null) {
                 cancel()
@@ -187,21 +259,25 @@ internal object OplusCardTransition {
                 Opening(
                     options.toBundle().apply { putBoolean(OPEN, true) },
                     callback,
-                    offset,
-                    springPositionOffsetSupported(),
+                    api.setPositionOffset,
+                    cachedSpringPositionOffsetSupported,
                 )
             }
         } catch (error: ReflectiveOperationException) {
             Napier.w(tag = TAG, throwable = cause(error)) { "旧无缝展开配置失败" }
-            cancel()
+            if (opened) cancel()
             null
         } catch (error: SecurityException) {
             Napier.w(tag = TAG, throwable = error) { "系统拒绝旧无缝展开配置" }
-            cancel()
+            if (opened) cancel()
             null
         } catch (error: LinkageError) {
             Napier.w(tag = TAG, throwable = error) { "系统回调契约不可用" }
-            cancel()
+            if (opened) cancel()
+            null
+        } catch (error: IllegalArgumentException) {
+            Napier.w(tag = TAG, throwable = error) { "旧无缝展开参数不匹配" }
+            if (opened) cancel()
             null
         }
     }
@@ -218,6 +294,8 @@ internal object OplusCardTransition {
                 Napier.w(tag = TAG, throwable = cause(error)) { "返回位置偏移更新失败，跳过卡片收回" }
             } catch (error: SecurityException) {
                 Napier.w(tag = TAG, throwable = error) { "系统拒绝返回位置偏移，跳过卡片收回" }
+            } catch (error: LinkageError) {
+                Napier.w(tag = TAG, throwable = error) { "返回位置偏移契约不可用，跳过卡片收回" }
             }
         }
         try {
@@ -226,16 +304,9 @@ internal object OplusCardTransition {
             Napier.w(tag = TAG, throwable = cause(error)) { "无法取消旧无缝返回落点" }
         } catch (error: SecurityException) {
             Napier.w(tag = TAG, throwable = error) { "系统拒绝取消旧无缝返回落点" }
+        } catch (error: LinkageError) {
+            Napier.w(tag = TAG, throwable = error) { "旧无缝取消返回契约不可用" }
         }
-    }
-
-    private fun springPositionOffsetSupported(): Boolean = try {
-        Class.forName("android.app.viewseamless.ViewSeamlessRemoteTransition", false, null)
-            .getDeclaredField("SPRING").apply { isAccessible = true }.getBoolean(null)
-    } catch (_: ReflectiveOperationException) {
-        false
-    } catch (_: SecurityException) {
-        false
     }
 
     fun cancel() {
@@ -247,6 +318,8 @@ internal object OplusCardTransition {
             Napier.w(tag = TAG, throwable = cause(error)) { "无法结束旧无缝动画" }
         } catch (error: SecurityException) {
             Napier.w(tag = TAG, throwable = error) { "系统拒绝结束旧无缝动画" }
+        } catch (error: LinkageError) {
+            Napier.w(tag = TAG, throwable = error) { "旧无缝动画结束契约不可用" }
         }
     }
 

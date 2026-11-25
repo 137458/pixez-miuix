@@ -151,6 +151,7 @@ class SharedBoundsRegistry {
         rect: Rect?,
         cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
         safeViewport: Rect? = null,
+        safeViewportProvider: (() -> Rect?)? = null,
     ) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
             return
@@ -168,6 +169,7 @@ class SharedBoundsRegistry {
                 rect = rect.toStationaryBounds(),
                 cornerRadiusDp = cornerRadiusDp,
                 safeViewport = safeViewport,
+                safeViewportProvider = safeViewportProvider,
             )
             return
         }
@@ -175,6 +177,7 @@ class SharedBoundsRegistry {
             rect = rect,
             cornerRadiusDp = cornerRadiusDp,
             safeViewport = safeViewport,
+            safeViewportProvider = safeViewportProvider,
         )
     }
 
@@ -184,8 +187,15 @@ class SharedBoundsRegistry {
         rect: Rect?,
         cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
         safeViewport: Rect? = null,
+        safeViewportProvider: (() -> Rect?)? = null,
     ) {
-        putTarget(TransitionTarget(TransitionTargetKind.Illust, illustId), rect, cornerRadiusDp, safeViewport)
+        putTarget(
+            TransitionTarget(TransitionTargetKind.Illust, illustId),
+            rect,
+            cornerRadiusDp,
+            safeViewport,
+            safeViewportProvider,
+        )
     }
 
     /** 取出某个目标卡片最近一次登记的窗口坐标矩形与圆角。 */
@@ -358,12 +368,13 @@ class SharedBoundsRegistry {
         widthPx: Float,
         fraction: Float,
         parallaxFraction: Float = MIUIX_DEFAULT_COVER_PARALLAX_FRACTION,
+        directionSign: Float = 1f,
     ) {
         val clamped = fraction.coerceIn(0f, 1f)
         if (widthPx <= 0f || parallaxFraction <= 0f || clamped <= 0.001f || clamped >= 0.999f) {
             listTranslationX = 0f
         } else {
-            listTranslationX = -widthPx * parallaxFraction * clamped
+            listTranslationX = -widthPx * parallaxFraction * clamped * directionSign
         }
     }
 
@@ -560,7 +571,11 @@ data class IllustCardBounds(
     val rect: Rect,
     val cornerRadiusDp: Float,
     val safeViewport: Rect? = null,
-)
+    val safeViewportProvider: (() -> Rect?)? = null,
+) {
+    /** 优先动态读取最新安全视口（避免布局序与栏位状态变化造成快照过期），无提供者时回退静态快照。 */
+    fun resolveSafeViewport(): Rect? = safeViewportProvider?.invoke() ?: safeViewport
+}
 
 /**
  * 提供当前组合树使用的 [SharedBoundsRegistry]。

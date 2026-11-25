@@ -406,10 +406,20 @@ class RootComponent(
     }
 
     /**
-     * 登录成功：标记引导完成，清空登录栈并跳转至首页。
+     * 登录成功：标记引导完成；独立详情窗口内仅关闭登录页（若为栈底则退出窗口），
+     * 主窗口则清空登录栈并跳转至首页。
      */
     fun onLoginSuccess() {
         settingsRepository.hasCompletedGuide = true
+        val exit = onExitRoot
+        if (exit != null) {
+            if (stack.value.backStack.isEmpty()) {
+                exit()
+            } else {
+                navigation.pop()
+            }
+            return
+        }
         navigation.navigate { listOf(Config.Main(MainTab.Hello)) }
     }
 

@@ -191,4 +191,21 @@ class RootComponentSystemTransitionTest {
             assertTrue(exited)
         }
     }
+
+    @Test
+    fun `独立详情窗口内 onLoginSuccess 仅退出登录栈而不替换为第二个首页`() {
+        var exited = false
+        val component = RootComponent(
+            componentContext = DefaultComponentContext(LifecycleRegistry()),
+            settingsRepository = createSettings(),
+            initialConfig = Config.IllustDetail(99L),
+            onExitRoot = { exited = true },
+        )
+        component.onLoginClicked()
+        assertEquals(Config.Login, component.stack.value.active.configuration)
+
+        component.onLoginSuccess()
+        assertFalse(exited)
+        assertIs<IllustDetailComponent>(component.stack.value.active.instance)
+    }
 }

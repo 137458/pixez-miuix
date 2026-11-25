@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification"
+                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+   <configuration>
+      <verify-metadata>true</verify-metadata>
+      <verify-signatures>false</verify-signatures>
+      <trusted-artifacts>
+         <trust group="^(?!gsai\.sdk$).*" regex="true"/>
+      </trusted-artifacts>
+   </configuration>
+   <components>
+      <component group="gsai.sdk" name="sharedview-kit" version="1.0.0.5">
+         <artifact name="sharedview-kit-1.0.0.5.aar">
+            <sha256 value="fd66b7c61887e462b0d76437b4d301d74ef478486c906ed85f27c1d9fd905ecf" origin="Pinned SHA-256 for HTTP repository gsai.sdk:sharedview-kit"/>
+         </artifact>
+         <artifact name="sharedview-kit-1.0.0.5.module">
+            <sha256 value="300879aa1e98ea7d44202143f4f5ee5c64188ebaa8b7a6135a49d1855b899240" origin="Pinned SHA-256 for HTTP repository gsai.sdk:sharedview-kit"/>
+         </artifact>
+         <artifact name="sharedview-kit-1.0.0.5.pom">
+            <sha256 value="db3b5f43c26584ef2defba8bc638b46d92751d4be35ecef429b37b27ad96d2dc" origin="Pinned SHA-256 for HTTP repository gsai.sdk:sharedview-kit"/>
+         </artifact>
+      </component>
+   </components>
+</verification-metadata>

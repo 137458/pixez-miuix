@@ -2,7 +2,6 @@ package com.perol.pixez.android
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -60,12 +59,6 @@ class IllustDetailActivity : ComponentActivity() {
         if (::dependencies.isInitialized) {
             applyWindowDisplayMode(this, dependencies.settingsRepository)
         }
-        SystemIllustCardTransition.refreshReturn(this, reason = "on_resume")
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        SystemIllustCardTransition.refreshReturn(this, reason = "configuration_changed")
     }
 
     override fun finish() {
@@ -84,6 +77,9 @@ class IllustDetailActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        if (::rootComponent.isInitialized) {
+            rootComponent.cardWindowInterceptor = null
+        }
         if (!isChangingConfigurations) {
             SystemIllustCardTransition.release(
                 intent.getStringExtra(SystemIllustCardTransition.EXTRA_SESSION),

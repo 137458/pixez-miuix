@@ -305,6 +305,7 @@ fun NovelViewerScreen(
                                 targetId = novelId,
                                 isNovel = true,
                                 cornerRadius = 20.dp,
+                                respectSafeViewport = false,
                             ),
                         ) {
                             Icon(

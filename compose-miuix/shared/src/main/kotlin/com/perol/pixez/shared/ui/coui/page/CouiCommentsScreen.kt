@@ -34,6 +34,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
+import com.perol.pixez.shared.ui.navigation.animation.transitionBottomBarOccluder
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
@@ -271,6 +274,7 @@ internal fun CouiCommentsScreen(
         if (inputFocused) showEmojiPanel = false
     }
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -289,44 +293,48 @@ internal fun CouiCommentsScreen(
                 }
             },
         topBar = {
-            CouiTopBar(
-                title = strings.commentsTitle,
-                onBack = onBack,
-                actions = {
-                    CouiTopBarIconButton(
-                        icon = CouiIcons.Refresh,
-                        contentDescription = strings.refresh,
-                        onClick = triggerManualRefresh,
-                    )
-                },
-            )
+            Box(modifier = Modifier.transitionTopBarOccluder()) {
+                CouiTopBar(
+                    title = strings.commentsTitle,
+                    onBack = onBack,
+                    actions = {
+                        CouiTopBarIconButton(
+                            icon = CouiIcons.Refresh,
+                            contentDescription = strings.refresh,
+                            onClick = triggerManualRefresh,
+                        )
+                    },
+                )
+            }
         },
         bottomBar = {
-            CouiCommentBottomBar(
-                draft = draft,
-                inputInteraction = inputInteraction,
-                placeholder = placeholder,
-                inputEnabled = inputEnabled,
-                canSend = canSend,
-                isSending = isSending,
-                isLoggedIn = isLoggedIn,
-                replyTarget = replyTarget,
-                showEmojiPanel = showEmojiPanel,
-                renderer = rendererOutcome?.getOrNull(),
-                onToggleEmojiPanel = {
-                    val opening = !showEmojiPanel
-                    showEmojiPanel = opening
-                    // 表情面板占用键盘位置：展开时先收键盘，避免两者叠加把输入栏顶到半空。
-                    if (opening) {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                    }
-                },
-                onCancelReply = { replyTarget = null },
-                onPlaceEmoji = ::insertEmoji,
-                onSubmit = submit,
-                onBoundsChanged = { bottomBarBounds = it },
-            )
+            Box(modifier = Modifier.transitionBottomBarOccluder()) {
+                CouiCommentBottomBar(
+                    draft = draft,
+                    inputInteraction = inputInteraction,
+                    placeholder = placeholder,
+                    inputEnabled = inputEnabled,
+                    canSend = canSend,
+                    isSending = isSending,
+                    isLoggedIn = isLoggedIn,
+                    replyTarget = replyTarget,
+                    showEmojiPanel = showEmojiPanel,
+                    renderer = rendererOutcome?.getOrNull(),
+                    onToggleEmojiPanel = {
+                        val opening = !showEmojiPanel
+                        showEmojiPanel = opening
+                        // 表情面板占用键盘位置：展开时先收键盘，避免两者叠加把输入栏顶到半空。
+                        if (opening) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                    },
+                    onCancelReply = { replyTarget = null },
+                    onPlaceEmoji = ::insertEmoji,
+                    onSubmit = submit,
+                    onBoundsChanged = { bottomBarBounds = it },
+                )
+            }
         },
     ) { contentPadding ->
         when {
@@ -380,6 +388,7 @@ internal fun CouiCommentsScreen(
                 }
             }
         }
+    }
     }
 }
 

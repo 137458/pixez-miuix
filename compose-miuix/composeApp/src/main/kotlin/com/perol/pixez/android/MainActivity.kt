@@ -191,6 +191,9 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         // 栈订阅随 Activity 销毁取消，避免销毁期间栈状态回调引用已销毁的 Activity。
         stackSubscription?.cancel()
+        if (::rootComponent.isInitialized) {
+            rootComponent.cardWindowInterceptor = null
+        }
         // 依赖容器已迁至 PixEzApplication 随进程常驻，Activity 销毁不再 close：
         // 避免重建窗口内（字体缩放等未覆盖 configChanges 的配置变化）网络与数据库资源被误关，
         // 导致进程存活期间后台协程经 orNull() 拿到资源已关闭的容器而静默失败。

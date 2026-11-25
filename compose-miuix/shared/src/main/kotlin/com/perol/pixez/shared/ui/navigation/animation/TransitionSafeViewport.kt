@@ -6,6 +6,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -20,7 +21,7 @@ import kotlin.math.min
 /**
  * 当前屏幕/主容器的转场安全可视区域状态。
  *
- * 用于记录未被顶栏（TopBar）、底栏（BottomBar）或侧边导航栏（NavigationRail）遮挡的内容可视区域，
+ * 用于记录未被顶栏（TopBar）、固定子栏、底栏（BottomBar）或侧边导航栏（NavigationRail）遮挡的内容可视区域，
  * 避免从详情页返回列表卡片时转场画面在尾帧盖住应用栏按钮。
  */
 @Stable
@@ -31,13 +32,46 @@ internal class TransitionViewportState(
     var topOccluderBottomPx by mutableStateOf<Float?>(null)
     var bottomOccluderTopPx by mutableStateOf<Float?>(null)
 
-    fun resolveContainerBounds(): Rect? = containerBounds ?: parent?.resolveContainerBounds()
+    private val containerBoundsByOwner = mutableStateMapOf<Any, Rect>()
+    private val topOccludersByOwner = mutableStateMapOf<Any, Float>()
+    private val bottomOccludersByOwner = mutableStateMapOf<Any, Float>()
 
-    fun resolveTopOccluderBottomPx(): Float? =
-        topOccluderBottomPx ?: parent?.resolveTopOccluderBottomPx()
+    fun updateContainerBounds(owner: Any, bounds: Rect?) {
+        if (bounds == null) {
+            containerBoundsByOwner.remove(owner)
+        } else if (containerBoundsByOwner[owner] != bounds) {
+            containerBoundsByOwner[owner] = bounds
+        }
+    }
 
-    fun resolveBottomOccluderTopPx(): Float? =
-        bottomOccluderTopPx ?: parent?.resolveBottomOccluderTopPx()
+    fun updateTopOccluder(owner: Any, bottomPx: Float?) {
+        if (bottomPx == null || !bottomPx.isFinite()) {
+            topOccludersByOwner.remove(owner)
+        } else if (topOccludersByOwner[owner] != bottomPx) {
+            topOccludersByOwner[owner] = bottomPx
+        }
+    }
+
+    fun updateBottomOccluder(owner: Any, topPx: Float?) {
+        if (topPx == null || !topPx.isFinite()) {
+            bottomOccludersByOwner.remove(owner)
+        } else if (bottomOccludersByOwner[owner] != topPx) {
+            bottomOccludersByOwner[owner] = topPx
+        }
+    }
+
+    fun resolveContainerBounds(): Rect? =
+        containerBounds ?: containerBoundsByOwner.values.lastOrNull() ?: parent?.resolveContainerBounds()
+
+    fun resolveTopOccluderBottomPx(): Float? {
+        val local = listOfNotNull(topOccluderBottomPx, topOccludersByOwner.values.maxOrNull()).maxOrNull()
+        return local ?: parent?.resolveTopOccluderBottomPx()
+    }
+
+    fun resolveBottomOccluderTopPx(): Float? {
+        val local = listOfNotNull(bottomOccluderTopPx, bottomOccludersByOwner.values.minOrNull()).minOrNull()
+        return local ?: parent?.resolveBottomOccluderTopPx()
+    }
 
     fun resolveSafeViewport(
         fallbackWidth: Float,
@@ -71,48 +105,53 @@ internal fun ProvideTransitionViewportScope(
 @Composable
 internal fun Modifier.transitionViewportContainer(): Modifier {
     val state = LocalTransitionViewportState.current ?: return this
-    DisposableEffect(state) {
-        onDispose { state.containerBounds = null }
+    val owner = remember { Any() }
+    DisposableEffect(state, owner) {
+        onDispose { state.updateContainerBounds(owner, null) }
     }
     return onGloballyPositioned { coordinates ->
         val next = if (coordinates.isAttached) coordinates.boundsInWindow() else null
-        if (state.containerBounds != next) {
-            state.containerBounds = next
-        }
+        state.updateContainerBounds(owner, next)
     }
 }
 
 /**
- * 标记会遮挡滚动列表内容的顶栏区域（取其窗口底部 Y 作为安全区上界）。
+ * 标记会遮挡滚动列表内容的顶栏区域（取其窗口底部 Y 作为安全区上界；同作用域多个栏位取最下沿）。
  */
 @Composable
 internal fun Modifier.transitionTopBarOccluder(): Modifier {
     val state = LocalTransitionViewportState.current ?: return this
-    DisposableEffect(state) {
-        onDispose { state.topOccluderBottomPx = null }
+    val owner = remember { Any() }
+    DisposableEffect(state, owner) {
+        onDispose { state.updateTopOccluder(owner, null) }
     }
     return onGloballyPositioned { coordinates ->
-        val next = if (coordinates.isAttached) coordinates.boundsInWindow().bottom else null
-        if (state.topOccluderBottomPx != next) {
-            state.topOccluderBottomPx = next
+        val next = if (coordinates.isAttached && coordinates.size.height > 0) {
+            coordinates.boundsInWindow().bottom
+        } else {
+            null
         }
+        state.updateTopOccluder(owner, next)
     }
 }
 
 /**
- * 标记会遮挡滚动列表内容的底栏区域（取其窗口顶部 Y 作为安全区下界）。
+ * 标记会遮挡滚动列表内容的底栏区域（取其窗口顶部 Y 作为安全区下界；同作用域多个栏位取最上沿）。
  */
 @Composable
 internal fun Modifier.transitionBottomBarOccluder(): Modifier {
     val state = LocalTransitionViewportState.current ?: return this
-    DisposableEffect(state) {
-        onDispose { state.bottomOccluderTopPx = null }
+    val owner = remember { Any() }
+    DisposableEffect(state, owner) {
+        onDispose { state.updateBottomOccluder(owner, null) }
     }
     return onGloballyPositioned { coordinates ->
-        val next = if (coordinates.isAttached) coordinates.boundsInWindow().top else null
-        if (state.bottomOccluderTopPx != next) {
-            state.bottomOccluderTopPx = next
+        val next = if (coordinates.isAttached && coordinates.size.height > 0) {
+            coordinates.boundsInWindow().top
+        } else {
+            null
         }
+        state.updateBottomOccluder(owner, next)
     }
 }
 

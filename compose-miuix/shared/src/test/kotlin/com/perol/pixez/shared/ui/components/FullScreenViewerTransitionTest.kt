@@ -1,9 +1,16 @@
 package com.perol.pixez.shared.ui.components
 
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.ui.geometry.Rect
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FullScreenViewerTransitionTest {
 
@@ -80,5 +87,28 @@ class FullScreenViewerTransitionTest {
         assertEquals(0.5f, mid.backgroundAlpha, 1e-3f)
         assertEquals(0.75f, mid.contentAlpha, 1e-3f)
         assertEquals(0.5f, mid.controlsAlpha, 1e-3f)
+    }
+
+    @Test
+    fun `startOpenIfReady 仅首次返回 true 避免旋屏重播且 requestDismiss 取消仍回调关闭`() = runBlocking {
+        var dismissedCount = 0
+        val state = FullScreenViewerTransitionState(
+            initialPage = 0,
+            imageAspectRatio = 1f,
+            originBoundsProvider = { null },
+            onDismissComplete = { dismissedCount++ },
+        )
+        state.containerBounds = Rect(0f, 0f, 1080f, 2400f)
+        assertTrue(state.startOpenIfReady())
+        state.containerBounds = Rect(0f, 0f, 2400f, 1080f)
+        assertFalse(state.startOpenIfReady(), "旋屏改变容器尺寸后不得重播开屏动画")
+
+        val clock = BroadcastFrameClock()
+        val job = launch(clock, start = CoroutineStart.UNDISPATCHED) {
+            state.requestDismiss()
+        }
+        job.cancel(CancellationException("test cancel"))
+        job.join()
+        assertEquals(1, dismissedCount, "关闭协程被取消时也应通过 finally 完成回调")
     }
 }

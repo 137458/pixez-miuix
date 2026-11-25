@@ -46,6 +46,9 @@ internal object RoundedCardTransition {
         } catch (error: SecurityException) {
             Napier.w(tag = TAG, throwable = error) { "系统不允许访问圆角窗口协议" }
             null
+        } catch (error: LinkageError) {
+            Napier.w(tag = TAG, throwable = error) { "圆角窗口协议依赖不可用" }
+            null
         }
     }
 

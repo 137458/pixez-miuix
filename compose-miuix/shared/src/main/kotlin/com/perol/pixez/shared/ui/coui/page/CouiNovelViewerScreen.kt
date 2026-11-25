@@ -287,6 +287,7 @@ internal fun CouiNovelViewerScreen(
                     targetId = novelId,
                     isNovel = true,
                     cornerRadius = 20.dp,
+                    respectSafeViewport = false,
                 ),
             )
             if (novelDetail != null) {

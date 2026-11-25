@@ -318,8 +318,11 @@ internal fun ZoomableUgoiraViewer(
         contentSize = ugoiraContentSize,
     )
     val viewerZoomedState = LocalFullScreenViewerZoomedState.current
-    LaunchedEffect(fullZoomState.scale, viewerZoomedState) {
-        viewerZoomedState?.value = fullZoomState.scale > 1.03f
+    LaunchedEffect(fullZoomState, viewerZoomedState) {
+        if (viewerZoomedState != null) {
+            androidx.compose.runtime.snapshotFlow { fullZoomState.scale > 1.03f }
+                .collect { viewerZoomedState.value = it }
+        }
     }
 
     Box(

@@ -34,20 +34,19 @@ internal class NavVelocityHandoffEasing(
     }
 }
 
-/** 根据剩余行程与松手速度构造无缝交接的补间规格；零速度时退回默认曲线。 */
+/** 根据剩余行程与松手速度构造无缝交接的补间规格；零速度或异号速度时退回默认曲线。 */
 internal fun resolveVelocityHandoffSpec(
     remainingDistance: Float,
     initialVelocityPerSec: Float,
     durationMillis: Int,
     fallbackEasing: Easing = HyperOSDecelerateEasing,
 ): TweenSpec<Float> {
-    val hasVelocity = initialVelocityPerSec.isFinite() &&
-        initialVelocityPerSec != 0f &&
+    val hasAlignedVelocity = initialVelocityPerSec.isFinite() &&
         remainingDistance.isFinite() &&
-        remainingDistance != 0f
+        initialVelocityPerSec * remainingDistance > 0f
     return tween(
         durationMillis = durationMillis,
-        easing = if (hasVelocity) {
+        easing = if (hasAlignedVelocity) {
             NavVelocityHandoffEasing(
                 distance = remainingDistance,
                 initialVelocity = initialVelocityPerSec,

@@ -160,9 +160,10 @@ fun RootContent(
         }
     }
 
-    // 凭证失效提示与恢复收敛：先以 UNDISPATCHED 挂上收集器，再触发启动自检，
+    // 凭证失效提示与恢复收敛：先以 UNDISPATCHED 挂上收集器，再由主窗口触发启动自检，
     // 避免「账号凭证已被清理」的自检事件在订阅建立前发出而丢失；会话恢复或重新登录后自动收起失效弹窗。
-    LaunchedEffect(Unit) {
+    val isPrimaryWindow = systemTransitionSessionToken == null
+    LaunchedEffect(isPrimaryWindow) {
         launch(start = CoroutineStart.UNDISPATCHED) {
             registry.accountRepository.authExpiredFlow.collect {
                 showAuthExpiredDialog = true
@@ -175,11 +176,13 @@ fun RootContent(
                 }
             }
         }
-        registry.accountRepository.refreshSessionState()
+        if (isPrimaryWindow) {
+            registry.accountRepository.refreshSessionState()
+        }
     }
 
-    LaunchedEffect(Unit) {
-        if (settingsRepository.autoCheckUpdate) {
+    LaunchedEffect(isPrimaryWindow) {
+        if (isPrimaryWindow && settingsRepository.autoCheckUpdate) {
             registry.updateRepository.fetchLatestReleaseInfo().onSuccess { info ->
                 if (info.isNew && info.versionName != settingsRepository.ignoreUpdateVersion) {
                     appReleaseInfo = info
@@ -359,6 +362,7 @@ fun RootContent(
                                 }
                             },
                     ) {
+                        val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
                         Children(
                             stack = component.stack,
                             modifier = Modifier.fillMaxSize(),
@@ -374,7 +378,7 @@ fun RootContent(
                                         )
                                     } else {
                                         // 预测性返回手势来源页直接取自 exitChild 的 configuration，
-                                        // 覆盖插画详情页与小说阅读器两种卡片展开目标；无锚点则回退侧滑。
+                                        // 覆盖插画详情页、小说阅读器、特辑详情与用户详情等卡片展开目标；无锚点则回退侧滑。
                                         miuixCardExpandPredictiveBackAnimatable(
                                             initialBackEvent = initialBackEvent,
                                             registry = sharedBounds,
@@ -382,6 +386,7 @@ fun RootContent(
                                             containerGeometry = { containerGeometry },
                                             coverParallax = uiSkin.coverParallax,
                                             isLightBackground = isLightBackground,
+                                            layoutDirection = layoutDirection,
                                         )
                                     }
                                 },
@@ -389,7 +394,9 @@ fun RootContent(
                                 // 应用内拖拽线性关页：卡片展开目标页均启用（平台开关见 rememberDragBackGestureEnabled）。
                                 dragBackEligible = {
                                     it is IllustDetailComponent ||
+                                        it is UserDetailComponent ||
                                         it is Config.NovelViewer ||
+                                        it is Config.SpotlightDetail ||
                                         it is Config.Comments
                                 },
                                 modalDismissEligible = { (it as? Config)?.isModalRoute() == true },

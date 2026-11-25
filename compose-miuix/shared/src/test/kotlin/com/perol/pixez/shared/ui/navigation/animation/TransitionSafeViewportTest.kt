@@ -153,4 +153,28 @@ class TransitionSafeViewportTest {
         assertNotNull(anchor)
         assertEquals(safeViewport, anchor.card.safeViewport)
     }
+
+    @Test
+    fun `TransitionViewportState 多遮挡源取最严边界且释放互不误清，CardBounds 支持动态刷新`() {
+        val state = TransitionViewportState()
+        val topBar = Any()
+        val subTab = Any()
+        state.updateTopOccluder(topBar, 240f)
+        state.updateTopOccluder(subTab, 360f)
+        assertEquals(360f, state.resolveTopOccluderBottomPx())
+
+        state.updateTopOccluder(subTab, null)
+        assertEquals(240f, state.resolveTopOccluderBottomPx())
+
+        var latestSafe = Rect(0f, 360f, 1080f, 2100f)
+        val card = IllustCardBounds(
+            rect = Rect(0f, 400f, 500f, 900f),
+            cornerRadiusDp = 16f,
+            safeViewport = Rect(0f, 240f, 1080f, 2400f),
+            safeViewportProvider = { latestSafe },
+        )
+        assertEquals(latestSafe, card.resolveSafeViewport())
+        latestSafe = Rect(0f, 280f, 1080f, 2200f)
+        assertEquals(latestSafe, card.resolveSafeViewport())
+    }
 }

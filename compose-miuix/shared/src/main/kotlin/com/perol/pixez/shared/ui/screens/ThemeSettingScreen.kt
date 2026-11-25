@@ -51,7 +51,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
-import androidx.compose.foundation.background
+import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
 /**
  * 主题设置页：切换日间/夜间模式、AMOLED 纯黑、动态取色与自定义主题色。
@@ -271,11 +271,12 @@ fun ThemeSettingScreen(
                             selectedIndex = paletteStyle.coerceIn(0, paletteStyleOptions.lastIndex),
                             onSelectedIndexChange = { setPaletteStyle(it) },
                         )
-                        val supportsSpec2025 = paletteStyle in 0..3
+                        val selectedStyle = ThemePaletteStyle.entries.getOrNull(paletteStyle)
+                        val supportsSpec2025 = selectedStyle in SPEC_2025_PALETTE_STYLES
                         SwitchPreference(
                             title = strings.themeSpec2025,
                             summary = if (useSpec2025 && supportsSpec2025) strings.themeSpec2025SummaryOn else strings.themeSpec2025SummaryOff,
-                            checked = useSpec2025,
+                            checked = useSpec2025 && supportsSpec2025,
                             enabled = supportsSpec2025,
                             onCheckedChange = { setUseSpec2025(it) },
                         )
@@ -468,3 +469,11 @@ internal fun parseHexColor(hex: String): Int? {
  * 默认种子色：对齐 Flutter 版默认蓝色。
  */
 internal const val DEFAULT_SEED_COLOR = 0xFF2196F3.toInt()
+
+/** 支持 Material You 2025 色彩规范的调色板风格集合（对应 [ThemePaletteStyle] 前四项）。 */
+private val SPEC_2025_PALETTE_STYLES = setOf(
+    ThemePaletteStyle.TonalSpot,
+    ThemePaletteStyle.Neutral,
+    ThemePaletteStyle.Vibrant,
+    ThemePaletteStyle.Expressive,
+)

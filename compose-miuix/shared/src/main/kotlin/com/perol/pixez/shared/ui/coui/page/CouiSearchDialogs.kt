@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +92,12 @@ internal fun CouiSearchFilterSheet(
         strings.searchRatioSquare to 3,
     )
 
-    var draftState by remember(visible.value, filterState) { mutableStateOf(filterState) }
+    var draftState by remember { mutableStateOf(filterState) }
+    LaunchedEffect(visible.value, filterState) {
+        if (visible.value) {
+            draftState = filterState
+        }
+    }
 
     BottomSheet(
         visible = visible,
@@ -309,12 +317,20 @@ internal fun CouiSauceNaoSheet(
                 }
 
                 error != null -> {
-                    Text(
-                        text = error,
-                        kind = CouiTextKind.ItemSummary,
-                        color = CouiTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CouiTextButton(text = strings.retry, onClick = onRetry)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = error,
+                            kind = CouiTextKind.ItemSummary,
+                            color = CouiTheme.colorScheme.onSurfaceVariant,
+                        )
+                        CouiTextButton(text = strings.retry, onClick = onRetry)
+                    }
                 }
 
                 results.isEmpty() -> {

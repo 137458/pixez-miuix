@@ -163,6 +163,7 @@ fun IllustFullScreenViewer(
         imageAspectRatio = imageAspectRatio,
         tracker = imageBoundsTracker,
         onDismissComplete = onDismiss,
+        imageAspectRatioProvider = { page -> if (page == 0) imageAspectRatio else null },
     )
     LaunchedEffect(currentDisplayPage, transitionState) {
         transitionState.currentPage = currentDisplayPage

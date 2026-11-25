@@ -13,7 +13,6 @@ import android.view.PixelCopy
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.withResumed
 import com.itgsa.animation.sharedview.ViewAnimationConfig
 import com.itgsa.animation.sharedview.ViewAnimationExtras
 import com.itgsa.animation.sharedview.ViewAnimationListener
@@ -42,6 +41,7 @@ import kotlin.math.abs
  */
 object SystemIllustCardTransition {
     private const val TAG = "SystemIllustCardTransition"
+    private const val MAX_SESSIONS = 16
     const val EXTRA_SESSION = "pixez_system_card_transition_session"
 
     private class Session(
@@ -62,13 +62,11 @@ object SystemIllustCardTransition {
         val openingRadius: Float,
         val sourceAnchor: SystemIllustCardAnchor,
     ) {
-        val requestedAtMs = SystemClock.uptimeMillis()
-        @Volatile var openingEvent = "awaiting_start"
         var oplusOpening: OplusCardTransition.Opening? = null
         var vivoOpening: VivoCardTransition.Opening? = null
     }
 
-    private val sessions = mutableMapOf<String, Session>()
+    private val sessions = LinkedHashMap<String, Session>()
     private val openingJobs = WeakHashMap<ComponentActivity, Job>()
     private var latestWindowRequestToken: String? = null
 
@@ -102,6 +100,12 @@ object SystemIllustCardTransition {
                 configurableBlur = extras?.containsKey(ViewAnimationExtras.EXTRA_BLUR) == true,
                 backAnimMetadata = extras?.get(ViewAnimationExtras.EXTRA_BACK_ANIM_TYPE),
                 oplusSdkWindow = oplusSystemManager,
+                canConfigureBackgroundScale = extras?.containsKey(ViewAnimationExtras.EXTRA_BACKGROUND_SCALE) == true,
+                canConfigureColor = extras?.containsKey(ViewAnimationExtras.EXTRA_COLOR) == true,
+                canRefreshBitmap = extras?.containsKey(ViewAnimationExtras.EXTRA_BITMAP) == true,
+                officialBoundsWindowCoordinates = officialBoundsUseWindowCoordinates(
+                    extras?.get(ViewAnimationExtras.EXTRA_BOUNDS),
+                ),
             )
         }
         if (OplusCardTransition.available) {
@@ -145,9 +149,16 @@ object SystemIllustCardTransition {
 
     fun hasSession(token: String?): Boolean = token != null && token in sessions
 
-    fun updateDisplayedIllust(token: String?, displayedIllustId: Long) {
+    fun updateDisplayedIllust(
+        token: String?,
+        displayedIllustId: Long,
+        originIllustId: Long? = null,
+    ) {
         if (token == null) return
-        sessions[token]?.displayedTarget = TransitionTarget(TransitionTargetKind.Illust, displayedIllustId)
+        val session = sessions[token] ?: return
+        if (session.originTarget.kind != TransitionTargetKind.Illust) return
+        if (originIllustId != null && session.originTarget.id != originIllustId) return
+        session.displayedTarget = TransitionTarget(TransitionTargetKind.Illust, displayedIllustId)
     }
 
     /** false 表示未启动系统窗口，调用方回退原有 CardExpandLayer 导航。 */
@@ -210,11 +221,8 @@ object SystemIllustCardTransition {
                 return rejected("source_window_inactive")
             }
 
-            val extras = if (capability.method == SystemCardTransitionMethod.OFFICIAL) {
-                runCatching { ViewAnimationManager.getViewAnimationExtras() }.getOrNull()
-            } else null
             val windowCoordinates = capability.method == SystemCardTransitionMethod.VIVO_ONESHOT ||
-                officialBoundsUseWindowCoordinates(extras?.get(ViewAnimationExtras.EXTRA_BOUNDS))
+                capability.officialBoundsWindowCoordinates
             val bounds = anchor.bounds(windowCoordinates, allowPartial = false)
                 ?: return rejected("source_bounds_unavailable")
 
@@ -237,12 +245,12 @@ object SystemIllustCardTransition {
                 return rejected("source_size_mismatch bitmap=${thumbnail.width}x${thumbnail.height} bounds=$bounds")
             }
             val radius = anchor.radiusPx() ?: return rejected("source_radius_unavailable")
-            val canConfigureBlur = extras?.containsKey(ViewAnimationExtras.EXTRA_BLUR) == true
-            val canConfigureBackgroundScale = extras?.containsKey(ViewAnimationExtras.EXTRA_BACKGROUND_SCALE) == true
+            val canConfigureBlur = capability.configurableBlur
+            val canConfigureBackgroundScale = capability.canConfigureBackgroundScale
             val configuration = Bundle().apply {
                 if (canConfigureBlur) putBoolean(ViewAnimationExtras.EXTRA_BLUR, true)
                 if (canConfigureBackgroundScale) putFloat(ViewAnimationExtras.EXTRA_BACKGROUND_SCALE, 1f)
-                if (capability.oplusSdkWindow && extras?.containsKey(ViewAnimationExtras.EXTRA_COLOR) == true) {
+                if (capability.oplusSdkWindow && capability.canConfigureColor) {
                     putInt(ViewAnimationExtras.EXTRA_COLOR, sourceBackgroundColor)
                 }
             }
@@ -254,13 +262,14 @@ object SystemIllustCardTransition {
                 SystemCardTransitionMethod.NONE -> return rejected("no_protocol")
             }
             val token = "$prefix:${UUID.randomUUID()}"
+            val requestedAtMs = SystemClock.uptimeMillis()
             val session = Session(
                 originTarget = target,
                 displayedTarget = target,
                 sourceActivity = WeakReference(activity),
                 sourceWindow = sourceWindow,
                 thumbnail = thumbnail,
-                canRefreshBitmap = extras?.containsKey(ViewAnimationExtras.EXTRA_BITMAP) == true,
+                canRefreshBitmap = capability.canRefreshBitmap,
                 canConfigureBlur = canConfigureBlur,
                 canConfigureBackgroundScale = canConfigureBackgroundScale,
                 method = capability.method,
@@ -272,23 +281,22 @@ object SystemIllustCardTransition {
                 openingRadius = radius,
                 sourceAnchor = anchor,
             )
+            // 仅捕获轻量 token 与时间戳，绝不捕获 session/thumbnail，防止系统 Binder stub 泄漏位图。
             val listener = object : ViewAnimationListener {
                 private fun record(event: String, animMode: Int) {
-                    if (animMode == ViewAnimationManager.ANIM_MODE_OPEN) session.openingEvent = event
                     val mode = when (animMode) {
                         ViewAnimationManager.ANIM_MODE_OPEN -> "OPEN"
                         ViewAnimationManager.ANIM_MODE_BACK -> "BACK"
                         else -> animMode.toString()
                     }
                     Napier.d(tag = TAG) {
-                        "session=$token mode=$mode event=$event elapsedMs=${SystemClock.uptimeMillis() - session.requestedAtMs}"
+                        "session=$token mode=$mode event=$event elapsedMs=${SystemClock.uptimeMillis() - requestedAtMs}"
                     }
                 }
                 override fun onAnimationStart(animMode: Int) = record("start", animMode)
                 override fun onAnimationCancel(animMode: Int) = record("cancel", animMode)
                 override fun onAnimationEnd(animMode: Int) = record("end", animMode)
             }
-            latestWindowRequestToken = token
             val optionsBundle = when (capability.method) {
                 SystemCardTransitionMethod.VIVO_ONESHOT ->
                     VivoCardTransition.open(activity, thumbnail, bounds, radius, blurEnabled = true, listener)
@@ -306,17 +314,24 @@ object SystemIllustCardTransition {
                         }
                     }?.toBundle()
                 SystemCardTransitionMethod.OFFICIAL ->
-                    ViewAnimationManager.makeViewAnimationOptions(thumbnail, bounds, radius, configuration, listener)
-                        ?.toBundle()
+                    runCatching {
+                        ViewAnimationManager.makeViewAnimationOptions(thumbnail, bounds, radius, configuration, listener)
+                            ?.toBundle()
+                    }.getOrNull()
                 SystemCardTransitionMethod.NONE -> null
             } ?: return rejected("system_options_null protocol=${capability.method}")
 
+            latestWindowRequestToken = token
+            while (sessions.size >= MAX_SESSIONS) {
+                val oldestKey = sessions.entries.firstOrNull()?.key ?: break
+                sessions.remove(oldestKey)?.vivoOpening?.abandon()
+            }
             sessions[token] = session
             var launched = false
             try {
-                activity.lifecycle.withResumed { }
                 currentCoroutineContext().ensureActive()
                 val canLaunch = isCurrent() &&
+                    activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
                     !activity.isInMultiWindowMode &&
                     activity.window.decorView.hasWindowFocus() &&
                     windowGeometry(activity) == sourceWindow &&
@@ -334,7 +349,7 @@ object SystemIllustCardTransition {
                 launched = true
                 Napier.i(tag = TAG) { "session=$token 系统卡片转场已请求 target=$target protocol=${capability.method}" }
                 return true
-            } catch (error: SecurityException) {
+            } catch (error: RuntimeException) {
                 Napier.w(tag = TAG, throwable = error) { "系统拒绝窗口转场，回退应用内转场" }
                 return false
             } finally {
@@ -429,10 +444,11 @@ object SystemIllustCardTransition {
             }
             return
         }
-        val currentRadius = session?.openingRadius?.takeIf { sourceAvailable }
-        val oplusSdkWindow = session?.oplusSdkWindow == true
+        if (!token.startsWith("sdk:") || session == null) return
+        val currentRadius = session.openingRadius.takeIf { sourceAvailable }
+        val oplusSdkWindow = session.oplusSdkWindow
         val plan = resolveOfficialCardReturnPlan(
-            metadata = session?.backAnimMetadata,
+            metadata = session.backAnimMetadata,
             oplusSdkWindow = oplusSdkWindow,
             preparingToFinish = preparingToFinish,
             motionEnabled = true,
@@ -443,15 +459,15 @@ object SystemIllustCardTransition {
         if (plan.useSourceBounds && bounds != null) config.setBounds(bounds)
         if (plan.updateRadius && currentRadius != null) config.setRadius(currentRadius)
         val bundle = config.toBundle()
-        if (session != null && bounds != null && session.canRefreshBitmap &&
+        if (bounds != null && session.canRefreshBitmap &&
             (!oplusSdkWindow || plan.useSourceBounds)
         ) {
             bundle.putParcelable(ViewAnimationExtras.EXTRA_BITMAP, session.thumbnail)
         }
-        if (plan.updateEffects && session?.canConfigureBlur == true) {
+        if (plan.updateEffects && session.canConfigureBlur) {
             bundle.putBoolean(ViewAnimationExtras.EXTRA_BLUR, true)
         }
-        if (plan.updateEffects && session?.canConfigureBackgroundScale == true) {
+        if (plan.updateEffects && session.canConfigureBackgroundScale) {
             bundle.putFloat(ViewAnimationExtras.EXTRA_BACKGROUND_SCALE, 1f)
         }
         runCatching {
@@ -467,7 +483,9 @@ object SystemIllustCardTransition {
     }
 
     fun release(token: String?) {
-        if (token != null) sessions.remove(token)
+        if (token != null) {
+            sessions.remove(token)?.vivoOpening?.abandon()
+        }
         if (latestWindowRequestToken == token) latestWindowRequestToken = null
     }
 
@@ -482,13 +500,15 @@ object SystemIllustCardTransition {
             Napier.w(tag = TAG, throwable = error) { "卡片位图软件化失败" }
             return null
         }
+        var backed: Bitmap? = null
         try {
-            val backed = Bitmap.createBitmap(softwareSource.width, softwareSource.height, Bitmap.Config.ARGB_8888)
+            backed = Bitmap.createBitmap(softwareSource.width, softwareSource.height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(backed)
             canvas.drawColor(backgroundColor)
             canvas.drawBitmap(softwareSource, 0f, 0f, null)
-            return backed
+            return toSharedImmutableBitmap(backed)
         } finally {
+            if (backed != null && !backed.isRecycled) backed.recycle()
             if (softwareSource !== source) softwareSource.recycle()
         }
     }
@@ -496,19 +516,39 @@ object SystemIllustCardTransition {
     private suspend fun captureWindowRegion(activity: ComponentActivity, windowBounds: Rect): Bitmap? =
         suspendCancellableCoroutine { continuation ->
             val bitmap = Bitmap.createBitmap(windowBounds.width(), windowBounds.height(), Bitmap.Config.ARGB_8888)
+            continuation.invokeOnCancellation {
+                if (!bitmap.isRecycled) bitmap.recycle()
+            }
             try {
                 PixelCopy.request(
                     activity.window,
                     windowBounds,
                     bitmap,
                     { result ->
-                        continuation.resume(bitmap.takeIf { result == PixelCopy.SUCCESS })
+                        if (!continuation.isActive || result != PixelCopy.SUCCESS) {
+                            if (!bitmap.isRecycled) bitmap.recycle()
+                            if (continuation.isActive) continuation.resume(null)
+                            return@request
+                        }
+                        val shared = toSharedImmutableBitmap(bitmap)
+                        if (shared !== bitmap && !bitmap.isRecycled) bitmap.recycle()
+                        continuation.resume(shared)
                     },
                     Handler(Looper.getMainLooper()),
                 )
             } catch (error: IllegalArgumentException) {
                 Napier.w(tag = TAG, throwable = error) { "卡片矩形像素复制失败" }
-                continuation.resume(null)
+                if (!bitmap.isRecycled) bitmap.recycle()
+                if (continuation.isActive) continuation.resume(null)
             }
         }
+
+    /** 转换为 Ashmem 共享不可变位图（API 31+），跨 Binder 传参走 FD 而非内联拷贝像素，规避 1MB 超限崩溃。 */
+    private fun toSharedImmutableBitmap(source: Bitmap): Bitmap {
+        val shared = runCatching { source.asShared() }.getOrNull() ?: return source
+        if (shared !== source && !source.isRecycled) {
+            source.recycle()
+        }
+        return shared
+    }
 }
