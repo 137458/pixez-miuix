@@ -40,9 +40,12 @@ import com.perol.pixez.shared.ui.theme.darkAppExtraColors
 import com.perol.pixez.shared.ui.theme.lightAppExtraColors
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.PageContainerGeometry
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.navigation.animation.SharedBoundsRegistry
 import androidx.compose.ui.graphics.luminance
 import com.perol.pixez.shared.ui.navigation.animation.miuixCardExpandPredictiveBackAnimatable
+import com.perol.pixez.shared.ui.navigation.animation.transitionBottomBarOccluder
+import com.perol.pixez.shared.ui.navigation.animation.transitionViewportContainer
 import com.perol.pixez.shared.ui.navigation.animation.miuixModalPredictiveBackAnimatable
 import com.perol.pixez.shared.ui.navigation.animation.miuixSeekableStackAnimation
 import com.perol.pixez.shared.ui.navigation.animation.miuixPredictiveBackAnimation
@@ -728,6 +731,12 @@ private fun MainChildSection(
                     .weight(1f)
                     .fillMaxHeight(),
             ) {
+                ProvideTransitionViewportScope {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .transitionViewportContainer(),
+                    ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -754,7 +763,9 @@ private fun MainChildSection(
                             onSelect = onNavIndexSelected,
                             onLeftAccessoryClick = component::onSettingsClicked,
                             onRightAccessoryClick = { component.onSearchClicked("") },
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .transitionBottomBarOccluder(),
                         )
                     } else {
                         MainBottomBar(
@@ -763,8 +774,12 @@ private fun MainChildSection(
                             hasUnreadFeedBadge = hasUnreadFeedBadge,
                             isFloating = useFloatingBottomBar,
                             backdrop = floatingBackdrop,
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .transitionBottomBarOccluder(),
                         )
+                    }
+                }
                     }
                 }
             }

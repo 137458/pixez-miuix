@@ -51,6 +51,7 @@ import com.perol.pixez.shared.ui.LocalNovelRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.LocalToastSink
 import com.perol.pixez.shared.ui.components.PixivApiErrorFormatter
 import com.perol.pixez.shared.ui.components.PixivAsyncImage
@@ -274,6 +275,7 @@ fun NovelViewerScreen(
     val backdrop = rememberBlurBackdrop()
     val webTitle = (state as? NovelViewState.Success)?.data?.title
 
+    ProvideTransitionViewportScope {
     Scaffold(
         topBar = {
             BlurredBar(
@@ -606,6 +608,7 @@ fun NovelViewerScreen(
                 }
             }
         }
+    }
     }
 }
 

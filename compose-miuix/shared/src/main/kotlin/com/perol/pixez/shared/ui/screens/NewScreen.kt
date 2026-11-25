@@ -39,6 +39,7 @@ import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import androidx.compose.ui.text.style.TextOverflow
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.LiquidFilterBar
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -113,6 +114,7 @@ fun NewScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -348,6 +350,7 @@ fun NewScreen(
                 )
             }
         }
+    }
     }
 }
 

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
@@ -58,7 +59,7 @@ fun BlurredBar(
     scrollBehavior: ScrollBehavior? = null,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.transitionTopBarOccluder()) {
         if (backdrop != null && blurEnabled) {
             Box(
                 modifier = Modifier

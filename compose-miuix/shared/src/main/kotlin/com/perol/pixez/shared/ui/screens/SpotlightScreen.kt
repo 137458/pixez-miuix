@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.data.model.SpotlightArticle
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LiquidFilterBar
@@ -102,6 +103,7 @@ fun SpotlightScreen(
     val backdrop = rememberBlurBackdrop()
     val colorScheme = MiuixTheme.colorScheme
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -220,6 +222,7 @@ fun SpotlightScreen(
                 }
             }
         }
+    }
     }
 }
 

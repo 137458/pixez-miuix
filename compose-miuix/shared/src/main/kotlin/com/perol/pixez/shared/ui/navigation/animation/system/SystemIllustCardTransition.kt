@@ -215,7 +215,7 @@ object SystemIllustCardTransition {
             } else null
             val windowCoordinates = capability.method == SystemCardTransitionMethod.VIVO_ONESHOT ||
                 officialBoundsUseWindowCoordinates(extras?.get(ViewAnimationExtras.EXTRA_BOUNDS))
-            val bounds = anchor.bounds(windowCoordinates, allowPartial = capturedImage != null)
+            val bounds = anchor.bounds(windowCoordinates, allowPartial = false)
                 ?: return rejected("source_bounds_unavailable")
 
             val sourceBackgroundColor = anchor.backgroundColorArgb
@@ -268,7 +268,7 @@ object SystemIllustCardTransition {
                 backAnimMetadata = capability.backAnimMetadata,
                 openingBounds = Rect(bounds),
                 windowCoordinates = windowCoordinates,
-                allowPartialSource = capturedImage != null,
+                allowPartialSource = false,
                 openingRadius = radius,
                 sourceAnchor = anchor,
             )
@@ -325,7 +325,7 @@ object SystemIllustCardTransition {
                         bounds,
                         radius,
                         windowCoordinates,
-                        allowPartial = capturedImage != null,
+                        allowPartial = false,
                     )
                 if (!canLaunch) return rejected("request_expired_before_launch")
 

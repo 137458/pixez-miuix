@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.EmptyPlaceholder
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.IllustStaggeredGrid
@@ -105,6 +106,7 @@ fun RankingScreen(
         )
     }
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -218,6 +220,7 @@ fun RankingScreen(
                 }
             }
         }
+    }
     }
 }
 

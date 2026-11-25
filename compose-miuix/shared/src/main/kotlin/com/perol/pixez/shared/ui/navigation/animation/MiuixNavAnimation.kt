@@ -96,6 +96,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
                 expansion = expansion,
                 sourceBounds = sourceCard.rect,
                 containerBounds = current.bounds,
+                isExiting = true,
             )
             Modifier.cardExpandLayer(
                 expansion = expansion,
@@ -103,6 +104,7 @@ fun miuixCardExpandPredictiveBackAnimatable(
                 cardCornerRadiusDp = sourceCard.cornerRadiusDp,
                 containerBounds = current.bounds,
                 containerCornerRadius = current.cornerRadius,
+                safeViewport = sourceCard.safeViewport,
             )
         },
         getEnterModifier = { progress, _ ->

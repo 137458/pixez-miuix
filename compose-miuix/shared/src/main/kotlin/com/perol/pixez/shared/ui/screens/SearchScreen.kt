@@ -26,6 +26,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import kotlinx.coroutines.launch
@@ -205,6 +206,7 @@ fun SearchScreen(
         }
     }
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -357,6 +359,7 @@ fun SearchScreen(
                 )
             }
         }
+    }
     }
 }
 

@@ -86,6 +86,8 @@ import com.itos.coui.topappbar.TopAppBarButton
 import com.itos.coui.topappbar.TopAppBarButtonGroup
 import com.perol.pixez.shared.ui.AppConstants
 import com.perol.pixez.shared.ui.components.LocalBottomBarContentPadding
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
+import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
 import com.perol.pixez.shared.ui.coui.icon.CouiIcons
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 
@@ -480,32 +482,34 @@ internal fun CouiCompactScaffold(
         .fillMaxSize()
         .imePadding()
     val topBarSlot: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth().then(topBarModifier)) {
+        Column(modifier = Modifier.fillMaxWidth().transitionTopBarOccluder().then(topBarModifier)) {
             CouiTopBar(title = title, onBack = onBack, actions = actions)
             if (topBarBottom != null) topBarBottom()
         }
     }
-    if (topBarBottom != null) {
-        CouiSingleBackdropScaffold(
-            modifier = scaffoldModifier,
-            topBar = topBarSlot,
-            floatingActionButton = floatingActionButton,
-        ) { innerPadding ->
-            val resolvedPadding = remember(innerPadding, bottomReserve) {
-                innerPadding.withExtraBottom(bottomReserve)
+    ProvideTransitionViewportScope {
+        if (topBarBottom != null) {
+            CouiSingleBackdropScaffold(
+                modifier = scaffoldModifier,
+                topBar = topBarSlot,
+                floatingActionButton = floatingActionButton,
+            ) { innerPadding ->
+                val resolvedPadding = remember(innerPadding, bottomReserve) {
+                    innerPadding.withExtraBottom(bottomReserve)
+                }
+                content(resolvedPadding)
             }
-            content(resolvedPadding)
-        }
-    } else {
-        Scaffold(
-            modifier = scaffoldModifier,
-            topBar = topBarSlot,
-            floatingActionButton = floatingActionButton,
-        ) { innerPadding ->
-            val resolvedPadding = remember(innerPadding, bottomReserve) {
-                innerPadding.withExtraBottom(bottomReserve)
+        } else {
+            Scaffold(
+                modifier = scaffoldModifier,
+                topBar = topBarSlot,
+                floatingActionButton = floatingActionButton,
+            ) { innerPadding ->
+                val resolvedPadding = remember(innerPadding, bottomReserve) {
+                    innerPadding.withExtraBottom(bottomReserve)
+                }
+                content(resolvedPadding)
             }
-            content(resolvedPadding)
         }
     }
 }
@@ -604,32 +608,34 @@ private fun CouiCollapsingScaffold(
         .imePadding()
         .nestedScroll(behavior.nestedScrollConnection)
     val topBarSlot: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().transitionTopBarOccluder()) {
             CouiCollapsingTopBar(title = title, onBack = onBack, actions = actions, behavior = behavior)
             if (topBarBottom != null) topBarBottom()
         }
     }
-    if (topBarBottom != null) {
-        CouiSingleBackdropScaffold(
-            modifier = scaffoldModifier,
-            topBar = topBarSlot,
-            floatingActionButton = floatingActionButton,
-        ) { innerPadding ->
-            val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
-                behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+    ProvideTransitionViewportScope {
+        if (topBarBottom != null) {
+            CouiSingleBackdropScaffold(
+                modifier = scaffoldModifier,
+                topBar = topBarSlot,
+                floatingActionButton = floatingActionButton,
+            ) { innerPadding ->
+                val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
+                    behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+                }
+                content(resolvedPadding)
             }
-            content(resolvedPadding)
-        }
-    } else {
-        Scaffold(
-            modifier = scaffoldModifier,
-            topBar = topBarSlot,
-            floatingActionButton = floatingActionButton,
-        ) { innerPadding ->
-            val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
-                behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+        } else {
+            Scaffold(
+                modifier = scaffoldModifier,
+                topBar = topBarSlot,
+                floatingActionButton = floatingActionButton,
+            ) { innerPadding ->
+                val resolvedPadding = remember(behavior, innerPadding, density, bottomReserve) {
+                    behavior.state.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+                }
+                content(resolvedPadding)
             }
-            content(resolvedPadding)
         }
     }
 }
@@ -649,25 +655,29 @@ internal fun CouiSearchScaffold(
     val density = LocalDensity.current
     val bottomReserve = LocalBottomBarContentPadding.current
     val bar = behavior.state
-    Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
-            .nestedScroll(behavior.nestedScrollConnection),
-        topBar = {
-            CollapsingTopAppBar(
-                state = bar,
-                searchState = searchState,
-                title = title,
-                backgroundColor = CouiTheme.colorScheme.background,
-                dark = CouiTheme.isDark,
-            ) { searchBar(bar.collapsedFraction) }
-        },
-    ) { innerPadding ->
-        val resolvedPadding = remember(bar, innerPadding, density, bottomReserve) {
-            bar.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+    ProvideTransitionViewportScope {
+        Scaffold(
+            modifier = modifier
+                .fillMaxSize()
+                .imePadding()
+                .nestedScroll(behavior.nestedScrollConnection),
+            topBar = {
+                Box(modifier = Modifier.fillMaxWidth().transitionTopBarOccluder()) {
+                    CollapsingTopAppBar(
+                        state = bar,
+                        searchState = searchState,
+                        title = title,
+                        backgroundColor = CouiTheme.colorScheme.background,
+                        dark = CouiTheme.isDark,
+                    ) { searchBar(bar.collapsedFraction) }
+                }
+            },
+        ) { innerPadding ->
+            val resolvedPadding = remember(bar, innerPadding, density, bottomReserve) {
+                bar.contentPadding(innerPadding, density).withExtraBottom(bottomReserve)
+            }
+            content(resolvedPadding)
         }
-        content(resolvedPadding)
     }
 }
 

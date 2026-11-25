@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -35,7 +36,8 @@ fun BlurTopBarScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val strings = LocalStrings.current
-    Scaffold(
+    ProvideTransitionViewportScope {
+        Scaffold(
         modifier = modifier,
         topBar = {
             BlurredBar(
@@ -63,4 +65,5 @@ fun BlurTopBarScaffold(
         bottomBar = bottomBar,
         content = content,
     )
+    }
 }

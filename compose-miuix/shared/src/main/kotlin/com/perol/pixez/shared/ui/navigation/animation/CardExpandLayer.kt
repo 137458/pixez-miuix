@@ -196,12 +196,14 @@ internal fun Modifier.cardExpandLayer(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBounds: Rect,
     containerCornerRadius: Dp,
+    safeViewport: Rect? = null,
 ): Modifier = cardExpandLayer(
     expansionProvider = { expansion },
     sourceBounds = sourceBounds,
     cardCornerRadiusDp = cardCornerRadiusDp,
     containerBoundsProvider = { containerBounds },
     containerCornerRadiusProvider = { containerCornerRadius },
+    safeViewportProvider = { safeViewport },
 )
 
 /**
@@ -214,7 +216,36 @@ internal fun Modifier.cardExpandLayer(
     cardCornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
     containerBoundsProvider: () -> Rect,
     containerCornerRadiusProvider: () -> Dp,
-): Modifier = this.graphicsLayer {
+    safeViewportProvider: () -> Rect? = { null },
+): Modifier = this
+    .graphicsLayer {
+        val containerBounds = containerBoundsProvider()
+        val clipRect = resolveCardExpandViewportClip(
+            safeViewport = safeViewportProvider(),
+            containerBounds = containerBounds,
+            expansion = expansionProvider(),
+            minEdgeProgress = CONTENT_FADE_THRESHOLD,
+        )
+        if (clipRect == null) {
+            this.clip = false
+        } else {
+            val localLeft = (clipRect.left - containerBounds.left).coerceIn(0f, size.width)
+            val localTop = (clipRect.top - containerBounds.top).coerceIn(0f, size.height)
+            val localRight = (clipRect.right - containerBounds.left).coerceIn(localLeft, size.width)
+            val localBottom = (clipRect.bottom - containerBounds.top).coerceIn(localTop, size.height)
+            if (localLeft <= 0.5f &&
+                localTop <= 0.5f &&
+                localRight >= size.width - 0.5f &&
+                localBottom >= size.height - 0.5f
+            ) {
+                this.clip = false
+            } else {
+                this.clip = true
+                this.shape = ViewportClipShape(localLeft, localTop, localRight, localBottom)
+            }
+        }
+    }
+    .graphicsLayer {
     val expansion = expansionProvider()
     val state = if (sourceBounds != null && expansion < 0.999f) {
         resolveCardExpandTransform(
@@ -261,6 +292,21 @@ internal fun Modifier.cardExpandLayer(
  * 水平裁切时窗口按 [horizontalBias] 在页面内偏移（0 贴左缘、0.5 居中），
  * 居中收窄保证宽屏下以页面中心呈现的大图在收回全程不被单侧裁出画面。
  */
+private data class ViewportClipShape(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+) : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density,
+    ): androidx.compose.ui.graphics.Outline = androidx.compose.ui.graphics.Outline.Rectangle(
+        Rect(left = left, top = top, right = right, bottom = bottom),
+    )
+}
+
 private data class ClippedContainerShape(
     val widthFraction: Float = 1f,
     val heightFraction: Float,

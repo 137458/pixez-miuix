@@ -41,6 +41,7 @@ import com.perol.pixez.shared.ui.LocalBookmarkRepository
 import com.perol.pixez.shared.ui.LocalSettingsRepository
 import com.perol.pixez.shared.ui.LocalUserRepository
 import com.perol.pixez.shared.ui.components.BlurredBar
+import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
 import com.perol.pixez.shared.ui.components.ErrorPlaceholder
 import com.perol.pixez.shared.ui.components.LoadingPlaceholder
 import com.perol.pixez.shared.ui.components.LocalToastSink
@@ -207,6 +208,7 @@ fun UserDetailScreen(
         }
     }
 
+    ProvideTransitionViewportScope {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -244,6 +246,7 @@ fun UserDetailScreen(
             onIllustClick = onIllustClick,
             onRefresh = triggerManualRefresh,
         )
+    }
     }
 }
 

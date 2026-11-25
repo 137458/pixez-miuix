@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import com.perol.pixez.shared.ui.navigation.animation.TransitionTarget
+import com.perol.pixez.shared.ui.navigation.animation.isRectContainedInViewport
 import kotlinx.coroutines.Deferred
 import java.lang.ref.WeakReference
 import kotlin.math.abs
@@ -43,6 +44,7 @@ internal class SystemIllustCardSource(
     val layer: GraphicsLayer,
 ) {
     var coordinates: LayoutCoordinates? = null
+    var safeViewportProvider: (() -> Rect?)? = null
     @Volatile
     var preCapturedSnapshot: Deferred<ImageBitmap?>? = null
 
@@ -81,6 +83,10 @@ internal class SystemIllustCardSource(
             visible.top < rootView.height - 1f
         if (!overlapsRoot || visible.width <= 1f || visible.height <= 1f) return null
         if (!allowPartial && !sameBounds(full, visible)) return null
+        // 卡片任一边缘被 TopBar / BottomBar / NavigationRail 遮挡时，系统级跨窗口转场返回会直接盖在栏位上方，
+        // 必须回退到应用内 CardExpandLayer 进行安全视口裁切。
+        val safeViewport = safeViewportProvider?.invoke()
+        if (safeViewport != null && !isRectContainedInViewport(full, safeViewport)) return null
 
         val offset = IntArray(2)
         if (!windowCoordinates) {
@@ -191,14 +197,14 @@ internal object SystemIllustCardAnchorRegistry {
             it in sources &&
                 it.target == target &&
                 it.view.rootView === decor.rootView &&
-                it.bounds(windowCoordinates = true, allowPartial = it.captureLayer() != null) != null
+                it.bounds(windowCoordinates = true, allowPartial = false) != null
         }
         if (touched != null) return SystemIllustCardAnchor(touched)
 
         val matched = sources.firstOrNull {
             it.target == target &&
                 it.view.rootView === decor.rootView &&
-                it.bounds(windowCoordinates = true, allowPartial = it.captureLayer() != null) != null
+                it.bounds(windowCoordinates = true, allowPartial = false) != null
         } ?: return null
         return SystemIllustCardAnchor(matched)
     }

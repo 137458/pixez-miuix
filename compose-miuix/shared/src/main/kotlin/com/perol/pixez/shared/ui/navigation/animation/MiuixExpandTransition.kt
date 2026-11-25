@@ -127,6 +127,7 @@ internal fun cardExpandFrame(
         val activeSourceBounds = anchor?.card?.rect
             ?: sourceBounds?.takeIf { hasUsableCardExpandGeometry(it, containerBounds) }
         val activeCornerRadiusDp = anchor?.card?.cornerRadiusDp ?: cardCornerRadiusDp
+        val activeSafeViewport = anchor?.card?.safeViewport
 
         if (activeSourceBounds == null) {
             val isTopLayer = direction.isFront
@@ -169,7 +170,16 @@ internal fun cardExpandFrame(
                 }
             }
             val isTopLayer = direction.isFront
-            layerModifier = remember(isTopLayer, factorProvider, direction, activeSourceBounds, activeCornerRadiusDp, containerGeometry, isLightBackground) {
+            layerModifier = remember(
+                isTopLayer,
+                factorProvider,
+                direction,
+                activeSourceBounds,
+                activeCornerRadiusDp,
+                activeSafeViewport,
+                containerGeometry,
+                isLightBackground,
+            ) {
                 if (isTopLayer) {
                     Modifier.cardExpandLayer(
                         expansionProvider = {
@@ -179,6 +189,7 @@ internal fun cardExpandFrame(
                         cardCornerRadiusDp = activeCornerRadiusDp,
                         containerBoundsProvider = { containerGeometry().bounds },
                         containerCornerRadiusProvider = { containerGeometry().cornerRadius },
+                        safeViewportProvider = { activeSafeViewport },
                     )
                 } else {
                     Modifier

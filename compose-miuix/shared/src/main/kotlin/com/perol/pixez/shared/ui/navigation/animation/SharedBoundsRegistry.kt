@@ -150,6 +150,7 @@ class SharedBoundsRegistry {
         target: TransitionTarget,
         rect: Rect?,
         cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
+        safeViewport: Rect? = null,
     ) {
         if (rect == null || rect.width <= 0f || rect.height <= 0f) {
             return
@@ -163,15 +164,28 @@ class SharedBoundsRegistry {
             if (bounds.containsKey(target)) {
                 return
             }
-            bounds[target] = IllustCardBounds(rect = rect.toStationaryBounds(), cornerRadiusDp = cornerRadiusDp)
+            bounds[target] = IllustCardBounds(
+                rect = rect.toStationaryBounds(),
+                cornerRadiusDp = cornerRadiusDp,
+                safeViewport = safeViewport,
+            )
             return
         }
-        bounds[target] = IllustCardBounds(rect = rect, cornerRadiusDp = cornerRadiusDp)
+        bounds[target] = IllustCardBounds(
+            rect = rect,
+            cornerRadiusDp = cornerRadiusDp,
+            safeViewport = safeViewport,
+        )
     }
 
     /** 登记某个插画卡片的窗口坐标矩形与卡片圆角。 */
-    fun put(illustId: Long, rect: Rect?, cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP) {
-        putTarget(TransitionTarget(TransitionTargetKind.Illust, illustId), rect, cornerRadiusDp)
+    fun put(
+        illustId: Long,
+        rect: Rect?,
+        cornerRadiusDp: Float = DEFAULT_CARD_CORNER_RADIUS_DP,
+        safeViewport: Rect? = null,
+    ) {
+        putTarget(TransitionTarget(TransitionTargetKind.Illust, illustId), rect, cornerRadiusDp, safeViewport)
     }
 
     /** 取出某个目标卡片最近一次登记的窗口坐标矩形与圆角。 */
@@ -545,6 +559,7 @@ data class Anchor(
 data class IllustCardBounds(
     val rect: Rect,
     val cornerRadiusDp: Float,
+    val safeViewport: Rect? = null,
 )
 
 /**

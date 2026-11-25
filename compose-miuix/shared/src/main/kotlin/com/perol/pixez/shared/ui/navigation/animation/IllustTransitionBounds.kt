@@ -102,6 +102,8 @@ private fun Modifier.transitionTargetBounds(
     cornerRadius: Dp,
 ): Modifier = composed {
     val registry = LocalSharedBoundsRegistry.current
+    val view = LocalView.current
+    val currentViewportState by rememberUpdatedState(LocalTransitionViewportState.current)
     val currentId by rememberUpdatedState(id)
     val currentCornerRadius by rememberUpdatedState(cornerRadius)
     val systemCapable = LocalSystemCardTransitionCapable.current &&
@@ -109,7 +111,6 @@ private fun Modifier.transitionTargetBounds(
         id > 0L
 
     val systemModifier = if (systemCapable) {
-        val view = LocalView.current
         val density = LocalDensity.current
         val backgroundColorArgb = LocalSystemCardBackgroundColor.current.toArgb()
         val cornerRadiusPx = with(density) { cornerRadius.toPx() }
@@ -128,6 +129,12 @@ private fun Modifier.transitionTargetBounds(
         SideEffect {
             source.cornerRadiusPx = cornerRadiusPx
             source.backgroundColorArgb = backgroundColorArgb
+            source.safeViewportProvider = {
+                currentViewportState?.resolveSafeViewport(
+                    fallbackWidth = view.rootView.width.toFloat(),
+                    fallbackHeight = view.rootView.height.toFloat(),
+                )
+            }
         }
         DisposableEffect(source) {
             SystemIllustCardAnchorRegistry.attach(source)
@@ -186,7 +193,7 @@ private fun Modifier.transitionTargetBounds(
         Modifier
     }
 
-    val registryModifier = remember(registry, kind, id) {
+    val registryModifier = remember(registry, kind, id, view) {
         var latestCoordinates: androidx.compose.ui.layout.LayoutCoordinates? = null
         Modifier
             .onGloballyPositioned { coordinates ->
@@ -197,6 +204,10 @@ private fun Modifier.transitionTargetBounds(
                         target = TransitionTarget(kind, resolvedId),
                         rect = coordinates.boundsInWindow(),
                         cornerRadiusDp = currentCornerRadius.value,
+                        safeViewport = currentViewportState?.resolveSafeViewport(
+                            fallbackWidth = view.rootView.width.toFloat(),
+                            fallbackHeight = view.rootView.height.toFloat(),
+                        ),
                     )
                 }
             }
@@ -210,6 +221,10 @@ private fun Modifier.transitionTargetBounds(
                             target = TransitionTarget(kind, resolvedId),
                             rect = coords.boundsInWindow(),
                             cornerRadiusDp = currentCornerRadius.value,
+                            safeViewport = currentViewportState?.resolveSafeViewport(
+                                fallbackWidth = view.rootView.width.toFloat(),
+                                fallbackHeight = view.rootView.height.toFloat(),
+                            ),
                         )
                     }
                 }
