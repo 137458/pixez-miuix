@@ -40,7 +40,6 @@ import com.perol.pixez.shared.ui.screens.NovelScreen
 import com.perol.pixez.shared.ui.screens.NovelViewerScreen
 import com.perol.pixez.shared.ui.screens.QualitySettingScreen
 import com.perol.pixez.shared.ui.screens.RecomUserScreen
-import com.perol.pixez.shared.ui.screens.RelatedIllustsScreen
 import com.perol.pixez.shared.ui.screens.SearchScreen
 import com.perol.pixez.shared.ui.screens.SettingsScreen
 import com.perol.pixez.shared.ui.screens.ShieldScreen
@@ -173,7 +172,6 @@ internal fun renderIllustDetail(
             onBack = { component.onBack() },
             onUserClick = component.onUserClick,
             onCommentsClick = component.onCommentsClick,
-            onRelatedIllustsClick = component.onRelatedIllustsClick,
             onIllustSeriesClick = component.onIllustSeriesClick,
             onTagClick = component.onTagClick,
             onIllustClick = component.onIllustClick,
@@ -186,7 +184,6 @@ internal fun renderIllustDetail(
             onBack = { component.onBack() },
             onUserClick = component.onUserClick,
             onCommentsClick = component.onCommentsClick,
-            onRelatedIllustsClick = component.onRelatedIllustsClick,
             onIllustSeriesClick = component.onIllustSeriesClick,
             onTagClick = component.onTagClick,
             onIllustClick = component.onIllustClick,
@@ -267,27 +264,6 @@ internal fun renderComments(
             onBack = component::onBack,
             onUserClick = component::onUserClicked,
             isNovel = instance.isNovel,
-        )
-    }
-}
-
-@Composable
-internal fun renderRelatedIllusts(
-    instance: Config.RelatedIllusts,
-    component: RootComponent,
-) {
-    val skinPages = LocalSkinPages.current
-    if (skinPages != null) {
-        skinPages.relatedIllusts(
-            illustId = instance.illustId,
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
-        )
-    } else {
-        RelatedIllustsScreen(
-            illustId = instance.illustId,
-            onBack = component::onBack,
-            onIllustClick = component::onIllustClicked,
         )
     }
 }

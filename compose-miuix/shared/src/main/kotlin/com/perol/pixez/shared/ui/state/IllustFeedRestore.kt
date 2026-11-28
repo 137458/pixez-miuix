@@ -1,5 +1,9 @@
 package com.perol.pixez.shared.ui.state
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.mapSaver
 import com.perol.pixez.shared.data.model.Illust
 import kotlinx.serialization.Serializable
 
@@ -19,6 +23,43 @@ data class IllustFeedSnapshot(
             IllustFeedSnapshot(illustIds = illusts.map { it.id }, nextUrl = nextUrl)
     }
 }
+
+private fun IllustFeedSnapshot.toSavedMap(): Map<String, Any?> = mapOf(
+    "illustIds" to illustIds.joinToString(","),
+    "nextUrl" to (nextUrl ?: ""),
+)
+
+private fun Map<String, Any?>.toIllustFeedSnapshot(): IllustFeedSnapshot {
+    val ids = (this["illustIds"] as? String).orEmpty()
+        .split(',')
+        .mapNotNull { it.toLongOrNull() }
+    val savedNextUrl = this["nextUrl"] as? String
+    return IllustFeedSnapshot(
+        illustIds = ids,
+        nextUrl = savedNextUrl?.takeIf { it.isNotEmpty() },
+    )
+}
+
+/**
+ * [IllustFeedSnapshot] 的 rememberSaveable Saver：只持久化作品 ID 与 nextUrl，
+ * 避免把整批 [Illust] 对象写进 SavedState（类型大且会随模型变更失效）。
+ */
+val IllustFeedSnapshotSaver = mapSaver<IllustFeedSnapshot>(
+    save = { it.toSavedMap() },
+    restore = { it.toIllustFeedSnapshot() },
+)
+
+/**
+ * 可空 [IllustFeedSnapshot] 状态的 rememberSaveable Saver。
+ *
+ * rememberSaveable 的 saver 作用于整个 [MutableState]，不能直接复用只处理快照值的
+ * [IllustFeedSnapshotSaver]。这里显式包装 State，以空 map 表示「尚无快照」，
+ * 与「已记录但结果为空」的快照（map 中 illustIds 为空串）区分。
+ */
+val IllustFeedSnapshotStateSaver = Saver<MutableState<IllustFeedSnapshot?>, Map<String, Any?>>(
+    save = { state -> state.value?.toSavedMap() ?: emptyMap() },
+    restore = { saved -> mutableStateOf(saved.takeIf { it.isNotEmpty() }?.toIllustFeedSnapshot()) },
+)
 
 /**
  * Main child 的跨页恢复容器（高-5）：推荐页单快照与排行榜多 key LRU 的聚合持有者，

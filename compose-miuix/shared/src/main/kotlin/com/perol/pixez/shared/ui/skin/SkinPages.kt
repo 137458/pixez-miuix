@@ -110,7 +110,6 @@ internal interface SkinPages {
         onBack: () -> Unit,
         onUserClick: (Long) -> Unit,
         onCommentsClick: (Long) -> Unit,
-        onRelatedIllustsClick: (Long) -> Unit,
         onIllustSeriesClick: (Long) -> Unit,
         onTagClick: (String) -> Unit,
         onIllustClick: ((Long) -> Unit)?,
@@ -149,14 +148,6 @@ internal interface SkinPages {
         onBack: () -> Unit,
         onUserClick: (Long) -> Unit,
         isNovel: Boolean,
-    )
-
-    /** 相关作品页的 COUI 实现。 */
-    @Composable
-    fun relatedIllusts(
-        illustId: Long,
-        onBack: () -> Unit,
-        onIllustClick: (Long) -> Unit,
     )
 
     /** 下载历史页的 COUI 实现。 */

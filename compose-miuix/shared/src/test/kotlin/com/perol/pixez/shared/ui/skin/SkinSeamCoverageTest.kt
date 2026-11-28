@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
  * R-06 皮肤接缝覆盖守护测试（源码结构断言，不做任何生产代码改动）。
  *
  * 为什么用源码扫描而不是运行时/组合测试：
- * [SkinPages] 是 40 个方法的接缝接口——[LocalSkinPages] 非空时页面走皮肤实现，为 null 时
+ * [SkinPages] 是 44 个方法的接缝接口——[LocalSkinPages] 非空时页面走皮肤实现，为 null 时
  * 回退 MIUIX 内置渲染。这类回归的真实形态是「新增页面时忘了在 RootChildScreens 里补一条
  * skinPages 调用」或「删掉调用后接口方法变成死方法」，两者都是源码事实，而不是运行时行为。
  * shared 模块没有引入 compose ui-test 依赖，纯 JVM 测试既无法组合这些页面，也无法观察
@@ -181,10 +181,10 @@ private class FunctionBody(val text: String, val startLine: Int)
 private object SkinSeamSources {
 
     /** 审计 R-06 记录的方法数基线（40 页面/底栏 + 5 根级覆盖层与侧栏接缝）。 */
-    const val SKIN_PAGES_METHOD_BASELINE = 45
+    const val SKIN_PAGES_METHOD_BASELINE = 44
 
     /** 审计记录的路由基线：sealed class Config 的子类数量。 */
-    const val CONFIG_SUBCLASS_BASELINE = 41
+    const val CONFIG_SUBCLASS_BASELINE = 40
 
     const val SKIN_PAGES_PATH = "compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/skin/SkinPages.kt"
     const val ROOT_CONTENT_PATH = "compose-miuix/shared/src/main/kotlin/com/perol/pixez/shared/ui/navigation/RootContent.kt"

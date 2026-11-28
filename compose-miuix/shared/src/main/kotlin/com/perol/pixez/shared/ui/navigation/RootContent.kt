@@ -483,11 +483,6 @@ private fun RootChildContent(
             component = component,
         )
 
-        is Config.RelatedIllusts -> renderRelatedIllusts(
-            instance = instance,
-            component = component,
-        )
-
         is Config.IllustSeries -> renderIllustSeries(
             instance = instance,
             component = component,

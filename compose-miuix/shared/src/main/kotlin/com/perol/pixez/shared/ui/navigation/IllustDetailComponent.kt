@@ -19,7 +19,6 @@ class IllustDetailComponent(
     val onBack: () -> Boolean,
     val onUserClick: (Long) -> Unit,
     val onCommentsClick: (Long) -> Unit,
-    val onRelatedIllustsClick: (Long) -> Unit,
     val onIllustSeriesClick: (Long) -> Unit,
     val onTagClick: (String) -> Unit,
     val onIllustClick: (Long) -> Unit,

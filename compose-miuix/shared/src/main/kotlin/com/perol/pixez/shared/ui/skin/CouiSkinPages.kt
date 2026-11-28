@@ -40,7 +40,6 @@ import com.perol.pixez.shared.ui.coui.page.CouiNovelViewerScreen
 import com.perol.pixez.shared.ui.coui.page.CouiQualitySettingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRankingScreen
 import com.perol.pixez.shared.ui.coui.page.CouiRecomUserScreen
-import com.perol.pixez.shared.ui.coui.page.CouiRelatedIllustsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSearchScreen
 import com.perol.pixez.shared.ui.coui.page.CouiSettingsScreen
 import com.perol.pixez.shared.ui.coui.page.CouiShieldScreen
@@ -222,7 +221,6 @@ internal object CouiSkinPages : SkinPages {
         onBack: () -> Unit,
         onUserClick: (Long) -> Unit,
         onCommentsClick: (Long) -> Unit,
-        onRelatedIllustsClick: (Long) -> Unit,
         onIllustSeriesClick: (Long) -> Unit,
         onTagClick: (String) -> Unit,
         onIllustClick: ((Long) -> Unit)?,
@@ -233,7 +231,6 @@ internal object CouiSkinPages : SkinPages {
             onBack = onBack,
             onUserClick = onUserClick,
             onCommentsClick = onCommentsClick,
-            onRelatedIllustsClick = onRelatedIllustsClick,
             onIllustSeriesClick = onIllustSeriesClick,
             onTagClick = onTagClick,
             onIllustClick = onIllustClick,
@@ -297,19 +294,6 @@ internal object CouiSkinPages : SkinPages {
             onBack = onBack,
             onUserClick = onUserClick,
             isNovel = isNovel,
-        )
-    }
-
-    @Composable
-    override fun relatedIllusts(
-        illustId: Long,
-        onBack: () -> Unit,
-        onIllustClick: (Long) -> Unit,
-    ) {
-        CouiRelatedIllustsScreen(
-            illustId = illustId,
-            onBack = onBack,
-            onIllustClick = onIllustClick,
         )
     }
 
