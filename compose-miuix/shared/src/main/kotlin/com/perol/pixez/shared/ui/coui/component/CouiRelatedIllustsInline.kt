@@ -31,8 +31,11 @@ import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
 import com.perol.pixez.shared.ui.coui.core.CouiLoadMoreFooter
 import com.perol.pixez.shared.ui.coui.core.CouiPlaceholder
 import com.perol.pixez.shared.ui.i18n.LocalStrings
+import com.perol.pixez.shared.ui.state.IllustFeedSnapshot
+import com.perol.pixez.shared.ui.state.IllustFeedSnapshotStateSaver
 import com.perol.pixez.shared.ui.state.IllustPagedListState
 import com.perol.pixez.shared.ui.state.IllustPagedPage
+import com.perol.pixez.shared.ui.state.PagedLoadOutcome
 import kotlinx.coroutines.launch
 
 private const val INLINE_RELATED_COLUMN_COUNT = 3
@@ -63,6 +66,11 @@ internal fun CouiRelatedIllustsInline(
 
     var retryCount by rememberSaveable(illustId) { mutableIntStateOf(0) }
     var isManualRefreshing by rememberSaveable(illustId) { mutableStateOf(false) }
+    // 跨页恢复：返回详情页时组件重建，但快照随 SavedState 保留；按 ID 回查仓库缓存还原列表，
+    // 避免重新拉首屏。快照保存于 loadFirst/loadMore 真正写入之后。
+    var feedSnapshot by rememberSaveable(illustId, saver = IllustFeedSnapshotStateSaver) {
+        mutableStateOf<IllustFeedSnapshot?>(null)
+    }
     // 视口门控：模块与触底哨兵分别上报可见性，未进入屏幕时不触碰网络。
     var isModuleVisible by remember(illustId) { mutableStateOf(false) }
     var isFooterVisible by remember(illustId) { mutableStateOf(false) }
@@ -75,7 +83,15 @@ internal fun CouiRelatedIllustsInline(
             },
             filter = { rawIllusts -> banRepository.filterIllustsBySettings(rawIllusts, settingsRepository) },
             filterVersionProvider = { settingsRepository.filterChangeVersion.value },
-        )
+        ).also { state ->
+            feedSnapshot?.let { snapshot ->
+                val raw = snapshot.illustIds.mapNotNull(repository::getCachedIllust)
+                // 空结果也是有效快照；缓存被清理导致回查全空时回落重新加载。
+                if (snapshot.illustIds.isEmpty() || raw.isNotEmpty()) {
+                    state.restore(raw, snapshot.nextUrl)
+                }
+            }
+        }
     }
 
     val filterChangeVersion = settingsRepository.filterChangeVersion.collectAsState().value
@@ -87,8 +103,11 @@ internal fun CouiRelatedIllustsInline(
         if (!force && listState.filteredIllusts != null && listState.initialError == null) {
             return@LaunchedEffect
         }
-        listState.loadFirst(force = force)
+        val outcome = listState.loadFirst(force = force)
         isManualRefreshing = false
+        if (outcome == PagedLoadOutcome.Written) {
+            listState.rawIllusts?.let { feedSnapshot = IllustFeedSnapshot.of(it, listState.nextUrl) }
+        }
     }
 
     val footerState = listState.footerState
@@ -100,7 +119,9 @@ internal fun CouiRelatedIllustsInline(
     // 若把挂起的 loadMore() 直接放在 effect 内会被中途取消，故在外部作用域启动。
     fun loadMore() {
         coroutineScope.launch {
-            listState.loadMore()
+            if (listState.loadMore() == PagedLoadOutcome.Written) {
+                listState.rawIllusts?.let { feedSnapshot = IllustFeedSnapshot.of(it, listState.nextUrl) }
+            }
         }
     }
     LaunchedEffect(shouldLoadMore) {
