@@ -439,13 +439,6 @@ class RootComponent(
     }
 
     /**
-     * 打开相关作品页。
-     */
-    fun onRelatedIllustsClicked(illustId: Long) {
-        navigation.pushToFront(Config.RelatedIllusts(illustId))
-    }
-
-    /**
      * 打开插画系列页。
      */
     fun onIllustSeriesClicked(seriesId: Long) {
@@ -558,7 +551,6 @@ class RootComponent(
                 onBack = ::onBack,
                 onUserClick = ::onUserClicked,
                 onCommentsClick = ::onCommentsClicked,
-                onRelatedIllustsClick = ::onRelatedIllustsClicked,
                 onIllustSeriesClick = ::onIllustSeriesClicked,
                 onTagClick = ::onSearchClicked,
                 onIllustClick = ::onIllustClicked,

@@ -21,7 +21,7 @@ private const val LEGACY_CONFIG_SERIAL_PREFIX = "com.perol.pixez.shared.ui.navig
  *
  * 按域索引：
  * - 一级页面：[Main]
- * - 作品域：[IllustDetail] [Comments] [RelatedIllusts] [IllustSeries] [SpotlightDetail]
+ * - 作品域：[IllustDetail] [Comments] [IllustSeries] [SpotlightDetail]
  * - 用户域：[UserDetail] [UserFollowList] [UserFollowerList] [RecomUserList] [AccountEdit] [AccountManage]
  * - 小说域：[Novel] [NovelViewer]
  * - 搜索与历史：[Search] [History] [DownloadHistory] [DownloadTask] [DataExport] [BookTag] [Board]
@@ -75,10 +75,6 @@ sealed class Config {
     @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "Comments")
     data class Comments(val illustId: Long, val isNovel: Boolean = false) : Config()
-
-    @Serializable
-    @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "RelatedIllusts")
-    data class RelatedIllusts(val illustId: Long) : Config()
 
     @Serializable
     @SerialName(LEGACY_CONFIG_SERIAL_PREFIX + "IllustSeries")

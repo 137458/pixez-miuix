@@ -7,6 +7,7 @@ import com.perol.pixez.shared.ui.components.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.perol.pixez.shared.ui.components.blurBackdropSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -235,6 +236,7 @@ fun IllustSeriesScreen(
                                 illusts = currentIllusts,
                                 onIllustClick = onIllustClick,
                                 state = gridState,
+                                columns = StaggeredGridCells.Fixed(3),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .nestedScroll(scrollBehavior.nestedScrollConnection),

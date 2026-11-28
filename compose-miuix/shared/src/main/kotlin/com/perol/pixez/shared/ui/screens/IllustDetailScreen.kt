@@ -64,7 +64,6 @@ import com.perol.pixez.shared.ui.i18n.AppStrings
 import com.perol.pixez.shared.ui.i18n.LocalStrings
 import com.perol.pixez.shared.ui.navigation.animation.LocalSharedBoundsRegistry
 import com.perol.pixez.shared.ui.navigation.animation.ProvideTransitionViewportScope
-import com.perol.pixez.shared.ui.navigation.animation.cardExpandDetailChromeAlpha
 import com.perol.pixez.shared.ui.navigation.animation.system.LocalSystemTransitionSessionToken
 import com.perol.pixez.shared.ui.navigation.animation.system.SystemIllustCardTransition
 import com.perol.pixez.shared.ui.navigation.animation.transitionTopBarOccluder
@@ -88,7 +87,6 @@ fun IllustDetailScreen(
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)? = null,
@@ -144,7 +142,6 @@ fun IllustDetailScreen(
                 onBack = onBack,
                 onUserClick = onUserClick,
                 onCommentsClick = onCommentsClick,
-                onRelatedIllustsClick = onRelatedIllustsClick,
                 onIllustSeriesClick = onIllustSeriesClick,
                 onTagClick = onTagClick,
                 repository = repository,
@@ -171,7 +168,6 @@ fun IllustDetailScreen(
             onBack = onBack,
             onUserClick = onUserClick,
             onCommentsClick = onCommentsClick,
-            onRelatedIllustsClick = onRelatedIllustsClick,
             onIllustSeriesClick = onIllustSeriesClick,
             onTagClick = onTagClick,
             repository = repository,
@@ -235,7 +231,6 @@ private fun IllustDetailSingleContent(
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     repository: IllustRepository,
@@ -402,7 +397,6 @@ private fun IllustDetailSingleContent(
                         onFullScreen = { fullScreenPageIndex = it },
                         onUserClick = onUserClick,
                         onCommentsClick = onCommentsClick,
-                        onRelatedIllustsClick = onRelatedIllustsClick,
                         onIllustSeriesClick = onIllustSeriesClick,
                         onTagClick = onTagClick,
                         onIllustClick = onIllustClick,
@@ -525,7 +519,6 @@ private fun IllustDetailContentList(
     onFullScreen: (Int) -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)?,
@@ -634,14 +627,14 @@ private fun IllustDetailContentList(
             }
         }
 
-        // 5. 互动操作卡片（评论与相关作品）
+        // 5. 互动操作卡片（评论与内嵌相关作品网格）
         item(key = "interaction") {
             Column(modifier = chromeModifier) {
                 IllustDetailInteractionCard(
                     illust = illust,
                     strings = strings,
                     onCommentsClick = onCommentsClick,
-                    onRelatedIllustsClick = onRelatedIllustsClick,
+                    onIllustClick = onIllustClick ?: { },
                 )
             }
         }

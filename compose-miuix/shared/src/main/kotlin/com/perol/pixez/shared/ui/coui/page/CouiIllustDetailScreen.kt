@@ -130,6 +130,7 @@ import com.perol.pixez.shared.ui.components.toLocalizedDownloadError
 import com.perol.pixez.shared.ui.coui.component.CouiAssistChip
 import com.perol.pixez.shared.ui.coui.component.CouiCard
 import com.perol.pixez.shared.ui.coui.component.CouiIllustFullScreenOverlay
+import com.perol.pixez.shared.ui.coui.component.CouiRelatedIllustsInline
 import com.perol.pixez.shared.ui.coui.component.couiPressFeedback
 import com.perol.pixez.shared.ui.coui.core.CouiBarTitle
 import com.perol.pixez.shared.ui.coui.core.CouiErrorMessage
@@ -237,7 +238,6 @@ internal fun CouiIllustDetailScreen(
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)? = null,
@@ -287,7 +287,6 @@ internal fun CouiIllustDetailScreen(
                 onBack = onBack,
                 onUserClick = onUserClick,
                 onCommentsClick = onCommentsClick,
-                onRelatedIllustsClick = onRelatedIllustsClick,
                 onIllustSeriesClick = onIllustSeriesClick,
                 onTagClick = onTagClick,
                 onIllustClick = onIllustClick,
@@ -310,7 +309,6 @@ internal fun CouiIllustDetailScreen(
             onBack = onBack,
             onUserClick = onUserClick,
             onCommentsClick = onCommentsClick,
-            onRelatedIllustsClick = onRelatedIllustsClick,
             onIllustSeriesClick = onIllustSeriesClick,
             onTagClick = onTagClick,
             onIllustClick = onIllustClick,
@@ -327,7 +325,6 @@ private fun CouiIllustDetailSingle(
     onBack: () -> Unit,
     onUserClick: (Long) -> Unit,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
     onIllustSeriesClick: (Long) -> Unit,
     onTagClick: (String) -> Unit,
     onIllustClick: ((Long) -> Unit)?,
@@ -698,13 +695,18 @@ private fun CouiIllustDetailSingle(
                                             onClick = { onCommentsClick(illust.id) },
                                         )
                                     }
-                                    CouiRowDivider()
-                                    CouiValueRow(
-                                        title = strings.relatedIllusts,
-                                        onClick = { onRelatedIllustsClick(illust.id) },
+                                }
+                                // 相关作品不再跳转独立页，直接内联展示（3 列，进入视口后才加载）。
+                                // 复用标签同款的 CouiDetailSectionCard，标题样式与边距完全一致。
+                                CouiDetailSectionCard(
+                                    title = strings.relatedIllusts,
+                                    modifier = chromeAlphaModifier,
+                                ) {
+                                    CouiRelatedIllustsInline(
+                                        illustId = illust.id,
+                                        onIllustClick = onIllustClick,
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(28.dp))
                             }
                         }
 

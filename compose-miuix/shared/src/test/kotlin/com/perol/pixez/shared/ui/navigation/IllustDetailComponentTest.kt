@@ -97,14 +97,6 @@ class IllustDetailComponentTest {
         )
         assertTrue(root.onBack())
 
-        detail.onRelatedIllustsClick(42L)
-        assertEquals(
-            Config.RelatedIllusts(illustId = 42L),
-            root.stack.value.active.configuration,
-            "onRelatedIllustsClick 应入栈相关作品页",
-        )
-        assertTrue(root.onBack())
-
         detail.onIllustSeriesClick(5L)
         assertEquals(
             Config.IllustSeries(seriesId = 5L),

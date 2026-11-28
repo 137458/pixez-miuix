@@ -333,14 +333,14 @@ internal fun IllustDetailTagsCard(
 }
 
 /**
- * 互动操作卡片：评论与相关作品入口。
+ * 互动操作卡片：评论入口与内嵌的相关作品三列网格。
  */
 @Composable
 internal fun IllustDetailInteractionCard(
     illust: Illust,
     strings: AppStrings,
     onCommentsClick: (Long) -> Unit,
-    onRelatedIllustsClick: (Long) -> Unit,
+    onIllustClick: (Long) -> Unit,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
         Card(
@@ -362,11 +362,22 @@ internal fun IllustDetailInteractionCard(
                     onClick = { onCommentsClick(illust.id) },
                 )
             }
-            BasicComponent(
-                title = strings.relatedIllusts,
-                summary = "",
-                onClick = { onRelatedIllustsClick(illust.id) },
-            )
+            // 标题与标签卡片同款：title4 + 16dp 内边距，避免内联组件自带的大号 title2。
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Text(
+                    text = strings.relatedIllusts,
+                    style = MiuixTheme.textStyles.title4,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                RelatedIllustsInline(
+                    illustId = illust.id,
+                    onIllustClick = onIllustClick,
+                )
+            }
         }
     Spacer(modifier = Modifier.height(32.dp))
 }
